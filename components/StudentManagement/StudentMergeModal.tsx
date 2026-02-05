@@ -267,11 +267,11 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
     return (
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className={`text-xs ${isPrimary ? 'font-bold text-[#081429]' : 'text-gray-600'}`}>
+          <span className={`text-xs ${isPrimary ? 'font-bold text-primary' : 'text-gray-600'}`}>
             {student.id.length > 20 ? student.id.substring(0, 20) + '...' : student.id}
           </span>
           {isPrimary && (
-            <span className="text-xxs bg-[#fdb813] text-[#081429] px-1 rounded-sm font-bold">추천</span>
+            <span className="text-xxs bg-accent text-primary px-1 rounded-sm font-bold">추천</span>
           )}
           <span className={`text-xxs px-1 rounded-sm ${
             student.status === 'active' ? 'bg-green-100 text-green-700' :
@@ -302,7 +302,7 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-[#081429] text-white rounded-t-sm">
+        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-primary text-white rounded-t-sm">
           <div className="flex items-center gap-2">
             <GitMerge className="w-5 h-5" />
             <h3 className="font-bold">학생 중복 병합</h3>
@@ -321,7 +321,7 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
           {/* Loading */}
           {step === 'loading' && (
             <div className="flex-1 flex flex-col items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-[#fdb813] mb-3" />
+              <Loader2 className="w-8 h-8 animate-spin text-accent mb-3" />
               <p className="text-gray-600">{students.length}명 학생 분석 중...</p>
             </div>
           )}
@@ -333,31 +333,31 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
                 {/* Section 1: 병합 통계 */}
                 <div className="bg-white border border-gray-200 overflow-hidden">
                   <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                    <BarChart3 className="w-3 h-3 text-[#081429]" />
-                    <h3 className="text-[#081429] font-bold text-xs">병합 통계</h3>
+                    <BarChart3 className="w-3 h-3 text-primary" />
+                    <h3 className="text-primary font-bold text-xs">병합 통계</h3>
                   </div>
                   <div className="divide-y divide-gray-100">
                     <div className="flex items-center gap-2 px-2 py-1.5">
-                      <span className="w-20 shrink-0 text-xs font-medium text-[#373d41]">전체 학생</span>
-                      <span className="flex-1 text-xs text-[#081429]">
+                      <span className="w-20 shrink-0 text-xs font-medium text-primary-700">전체 학생</span>
+                      <span className="flex-1 text-xs text-primary">
                         <strong>{students.length}</strong>명
                       </span>
                     </div>
                     <div className="flex items-center gap-2 px-2 py-1.5">
-                      <span className="w-20 shrink-0 text-xs font-medium text-[#373d41]">중복 그룹</span>
+                      <span className="w-20 shrink-0 text-xs font-medium text-primary-700">중복 그룹</span>
                       <span className="flex-1 text-xs text-orange-600">
                         <strong>{totalGroups}</strong>개
                       </span>
                     </div>
                     <div className="flex items-center gap-2 px-2 py-1.5">
-                      <span className="w-20 shrink-0 text-xs font-medium text-[#373d41]">병합 대상</span>
+                      <span className="w-20 shrink-0 text-xs font-medium text-primary-700">병합 대상</span>
                       <span className="flex-1 text-xs text-red-600">
                         <strong>{totalDuplicates}</strong>명
                       </span>
                     </div>
                     <div className="flex items-center gap-2 px-2 py-1.5">
-                      <span className="w-20 shrink-0 text-xs font-medium text-[#373d41]">선택 그룹</span>
-                      <span className="flex-1 text-xs text-[#081429]">
+                      <span className="w-20 shrink-0 text-xs font-medium text-primary-700">선택 그룹</span>
+                      <span className="flex-1 text-xs text-primary">
                         <strong>{selectedGroups}</strong>개
                       </span>
                     </div>
@@ -367,8 +367,8 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
                 {/* Section 2: 중복 그룹 목록 */}
                 <div className="bg-white border border-gray-200 overflow-hidden">
                   <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                    <Users className="w-3 h-3 text-[#081429]" />
-                    <h3 className="text-[#081429] font-bold text-xs">중복 그룹 목록</h3>
+                    <Users className="w-3 h-3 text-primary" />
+                    <h3 className="text-primary font-bold text-xs">중복 그룹 목록</h3>
                   </div>
                   <div className="max-h-[300px] overflow-y-auto">
                     {duplicateGroups.length === 0 ? (
@@ -386,7 +386,7 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
                             {/* 그룹 헤더 */}
                             <div
                               className={`flex items-center gap-2 px-2 py-1.5 cursor-pointer hover:bg-gray-50 ${
-                                group.isSelected ? 'bg-[#fdb813]/10' : ''
+                                group.isSelected ? 'bg-accent/10' : ''
                               }`}
                               onClick={() => toggleExpand(group.key)}
                             >
@@ -395,7 +395,7 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
                                 checked={group.isSelected}
                                 onChange={() => toggleGroupSelection(group.key)}
                                 onClick={e => e.stopPropagation()}
-                                className="w-4 h-4 text-[#fdb813] rounded-sm border-gray-300 focus:ring-[#fdb813]"
+                                className="w-4 h-4 text-accent rounded-sm border-gray-300 focus:ring-accent"
                               />
                               {isExpanded ? (
                                 <ChevronDown className="w-4 h-4 text-gray-400" />
@@ -403,7 +403,7 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
                                 <ChevronRight className="w-4 h-4 text-gray-400" />
                               )}
                               <div className="flex-1">
-                                <span className="font-bold text-xs text-[#081429]">{group.name}</span>
+                                <span className="font-bold text-xs text-primary">{group.name}</span>
                                 {(group.school || group.grade) && (
                                   <span className="text-xs text-gray-500 ml-2">
                                     {group.school} {group.grade}
@@ -425,7 +425,7 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
                                       key={student.id}
                                       className={`flex items-center gap-2 p-2 rounded-sm cursor-pointer ${
                                         isPrimary
-                                          ? 'bg-[#fdb813]/20 border border-[#fdb813]'
+                                          ? 'bg-accent/20 border border-accent'
                                           : 'bg-gray-50 hover:bg-gray-100'
                                       }`}
                                       onClick={() => setPrimaryStudent(group.key, student.id)}
@@ -435,7 +435,7 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
                                         name={`primary-${group.key}`}
                                         checked={isPrimary}
                                         onChange={() => setPrimaryStudent(group.key, student.id)}
-                                        className="w-4 h-4 text-[#fdb813] focus:ring-[#fdb813]"
+                                        className="w-4 h-4 text-accent focus:ring-accent"
                                       />
                                       <div className="flex-1">
                                         {renderStudentInfo(student, isPrimary)}
@@ -455,8 +455,8 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
                 {/* Section 3: 작업 설정 */}
                 <div className="bg-white border border-gray-200 overflow-hidden">
                   <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                    <Settings className="w-3 h-3 text-[#081429]" />
-                    <h3 className="text-[#081429] font-bold text-xs">작업 설정</h3>
+                    <Settings className="w-3 h-3 text-primary" />
+                    <h3 className="text-primary font-bold text-xs">작업 설정</h3>
                   </div>
                   <div className="px-2 py-1.5">
                     <div className="flex items-center gap-2">
@@ -480,7 +480,7 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
               {/* Footer */}
               <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between">
                 <div className="text-sm text-gray-500">
-                  선택된 그룹: <strong className="text-[#081429]">{selectedGroups}</strong>개
+                  선택된 그룹: <strong className="text-primary">{selectedGroups}</strong>개
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -492,7 +492,7 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
                   <button
                     onClick={handleMerge}
                     disabled={selectedGroups === 0}
-                    className="px-4 py-2 bg-[#fdb813] text-[#081429] rounded-sm text-sm font-bold hover:bg-[#e5a711] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="px-4 py-2 bg-accent text-primary rounded-sm text-sm font-bold hover:bg-[#e5a711] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     <GitMerge className="w-4 h-4" />
                     선택 그룹 병합 ({selectedGroups})
@@ -508,15 +508,15 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
               {/* Section 1: 진행 상황 */}
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                  <TrendingUp className="w-3 h-3 text-[#081429]" />
-                  <h3 className="text-[#081429] font-bold text-xs">진행 상황</h3>
+                  <TrendingUp className="w-3 h-3 text-primary" />
+                  <h3 className="text-primary font-bold text-xs">진행 상황</h3>
                 </div>
                 <div className="p-4">
                   <div className="flex flex-col items-center justify-center py-8">
-                    <Loader2 className="w-8 h-8 animate-spin text-[#fdb813] mb-4" />
+                    <Loader2 className="w-8 h-8 animate-spin text-accent mb-4" />
                     <div className="w-full max-w-md h-2 bg-gray-200 rounded-sm overflow-hidden mb-3">
                       <div
-                        className="h-full bg-[#fdb813] transition-all duration-300"
+                        className="h-full bg-accent transition-all duration-300"
                         style={{ width: `${(progress.current / progress.total) * 100}%` }}
                       />
                     </div>
@@ -539,23 +539,23 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
                   <Check className="w-3 h-3 text-green-600" />
-                  <h3 className="text-[#081429] font-bold text-xs">결과 요약</h3>
+                  <h3 className="text-primary font-bold text-xs">결과 요약</h3>
                 </div>
                 <div className="divide-y divide-gray-100">
                   <div className="flex items-center gap-2 px-2 py-1.5">
-                    <span className="w-24 shrink-0 text-xs font-medium text-[#373d41]">처리된 그룹</span>
+                    <span className="w-24 shrink-0 text-xs font-medium text-primary-700">처리된 그룹</span>
                     <span className="flex-1 text-xs">
                       <strong className="text-green-600">{result.processedGroups}</strong>개
                     </span>
                   </div>
                   <div className="flex items-center gap-2 px-2 py-1.5">
-                    <span className="w-24 shrink-0 text-xs font-medium text-[#373d41]">이전된 수강정보</span>
+                    <span className="w-24 shrink-0 text-xs font-medium text-primary-700">이전된 수강정보</span>
                     <span className="flex-1 text-xs">
                       <strong className="text-blue-600">{result.transferredEnrollments}</strong>개
                     </span>
                   </div>
                   <div className="flex items-center gap-2 px-2 py-1.5">
-                    <span className="w-24 shrink-0 text-xs font-medium text-[#373d41]">삭제된 학생</span>
+                    <span className="w-24 shrink-0 text-xs font-medium text-primary-700">삭제된 학생</span>
                     <span className="flex-1 text-xs">
                       <strong className="text-orange-600">{result.deletedStudents}</strong>명
                     </span>
@@ -587,11 +587,11 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
                 <div className="w-16 h-16 bg-green-100 rounded-sm flex items-center justify-center mb-4">
                   <Check className="w-8 h-8 text-green-600" />
                 </div>
-                <h4 className="text-lg font-bold text-[#081429] mb-2">병합 완료!</h4>
+                <h4 className="text-lg font-bold text-primary mb-2">병합 완료!</h4>
                 <p className="text-sm text-gray-600 mb-6">학생 중복 병합이 성공적으로 완료되었습니다.</p>
                 <button
                   onClick={onClose}
-                  className="px-6 py-2 bg-[#fdb813] text-[#081429] rounded-sm text-sm font-bold hover:bg-[#e5a711]"
+                  className="px-6 py-2 bg-accent text-primary rounded-sm text-sm font-bold hover:bg-[#e5a711]"
                 >
                   완료
                 </button>

@@ -169,7 +169,7 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
 
                 {/* Header */}
                 <div className="px-4 pt-4 pb-3 border-b border-gray-200">
-                    <h3 className="text-base font-bold text-[#081429] flex items-center gap-2">
+                    <h3 className="text-base font-bold text-primary flex items-center gap-2">
                         <UserPlus size={18} />
                         학생 추가
                     </h3>

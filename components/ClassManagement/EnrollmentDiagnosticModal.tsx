@@ -373,15 +373,15 @@ const EnrollmentDiagnosticModal: React.FC<EnrollmentDiagnosticModalProps> = ({
         <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] bg-black/50">
             <div className="bg-white rounded-sm shadow-2xl w-[95%] max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
                 {/* 헤더 */}
-                <div className="bg-[#081429] px-6 py-4 flex items-center justify-between">
+                <div className="bg-primary px-6 py-4 flex items-center justify-between">
                     <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                        <Stethoscope size={20} className="text-[#fdb813]" />
+                        <Stethoscope size={20} className="text-accent" />
                         전체 Enrollment 정밀 진단
                     </h2>
                     <div className="flex items-center gap-4">
                         <div className="text-xs text-gray-400 flex items-center gap-1">
                             <Info size={12} />
-                            Project: <span className="font-mono text-[#fdb813]">{(db.app.options as any).projectId}</span>
+                            Project: <span className="font-mono text-accent">{(db.app.options as any).projectId}</span>
                         </div>
                         <button onClick={onClose} className="text-gray-400 hover:text-white">
                             <X size={24} />
@@ -392,10 +392,10 @@ const EnrollmentDiagnosticModal: React.FC<EnrollmentDiagnosticModalProps> = ({
                 {/* 로딩 화면 */}
                 {step === 'loading' && (
                     <div className="flex-1 flex flex-col items-center justify-center">
-                        <Loader2 className="w-12 h-12 animate-spin text-[#fdb813] mb-4" />
+                        <Loader2 className="w-12 h-12 animate-spin text-accent mb-4" />
                         <p className="text-gray-600 mb-2">모든 학생의 데이터를 분석 중입니다...</p>
                         <div className="w-64 bg-gray-100 rounded-sm h-2 overflow-hidden">
-                            <div className="bg-[#fdb813] h-full transition-all duration-300" style={{ width: `${progress}%` }} />
+                            <div className="bg-accent h-full transition-all duration-300" style={{ width: `${progress}%` }} />
                         </div>
                         <p className="text-sm text-gray-400 mt-2">{progress}%</p>
                     </div>
@@ -490,7 +490,7 @@ const EnrollmentDiagnosticModal: React.FC<EnrollmentDiagnosticModalProps> = ({
                                         value={searchQuery}
                                         onChange={e => setSearchQuery(e.target.value)}
                                         placeholder="학생 이름, classID 검색..."
-                                        className="w-full pl-9 pr-3 py-2 text-sm border rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+                                        className="w-full pl-9 pr-3 py-2 text-sm border rounded-sm focus:outline-none focus:ring-2 focus:ring-accent"
                                     />
                                 </div>
                                 <button onClick={runDiagnostic} className="p-2 hover:bg-gray-100 rounded-sm text-gray-600" title="새로고침">

@@ -225,7 +225,7 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-[#081429] text-white rounded-t-sm">
+        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-primary text-white rounded-t-sm">
           <div className="flex items-center gap-2">
             <Database className="w-5 h-5" />
             <h3 className="font-bold">학생 데이터 정리</h3>
@@ -244,7 +244,7 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
           {/* Analyzing */}
           {step === 'analyzing' && (
             <div className="flex-1 flex flex-col items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-[#fdb813] mb-3" />
+              <Loader2 className="w-8 h-8 animate-spin text-accent mb-3" />
               <p className="text-gray-600">학생 데이터 분석 중...</p>
             </div>
           )}
@@ -261,7 +261,7 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
                 <div className="px-4 py-3">
                   <div className="grid grid-cols-4 gap-4 text-center">
                     <div>
-                      <div className="text-2xl font-bold text-[#081429]">{result.total}</div>
+                      <div className="text-2xl font-bold text-primary">{result.total}</div>
                       <div className="text-xs text-gray-500">전체 학생</div>
                     </div>
                     <div>
@@ -445,7 +445,7 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
               <div className="w-16 h-16 bg-green-100 rounded-sm flex items-center justify-center mb-4">
                 <Check className="w-8 h-8 text-green-600" />
               </div>
-              <h4 className="text-lg font-bold text-[#081429] mb-4">삭제 완료!</h4>
+              <h4 className="text-lg font-bold text-primary mb-4">삭제 완료!</h4>
               <div className="text-center space-y-1 text-sm text-gray-600 mb-6">
                 <p>삭제된 학생: <strong className="text-red-600">{deleteResult.deleted}</strong>명</p>
                 {deleteResult.errors > 0 && (
@@ -454,7 +454,7 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
               </div>
               <button
                 onClick={onClose}
-                className="px-6 py-2 bg-[#fdb813] text-[#081429] rounded-sm text-sm font-bold hover:bg-[#e5a711]"
+                className="px-6 py-2 bg-accent text-primary rounded-sm text-sm font-bold hover:bg-[#e5a711]"
               >
                 완료
               </button>

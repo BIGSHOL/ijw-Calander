@@ -111,7 +111,7 @@ const EventModalActions: React.FC<EventModalActionsProps> = ({
                     setAuthorName(`${selectedUser.email.split('@')[0]} ${selectedUser.jobTitle ? `(${selectedUser.jobTitle})` : ''}`);
                   }
                 }}
-                className="appearance-none bg-white border border-gray-200 text-gray-700 text-xs py-1 pl-2 pr-6 rounded-sm outline-none focus:border-[#fdb813] cursor-pointer"
+                className="appearance-none bg-white border border-gray-200 text-gray-700 text-xs py-1 pl-2 pr-6 rounded-sm outline-none focus:border-accent cursor-pointer"
               >
                 {users.filter(u => u.status === 'approved').map(u => (
                   <option key={u.uid} value={u.uid}>{u.email.split('@')[0]} {u.jobTitle ? `(${u.jobTitle})` : ''}</option>
@@ -154,7 +154,7 @@ const EventModalActions: React.FC<EventModalActionsProps> = ({
           <button
             type="button"
             onClick={() => setIsViewMode(false)}
-            className="px-5 py-1.5 bg-[#fdb813] text-[#081429] rounded-sm hover:brightness-110 text-xs font-bold shadow-sm transition-all"
+            className="px-5 py-1.5 bg-accent text-primary rounded-sm hover:brightness-110 text-xs font-bold shadow-sm transition-all"
           >
             수정
           </button>
@@ -164,7 +164,7 @@ const EventModalActions: React.FC<EventModalActionsProps> = ({
         {!isViewMode && canEditCurrent && (
           <button
             type="submit"
-            className="px-5 py-1.5 bg-[#fdb813] text-[#081429] rounded-sm hover:brightness-110 text-xs font-bold shadow-sm transition-all"
+            className="px-5 py-1.5 bg-accent text-primary rounded-sm hover:brightness-110 text-xs font-bold shadow-sm transition-all"
           >
             저장
           </button>

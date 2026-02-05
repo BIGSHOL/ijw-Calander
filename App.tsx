@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef, useMemo, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { addYears, subYears, format } from 'date-fns';
-import { CalendarEvent, Department, UserProfile, Holiday, ROLE_LABELS, Teacher, BucketItem, ClassKeywordColor, AppTab, TAB_META, TAB_GROUPS } from './types';
+import { CalendarEvent, AppTab, TAB_META, TAB_GROUPS } from './types';
 import { AttendanceViewMode, SessionPeriod } from './components/Attendance/types';
-import { INITIAL_DEPARTMENTS } from './constants';
 import { usePermissions } from './hooks/usePermissions';
-import { useDepartments, useTeachers, useHolidays, useClassKeywords, useSystemConfig, useStaffWithAccounts, useAllStaff } from './hooks/useFirebaseQueries';
+import { useDepartments, useTeachers, useHolidays, useClassKeywords, useSystemConfig, useStaffWithAccounts } from './hooks/useFirebaseQueries';
 import { useGanttProjects } from './hooks/useGanttProjects';
 import { useSessionPeriods } from './hooks/useSessionPeriods';
 import { convertGanttProjectsToCalendarEvents } from './utils/ganttToCalendar';
@@ -16,10 +15,10 @@ import { useGlobalSearch } from './hooks/useGlobalSearch';
 import { useAuth } from './hooks/useAuth';
 import { formatUserDisplay, staffToUserLike } from './utils/staffHelpers';
 import { storage, STORAGE_KEYS } from './utils/localStorage';
-
 import { useStudents } from './hooks/useStudents';
 import { useClasses } from './hooks/useClasses';
-// State management hooks (Vercel React Best Practices: rerender-derived-state)
+
+// State management hooks
 import {
   useCalendarState,
   useEventModalState,
@@ -31,91 +30,40 @@ import {
   usePendingEventMoves,
 } from './hooks/useAppState';
 
-// 항상 필요한 컴포넌트 (즉시 로딩)
-import LoginModal from './components/Auth/LoginModal';
-import CalendarBoard from './components/Calendar/CalendarBoard';
+// Core components
 import Sidebar from './components/Navigation/Sidebar';
-import Breadcrumb, { BreadcrumbItem } from './components/Common/Breadcrumb';
+import { BreadcrumbItem } from './components/Common/Breadcrumb';
 import SkipLink from './components/Common/SkipLink';
-import GlobalSearch from './components/Common/GlobalSearch';
 import { RoleSimulationProvider, SimulationState, getEffectiveUserProfile } from './hooks/useRoleSimulation';
 import RoleSimulationBanner from './components/Common/RoleSimulationBanner';
-import ErrorBoundary from './components/Common/ErrorBoundary';
 import { HeaderCollapseProvider } from './contexts/HeaderCollapseContext';
-import { TimetableNavBar } from './components/Header/TimetableNavBar';
-import { CalendarFilterBar } from './components/Header/CalendarFilterBar';
-import { CalendarFilterPopover } from './components/Header/CalendarFilterPopover';
-import { AttendanceNavBar } from './components/Header/AttendanceNavBar';
-import { StudentsNavBar } from './components/Header/StudentsNavBar';
-import { PendingApprovalOverlay } from './components/Auth/PendingApprovalOverlay';
-import { ProfileDropdown } from './components/Header/ProfileDropdown';
-import { PermissionViewModal } from './components/Header/PermissionViewModal';
-import { MemoDropdown } from './components/Header/MemoDropdown';
-import { MemoSendModal } from './components/TaskMemo/MemoSendModal';
-import { MemoDetailModal } from './components/TaskMemo/MemoDetailModal';
-
-// Performance: bundle-dynamic-imports - 모달 컴포넌트 lazy loading (~30-50KB 번들 감소)
-const EventModal = lazy(() => import('./components/Calendar/EventModal'));
-const SettingsModal = lazy(() => import('./components/settings/SettingsModal'));
-
-// 탭별 컴포넌트 (lazy loading - 해당 탭 진입 시 로딩)
-const TimetableManager = lazy(() => import('./components/Timetable/TimetableManager'));
-const TimetableSettingsModal = lazy(() => import('./components/Timetable/TimetableSettingsModal'));
-const AttendanceManager = lazy(() => import('./components/Attendance/AttendanceManager'));
-const PaymentReport = lazy(() => import('./components/PaymentReport/PaymentReport'));
-const GanttManager = lazy(() => import('./components/Gantt/GanttManager'));
-const ConsultationManager = lazy(() => import('./components/RegistrationConsultation/ConsultationManager'));
-const StudentManagementTab = lazy(() => import('./components/StudentManagement/StudentManagementTab'));
-const GradesManager = lazy(() => import('./components/Grades/GradesManager'));
-const ClassManagementTab = lazy(() => import('./components/ClassManagement').then(m => ({ default: m.ClassManagementTab })));
-const ClassroomTab = lazy(() => import('./components/Classroom').then(m => ({ default: m.ClassroomTab })));
-const ClassroomAssignmentTab = lazy(() => import('./components/ClassroomAssignment').then(m => ({ default: m.ClassroomAssignmentTab })));
-const StudentConsultationTab = lazy(() => import('./components/StudentConsultation').then(m => ({ default: m.ConsultationManagementTab })));
-
-// 신규 탭 (lazy loading)
-const DashboardTab = lazy(() => import('./components/Dashboard/DashboardTab'));
-const BillingManager = lazy(() => import('./components/Billing').then(m => ({ default: m.BillingManager })));
-const DailyAttendanceManager = lazy(() => import('./components/DailyAttendance').then(m => ({ default: m.DailyAttendanceManager })));
-const StaffManager = lazy(() => import('./components/Staff').then(m => ({ default: m.StaffManager })));
-const RoleManagementPage = lazy(() => import('./components/RoleManagement/RoleManagementPage'));
-const ResourceDashboard = lazy(() => import('./components/Resources').then(m => ({ default: m.ResourceDashboard })));
-const WithdrawalManagementTab = lazy(() => import('./components/WithdrawalManagement/WithdrawalManagementTab'));
-const CalendarSettingsModal = lazy(() => import('./components/Calendar/CalendarSettingsModal'));
-// ProspectManagementTab removed - merged into ConsultationManager
-import { Settings, User as UserIcon, ChevronUp, ChevronDown, FlaskConical } from 'lucide-react';
-import { db, auth } from './firebaseConfig';
-import { collection, onSnapshot, doc, deleteDoc, query, where, updateDoc, getDocs } from 'firebase/firestore';
-import { User } from 'firebase/auth';
-import { StaffMember } from './types';
-
-// ViewMode is imported from useAppState (used by CalendarFilterBar)
-
-// Import Firestore Converters from separate file
-import { eventConverter } from './converters';
-
-// Import Style Utilities
-import { INJAEWON_LOGO, getJobTitleStyle } from './utils/styleUtils';
-
+import { INJAEWON_LOGO } from './utils/styleUtils';
 import { VideoLoading } from './components/Common/VideoLoading';
 
 // Embed Mode Support
 import EmbedRouter, { isEmbedMode } from './components/Embed/EmbedRouter';
 
-// Lazy loading 폴백 컴포넌트
-const TabLoadingFallback = () => <VideoLoading className="flex-1 h-full" />;
+// Layout components
+import { AppHeader } from './components/Layout/AppHeader';
+import { TabContent } from './components/Layout/TabContent';
+import { ModalManager } from './components/Layout/ModalManager';
+
+// Firestore
+import { db } from './firebaseConfig';
+import { collection, onSnapshot, query, where, updateDoc, getDocs } from 'firebase/firestore';
+import { User } from 'firebase/auth';
+import { eventConverter } from './converters';
 
 const App: React.FC = () => {
-  // 임베드 모드 체크 - URL에 ?embed=xxx&token=xxx 가 있으면 임베드 페이지만 렌더링
+  // Embed mode check
   if (isEmbedMode()) {
     return <EmbedRouter />;
   }
 
-  // App Mode (Top-level navigation) - null until permissions are loaded
+  // App Mode
   const [appMode, setAppMode] = useState<AppTab | null>(null);
 
-  // ============================================
-  // Custom Hooks (Vercel Best Practices: rerender-derived-state)
-  // ============================================
+  // Custom Hooks - State
   const calendarState = useCalendarState();
   const eventModalState = useEventModalState();
   const modalState = useModalState();
@@ -125,7 +73,7 @@ const App: React.FC = () => {
   const darkModeState = useDarkMode();
   const pendingMovesState = usePendingEventMoves();
 
-  // Destructure for backward compatibility
+  // Destructure states
   const {
     baseDate, setBaseDate, viewMode, setViewMode, viewColumns, setViewColumns,
     selectedDate, setSelectedDate, selectedEndDate, setSelectedEndDate,
@@ -149,9 +97,7 @@ const App: React.FC = () => {
     isGlobalSearchOpen, setIsGlobalSearchOpen, isAttendanceAddStudentModalOpen, setIsAttendanceAddStudentModalOpen,
   } = modalState;
 
-  // Header collapse state
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
-  // Role simulation panel state
   const [isRoleSimulationOpen, setIsRoleSimulationOpen] = useState(false);
 
   const {
@@ -174,29 +120,26 @@ const App: React.FC = () => {
     pendingEventMoves, setPendingEventMoves, addPendingMove, removePendingMove, clearPendingMoves,
   } = pendingMovesState;
 
-  const rightDate = subYears(baseDate, 1);  // 2단: 1년 전
-  const thirdDate = subYears(baseDate, 2);  // 3단: 2년 전
+  const rightDate = subYears(baseDate, 1);
+  const thirdDate = subYears(baseDate, 2);
 
-  // Auth State: currentUser는 useSystemConfig 등 의존성 순서 때문에 App에서 유지
+  // Auth State
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  // Firestore Data State - React Query for static data (cached 30-60min)
-  // Performance: Only load essential data at app startup
+  // Firestore Data
   const { data: systemConfig } = useSystemConfig(!!currentUser);
   const { data: staffWithAccounts = [] } = useStaffWithAccounts(!!currentUser);
-
-  // Tab-specific data: Load only when needed (각 탭에서 로딩)
   const { data: departments = [] } = useDepartments(!!currentUser && appMode === 'calendar');
   const { data: teachers = [] } = useTeachers(!!currentUser && (appMode === 'attendance' || appMode === 'timetable'));
   const { data: holidays = [] } = useHolidays(!!currentUser && appMode === 'calendar');
   const { data: classKeywords = [] } = useClassKeywords(!!currentUser && appMode === 'timetable');
 
-  // Auth: 프로필 동기화 + 로그아웃 (extracted to hooks/useAuth.ts)
+  // Auth
   const { userProfile, setUserProfile, authLoading, handleLogout } = useAuth({
     setCurrentUser, systemConfig, onShowLogin: () => setIsLoginModalOpen(true),
   });
 
-  // ========== 시뮬레이션 상태 (App 레벨 관리) ==========
+  // Simulation state
   const [simulationState, setSimulationState] = useState<SimulationState>({
     simulationType: null,
     simulatedRole: null,
@@ -213,30 +156,23 @@ const App: React.FC = () => {
   }, [userProfile, simulationState]);
 
   const isSimulating = userProfile?.role === 'master' && simulationState.simulationType !== null;
-  // ====================================================
 
   const lookbackYears = systemConfig?.eventLookbackYears || 2;
   const sysCategories = systemConfig?.categories || [];
 
-  // staff 데이터를 UserProfile 형태로 변환 (기존 users 대체)
   const usersFromStaff = useMemo(() =>
     staffWithAccounts.map(staffToUserLike),
     [staffWithAccounts]
   );
 
-  // 현재 로그인한 사용자의 StaffMember 정보
   const currentStaffMember = useMemo(() => {
     if (!currentUser || !userProfile) return undefined;
     return staffWithAccounts.find(s => s.uid === currentUser.uid || s.email === userProfile.email);
   }, [currentUser, userProfile, staffWithAccounts]);
 
-  // 시뮬레이션 적용된 StaffMember (시뮬레이션 시 해당 사용자의 StaffMember)
   const effectiveStaffMember = useMemo(() => {
     if (!effectiveProfile) return undefined;
-    // 시뮬레이션 중이 아니면 currentStaffMember 반환
     if (!isSimulating) return currentStaffMember;
-    // 시뮬레이션 중이면 effectiveProfile에 해당하는 StaffMember 찾기
-    // uid 또는 id 또는 email로 매칭
     return staffWithAccounts.find(s =>
       s.uid === effectiveProfile.uid ||
       s.id === effectiveProfile.uid ||
@@ -244,12 +180,11 @@ const App: React.FC = () => {
     );
   }, [effectiveProfile, isSimulating, currentStaffMember, staffWithAccounts]);
 
-  // Students and Classes for Global Search (load only when search is opened or in students mode)
+  // Global data for search
   const shouldLoadGlobalData = !!currentUser && (isGlobalSearchOpen || appMode === 'students');
   const { students: globalStudents = [] } = useStudents(false, shouldLoadGlobalData);
   const { data: allClasses = [] } = useClasses(shouldLoadGlobalData);
 
-  // 선생님 목록 추출 (학생 enrollments에서 staffId 수집, 과목별 그룹화)
   const teachersBySubject = useMemo(() => {
     const subjectTeachers: Record<string, Set<string>> = {
       math: new Set(),
@@ -275,38 +210,29 @@ const App: React.FC = () => {
     };
   }, [globalStudents]);
 
-  // Tab Permissions
-
-
-  // Real-time data (still uses onSnapshot for events)
+  // Real-time events
   const [events, setEvents] = useState<CalendarEvent[]>([]);
 
-  // Derive unique categories from available departments
   const uniqueCategories = Array.from(new Set(departments.map(d => d.category).filter(Boolean))) as string[];
 
-  // Attendance State (depends on userProfile)
+  // Attendance State
   const [attendanceSubject, setAttendanceSubject] = useState<'math' | 'english'>('math');
   const [attendanceStaffId, setAttendanceStaffId] = useState<string | undefined>(undefined);
   const [attendanceDate, setAttendanceDate] = useState(() => new Date());
-
-  // 세션 모드 상태 (월별/세션 토글)
   const [attendanceViewMode, setAttendanceViewMode] = useState<AttendanceViewMode>('monthly');
   const [selectedSession, setSelectedSession] = useState<SessionPeriod | null>(null);
 
-  // 세션 카테고리 매핑: attendanceSubject -> session category
   const sessionCategory = useMemo((): 'math' | 'english' | 'eie' => {
     if (attendanceSubject === 'math') return 'math';
     if (attendanceSubject === 'english') return 'english';
-    return 'math'; // 기본값
+    return 'math';
   }, [attendanceSubject]);
 
-  // 세션 데이터 조회
   const { data: sessions = [], isLoading: isLoadingSessions } = useSessionPeriods(
     attendanceDate.getFullYear(),
     sessionCategory
   );
 
-  // 세션 모드에서 현재 월에 맞는 세션 자동 선택
   useEffect(() => {
     if (attendanceViewMode === 'session' && !selectedSession && sessions.length > 0) {
       const currentYear = attendanceDate.getFullYear();
@@ -320,37 +246,9 @@ const App: React.FC = () => {
   }, [attendanceViewMode, selectedSession, sessions, attendanceDate]);
 
   // Permission Hook
-  // 시뮬레이션 적용된 프로필로 권한 체크
   const { hasPermission, rolePermissions } = usePermissions(effectiveProfile || null);
 
-  // TEMPORARY: Disabled auto-initialization based on permissions
-  // TODO: Re-enable after fixing permission configuration
-  // Initialize timetable subject based on user's permissions (edit permission takes priority)
-  // useEffect(() => {
-  //   if (!userProfile) return;
-
-  //   let initialSubject: 'math' | 'english' = 'math';
-
-  //   // Priority 1: Edit permission (user's primary subject)
-  //   if (hasPermission('timetable.english.edit')) {
-  //     initialSubject = 'english';
-  //   } else if (hasPermission('timetable.math.edit')) {
-  //     initialSubject = 'math';
-  //   }
-  //   // Priority 2: View permission (if no edit permission)
-  //   else if (hasPermission('timetable.english.view') && !hasPermission('timetable.math.view')) {
-  //     initialSubject = 'english';
-  //   }
-  //   // else: default 'math'
-
-  //   if (timetableSubject !== initialSubject) {
-  //     console.log(`[Init] Setting initial timetableSubject to: ${initialSubject}`);
-  //     setTimetableSubject(initialSubject);
-  //   }
-  // }, [userProfile, hasPermission, timetableSubject]);
-
-  // Guard: Strictly enforce permission access to subjects (시뮬레이션 적용)
-  // If a user somehow lands on a subject they don't have permission for, switch them.
+  // Guard: Timetable subject permission
   useEffect(() => {
     if (!effectiveProfile || appMode !== 'timetable') return;
 
@@ -359,7 +257,6 @@ const App: React.FC = () => {
     const canViewScience = hasPermission('timetable.science.view') || hasPermission('timetable.science.edit');
     const canViewKorean = hasPermission('timetable.korean.view') || hasPermission('timetable.korean.edit');
 
-    // Check if current subject is accessible
     const canViewCurrent =
       (timetableSubject === 'math' && canViewMath) ||
       (timetableSubject === 'english' && canViewEnglish) ||
@@ -367,27 +264,21 @@ const App: React.FC = () => {
       (timetableSubject === 'korean' && canViewKorean);
 
     if (!canViewCurrent) {
-      // Switch to first available subject
       if (canViewMath) {
-        console.log('[Guard] Switching to Math (first available)');
         setTimetableSubject('math');
       } else if (canViewEnglish) {
-        console.log('[Guard] Switching to English (first available)');
         setTimetableSubject('english');
       } else if (canViewScience) {
-        console.log('[Guard] Switching to Science (first available)');
         setTimetableSubject('science');
       } else if (canViewKorean) {
-        console.log('[Guard] Switching to Korean (first available)');
         setTimetableSubject('korean');
       } else {
-        console.log('[Guard] No timetable permissions, redirecting to dashboard');
         setAppMode('dashboard');
       }
     }
   }, [timetableSubject, effectiveProfile, appMode, hasPermission]);
 
-  // Initialize attendance subject based on user's permissions (시뮬레이션 적용)
+  // Initialize attendance subject
   useEffect(() => {
     if (!effectiveProfile) return;
 
@@ -409,20 +300,13 @@ const App: React.FC = () => {
   }, [effectiveProfile, hasPermission]);
 
   // Tab Permissions
-  /* ----------------------------------------------------
-     Tab Access Redirection Logic
-     ---------------------------------------------------- */
-  // 시뮬레이션 적용된 프로필로 탭 권한 체크
   const { canAccessTab, accessibleTabs, isLoading: isTabPermissionLoading } = useTabPermissions(effectiveProfile);
 
   useEffect(() => {
-    // Wait for permissions to load (시뮬레이션 적용)
     if (isTabPermissionLoading || !effectiveProfile) return;
 
-    // Priority order for tabs (dashboard first!)
     const priority: AppTab[] = ['dashboard', 'calendar', 'timetable', 'attendance', 'payment', 'gantt', 'consultation', 'students'];
 
-    // Initial setup: if appMode is null, set to first accessible tab
     if (appMode === null) {
       const firstAccessibleTab = priority.find(tab => canAccessTab(tab));
       if (firstAccessibleTab) {
@@ -433,7 +317,6 @@ const App: React.FC = () => {
       return;
     }
 
-    // Redirect: if current mode is not accessible, redirect to first accessible tab
     const isAccessible = canAccessTab(appMode);
     if (!isAccessible) {
       const firstValidTab = priority.find(tab => canAccessTab(tab));
@@ -443,61 +326,47 @@ const App: React.FC = () => {
     }
   }, [appMode, canAccessTab, accessibleTabs, isTabPermissionLoading, effectiveProfile]);
 
-  // Reset visibility when user changes (optional convenience)
   useEffect(() => {
     if (currentUser) {
-      // Optional: Reset hidden departments on fresh login to ensure everything is visible
-      // setHiddenDeptIds([]); 
+      // Optional: Reset hidden departments
     }
   }, [currentUser]);
 
-  // Global Search (extracted to hooks/useGlobalSearch.ts)
+  // Global Search
   const { handleGlobalSearch, handleSearchSelect } = useGlobalSearch({
     globalStudents, events, departments, allClasses, teachers,
     setAppMode, setStudentFilters, setEditingEvent, setIsEventModalOpen, setIsGlobalSearchOpen,
   });
 
-  // Derive Permissions (시뮬레이션 적용된 프로필 기준)
+  // Permissions
   const isMaster = effectiveProfile?.role === 'master';
   const isAdmin = effectiveProfile?.role === 'admin';
-  // canEdit is now derived/overridden by departmental permissions, but global override remains for Master
-  const canGlobalEdit = isMaster || isAdmin; // Admin generally has high privileges, but let's stick to granular?
-  // User asked for "Admin" who can "give permissions". This implies Admin manages Users.
-  // Docs say: "2. 마스터계정과 같이 '권한'들을 내려줄 수 있는 '어드민' 계정 지정"
+  const canGlobalEdit = isMaster || isAdmin;
 
-  // Filter Departments based on RBAC AND Local Toggles (시뮬레이션 적용)
+  // Filter Departments
   const visibleDepartments = departments.filter(d => {
-    // 1. Access Control Check
     let hasAccess = false;
 
-    // Master and Admin have access to everything
     if (isMaster || isAdmin) {
       hasAccess = true;
-    }
-    // Check Granular Permissions (by ID or by name for legacy compatibility)
-    else if (effectiveProfile?.departmentPermissions?.[d.id] || effectiveProfile?.departmentPermissions?.[d.name]) {
+    } else if (effectiveProfile?.departmentPermissions?.[d.id] || effectiveProfile?.departmentPermissions?.[d.name]) {
       hasAccess = true;
-    }
-    // Legacy Fallback
-    else if (effectiveProfile?.allowedDepartments?.includes(d.id)) {
+    } else if (effectiveProfile?.allowedDepartments?.includes(d.id)) {
       hasAccess = true;
     }
 
     if (!hasAccess) return false;
 
-    // 2. Favorites Filter (시뮬레이션 적용)
     if (showFavoritesOnly && effectiveProfile?.favoriteDepartments) {
       if (!effectiveProfile.favoriteDepartments.includes(d.id)) return false;
     }
 
-    // 3. Local Visibility Toggle Check
-    // (Users can hide departments locally even if they have access)
     if (hiddenDeptIds.includes(d.id)) return false;
 
     return true;
   });
 
-  // Handle time slot click from Daily View
+  // Event handlers
   const handleTimeSlotClick = (date: string, time: string) => {
     if (!hasPermission('events.create')) {
       alert("일정 생성 권한이 없습니다.");
@@ -506,27 +375,21 @@ const App: React.FC = () => {
     setSelectedDate(date);
     setSelectedEndDate(date);
     setEditingEvent(null);
-
     setInitialStartTime(time);
-
-    // Calculate End Time (1 hour later)
     const [h, m] = time.split(':').map(Number);
     const endH = h + 1;
     const endTimeStr = `${String(endH > 23 ? 23 : endH).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
     setInitialEndTime(endTimeStr);
-
     setIsEventModalOpen(true);
   };
 
-  // Subscribe to Events - REAL-TIME (only in calendar mode for performance)
+  // Subscribe to Events
   useEffect(() => {
-    // Performance: Only subscribe to events when in calendar mode
     if (!currentUser || appMode !== 'calendar') {
       setEvents([]);
       return;
     }
 
-    // Optimization: Fetch events from configured lookback years (default 2)
     const queryStartDate = format(subYears(new Date(), lookbackYears), 'yyyy-MM-dd');
 
     const q = query(
@@ -541,21 +404,18 @@ const App: React.FC = () => {
     return () => unsubscribe();
   }, [lookbackYears, currentUser, appMode]);
 
-  // Note: departments, staff, holidays, classKeywords, systemConfig are now handled by React Query hooks
-
-
   useEffect(() => {
     storage.setJSON(STORAGE_KEYS.DEPT_HIDDEN_IDS, hiddenDeptIds);
   }, [hiddenDeptIds]);
 
   const [selectedDeptIds, setSelectedDeptIds] = useState<string[]>([]);
 
-  // Bucket Items (extracted to hooks/useBucketItems.ts)
+  // Bucket Items
   const {
     bucketItems, handleAddBucketItem, handleDeleteBucketItem, handleEditBucketItem,
   } = useBucketItems({ currentUser, effectiveProfile, userProfile, usersFromStaff, hasPermission });
 
-  // Task Memos (extracted to hooks/useTaskMemos.ts)
+  // Task Memos
   const {
     taskMemos, isMemoDropdownOpen, setIsMemoDropdownOpen,
     isMemoModalOpen, setIsMemoModalOpen, memoRecipients, setMemoRecipients,
@@ -563,31 +423,25 @@ const App: React.FC = () => {
     unreadMemoCount, handleSendMemo, handleMarkMemoRead, handleDeleteMemo,
   } = useTaskMemos({ currentUser, userProfile, usersFromStaff, formatUserDisplay });
 
-  // Search Field Dropdown State
   const [isSearchFieldDropdownOpen, setIsSearchFieldDropdownOpen] = useState(false);
+  const [consultationToStudentId, setConsultationToStudentId] = useState<string | undefined>(undefined);
 
   const handleCellClick = (date: string, deptId: string) => {
-    if (!hasPermission('events.create')) {
-      // Silent return or alert
-      return;
-    }
-
+    if (!hasPermission('events.create')) return;
     setSelectedDate(date);
     setSelectedEndDate(date);
     setSelectedDeptId(deptId);
-    setSelectedDeptIds([deptId]); // Reset to single
+    setSelectedDeptIds([deptId]);
     setEditingEvent(null);
     setIsEventModalOpen(true);
   };
 
   const handleRangeSelect = (startDate: string, endDate: string, deptId: string, deptIds?: string[]) => {
-    console.log('DEBUG: App handleRangeSelect', { startDate, endDate, deptId, deptIds });
     if (!hasPermission('events.create')) return;
-
     setSelectedDate(startDate);
     setSelectedEndDate(endDate);
     setSelectedDeptId(deptId);
-    setSelectedDeptIds(deptIds || [deptId]); // Set multi-dept if present
+    setSelectedDeptIds(deptIds || [deptId]);
     setEditingEvent(null);
     setIsEventModalOpen(true);
   };
@@ -599,32 +453,28 @@ const App: React.FC = () => {
     setIsEventModalOpen(true);
   };
 
-  // Quick Add: Click date cell in Yearly View to create new event
   const handleQuickAdd = (date: Date) => {
     if (!hasPermission('events.create')) return;
     const dateStr = format(date, 'yyyy-MM-dd');
     setSelectedDate(dateStr);
     setSelectedEndDate(dateStr);
     setEditingEvent(null);
-    setSelectedDeptId(departments[0]?.id || ''); // Default to first department
+    setSelectedDeptId(departments[0]?.id || '');
     setIsEventModalOpen(true);
   };
 
-  const handleConvertBucketToEvent = (bucket: BucketItem) => {
-    // Get first day of target month as default date
+  const handleConvertBucketToEvent = (bucket: any) => {
     const [year, month] = bucket.targetMonth.split('-').map(Number);
     const targetDate = new Date(year, month - 1, 1);
     const dateStr = format(targetDate, 'yyyy-MM-dd');
 
-    // Set up modal with bucket data
     setSelectedDate(dateStr);
     setSelectedEndDate(dateStr);
     setEditingEvent(null);
     setSelectedDeptId(bucket.departmentId || departments[0]?.id || '');
-    setInitialTitle(bucket.title); // Pass bucket title to modal
-    setPendingBucketId(bucket.id); // Mark bucket for deletion after save
+    setInitialTitle(bucket.title);
+    setPendingBucketId(bucket.id);
     setIsEventModalOpen(true);
-    // NOTE: Do NOT delete bucket here - wait for save confirmation
   };
 
   const handleCopyEvent = (event: CalendarEvent) => {
@@ -633,7 +483,7 @@ const App: React.FC = () => {
     setIsEventModalOpen(true);
   };
 
-  // Event CRUD (extracted to hooks/useEventCrud.ts)
+  // Event CRUD
   const { handleSaveEvent, handleDeleteEvent, handleBatchUpdateAttendance } = useEventCrud({
     events,
     pendingBucketId,
@@ -655,7 +505,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Toggle Favorite Department
   const toggleFavorite = async (deptId: string) => {
     if (!userProfile) return;
     const current = userProfile.favoriteDepartments || [];
@@ -664,7 +513,6 @@ const App: React.FC = () => {
       : [...current, deptId];
 
     try {
-      // staff 컬렉션에서 uid로 문서 찾기
       const staffQuery = query(
         collection(db, 'staff'),
         where('uid', '==', userProfile.uid)
@@ -680,10 +528,7 @@ const App: React.FC = () => {
     }
   };
 
-  // --- Event Drag and Drop ---
-  // --- Event Drag and Drop ---
   const handleEventMove = (original: CalendarEvent, updated: CalendarEvent) => {
-    // Permission Check
     const isAuthor = original.authorId === userProfile?.uid;
     const canDrag = hasPermission('events.drag_move');
     const canEdit = hasPermission(isAuthor ? 'events.manage_own' : 'events.manage_others');
@@ -706,7 +551,6 @@ const App: React.FC = () => {
       let totalCount = 0;
       for (const move of pendingEventMoves) {
         await handleSaveEvent(move.updated);
-        // Count linked events if present, otherwise 1
         totalCount += (move.updated.departmentIds?.length || 1);
       }
       setPendingEventMoves([]);
@@ -725,19 +569,16 @@ const App: React.FC = () => {
     if (!effectiveProfile) return false;
     if (effectiveProfile.role === 'master' || effectiveProfile.role === 'admin') return true;
     if (hasPermission('departments.manage')) return true;
-    // 부서 가시성 체크 - 'view' 권한이 있으면 해당 부서의 일정을 편집할 수 있음
-    // 실제 일정 편집 권한은 events.manage_own/events.manage_others로 별도 체크됨
     const permission = effectiveProfile.departmentPermissions?.[deptId];
     return permission === 'view';
   };
 
-  // Fetch Gantt Projects for Calendar Integration (Phase 7.3) - 시뮬레이션 적용
+  // Gantt Projects
   const { data: ganttProjects = [] } = useGanttProjects(effectiveProfile?.uid);
   const ganttCalendarEvents = useMemo(() =>
     convertGanttProjectsToCalendarEvents(ganttProjects),
     [ganttProjects]);
 
-  // Compute display events (apply pending moves for preview) + Merge Gantt Events
   const displayEvents = useMemo(() => {
     const calendarEventsWithMoves = events.map(event => {
       const pendingMove = pendingEventMoves.find(m => m.original.id === event.id);
@@ -748,43 +589,27 @@ const App: React.FC = () => {
 
   const pendingEventIds = pendingEventMoves.map(m => m.original.id);
 
-  // IMPORTANT: 현재 월의 세션 찾기 - 컴포넌트 최상단에서 호출 (React Hooks 규칙 준수)
-  // JSX 내부에서 조건부로 호출하면 안 됨!
-  const currentMonthSession = useMemo(() => {
-    const currentYear = attendanceDate.getFullYear();
-    const currentMonth = attendanceDate.getMonth() + 1;
-    return sessions.find(s => s.year === currentYear && s.month === currentMonth);
-  }, [sessions, attendanceDate]);
-
-  // Generate breadcrumb items based on current tab
+  // Breadcrumb
   const breadcrumbItems: BreadcrumbItem[] = React.useMemo(() => {
     if (!appMode) return [];
-
     const currentTabMeta = TAB_META[appMode];
     if (!currentTabMeta) return [];
-
-    // Find the group that contains this tab
     const currentGroup = TAB_GROUPS.find(group => group.tabs.includes(appMode));
-
     const items: BreadcrumbItem[] = [];
-
     if (currentGroup) {
       items.push({
         label: currentGroup.label,
-        onClick: undefined, // Group is not clickable
+        onClick: undefined,
       });
     }
-
     items.push({
       label: currentTabMeta.label,
       isActive: true,
     });
-
     return items;
   }, [appMode]);
 
-  // Initial Loading Screen (Waiting for Auth or Tab Permissions or appMode initialization)
-  // This prevents flashing of unauthorized content before we know which tab user can access.
+  // Loading screen
   if (authLoading || (currentUser && isTabPermissionLoading) || (currentUser && appMode === null)) {
     return (
       <div className="flex h-screen items-center justify-center bg-white">
@@ -801,630 +626,271 @@ const App: React.FC = () => {
       externalState={simulationState}
       onStateChange={setSimulationState}
     >
-    <div className="h-screen overflow-hidden flex bg-[#f0f4f8]">
-      {/* Role Simulation Banner (마스터만 표시) */}
-      <RoleSimulationBanner
-        actualRole={userProfile?.role || null}
-        availableUsers={usersFromStaff}
-        isOpen={isRoleSimulationOpen}
-        onOpenChange={setIsRoleSimulationOpen}
-        externalTrigger={true}
-      />
+      <div className="h-screen overflow-hidden flex bg-[#f0f4f8]">
+        <RoleSimulationBanner
+          actualRole={userProfile?.role || null}
+          availableUsers={usersFromStaff}
+          isOpen={isRoleSimulationOpen}
+          onOpenChange={setIsRoleSimulationOpen}
+          externalTrigger={true}
+        />
 
-      {/* Skip Link for Keyboard Navigation - Addresses Issue #7 */}
-      <SkipLink targetId="main-content">메인 콘텐츠로 건너뛰기</SkipLink>
+        <SkipLink targetId="main-content">메인 콘텐츠로 건너뛰기</SkipLink>
 
-      {/* Sidebar Navigation - Addresses Issues #1, #2 */}
-      <Sidebar
-        currentTab={appMode}
-        accessibleTabs={accessibleTabs}
-        onTabSelect={(tab) => setAppMode(tab as typeof appMode)}
-        logoUrl={INJAEWON_LOGO}
-      />
+        <Sidebar
+          currentTab={appMode}
+          accessibleTabs={accessibleTabs}
+          onTabSelect={(tab) => setAppMode(tab as typeof appMode)}
+          logoUrl={INJAEWON_LOGO}
+        />
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        <header className={`no-print z-40 sticky top-0 bg-[#081429] shadow-lg flex flex-col transition-all duration-300 ${isHeaderCollapsed ? 'overflow-hidden' : ''}`} role="banner">
-          {/* Row 1: Primary Header (Navy) */}
-          <div className={`bg-[#081429] flex items-center justify-between px-4 md:px-6 z-50 relative transition-all duration-300 ${isHeaderCollapsed ? 'h-10 border-b-0' : 'h-16 border-b border-white/10'}`}>
+        <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+          <AppHeader
+            appMode={appMode}
+            isHeaderCollapsed={isHeaderCollapsed}
+            setIsHeaderCollapsed={setIsHeaderCollapsed}
+            breadcrumbItems={breadcrumbItems}
+            currentUser={currentUser}
+            userProfile={userProfile}
+            currentStaffMember={currentStaffMember}
+            isProfileMenuOpen={isProfileMenuOpen}
+            setIsProfileMenuOpen={setIsProfileMenuOpen}
+            hasPermission={hasPermission}
+            setIsSettingsOpen={setIsSettingsOpen}
+            isRoleSimulationOpen={isRoleSimulationOpen}
+            setIsRoleSimulationOpen={setIsRoleSimulationOpen}
+            isMemoDropdownOpen={isMemoDropdownOpen}
+            setIsMemoDropdownOpen={setIsMemoDropdownOpen}
+            unreadMemoCount={unreadMemoCount}
+            taskMemos={taskMemos}
+            setIsMemoModalOpen={setIsMemoModalOpen}
+            setSelectedMemo={setSelectedMemo}
+            handleMarkMemoRead={handleMarkMemoRead}
+            calendarFilterProps={appMode === 'calendar' ? {
+              isFilterOpen,
+              setIsFilterOpen,
+              hiddenDeptIds,
+              visibleDepartments,
+              viewMode,
+              setViewMode,
+              viewColumns,
+              setViewColumns,
+              setIsCalendarSettingsOpen,
+              departments,
+              effectiveProfile,
+              isMaster,
+              selectedCategory,
+              setSelectedCategory,
+              uniqueCategories,
+              showFavoritesOnly,
+              setShowFavoritesOnly,
+              toggleDeptVisibility,
+              setAllVisibility,
+              toggleFavorite,
+            } : undefined}
+            attendanceProps={appMode === 'attendance' ? {
+              effectiveProfile,
+              hasPermission,
+              teachers,
+              attendanceSubject,
+              setAttendanceSubject,
+              attendanceStaffId,
+              setAttendanceStaffId,
+              attendanceDate,
+              setAttendanceDate,
+              attendanceViewMode,
+              setAttendanceViewMode,
+              selectedSession,
+              setSelectedSession,
+              sessions,
+              setIsAttendanceAddStudentModalOpen,
+            } : undefined}
+            studentsProps={appMode === 'students' ? {
+              studentFilters,
+              setStudentFilters,
+              isSearchFieldDropdownOpen,
+              setIsSearchFieldDropdownOpen,
+              teachersBySubject,
+              studentSortBy,
+              setStudentSortBy,
+            } : undefined}
+            timetableProps={appMode === 'timetable' ? {
+              timetableSubject,
+              setTimetableSubject,
+              timetableViewType,
+              setTimetableViewType,
+              mathViewMode,
+              setMathViewMode,
+              hasPermission,
+              setIsTimetableSettingsOpen,
+            } : undefined}
+          />
 
-            {/* Left: Breadcrumb Navigation - Addresses Issue #21 */}
-            <div className="flex items-center gap-4 flex-1 min-w-0">
-              {!isHeaderCollapsed && <Breadcrumb items={breadcrumbItems} showHome={false} />}
+          <main id="main-content" className="flex-1 flex flex-col md:flex-row overflow-hidden" role="main">
+            <HeaderCollapseProvider isHeaderCollapsed={isHeaderCollapsed}>
+              <TabContent
+                appMode={appMode}
+                canAccessTab={canAccessTab}
+                effectiveProfile={effectiveProfile}
+                effectiveStaffMember={effectiveStaffMember}
+                calendarProps={appMode === 'calendar' ? {
+                  baseDate,
+                  setBaseDate,
+                  rightDate,
+                  thirdDate,
+                  visibleDepartments,
+                  displayEvents,
+                  handleCellClick,
+                  handleRangeSelect,
+                  handleTimeSlotClick,
+                  handleEventClick,
+                  holidays,
+                  viewMode,
+                  handleEventMove,
+                  canEditDepartment,
+                  pendingEventIds,
+                  setViewMode,
+                  handleQuickAdd,
+                  bucketItems,
+                  handleAddBucketItem,
+                  handleEditBucketItem,
+                  handleDeleteBucketItem,
+                  handleConvertBucketToEvent,
+                  showArchived,
+                  viewColumns,
+                } : undefined}
+                timetableProps={appMode === 'timetable' ? {
+                  timetableSubject,
+                  setTimetableSubject,
+                  timetableViewType,
+                  setTimetableViewType,
+                  teachers,
+                  classKeywords,
+                  mathViewMode,
+                  setMathViewMode,
+                } : undefined}
+                ganttProps={appMode === 'gantt' ? {
+                  usersFromStaff,
+                } : undefined}
+                consultationProps={appMode === 'consultation' ? {
+                  onNavigateToStudent: (studentId) => {
+                    setConsultationToStudentId(studentId);
+                    setAppMode('students');
+                  },
+                } : undefined}
+                attendanceProps={appMode === 'attendance' ? {
+                  teachers,
+                  attendanceSubject,
+                  attendanceStaffId,
+                  attendanceDate,
+                  isAttendanceAddStudentModalOpen,
+                  setIsAttendanceAddStudentModalOpen,
+                  attendanceViewMode,
+                  selectedSession,
+                } : undefined}
+                studentsProps={appMode === 'students' ? {
+                  studentFilters,
+                  studentSortBy,
+                  consultationToStudentId,
+                  setConsultationToStudentId,
+                } : undefined}
+                gradesProps={appMode === 'grades' ? {
+                  gradesSubjectFilter,
+                  gradesSearchQuery,
+                  setGradesSearchQuery,
+                  setGradesSubjectFilter,
+                } : undefined}
+              />
 
-              {/* User Info Display (Desktop) */}
-              {currentUser && !isHeaderCollapsed && (
-                <div className="hidden lg:flex flex-row items-center gap-1.5 ml-4 pl-4 border-l border-white/10">
-                  {/* Role Badge */}
-                  {userProfile?.role && (
-                    <span className={`text-white text-micro px-1 py-0.5 rounded font-black tracking-tighter shadow-sm ${userProfile.role === 'master' ? 'bg-red-600' :
-                      userProfile.role === 'admin' ? 'bg-indigo-600' :
-                        userProfile.role === 'manager' ? 'bg-purple-600' :
-                          userProfile.role === 'math_lead' ? 'bg-gradient-to-r from-green-500 to-emerald-600' :
-                            userProfile.role === 'english_lead' ? 'bg-gradient-to-r from-orange-500 to-red-500' :
-                              userProfile.role === 'math_teacher' ? 'bg-green-500' :
-                                userProfile.role === 'english_teacher' ? 'bg-orange-500' :
-                                  'bg-gray-500'
-                      }`}>
-                      {ROLE_LABELS[userProfile.role] || userProfile.role.toUpperCase()}
-                    </span>
-                  )}
-                  {/* Name */}
-                  <span className="text-xs font-bold text-white whitespace-nowrap">
-                    {currentStaffMember
-                      ? (currentStaffMember.englishName ? `${currentStaffMember.name}(${currentStaffMember.englishName})` : currentStaffMember.name)
-                      : (userProfile?.displayName || (userProfile?.email || currentUser?.email)?.split('@')[0])}
-                  </span>
-                  {/* Job Title Badge */}
-                  <span className={`text-xxs px-1.5 py-0.5 rounded flex items-center justify-center font-bold tracking-tight whitespace-nowrap ${getJobTitleStyle(userProfile?.jobTitle)}`}>
-                    {userProfile?.jobTitle || '직급 미설정'}
-                  </span>
-                </div>
-              )}
-            </div>
-
-
-            {/* Right: Actions */}
-            <div className={`flex items-center justify-end gap-3 transition-all duration-300 ${isHeaderCollapsed ? 'w-auto' : 'w-[250px]'}`}>
-              {/* Header Collapse Toggle */}
-              <button
-                onClick={() => setIsHeaderCollapsed(!isHeaderCollapsed)}
-                className="text-gray-400 hover:text-white transition-colors"
-                title={isHeaderCollapsed ? "네비게이션 펼치기" : "네비게이션 접기"}
-              >
-                {isHeaderCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={20} />}
-              </button>
-
-              {!isHeaderCollapsed && hasPermission('settings.access') && (
-                <button onClick={() => setIsSettingsOpen(true)} className="text-gray-400 hover:text-white transition-colors">
-                  <Settings size={20} />
-                </button>
-              )}
-              {/* Role Simulation Button - Master Only */}
-              {!isHeaderCollapsed && userProfile?.role === 'master' && (
-                <button
-                  onClick={() => setIsRoleSimulationOpen(!isRoleSimulationOpen)}
-                  className={`transition-colors ${isRoleSimulationOpen ? 'text-amber-400' : 'text-gray-400 hover:text-white'}`}
-                  title="권한 테스트 모드"
-                >
-                  <FlaskConical size={20} />
-                </button>
-              )}
-              {/* Memo/Messenger */}
-              {!isHeaderCollapsed && currentUser && (
-                <MemoDropdown
-                  isMemoDropdownOpen={isMemoDropdownOpen}
-                  setIsMemoDropdownOpen={setIsMemoDropdownOpen}
-                  unreadMemoCount={unreadMemoCount}
-                  taskMemos={taskMemos}
-                  setIsMemoModalOpen={setIsMemoModalOpen}
-                  setSelectedMemo={setSelectedMemo}
-                  handleMarkMemoRead={handleMarkMemoRead}
-                />
-              )}
-
-              {/* Profile Dropdown */}
-              {!isHeaderCollapsed && currentUser && (
-                <div className="relative">
+              {/* Floating Save Button */}
+              {pendingEventMoves.length > 0 && (
+                <div className="fixed bottom-6 right-6 z-50 flex gap-3 animate-in slide-in-from-bottom-4 duration-300">
                   <button
-                    onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                    className={`transition-colors mt-[5px] ${isProfileMenuOpen ? 'text-white' : 'text-gray-400 hover:text-white'}`}
+                    onClick={handleCancelPendingMoves}
+                    className="px-4 py-3 bg-white text-gray-700 rounded-sm font-bold shadow-lg border border-gray-200 hover:bg-gray-50 transition-all flex items-center gap-2"
                   >
-                    <UserIcon size={20} />
+                    취소
                   </button>
-
-
+                  <button
+                    onClick={handleSavePendingMoves}
+                    className="px-6 py-3 bg-[#fdb813] text-[#081429] rounded-sm font-bold shadow-lg hover:brightness-110 transition-all flex items-center gap-2"
+                  >
+                    <span className="bg-[#081429] text-white px-2 py-0.5 rounded-full text-xs font-black">{pendingEventMoves.length}</span>
+                    변경사항 저장
+                  </button>
                 </div>
               )}
-            </div>
-          </div>
+            </HeaderCollapseProvider>
+          </main>
+        </div>
 
-          {/* Row 2: Filter Bar (Slate) - Only show in calendar mode */}
-          {appMode === 'calendar' && !isHeaderCollapsed && (
-            <CalendarFilterBar
-              isFilterOpen={isFilterOpen}
-              setIsFilterOpen={setIsFilterOpen}
-              hiddenDeptIds={hiddenDeptIds}
-              visibleDepartments={visibleDepartments}
-              viewMode={viewMode}
-              setViewMode={setViewMode}
-              viewColumns={viewColumns}
-              setViewColumns={setViewColumns}
-              setIsCalendarSettingsOpen={setIsCalendarSettingsOpen}
-            />
-          )}
-
-          {/* Row 3: Attendance Navigation Bar - Only show in attendance mode */}
-          {appMode === 'attendance' && !isHeaderCollapsed && (
-            <AttendanceNavBar
-              effectiveProfile={effectiveProfile}
-              hasPermission={hasPermission}
-              teachers={teachers}
-              attendanceSubject={attendanceSubject}
-              setAttendanceSubject={setAttendanceSubject}
-              attendanceStaffId={attendanceStaffId}
-              setAttendanceStaffId={setAttendanceStaffId}
-              attendanceDate={attendanceDate}
-              setAttendanceDate={setAttendanceDate}
-              attendanceViewMode={attendanceViewMode}
-              setAttendanceViewMode={setAttendanceViewMode}
-              selectedSession={selectedSession}
-              setSelectedSession={setSelectedSession}
-              sessions={sessions}
-              setIsAttendanceAddStudentModalOpen={setIsAttendanceAddStudentModalOpen}
-            />
-          )}
-
-          {/* Row 4: Students Navigation Bar - Only show in students mode */}
-          {appMode === 'students' && !isHeaderCollapsed && (
-            <StudentsNavBar
-              studentFilters={studentFilters}
-              setStudentFilters={setStudentFilters}
-              isSearchFieldDropdownOpen={isSearchFieldDropdownOpen}
-              setIsSearchFieldDropdownOpen={setIsSearchFieldDropdownOpen}
-              teachersBySubject={teachersBySubject}
-              studentSortBy={studentSortBy}
-              setStudentSortBy={setStudentSortBy}
-            />
-          )}
-
-          {/* Filter Popover Panel */}
-          {appMode === 'calendar' && !isHeaderCollapsed && (
-            <CalendarFilterPopover
-              isFilterOpen={isFilterOpen}
-              setIsFilterOpen={setIsFilterOpen}
-              departments={departments}
-              hiddenDeptIds={hiddenDeptIds}
-              effectiveProfile={effectiveProfile}
-              isMaster={isMaster}
-              selectedCategory={selectedCategory}
-              setSelectedCategory={setSelectedCategory}
-              uniqueCategories={uniqueCategories}
-              showFavoritesOnly={showFavoritesOnly}
-              setShowFavoritesOnly={setShowFavoritesOnly}
-              toggleDeptVisibility={toggleDeptVisibility}
-              setAllVisibility={setAllVisibility}
-              toggleFavorite={toggleFavorite}
-            />
-          )}
-
-          {/* Row 2: Timetable Filter Bar - Only show in timetable mode */}
-          {appMode === 'timetable' && !isHeaderCollapsed && (
-            <TimetableNavBar
-              timetableSubject={timetableSubject}
-              setTimetableSubject={setTimetableSubject}
-              timetableViewType={timetableViewType}
-              setTimetableViewType={setTimetableViewType}
-              mathViewMode={mathViewMode}
-              setMathViewMode={setMathViewMode}
-              hasPermission={hasPermission}
-              setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
-            />
-          )}
-
-          {/* Timetable Filter Popover Panel Removed */}
-          {/* Grades Filter Bar Removed - Filter is now inside GradesManager component */}
-        </header >
-
-        <main id="main-content" className="flex-1 flex flex-col md:flex-row overflow-hidden" role="main">
-          <HeaderCollapseProvider isHeaderCollapsed={isHeaderCollapsed}>
-          {/* Render Gating: If permission fails, show nothing (Redirect will happen in useEffect) */}
-          <ErrorBoundary key={appMode}>
-          {!canAccessTab(appMode) ? (
-            <div className="flex-1 flex items-center justify-center bg-white">
-              <VideoLoading className="flex-1 h-full" />
-            </div>
-          ) : appMode === 'dashboard' ? (
-            /* Dashboard View */
-            <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 overflow-auto bg-gray-50">
-                <DashboardTab userProfile={effectiveProfile} staffMember={effectiveStaffMember} />
-              </div>
-            </Suspense>
-          ) : appMode === 'calendar' ? (
-            /* Calendar View */
-            <div className="w-full flex-1 max-w-full mx-auto h-full print:p-0 flex flex-col xl:flex-row print:flex-row print:gap-2 overflow-x-auto">
-              {/* 1단: 현재 년도 (항상 표시) */}
-              <div className={`flex-1 flex flex-col overflow-y-auto ${viewColumns >= 2 ? 'min-w-[320px] border-r-4 border-gray-400' : 'min-w-0'}`}>
-                <CalendarBoard
-                  currentDate={baseDate}
-                  onDateChange={setBaseDate}
-                  departments={visibleDepartments}
-                  events={displayEvents}
-                  onCellClick={handleCellClick}
-                  onRangeSelect={handleRangeSelect}
-                  onTimeSlotClick={handleTimeSlotClick}
-                  onEventClick={handleEventClick}
-                  holidays={holidays}
-                  viewMode={viewMode}
-                  currentUser={effectiveProfile}
-                  onEventMove={handleEventMove}
-                  canEditDepartment={canEditDepartment}
-                  pendingEventIds={pendingEventIds}
-                  onViewChange={setViewMode}
-                  showSidePanel={viewColumns === 1} // Only show detail side panel in single column mode
-                  onQuickAdd={handleQuickAdd}
-                  bucketItems={bucketItems}
-                  onAddBucket={handleAddBucketItem}
-                  onEditBucket={handleEditBucketItem}
-                  onDeleteBucket={handleDeleteBucketItem}
-                  onConvertBucket={handleConvertBucketToEvent}
-                  showArchived={showArchived} // Phase 9
-                />
-              </div>
-
-              {/* 2단: 1년 전 (viewColumns >= 2 일 때 표시) */}
-              <div className={`flex-1 flex flex-col overflow-hidden min-w-[320px] transition-all duration-300 ${viewColumns >= 2 ? (viewColumns >= 3 ? 'border-r-4 border-gray-400' : '') : 'hidden'}`}>
-                <CalendarBoard
-                  currentDate={rightDate}
-                  onDateChange={(date) => setBaseDate(addYears(date, 1))}
-                  departments={visibleDepartments}
-                  events={displayEvents}
-                  onCellClick={handleCellClick}
-                  onRangeSelect={handleRangeSelect}
-                  onTimeSlotClick={handleTimeSlotClick}
-                  onEventClick={handleEventClick}
-                  holidays={holidays}
-                  viewMode={viewMode}
-                  onEventMove={handleEventMove}
-                  canEditDepartment={canEditDepartment}
-                  pendingEventIds={pendingEventIds}
-                  isPrimaryView={false} // Hide My Events
-                  onViewChange={setViewMode}
-                  showSidePanel={false} // Always hide side panel for comparison views
-                  currentUser={effectiveProfile}
-                  showArchived={showArchived} // Phase 9
-                />
-              </div>
-
-              {/* 3단: 2년 전 (viewColumns >= 3 일 때 표시) */}
-              <div className={`flex-1 flex flex-col overflow-hidden min-w-[320px] transition-all duration-300 ${viewColumns >= 3 ? '' : 'hidden'}`}>
-                <CalendarBoard
-                  currentDate={thirdDate}
-                  onDateChange={(date) => setBaseDate(addYears(date, 2))}
-                  departments={visibleDepartments}
-                  events={displayEvents}
-                  onCellClick={handleCellClick}
-                  onRangeSelect={handleRangeSelect}
-                  onTimeSlotClick={handleTimeSlotClick}
-                  onEventClick={handleEventClick}
-                  holidays={holidays}
-                  viewMode={viewMode}
-                  onEventMove={handleEventMove}
-                  canEditDepartment={canEditDepartment}
-                  pendingEventIds={pendingEventIds}
-                  isPrimaryView={false} // Hide My Events
-                  onViewChange={setViewMode}
-                  showSidePanel={false}
-                  currentUser={effectiveProfile}
-                  showArchived={showArchived} // Phase 9
-                />
-              </div>
-            </div>
-          ) : appMode === 'timetable' ? (
-            /* Timetable View */
-            <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 overflow-auto">
-                <TimetableManager
-                  subjectTab={timetableSubject}
-                  onSubjectChange={setTimetableSubject}
-                  viewType={timetableViewType}
-                  onViewTypeChange={setTimetableViewType}
-                  currentUser={effectiveProfile}
-                  /* Removed global state props */
-                  teachers={teachers}
-                  classKeywords={classKeywords}
-                  mathViewMode={mathViewMode}
-                  onMathViewModeChange={setMathViewMode}
-                />
-              </div>
-            </Suspense>
-          ) : appMode === 'payment' ? (
-            /* Payment Report View */
-            <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 overflow-auto">
-                <PaymentReport />
-              </div>
-            </Suspense>
-          ) : appMode === 'gantt' ? (
-            /* Gantt Chart View */
-            <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 overflow-auto bg-[#f8f9fa]">
-                <GanttManager userProfile={effectiveProfile} allUsers={usersFromStaff} />
-              </div>
-            </Suspense>
-          ) : appMode === 'consultation' ? (
-            /* Consultation Manager View */
-            <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 overflow-auto">
-                <ConsultationManager
-                  userProfile={effectiveProfile}
-                />
-              </div>
-            </Suspense>
-          ) : appMode === 'attendance' ? (
-            /* Attendance Manager View */
-            <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 flex flex-col overflow-hidden">
-                <AttendanceManager
-                  userProfile={effectiveProfile}
-                  teachers={teachers}
-                  selectedSubject={attendanceSubject}
-                  selectedStaffId={attendanceStaffId}
-                  currentDate={attendanceDate}
-                  isAddStudentModalOpen={isAttendanceAddStudentModalOpen}
-                  onCloseAddStudentModal={() => setIsAttendanceAddStudentModalOpen(false)}
-                  viewMode={attendanceViewMode}
-                  selectedSession={selectedSession}
-                />
-              </div>
-            </Suspense>
-          ) : appMode === 'students' ? (
-            /* Student Management View */
-            <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 overflow-auto">
-                <StudentManagementTab
-                  filters={studentFilters}
-                  sortBy={studentSortBy}
-                  currentUser={effectiveProfile}
-                />
-              </div>
-            </Suspense>
-            /* prospects tab removed - merged into consultation */
-          ) : appMode === 'grades' ? (
-            /* Grades Management View */
-            <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 overflow-auto">
-                <GradesManager
-                  subjectFilter={gradesSubjectFilter}
-                  searchQuery={gradesSearchQuery}
-                  onSearchChange={setGradesSearchQuery}
-                  onSubjectFilterChange={setGradesSubjectFilter}
-                  currentUser={effectiveProfile}
-                />
-              </div>
-            </Suspense>
-          ) : appMode === 'classes' ? (
-            /* Class Management View */
-            <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 min-h-0 overflow-hidden">
-                <ClassManagementTab currentUser={effectiveProfile} />
-              </div>
-            </Suspense>
-          ) : appMode === 'classroom' ? (
-            /* Classroom Usage Grid View */
-            <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 min-h-0 overflow-hidden">
-                <ClassroomTab />
-              </div>
-            </Suspense>
-          ) : appMode === 'classroom-assignment' ? (
-            /* Classroom Auto-Assignment View */
-            <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 min-h-0 overflow-hidden">
-                <ClassroomAssignmentTab />
-              </div>
-            </Suspense>
-          ) : appMode === 'student-consultations' ? (
-            /* Student Consultation Management View */
-            <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 overflow-auto">
-                <StudentConsultationTab currentUser={effectiveProfile} />
-              </div>
-            </Suspense>
-          ) : appMode === 'billing' ? (
-            /* Billing Management View */
-            <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 overflow-auto">
-                <BillingManager userProfile={effectiveProfile} />
-              </div>
-            </Suspense>
-          ) : appMode === 'daily-attendance' ? (
-            /* Daily Attendance Management View */
-            <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 overflow-auto">
-                <DailyAttendanceManager userProfile={effectiveProfile} />
-              </div>
-            </Suspense>
-          ) : appMode === 'staff' ? (
-            /* Staff Management View */
-            <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 overflow-auto">
-                <StaffManager
-                  currentUserProfile={effectiveProfile}
-                />
-              </div>
-            </Suspense>
-          ) : appMode === 'role-management' ? (
-            /* Role Management View */
-            <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 overflow-hidden">
-                <RoleManagementPage
-                  currentUser={effectiveProfile}
-                />
-              </div>
-            </Suspense>
-          ) : appMode === 'resources' ? (
-            /* Resources Dashboard View */
-            <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 overflow-hidden">
-                <ResourceDashboard
-                  userProfile={effectiveProfile}
-                />
-              </div>
-            </Suspense>
-          ) : appMode === 'withdrawal' ? (
-            /* Withdrawal Management View */
-            <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 overflow-auto">
-                <WithdrawalManagementTab
-                  currentUser={effectiveProfile}
-                />
-              </div>
-            </Suspense>
-          ) : null}
-          </ErrorBoundary>
-
-          {/* Floating Save Button for Pending Moves */}
-          {pendingEventMoves.length > 0 && (
-            <div className="fixed bottom-6 right-6 z-50 flex gap-3 animate-in slide-in-from-bottom-4 duration-300">
-              <button
-                onClick={handleCancelPendingMoves}
-                className="px-4 py-3 bg-white text-gray-700 rounded-sm font-bold shadow-lg border border-gray-200 hover:bg-gray-50 transition-all flex items-center gap-2"
-              >
-                취소
-              </button>
-              <button
-                onClick={handleSavePendingMoves}
-                className="px-6 py-3 bg-[#fdb813] text-[#081429] rounded-sm font-bold shadow-lg hover:brightness-110 transition-all flex items-center gap-2"
-              >
-                <span className="bg-[#081429] text-white px-2 py-0.5 rounded-full text-xs font-black">{pendingEventMoves.length}</span>
-                변경사항 저장
-              </button>
-            </div>
-          )}
-          </HeaderCollapseProvider>
-        </main>
+        <ModalManager
+          isGlobalSearchOpen={isGlobalSearchOpen}
+          setIsGlobalSearchOpen={setIsGlobalSearchOpen}
+          handleGlobalSearch={handleGlobalSearch}
+          handleSearchSelect={handleSearchSelect}
+          isLoginModalOpen={isLoginModalOpen}
+          setIsLoginModalOpen={setIsLoginModalOpen}
+          currentUser={currentUser}
+          isProfileMenuOpen={isProfileMenuOpen}
+          setIsProfileMenuOpen={setIsProfileMenuOpen}
+          userProfile={userProfile}
+          currentStaffMember={currentStaffMember}
+          setIsPermissionViewOpen={setIsPermissionViewOpen}
+          handleLogout={handleLogout}
+          isPermissionViewOpen={isPermissionViewOpen}
+          accessibleTabs={accessibleTabs}
+          rolePermissions={rolePermissions}
+          isEventModalOpen={isEventModalOpen}
+          setIsEventModalOpen={setIsEventModalOpen}
+          setInitialTitle={setInitialTitle}
+          setPendingBucketId={setPendingBucketId}
+          setTemplateEvent={setTemplateEvent}
+          handleSaveEvent={handleSaveEvent}
+          handleDeleteEvent={handleDeleteEvent}
+          selectedDate={selectedDate}
+          selectedEndDate={selectedEndDate}
+          selectedDeptId={selectedDeptId}
+          selectedDeptIds={selectedDeptIds}
+          initialStartTime={initialStartTime}
+          initialEndTime={initialEndTime}
+          initialTitle={initialTitle}
+          editingEvent={editingEvent}
+          visibleDepartments={visibleDepartments}
+          usersFromStaff={usersFromStaff}
+          effectiveProfile={effectiveProfile}
+          events={events}
+          handleBatchUpdateAttendance={handleBatchUpdateAttendance}
+          handleCopyEvent={handleCopyEvent}
+          templateEvent={templateEvent}
+          isSettingsOpen={isSettingsOpen}
+          setIsSettingsOpen={setIsSettingsOpen}
+          departments={departments}
+          holidays={holidays}
+          sysCategories={sysCategories}
+          teachers={teachers}
+          showArchived={showArchived}
+          onToggleArchived={() => setShowArchived(!showArchived)}
+          isTimetableSettingsOpen={isTimetableSettingsOpen}
+          setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
+          hasPermission={hasPermission}
+          isCalendarSettingsOpen={isCalendarSettingsOpen}
+          setIsCalendarSettingsOpen={setIsCalendarSettingsOpen}
+          logoUrl={INJAEWON_LOGO}
+          isMemoModalOpen={isMemoModalOpen}
+          setIsMemoModalOpen={setIsMemoModalOpen}
+          memoRecipients={memoRecipients}
+          setMemoRecipients={setMemoRecipients}
+          memoMessage={memoMessage}
+          setMemoMessage={setMemoMessage}
+          handleSendMemo={handleSendMemo}
+          formatUserDisplay={formatUserDisplay}
+          selectedMemo={selectedMemo}
+          setSelectedMemo={setSelectedMemo}
+          handleMarkMemoRead={handleMarkMemoRead}
+          handleDeleteMemo={handleDeleteMemo}
+        />
       </div>
-
-      {/* Global Search Modal - Addresses Issue #10 */}
-      <GlobalSearch
-        isOpen={isGlobalSearchOpen}
-        onClose={() => setIsGlobalSearchOpen(false)}
-        onSearch={handleGlobalSearch}
-        onSelect={handleSearchSelect}
-      />
-
-      <LoginModal
-        isOpen={isLoginModalOpen}
-        onClose={() => setIsLoginModalOpen(false)}
-        canClose={!!currentUser} // Only allow close if logged in
-      />
-
-      {/* Profile Dropdown Menu (Moved to Root to avoid z-index trap) */}
-      <ProfileDropdown
-        isOpen={isProfileMenuOpen}
-        onClose={() => setIsProfileMenuOpen(false)}
-        userProfile={userProfile}
-        currentStaffMember={currentStaffMember}
-        onOpenPermissionView={() => setIsPermissionViewOpen(true)}
-        onLogout={handleLogout}
-      />
-
-      {/* Permission View Modal */}
-      <PermissionViewModal
-        isOpen={isPermissionViewOpen}
-        onClose={() => setIsPermissionViewOpen(false)}
-        userProfile={userProfile}
-        accessibleTabs={accessibleTabs}
-        rolePermissions={rolePermissions}
-      />
-
-      {/* Event Modal - Performance: lazy loaded */}
-      {isEventModalOpen && (
-        <Suspense fallback={<div className="fixed inset-0 bg-white/80 flex items-center justify-center z-50"><VideoLoading className="h-screen" /></div>}>
-          <EventModal
-            isOpen={isEventModalOpen}
-            onClose={() => { setIsEventModalOpen(false); setInitialTitle(''); setPendingBucketId(null); setTemplateEvent(null); }}
-            onSave={handleSaveEvent}
-            onDelete={handleDeleteEvent}
-            initialDate={selectedDate}
-            initialEndDate={selectedEndDate}
-            initialDepartmentId={selectedDeptId}
-            initialDepartmentIds={selectedDeptIds} // Pass multi-select
-            initialStartTime={initialStartTime}
-            initialEndTime={initialEndTime}
-            initialTitle={initialTitle}
-            existingEvent={editingEvent}
-            departments={visibleDepartments} // ONLY Pass visible
-            // Granular Permission Update:
-            // We do NOT forcefully set readOnly based on global edit anymore.
-            // EventModal will check `userProfile.departmentPermissions` vs `selectedDeptId`.
-            readOnly={false}
-            users={usersFromStaff}
-            currentUser={effectiveProfile}
-            allEvents={events}
-            onBatchUpdateAttendance={handleBatchUpdateAttendance}
-            onCopy={handleCopyEvent}
-            templateEvent={templateEvent}
-          />
-        </Suspense>
-      )}
-
-      {/* Settings Modal - Performance: lazy loaded */}
-      {isSettingsOpen && (
-        <Suspense fallback={<div className="fixed inset-0 bg-white/80 flex items-center justify-center z-50"><VideoLoading className="h-screen" /></div>}>
-          <SettingsModal
-            isOpen={isSettingsOpen}
-            onClose={() => setIsSettingsOpen(false)}
-            departments={departments}
-            currentUserProfile={effectiveProfile}
-            users={usersFromStaff}
-            holidays={holidays}
-            events={events}
-            sysCategories={sysCategories}
-            teachers={teachers}
-            showArchived={showArchived}
-            onToggleArchived={() => setShowArchived(!showArchived)}
-          />
-        </Suspense>
-      )}
-
-      {/* Timetable Settings Modal - 시간표 탭 상단에서 열림 */}
-      {isTimetableSettingsOpen && (
-        <Suspense fallback={null}>
-          <TimetableSettingsModal
-            isOpen={isTimetableSettingsOpen}
-            onClose={() => setIsTimetableSettingsOpen(false)}
-            canEdit={hasPermission('timetable.math.edit') || hasPermission('timetable.english.edit')}
-            currentUser={effectiveProfile}
-          />
-        </Suspense>
-      )}
-
-      {/* Calendar Settings Modal - 연간 일정 네비게이션에서 열림 */}
-      {isCalendarSettingsOpen && (
-        <Suspense fallback={null}>
-          <CalendarSettingsModal
-            isOpen={isCalendarSettingsOpen}
-            onClose={() => setIsCalendarSettingsOpen(false)}
-            currentUser={effectiveProfile}
-          />
-        </Suspense>
-      )}
-
-      {/* Access Denied / Pending Approval Overlay */}
-      {currentUser && userProfile?.status === 'pending' && (
-        <PendingApprovalOverlay logoUrl={INJAEWON_LOGO} onLogout={handleLogout} />
-      )}
-
-      {/* Memo Send Modal */}
-      <MemoSendModal
-        isOpen={isMemoModalOpen}
-        onClose={() => setIsMemoModalOpen(false)}
-        usersFromStaff={usersFromStaff}
-        currentUser={currentUser}
-        memoRecipients={memoRecipients}
-        setMemoRecipients={setMemoRecipients}
-        memoMessage={memoMessage}
-        setMemoMessage={setMemoMessage}
-        handleSendMemo={handleSendMemo}
-        formatUserDisplay={formatUserDisplay}
-      />
-
-      {/* Memo Detail Modal */}
-      <MemoDetailModal
-        selectedMemo={selectedMemo}
-        onClose={() => setSelectedMemo(null)}
-        onReply={(senderUid) => {
-          setMemoRecipients([senderUid]);
-          setIsMemoModalOpen(true);
-          setSelectedMemo(null);
-        }}
-        handleMarkMemoRead={handleMarkMemoRead}
-        handleDeleteMemo={handleDeleteMemo}
-      />
-    </div >
     </RoleSimulationProvider>
   );
 };

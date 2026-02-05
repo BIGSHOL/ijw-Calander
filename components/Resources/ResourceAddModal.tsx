@@ -263,8 +263,8 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
       <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
         {/* 헤더 */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-          <h2 className="text-sm font-bold text-[#081429] flex items-center gap-2">
-            <Link2 size={18} className="text-[#fdb813]" />
+          <h2 className="text-sm font-bold text-primary flex items-center gap-2">
+            <Link2 size={18} className="text-accent" />
             {editingResource ? '리소스 수정' : '리소스 추가'}
           </h2>
           <button
@@ -280,13 +280,13 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
           {/* URL 정보 섹션 */}
           <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-              <Link2 className="w-3 h-3 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-xs">URL 정보</h3>
+              <Link2 className="w-3 h-3 text-primary" />
+              <h3 className="text-primary font-bold text-xs">URL 정보</h3>
             </div>
             <div className="divide-y divide-gray-100">
               {/* URL */}
               <div className="flex items-center gap-2 px-2 py-1.5">
-                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">URL<span className="text-red-500">*</span></span>
+                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">URL<span className="text-red-500">*</span></span>
                 <div className="flex-1 relative">
                   <input
                     type="url"
@@ -297,12 +297,12 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
                     }}
                     onBlur={() => validateUrl(url)}
                     placeholder="https://notion.so/... 또는 https://drive.google.com/..."
-                    className={`w-full px-2 py-1 pr-6 text-xs border rounded-sm focus:ring-1 focus:border-[#fdb813] outline-none ${
+                    className={`w-full px-2 py-1 pr-6 text-xs border rounded-sm focus:ring-1 focus:border-accent outline-none ${
                       isDuplicateUrl || (urlValidation && !urlValidation.valid)
                         ? 'border-orange-400 focus:border-orange-400 focus:ring-orange-400'
                         : urlValidation?.valid
                         ? 'border-green-400 focus:border-green-400 focus:ring-green-400'
-                        : 'border-gray-300 focus:ring-[#fdb813]'
+                        : 'border-gray-300 focus:ring-accent'
                     }`}
                     required
                   />
@@ -346,7 +346,7 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
               {!isDuplicateUrl && !urlValidation && type !== 'other' && type !== '__custom__' && RESOURCE_TYPE_LABELS[type] && (
                 <div className="px-2 py-1.5">
                   <div className="ml-16">
-                    <p className="text-xxs text-[#fdb813]">
+                    <p className="text-xxs text-accent">
                       자동 감지: {RESOURCE_TYPE_ICONS[type]} {RESOURCE_TYPE_LABELS[type]}
                     </p>
                   </div>
@@ -354,13 +354,13 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
               )}
               {/* 제목 */}
               <div className="flex items-center gap-2 px-2 py-1.5">
-                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">제목<span className="text-red-500">*</span></span>
+                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">제목<span className="text-red-500">*</span></span>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="리소스 제목"
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                   required
                 />
               </div>
@@ -370,24 +370,24 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
           {/* 상세 정보 섹션 */}
           <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-              <FileText className="w-3 h-3 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-xs">상세 정보</h3>
+              <FileText className="w-3 h-3 text-primary" />
+              <h3 className="text-primary font-bold text-xs">상세 정보</h3>
             </div>
             <div className="divide-y divide-gray-100">
               {/* 설명 */}
               <div className="flex items-start gap-2 px-2 py-1.5">
-                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41] pt-1">설명</span>
+                <span className="w-14 shrink-0 text-xs font-medium text-primary-700 pt-1">설명</span>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="리소스에 대한 간단한 설명"
                   rows={2}
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none resize-none"
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none resize-none"
                 />
               </div>
               {/* 타입 */}
               <div className="flex items-center gap-2 px-2 py-1.5">
-                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">타입</span>
+                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">타입</span>
                 <select
                   value={type}
                   onChange={(e) => {
@@ -396,7 +396,7 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
                       setCustomType('');
                     }
                   }}
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                 >
                   {Object.entries(RESOURCE_TYPE_LABELS).map(([key, label]) => (
                     <option key={key} value={key}>
@@ -409,13 +409,13 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
               {/* 커스텀 타입 입력 */}
               {type === '__custom__' && (
                 <div className="flex items-center gap-2 px-2 py-1.5">
-                  <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]"></span>
+                  <span className="w-14 shrink-0 text-xs font-medium text-primary-700"></span>
                   <input
                     type="text"
                     value={customType}
                     onChange={(e) => setCustomType(e.target.value)}
                     placeholder="새 타입 이름 입력"
-                    className="flex-1 px-2 py-1 text-xs border border-[#fdb813] rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                    className="flex-1 px-2 py-1 text-xs border border-accent rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                   />
                 </div>
               )}
@@ -425,13 +425,13 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
           {/* 분류 섹션 */}
           <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-              <FolderTree className="w-3 h-3 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-xs">분류</h3>
+              <FolderTree className="w-3 h-3 text-primary" />
+              <h3 className="text-primary font-bold text-xs">분류</h3>
             </div>
             <div className="divide-y divide-gray-100">
               {/* 대분류 */}
               <div className="flex items-center gap-2 px-2 py-1.5">
-                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">대분류</span>
+                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">대분류</span>
                 <select
                   value={categoryMain}
                   onChange={(e) => {
@@ -440,7 +440,7 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
                     setCategoryDetail('');
                     setCustomMain('');
                   }}
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                 >
                   <option value="">대분류 선택</option>
                   {mainCategories.map(cat => (
@@ -452,20 +452,20 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
               {/* 대분류 커스텀 입력 */}
               {categoryMain === '__custom__' && (
                 <div className="flex items-center gap-2 px-2 py-1.5">
-                  <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]"></span>
+                  <span className="w-14 shrink-0 text-xs font-medium text-primary-700"></span>
                   <input
                     type="text"
                     value={customMain}
                     onChange={(e) => setCustomMain(e.target.value)}
                     placeholder="새 대분류 이름 입력"
-                    className="flex-1 px-2 py-1 text-xs border border-[#fdb813] rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                    className="flex-1 px-2 py-1 text-xs border border-accent rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                   />
                 </div>
               )}
               {/* 중분류 */}
               {categoryMain && categoryMain !== '__custom__' && (
                 <div className="flex items-center gap-2 px-2 py-1.5">
-                  <span className="w-14 shrink-0 text-xs font-medium text-[#373d41] flex items-center gap-1">
+                  <span className="w-14 shrink-0 text-xs font-medium text-primary-700 flex items-center gap-1">
                     <ChevronRight size={10} className="text-gray-400" />
                     중분류
                   </span>
@@ -476,7 +476,7 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
                       setCategoryDetail('');
                       setCustomSub('');
                     }}
-                    className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                    className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                   >
                     <option value="">중분류 선택 (선택사항)</option>
                     {subCategories.map(cat => (
@@ -489,13 +489,13 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
               {/* 중분류 커스텀 입력 */}
               {categorySub === '__custom__' && (
                 <div className="flex items-center gap-2 px-2 py-1.5">
-                  <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]"></span>
+                  <span className="w-14 shrink-0 text-xs font-medium text-primary-700"></span>
                   <input
                     type="text"
                     value={customSub}
                     onChange={(e) => setCustomSub(e.target.value)}
                     placeholder="새 중분류 이름 입력"
-                    className="flex-1 px-2 py-1 text-xs border border-[#fdb813] rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                    className="flex-1 px-2 py-1 text-xs border border-accent rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                   />
                 </div>
               )}
@@ -503,7 +503,7 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
               {(categoryMain || customMain) && (
                 <div className="px-2 py-1.5">
                   <div className="ml-16">
-                    <p className="text-xxs text-[#fdb813] flex items-center gap-1">
+                    <p className="text-xxs text-accent flex items-center gap-1">
                       선택: {finalCategory}
                     </p>
                   </div>
@@ -515,24 +515,24 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
           {/* 표시 설정 섹션 */}
           <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-              <Palette className="w-3 h-3 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-xs">표시 설정</h3>
+              <Palette className="w-3 h-3 text-primary" />
+              <h3 className="text-primary font-bold text-xs">표시 설정</h3>
             </div>
             <div className="divide-y divide-gray-100">
               {/* 아이콘 */}
               <div className="flex items-center gap-2 px-2 py-1.5">
-                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">아이콘</span>
+                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">아이콘</span>
                 <div className="flex-1 flex items-center gap-2">
                   <div
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="w-8 h-8 border border-gray-300 rounded-sm flex items-center justify-center cursor-pointer hover:border-[#fdb813] transition-colors text-base"
+                    className="w-8 h-8 border border-gray-300 rounded-sm flex items-center justify-center cursor-pointer hover:border-accent transition-colors text-base"
                   >
                     {icon || <span className="text-gray-300 text-xxs">없음</span>}
                   </div>
                   <button
                     type="button"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm text-gray-500 hover:border-[#fdb813] transition-colors text-left"
+                    className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm text-gray-500 hover:border-accent transition-colors text-left"
                   >
                     {showEmojiPicker ? '닫기' : '이모지 선택...'}
                   </button>
@@ -560,8 +560,8 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
                             setIcon(emoji);
                             setShowEmojiPicker(false);
                           }}
-                          className={`w-6 h-6 flex items-center justify-center rounded hover:bg-[#fdb813]/20 transition-colors text-sm ${
-                            icon === emoji ? 'bg-[#fdb813]/30 ring-1 ring-[#fdb813]' : ''
+                          className={`w-6 h-6 flex items-center justify-center rounded hover:bg-accent/20 transition-colors text-sm ${
+                            icon === emoji ? 'bg-accent/30 ring-1 ring-[#fdb813]' : ''
                           }`}
                         >
                           {emoji}
@@ -573,16 +573,16 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
               )}
               {/* 고정 여부 */}
               <div className="flex items-center gap-2 px-2 py-1.5">
-                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">고정</span>
+                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">고정</span>
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     id="isPinned"
                     checked={isPinned}
                     onChange={(e) => setIsPinned(e.target.checked)}
-                    className="w-3 h-3 rounded border-gray-300 text-[#fdb813] focus:ring-[#fdb813]"
+                    className="w-3 h-3 rounded border-gray-300 text-accent focus:ring-accent"
                   />
-                  <label htmlFor="isPinned" className="text-xs text-[#373d41]">
+                  <label htmlFor="isPinned" className="text-xs text-primary-700">
                     상단에 고정
                   </label>
                 </div>
@@ -603,7 +603,7 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="px-3 py-1.5 bg-[#fdb813] text-[#081429] text-xs font-semibold rounded-sm hover:bg-[#e5a60f] disabled:opacity-50 flex items-center gap-2"
+            className="px-3 py-1.5 bg-accent text-primary text-xs font-semibold rounded-sm hover:bg-[#e5a60f] disabled:opacity-50 flex items-center gap-2"
           >
             {isSubmitting && <Loader2 size={12} className="animate-spin" />}
             {editingResource ? '수정' : '추가'}

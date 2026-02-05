@@ -273,7 +273,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
                   onClick={() => setFilters({ ...filters, teacherRole: 'all' })}
                   className={`px-3 py-1 rounded text-xs font-bold transition-all ${
                     filters.teacherRole === 'all'
-                      ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                      ? 'bg-accent text-primary shadow-sm'
                       : 'text-gray-400 hover:text-white hover:bg-white/5'
                   }`}
                 >
@@ -308,7 +308,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
                     onClick={() => setShowTeacherDropdown(!showTeacherDropdown)}
                     className={`flex items-center gap-1.5 px-3 py-1 rounded-sm border text-xs font-medium transition-colors ${
                       filters.teacher !== 'all'
-                        ? 'bg-[#fdb813] border-[#fdb813] text-[#081429]'
+                        ? 'bg-accent border-accent text-primary'
                         : 'bg-[#1e293b] border-gray-700 text-white hover:border-gray-500'
                     }`}
                   >
@@ -327,7 +327,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
                           }}
                           className={`w-full px-3 py-1.5 rounded text-xs font-bold text-left ${
                             filters.teacher === 'all'
-                              ? 'bg-[#fdb813] text-[#081429]'
+                              ? 'bg-accent text-primary'
                               : 'text-gray-300 hover:bg-white/10'
                           }`}
                         >
@@ -478,7 +478,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
                       key={day}
                       onClick={toggleDay}
                       className={`px-2 py-0.5 rounded text-xs font-bold transition-all ${isSelected
-                        ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                        ? 'bg-accent text-primary shadow-sm'
                         : 'text-gray-400 hover:text-white hover:bg-white/5'
                         }`}
                     >
@@ -501,7 +501,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
               <select
                 value={filters.sortBy}
                 onChange={(e) => setFilters({ ...filters, sortBy: e.target.value as any })}
-                className="flex-shrink-0 appearance-none bg-[#1e293b] border border-gray-700 rounded-sm px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+                className="flex-shrink-0 appearance-none bg-[#1e293b] border border-gray-700 rounded-sm px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-accent focus:ring-1 focus:ring-accent outline-none"
               >
                 <option value="name">수업명순</option>
                 <option value="studentCount">학생수순</option>
@@ -516,13 +516,13 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
                   placeholder="수업명, 강사명 검색..."
                   value={filters.searchQuery}
                   onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-                  className="bg-[#1e293b] border border-gray-700 rounded-sm pl-8 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none w-48"
+                  className="bg-[#1e293b] border border-gray-700 rounded-sm pl-8 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:border-accent focus:ring-1 focus:ring-accent outline-none w-48"
                 />
               </div>
 
               {/* 결과 카운트 */}
               <span className="text-gray-400 text-xs flex-shrink-0">
-                총 <span className="text-[#fdb813] font-bold">{filteredClasses.length}</span>개
+                총 <span className="text-accent font-bold">{filteredClasses.length}</span>개
               </span>
 
               {/* 우측 버튼들 - 권한 체크 */}
@@ -540,7 +540,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
                 {canCreateClass ? (
                   <button
                     onClick={() => setShowAddModal(true)}
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-sm bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-sm bg-accent text-primary hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
                   >
                     <Plus size={14} />
                     <span>새 수업</span>
@@ -568,7 +568,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
             <p className="text-red-800">데이터를 불러오는 중 오류가 발생했습니다.</p>
             <button
               onClick={() => window.location.reload()}
-              className="mt-2 bg-[#fdb813] hover:bg-[#e5a60f] text-[#081429] px-4 py-2 rounded font-semibold text-sm"
+              className="mt-2 bg-accent hover:bg-[#e5a60f] text-primary px-4 py-2 rounded font-semibold text-sm"
             >
               다시 시도
             </button>

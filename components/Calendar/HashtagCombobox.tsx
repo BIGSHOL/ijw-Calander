@@ -286,7 +286,7 @@ const HashtagCombobox: React.FC<HashtagComboboxProps> = ({
       <div
         className={`
           w-full min-h-[42px] px-3 py-2 border border-gray-300 rounded-sm
-          focus-within:ring-2 focus-within:ring-[#fdb813] focus-within:border-[#fdb813]
+          focus-within:ring-2 focus-within:ring-[#fdb813] focus-within:border-accent
           transition-all cursor-text
           ${disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}
         `}

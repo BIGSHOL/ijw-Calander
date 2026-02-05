@@ -86,7 +86,7 @@ const CategoryStats: React.FC<CategoryStatsProps> = ({ stats, totalCount, loadin
 
   return (
     <div className="bg-white rounded-sm border border-gray-200 p-6">
-      <h3 className="text-lg font-semibold text-[#081429] mb-4">
+      <h3 className="text-lg font-semibold text-primary mb-4">
         카테고리별 상담
       </h3>
 
@@ -126,7 +126,7 @@ const CategoryStats: React.FC<CategoryStatsProps> = ({ stats, totalCount, loadin
 
       <div className="mt-4 pt-4 border-t border-gray-100 text-right">
         <span className="text-sm text-gray-500">
-          총 <span className="font-semibold text-[#081429]">{totalCount}</span>건
+          총 <span className="font-semibold text-primary">{totalCount}</span>건
         </span>
       </div>
     </div>

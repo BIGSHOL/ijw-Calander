@@ -430,9 +430,6 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
         school: (d.data() as UnifiedStudent).school,
       }));
       const schoolCorrections = buildSchoolCorrections(existingStudentList);
-      if (schoolCorrections.size > 0) {
-        console.log('📌 학교 약칭 보정 맵:', Object.fromEntries(schoolCorrections));
-      }
 
       // 데이터 변환 및 배치 저장
       const batchSize = 500;
@@ -497,10 +494,6 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
             const nameKey = `${excelData.이름}_${normalizedSchool}_${grade || ''}`;
             existingStudent = existingStudentsByNameKey.get(nameKey) as (UnifiedStudent & { _firestoreDocId?: string }) | undefined;
 
-            // 찾았으면 출결번호도 업데이트하도록 플래그 설정
-            if (existingStudent) {
-              console.log(`📌 이름_학교_학년으로 기존 학생 찾음: ${nameKey}`);
-            }
           }
 
           // 문서 ID: 기존 학생이면 기존 ID 사용, 신규면 이름_학교_학년 형식
@@ -782,7 +775,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
               onClick={() => setDetailFilter('all')}
               className={`px-3 py-1 text-xs rounded-sm transition-colors ${
                 detailFilter === 'all'
-                  ? 'bg-[#081429] text-white'
+                  ? 'bg-primary text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
@@ -899,14 +892,14 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
 
   const renderMigratingStep = () => (
     <div className="text-center space-y-6">
-      <Loader2 className="w-16 h-16 animate-spin text-[#fdb813] mx-auto" />
+      <Loader2 className="w-16 h-16 animate-spin text-accent mx-auto" />
       <div>
         <h3 className="text-xl font-bold text-gray-900 mb-2">마이그레이션 진행 중...</h3>
         <p className="text-gray-600 text-sm">잠시만 기다려주세요.</p>
       </div>
       <div className="w-full bg-gray-200 rounded-sm h-3 overflow-hidden">
         <div
-          className="bg-[#fdb813] h-full transition-all duration-300 rounded-sm"
+          className="bg-accent h-full transition-all duration-300 rounded-sm"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -920,7 +913,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
         <Check className="w-10 h-10 text-green-600" strokeWidth={3} />
       </div>
       <div>
-        <h3 className="text-2xl font-bold text-[#081429]">마이그레이션 완료!</h3>
+        <h3 className="text-2xl font-bold text-primary">마이그레이션 완료!</h3>
         <p className="text-gray-600 mt-2">
           총 <span className="text-green-600 font-bold">{totalCount}</span>명의 학생 데이터가 저장되었습니다.
         </p>
@@ -963,9 +956,9 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] bg-black/50">
       <div className="bg-white rounded-sm shadow-2xl w-[90%] max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* 헤더 */}
-        <div className="bg-[#081429] px-6 py-4 flex items-center justify-between">
+        <div className="bg-primary px-6 py-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Database size={20} className="text-[#fdb813]" />
+            <Database size={20} className="text-accent" />
             원생목록 데이터 마이그레이션
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
@@ -1004,7 +997,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
               </button>
               <button
                 onClick={handleMigrate}
-                className="px-4 py-2 bg-[#fdb813] text-[#081429] hover:bg-[#fdb813]/90 rounded-sm transition-colors flex items-center gap-2 font-bold"
+                className="px-4 py-2 bg-accent text-primary hover:bg-accent/90 rounded-sm transition-colors flex items-center gap-2 font-bold"
               >
                 <Upload size={16} />
                 {totalCount}명 마이그레이션 실행
@@ -1015,7 +1008,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
           {step === 'done' && (
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-[#081429] text-white hover:bg-[#081429]/90 rounded-sm transition-colors"
+              className="px-4 py-2 bg-primary text-white hover:bg-primary/90 rounded-sm transition-colors"
             >
               닫기
             </button>

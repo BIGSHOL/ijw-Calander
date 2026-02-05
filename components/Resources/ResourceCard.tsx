@@ -63,8 +63,8 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
       onClick={onClick}
       className={`
         flex items-center gap-3 px-4 py-3 cursor-pointer
-        transition-all duration-150 hover:bg-[#fdb813]/5
-        ${isSelected ? 'bg-[#fdb813]/10 border-l-4 border-l-[#fdb813]' : 'border-l-4 border-l-transparent'}
+        transition-all duration-150 hover:bg-accent/5
+        ${isSelected ? 'bg-accent/10 border-l-4 border-l-[#fdb813]' : 'border-l-4 border-l-transparent'}
       `}
     >
       {/* 체크박스 (다중 선택 모드) */}
@@ -78,7 +78,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
               onCheckChange?.(resource, e.target.checked);
             }}
             onClick={(e) => e.stopPropagation()}
-            className="w-4 h-4 rounded border-gray-300 text-[#fdb813] focus:ring-[#fdb813] cursor-pointer"
+            className="w-4 h-4 rounded border-gray-300 text-accent focus:ring-accent cursor-pointer"
           />
         </div>
       )}
@@ -92,8 +92,8 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
           }}
           className={`p-0.5 rounded transition-colors ${
             resource.isPinned
-              ? 'text-[#fdb813] hover:text-[#fdb813]/70'
-              : 'text-gray-300 hover:text-[#fdb813]'
+              ? 'text-accent hover:text-accent/70'
+              : 'text-gray-300 hover:text-accent'
           }`}
           title={resource.isPinned ? '고정 해제' : '상단에 고정'}
         >
@@ -112,7 +112,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
 
       {/* 제목 + 설명 */}
       <div className="flex-1 min-w-0">
-        <h3 className="text-sm font-medium text-[#081429] truncate">
+        <h3 className="text-sm font-medium text-primary truncate">
           {resource.title}
         </h3>
         {resource.description && (
@@ -124,7 +124,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
 
       {/* 타입 */}
       <div className="w-24 flex-shrink-0">
-        <span className="text-xxs font-medium px-2 py-0.5 rounded-sm bg-[#081429]/10 text-[#081429] inline-flex items-center gap-1">
+        <span className="text-xxs font-medium px-2 py-0.5 rounded-sm bg-primary/10 text-primary inline-flex items-center gap-1">
           <span>{typeIcon}</span>
           <span>{typeLabel}</span>
         </span>
@@ -201,7 +201,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="p-1 text-gray-400 hover:text-[#fdb813] transition-colors"
+          className="p-1 text-gray-400 hover:text-accent transition-colors"
           title="새 탭에서 열기"
         >
           <ExternalLink size={14} />
@@ -237,13 +237,13 @@ const SortableHeader: React.FC<{
   return (
     <button
       onClick={() => onSort?.(field)}
-      className={`flex items-center gap-0.5 hover:text-[#081429] transition-colors ${className || ''} ${isActive ? 'text-[#081429]' : ''}`}
+      className={`flex items-center gap-0.5 hover:text-primary transition-colors ${className || ''} ${isActive ? 'text-primary' : ''}`}
     >
       <span>{label}</span>
       {isActive && (
         direction === 'asc'
-          ? <ChevronUp size={12} className="text-[#fdb813]" />
-          : <ChevronDown size={12} className="text-[#fdb813]" />
+          ? <ChevronUp size={12} className="text-accent" />
+          : <ChevronDown size={12} className="text-accent" />
       )}
     </button>
   );
@@ -268,7 +268,7 @@ export const ResourceTableHeader: React.FC<ResourceTableHeaderProps> = ({
           }}
           checked={isAllChecked}
           onChange={onToggleAll}
-          className="w-4 h-4 rounded border-gray-300 text-[#fdb813] focus:ring-[#fdb813] cursor-pointer"
+          className="w-4 h-4 rounded border-gray-300 text-accent focus:ring-accent cursor-pointer"
         />
       </div>
     )}

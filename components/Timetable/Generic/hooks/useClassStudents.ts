@@ -15,6 +15,7 @@ import { query, where, collectionGroup, getDocs } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 import type { TimetableStudent, SubjectKey } from '../types';
 import { getSubjectConfig } from '../utils/subjectConfig';
+import { formatDateKey } from '../../../../utils/dateUtils';
 
 export interface ClassStudentData {
   studentList: TimetableStudent[];
@@ -112,7 +113,7 @@ export function useClassStudents(
         classStudentMap[className].add(studentId);
 
         // 배정 예정 여부 확인
-        const today = new Date().toISOString().split('T')[0];
+        const today = formatDateKey(new Date());
         const isScheduled = data.enrollmentDate && data.enrollmentDate > today;
 
         enrollmentDataMap[className][studentId] = {

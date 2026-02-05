@@ -200,20 +200,20 @@ const Table = forwardRef<HTMLTableElement, Props>(({
   return (
     <>
       <table ref={ref} className="border-separate border-spacing-0 w-full min-w-full text-sm text-left bg-white border border-gray-200 rounded-sm shadow-sm table-fixed">
-        <thead className="bg-[#081429] text-white font-medium sticky top-0 z-[100] shadow-md">
+        <thead className="bg-primary text-white font-medium sticky top-0 z-[100] shadow-md">
           <tr>
             {/* Sticky Left Columns - Compact width */}
-            <th className="p-2 sticky left-0 top-0 z-[110] bg-[#081429] border-r border-b border-[#ffffff]/10 w-8 text-center text-gray-400 align-middle text-xs">#</th>
-            <th className="p-2 sticky left-8 top-0 z-[110] bg-[#081429] border-r border-b border-[#ffffff]/10 w-[70px] align-middle text-xs">이름</th>
-            <th className="p-2 sticky left-[102px] top-0 z-[110] bg-[#081429] border-r border-b border-[#ffffff]/10 w-[80px] align-middle text-xs">학교</th>
+            <th className="p-2 sticky left-0 top-0 z-[110] bg-primary border-r border-b border-[#ffffff]/10 w-8 text-center text-gray-400 align-middle text-xs">#</th>
+            <th className="p-2 sticky left-8 top-0 z-[110] bg-primary border-r border-b border-[#ffffff]/10 w-[70px] align-middle text-xs">이름</th>
+            <th className="p-2 sticky left-[102px] top-0 z-[110] bg-primary border-r border-b border-[#ffffff]/10 w-[80px] align-middle text-xs">학교</th>
 
             {/* Stat Columns - Compact */}
-            <th className="p-2 sticky left-[182px] top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[70px] text-center bg-[#081429] align-middle text-xs">요일</th>
-            <th className="p-2 sticky left-[252px] top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[36px] text-center bg-[#081429] align-middle text-xs">출석</th>
+            <th className="p-2 sticky left-[182px] top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[70px] text-center bg-primary align-middle text-xs">요일</th>
+            <th className="p-2 sticky left-[252px] top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[36px] text-center bg-primary align-middle text-xs">출석</th>
 
             {/* 숨긴 열 표시 바 */}
             {hiddenDates.size > 0 && onHiddenDatesChange && (
-              <th className="p-1 sticky top-0 border-r border-b border-[#ffffff]/10 text-center align-middle bg-[#081429] w-[30px]">
+              <th className="p-1 sticky top-0 border-r border-b border-[#ffffff]/10 text-center align-middle bg-primary w-[30px]">
                 <button
                   type="button"
                   onClick={() => onHiddenDatesChange(new Set())}
@@ -250,7 +250,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
               return (
                 <th
                   key={day.toISOString()}
-                  className={`p-1 sticky top-0 border-r border-b border-[#ffffff]/10 text-center align-middle min-w-[40px] bg-[#081429] ${headerColorClass} cursor-context-menu`}
+                  className={`p-1 sticky top-0 border-r border-b border-[#ffffff]/10 text-center align-middle min-w-[40px] bg-primary ${headerColorClass} cursor-context-menu`}
                   title={holidayName || '우클릭으로 열 숨기기'}
                   onContextMenu={(e) => {
                     e.preventDefault();

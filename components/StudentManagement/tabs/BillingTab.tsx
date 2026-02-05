@@ -87,7 +87,7 @@ const BillingTab: React.FC<BillingTabProps> = ({ student, readOnly = true }) => 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <DollarSign className="w-4 h-4 text-emerald-600" />
-          <h3 className="text-sm font-bold text-[#081429]">수납 현황</h3>
+          <h3 className="text-sm font-bold text-primary">수납 현황</h3>
         </div>
         <div className="flex items-center gap-2">
           {/* 상태 필터 */}
@@ -133,7 +133,7 @@ const BillingTab: React.FC<BillingTabProps> = ({ student, readOnly = true }) => 
         className="flex items-center gap-2 cursor-pointer"
         onClick={() => setShowStats(!showStats)}
       >
-        <h4 className="text-xs font-bold text-[#081429]">수납 통계</h4>
+        <h4 className="text-xs font-bold text-primary">수납 통계</h4>
         <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showStats ? '' : 'rotate-180'}`} />
       </div>
 
@@ -175,7 +175,7 @@ const BillingTab: React.FC<BillingTabProps> = ({ student, readOnly = true }) => 
         className="flex items-center gap-2 cursor-pointer"
         onClick={() => setShowRecords(!showRecords)}
       >
-        <h4 className="text-xs font-bold text-[#081429]">수납 내역</h4>
+        <h4 className="text-xs font-bold text-primary">수납 내역</h4>
         <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showRecords ? '' : 'rotate-180'}`} />
       </div>
 
@@ -214,7 +214,7 @@ const BillingTab: React.FC<BillingTabProps> = ({ student, readOnly = true }) => 
                   </span>
 
                   {/* 수납명 */}
-                  <span className="flex-1 min-w-0 text-xs text-[#081429] truncate" title={record.billingName}>
+                  <span className="flex-1 min-w-0 text-xs text-primary truncate" title={record.billingName}>
                     {record.billingName}
                   </span>
 
@@ -289,7 +289,7 @@ const BillingTab: React.FC<BillingTabProps> = ({ student, readOnly = true }) => 
                     onClick={() => setCurrentPage(pageNum)}
                     className={`w-5 h-5 rounded-full text-xxs font-bold transition-colors ${
                       safePage === pageNum
-                        ? 'bg-[#fdb813] text-[#081429]'
+                        ? 'bg-accent text-primary'
                         : 'text-gray-600 hover:bg-gray-100'
                     }`}
                   >
@@ -319,7 +319,7 @@ const BillingTab: React.FC<BillingTabProps> = ({ student, readOnly = true }) => 
         className="flex items-center gap-2 cursor-pointer"
         onClick={() => setShowOverallStats(!showOverallStats)}
       >
-        <h4 className="text-xs font-bold text-[#081429]">전체 통계</h4>
+        <h4 className="text-xs font-bold text-primary">전체 통계</h4>
         <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showOverallStats ? '' : 'rotate-180'}`} />
       </div>
 

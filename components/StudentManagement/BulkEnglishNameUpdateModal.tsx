@@ -174,9 +174,9 @@ const BulkEnglishNameUpdateModal: React.FC<BulkEnglishNameUpdateModalProps> = ({
     <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4">
       <div className="bg-white rounded-sm shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
         {/* 헤더 */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-[#081429]">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-primary">
           <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-[#fdb813]" />
+            <FileText className="w-5 h-5 text-accent" />
             <h2 className="text-lg font-bold text-white">일괄 영어 이름 업데이트</h2>
           </div>
           <button
@@ -189,22 +189,22 @@ const BulkEnglishNameUpdateModal: React.FC<BulkEnglishNameUpdateModalProps> = ({
 
         {/* 단계 표시 */}
         <div className="flex items-center justify-center gap-4 p-4 bg-gray-50 border-b border-gray-200">
-          <div className={`flex items-center gap-2 ${step === 'input' ? 'text-[#081429] font-semibold' : 'text-gray-400'}`}>
-            <div className={`w-8 h-8 rounded-sm flex items-center justify-center ${step === 'input' ? 'bg-[#fdb813] text-white' : 'bg-gray-200'}`}>
+          <div className={`flex items-center gap-2 ${step === 'input' ? 'text-primary font-semibold' : 'text-gray-400'}`}>
+            <div className={`w-8 h-8 rounded-sm flex items-center justify-center ${step === 'input' ? 'bg-accent text-white' : 'bg-gray-200'}`}>
               1
             </div>
             <span>입력</span>
           </div>
           <div className="w-12 h-0.5 bg-gray-300" />
-          <div className={`flex items-center gap-2 ${step === 'preview' ? 'text-[#081429] font-semibold' : 'text-gray-400'}`}>
-            <div className={`w-8 h-8 rounded-sm flex items-center justify-center ${step === 'preview' ? 'bg-[#fdb813] text-white' : 'bg-gray-200'}`}>
+          <div className={`flex items-center gap-2 ${step === 'preview' ? 'text-primary font-semibold' : 'text-gray-400'}`}>
+            <div className={`w-8 h-8 rounded-sm flex items-center justify-center ${step === 'preview' ? 'bg-accent text-white' : 'bg-gray-200'}`}>
               2
             </div>
             <span>미리보기</span>
           </div>
           <div className="w-12 h-0.5 bg-gray-300" />
-          <div className={`flex items-center gap-2 ${step === 'result' ? 'text-[#081429] font-semibold' : 'text-gray-400'}`}>
-            <div className={`w-8 h-8 rounded-sm flex items-center justify-center ${step === 'result' ? 'bg-[#fdb813] text-white' : 'bg-gray-200'}`}>
+          <div className={`flex items-center gap-2 ${step === 'result' ? 'text-primary font-semibold' : 'text-gray-400'}`}>
+            <div className={`w-8 h-8 rounded-sm flex items-center justify-center ${step === 'result' ? 'bg-accent text-white' : 'bg-gray-200'}`}>
               3
             </div>
             <span>완료</span>
@@ -246,7 +246,7 @@ const BulkEnglishNameUpdateModal: React.FC<BulkEnglishNameUpdateModalProps> = ({
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   placeholder="김나윤A(Chloe)&#10;현가현(Sophia)&#10;이세인A(Vera)"
-                  className="w-full h-64 p-3 border border-gray-300 rounded-sm focus:ring-2 focus:ring-[#fdb813] focus:border-transparent font-mono text-sm"
+                  className="w-full h-64 p-3 border border-gray-300 rounded-sm focus:ring-2 focus:ring-accent focus:border-transparent font-mono text-sm"
                 />
               </div>
 
@@ -324,7 +324,7 @@ const BulkEnglishNameUpdateModal: React.FC<BulkEnglishNameUpdateModalProps> = ({
                             <div className="font-medium text-gray-900">
                               {entry.koreanName}
                               {entry.englishName && (
-                                <span className="ml-2 text-[#fdb813]">→ {entry.englishName}</span>
+                                <span className="ml-2 text-accent">→ {entry.englishName}</span>
                               )}
                             </div>
                             {entry.foundStudent && entry.foundStudent.englishName && (
@@ -412,7 +412,7 @@ const BulkEnglishNameUpdateModal: React.FC<BulkEnglishNameUpdateModalProps> = ({
                             <div className="font-medium text-gray-900">
                               {entry.koreanName}
                               {entry.englishName && (
-                                <span className="ml-2 text-[#fdb813]">→ {entry.englishName}</span>
+                                <span className="ml-2 text-accent">→ {entry.englishName}</span>
                               )}
                             </div>
                             {entry.errorMessage && (
@@ -450,7 +450,7 @@ const BulkEnglishNameUpdateModal: React.FC<BulkEnglishNameUpdateModalProps> = ({
               <button
                 onClick={handlePreview}
                 disabled={parsedEntries.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-[#fdb813] text-white rounded-sm hover:bg-[#fdb813]/90 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-sm hover:bg-accent/90 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
               >
                 <Upload className="w-4 h-4" />
                 미리보기
@@ -469,7 +469,7 @@ const BulkEnglishNameUpdateModal: React.FC<BulkEnglishNameUpdateModalProps> = ({
                 <button
                   onClick={handleBulkUpdate}
                   disabled={stats.ready === 0 || isProcessing}
-                  className="flex items-center gap-2 px-4 py-2 bg-[#081429] text-white rounded-sm hover:bg-[#081429]/90 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-sm hover:bg-primary/90 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                 >
                   {isProcessing && <Loader2 className="w-4 h-4 animate-spin" />}
                   <Check className="w-4 h-4" />
@@ -481,7 +481,7 @@ const BulkEnglishNameUpdateModal: React.FC<BulkEnglishNameUpdateModalProps> = ({
             {step === 'result' && (
               <button
                 onClick={onClose}
-                className="flex items-center gap-2 px-4 py-2 bg-[#fdb813] text-white rounded-sm hover:bg-[#fdb813]/90 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-sm hover:bg-accent/90 transition-colors"
               >
                 <Check className="w-4 h-4" />
                 완료

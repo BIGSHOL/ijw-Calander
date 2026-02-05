@@ -696,7 +696,7 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
     <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4">
       <div className="bg-white rounded-sm shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
         {/* 헤더 */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-[#081429] rounded-t-sm">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-primary rounded-t-sm">
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-400" />
             <h2 className="text-lg font-bold text-white">중복 이름 학생 확인</h2>
@@ -726,8 +726,8 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
               {/* Section 1: 필터 및 설정 */}
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                  <Filter className="w-3 h-3 text-[#081429]" />
-                  <h3 className="text-[#081429] font-bold text-xs">필터 및 설정</h3>
+                  <Filter className="w-3 h-3 text-primary" />
+                  <h3 className="text-primary font-bold text-xs">필터 및 설정</h3>
                 </div>
                 <div className="divide-y divide-gray-100">
                   {/* 불일치 목록 토글 */}
@@ -735,7 +735,7 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
                     <div className="flex items-center justify-between px-2 py-1.5">
                       <div className="flex items-center gap-2">
                         <AlertTriangle className="w-3 h-3 text-purple-600" />
-                        <span className="text-xs font-medium text-[#373d41]">ID-데이터 불일치</span>
+                        <span className="text-xs font-medium text-primary-700">ID-데이터 불일치</span>
                         <span className="text-xs text-purple-600">
                           {mismatchedStudents.length}명
                         </span>
@@ -770,7 +770,7 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
                     <div className="flex items-center justify-between px-2 py-1.5">
                       <div className="flex items-center gap-2">
                         <RefreshCw className="w-3 h-3 text-rose-600" />
-                        <span className="text-xs font-medium text-[#373d41]">비정규 ID</span>
+                        <span className="text-xs font-medium text-primary-700">비정규 ID</span>
                         <span className="text-xs text-rose-600">
                           {unnormalizedIdStudents.length}명
                         </span>
@@ -793,7 +793,7 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
                     <div className="flex items-center justify-between px-2 py-1.5">
                       <div className="flex items-center gap-2">
                         <FileWarning className="w-3 h-3 text-orange-600" />
-                        <span className="text-xs font-medium text-[#373d41]">이상한 문서</span>
+                        <span className="text-xs font-medium text-primary-700">이상한 문서</span>
                         <span className="text-xs text-orange-600">
                           {abnormalStudents.length}개
                         </span>
@@ -816,8 +816,8 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
               {/* Section 2: 통계 요약 */}
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                  <BarChart3 className="w-3 h-3 text-[#081429]" />
-                  <h3 className="text-[#081429] font-bold text-xs">통계 요약</h3>
+                  <BarChart3 className="w-3 h-3 text-primary" />
+                  <h3 className="text-primary font-bold text-xs">통계 요약</h3>
                 </div>
                 <div className="p-2 space-y-2">
                   {/* 중복 그룹 통계 */}
@@ -991,7 +991,7 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
                   <div className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200">
                     <div className="flex items-center gap-1">
                       <AlertTriangle className="w-3 h-3 text-gray-600" />
-                      <h3 className="text-[#081429] font-bold text-xs">최근 정규화 결과</h3>
+                      <h3 className="text-primary font-bold text-xs">최근 정규화 결과</h3>
                     </div>
                     <button onClick={() => setNormalizeResult(null)} className="text-xs text-gray-500 hover:text-gray-700">닫기</button>
                   </div>
@@ -1080,8 +1080,8 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
                 <div className="bg-white border border-gray-200 overflow-hidden">
                   <div className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200">
                     <div className="flex items-center gap-1">
-                      <Users className="w-3 h-3 text-[#081429]" />
-                      <h3 className="text-[#081429] font-bold text-xs">중복 그룹 목록</h3>
+                      <Users className="w-3 h-3 text-primary" />
+                      <h3 className="text-primary font-bold text-xs">중복 그룹 목록</h3>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -1117,7 +1117,7 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
                               ) : (
                                 <ChevronRight className="w-4 h-4 text-gray-500" />
                               )}
-                              <span className="font-bold text-[#081429]">{group.name}</span>
+                              <span className="font-bold text-primary">{group.name}</span>
                               {(group.school || group.grade) && (
                                 <span className="text-xs text-gray-500">
                                   {group.school} {group.grade}
@@ -1220,8 +1220,8 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
               {/* Section 4: 작업 버튼 */}
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                  <Settings className="w-3 h-3 text-[#081429]" />
-                  <h3 className="text-[#081429] font-bold text-xs">일괄 작업</h3>
+                  <Settings className="w-3 h-3 text-primary" />
+                  <h3 className="text-primary font-bold text-xs">일괄 작업</h3>
                 </div>
                 <div className="p-2 space-y-2">
                   {/* 수강 없는 중복 학생 삭제 */}

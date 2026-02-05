@@ -39,17 +39,17 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                 className={`
           flex items-center justify-center gap-0.5 min-w-fit px-0.5 @xs:px-1 @sm:px-2 py-0.5 @xs:py-1 @sm:py-1.5
           rounded-sm @sm:rounded-sm transition-all duration-200 group
-          ${isOpen ? 'bg-gray-100 text-[#081429]' : 'hover:bg-gray-100 text-[#373d41]'}
+          ${isOpen ? 'bg-gray-100 text-primary' : 'hover:bg-gray-100 text-primary-700'}
           ${className}
         `}
             >
-                <span className={`font-extrabold text-xxs @xs:text-xs @sm:text-sm tracking-tight group-hover:text-[#fdb813] transition-colors`}>
+                <span className={`font-extrabold text-xxs @xs:text-xs @sm:text-sm tracking-tight group-hover:text-accent transition-colors`}>
                     {selectedOption ? selectedOption.label : placeholder}
                 </span>
                 <ChevronDown
                     size={12}
                     strokeWidth={3}
-                    className={`text-gray-300 transition-transform duration-200 group-hover:text-[#fdb813] @xs:w-3 @xs:h-3 @sm:w-4 @sm:h-4 ${isOpen ? 'rotate-180 text-[#fdb813]' : ''}`}
+                    className={`text-gray-300 transition-transform duration-200 group-hover:text-accent @xs:w-3 @xs:h-3 @sm:w-4 @sm:h-4 ${isOpen ? 'rotate-180 text-accent' : ''}`}
                 />
             </button>
 
@@ -66,12 +66,12 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                                 className={`
                   flex items-center justify-between w-full px-3 py-2 rounded-sm text-sm font-bold transition-colors whitespace-nowrap
                   ${option.value === value
-                                        ? 'bg-[#fdb813]/10 text-[#081429]'
-                                        : 'text-gray-600 hover:bg-gray-50 hover:text-[#081429]'}
+                                        ? 'bg-accent/10 text-primary'
+                                        : 'text-gray-600 hover:bg-gray-50 hover:text-primary'}
                 `}
                             >
                                 {option.label}
-                                {option.value === value && <Check size={14} className="text-[#fdb813]" />}
+                                {option.value === value && <Check size={14} className="text-accent" />}
                             </button>
                         ))}
                     </div>

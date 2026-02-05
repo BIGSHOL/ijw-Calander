@@ -186,13 +186,13 @@ const StaffManager: React.FC<StaffManagerProps> = ({
           {/* Left: Title + Stats inline */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <Briefcase className="w-4 h-4 text-[#fdb813]" />
-              <h1 className="text-sm font-bold text-[#081429]">직원 관리</h1>
+              <Briefcase className="w-4 h-4 text-accent" />
+              <h1 className="text-sm font-bold text-primary">직원 관리</h1>
             </div>
 
             {/* Inline Stats */}
             <div className="flex items-center gap-3 text-xs">
-              <span className="text-gray-500">전체 <span className="font-bold text-[#081429]">{stats.total}</span></span>
+              <span className="text-gray-500">전체 <span className="font-bold text-primary">{stats.total}</span></span>
               <span className="text-gray-300">|</span>
               <span className="text-gray-500">재직 <span className="font-bold text-emerald-600">{stats.active}</span></span>
               <span className="text-gray-300">|</span>
@@ -238,7 +238,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
             )}
             <button
               onClick={handleAddNew}
-              className="flex items-center gap-1 px-3 py-1.5 bg-[#081429] text-white rounded text-xs font-bold hover:bg-[#0a1a35] transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded text-xs font-bold hover:bg-primary-800 transition-colors"
             >
               <Plus className="w-3 h-3" />
               <span>직원 추가</span>
@@ -252,8 +252,8 @@ const StaffManager: React.FC<StaffManagerProps> = ({
             onClick={() => setViewMode('list')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border-b-2 transition-colors ${
               viewMode === 'list'
-                ? 'border-[#fdb813] text-[#081429] font-semibold'
-                : 'border-transparent text-gray-500 hover:text-[#081429]'
+                ? 'border-accent text-primary font-semibold'
+                : 'border-transparent text-gray-500 hover:text-primary'
             }`}
           >
             <Briefcase className="w-3.5 h-3.5" />
@@ -263,8 +263,8 @@ const StaffManager: React.FC<StaffManagerProps> = ({
             onClick={() => setViewMode('schedule')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border-b-2 transition-colors ${
               viewMode === 'schedule'
-                ? 'border-[#fdb813] text-[#081429] font-semibold'
-                : 'border-transparent text-gray-500 hover:text-[#081429]'
+                ? 'border-accent text-primary font-semibold'
+                : 'border-transparent text-gray-500 hover:text-primary'
             }`}
           >
             <Calendar className="w-3.5 h-3.5" />
@@ -274,8 +274,8 @@ const StaffManager: React.FC<StaffManagerProps> = ({
             onClick={() => setViewMode('leave')}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs border-b-2 transition-colors ${
               viewMode === 'leave'
-                ? 'border-[#fdb813] text-[#081429] font-semibold'
-                : 'border-transparent text-gray-500 hover:text-[#081429]'
+                ? 'border-accent text-primary font-semibold'
+                : 'border-transparent text-gray-500 hover:text-primary'
             }`}
           >
             <Calendar className="w-3.5 h-3.5" />
@@ -301,7 +301,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
                 placeholder="이름, 이메일, 전화번호 검색..."
                 value={searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813] focus:border-transparent"
+                className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-accent focus:border-transparent"
               />
             </div>
 
@@ -311,7 +311,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value as StaffMember['role'] | 'all')}
-                className="px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
+                className="px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-accent"
               >
                 <option value="all">전체 직책</option>
                 {Object.entries(STAFF_ROLE_LABELS).map(([value, label]) => (
@@ -324,7 +324,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as StaffMember['status'] | 'all')}
-              className="px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-[#fdb813]"
+              className="px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-accent"
             >
               <option value="all">전체 상태</option>
               {Object.entries(STAFF_STATUS_LABELS).map(([value, label]) => (
@@ -344,7 +344,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
       <div className="flex-1 overflow-auto p-4">
         {loading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-sm h-8 w-8 border-b-2 border-[#081429]"></div>
+            <div className="animate-spin rounded-sm h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : error ? (
           <div className="text-center text-red-500 py-8">{error}</div>

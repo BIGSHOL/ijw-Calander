@@ -198,23 +198,23 @@ const ClassAttendanceList: React.FC<ClassAttendanceListProps> = ({
       </div>
 
       {/* Records List */}
-      <div className="rounded-sm shadow-sm border overflow-hidden" style={{ backgroundColor: 'white', borderColor: '#08142915' }}>
+      <div className="rounded-sm shadow-sm border overflow-hidden" style={{ backgroundColor: 'white', borderColor: 'rgba(8, 20, 41, 0.15)' }}>
         <table className="w-full">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>
+              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
                 학생
               </th>
-              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>
+              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
                 수업
               </th>
-              <th className="px-2 py-1.5 text-center text-xxs font-medium" style={{ color: '#373d41' }}>
+              <th className="px-2 py-1.5 text-center text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
                 출결 상태
               </th>
-              <th className="px-2 py-1.5 text-center text-xxs font-medium" style={{ color: '#373d41' }}>
+              <th className="px-2 py-1.5 text-center text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
                 입실/퇴실
               </th>
-              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>
+              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
                 메모
               </th>
             </tr>
@@ -323,21 +323,21 @@ const ClassAttendanceList: React.FC<ClassAttendanceListProps> = ({
 
       {/* Pagination */}
       {filteredRecords.length > 0 && (
-        <div className="p-3 rounded-sm shadow-sm border flex items-center justify-between" style={{ backgroundColor: 'white', borderColor: '#08142915' }}>
+        <div className="p-3 rounded-sm shadow-sm border flex items-center justify-between" style={{ backgroundColor: 'white', borderColor: 'rgba(8, 20, 41, 0.15)' }}>
           <div className="flex items-center gap-2">
-            <span className="text-xs" style={{ color: '#373d41' }}>페이지당</span>
+            <span className="text-xs" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>페이지당</span>
             <select
               value={pageSize}
               onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
               className="px-2 py-1 text-xs rounded-sm border transition-all"
-              style={{ borderColor: '#08142920', color: '#081429', backgroundColor: 'white' }}
+              style={{ borderColor: 'rgba(8, 20, 41, 0.2)', color: 'rgb(8, 20, 41)' /* primary */, backgroundColor: 'white' }}
             >
               <option value={10}>10개</option>
               <option value={20}>20개</option>
               <option value={50}>50개</option>
               <option value={100}>100개</option>
             </select>
-            <span className="text-xs hidden sm:inline" style={{ color: '#373d41' }}>
+            <span className="text-xs hidden sm:inline" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
               {(safePage - 1) * pageSize + 1}-{Math.min(safePage * pageSize, filteredRecords.length)} / 총 {filteredRecords.length}개
             </span>
           </div>
@@ -346,7 +346,7 @@ const ClassAttendanceList: React.FC<ClassAttendanceListProps> = ({
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={safePage <= 1}
               className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
-              style={{ color: '#081429' }}
+              style={{ color: 'rgb(8, 20, 41)' /* primary */ }}
             >이전</button>
             <div className="flex items-center gap-1">
               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -357,7 +357,7 @@ const ClassAttendanceList: React.FC<ClassAttendanceListProps> = ({
                 else pageNum = safePage - 2 + i;
                 return (
                   <button key={pageNum} onClick={() => setCurrentPage(pageNum)}
-                    className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${safePage === pageNum ? 'text-[#081429]' : 'text-gray-600 hover:bg-gray-100'}`}
+                    className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${safePage === pageNum ? 'text-primary' : 'text-gray-600 hover:bg-gray-100'}`}
                     style={{ backgroundColor: safePage === pageNum ? '#fdb813' : 'transparent' }}
                   >{pageNum}</button>
                 );
@@ -367,7 +367,7 @@ const ClassAttendanceList: React.FC<ClassAttendanceListProps> = ({
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={safePage >= totalPages}
               className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
-              style={{ color: '#081429' }}
+              style={{ color: 'rgb(8, 20, 41)' /* primary */ }}
             >다음</button>
           </nav>
         </div>

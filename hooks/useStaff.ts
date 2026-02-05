@@ -90,7 +90,6 @@ async function cascadeNameUpdate(
     // 배치 커밋
     if (updateCount > 0) {
       await batch.commit();
-      console.log(`✅ 직원 이름 변경: ${oldName} → ${newName} (${updateCount}개 수업 자동 업데이트)`);
     }
   } catch (error) {
     console.error('❌ 직원 이름 변경 전파 실패:', error);

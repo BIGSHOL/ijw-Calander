@@ -307,7 +307,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
             <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-sm shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[84vh]">
                 {/* 헤더 */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
-                    <h2 className="text-sm font-bold text-[#081429]">
+                    <h2 className="text-sm font-bold text-primary">
                         {initialData ? '상담 기록 수정' : '새 상담 등록'}
                     </h2>
                     <button
@@ -328,7 +328,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                             onClick={() => setActiveTab(tab.id)}
                             className={`px-4 py-2 text-xs font-medium transition-colors relative ${
                                 activeTab === tab.id
-                                    ? 'text-[#081429]'
+                                    ? 'text-primary'
                                     : 'text-gray-500 hover:text-gray-700'
                             }`}
                             style={activeTab === tab.id ? {
@@ -348,7 +348,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                     {/* 1. 접수 정보 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <h3 className="text-[#081429] font-bold text-xs">접수 정보</h3>
+                            <h3 className="text-primary font-bold text-xs">접수 정보</h3>
                         </div>
                         <div className="p-2">
                         <div className="grid grid-cols-4 gap-2">
@@ -401,7 +401,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                         {/* 학생 정보 */}
                         <div className="bg-white border border-gray-200 overflow-hidden">
                             <div className="px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                <h3 className="text-[#081429] font-bold text-xs">학생 정보</h3>
+                                <h3 className="text-primary font-bold text-xs">학생 정보</h3>
                             </div>
                             <div className="p-2">
                             <div className="grid grid-cols-2 gap-2 mb-2">
@@ -466,7 +466,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                         {/* 상담 정보 */}
                         <div className="bg-white border border-gray-200 overflow-hidden">
                             <div className="px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                <h3 className="text-[#081429] font-bold text-xs">상담 내용</h3>
+                                <h3 className="text-primary font-bold text-xs">상담 내용</h3>
                             </div>
                             <div className="p-2">
                             <div className="grid grid-cols-2 gap-2 mb-2">
@@ -813,7 +813,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                     {/* 5. 등록/결제 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <h3 className="text-[#081429] font-bold text-xs">등록 / 결제</h3>
+                            <h3 className="text-primary font-bold text-xs">등록 / 결제</h3>
                         </div>
                         <div className="p-2">
                             <div className="mb-2">

@@ -216,7 +216,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
       id: 'students', label: '재원생', value: activeStudents, subValue: '명',
       trend: newStudentsThisMonth > 0 ? 'up' : 'stable',
       trendValue: newStudentsThisMonth > 0 ? `+${newStudentsThisMonth}` : undefined,
-      icon: '👥', color: '#081429',
+      icon: '👥', color: 'rgb(8, 20, 41)' /* primary */,
     },
     {
       id: 'attendance', label: '오늘 출석률', value: `${attendanceRate}%`,
@@ -257,7 +257,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   const [isAddConsultationOpen, setIsAddConsultationOpen] = useState(false);
 
   const quickActions: QuickAction[] = [
-    { id: 'add-student', label: '학생 추가', icon: UserPlus, onClick: () => setIsAddStudentOpen(true), color: '#081429' },
+    { id: 'add-student', label: '학생 추가', icon: UserPlus, onClick: () => setIsAddStudentOpen(true), color: 'rgb(8, 20, 41)' /* primary */ },
     { id: 'add-class', label: '수업 추가', icon: BookOpen, onClick: () => setIsAddClassOpen(true), color: '#10b981' },
     { id: 'add-consultation', label: '상담 기록', icon: MessageCircle, onClick: () => setIsAddConsultationOpen(true), color: '#6366f1' },
   ];
@@ -281,7 +281,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
         {isLoading ? (
           <div className="flex items-center justify-center h-64">
             <div className="flex flex-col items-center gap-3">
-              <div className="w-8 h-8 border-3 border-[#fdb813] border-t-transparent rounded-sm animate-spin" />
+              <div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-sm animate-spin" />
               <span className="text-sm text-gray-500">데이터 로딩 중...</span>
             </div>
           </div>
@@ -296,7 +296,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3">
               {/* 과목별 학생 분포 */}
               <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
-                <h3 className="text-xs font-bold text-[#081429] mb-2">📊 과목별 학생 분포</h3>
+                <h3 className="text-xs font-bold text-primary mb-2">📊 과목별 학생 분포</h3>
                 <div className="space-y-2">
                   {subjectDistribution.map((item, idx) => (
                     <div key={idx}>
@@ -314,7 +314,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
 
               {/* 주간 출석 추이 */}
               <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
-                <h3 className="text-xs font-bold text-[#081429] mb-2">📈 주간 출석 추이</h3>
+                <h3 className="text-xs font-bold text-primary mb-2">📈 주간 출석 추이</h3>
                 <div className="flex items-end justify-between h-20 gap-1">
                   {weeklyAttendance.map((day, idx) => (
                     <div key={idx} className="flex-1 flex flex-col items-center gap-0.5">
@@ -332,7 +332,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
 
               {/* 주의 필요 */}
               <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
-                <h3 className="text-xs font-bold text-[#081429] mb-2">⚠️ 주의 필요</h3>
+                <h3 className="text-xs font-bold text-primary mb-2">⚠️ 주의 필요</h3>
                 <div className="space-y-1.5">
                   {pendingCount > 0 ? (
                     <div className="flex items-center gap-1.5 text-xxs text-red-600">
@@ -389,7 +389,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               {/* 미납 현황 */}
               <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-bold text-[#081429]">💰 미납 현황</h3>
+                  <h3 className="text-xs font-bold text-primary">💰 미납 현황</h3>
                   {pendingCount > 0 ? (
                     <span className="text-xxs font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded">
                       {pendingCount}건 / {unpaidRecords.reduce((s, r) => s + (r.unpaidAmount || 0), 0).toLocaleString()}원
@@ -419,7 +419,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               {/* 상담 후속조치 */}
               <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-bold text-[#081429]">📋 상담 후속조치</h3>
+                  <h3 className="text-xs font-bold text-primary">📋 상담 후속조치</h3>
                   {followUpData.total > 0 ? (
                     <span className="text-xxs font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
                       {followUpData.total}건 대기
@@ -456,13 +456,13 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               {/* 오늘의 수업 현황 - 요약 + 미기록만 표시 */}
               <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-bold text-[#081429]">📚 오늘의 수업</h3>
+                  <h3 className="text-xs font-bold text-primary">📚 오늘의 수업</h3>
                 </div>
                 {todayClasses.length > 0 ? (
                   <>
                     <div className="flex items-center gap-3 mb-2">
                       <div className="flex-1 bg-gray-50 rounded px-2 py-1.5 text-center">
-                        <div className="text-sm font-bold text-[#081429]">{todayClasses.length}</div>
+                        <div className="text-sm font-bold text-primary">{todayClasses.length}</div>
                         <div className="text-micro text-gray-500">전체</div>
                       </div>
                       <div className="flex-1 bg-green-50 rounded px-2 py-1.5 text-center">
@@ -502,7 +502,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               {/* 퇴원 현황 + 최근 시험 */}
               <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-bold text-[#081429]">🚪 이번 달 퇴원</h3>
+                  <h3 className="text-xs font-bold text-primary">🚪 이번 달 퇴원</h3>
                   {withdrawalData.count > 0 ? (
                     <span className="text-xxs font-bold text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">{withdrawalData.count}명</span>
                   ) : null}
@@ -521,7 +521,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 )}
 
                 <div className="border-t border-gray-100 pt-2">
-                  <h3 className="text-xs font-bold text-[#081429] mb-1.5">📝 최근 시험</h3>
+                  <h3 className="text-xs font-bold text-primary mb-1.5">📝 최근 시험</h3>
                   {recentExamList.length > 0 ? (
                     <div className="space-y-1">
                       {recentExamList.map((exam, idx) => (
@@ -544,10 +544,10 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
 
               {/* 등록 상담 전환율 */}
               <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
-                <h3 className="text-xs font-bold text-[#081429] mb-2">📞 이번 달 등록 상담</h3>
+                <h3 className="text-xs font-bold text-primary mb-2">📞 이번 달 등록 상담</h3>
                 <div className="flex items-center justify-center gap-4 py-2">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-[#081429]">{regConversionData.total}</div>
+                    <div className="text-2xl font-bold text-primary">{regConversionData.total}</div>
                     <div className="text-xxs text-gray-500">전체 상담</div>
                   </div>
                   <div className="text-lg text-gray-300">→</div>
@@ -560,7 +560,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 <div className="mt-1">
                   <div className="flex items-center justify-between mb-0.5">
                     <span className="text-xxs text-gray-500">전환율</span>
-                    <span className="text-xxs font-bold text-[#081429]">{regConversionData.rate}%</span>
+                    <span className="text-xxs font-bold text-primary">{regConversionData.rate}%</span>
                   </div>
                   <div className="w-full bg-gray-100 rounded-sm h-2">
                     <div

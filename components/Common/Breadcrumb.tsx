@@ -60,7 +60,7 @@ const Breadcrumb: React.FC<BreadcrumbProps> = ({
                   </button>
                 ) : (
                   <span
-                    className={isLast ? 'text-[#fdb813] font-medium' : 'text-gray-300'}
+                    className={isLast ? 'text-accent font-medium' : 'text-gray-300'}
                     aria-current={isLast ? 'page' : undefined}
                   >
                     {item.label}

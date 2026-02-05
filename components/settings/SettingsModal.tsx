@@ -468,8 +468,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* Header */}
           <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-            <h2 className="text-sm font-bold text-[#081429] flex items-center gap-2">
-              <FolderKanban size={20} className="text-[#fdb813]" />
+            <h2 className="text-sm font-bold text-primary flex items-center gap-2">
+              <FolderKanban size={20} className="text-accent" />
               시스템 관리
             </h2>
             <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
@@ -506,7 +506,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                           document.documentElement.classList.remove('dark');
                         }
                       }}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-sm transition-colors ${storage.getBoolean(STORAGE_KEYS.DARK_MODE, false) ? 'bg-[#081429]' : 'bg-gray-200'
+                      className={`relative inline-flex h-6 w-11 items-center rounded-sm transition-colors ${storage.getBoolean(STORAGE_KEYS.DARK_MODE, false) ? 'bg-primary' : 'bg-gray-200'
                         }`}
                     >
                       <span
@@ -542,7 +542,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         </div>
                         <button
                           onClick={onToggleArchived}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-sm transition-colors ${showArchived ? 'bg-[#fdb813]' : 'bg-gray-200'}`}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-sm transition-colors ${showArchived ? 'bg-accent' : 'bg-gray-200'}`}
                         >
                           <span className={`inline-block h-4 w-4 transform rounded-sm bg-white transition-transform ${showArchived ? 'translate-x-6' : 'translate-x-1'}`} />
                         </button>

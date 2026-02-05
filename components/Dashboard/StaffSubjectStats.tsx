@@ -50,7 +50,7 @@ const StaffSubjectStats: React.FC<StaffSubjectStatsProps> = ({ stats = [], loadi
       </div>
     ) : (
       <div className="bg-white rounded-sm border border-gray-200 p-4">
-        <h3 className="text-sm font-semibold text-[#081429] mb-2">선생님별 상담</h3>
+        <h3 className="text-sm font-semibold text-primary mb-2">선생님별 상담</h3>
         <p className="text-xs text-gray-400 text-center py-4">상담 기록 없음</p>
       </div>
     );
@@ -119,7 +119,7 @@ const StaffSubjectStats: React.FC<StaffSubjectStatsProps> = ({ stats = [], loadi
 
   return (
     <div className="bg-white rounded-sm border border-gray-200 p-6">
-      <h3 className="text-lg font-semibold text-[#081429] mb-5">선생님별 상담 통계</h3>
+      <h3 className="text-lg font-semibold text-primary mb-5">선생님별 상담 통계</h3>
 
       {/* 선생님 목록 - 대시보드 스타일 */}
       <div className="space-y-3">

@@ -189,7 +189,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
         <div className="max-w-7xl mx-auto">
           <DashboardHeader userProfile={userProfile} staffMember={staffMember} />
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-sm h-12 w-12 border-4 border-[#fdb813] border-t-transparent"></div>
+            <div className="animate-spin rounded-sm h-12 w-12 border-4 border-accent border-t-transparent"></div>
           </div>
         </div>
       </div>
@@ -208,7 +208,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
               <h3 className="text-xs font-medium text-gray-500">전체 학생</h3>
               <Users className="w-4 h-4 text-blue-500" />
             </div>
-            <p className="text-2xl font-bold text-[#081429]">{totalStudents}</p>
+            <p className="text-2xl font-bold text-primary">{totalStudents}</p>
             <p className="text-xxs text-gray-400 mt-0.5">재원 {activeStudents}명</p>
           </div>
 
@@ -217,7 +217,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
               <h3 className="text-xs font-medium text-gray-500">전체 수업</h3>
               <BookOpen className="w-4 h-4 text-green-500" />
             </div>
-            <p className="text-2xl font-bold text-[#081429]">{totalClasses}</p>
+            <p className="text-2xl font-bold text-primary">{totalClasses}</p>
             <p className="text-xxs text-gray-400 mt-0.5">운영 중인 수업</p>
           </div>
 
@@ -226,7 +226,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
               <h3 className="text-xs font-medium text-gray-500">오늘 수업</h3>
               <Calendar className="w-4 h-4 text-purple-500" />
             </div>
-            <p className="text-2xl font-bold text-[#081429]">{todayClasses.length}</p>
+            <p className="text-2xl font-bold text-primary">{todayClasses.length}</p>
             <p className="text-xxs text-gray-400 mt-0.5">{dayOfWeek}요일 수업</p>
           </div>
 
@@ -235,7 +235,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
               <h3 className="text-xs font-medium text-gray-500">강사</h3>
               <UserCheck className="w-4 h-4 text-orange-500" />
             </div>
-            <p className="text-2xl font-bold text-[#081429]">{teacherStats.length}</p>
+            <p className="text-2xl font-bold text-primary">{teacherStats.length}</p>
             <p className="text-xxs text-gray-400 mt-0.5">활동 중인 강사</p>
           </div>
         </div>
@@ -243,8 +243,8 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
         {/* 강사별 성과 */}
         <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
           <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="w-4 h-4 text-[#081429]" />
-            <h2 className="text-sm font-bold text-[#081429]">강사별 성과</h2>
+            <TrendingUp className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-bold text-primary">강사별 성과</h2>
           </div>
 
           {teacherStats.length === 0 ? (
@@ -267,7 +267,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
                   {teacherStats.map((teacher, index) => (
                     <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="py-2 px-2">
-                        <div className="text-xs font-medium text-[#081429]">{teacher.name}</div>
+                        <div className="text-xs font-medium text-primary">{teacher.name}</div>
                       </td>
                       <td className="text-center py-2 px-2 text-xs text-gray-600">
                         {teacher.classCount}개
@@ -292,15 +292,15 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
         <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-[#081429]" />
-              <h2 className="text-sm font-bold text-[#081429]">수업 현황</h2>
+              <BookOpen className="w-4 h-4 text-primary" />
+              <h2 className="text-sm font-bold text-primary">수업 현황</h2>
             </div>
 
             {/* 선생님 필터 */}
             <select
               value={selectedTeacher}
               onChange={(e) => setSelectedTeacher(e.target.value)}
-              className="px-2 py-1 border border-gray-300 rounded-sm text-xs focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+              className="px-2 py-1 border border-gray-300 rounded-sm text-xs focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="all">전체 선생님</option>
               {teacherStats.map(teacher => (
@@ -331,10 +331,10 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
                 return (
                 <div
                   key={cls.id}
-                  className="border border-gray-200 rounded-sm p-2 hover:border-[#fdb813] hover:shadow-md transition-all"
+                  className="border border-gray-200 rounded-sm p-2 hover:border-accent hover:shadow-md transition-all"
                 >
                   <div className="flex items-start justify-between mb-1">
-                    <h3 className="text-sm font-bold text-[#081429]">{cls.className}</h3>
+                    <h3 className="text-sm font-bold text-primary">{cls.className}</h3>
                     <span className={`text-xxs px-1.5 py-0.5 rounded-sm font-medium ${SUBJECT_COLORS[cls.subject as SubjectType]?.badge || SUBJECT_COLORS.other.badge}`}>
                       {SUBJECT_LABELS[cls.subject as SubjectType] || cls.subject}
                     </span>

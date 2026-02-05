@@ -107,7 +107,7 @@ const MathTimetableEmbed: React.FC<MathTimetableEmbedProps> = ({ token }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
   // 데이터 로딩
-  const { classes, teachers, studentMap, loading, error } = useEmbedMathData(embedSettings);
+  const { classes, teachers, classKeywords, studentMap, loading, error } = useEmbedMathData(embedSettings);
   const { settings } = useMathSettings();
 
   // 수학 수업 변환 (통합뷰용)
@@ -383,7 +383,7 @@ const MathTimetableEmbed: React.FC<MathTimetableEmbedProps> = ({ token }) => {
                 currentSubjectFilter="math"
                 studentMap={studentMap}
                 timetableViewMode="teacher-based"
-                classKeywords={[]}
+                classKeywords={classKeywords}
               />
             )}
           </div>

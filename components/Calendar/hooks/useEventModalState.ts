@@ -379,12 +379,6 @@ export const useEventModalState = (props: UseEventModalStateProps): UseEventModa
       tags: selectedTags.length > 0 ? selectedTags : undefined,
     };
 
-    console.log('DEBUG: selectedColor', selectedColor);
-    console.log('DEBUG: selectedTextColor', selectedTextColor);
-    console.log('DEBUG: selectedBorderColor', selectedBorderColor);
-    console.log('EventModal handleSubmit payload:', payload);
-    console.log('Recurrence:', recurrenceType, 'Count:', recurrenceCount);
-
     (payload as any)._recurrenceCount = recurrenceType !== 'none' ? recurrenceCount : undefined;
 
     onSave(payload);

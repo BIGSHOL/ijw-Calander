@@ -223,8 +223,6 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
                     isPreRestoreBackup: true,
                     restoringTo: backup.id
                 });
-
-                console.log(`✅ Pre-restore backup created: ${preRestoreBackupId} (timetable: ${Object.keys(currentTimetableData).length}, students: ${Object.keys(currentStudentData).length})`);
             } catch (preBackupError) {
                 console.warn('복원 전 백업 생성 실패 (계속 진행):', preBackupError);
             }
@@ -233,8 +231,6 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
             const currentSnapshot = await getDocs(collection(db, CLASS_COLLECTION));
             const currentDocIds = new Set(currentSnapshot.docs.map(doc => doc.id));
             const backupDocIds = new Set(Object.keys(backup.data));
-
-            console.log(`Timetable restoration started:\r\n- Current documents: ${currentDocIds.size}\r\n- Backup documents: ${backupDocIds.size}`);
 
             const timetableBatch = writeBatch(db);
             let timetableDeleteCount = 0;
@@ -253,7 +249,6 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
             });
 
             await timetableBatch.commit();
-            console.log(`✅ Timetable restored: deleted ${timetableDeleteCount}, written ${timetableWriteCount}`);
 
             // Step 3: 학생 데이터 복원 (있는 경우만)
             let studentDeleteCount = 0;
@@ -283,7 +278,6 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
                 });
 
                 await studentBatch.commit();
-                console.log(`✅ Student data restored: deleted ${studentDeleteCount}, written ${studentWriteCount}`);
             }
 
             // 결과 메시지
@@ -371,8 +365,8 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
                             {/* Section 1: 백업 목록 */}
                             <div className="bg-white border border-gray-200 overflow-hidden">
                                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                    <Database className="w-3 h-3 text-[#081429]" />
-                                    <h3 className="text-[#081429] font-bold text-xs">백업 목록</h3>
+                                    <Database className="w-3 h-3 text-primary" />
+                                    <h3 className="text-primary font-bold text-xs">백업 목록</h3>
                                 </div>
                                 <div className="divide-y divide-gray-100">
                                     {backups.map((backup, index) => {
@@ -515,8 +509,8 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
                             {selectedBackup && (
                                 <div className="bg-white border border-gray-200 overflow-hidden">
                                     <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                        <Database className="w-3 h-3 text-[#081429]" />
-                                        <h3 className="text-[#081429] font-bold text-xs">선택한 백업 정보</h3>
+                                        <Database className="w-3 h-3 text-primary" />
+                                        <h3 className="text-primary font-bold text-xs">선택한 백업 정보</h3>
                                     </div>
                                     <div className="p-3 space-y-2">
                                         <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
@@ -549,8 +543,8 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
                             {selectedBackup && (
                                 <div className="bg-white border border-gray-200 overflow-hidden">
                                     <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                        <Eye className="w-3 h-3 text-[#081429]" />
-                                        <h3 className="text-[#081429] font-bold text-xs">미리보기</h3>
+                                        <Eye className="w-3 h-3 text-primary" />
+                                        <h3 className="text-primary font-bold text-xs">미리보기</h3>
                                     </div>
                                     <div className="p-3">
                                         <div className="bg-gray-50 border border-gray-200 rounded-sm p-3 max-h-48 overflow-y-auto">
@@ -591,8 +585,8 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
                             {selectedBackup && (
                                 <div className="bg-white border border-gray-200 overflow-hidden">
                                     <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                        <RotateCcw className="w-3 h-3 text-[#081429]" />
-                                        <h3 className="text-[#081429] font-bold text-xs">작업</h3>
+                                        <RotateCcw className="w-3 h-3 text-primary" />
+                                        <h3 className="text-primary font-bold text-xs">작업</h3>
                                     </div>
                                     <div className="p-3">
                                         <div className="flex items-center gap-2">

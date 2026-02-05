@@ -128,7 +128,6 @@ export const useEnglishSettings = () => {
 
                 // 변경 사항이 있을 때만 저장
                 if (JSON.stringify(migratedGroups) !== JSON.stringify(customGroups)) {
-                    console.log('[Settings Migration] className → classId 변환 완료:', migratedGroups);
                     await setDoc(doc(db, 'settings', 'english_class_integration'), {
                         ...firebaseSettings,
                         customGroups: migratedGroups,

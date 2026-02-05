@@ -361,8 +361,8 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
       {/* 월 선택 헤더 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <CalendarIcon className="w-4 h-4 text-[#081429]" />
-          <h3 className="text-sm font-bold text-[#081429]">출결 현황</h3>
+          <CalendarIcon className="w-4 h-4 text-primary" />
+          <h3 className="text-sm font-bold text-primary">출결 현황</h3>
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -410,7 +410,7 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
         className="flex items-center gap-2 cursor-pointer"
         onClick={() => setShowStats(!showStats)}
       >
-        <h4 className="text-xs font-bold text-[#081429]">출석 통계</h4>
+        <h4 className="text-xs font-bold text-primary">출석 통계</h4>
         <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showStats ? '' : 'rotate-180'}`} />
       </div>
 
@@ -448,7 +448,7 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
         className="flex items-center gap-2 cursor-pointer"
         onClick={() => setShowCalendar(!showCalendar)}
       >
-        <h4 className="text-xs font-bold text-[#081429]">출석 달력</h4>
+        <h4 className="text-xs font-bold text-primary">출석 달력</h4>
         <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showCalendar ? '' : 'rotate-180'}`} />
       </div>
 

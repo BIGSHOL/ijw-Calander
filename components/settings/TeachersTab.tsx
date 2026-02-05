@@ -117,19 +117,16 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
             // 이름 변경 시 관련 수업/스케줄 동기화
             if (oldName !== newName) {
                 // Sync classes (수학/영어 시간표)
-                console.log(`수업 데이터: "${oldName}" → "${newName}" 수업 검색 중...`);
                 const classesSnapshot = await getDocs(
                     query(collection(db, 'classes'), where('teacher', '==', oldName))
                 );
 
-                console.log(`수업: 발견된 수업 ${classesSnapshot.docs.length}개`);
                 if (classesSnapshot.docs.length > 0) {
                     const batch = writeBatch(db);
                     classesSnapshot.docs.forEach(docSnap => {
                         batch.update(doc(db, 'classes', docSnap.id), { teacher: newName });
                     });
                     await batch.commit();
-                    console.log(`✅ 수업: ${classesSnapshot.docs.length}개 수업의 강사명 변경 완료`);
                 }
 
                 // 영어 시간표 강사명 변경은 classes 컬렉션 업데이트로 이미 처리됨
@@ -226,7 +223,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                         placeholder="강사 검색..."
                         value={teacherSearchTerm}
                         onChange={(e) => setTeacherSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-sm text-sm focus:border-[#fdb813] outline-none"
+                        className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-sm text-sm focus:border-accent outline-none"
                     />
                 </div>
                 {canEdit && (
@@ -263,12 +260,12 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                                 value={newTeacherName}
                                 onChange={(e) => setNewTeacherName(e.target.value)}
                                 placeholder="새 강사 이름"
-                                className="border border-gray-300 rounded-sm px-3 py-2 text-sm focus:border-[#fdb813] outline-none w-48"
+                                className="border border-gray-300 rounded-sm px-3 py-2 text-sm focus:border-accent outline-none w-48"
                                 onKeyDown={(e) => e.key === 'Enter' && handleAddTeacher()}
                             />
                             <button
                                 onClick={handleAddTeacher}
-                                className="bg-[#081429] text-white px-4 py-2 rounded-sm text-sm font-bold hover:bg-[#1e293b] flex items-center gap-1"
+                                className="bg-primary text-white px-4 py-2 rounded-sm text-sm font-bold hover:bg-[#1e293b] flex items-center gap-1"
                             >
                                 <Plus size={16} /> 추가
                             </button>
@@ -310,7 +307,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                         {canViewEnglish && (
                             <button
                                 onClick={() => setTeacherSubjectFilter('english')}
-                                className={`px-3 py-1 text-xs font-bold rounded transition-all ${teacherSubjectFilter === 'english' ? 'bg-[#fdb813] text-[#081429] shadow-sm' : 'text-gray-500'}`}
+                                className={`px-3 py-1 text-xs font-bold rounded transition-all ${teacherSubjectFilter === 'english' ? 'bg-accent text-primary shadow-sm' : 'text-gray-500'}`}
                             >
                                 영어
                             </button>
@@ -354,7 +351,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                                             <input
                                                 value={editTeacherName}
                                                 onChange={(e) => setEditTeacherName(e.target.value)}
-                                                className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm bg-white focus:border-[#fdb813] outline-none"
+                                                className="flex-1 border border-gray-300 rounded px-2 py-1 text-sm bg-white focus:border-accent outline-none"
                                                 autoFocus
                                                 onKeyDown={(e) => {
                                                     if (e.key === 'Enter') handleUpdateTeacher(teacher.id);
@@ -424,7 +421,7 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                                                 value={editTeacherDefaultRoom}
                                                 onChange={(e) => setEditTeacherDefaultRoom(e.target.value)}
                                                 placeholder="예: 601"
-                                                className="flex-1 max-w-[100px] px-2 py-1 border border-gray-200 rounded text-xxs focus:border-[#fdb813] outline-none"
+                                                className="flex-1 max-w-[100px] px-2 py-1 border border-gray-200 rounded text-xxs focus:border-accent outline-none"
                                             />
                                         </div>
                                         <div className="flex items-center gap-2 px-1 pt-1">

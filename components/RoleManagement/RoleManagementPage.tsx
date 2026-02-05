@@ -567,7 +567,7 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
               onClick={handleSave}
               disabled={!hasChanges}
               className={`px-4 py-1.5 text-xs font-bold rounded-none flex items-center gap-1 transition-colors ${hasChanges
-                ? 'bg-[#081429] text-white hover:bg-[#0a1a35]'
+                ? 'bg-primary text-white hover:bg-primary-800'
                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                 }`}
             >

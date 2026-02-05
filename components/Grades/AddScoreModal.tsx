@@ -214,7 +214,7 @@ const AddScoreModal: React.FC<AddScoreModalProps> = ({
             <div className="bg-white rounded-sm w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
                 {/* 헤더 */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-                    <h2 className="text-sm font-bold text-[#081429] flex items-center gap-2">
+                    <h2 className="text-sm font-bold text-primary flex items-center gap-2">
                         <BookOpen size={18} className="text-indigo-600" />
                         성적 입력{studentName && <span className="text-xs font-normal text-gray-500"> - {studentName}</span>}
                     </h2>
@@ -228,16 +228,16 @@ const AddScoreModal: React.FC<AddScoreModalProps> = ({
                     {/* 1. 시험 선택 섹션 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b">
-                            <Calendar className="w-3 h-3 text-[#081429]" />
-                            <span className="text-[#081429] font-bold text-xs">시험 선택</span>
+                            <Calendar className="w-3 h-3 text-primary" />
+                            <span className="text-primary font-bold text-xs">시험 선택</span>
                         </div>
                         <div className="divide-y divide-gray-100">
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <label className="w-14 shrink-0 text-xs font-medium text-[#373d41]">시험</label>
+                                <label className="w-14 shrink-0 text-xs font-medium text-primary-700">시험</label>
                                 <select
                                     value={formData.examId}
                                     onChange={(e) => setFormData({ ...formData, examId: e.target.value })}
-                                    className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:outline-none"
+                                    className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:outline-none"
                                     disabled={loadingExams}
                                 >
                                     <option value="">시험 선택...</option>
@@ -280,19 +280,19 @@ const AddScoreModal: React.FC<AddScoreModalProps> = ({
                                 value={newExam.title}
                                 onChange={(e) => setNewExam({ ...newExam, title: e.target.value })}
                                 placeholder="시험 이름 (예: 1월 모의고사)"
-                                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:outline-none"
+                                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:outline-none"
                             />
                             <div className="grid grid-cols-2 gap-2">
                                 <input
                                     type="date"
                                     value={newExam.date}
                                     onChange={(e) => setNewExam({ ...newExam, date: e.target.value })}
-                                    className="px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:outline-none"
+                                    className="px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:outline-none"
                                 />
                                 <select
                                     value={newExam.type}
                                     onChange={(e) => setNewExam({ ...newExam, type: e.target.value as Exam['type'] })}
-                                    className="px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:outline-none"
+                                    className="px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:outline-none"
                                 >
                                     <option value="mock">모의고사</option>
                                     <option value="weekly">주간테스트</option>
@@ -305,7 +305,7 @@ const AddScoreModal: React.FC<AddScoreModalProps> = ({
                                 <select
                                     value={newExam.subject}
                                     onChange={(e) => setNewExam({ ...newExam, subject: e.target.value as Exam['subject'] })}
-                                    className="px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:outline-none"
+                                    className="px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:outline-none"
                                 >
                                     <option value="math">수학</option>
                                     <option value="english">영어</option>
@@ -316,13 +316,13 @@ const AddScoreModal: React.FC<AddScoreModalProps> = ({
                                     value={newExam.maxScore}
                                     onChange={(e) => setNewExam({ ...newExam, maxScore: e.target.value })}
                                     placeholder="만점"
-                                    className="px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:outline-none"
+                                    className="px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:outline-none"
                                 />
                             </div>
                             <button
                                 onClick={handleCreateExam}
                                 disabled={!newExam.title || createExam.isPending}
-                                className="w-full px-3 py-2 bg-[#081429] text-white rounded-sm text-xs font-medium hover:bg-[#0f2847] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+                                className="w-full px-3 py-2 bg-primary text-white rounded-sm text-xs font-medium hover:bg-[#0f2847] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
                             >
                                 {createExam.isPending && <Loader2 size={12} className="animate-spin" />}
                                 시험 등록
@@ -333,13 +333,13 @@ const AddScoreModal: React.FC<AddScoreModalProps> = ({
                     {/* 2. 성적 입력 섹션 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b">
-                            <FileText className="w-3 h-3 text-[#081429]" />
-                            <span className="text-[#081429] font-bold text-xs">성적 입력</span>
+                            <FileText className="w-3 h-3 text-primary" />
+                            <span className="text-primary font-bold text-xs">성적 입력</span>
                         </div>
                         <div className="divide-y divide-gray-100">
                             {/* 과목 선택 */}
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <label className="w-14 shrink-0 text-xs font-medium text-[#373d41]">과목</label>
+                                <label className="w-14 shrink-0 text-xs font-medium text-primary-700">과목</label>
                                 <div className="flex-1 grid grid-cols-4 gap-2">
                                     <button
                                         type="button"
@@ -390,34 +390,34 @@ const AddScoreModal: React.FC<AddScoreModalProps> = ({
 
                             {/* 점수 */}
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <label className="w-14 shrink-0 text-xs font-medium text-[#373d41]">점수</label>
+                                <label className="w-14 shrink-0 text-xs font-medium text-primary-700">점수</label>
                                 <input
                                     type="number"
                                     value={formData.score}
                                     onChange={(e) => setFormData({ ...formData, score: e.target.value })}
                                     placeholder="85"
-                                    className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:outline-none"
+                                    className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:outline-none"
                                 />
                             </div>
 
                             {/* 만점 */}
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <label className="w-14 shrink-0 text-xs font-medium text-[#373d41]">만점</label>
+                                <label className="w-14 shrink-0 text-xs font-medium text-primary-700">만점</label>
                                 <input
                                     type="number"
                                     value={formData.maxScore}
                                     onChange={(e) => setFormData({ ...formData, maxScore: e.target.value })}
                                     placeholder="100"
-                                    className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:outline-none"
+                                    className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:outline-none"
                                 />
                             </div>
 
                             {/* 백분율/등급 미리보기 */}
                             {percentage && (
                                 <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-50">
-                                    <label className="w-14 shrink-0 text-xs font-medium text-[#373d41]">환산 점수</label>
+                                    <label className="w-14 shrink-0 text-xs font-medium text-primary-700">환산 점수</label>
                                     <div className="flex-1 flex items-center gap-1.5">
-                                        <span className="text-xs font-bold text-[#081429]">{percentage}%</span>
+                                        <span className="text-xs font-bold text-primary">{percentage}%</span>
                                         <span className={`px-1.5 py-0.5 rounded-sm text-xs font-bold ${
                                             grade === 'A' ? 'bg-green-100 text-green-700' :
                                             grade === 'B' ? 'bg-blue-100 text-blue-700' :
@@ -437,31 +437,31 @@ const AddScoreModal: React.FC<AddScoreModalProps> = ({
                     {formData.examId && formData.score && (
                         <div className="bg-white border border-gray-200 overflow-hidden">
                             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b">
-                                <TrendingUp className="w-3 h-3 text-[#081429]" />
-                                <span className="text-[#081429] font-bold text-xs">자동 계산</span>
+                                <TrendingUp className="w-3 h-3 text-primary" />
+                                <span className="text-primary font-bold text-xs">자동 계산</span>
                                 <span className="ml-auto text-xs text-gray-500">(저장 시 반영)</span>
                             </div>
                             <div className="divide-y divide-gray-100">
                                 {/* 평균 */}
                                 <div className="flex items-center gap-2 px-2 py-1.5">
-                                    <label className="w-14 shrink-0 text-xs font-medium text-[#373d41]">평균</label>
-                                    <div className="flex-1 px-2 py-1 text-xs text-[#081429] font-bold">
+                                    <label className="w-14 shrink-0 text-xs font-medium text-primary-700">평균</label>
+                                    <div className="flex-1 px-2 py-1 text-xs text-primary font-bold">
                                         {loadingScores ? '...' : calculatedStats.average ?? '-'}
                                     </div>
                                 </div>
 
                                 {/* 석차 */}
                                 <div className="flex items-center gap-2 px-2 py-1.5">
-                                    <label className="w-14 shrink-0 text-xs font-medium text-[#373d41]">석차</label>
-                                    <div className="flex-1 px-2 py-1 text-xs text-[#081429] font-bold">
+                                    <label className="w-14 shrink-0 text-xs font-medium text-primary-700">석차</label>
+                                    <div className="flex-1 px-2 py-1 text-xs text-primary font-bold">
                                         {loadingScores ? '...' : calculatedStats.rank ?? '-'}
                                     </div>
                                 </div>
 
                                 {/* 전체 인원 */}
                                 <div className="flex items-center gap-2 px-2 py-1.5">
-                                    <label className="w-14 shrink-0 text-xs font-medium text-[#373d41]">전체 인원</label>
-                                    <div className="flex-1 px-2 py-1 text-xs text-[#081429] font-bold">
+                                    <label className="w-14 shrink-0 text-xs font-medium text-primary-700">전체 인원</label>
+                                    <div className="flex-1 px-2 py-1 text-xs text-primary font-bold">
                                         {loadingScores ? '...' : calculatedStats.totalStudents ?? '-'}
                                     </div>
                                 </div>
@@ -472,8 +472,8 @@ const AddScoreModal: React.FC<AddScoreModalProps> = ({
                     {/* 4. 메모 섹션 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b">
-                            <AlignLeft className="w-3 h-3 text-[#081429]" />
-                            <span className="text-[#081429] font-bold text-xs">메모</span>
+                            <AlignLeft className="w-3 h-3 text-primary" />
+                            <span className="text-primary font-bold text-xs">메모</span>
                         </div>
                         <div className="p-2">
                             <textarea
@@ -481,7 +481,7 @@ const AddScoreModal: React.FC<AddScoreModalProps> = ({
                                 onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
                                 placeholder="특이사항 메모..."
                                 rows={2}
-                                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:outline-none resize-none"
+                                className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:outline-none resize-none"
                             />
                         </div>
                     </div>

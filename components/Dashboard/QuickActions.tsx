@@ -22,7 +22,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({ actions }) => {
   return (
     <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
       <div className="flex items-center gap-3">
-        <h3 className="text-xs font-bold text-[#081429]">📝 빠른 작업</h3>
+        <h3 className="text-xs font-bold text-primary">📝 빠른 작업</h3>
         <div className="flex flex-wrap gap-1.5">
           {actions.map((action) => {
             const Icon = action.icon;

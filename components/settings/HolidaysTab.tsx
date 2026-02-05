@@ -91,8 +91,8 @@ const HolidaysTab: React.FC<HolidaysTabProps> = ({ holidays, isMaster }) => {
             {isMaster && (
                 <div className="bg-white border border-gray-200 overflow-hidden">
                     <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                        <Download className="w-3 h-3 text-[#081429]" />
-                        <h3 className="text-[#081429] font-bold text-xs">기본 공휴일</h3>
+                        <Download className="w-3 h-3 text-primary" />
+                        <h3 className="text-primary font-bold text-xs">기본 공휴일</h3>
                     </div>
                     <div className="p-3">
                         <div className="flex flex-col gap-3">
@@ -107,7 +107,7 @@ const HolidaysTab: React.FC<HolidaysTabProps> = ({ holidays, isMaster }) => {
                             </div>
                             <button
                                 onClick={handleResetHolidays}
-                                className="w-full py-2 bg-[#081429] text-white rounded-sm font-bold hover:bg-[#1e293b] transition-all flex items-center justify-center gap-2 text-xs"
+                                className="w-full py-2 bg-primary text-white rounded-sm font-bold hover:bg-[#1e293b] transition-all flex items-center justify-center gap-2 text-xs"
                             >
                                 <Download size={14} />
                                 기본 공휴일 가져오기 ({STANDARD_HOLIDAYS.length}개)
@@ -121,8 +121,8 @@ const HolidaysTab: React.FC<HolidaysTabProps> = ({ holidays, isMaster }) => {
             <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200">
                     <div className="flex items-center gap-1">
-                        <List className="w-3 h-3 text-[#081429]" />
-                        <h3 className="text-[#081429] font-bold text-xs">공휴일 목록</h3>
+                        <List className="w-3 h-3 text-primary" />
+                        <h3 className="text-primary font-bold text-xs">공휴일 목록</h3>
                     </div>
                     <span className="text-xxs text-gray-400">{localHolidays.length}개 등록됨</span>
                 </div>
@@ -148,7 +148,7 @@ const HolidaysTab: React.FC<HolidaysTabProps> = ({ holidays, isMaster }) => {
                                         .filter(h => h.date.startsWith(year))
                                         .sort((a, b) => a.date.localeCompare(b.date))
                                         .map(holiday => (
-                                            <div key={holiday.id} className="group flex items-center justify-between px-2 py-1.5 bg-white rounded-sm border border-gray-100 hover:border-[#fdb813]/50 transition-colors">
+                                            <div key={holiday.id} className="group flex items-center justify-between px-2 py-1.5 bg-white rounded-sm border border-gray-100 hover:border-accent/50 transition-colors">
                                                 {editingHolidayId === holiday.id ? (
                                                     <div className="flex items-center gap-2 w-full">
                                                         <span className="text-gray-500 font-mono text-xxs">{holiday.date}</span>
@@ -156,7 +156,7 @@ const HolidaysTab: React.FC<HolidaysTabProps> = ({ holidays, isMaster }) => {
                                                             type="text"
                                                             value={editHolidayName}
                                                             onChange={(e) => setEditHolidayName(e.target.value)}
-                                                            className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                                            className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-accent outline-none"
                                                             autoFocus
                                                             onKeyDown={(e) => e.key === 'Enter' && handleUpdateHoliday(holiday)}
                                                         />
@@ -188,7 +188,7 @@ const HolidaysTab: React.FC<HolidaysTabProps> = ({ holidays, isMaster }) => {
                                                                     setEditingHolidayId(holiday.id);
                                                                     setEditHolidayName(holiday.name);
                                                                 }}
-                                                                className="p-1 text-gray-400 hover:text-[#081429] hover:bg-gray-100 rounded-sm"
+                                                                className="p-1 text-gray-400 hover:text-primary hover:bg-gray-100 rounded-sm"
                                                             >
                                                                 <Edit size={11} />
                                                             </button>
@@ -218,33 +218,33 @@ const HolidaysTab: React.FC<HolidaysTabProps> = ({ holidays, isMaster }) => {
             {/* Section 3: 공휴일 추가 (Add Holiday Form) */}
             <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                    <Plus className="w-3 h-3 text-[#081429]" />
-                    <h3 className="text-[#081429] font-bold text-xs">공휴일 추가</h3>
+                    <Plus className="w-3 h-3 text-primary" />
+                    <h3 className="text-primary font-bold text-xs">공휴일 추가</h3>
                 </div>
                 <div className="p-2">
                     <div className="divide-y divide-gray-100">
                         {/* Date Input Row */}
                         <div className="flex items-center gap-2 py-1.5">
                             <Calendar className="w-3 h-3 text-gray-400 shrink-0" />
-                            <span className="w-10 shrink-0 text-xs font-medium text-[#373d41]">날짜</span>
+                            <span className="w-10 shrink-0 text-xs font-medium text-primary-700">날짜</span>
                             <input
                                 type="date"
                                 value={newHolidayDate}
                                 onChange={(e) => setNewHolidayDate(e.target.value)}
-                                className="flex-1 border border-gray-300 rounded-sm px-2 py-1 text-xs focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                                className="flex-1 border border-gray-300 rounded-sm px-2 py-1 text-xs focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                             />
                         </div>
 
                         {/* Name Input Row */}
                         <div className="flex items-center gap-2 py-1.5">
                             <Edit className="w-3 h-3 text-gray-400 shrink-0" />
-                            <span className="w-10 shrink-0 text-xs font-medium text-[#373d41]">이름</span>
+                            <span className="w-10 shrink-0 text-xs font-medium text-primary-700">이름</span>
                             <input
                                 type="text"
                                 placeholder="예: 창립기념일, 임시공휴일"
                                 value={newHolidayName}
                                 onChange={(e) => setNewHolidayName(e.target.value)}
-                                className="flex-1 border border-gray-300 rounded-sm px-2 py-1 text-xs focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                                className="flex-1 border border-gray-300 rounded-sm px-2 py-1 text-xs focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                                 onKeyDown={(e) => e.key === 'Enter' && handleAddHoliday()}
                             />
                         </div>
@@ -254,7 +254,7 @@ const HolidaysTab: React.FC<HolidaysTabProps> = ({ holidays, isMaster }) => {
                             <button
                                 onClick={handleAddHoliday}
                                 disabled={!newHolidayDate || !newHolidayName}
-                                className="w-full bg-[#081429] text-white px-3 py-1.5 rounded-sm text-xs font-bold hover:bg-[#1e293b] disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-1 transition-colors"
+                                className="w-full bg-primary text-white px-3 py-1.5 rounded-sm text-xs font-bold hover:bg-[#1e293b] disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-1 transition-colors"
                             >
                                 <Plus size={12} /> 공휴일 추가
                             </button>

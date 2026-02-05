@@ -111,8 +111,8 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                 {/* Header */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 sticky top-0 bg-white z-10">
                     <div className="flex items-center gap-2">
-                        <SlidersHorizontal size={18} className="text-[#fdb813]" />
-                        <h3 className="text-sm font-bold text-[#081429]">보기 설정</h3>
+                        <SlidersHorizontal size={18} className="text-accent" />
+                        <h3 className="text-sm font-bold text-primary">보기 설정</h3>
                     </div>
                     <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
                         <X size={18} />
@@ -124,13 +124,13 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                     {viewType === 'date-teacher' && selectedDays && setSelectedDays && (
                         <>
                             <div className="space-y-3">
-                                <div className="text-xs font-bold text-[#fdb813]">요일 표시</div>
+                                <div className="text-xs font-bold text-accent">요일 표시</div>
                                 <div className="flex gap-2">
                                     <button
                                         onClick={toggleWeekdays}
                                         className={`flex-1 py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
                                             hasWeekdays
-                                                ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                                ? 'bg-accent text-primary border-accent'
                                                 : 'bg-gray-100 text-gray-400 border-gray-200'
                                         }`}
                                     >
@@ -140,7 +140,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                                         onClick={toggleWeekends}
                                         className={`flex-1 py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
                                             hasWeekends
-                                                ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                                ? 'bg-accent text-primary border-accent'
                                                 : 'bg-gray-100 text-gray-400 border-gray-200'
                                         }`}
                                     >
@@ -155,7 +155,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
 
                     {/* 표시 옵션 - 공통 */}
                     <div className="space-y-3">
-                        <div className="text-xs font-bold text-[#fdb813]">표시 옵션</div>
+                        <div className="text-xs font-bold text-accent">표시 옵션</div>
                         <div className="grid grid-cols-2 gap-2">
                             {/* 공통: 학생목록 */}
                             {showStudents !== undefined && setShowStudents && (
@@ -163,7 +163,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                                     onClick={() => setShowStudents(!showStudents)}
                                     className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
                                         showStudents
-                                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                            ? 'bg-accent text-primary border-accent'
                                             : 'bg-gray-100 text-gray-400 border-gray-200'
                                     }`}
                                 >
@@ -177,7 +177,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                                     onClick={() => setShowClassName(!showClassName)}
                                     className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
                                         showClassName
-                                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                            ? 'bg-accent text-primary border-accent'
                                             : 'bg-gray-100 text-gray-400 border-gray-200'
                                     }`}
                                 >
@@ -189,7 +189,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                                     onClick={() => setShowSchool(!showSchool)}
                                     className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
                                         showSchool
-                                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                            ? 'bg-accent text-primary border-accent'
                                             : 'bg-gray-100 text-gray-400 border-gray-200'
                                     }`}
                                 >
@@ -201,7 +201,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                                     onClick={() => setShowGrade(!showGrade)}
                                     className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
                                         showGrade
-                                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                            ? 'bg-accent text-primary border-accent'
                                             : 'bg-gray-100 text-gray-400 border-gray-200'
                                     }`}
                                 >
@@ -213,7 +213,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                                     onClick={() => setShowHoldStudents(!showHoldStudents)}
                                     className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
                                         showHoldStudents
-                                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                            ? 'bg-accent text-primary border-accent'
                                             : 'bg-gray-100 text-gray-400 border-gray-200'
                                     }`}
                                 >
@@ -225,7 +225,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                                     onClick={() => setShowWithdrawnStudents(!showWithdrawnStudents)}
                                     className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
                                         showWithdrawnStudents
-                                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                            ? 'bg-accent text-primary border-accent'
                                             : 'bg-gray-100 text-gray-400 border-gray-200'
                                     }`}
                                 >
@@ -241,14 +241,14 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                             <div className="w-full h-px bg-gray-200"></div>
 
                             <div className="space-y-3">
-                                <div className="text-xs font-bold text-[#fdb813]">통합뷰 전용 옵션</div>
+                                <div className="text-xs font-bold text-accent">통합뷰 전용 옵션</div>
                                 <div className="grid grid-cols-2 gap-2">
                                     {showRoom !== undefined && setShowRoom && (
                                         <button
                                             onClick={() => setShowRoom(!showRoom)}
                                             className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
                                                 showRoom
-                                                    ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                                    ? 'bg-accent text-primary border-accent'
                                                     : 'bg-gray-100 text-gray-400 border-gray-200'
                                             }`}
                                         >
@@ -260,7 +260,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                                             onClick={() => setShowTeacher(!showTeacher)}
                                             className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
                                                 showTeacher
-                                                    ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                                    ? 'bg-accent text-primary border-accent'
                                                     : 'bg-gray-100 text-gray-400 border-gray-200'
                                             }`}
                                         >
@@ -272,7 +272,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                                             onClick={() => setShowSchedule(!showSchedule)}
                                             className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
                                                 showSchedule
-                                                    ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                                    ? 'bg-accent text-primary border-accent'
                                                     : 'bg-gray-100 text-gray-400 border-gray-200'
                                             }`}
                                         >
@@ -289,7 +289,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                     {/* 크기 설정 섹션 - 날짜/강사뷰만 */}
                     {viewType === 'date-teacher' && columnWidth && setColumnWidth && rowHeight && setRowHeight && fontSize && setFontSize && (
                         <div className="space-y-3">
-                            <div className="text-xs font-bold text-[#fdb813]">크기 설정</div>
+                            <div className="text-xs font-bold text-accent">크기 설정</div>
 
                             {/* 가로 폭 */}
                             <div>
@@ -301,7 +301,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                                             onClick={() => setColumnWidth(w)}
                                             className={`flex-1 py-1.5 text-xxs rounded-sm border ${
                                                 columnWidth === w
-                                                    ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold'
+                                                    ? 'bg-accent text-primary border-accent font-bold'
                                                     : 'border-gray-300 text-gray-500 hover:bg-gray-50'
                                             }`}
                                         >
@@ -321,7 +321,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                                             onClick={() => setRowHeight(h)}
                                             className={`flex-1 py-1.5 text-xxs rounded-sm border ${
                                                 rowHeight === h
-                                                    ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold'
+                                                    ? 'bg-accent text-primary border-accent font-bold'
                                                     : 'border-gray-300 text-gray-500 hover:bg-gray-50'
                                             }`}
                                         >
@@ -341,7 +341,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                                             onClick={() => setFontSize(f)}
                                             className={`flex-1 py-2 text-xs rounded-sm border ${
                                                 fontSize === f
-                                                    ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold'
+                                                    ? 'bg-accent text-primary border-accent font-bold'
                                                     : 'border-gray-300 text-gray-500 hover:bg-gray-50'
                                             }`}
                                         >

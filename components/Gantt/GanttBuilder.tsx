@@ -274,11 +274,11 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
     return (
         <div className="h-full bg-gradient-to-br from-gray-50 to-gray-100 text-gray-700 font-sans flex flex-col overflow-hidden">
             {/* Header */}
-            <div className="flex-none px-6 py-4 bg-[#081429] border-b border-[#fdb813]/20 shadow-lg">
-                <div className="flex items-center gap-2 text-[#fdb813] mb-1.5">
-                    <div className="w-1.5 h-1.5 rounded-sm bg-[#fdb813] animate-pulse"></div>
+            <div className="flex-none px-6 py-4 bg-primary border-b border-accent/20 shadow-lg">
+                <div className="flex items-center gap-2 text-accent mb-1.5">
+                    <div className="w-1.5 h-1.5 rounded-sm bg-accent animate-pulse"></div>
                     <span className="text-xxs font-bold tracking-widest uppercase">Project Builder</span>
-                    <ChevronRight size={12} className="text-[#373d41]" />
+                    <ChevronRight size={12} className="text-primary-700" />
                 </div>
                 <h1 className="text-2xl font-black text-white tracking-tight">
                     {initialData ? '프로젝트 수정' : '새 프로젝트 생성'}
@@ -290,18 +290,18 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
 
                 {/* Template Import (Only for New Projects) */}
                 {!initialData && templates && templates.length > 0 && (
-                    <div className="mb-4 p-3 bg-white border border-[#fdb813]/30 rounded-sm shadow-md relative overflow-hidden group hover:shadow-lg transition-shadow">
+                    <div className="mb-4 p-3 bg-white border border-accent/30 rounded-sm shadow-md relative overflow-hidden group hover:shadow-lg transition-shadow">
                         <div className="absolute top-0 right-0 p-3 opacity-5 group-hover:opacity-10 transition-opacity">
-                            <svg className="w-16 h-16 text-[#fdb813]" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z" /><path d="M7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z" /></svg>
+                            <svg className="w-16 h-16 text-accent" fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z" /><path d="M7 10h2v7H7zm4-3h2v10h-2zm4 6h2v4h-2z" /></svg>
                         </div>
-                        <label className="block text-xs font-bold text-[#081429] mb-2 flex items-center gap-1.5">
-                            <svg className="w-3.5 h-3.5 text-[#fdb813]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <label className="block text-xs font-bold text-primary mb-2 flex items-center gap-1.5">
+                            <svg className="w-3.5 h-3.5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 01-2-2V5a2 2 0 012-2h4.586" />
                             </svg>
                             템플릿 불러오기
                         </label>
                         <select
-                            className="w-full p-2 bg-white text-[#081429] text-xs rounded-sm border border-gray-300 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none shadow-sm font-medium"
+                            className="w-full p-2 bg-white text-primary text-xs rounded-sm border border-gray-300 focus:border-accent focus:ring-1 focus:ring-accent outline-none shadow-sm font-medium"
                             onChange={(e) => handleImportTemplate(e.target.value)}
                             defaultValue=""
                         >
@@ -318,24 +318,24 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                     {/* Row 1: Title (left) + Start Date (right) */}
                     <div className="flex gap-3">
                         <div className="flex-1">
-                            <label className="block text-xxs font-bold text-[#373d41] mb-1 uppercase tracking-wide flex items-center gap-1">
-                                <FileText size={10} className="text-[#fdb813]" /> 프로젝트 제목
+                            <label className="block text-xxs font-bold text-primary-700 mb-1 uppercase tracking-wide flex items-center gap-1">
+                                <FileText size={10} className="text-accent" /> 프로젝트 제목
                             </label>
                             <input
                                 type="text"
-                                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-sm text-[#081429] placeholder-gray-400 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none transition-all shadow-sm font-medium"
+                                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-sm text-primary placeholder-gray-400 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all shadow-sm font-medium"
                                 placeholder="예: 내신 대비 4주 완성"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
                             />
                         </div>
                         <div className="w-36">
-                            <label className="block text-xxs font-bold text-[#373d41] mb-1 uppercase tracking-wide flex items-center gap-1">
-                                <Calendar size={10} className="text-[#fdb813]" /> 시작일
+                            <label className="block text-xxs font-bold text-primary-700 mb-1 uppercase tracking-wide flex items-center gap-1">
+                                <Calendar size={10} className="text-accent" /> 시작일
                             </label>
                             <input
                                 type="date"
-                                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-sm text-[#081429] focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none transition-all shadow-sm font-medium"
+                                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-sm text-primary focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all shadow-sm font-medium"
                                 value={startDate}
                                 onChange={(e) => setStartDate(e.target.value)}
                             />
@@ -343,10 +343,10 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                     </div>
                     {/* Row 2: Description */}
                     <div>
-                        <label className="block text-xxs font-bold text-[#373d41] mb-1 uppercase tracking-wide">설명 (선택)</label>
+                        <label className="block text-xxs font-bold text-primary-700 mb-1 uppercase tracking-wide">설명 (선택)</label>
                         <input
                             type="text"
-                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-sm text-[#081429] placeholder-gray-400 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none transition-all shadow-sm"
+                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-sm text-sm text-primary placeholder-gray-400 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all shadow-sm"
                             placeholder="프로젝트에 대한 간단한 설명"
                             value={desc}
                             onChange={(e) => setDesc(e.target.value)}
@@ -356,8 +356,8 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
 
                 {/* Phase 10: Project Members */}
                 <div className="mb-4">
-                    <label className="block text-xxs font-bold text-[#373d41] mb-2 uppercase tracking-wide flex items-center gap-1">
-                        <User size={10} className="text-[#fdb813]" /> 프로젝트 멤버
+                    <label className="block text-xxs font-bold text-primary-700 mb-2 uppercase tracking-wide flex items-center gap-1">
+                        <User size={10} className="text-accent" /> 프로젝트 멤버
                     </label>
                     <div className="bg-white border border-gray-300 rounded-sm p-3 shadow-sm">
                         <div className="flex flex-wrap gap-1.5 mb-2">
@@ -370,8 +370,8 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                                         type="button"
                                         onClick={() => toggleProjectMember(user.uid, 'viewer')}
                                         className={`px-2.5 py-1 rounded-sm text-xxs font-bold transition-all ${isSelected
-                                            ? 'bg-[#fdb813] text-[#081429] shadow-md'
-                                            : 'bg-gray-100 text-[#373d41] hover:bg-gray-200 border border-gray-300'
+                                            ? 'bg-accent text-primary shadow-md'
+                                            : 'bg-gray-100 text-primary-700 hover:bg-gray-200 border border-gray-300'
                                             }`}
                                     >
                                         {formatUserDisplay(user)}
@@ -383,15 +383,15 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
 
                         {projectMembers.length > 0 && (
                             <div className="border-t border-gray-200 pt-2 mt-2">
-                                <p className="text-micro text-[#373d41] mb-1.5 font-medium">역할 설정:</p>
+                                <p className="text-micro text-primary-700 mb-1.5 font-medium">역할 설정:</p>
                                 <div className="space-y-1">
                                     {projectMembers.map(member => (
                                         <div key={member.userId} className="flex items-center justify-between bg-gray-50 rounded-sm px-2.5 py-1.5 border border-gray-200">
-                                            <span className="text-xxs text-[#081429] font-medium">{member.userName || member.userEmail}</span>
+                                            <span className="text-xxs text-primary font-medium">{member.userName || member.userEmail}</span>
                                             <select
                                                 value={member.role}
                                                 onChange={(e) => updateMemberRole(member.userId, e.target.value as ProjectMemberRole)}
-                                                className="text-micro px-2 py-0.5 rounded font-bold cursor-pointer outline-none bg-white border border-gray-300 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813]"
+                                                className="text-micro px-2 py-0.5 rounded font-bold cursor-pointer outline-none bg-white border border-gray-300 focus:border-accent focus:ring-1 focus:ring-accent"
                                             >
                                                 <option value="viewer">관찰자</option>
                                                 <option value="editor">편집자</option>
@@ -408,16 +408,16 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
 
                 {/* Phase 10: Visibility */}
                 <div className="mb-4">
-                    <label className="block text-xxs font-bold text-[#373d41] mb-2 uppercase tracking-wide flex items-center gap-1">
-                        <Globe size={10} className="text-[#fdb813]" /> 공개 범위
+                    <label className="block text-xxs font-bold text-primary-700 mb-2 uppercase tracking-wide flex items-center gap-1">
+                        <Globe size={10} className="text-accent" /> 공개 범위
                     </label>
                     <div className="flex gap-2">
                         <button
                             type="button"
                             onClick={() => setVisibility('private')}
                             className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-sm text-xxs font-bold transition-all shadow-sm ${visibility === 'private'
-                                ? 'bg-[#373d41] text-white ring-2 ring-[#373d41]/50'
-                                : 'bg-white text-[#373d41] hover:bg-gray-100 border border-gray-300'
+                                ? 'bg-primary-700 text-white ring-2 ring-[#373d41]/50'
+                                : 'bg-white text-primary-700 hover:bg-gray-100 border border-gray-300'
                                 }`}
                         >
                             <Lock size={12} />
@@ -428,7 +428,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                             onClick={() => setVisibility('department')}
                             className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-sm text-xxs font-bold transition-all shadow-sm ${visibility === 'department'
                                 ? 'bg-purple-600 text-white ring-2 ring-purple-400/50'
-                                : 'bg-white text-[#373d41] hover:bg-gray-100 border border-gray-300'
+                                : 'bg-white text-primary-700 hover:bg-gray-100 border border-gray-300'
                                 }`}
                         >
                             <Building2 size={12} />
@@ -439,7 +439,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                             onClick={() => setVisibility('public')}
                             className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-sm text-xxs font-bold transition-all shadow-sm ${visibility === 'public'
                                 ? 'bg-green-600 text-white ring-2 ring-green-400/50'
-                                : 'bg-white text-[#373d41] hover:bg-gray-100 border border-gray-300'
+                                : 'bg-white text-primary-700 hover:bg-gray-100 border border-gray-300'
                                 }`}
                         >
                             <Globe size={12} />
@@ -467,7 +467,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                                             }}
                                             className={`px-2.5 py-1 rounded-sm text-xxs font-bold transition-all ${isSelected
                                                 ? 'bg-purple-500 text-white shadow-md'
-                                                : 'bg-white text-[#373d41] hover:bg-gray-100 border border-gray-300'
+                                                : 'bg-white text-primary-700 hover:bg-gray-100 border border-gray-300'
                                                 }`}
                                         >
                                             {dept.label}
@@ -482,13 +482,13 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                 {/* Side-by-Side Layout: Form (Left) + Task List (Right) */}
                 <div className="flex gap-3 flex-1 min-h-0">
                     {/* LEFT: Task Form - Compact */}
-                    <div id="task-form" className={`w-1/2 bg-white border-2 ${editingTaskId ? 'border-[#fdb813]' : 'border-gray-300'} rounded-sm p-3 shadow-md transition-all flex flex-col`}>
+                    <div id="task-form" className={`w-1/2 bg-white border-2 ${editingTaskId ? 'border-accent' : 'border-gray-300'} rounded-sm p-3 shadow-md transition-all flex flex-col`}>
                         <div className="flex justify-between items-center mb-2">
-                            <h3 className={`text-xs font-bold flex items-center gap-1.5 ${editingTaskId ? 'text-[#fdb813]' : 'text-[#081429]'}`}>
-                                {editingTaskId ? <><Edit2 size={12} /> 항목 수정</> : <><Plus size={12} className="text-[#fdb813]" /> 항목 추가</>}
+                            <h3 className={`text-xs font-bold flex items-center gap-1.5 ${editingTaskId ? 'text-accent' : 'text-primary'}`}>
+                                {editingTaskId ? <><Edit2 size={12} /> 항목 수정</> : <><Plus size={12} className="text-accent" /> 항목 추가</>}
                             </h3>
                             {editingTaskId && (
-                                <button onClick={resetForm} className="text-micro text-[#373d41] hover:text-[#081429] flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-sm font-bold">
+                                <button onClick={resetForm} className="text-micro text-primary-700 hover:text-primary flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-sm font-bold">
                                     <RotateCcw size={8} />재설정
                                 </button>
                             )}
@@ -499,7 +499,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                             <div className="flex-1">
                                 <input
                                     type="text"
-                                    className="w-full px-2 py-1.5 bg-gray-50 border border-gray-300 rounded-sm text-xs text-[#081429] placeholder-gray-400 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none font-medium"
+                                    className="w-full px-2 py-1.5 bg-gray-50 border border-gray-300 rounded-sm text-xs text-primary placeholder-gray-400 focus:border-accent focus:ring-1 focus:ring-accent outline-none font-medium"
                                     placeholder="항목명"
                                     value={taskTitle}
                                     onChange={(e) => setTaskTitle(e.target.value)}
@@ -509,7 +509,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                                 <input
                                     type="number"
                                     min="0"
-                                    className="w-full px-2 py-1.5 bg-gray-50 border border-gray-300 rounded-sm text-xs text-[#081429] text-center focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none placeholder-gray-400 font-bold"
+                                    className="w-full px-2 py-1.5 bg-gray-50 border border-gray-300 rounded-sm text-xs text-primary text-center focus:border-accent focus:ring-1 focus:ring-accent outline-none placeholder-gray-400 font-bold"
                                     placeholder="D0"
                                     title="시작일 (Day)"
                                     value={startOffset}
@@ -520,7 +520,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                                 <input
                                     type="number"
                                     min="1"
-                                    className="w-full px-2 py-1.5 bg-gray-50 border border-gray-300 rounded-sm text-xs text-[#081429] text-center focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none placeholder-gray-400 font-bold"
+                                    className="w-full px-2 py-1.5 bg-gray-50 border border-gray-300 rounded-sm text-xs text-primary text-center focus:border-accent focus:ring-1 focus:ring-accent outline-none placeholder-gray-400 font-bold"
                                     placeholder="1"
                                     title="기간 (일)"
                                     value={duration}
@@ -532,7 +532,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                         {/* Row 2: Assignee + Category */}
                         <div className="flex gap-1.5 mb-2">
                             <select
-                                className="w-28 px-2 py-1.5 bg-gray-50 border border-gray-300 rounded-sm text-xxs text-[#081429] focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none cursor-pointer truncate font-bold"
+                                className="w-28 px-2 py-1.5 bg-gray-50 border border-gray-300 rounded-sm text-xxs text-primary focus:border-accent focus:ring-1 focus:ring-accent outline-none cursor-pointer truncate font-bold"
                                 value={assigneeId}
                                 onChange={(e) => handleAssigneeChange(e.target.value)}
                             >
@@ -558,7 +558,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                                             style={isSelected ? activeStyle : undefined}
                                             className={`px-2 py-1 rounded-sm text-micro font-bold transition-all border ${isSelected
                                                 ? 'shadow-sm ring-1 ring-[#fdb813]/50'
-                                                : 'bg-white text-[#373d41] border-gray-300 hover:bg-gray-100'
+                                                : 'bg-white text-primary-700 border-gray-300 hover:bg-gray-100'
                                                 }`}
                                         >
                                             {cat.label}
@@ -577,7 +577,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                                     onClick={() => toggleDepartment(dept.id)}
                                     className={`px-2 py-0.5 rounded-sm text-micro font-bold whitespace-nowrap transition-all ${departmentIds.includes(dept.id)
                                         ? 'bg-purple-500 text-white shadow-sm'
-                                        : 'bg-gray-100 text-[#373d41] hover:bg-gray-200 border border-gray-300'
+                                        : 'bg-gray-100 text-primary-700 hover:bg-gray-200 border border-gray-300'
                                         }`}
                                 >
                                     {dept.label}
@@ -588,7 +588,7 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                         {/* Row 4: Dependency */}
                         <div className="mb-2">
                             <select
-                                className="w-full px-2 py-1.5 bg-gray-50 border border-gray-300 rounded-sm text-xxs text-[#081429] focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none cursor-pointer font-medium"
+                                className="w-full px-2 py-1.5 bg-gray-50 border border-gray-300 rounded-sm text-xxs text-primary focus:border-accent focus:ring-1 focus:ring-accent outline-none cursor-pointer font-medium"
                                 value=""
                                 onChange={(e) => {
                                     const newDepId = e.target.value;
@@ -647,9 +647,9 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                         <button
                             onClick={handleSaveTask}
                             disabled={!taskTitle.trim()}
-                            className={`w-full py-2.5 text-xs text-[#081429] rounded-sm font-black flex items-center justify-center gap-1.5 transition-all shadow-md disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none ${editingTaskId
-                                ? 'bg-[#fdb813] hover:bg-[#fdb813]/90 shadow-[#fdb813]/30'
-                                : 'bg-[#fdb813] hover:bg-[#fdb813]/90 shadow-[#fdb813]/30'
+                            className={`w-full py-2.5 text-xs text-primary rounded-sm font-black flex items-center justify-center gap-1.5 transition-all shadow-md disabled:bg-gray-200 disabled:text-gray-400 disabled:shadow-none ${editingTaskId
+                                ? 'bg-accent hover:bg-accent/90 shadow-[#fdb813]/30'
+                                : 'bg-accent hover:bg-accent/90 shadow-[#fdb813]/30'
                                 }`}
                         >
                             {editingTaskId ? <><Save size={13} /> 수정 완료</> : <><Plus size={13} /> 추가</>}
@@ -658,16 +658,16 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
 
                     {/* RIGHT: Task List */}
                     <div className="w-1/2 bg-white border-2 border-gray-300 rounded-sm p-3 flex flex-col shadow-md">
-                        <h4 className="text-xs font-bold text-[#081429] mb-2 flex items-center gap-1.5">
+                        <h4 className="text-xs font-bold text-primary mb-2 flex items-center gap-1.5">
                             <span>등록된 항목</span>
-                            <span className="text-[#fdb813]">({tasks.length})</span>
+                            <span className="text-accent">({tasks.length})</span>
                         </h4>
                         {tasks.length === 0 ? (
                             <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
                                 <div className="w-14 h-14 bg-gradient-to-br from-gray-100 to-gray-200 rounded-sm flex items-center justify-center mb-2 shadow-inner">
                                     <ClipboardList className="w-6 h-6 text-gray-400" />
                                 </div>
-                                <p className="text-[#081429] text-xxs font-bold">항목이 없습니다</p>
+                                <p className="text-primary text-xxs font-bold">항목이 없습니다</p>
                                 <p className="text-gray-400 text-micro mt-1">왼쪽 폼에서 항목을 추가하세요</p>
                             </div>
                         ) : (
@@ -682,24 +682,24 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                                         <div
                                             key={task.id}
                                             className={`flex items-center gap-2 bg-gradient-to-r from-white to-gray-50 border-2 p-2 rounded-sm transition-all cursor-pointer group hover:shadow-md ${isEditing
-                                                ? 'border-[#fdb813] ring-2 ring-[#fdb813]/30'
+                                                ? 'border-accent ring-2 ring-[#fdb813]/30'
                                                 : 'border-gray-300 hover:border-gray-400'
                                                 }`}
                                         >
                                             <div className={`w-1 h-9 rounded-sm ${barColor} shadow-sm`}></div>
                                             <div className="flex-1 min-w-0" onClick={() => handleEditTask(task)}>
                                                 <div className="flex items-center gap-1.5 mb-0.5">
-                                                    <span className={`text-xs font-bold truncate ${isEditing ? 'text-[#fdb813]' : 'text-[#081429]'}`}>
+                                                    <span className={`text-xs font-bold truncate ${isEditing ? 'text-accent' : 'text-primary'}`}>
                                                         {task.title}
                                                     </span>
                                                     {isEditing && (
-                                                        <span className="text-nano px-1.5 py-0.5 bg-[#fdb813]/20 text-[#fdb813] rounded-sm font-black uppercase">
+                                                        <span className="text-nano px-1.5 py-0.5 bg-accent/20 text-accent rounded-sm font-black uppercase">
                                                             수정중
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="flex flex-wrap items-center gap-1.5 text-micro text-[#373d41]">
-                                                    <span className="text-[#fdb813] font-bold">{formatTaskDate(task.startOffset)}</span>
+                                                <div className="flex flex-wrap items-center gap-1.5 text-micro text-primary-700">
+                                                    <span className="text-accent font-bold">{formatTaskDate(task.startOffset)}</span>
                                                     <span>• {task.duration}일</span>
                                                     {task.assigneeName && (
                                                         <span className="text-emerald-600 font-medium">@{task.assigneeName}</span>
@@ -712,14 +712,14 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                                             <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleEditTask(task); }}
-                                                    className="p-1 rounded-sm hover:bg-blue-100 text-[#373d41] hover:text-blue-600 transition-all"
+                                                    className="p-1 rounded-sm hover:bg-blue-100 text-primary-700 hover:text-blue-600 transition-all"
                                                     title="수정"
                                                 >
                                                     <Edit2 size={12} />
                                                 </button>
                                                 <button
                                                     onClick={(e) => handleRemoveTask(task.id, e)}
-                                                    className="p-1 rounded-sm hover:bg-red-100 text-[#373d41] hover:text-red-600 transition-all"
+                                                    className="p-1 rounded-sm hover:bg-red-100 text-primary-700 hover:text-red-600 transition-all"
                                                     title="삭제"
                                                 >
                                                     <X size={12} />
@@ -737,13 +737,13 @@ const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialDa
                 <div className="flex gap-3 justify-end pt-4 border-t-2 border-gray-300 mt-4">
                     <button
                         onClick={onCancel}
-                        className="px-6 py-2.5 rounded-sm border-2 border-gray-300 text-[#373d41] font-bold hover:bg-gray-100 hover:border-gray-400 transition-all text-sm shadow-sm"
+                        className="px-6 py-2.5 rounded-sm border-2 border-gray-300 text-primary-700 font-bold hover:bg-gray-100 hover:border-gray-400 transition-all text-sm shadow-sm"
                     >
                         취소
                     </button>
                     <button
                         onClick={handleSaveTemplate}
-                        className="px-8 py-2.5 rounded-sm bg-[#081429] hover:bg-[#081429]/90 text-white font-black flex items-center gap-2 shadow-lg shadow-[#081429]/30 transition-all text-sm border-2 border-[#fdb813]"
+                        className="px-8 py-2.5 rounded-sm bg-primary hover:bg-primary/90 text-white font-black flex items-center gap-2 shadow-lg shadow-[#081429]/30 transition-all text-sm border-2 border-accent"
                     >
                         <Save size={15} />
                         {initialData ? '수정 완료' : '프로젝트 생성'}

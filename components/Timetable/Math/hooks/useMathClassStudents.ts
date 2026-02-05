@@ -22,6 +22,7 @@
 import { useMemo, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { TimetableStudent } from '../../../../types';
+import { formatDateKey } from '../../../../utils/dateUtils';
 
 // Helper to convert Firestore Timestamp to YYYY-MM-DD string (hoisted to module level)
 const convertTimestampToDate = (timestamp: any): string | undefined => {
@@ -29,7 +30,7 @@ const convertTimestampToDate = (timestamp: any): string | undefined => {
     if (typeof timestamp === 'string') return timestamp;
     if (timestamp?.toDate) {
         const date = timestamp.toDate();
-        return date.toISOString().split('T')[0];
+        return formatDateKey(date);
     }
     return undefined;
 };
@@ -50,7 +51,7 @@ export const useMathClassStudents = (
             return {};
         }
 
-        const today = new Date().toISOString().split('T')[0];
+        const today = formatDateKey(new Date());
 
         // 반이동 감지: 학생별로 활성/종료 등록 수업 목록 수집 (math only)
         const studentActiveClasses: Record<string, Set<string>> = {};

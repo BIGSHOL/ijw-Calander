@@ -327,13 +327,13 @@ const EnglishExportModal: React.FC<EnglishExportModalProps> = ({
               {/* Section 1: 내보내기 옵션 */}
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                  <Settings className="w-3 h-3 text-[#081429]" />
-                  <h3 className="text-[#081429] font-bold text-xs">내보내기 옵션</h3>
+                  <Settings className="w-3 h-3 text-primary" />
+                  <h3 className="text-primary font-bold text-xs">내보내기 옵션</h3>
                 </div>
                 <div className="divide-y divide-gray-100">
                   {/* 파일 형식 */}
                   <div className="flex items-center gap-2 px-2 py-1.5">
-                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">파일 형식</span>
+                    <span className="w-16 shrink-0 text-xs font-medium text-primary-700">파일 형식</span>
                     <div className="flex items-center gap-2 text-xs text-gray-700">
                       <FileSpreadsheet size={14} className="text-blue-600" />
                       <span>PNG 이미지 (강사별 개별 파일)</span>
@@ -342,7 +342,7 @@ const EnglishExportModal: React.FC<EnglishExportModalProps> = ({
 
                   {/* 요일 필터 */}
                   <div className="flex items-center gap-2 px-2 py-1.5">
-                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">요일 선택</span>
+                    <span className="w-16 shrink-0 text-xs font-medium text-primary-700">요일 선택</span>
                     <div className="flex-1">
                       <div className="flex flex-wrap gap-1 mb-1.5">
                         {EN_WEEKDAYS.map(day => {
@@ -385,8 +385,8 @@ const EnglishExportModal: React.FC<EnglishExportModalProps> = ({
               {/* Section 2: 포함할 데이터 (강사 선택) */}
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                  <CheckSquare className="w-3 h-3 text-[#081429]" />
-                  <h3 className="text-[#081429] font-bold text-xs">포함할 데이터</h3>
+                  <CheckSquare className="w-3 h-3 text-primary" />
+                  <h3 className="text-primary font-bold text-xs">포함할 데이터</h3>
                 </div>
                 <div className="p-2">
                   {/* 전체 선택/해제 */}
@@ -451,21 +451,21 @@ const EnglishExportModal: React.FC<EnglishExportModalProps> = ({
               {/* Section 3: 미리보기 */}
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                  <Eye className="w-3 h-3 text-[#081429]" />
-                  <h3 className="text-[#081429] font-bold text-xs">미리보기</h3>
+                  <Eye className="w-3 h-3 text-primary" />
+                  <h3 className="text-primary font-bold text-xs">미리보기</h3>
                 </div>
                 <div className="px-2 py-1.5">
                   <div className="text-xs text-gray-600 space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="w-20 text-[#373d41] font-medium">선택 강사</span>
+                      <span className="w-20 text-primary-700 font-medium">선택 강사</span>
                       <span className="text-gray-700">{selectedTeachers.size}명</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="w-20 text-[#373d41] font-medium">파일 개수</span>
+                      <span className="w-20 text-primary-700 font-medium">파일 개수</span>
                       <span className="text-gray-700">{selectedTeachers.size}개 PNG 파일</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="w-20 text-[#373d41] font-medium">포함 내용</span>
+                      <span className="w-20 text-primary-700 font-medium">포함 내용</span>
                       <span className="text-gray-700">수업명, 강의실, 합반 정보</span>
                     </div>
                     {selectedTeachers.size === 0 && (

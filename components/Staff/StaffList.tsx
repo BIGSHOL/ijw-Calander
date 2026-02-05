@@ -92,33 +92,33 @@ const StaffList: React.FC<StaffListProps> = ({
   return (
     <div className="space-y-2">
       {/* Table */}
-      <div className="rounded-sm shadow-sm border overflow-hidden" style={{ backgroundColor: 'white', borderColor: '#08142915' }}>
+      <div className="rounded-sm shadow-sm border overflow-hidden" style={{ backgroundColor: 'white', borderColor: 'rgba(8, 20, 41, 0.15)' }}>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>
+                <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
                   이름
                 </th>
-                <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>
+                <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
                   직책
                 </th>
-                <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>
+                <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
                   전화번호
                 </th>
-                <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>
+                <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
                   담당과목
                 </th>
-                <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>
+                <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
                   시간표 정보
                 </th>
-                <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>
+                <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
                   입사일
                 </th>
-                <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>
+                <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
                   상태
                 </th>
-                <th className="px-2 py-1.5 text-center text-xxs font-medium" style={{ color: '#373d41' }}>
+                <th className="px-2 py-1.5 text-center text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
                   시스템 계정
                 </th>
               </tr>
@@ -128,7 +128,7 @@ const StaffList: React.FC<StaffListProps> = ({
                 <tr
                   key={member.id}
                   onClick={() => onSelectStaff(member)}
-                  className={`hover:bg-gray-50 transition-colors cursor-pointer group ${selectedStaff?.id === member.id ? 'bg-[#fdb813]/10' : ''}`}
+                  className={`hover:bg-gray-50 transition-colors cursor-pointer group ${selectedStaff?.id === member.id ? 'bg-accent/10' : ''}`}
                   style={{ backgroundColor: selectedStaff?.id === member.id ? undefined : (idx % 2 === 0 ? 'white' : '#fafafa') }}
                 >
                   <td className="px-2 py-1.5 whitespace-nowrap text-xs">
@@ -143,7 +143,7 @@ const StaffList: React.FC<StaffListProps> = ({
                         {member.name.charAt(0)}
                       </div>
                       <div className="min-w-0">
-                        <div className="text-xs font-medium text-[#081429] truncate">
+                        <div className="text-xs font-medium text-primary truncate">
                           {member.name}
                           {member.englishName && (
                             <span className="ml-1 text-xxs text-gray-500 font-normal">({member.englishName})</span>
@@ -271,9 +271,9 @@ const StaffList: React.FC<StaffListProps> = ({
       </div>
 
       {/* Pagination - Bottom */}
-      <div className="p-3 rounded-sm shadow-sm border flex items-center justify-between" style={{ backgroundColor: 'white', borderColor: '#08142915' }}>
+      <div className="p-3 rounded-sm shadow-sm border flex items-center justify-between" style={{ backgroundColor: 'white', borderColor: 'rgba(8, 20, 41, 0.15)' }}>
         <div className="flex items-center gap-2">
-          <span className="text-xs" style={{ color: '#373d41' }}>페이지당</span>
+          <span className="text-xs" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>페이지당</span>
           <select
             value={pageSize}
             onChange={(e) => {
@@ -281,14 +281,14 @@ const StaffList: React.FC<StaffListProps> = ({
               setCurrentPage(1);
             }}
             className="px-2 py-1 text-xs rounded-sm border transition-all"
-            style={{ borderColor: '#08142920', color: '#081429', backgroundColor: 'white' }}
+            style={{ borderColor: 'rgba(8, 20, 41, 0.2)', color: 'rgb(8, 20, 41)' /* primary */, backgroundColor: 'white' }}
           >
             <option value={10}>10개</option>
             <option value={20}>20개</option>
             <option value={50}>50개</option>
             <option value={100}>100개</option>
           </select>
-          <span className="text-xs hidden sm:inline" style={{ color: '#373d41' }}>
+          <span className="text-xs hidden sm:inline" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
             {start}-{end} / 총 {total}개
           </span>
         </div>
@@ -297,7 +297,7 @@ const StaffList: React.FC<StaffListProps> = ({
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             disabled={currentPage === 1}
             className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
-            style={{ color: '#081429' }}
+            style={{ color: 'rgb(8, 20, 41)' /* primary */ }}
           >
             이전
           </button>
@@ -321,10 +321,10 @@ const StaffList: React.FC<StaffListProps> = ({
                   onClick={() => setCurrentPage(pageNum)}
                   className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${
                     currentPage === pageNum
-                      ? 'text-[#081429]'
+                      ? 'text-primary'
                       : 'text-gray-600 hover:bg-gray-100'
                   }`}
-                  style={currentPage === pageNum ? { backgroundColor: '#fdb813' } : undefined}
+                  style={currentPage === pageNum ? { backgroundColor: 'rgb(253, 184, 19)' /* accent */ } : undefined}
                 >
                   {pageNum}
                 </button>
@@ -336,7 +336,7 @@ const StaffList: React.FC<StaffListProps> = ({
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
             className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
-            style={{ color: '#081429' }}
+            style={{ color: 'rgb(8, 20, 41)' /* primary */ }}
           >
             다음
           </button>

@@ -291,11 +291,11 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
   if (!classes || classes.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
-        <Inbox className="w-12 h-12 text-[#373d41] opacity-50 mb-3" />
-        <h3 className="text-[#081429] font-bold text-base mb-1.5">
+        <Inbox className="w-12 h-12 text-primary-700 opacity-50 mb-3" />
+        <h3 className="text-primary font-bold text-base mb-1.5">
           등록된 수업이 없습니다
         </h3>
-        <p className="text-[#373d41] text-xs">
+        <p className="text-primary-700 text-xs">
           새 수업을 추가하거나 필터를 조정해보세요.
         </p>
       </div>
@@ -354,17 +354,17 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
               </div>
 
               {/* 수업명 */}
-              <div className="font-semibold text-[#081429] text-xs truncate">
+              <div className="font-semibold text-primary text-xs truncate">
                 {className}
               </div>
 
               {/* 담임 */}
-              <div className="text-[#373d41] text-xs truncate">
+              <div className="text-primary-700 text-xs truncate">
                 {getTeacherDisplayName(teacher)}
               </div>
 
               {/* 부담임 */}
-              <div className="text-[#373d41] text-xs truncate">
+              <div className="text-primary-700 text-xs truncate">
                 {classInfo.slotTeachers && Object.keys(classInfo.slotTeachers).length > 0 ? (
                   <span
                     className="text-gray-600"
@@ -401,14 +401,14 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
               {/* 학생수 */}
               <div className="flex items-center justify-center gap-1">
                 <Users className="w-3.5 h-3.5 text-gray-400" />
-                <span className="text-xs font-medium text-[#081429]">
+                <span className="text-xs font-medium text-primary">
                   {studentCount || 0}
                 </span>
               </div>
 
               {/* 화살표 */}
               <div className="flex justify-center">
-                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[#fdb813] transition-colors" />
+                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-accent transition-colors" />
               </div>
             </div>
           );
@@ -418,9 +418,9 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
 
       {/* 페이지네이션 컨트롤 */}
       {classes.length > 0 && (
-        <div className="p-3 rounded-sm shadow-sm border flex items-center justify-between" style={{ backgroundColor: 'white', borderColor: '#08142915' }}>
+        <div className="p-3 rounded-sm shadow-sm border flex items-center justify-between" style={{ backgroundColor: 'white', borderColor: 'rgba(8, 20, 41, 0.15)' }}>
           <div className="flex items-center gap-2">
-            <span className="text-xs" style={{ color: '#373d41' }}>페이지당</span>
+            <span className="text-xs" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>페이지당</span>
             <select
               value={itemsPerPage}
               onChange={(e) => {
@@ -428,14 +428,14 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
                 setCurrentPage(1);
               }}
               className="px-2 py-1 text-xs rounded-sm border transition-all"
-              style={{ borderColor: '#08142920', color: '#081429', backgroundColor: 'white' }}
+              style={{ borderColor: 'rgba(8, 20, 41, 0.2)', color: 'rgb(8, 20, 41)' /* primary */, backgroundColor: 'white' }}
             >
               <option value={10}>10개</option>
               <option value={20}>20개</option>
               <option value={50}>50개</option>
               <option value={100}>100개</option>
             </select>
-            <span className="text-xs hidden sm:inline" style={{ color: '#373d41' }}>
+            <span className="text-xs hidden sm:inline" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
               {startIndex + 1}-{Math.min(endIndex, classes.length)} / 총 {classes.length}개
             </span>
           </div>
@@ -445,7 +445,7 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
               className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
-              style={{ color: '#081429' }}
+              style={{ color: 'rgb(8, 20, 41)' /* primary */ }}
             >
               이전
             </button>
@@ -469,7 +469,7 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
                     onClick={() => setCurrentPage(pageNum)}
                     className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${
                       currentPage === pageNum
-                        ? 'text-[#081429]'
+                        ? 'text-primary'
                         : 'text-gray-600 hover:bg-gray-100'
                     }`}
                     style={{ backgroundColor: currentPage === pageNum ? '#fdb813' : 'transparent' }}
@@ -484,7 +484,7 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
               onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
               className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
-              style={{ color: '#081429' }}
+              style={{ color: 'rgb(8, 20, 41)' /* primary */ }}
             >
               다음
             </button>

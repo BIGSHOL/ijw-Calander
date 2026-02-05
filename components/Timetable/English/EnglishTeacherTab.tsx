@@ -537,7 +537,6 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
     // --- Batch Operations ---
 
     const handleBatchSave = async () => {
-        console.log('handleBatchSave called!', { size: selectedCells.size, inputData });
         if (selectedCells.size === 0) return;
 
         // Save current scroll position before clearing selection

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ConsultationRecord, CONSULTATION_STATUS_COLORS } from '../../types';
-import { Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, X, ClipboardList, UserPlus } from 'lucide-react';
+import { Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, X, ClipboardList, UserPlus, UserCheck, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
@@ -10,6 +10,7 @@ interface ConsultationTableProps {
     onEdit: (record: ConsultationRecord) => void;
     onDelete: (id: string) => void;
     onConvertToStudent?: (record: ConsultationRecord) => void; // 원생 전환 콜백
+    onNavigateToStudent?: (studentId: string) => void; // 원생 프로필로 이동 콜백
     currentUserId?: string; // 현재 로그인 사용자 ID
     canEdit?: boolean; // 상담 수정 권한 (본인 상담 또는 전체 상담)
     canManage?: boolean; // 모든 상담 관리 권한 (true면 모든 상담 수정/삭제 가능)
@@ -96,7 +97,7 @@ const loadSavedColumns = (): Set<ColumnKey> => {
 };
 
 export const ConsultationTable: React.FC<ConsultationTableProps> = ({
-    data, onEdit, onDelete, onConvertToStudent,
+    data, onEdit, onDelete, onConvertToStudent, onNavigateToStudent,
     currentUserId, canEdit = false, canManage = false, canConvert = false,
     searchTerm = '', showSettings = false, onShowSettingsChange
 }) => {
@@ -303,6 +304,14 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                     <table className="w-full" style={{ minWidth: visibleColumnsList.length * 100 + 80 }}>
                         <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
                             <tr>
+                                {/* 전환 열 (항상 첫번째) */}
+                                <th
+                                    scope="col"
+                                    className="px-2 py-1.5 text-center text-xxs font-medium whitespace-nowrap"
+                                    style={{ color: COLORS.gray, minWidth: '50px', width: '50px' }}
+                                >
+                                    전환
+                                </th>
                                 {visibleColumnsList.map(col => (
                                     <th
                                         key={col.key}
@@ -324,6 +333,24 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                         className="hover:bg-gray-50 transition-colors cursor-pointer group"
                                         style={{ backgroundColor: idx % 2 === 0 ? 'white' : '#fafafa' }}
                                     >
+                                        {/* 전환 열 (항상 첫번째) */}
+                                        <td className="px-2 py-1.5 whitespace-nowrap text-xs text-center" style={{ minWidth: '50px', width: '50px' }}>
+                                            {record.registeredStudentId ? (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation(); // 행 클릭 이벤트 방지
+                                                        onNavigateToStudent?.(record.registeredStudentId!);
+                                                    }}
+                                                    className="inline-flex items-center justify-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded-sm bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors"
+                                                    title="학생 프로필로 이동"
+                                                >
+                                                    <UserCheck size={12} />
+                                                    <ExternalLink size={10} />
+                                                </button>
+                                            ) : (
+                                                <span className="text-gray-300">-</span>
+                                            )}
+                                        </td>
                                         {visibleColumnsList.map(col => (
                                             <td key={col.key} className="px-2 py-1.5 whitespace-nowrap text-xs" style={{ minWidth: col.minWidth }}>
                                                 {getCellValue(record, col.key)}
@@ -333,7 +360,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={visibleColumnsList.length + 1} className="px-6 py-12 text-center" style={{ color: COLORS.gray }}>
+                                    <td colSpan={visibleColumnsList.length + 2} className="px-6 py-12 text-center" style={{ color: COLORS.gray }}>
                                         검색 결과가 없습니다.
                                     </td>
                                 </tr>
@@ -358,6 +385,19 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                     <div className="flex items-center gap-2 mb-1">
                                         <span className="text-lg font-bold" style={{ color: COLORS.navy }}>{record.studentName}</span>
                                         <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: `${COLORS.navy}10`, color: COLORS.navy }}>{record.grade}</span>
+                                        {/* 원생 전환 배지 */}
+                                        {record.registeredStudentId && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onNavigateToStudent?.(record.registeredStudentId!);
+                                                }}
+                                                className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded-sm bg-emerald-100 text-emerald-700"
+                                            >
+                                                <UserCheck size={12} />
+                                                전환완료
+                                            </button>
+                                        )}
                                     </div>
                                     <span className="text-sm" style={{ color: COLORS.gray }}>
                                         {(record.schoolName || '').replace('초등학교', '초').replace('중학교', '중').replace('고등학교', '고')}
@@ -466,7 +506,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                     onClick={() => handlePageChange(pageNum)}
                                     className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${
                                         currentPage === pageNum
-                                            ? 'text-[#081429]'
+                                            ? 'text-primary'
                                             : 'text-gray-600 hover:bg-gray-100'
                                     }`}
                                     style={{

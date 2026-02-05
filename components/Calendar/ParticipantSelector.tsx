@@ -40,13 +40,13 @@ const ParticipantSelector: React.FC<ParticipantSelectorProps> = ({
   return (
     <div>
       <label className="block text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1">
-        <Users size={12} className="text-[#fdb813]" /> 참가자
+        <Users size={12} className="text-accent" /> 참가자
       </label>
       <div className="relative">
         <button
           type="button"
           onClick={() => setIsParticipantsDropdownOpen(!isParticipantsDropdownOpen)}
-          className="w-full text-left px-3 py-2 text-sm border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] bg-white flex justify-between items-center outline-none transition-all"
+          className="w-full text-left px-3 py-2 text-sm border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent bg-white flex justify-between items-center outline-none transition-all"
         >
           <span className={`text-sm ${participants.length === 0 ? 'text-gray-400' : 'text-gray-800'}`}>
             {participants.length === 0
@@ -119,7 +119,7 @@ const ParticipantSelector: React.FC<ParticipantSelectorProps> = ({
                         }}
                         className="w-4 h-4 rounded border-gray-300 accent-[#081429]"
                       />
-                      <span className={`text-sm ${isSelected ? 'font-bold text-[#081429]' : 'text-gray-700'}`}>{displayName}</span>
+                      <span className={`text-sm ${isSelected ? 'font-bold text-primary' : 'text-gray-700'}`}>{displayName}</span>
                     </label>
 
                     {isSelected && (

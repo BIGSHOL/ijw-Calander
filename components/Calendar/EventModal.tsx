@@ -76,8 +76,8 @@ const EventModal: React.FC<EventModalProps> = ({
       <div className="bg-white rounded-sm shadow-xl max-w-2xl relative max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
         {/* Header - StudentDetailModal 스타일 */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
-          <h2 className="text-sm font-bold text-[#081429] flex items-center gap-2">
-            {existingEvent ? (state.isViewMode ? <Eye size={16} className="text-[#fdb813]" /> : <Edit3 size={16} className="text-[#fdb813]" />) : <Plus size={16} className="text-[#fdb813]" />}
+          <h2 className="text-sm font-bold text-primary flex items-center gap-2">
+            {existingEvent ? (state.isViewMode ? <Eye size={16} className="text-accent" /> : <Edit3 size={16} className="text-accent" />) : <Plus size={16} className="text-accent" />}
             {state.isViewMode ? '일정 상세' : (existingEvent ? '일정 수정' : '새 일정 추가')}
           </h2>
           <button

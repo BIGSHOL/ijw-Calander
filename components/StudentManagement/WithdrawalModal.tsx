@@ -76,7 +76,7 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
               <UserMinus className="w-5 h-5 text-red-600" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-[#081429]">퇴원 처리</h2>
+              <h2 className="text-base font-bold text-primary">퇴원 처리</h2>
               <p className="text-xs text-gray-500">{student.name} 학생</p>
             </div>
           </div>
@@ -93,14 +93,14 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
           {/* Section 1: 퇴원 정보 */}
           <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-              <Info className="w-3 h-3 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-xs">퇴원 정보</h3>
+              <Info className="w-3 h-3 text-primary" />
+              <h3 className="text-primary font-bold text-xs">퇴원 정보</h3>
             </div>
             <div className="divide-y divide-gray-100">
               {/* 퇴원일 Row */}
               <div className="flex items-center gap-2 px-2 py-1.5">
                 <Calendar className="w-3 h-3 text-gray-400 shrink-0" />
-                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">
+                <span className="w-16 shrink-0 text-xs font-medium text-primary-700">
                   퇴원일 <span className="text-red-500">*</span>
                 </span>
                 <input
@@ -115,7 +115,7 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
               {/* 퇴원 사유 Row */}
               <div className="flex items-center gap-2 px-2 py-1.5">
                 <FileText className="w-3 h-3 text-gray-400 shrink-0" />
-                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">사유</span>
+                <span className="w-16 shrink-0 text-xs font-medium text-primary-700">사유</span>
                 <select
                   value={formData.withdrawalReason}
                   onChange={(e) => setFormData(prev => ({ ...prev, withdrawalReason: e.target.value }))}
@@ -129,7 +129,7 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
 
               {/* 메모 Row */}
               <div className="px-2 py-1.5">
-                <span className="text-xs font-medium text-[#373d41] block mb-1">메모</span>
+                <span className="text-xs font-medium text-primary-700 block mb-1">메모</span>
                 <textarea
                   value={formData.withdrawalMemo}
                   onChange={(e) => setFormData(prev => ({ ...prev, withdrawalMemo: e.target.value }))}

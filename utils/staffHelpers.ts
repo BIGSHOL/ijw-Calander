@@ -99,6 +99,5 @@ export const createNewStaffMember = async (user: User, isMaster: boolean): Promi
 
   await setDoc(newStaffRef, newStaff);
 
-  console.log('✅ New staff created:', newStaffRef.id, 'with staffIndex');
   return newStaff;
 };

@@ -139,7 +139,7 @@ const Advanced: React.FC<AdvancedProps> = ({
         className={`
           flex items-center gap-1.5 px-3 py-1.5 rounded-sm border transition-all
           ${isAdvancedOpen || activeFilterCount > 0
-            ? 'bg-[#fdb813] border-[#fdb813] text-[#081429] font-bold shadow-sm'
+            ? 'bg-accent border-accent text-primary font-bold shadow-sm'
             : 'bg-white/10 border-white/10 text-white hover:border-white/30'
           }
         `}
@@ -153,8 +153,8 @@ const Advanced: React.FC<AdvancedProps> = ({
             inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full
             text-xxs font-bold
             ${isAdvancedOpen || activeFilterCount > 0
-              ? 'bg-[#081429] text-[#fdb813]'
-              : 'bg-[#fdb813] text-[#081429]'
+              ? 'bg-primary text-accent'
+              : 'bg-accent text-primary'
             }
           `} aria-label={`${activeFilterCount}개 필터 활성`}>
             {activeFilterCount}
@@ -192,7 +192,7 @@ const Advanced: React.FC<AdvancedProps> = ({
               <span className="text-xs font-bold text-white">{label}</span>
               <button
                 onClick={() => setIsAdvancedOpen(false)}
-                className="text-gray-400 hover:text-white transition-colors p-1 focus:outline-none focus:ring-2 focus:ring-[#fdb813]/50 rounded"
+                className="text-gray-400 hover:text-white transition-colors p-1 focus:outline-none focus:ring-2 focus:ring-accent/50 rounded"
                 aria-label="고급 필터 닫기"
               >
                 <X size={14} aria-hidden="true" />
@@ -226,7 +226,7 @@ const Badge: React.FC<BadgeProps> = ({
 }) => {
   const variantStyles = {
     default: 'bg-white/10 border-white/20 text-gray-300',
-    primary: 'bg-[#fdb813]/20 border-[#fdb813]/30 text-[#fdb813]',
+    primary: 'bg-accent/20 border-accent/30 text-accent',
     success: 'bg-green-500/20 border-green-500/30 text-green-400',
     warning: 'bg-yellow-500/20 border-yellow-500/30 text-yellow-400',
     danger: 'bg-red-500/20 border-red-500/30 text-red-400',

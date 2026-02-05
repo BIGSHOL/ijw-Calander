@@ -135,8 +135,8 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
 
                 {/* Header */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-                    <h2 className="text-sm font-bold text-[#081429] flex items-center gap-2">
-                        <Calendar className="text-[#fdb813]" size={18} />
+                    <h2 className="text-sm font-bold text-primary flex items-center gap-2">
+                        <Calendar className="text-accent" size={18} />
                         {customTitle || '내 일정 모아보기'}
                     </h2>
                     <button
@@ -154,8 +154,8 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
                         {/* Section 1: 필터 */}
                         <div className="bg-white border border-gray-200 overflow-hidden">
                             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                <Filter className="w-3 h-3 text-[#081429]" />
-                                <h3 className="text-[#081429] font-bold text-xs">필터</h3>
+                                <Filter className="w-3 h-3 text-primary" />
+                                <h3 className="text-primary font-bold text-xs">필터</h3>
                             </div>
                             <div className="px-2 py-2 flex gap-2">
                                 {(['all', 'pending', 'joined', 'declined'] as StatusFilter[]).map(status => (
@@ -164,9 +164,9 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
                                         onClick={() => setFilterStatus(status)}
                                         className={`px-3 py-1.5 rounded-sm text-xs font-bold transition-all flex items-center gap-1.5
                                             ${filterStatus === status
-                                                ? status === 'all' ? 'bg-[#081429] text-white'
-                                                    : status === 'pending' ? 'bg-[#fdb813] text-[#081429]'
-                                                        : status === 'joined' ? 'bg-[#081429] text-white'
+                                                ? status === 'all' ? 'bg-primary text-white'
+                                                    : status === 'pending' ? 'bg-accent text-primary'
+                                                        : status === 'joined' ? 'bg-primary text-white'
                                                             : 'bg-gray-400 text-white'
                                                 : 'bg-white text-gray-500 border border-gray-200 hover:border-gray-300'
                                             }
@@ -187,8 +187,8 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
                         {/* Section 2: 이벤트 목록 */}
                         <div className="bg-white border border-gray-200 overflow-hidden">
                             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                <Calendar className="w-3 h-3 text-[#081429]" />
-                                <h3 className="text-[#081429] font-bold text-xs">이벤트 목록</h3>
+                                <Calendar className="w-3 h-3 text-primary" />
+                                <h3 className="text-primary font-bold text-xs">이벤트 목록</h3>
                             </div>
                             <div className="p-2 space-y-3 bg-gray-50">
                                 {filteredEvents.length === 0 ? (
@@ -216,9 +216,9 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
                                             >
                                                 {/* Left Accent Bar based on status */}
                                                 <div className={`absolute top-0 bottom-0 left-0 w-1
-                                                    ${myStatus === 'joined' ? 'bg-[#081429]' : ''}
+                                                    ${myStatus === 'joined' ? 'bg-primary' : ''}
                                                     ${myStatus === 'declined' ? 'bg-gray-300' : ''}
-                                                    ${myStatus === 'pending' ? 'bg-[#fdb813]' : ''}
+                                                    ${myStatus === 'pending' ? 'bg-accent' : ''}
                                                 `} />
 
                                                 <div className="pl-2">
@@ -228,9 +228,9 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
                                                                 {/* Status Badge - Unified Font Size */}
                                                                 <span className={`
                                                                     text-xs px-2 py-0.5 rounded-sm font-bold tracking-tight border
-                                                                    ${myStatus === 'joined' ? 'bg-[#081429]/5 text-[#081429] border-[#081429]/10' : ''}
+                                                                    ${myStatus === 'joined' ? 'bg-primary/5 text-primary border-primary/10' : ''}
                                                                     ${myStatus === 'declined' ? 'bg-gray-100 text-gray-500 border-gray-200' : ''}
-                                                                    ${myStatus === 'pending' ? 'bg-[#fdb813]/10 text-[#fdb813] border-[#fdb813]/20' : ''}
+                                                                    ${myStatus === 'pending' ? 'bg-accent/10 text-accent border-accent/20' : ''}
                                                                 `}>
                                                                     {myStatus === 'joined' && '참석'}
                                                                     {myStatus === 'declined' && '불참'}
@@ -244,7 +244,7 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
                                                             </div>
 
                                                             {/* Title - Unified Font Size & Color #373d41 */}
-                                                            <h3 className="font-bold text-[#373d41] text-sm md:text-base leading-snug group-hover:text-[#081429] transition-colors">
+                                                            <h3 className="font-bold text-primary-700 text-sm md:text-base leading-snug group-hover:text-primary transition-colors">
                                                                 {event.title}
                                                             </h3>
                                                         </div>
@@ -252,14 +252,14 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
 
                                                     <div className="flex items-center gap-3 text-xs text-gray-500 font-medium mt-2">
                                                         <div className="flex items-center gap-1.5">
-                                                            <Calendar size={13} className="text-[#fdb813]" />
+                                                            <Calendar size={13} className="text-accent" />
                                                             <span className={isPast ? 'line-through decoration-gray-300' : 'text-gray-700 font-bold'}>
                                                                 {event.startDate}
                                                             </span>
                                                         </div>
                                                         {(event.startTime || event.isAllDay) && (
                                                             <div className="flex items-center gap-1.5">
-                                                                <Clock size={13} className="text-[#fdb813]" />
+                                                                <Clock size={13} className="text-accent" />
                                                                 <span>
                                                                     {event.isAllDay ? '하루종일' : `${event.startTime} ${event.endTime ? `~ ${event.endTime}` : ''}`}
                                                                 </span>

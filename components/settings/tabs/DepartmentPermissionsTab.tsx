@@ -257,7 +257,7 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
             placeholder="사용자 검색..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-white border border-gray-200 rounded-sm text-xs focus:border-[#fdb813] outline-none"
+            className="w-full pl-9 pr-3 py-1.5 bg-white border border-gray-200 rounded-sm text-xs focus:border-accent outline-none"
           />
         </div>
         <div className="text-xxs text-gray-400">
@@ -293,7 +293,7 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
                   )}
 
                   {/* 아이콘 */}
-                  <div className={`w-6 h-6 rounded-sm flex items-center justify-center shrink-0 ${user.role === 'master' ? 'bg-[#fdb813] text-[#081429]' :
+                  <div className={`w-6 h-6 rounded-sm flex items-center justify-center shrink-0 ${user.role === 'master' ? 'bg-accent text-primary' :
                       user.role === 'admin' ? 'bg-indigo-600 text-white' :
                         'bg-gray-100 text-gray-500'
                     }`}>
@@ -304,7 +304,7 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
 
                   {/* 이름 */}
                   <div className="min-w-0 flex-1">
-                    <span className="text-xs font-bold text-[#081429] truncate block">
+                    <span className="text-xs font-bold text-primary truncate block">
                       {user.displayName || user.email.split('@')[0]}
                       {user.jobTitle && <span className="text-gray-400 font-normal ml-1">({user.jobTitle})</span>}
                     </span>
@@ -370,7 +370,7 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
                         value={deptSearchTerm}
                         onChange={(e) => { e.stopPropagation(); setDeptSearchTerm(e.target.value); }}
                         onClick={(e) => e.stopPropagation()}
-                        className="w-full pl-6 pr-2 py-1 bg-white border border-gray-200 rounded text-xxs focus:border-[#fdb813] outline-none"
+                        className="w-full pl-6 pr-2 py-1 bg-white border border-gray-200 rounded text-xxs focus:border-accent outline-none"
                       />
                     </div>
 

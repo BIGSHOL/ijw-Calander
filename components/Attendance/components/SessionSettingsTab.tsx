@@ -295,14 +295,14 @@ const SessionSettingsTab: React.FC<SessionSettingsTabProps> = ({
       {/* Section 1: 세션 정보 */}
       <div className="bg-white border border-gray-200 overflow-hidden">
         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-          <Calendar className="w-3 h-3 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-xs">세션 정보</h3>
+          <Calendar className="w-3 h-3 text-primary" />
+          <h3 className="text-primary font-bold text-xs">세션 정보</h3>
         </div>
         <div className="divide-y divide-gray-100">
           {/* Year / Category Selection Row */}
           <div className="px-2 py-1.5">
             <div className="flex items-center gap-2 mb-2">
-              <span className="w-12 shrink-0 text-xs font-medium text-[#373d41]">년도</span>
+              <span className="w-12 shrink-0 text-xs font-medium text-primary-700">년도</span>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setSelectedYear(y => y - 1)}
@@ -321,7 +321,7 @@ const SessionSettingsTab: React.FC<SessionSettingsTabProps> = ({
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="w-12 shrink-0 text-xs font-medium text-[#373d41]">과목</span>
+              <span className="w-12 shrink-0 text-xs font-medium text-primary-700">과목</span>
               <div className="flex gap-1">
                 {CATEGORIES.map(cat => (
                   <button
@@ -351,8 +351,8 @@ const SessionSettingsTab: React.FC<SessionSettingsTabProps> = ({
           {/* Section 2: 기간 설정 */}
           <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-              <BookOpen className="w-3 h-3 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-xs">기간 설정</h3>
+              <BookOpen className="w-3 h-3 text-primary" />
+              <h3 className="text-primary font-bold text-xs">기간 설정</h3>
             </div>
             <div className="p-2">
               <div className="text-xs text-gray-500 mb-2">
@@ -380,8 +380,8 @@ const SessionSettingsTab: React.FC<SessionSettingsTabProps> = ({
           <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200">
               <div className="flex items-center gap-1">
-                <SettingsIcon className="w-3 h-3 text-[#081429]" />
-                <h3 className="text-[#081429] font-bold text-xs">설정 요약</h3>
+                <SettingsIcon className="w-3 h-3 text-primary" />
+                <h3 className="text-primary font-bold text-xs">설정 요약</h3>
               </div>
               {configuredMonths.length > 0 && (
                 <button
@@ -436,8 +436,8 @@ const SessionSettingsTab: React.FC<SessionSettingsTabProps> = ({
           {/* Section 4: 작업 */}
           <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-              <Save className="w-3 h-3 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-xs">작업</h3>
+              <Save className="w-3 h-3 text-primary" />
+              <h3 className="text-primary font-bold text-xs">작업</h3>
             </div>
             <div className="p-2">
               {/* 변경사항 알림 */}

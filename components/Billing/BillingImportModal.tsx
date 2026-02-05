@@ -149,7 +149,7 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
       <div className="bg-white rounded-sm w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-          <h2 className="text-sm font-bold text-[#081429] flex items-center gap-2">
+          <h2 className="text-sm font-bold text-primary flex items-center gap-2">
             <FileSpreadsheet size={18} className="text-emerald-600" />
             수납 데이터 가져오기
           </h2>
@@ -163,8 +163,8 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
           {/* Section 1: 파일 업로드 */}
           <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-              <Upload className="w-3 h-3 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-xs">파일 업로드</h3>
+              <Upload className="w-3 h-3 text-primary" />
+              <h3 className="text-primary font-bold text-xs">파일 업로드</h3>
             </div>
             <div className="p-3">
               <input
@@ -193,8 +193,8 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
           {summary && (
             <div className="bg-white border border-gray-200 overflow-hidden">
               <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                <Eye className="w-3 h-3 text-[#081429]" />
-                <h3 className="text-[#081429] font-bold text-xs">데이터 미리보기</h3>
+                <Eye className="w-3 h-3 text-primary" />
+                <h3 className="text-primary font-bold text-xs">데이터 미리보기</h3>
               </div>
               <div className="p-3 space-y-3">
                 {/* 통계 카드 */}
@@ -293,8 +293,8 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
           {summary && (
             <div className="bg-white border border-gray-200 overflow-hidden">
               <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                <Settings className="w-3 h-3 text-[#081429]" />
-                <h3 className="text-[#081429] font-bold text-xs">가져오기 설정</h3>
+                <Settings className="w-3 h-3 text-primary" />
+                <h3 className="text-primary font-bold text-xs">가져오기 설정</h3>
               </div>
               <div className="p-3">
                 <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-2 rounded-sm transition-colors">

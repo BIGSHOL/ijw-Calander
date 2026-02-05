@@ -40,26 +40,26 @@ export const BillingTable: React.FC<BillingTableProps> = ({
   }
 
   return (
-    <div className="rounded-sm shadow-sm border overflow-hidden" style={{ backgroundColor: 'white', borderColor: '#08142915' }}>
+    <div className="rounded-sm shadow-sm border overflow-hidden" style={{ backgroundColor: 'white', borderColor: 'rgba(8, 20, 41, 0.15)' }}>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>원생번호</th>
-              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>이름</th>
-              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>학년</th>
-              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>학교</th>
-              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>수납명</th>
-              <th className="px-2 py-1.5 text-right text-xxs font-medium" style={{ color: '#373d41' }}>청구액</th>
-              <th className="px-2 py-1.5 text-right text-xxs font-medium" style={{ color: '#373d41' }}>할인</th>
-              <th className="px-2 py-1.5 text-right text-xxs font-medium" style={{ color: '#373d41' }}>적립금</th>
-              <th className="px-2 py-1.5 text-right text-xxs font-medium" style={{ color: '#373d41' }}>납부액</th>
-              <th className="px-2 py-1.5 text-right text-xxs font-medium" style={{ color: '#373d41' }}>미납액</th>
-              <th className="px-2 py-1.5 text-center text-xxs font-medium" style={{ color: '#373d41' }}>상태</th>
-              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>결제수단</th>
-              <th className="px-2 py-1.5 text-center text-xxs font-medium" style={{ color: '#373d41' }}>수납일</th>
-              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: '#373d41' }}>담임강사</th>
-              <th className="px-2 py-1.5 text-center text-xxs font-medium" style={{ color: '#373d41' }}>관리</th>
+              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>원생번호</th>
+              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>이름</th>
+              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>학년</th>
+              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>학교</th>
+              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>수납명</th>
+              <th className="px-2 py-1.5 text-right text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>청구액</th>
+              <th className="px-2 py-1.5 text-right text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>할인</th>
+              <th className="px-2 py-1.5 text-right text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>적립금</th>
+              <th className="px-2 py-1.5 text-right text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>납부액</th>
+              <th className="px-2 py-1.5 text-right text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>미납액</th>
+              <th className="px-2 py-1.5 text-center text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>상태</th>
+              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>결제수단</th>
+              <th className="px-2 py-1.5 text-center text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>수납일</th>
+              <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>담임강사</th>
+              <th className="px-2 py-1.5 text-center text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>관리</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -162,7 +162,7 @@ export const BillingTable: React.FC<BillingTableProps> = ({
               })
             ) : (
               <tr>
-                <td colSpan={15} className="px-6 py-12 text-center" style={{ color: '#373d41' }}>
+                <td colSpan={15} className="px-6 py-12 text-center" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
                   검색 결과가 없습니다.
                 </td>
               </tr>

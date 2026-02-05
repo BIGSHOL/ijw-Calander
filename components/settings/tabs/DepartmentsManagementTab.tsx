@@ -75,9 +75,9 @@ const DepartmentsManagementTab: React.FC<DepartmentsManagementTabProps> = ({
                 value={categoryManagement.newCategoryName}
                 onChange={e => setCategoryManagement({ newCategoryName: e.target.value })}
                 placeholder="새 카테고리"
-                className="border border-gray-300 rounded-sm px-3 py-1 text-xs focus:border-[#fdb813] outline-none w-32"
+                className="border border-gray-300 rounded-sm px-3 py-1 text-xs focus:border-accent outline-none w-32"
               />
-              <button onClick={handleAddCategory} className="bg-[#081429] text-white px-3 py-1 rounded-sm text-xs font-bold hover:bg-[#1e293b] transition-colors"><Plus size={14} /></button>
+              <button onClick={handleAddCategory} className="bg-primary text-white px-3 py-1 rounded-sm text-xs font-bold hover:bg-[#1e293b] transition-colors"><Plus size={14} /></button>
             </div>
           </div>
           <div className="p-4 flex flex-wrap gap-2">
@@ -100,18 +100,18 @@ const DepartmentsManagementTab: React.FC<DepartmentsManagementTabProps> = ({
             placeholder="부서 검색"
             value={departmentFilterState.searchTerm}
             onChange={(e) => setDepartmentFilterState({ ...departmentFilterState, searchTerm: e.target.value })}
-            className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-sm text-sm focus:border-[#fdb813] outline-none"
+            className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-sm text-sm focus:border-accent outline-none"
           />
         </div>
         {!departmentFilterState.isCreating && canCreateDept && (
-          <button onClick={() => setDepartmentFilterState({ ...departmentFilterState, isCreating: true })} className="px-4 py-2 bg-[#081429] text-white rounded-sm text-xs font-bold hover:bg-[#1e293b] flex items-center gap-1 transition-colors">
+          <button onClick={() => setDepartmentFilterState({ ...departmentFilterState, isCreating: true })} className="px-4 py-2 bg-primary text-white rounded-sm text-xs font-bold hover:bg-[#1e293b] flex items-center gap-1 transition-colors">
             <Plus size={14} /> 새 부서 만들기
           </button>
         )}
       </div>
 
       {departmentFilterState.isCreating && (
-        <div className="bg-white p-4 rounded-sm border border-[#fdb813] space-y-3">
+        <div className="bg-white p-4 rounded-sm border border-accent space-y-3">
           <div className="flex gap-2">
             <input type="text" value={newDepartmentForm.name} onChange={(e) => setNewDepartmentForm({ ...newDepartmentForm, name: e.target.value })} placeholder="부서명" className="flex-1 border p-2 rounded" />
 
@@ -161,7 +161,7 @@ const DepartmentsManagementTab: React.FC<DepartmentsManagementTabProps> = ({
 
           <div className="flex gap-2">
             <button onClick={() => setDepartmentFilterState({ ...departmentFilterState, isCreating: false })} className="flex-1 bg-gray-100 py-2 rounded">취소</button>
-            <button onClick={handleAdd} className="flex-1 bg-[#081429] text-white py-2 rounded">생성</button>
+            <button onClick={handleAdd} className="flex-1 bg-primary text-white py-2 rounded">생성</button>
           </div>
         </div>
       )}
@@ -211,7 +211,7 @@ const DepartmentsManagementTab: React.FC<DepartmentsManagementTabProps> = ({
                     value={dept.name}
                     readOnly={!canEditDept}
                     onChange={(e) => handleLocalDeptUpdate(dept.id, 'name', e.target.value)}
-                    className={`font-bold border-none outline-none w-full bg-transparent ${canEditDept ? 'hover:bg-gray-50 rounded px-1 focus:bg-white focus:ring-1 focus:ring-[#fdb813]' : ''}`}
+                    className={`font-bold border-none outline-none w-full bg-transparent ${canEditDept ? 'hover:bg-gray-50 rounded px-1 focus:bg-white focus:ring-1 focus:ring-accent' : ''}`}
                   />
                 </div>
 
@@ -221,7 +221,7 @@ const DepartmentsManagementTab: React.FC<DepartmentsManagementTabProps> = ({
                     <select
                       value={dept.category || ''}
                       onChange={(e) => handleLocalDeptUpdate(dept.id, 'category', e.target.value)}
-                      className="w-full text-center text-xs border-b border-transparent hover:border-gray-200 focus:border-[#fdb813] outline-none bg-transparent transition-colors appearance-none cursor-pointer py-1"
+                      className="w-full text-center text-xs border-b border-transparent hover:border-gray-200 focus:border-accent outline-none bg-transparent transition-colors appearance-none cursor-pointer py-1"
                     >
                       <option value="">-</option>
                       {sysCategories.map(cat => (

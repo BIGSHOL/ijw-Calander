@@ -171,7 +171,7 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as StaffLeave['status'] | 'all')}
-            className="px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+            className="px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="all">전체 상태</option>
             {Object.entries(LEAVE_STATUS_LABELS).map(([value, label]) => (
@@ -181,7 +181,7 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
         </div>
         <button
           onClick={() => setShowAddForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#081429] text-white rounded-sm hover:bg-[#0a1a35] transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-sm hover:bg-primary-800 transition-colors"
         >
           <Plus className="w-4 h-4" />
           <span>휴가 신청</span>
@@ -191,14 +191,14 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
       {/* Add Leave Form */}
       {showAddForm && (
         <div className="bg-white rounded-sm border border-gray-200 p-4">
-          <h3 className="font-semibold text-[#081429] mb-4">새 휴가 신청</h3>
+          <h3 className="font-semibold text-primary mb-4">새 휴가 신청</h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">직원</label>
               <select
                 value={newLeave.staffId}
                 onChange={(e) => setNewLeave(prev => ({ ...prev, staffId: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 <option value="">선택하세요</option>
                 {staff.filter(s => s.status === 'active').map(s => (
@@ -211,7 +211,7 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
               <select
                 value={newLeave.type}
                 onChange={(e) => setNewLeave(prev => ({ ...prev, type: e.target.value as StaffLeave['type'] }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent"
               >
                 {Object.entries(LEAVE_TYPE_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>{label}</option>
@@ -224,7 +224,7 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
                 type="date"
                 value={newLeave.startDate}
                 onChange={(e) => setNewLeave(prev => ({ ...prev, startDate: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
             <div>
@@ -233,7 +233,7 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
                 type="date"
                 value={newLeave.endDate}
                 onChange={(e) => setNewLeave(prev => ({ ...prev, endDate: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
             <div className="col-span-2">
@@ -243,7 +243,7 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
                 value={newLeave.reason}
                 onChange={(e) => setNewLeave(prev => ({ ...prev, reason: e.target.value }))}
                 placeholder="휴가 사유를 입력하세요"
-                className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent"
               />
             </div>
           </div>
@@ -256,7 +256,7 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
             </button>
             <button
               onClick={handleAddLeave}
-              className="px-4 py-2 bg-[#081429] text-white rounded-sm hover:bg-[#0a1a35] transition-colors"
+              className="px-4 py-2 bg-primary text-white rounded-sm hover:bg-primary-800 transition-colors"
             >
               신청
             </button>
@@ -279,7 +279,7 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <span className="font-semibold text-[#081429]">{leave.staffName}</span>
+                      <span className="font-semibold text-primary">{leave.staffName}</span>
                       {getTypeBadge(leave.type)}
                       {getStatusBadge(leave.status)}
                     </div>
@@ -288,7 +288,7 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
                         <Calendar className="w-4 h-4" />
                         {leave.startDate} ~ {leave.endDate}
                       </span>
-                      <span className="text-[#fdb813] font-medium">
+                      <span className="text-accent font-medium">
                         ({calculateDays(leave.startDate, leave.endDate)}일)
                       </span>
                     </div>

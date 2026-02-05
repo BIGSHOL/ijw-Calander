@@ -242,7 +242,7 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
               <ImageIcon size={20} className="text-blue-600" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-[#081429]">{title}</h2>
+              <h2 className="text-sm font-bold text-primary">{title}</h2>
               {subtitle && (
                 <p className="text-xs text-gray-500">{subtitle}</p>
               )}

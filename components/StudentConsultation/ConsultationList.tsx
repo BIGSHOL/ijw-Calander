@@ -63,10 +63,10 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
                         key={n}
                         className="flex items-center gap-3 px-3 py-2 border-b border-gray-100 animate-pulse"
                     >
-                        <div className="h-3 bg-[#081429]/10 rounded w-10"></div>
-                        <div className="h-3 bg-[#081429]/10 rounded w-12"></div>
-                        <div className="h-4 bg-[#081429]/10 rounded w-16"></div>
-                        <div className="h-4 bg-[#081429]/10 rounded flex-1"></div>
+                        <div className="h-3 bg-primary/10 rounded w-10"></div>
+                        <div className="h-3 bg-primary/10 rounded w-12"></div>
+                        <div className="h-4 bg-primary/10 rounded w-16"></div>
+                        <div className="h-4 bg-primary/10 rounded flex-1"></div>
                     </div>
                 ))}
             </div>
@@ -76,19 +76,19 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
     // 빈 상태 (전체 데이터가 없을 때)
     if (totalCount === 0 && !loading) {
         return (
-            <div className="bg-white border border-[#081429] border-opacity-20 rounded-sm p-12 text-center">
+            <div className="bg-white border border-primary border-opacity-20 rounded-sm p-12 text-center">
                 <div className="mb-4">
                     <FileText className="w-16 h-16 mx-auto text-gray-300" />
                 </div>
-                <h3 className="text-xl font-semibold text-[#081429] mb-2">
+                <h3 className="text-xl font-semibold text-primary mb-2">
                     상담 기록이 없습니다
                 </h3>
-                <p className="text-[#373d41] mb-6">
+                <p className="text-primary-700 mb-6">
                     새 상담 기록을 추가하거나 필터를 조정해보세요.
                 </p>
                 <button
                     onClick={onRefresh}
-                    className="border border-[#081429] text-[#081429] px-6 py-2 rounded-sm hover:bg-[#081429] hover:text-white transition-colors"
+                    className="border border-primary text-primary px-6 py-2 rounded-sm hover:bg-primary hover:text-white transition-colors"
                 >
                     새로고침
                 </button>
@@ -104,24 +104,24 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
         <div className="overflow-x-auto">
             <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-2">
-                    <p className="text-sm" style={{ color: '#373d41' }}>
-                        총 <span className="font-semibold" style={{ color: '#081429' }}>{totalCount}</span>개의 상담 기록
-                        {loading && <Loader2 className="inline-block w-3 h-3 ml-1 animate-spin" style={{ color: '#fdb813' }} />}
+                    <p className="text-sm" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
+                        총 <span className="font-semibold" style={{ color: 'rgb(8, 20, 41)' /* primary */ }}>{totalCount}</span>개의 상담 기록
+                        {loading && <Loader2 className="inline-block w-3 h-3 ml-1 animate-spin" style={{ color: 'rgb(253, 184, 19)' /* accent */ }} />}
                     </p>
                     <span className="text-gray-300">|</span>
-                    <span className="text-xs" style={{ color: '#373d41' }}>페이지당</span>
+                    <span className="text-xs" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>페이지당</span>
                     <select
                         value={pageSize}
                         onChange={handlePageSizeChange}
                         className="px-2 py-1 text-xs rounded-sm border transition-all"
-                        style={{ borderColor: '#08142920', color: '#081429', backgroundColor: 'white' }}
+                        style={{ borderColor: 'rgba(8, 20, 41, 0.2)', color: 'rgb(8, 20, 41)', backgroundColor: 'white' }}
                     >
                         <option value={10}>10개</option>
                         <option value={20}>20개</option>
                         <option value={50}>50개</option>
                         <option value={100}>100개</option>
                     </select>
-                    <span className="text-xs hidden sm:inline" style={{ color: '#373d41' }}>
+                    <span className="text-xs hidden sm:inline" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
                         {startIndex + 1}-{Math.min(startIndex + pageSize, totalCount)} / 총 {totalCount}개
                     </span>
                 </div>
@@ -131,7 +131,7 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
                         onClick={() => goToPage(currentPage - 1)}
                         disabled={!hasPrevPage || loading}
                         className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
-                        style={{ color: '#081429' }}
+                        style={{ color: 'rgb(8, 20, 41)' /* primary */ }}
                     >
                         이전
                     </button>
@@ -153,7 +153,7 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
                                     key={pageNum}
                                     onClick={() => goToPage(pageNum)}
                                     disabled={loading}
-                                    className={`w-6 h-6 rounded-full text-xs font-bold transition-colors text-[#081429] ${
+                                    className={`w-6 h-6 rounded-full text-xs font-bold transition-colors text-primary ${
                                         currentPage === pageNum
                                             ? ''
                                             : 'hover:bg-gray-100'
@@ -169,7 +169,7 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
                         onClick={() => goToPage(currentPage + 1)}
                         disabled={!hasNextPage || loading}
                         className="px-2 py-1 rounded text-xs transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100"
-                        style={{ color: '#081429' }}
+                        style={{ color: 'rgb(8, 20, 41)' /* primary */ }}
                     >
                         다음
                     </button>
@@ -178,7 +178,7 @@ const ConsultationList: React.FC<ConsultationListProps> = ({
 
             <div className="bg-white rounded-sm border border-gray-200 min-w-[1200px]">
                 {/* 헤더 행 */}
-                <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-[#373d41]">
+                <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border-b border-gray-200 text-xs font-medium text-primary-700">
                     <span className="w-10 shrink-0 text-center">No</span>
                     <span className="w-20 shrink-0 text-center">날짜</span>
                     <span className="w-14 shrink-0 text-center">상태</span>

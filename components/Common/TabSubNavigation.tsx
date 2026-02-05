@@ -13,7 +13,7 @@ interface TabSubNavigationProps {
  * TabSubNavigation - 모든 탭에서 사용하는 공통 서브 네비게이션 컨테이너
  *
  * 디자인 규격 (DESIGN_SYSTEM.md 준수):
- * - 배경: bg-[#081429] (어두운 네이비)
+ * - 배경: bg-primary (어두운 네이비)
  * - 경계선: border-t border-white/10 (선택적)
  * - 텍스트: text-xs (12px)
  *
@@ -58,7 +58,7 @@ export const TabSubNavigation: React.FC<TabSubNavigationProps> = ({
       role="navigation"
       aria-label="필터 및 보기 옵션"
       className={`
-        bg-[#081429]
+        bg-primary
         ${showBorder ? 'border-t border-white/10' : ''}
         ${variantClasses[variant]}
         flex items-center

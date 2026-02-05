@@ -88,7 +88,7 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
   if (loading || regLoading) {
     return (
       <div className="text-center py-6">
-        <div className="animate-spin w-5 h-5 border-2 border-[#fdb813] border-t-transparent rounded-sm mx-auto mb-2"></div>
+        <div className="animate-spin w-5 h-5 border-2 border-accent border-t-transparent rounded-sm mx-auto mb-2"></div>
         <p className="text-gray-500 text-xs">상담 기록 불러오는 중...</p>
       </div>
     );
@@ -104,9 +104,9 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
             className="flex items-center gap-2 cursor-pointer"
             onClick={() => setShowStudentConsultations(!showStudentConsultations)}
           >
-            <MessageSquare className="w-4 h-4 text-[#081429]" />
-            <h3 className="text-xs font-bold text-[#081429]">재원생 상담 기록</h3>
-            <span className="text-xs text-[#373d41]">
+            <MessageSquare className="w-4 h-4 text-primary" />
+            <h3 className="text-xs font-bold text-primary">재원생 상담 기록</h3>
+            <span className="text-xs text-primary-700">
               ({sortedConsultations.length}건)
             </span>
             <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showStudentConsultations ? '' : 'rotate-180'}`} />
@@ -114,7 +114,7 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
           {!readOnly && (
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-[#fdb813] text-[#081429] px-2 py-1 rounded-sm text-xs font-semibold hover:bg-[#e5a711] transition-colors flex items-center gap-1"
+              className="bg-accent text-primary px-2 py-1 rounded-sm text-xs font-semibold hover:bg-[#e5a711] transition-colors flex items-center gap-1"
             >
               <Plus className="w-3 h-3" />
               추가
@@ -126,7 +126,7 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
         {showStudentConsultations && (
         <div className="bg-white border border-gray-200 overflow-hidden rounded-sm">
           {/* 테이블 헤더 */}
-          <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-[#373d41]">
+          <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-primary-700">
             <span className="w-16 shrink-0">날짜</span>
             <span className="w-10 shrink-0">구분</span>
             <span className="w-10 shrink-0">분류</span>
@@ -157,7 +157,7 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
                   <div
                     key={consultation.id}
                     onClick={() => setSelectedConsultation(consultation)}
-                    className="flex items-center gap-2 px-2 py-1 border-b border-gray-100 hover:bg-[#fdb813]/5 transition-colors cursor-pointer"
+                    className="flex items-center gap-2 px-2 py-1 border-b border-gray-100 hover:bg-accent/5 transition-colors cursor-pointer"
                   >
                     {/* 날짜 */}
                     <span className="w-16 shrink-0 text-xxs text-gray-500">
@@ -197,13 +197,13 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
                           {urgency === 'done' && '✓'}
                         </span>
                       )}
-                      <span className="text-xs text-[#081429] truncate">
+                      <span className="text-xs text-primary truncate">
                         {consultation.title}
                       </span>
                     </div>
 
                     {/* 상담자 */}
-                    <span className="w-12 shrink-0 text-xs text-[#373d41] text-right truncate">
+                    <span className="w-12 shrink-0 text-xs text-primary-700 text-right truncate">
                       {consultation.consultantName || '-'}
                     </span>
                   </div>
@@ -222,9 +222,9 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
           className="flex items-center gap-2 cursor-pointer"
           onClick={() => setShowRegistrationConsultations(!showRegistrationConsultations)}
         >
-          <ClipboardList className="w-4 h-4 text-[#081429]" />
-          <h3 className="text-xs font-bold text-[#081429]">등록 상담 이력</h3>
-          <span className="text-xs text-[#373d41]">
+          <ClipboardList className="w-4 h-4 text-primary" />
+          <h3 className="text-xs font-bold text-primary">등록 상담 이력</h3>
+          <span className="text-xs text-primary-700">
             ({filteredRegistrationConsultations.length}건)
           </span>
           <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showRegistrationConsultations ? '' : 'rotate-180'}`} />
@@ -247,12 +247,12 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
               <div
                 key={record.id}
                 onClick={() => setSelectedRegistrationRecord(record)}
-                className="bg-white border border-gray-200 rounded-sm p-3 hover:border-gray-300 hover:bg-[#fdb813]/5 transition-colors cursor-pointer"
+                className="bg-white border border-gray-200 rounded-sm p-3 hover:border-gray-300 hover:bg-accent/5 transition-colors cursor-pointer"
               >
                 {/* 상단: 날짜, 과목, 상태 */}
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-semibold text-[#081429]">
+                    <span className="text-xs font-semibold text-primary">
                       {record.consultationDate?.slice(0, 10) || '-'}
                     </span>
                     <span className="text-xs px-1.5 py-0.5 rounded-sm bg-gray-100 text-gray-700">

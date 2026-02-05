@@ -327,7 +327,7 @@ const RolePermissionsTab: React.FC<RolePermissionsTabProps> = ({
                         </button>
                         <button
                             onClick={handleSave}
-                            className="px-6 py-2 bg-[#081429] text-white rounded-sm text-sm font-bold hover:bg-[#0a1a35] flex items-center gap-2"
+                            className="px-6 py-2 bg-primary text-white rounded-sm text-sm font-bold hover:bg-primary-800 flex items-center gap-2"
                         >
                             <Save size={14} /> 저장
                         </button>

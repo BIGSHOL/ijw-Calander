@@ -92,7 +92,6 @@ const StudentModal: React.FC<StudentModalProps> = ({
 
         if (useEnrollmentsMode) {
             // Enrollments 모드: props에서 받은 학생 데이터 사용
-            console.log('[StudentModal] Using enrollments mode with', initialStudents.length, 'students');
             setStudents(initialStudents);
             setClassTeacher(teacherRef.current || '');
             setLoading(false);
@@ -130,7 +129,6 @@ const StudentModal: React.FC<StudentModalProps> = ({
                         };
                         await setDocFn(doc(db, targetCollection, newDocId), newClassData);
                         setClassDocId(newDocId);
-                        console.log(`[Simulation] Auto-created class: ${className}`);
                     } else {
                         // 실시간 모드: 사용자 확인 필요
                         const confirmed = confirm(
@@ -156,7 +154,6 @@ const StudentModal: React.FC<StudentModalProps> = ({
                         };
                         await setDocFn(doc(db, targetCollection, newDocId), newClassData);
                         setClassDocId(newDocId);
-                        console.log(`[Live] User-confirmed class creation: ${className}`);
                     }
                 }
             } catch (e) {
@@ -188,13 +185,11 @@ const StudentModal: React.FC<StudentModalProps> = ({
         const unsub = onSnapshot(doc(db, targetCollection, classDocId), (docSnap) => {
             // Skip update if user has unsaved changes (using Ref to avoid re-subscription)
             if (isDirtyRef.current) {
-                console.log('[StudentModal] Skipping update - isDirty is true');
                 return;
             }
 
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                console.log('[StudentModal] Received snapshot update:', data.studentList?.length, 'students');
                 setStudents(data.studentList || []);
                 setClassTeacher(data.teacher || '');
             } else {
@@ -230,15 +225,11 @@ const StudentModal: React.FC<StudentModalProps> = ({
                 return cleanStudent;
             });
 
-            console.log('[StudentModal] Saving students:', sanitizedStudents);
-
             // Set isDirty to false BEFORE saving so listener can receive updates
             setIsDirty(false);
 
             const targetCollection = isSimulationMode ? CLASS_DRAFT_COLLECTION : CLASS_COLLECTION;
             await updateDoc(doc(db, targetCollection, classDocId), { studentList: sanitizedStudents });
-
-            console.log('[StudentModal] Save successful');
 
             const mode = isSimulationMode ? '[시뮬레이션]' : '';
             alert(`${mode} 저장되었습니다.`);
@@ -298,7 +289,6 @@ const StudentModal: React.FC<StudentModalProps> = ({
                         ...basicUpdates,
                         updatedAt: new Date().toISOString()
                     });
-                    console.log('[StudentModal] Student basic info updated:', id, basicUpdates);
 
                     // 학생관리 캐시 무효화 (학생관리 화면에서 변경사항 반영)
                     queryClient.invalidateQueries({ queryKey: ['students'] });
@@ -316,7 +306,6 @@ const StudentModal: React.FC<StudentModalProps> = ({
 
                 if (enrollmentDoc) {
                     await updateDoc(enrollmentDoc.ref, enrollmentUpdates);
-                    console.log('[StudentModal] Enrollment updated:', id, enrollmentUpdates);
 
                     // 영어 시간표 캐시 무효화 (시간표에서 변경사항 반영)
                     queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
@@ -352,7 +341,6 @@ const StudentModal: React.FC<StudentModalProps> = ({
 
                 if (enrollmentDoc) {
                     await deleteDoc(enrollmentDoc.ref);
-                    console.log('[StudentModal] Enrollment deleted:', id);
 
                     // 캐시 무효화
                     queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
@@ -500,9 +488,9 @@ const StudentModal: React.FC<StudentModalProps> = ({
             >
 
                 {/* Header - Dark bar */}
-                <div className="px-5 py-3 flex items-center justify-between bg-[#081429] text-white">
+                <div className="px-5 py-3 flex items-center justify-between bg-primary text-white">
                     <h2 className="text-sm font-bold flex items-center gap-2">
-                        <Users size={18} className="text-[#fdb813]" />
+                        <Users size={18} className="text-accent" />
                         {fullClassName} - 학생 관리
                         {isDirty && <span className="text-xxs bg-red-500 text-white px-1.5 py-0.5 rounded-sm ml-2">변경사항 있음</span>}
                     </h2>
@@ -520,26 +508,26 @@ const StudentModal: React.FC<StudentModalProps> = ({
                     {/* Section 1: 수업 정보 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <BookOpen className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">수업 정보</h3>
+                            <BookOpen className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">수업 정보</h3>
                         </div>
                         <div className="divide-y divide-gray-100">
                             {/* Class Name Row */}
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">수업명</span>
-                                <span className="flex-1 text-xs text-[#081429] font-bold">{fullClassName}</span>
+                                <span className="w-16 shrink-0 text-xs font-medium text-primary-700">수업명</span>
+                                <span className="flex-1 text-xs text-primary font-bold">{fullClassName}</span>
                             </div>
 
                             {/* Teacher Row */}
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">담당강사</span>
-                                <span className="flex-1 text-xs text-[#373d41]">{teacher || classTeacher || '-'}</span>
+                                <span className="w-16 shrink-0 text-xs font-medium text-primary-700">담당강사</span>
+                                <span className="flex-1 text-xs text-primary-700">{teacher || classTeacher || '-'}</span>
                             </div>
 
                             {/* Student Count Row */}
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">학생 수</span>
-                                <span className="bg-[#fdb813] text-[#081429] px-2 py-0.5 rounded-sm font-bold text-xs">
+                                <span className="w-16 shrink-0 text-xs font-medium text-primary-700">학생 수</span>
+                                <span className="bg-accent text-primary px-2 py-0.5 rounded-sm font-bold text-xs">
                                     {students.length}명
                                 </span>
                             </div>
@@ -549,8 +537,8 @@ const StudentModal: React.FC<StudentModalProps> = ({
                     {/* Section 2: 학생 목록 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <Users className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">학생 목록</h3>
+                            <Users className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">학생 목록</h3>
                         </div>
                         <div className="p-2">
                             <StudentListTable
@@ -569,8 +557,8 @@ const StudentModal: React.FC<StudentModalProps> = ({
                     {/* Section 3: 일괄 작업 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <Settings className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">일괄 작업</h3>
+                            <Settings className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">일괄 작업</h3>
                         </div>
                         <div className="p-2">
                             <StudentBatchActions
@@ -597,7 +585,7 @@ const StudentModal: React.FC<StudentModalProps> = ({
                     )}
                     <button
                         onClick={handleClose}
-                        className="px-6 py-2 bg-[#081429] text-white rounded-sm font-bold text-sm hover:bg-[#0a1a35] transition-colors"
+                        className="px-6 py-2 bg-primary text-white rounded-sm font-bold text-sm hover:bg-primary-800 transition-colors"
                     >
                         {isDirty ? '취소' : '닫기'}
                     </button>

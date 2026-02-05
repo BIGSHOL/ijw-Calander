@@ -103,7 +103,7 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
   }, []);
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2 bg-[#081429] border-b border-gray-700">
+    <div className="flex items-center gap-2 px-3 py-2 bg-primary border-b border-gray-700">
       {/* 요일 선택 */}
       <div className="flex gap-0.5">
         {WEEKDAYS.map(day => (
@@ -112,9 +112,9 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
             onClick={() => onDayChange(day)}
             className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
               selectedDay === day
-                ? 'bg-[#fdb813] text-[#081429]'
+                ? 'bg-accent text-primary'
                 : day === today
-                  ? 'bg-gray-600 text-[#fdb813] hover:bg-gray-500'
+                  ? 'bg-gray-600 text-accent hover:bg-gray-500'
                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
             }`}
           >
@@ -140,7 +140,7 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
                 onClick={allSelected ? onDeselectAllRooms : onSelectAllRooms}
                 className={`px-3 py-1 text-xs font-medium rounded border transition-colors ${
                   allSelected
-                    ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                    ? 'bg-accent text-primary border-accent'
                     : 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600'
                 }`}
               >
@@ -151,7 +151,7 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
             {/* 그룹별 강의실 */}
             {roomGroups.map(group => (
               <div key={group.label} className="mb-2">
-                <div className="text-xxs font-bold text-[#fdb813] mb-1">{group.label}</div>
+                <div className="text-xxs font-bold text-accent mb-1">{group.label}</div>
                 <div className="grid grid-cols-3 gap-1">
                   {group.rooms.map(room => {
                     const isSelected = !selectedRooms || selectedRooms.has(room);
@@ -182,7 +182,7 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
           onClick={() => setShowSettings(!showSettings)}
           className={`px-2 py-1 text-xs rounded transition-colors ${
             ignoredRooms.size > 0
-              ? 'bg-gray-600 text-[#fdb813] border border-[#fdb813]'
+              ? 'bg-gray-600 text-accent border border-accent'
               : 'bg-gray-700 text-gray-400 hover:bg-gray-600 border border-gray-600'
           }`}
         >
@@ -193,7 +193,7 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
           <div className="absolute top-full left-0 mt-1 z-50 bg-[#0d1f3c] border border-gray-600 rounded-sm shadow-xl p-3 min-w-[280px]">
             {/* 시간대 설정 */}
             <div className="mb-3 pb-2 border-b border-gray-700">
-              <div className="text-xxs font-bold text-[#fdb813] mb-1.5">표시 시간대</div>
+              <div className="text-xxs font-bold text-accent mb-1.5">표시 시간대</div>
               <div className="flex items-center gap-2">
                 <select
                   value={timeRange.start}
@@ -223,7 +223,7 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
             </div>
             {roomGroups.map(group => (
               <div key={group.label} className="mb-2">
-                <div className="text-xxs font-bold text-[#fdb813] mb-1">{group.label}</div>
+                <div className="text-xxs font-bold text-accent mb-1">{group.label}</div>
                 <div className="grid grid-cols-3 gap-1">
                   {group.rooms.map(room => {
                     const isIgnored = ignoredRooms.has(room);

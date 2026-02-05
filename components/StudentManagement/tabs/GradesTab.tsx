@@ -268,7 +268,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
     if (loadingScores) {
         return (
             <div className="flex items-center justify-center h-32">
-                <Loader2 className="w-5 h-5 animate-spin text-[#fdb813]" />
+                <Loader2 className="w-5 h-5 animate-spin text-accent" />
             </div>
         );
     }
@@ -282,8 +282,8 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                     onClick={() => setShowLevelTests(!showLevelTests)}
                 >
                     <div className="flex items-center gap-1.5">
-                        <Zap size={12} className="text-[#081429]" />
-                        <h4 className="text-xs font-bold text-[#081429]">레벨테스트</h4>
+                        <Zap size={12} className="text-primary" />
+                        <h4 className="text-xs font-bold text-primary">레벨테스트</h4>
                         <span className="text-xxs text-gray-500">({levelTests.length})</span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -293,7 +293,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                     e.stopPropagation();
                                     setIsAddingLevelTest(true);
                                 }}
-                                className="flex items-center gap-1 px-1.5 py-0.5 bg-[#081429] text-white rounded-sm text-xxs hover:bg-[#1a2845] transition-colors"
+                                className="flex items-center gap-1 px-1.5 py-0.5 bg-primary text-white rounded-sm text-xxs hover:bg-[#1a2845] transition-colors"
                             >
                                 <Plus size={10} />
                                 추가
@@ -315,7 +315,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                 {levelTests.slice(0, 3).map((test) => (
                                     <div
                                         key={test.id}
-                                        className="flex items-center gap-2 p-1.5 bg-gray-50 rounded-sm hover:bg-[#fdb813]/10 transition-colors group"
+                                        className="flex items-center gap-2 p-1.5 bg-gray-50 rounded-sm hover:bg-accent/10 transition-colors group"
                                     >
                                         <div className="flex-1">
                                             <div className="flex items-center gap-1.5">
@@ -329,7 +329,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                                 <span className="text-xxs text-gray-500">{test.testDate}</span>
                                             </div>
                                             <div className="flex items-center gap-2 mt-0.5">
-                                                <span className="text-xs font-bold text-[#081429]">
+                                                <span className="text-xs font-bold text-primary">
                                                     {test.percentage.toFixed(0)}%
                                                 </span>
                                                 <span className="text-xxs text-indigo-600 font-medium">
@@ -364,8 +364,8 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                     onClick={() => setShowGoals(!showGoals)}
                 >
                     <div className="flex items-center gap-1.5">
-                        <Target size={12} className="text-[#081429]" />
-                        <h4 className="text-xs font-bold text-[#081429]">시험 목표</h4>
+                        <Target size={12} className="text-primary" />
+                        <h4 className="text-xs font-bold text-primary">시험 목표</h4>
                         <span className="text-xxs text-gray-500">({goalSettings.length})</span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -375,7 +375,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                     e.stopPropagation();
                                     setIsAddingGoal(true);
                                 }}
-                                className="flex items-center gap-1 px-1.5 py-0.5 bg-[#081429] text-white rounded-sm text-xxs hover:bg-[#1a2845] transition-colors"
+                                className="flex items-center gap-1 px-1.5 py-0.5 bg-primary text-white rounded-sm text-xxs hover:bg-[#1a2845] transition-colors"
                             >
                                 <Plus size={10} />
                                 추가
@@ -401,7 +401,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                     return (
                                         <div
                                             key={goal.id}
-                                            className="flex items-center gap-2 p-1.5 bg-gray-50 rounded-sm hover:bg-[#fdb813]/10 transition-colors group"
+                                            className="flex items-center gap-2 p-1.5 bg-gray-50 rounded-sm hover:bg-accent/10 transition-colors group"
                                         >
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-1.5">
@@ -465,8 +465,8 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                     onClick={() => setShowComments(!showComments)}
                 >
                     <div className="flex items-center gap-1.5">
-                        <MessageSquare size={12} className="text-[#081429]" />
-                        <h4 className="text-xs font-bold text-[#081429]">학습 코멘트</h4>
+                        <MessageSquare size={12} className="text-primary" />
+                        <h4 className="text-xs font-bold text-primary">학습 코멘트</h4>
                         <span className="text-xxs text-gray-500">({latestComments.length})</span>
                     </div>
                     <div className="flex items-center gap-1">
@@ -476,7 +476,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                     e.stopPropagation();
                                     setIsAddingComment(true);
                                 }}
-                                className="flex items-center gap-1 px-1.5 py-0.5 bg-[#081429] text-white rounded-sm text-xxs hover:bg-[#1a2845] transition-colors"
+                                className="flex items-center gap-1 px-1.5 py-0.5 bg-primary text-white rounded-sm text-xxs hover:bg-[#1a2845] transition-colors"
                             >
                                 <Plus size={10} />
                                 추가
@@ -574,7 +574,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                 <span className="text-micro font-medium text-blue-600">전체 평균</span>
                                 <BarChart3 size={10} className="text-blue-400" />
                             </div>
-                            <div className="text-sm font-bold text-[#081429]">
+                            <div className="text-sm font-bold text-primary">
                                 {stats.averagePercentage.toFixed(1)}%
                             </div>
                             <div className="text-xxs text-blue-600 mt-0.5">
@@ -588,7 +588,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                 <span className="text-micro font-medium text-indigo-600">최근 평균</span>
                                 <TrendingUp size={10} className="text-indigo-400" />
                             </div>
-                            <div className="text-sm font-bold text-[#081429]">
+                            <div className="text-sm font-bold text-primary">
                                 {kpiStats.recent3Avg.toFixed(1)}%
                             </div>
                             <div className={`text-xxs mt-0.5 flex items-center gap-0.5 ${
@@ -605,7 +605,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                 <span className="text-micro font-medium text-amber-600">목표 달성</span>
                                 <Target size={10} className="text-amber-400" />
                             </div>
-                            <div className="text-sm font-bold text-[#081429]">
+                            <div className="text-sm font-bold text-primary">
                                 {kpiStats.goalAchievementRate.toFixed(0)}%
                             </div>
                             <div className="text-xxs text-amber-600 mt-0.5">
@@ -619,7 +619,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                 <span className="text-micro font-medium text-emerald-600">안정성</span>
                                 <Award size={10} className="text-emerald-400" />
                             </div>
-                            <div className="text-sm font-bold text-[#081429]">
+                            <div className="text-sm font-bold text-primary">
                                 {kpiStats.stability.toFixed(0)}%
                             </div>
                             <div className="text-xxs text-emerald-600 mt-0.5">
@@ -639,7 +639,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                         <BookOpen size={10} className="text-blue-400" />
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <div className="text-sm font-bold text-[#081429]">
+                                        <div className="text-sm font-bold text-primary">
                                             {kpiStats.mathAvg.toFixed(1)}%
                                         </div>
                                         <div className="text-xxs text-blue-600">
@@ -657,7 +657,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                         <BookOpen size={10} className="text-purple-400" />
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <div className="text-sm font-bold text-[#081429]">
+                                        <div className="text-sm font-bold text-primary">
                                             {kpiStats.englishAvg.toFixed(1)}%
                                         </div>
                                         <div className="text-xxs text-purple-600">
@@ -672,7 +672,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                     {/* Phase 4: 자동 인사이트 */}
                     {insights.length > 0 && (
                         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-sm p-2">
-                            <h5 className="text-xs font-bold text-[#081429] mb-1.5 flex items-center gap-1">
+                            <h5 className="text-xs font-bold text-primary mb-1.5 flex items-center gap-1">
                                 <AlertCircle size={12} className="text-blue-600" />
                                 AI 학습 인사이트
                             </h5>
@@ -704,7 +704,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
             {/* 성적 추이 차트 */}
             {chartData.length > 1 && (
                 <div className="bg-white border border-gray-200 p-2">
-                    <h4 className="text-xs font-bold text-[#081429] mb-2 flex items-center gap-1">
+                    <h4 className="text-xs font-bold text-primary mb-2 flex items-center gap-1">
                         <TrendingUp size={12} className="text-blue-500" />
                         성적 추이
                     </h4>
@@ -726,7 +726,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                 />
                                 <Tooltip
                                     contentStyle={{
-                                        backgroundColor: '#081429',
+                                        backgroundColor: 'rgb(8, 20, 41)' /* primary */,
                                         border: 'none',
                                         borderRadius: '4px',
                                         color: 'white',
@@ -754,7 +754,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                 {/* 헤더 */}
                 <div className="px-2 py-1.5 border-b border-gray-100">
                     <div className="flex items-center justify-between mb-1">
-                        <h4 className="text-xs font-bold text-[#081429] flex items-center gap-1">
+                        <h4 className="text-xs font-bold text-primary flex items-center gap-1">
                             <BookOpen size={12} className="text-indigo-500" />
                             시험별 성적
                             {allScores.length > 0 && scores.length !== allScores.length && (
@@ -767,7 +767,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                             {!readOnly && (
                                 <button
                                     onClick={() => setIsAddingScore(true)}
-                                    className="flex items-center gap-0.5 px-1.5 py-0.5 bg-[#081429] text-white rounded-sm text-micro font-medium hover:bg-[#0f2847] transition-colors"
+                                    className="flex items-center gap-0.5 px-1.5 py-0.5 bg-primary text-white rounded-sm text-micro font-medium hover:bg-[#0f2847] transition-colors"
                                 >
                                     <Plus size={10} />
                                     입력
@@ -830,7 +830,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                 </div>
 
                 {/* 테이블 헤더 */}
-                <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-[#373d41]">
+                <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-primary-700">
                     <span className="w-16 shrink-0">날짜</span>
                     <span className="w-8 shrink-0">과목</span>
                     <span className="flex-1">시험명</span>
@@ -886,10 +886,10 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                             return (
                                 <div
                                     key={score.id}
-                                    className="flex items-center gap-2 px-2 py-1 border-b border-gray-100 hover:bg-[#fdb813]/5 transition-colors group"
+                                    className="flex items-center gap-2 px-2 py-1 border-b border-gray-100 hover:bg-accent/5 transition-colors group"
                                 >
                                     {/* 날짜 */}
-                                    <span className="text-xxs text-[#373d41] w-16 shrink-0">
+                                    <span className="text-xxs text-primary-700 w-16 shrink-0">
                                         {examDate}
                                     </span>
 
@@ -903,13 +903,13 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                     </span>
 
                                     {/* 시험명 */}
-                                    <span className="flex-1 text-xs text-[#081429] truncate">
+                                    <span className="flex-1 text-xs text-primary truncate">
                                         {score.examTitle || '시험'}
                                     </span>
 
                                     {/* 점수 */}
                                     <span className="w-14 shrink-0 text-center">
-                                        <span className="text-xs font-bold text-[#081429]">
+                                        <span className="text-xs font-bold text-primary">
                                             {score.percentage?.toFixed(0)}%
                                         </span>
                                     </span>

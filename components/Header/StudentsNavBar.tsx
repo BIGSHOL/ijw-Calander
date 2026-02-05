@@ -198,7 +198,7 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
               placeholder="이름, 학교 검색..."
               value={studentFilters.searchQuery}
               onChange={(e) => setStudentFilters(prev => ({ ...prev, searchQuery: e.target.value }))}
-              className="w-full pl-8 pr-3 py-1.5 bg-white/10 border border-white/10 rounded-sm text-white placeholder-gray-500 text-xs focus:outline-none focus:ring-1 focus:ring-[#fdb813]/50 focus:border-[#fdb813]/50"
+              className="w-full pl-8 pr-3 py-1.5 bg-white/10 border border-white/10 rounded-sm text-white placeholder-gray-500 text-xs focus:outline-none focus:ring-1 focus:ring-accent/50 focus:border-accent/50"
             />
             {studentFilters.searchQuery && (
               <button
@@ -220,7 +220,7 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
               onClick={() => setStudentFilters(prev => ({ ...prev, excludeNoEnrollment: !prev.excludeNoEnrollment }))}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm border transition-all ${
                 studentFilters.excludeNoEnrollment
-                  ? 'bg-[#fdb813] border-[#fdb813] text-[#081429] font-medium'
+                  ? 'bg-accent border-accent text-primary font-medium'
                   : 'bg-white/10 border-white/10 text-white hover:border-white/30'
               }`}
             >
@@ -235,7 +235,7 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
             <div className="relative">
               <button
                 onClick={() => setIsSearchFieldDropdownOpen(!isSearchFieldDropdownOpen)}
-                className={`px-3 py-1.5 bg-white/10 border border-white/10 rounded-sm text-xs cursor-pointer hover:border-white/30 transition-colors min-w-[120px] text-left ${studentFilters.searchField !== 'all' ? 'text-[#fdb813] border-[#fdb813]/50' : 'text-white'}`}
+                className={`px-3 py-1.5 bg-white/10 border border-white/10 rounded-sm text-xs cursor-pointer hover:border-white/30 transition-colors min-w-[120px] text-left ${studentFilters.searchField !== 'all' ? 'text-accent border-accent/50' : 'text-white'}`}
               >
                 {studentFilters.searchField === 'all' && '전체'}
                 {studentFilters.searchField === 'name' && '이름'}
@@ -261,7 +261,7 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
                           setStudentFilters(prev => ({ ...prev, searchField: 'all' }));
                           setIsSearchFieldDropdownOpen(false);
                         }}
-                        className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'all' ? 'bg-[#fdb813] text-[#081429] font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                        className={`px-2 py-1 rounded text-xs ${studentFilters.searchField === 'all' ? 'bg-accent text-primary font-bold' : 'text-gray-300 hover:bg-white/10'}`}
                       >
                         전체
                       </button>
@@ -350,25 +350,25 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
             <select
               value={studentFilters.grade}
               onChange={(e) => setStudentFilters(prev => ({ ...prev, grade: e.target.value }))}
-              className="px-3 py-1.5 bg-white/10 border border-white/10 rounded-sm text-white text-xs focus:outline-none focus:ring-1 focus:ring-[#fdb813]/50 cursor-pointer min-w-[120px]"
+              className="px-3 py-1.5 bg-white/10 border border-white/10 rounded-sm text-white text-xs focus:outline-none focus:ring-1 focus:ring-accent/50 cursor-pointer min-w-[120px]"
             >
-              <option value="all" className="bg-[#081429]">전체</option>
-              <option value="elementary" className="bg-[#081429]">--- 초등학생 ---</option>
-              <option value="초1" className="bg-[#081429]">초1</option>
-              <option value="초2" className="bg-[#081429]">초2</option>
-              <option value="초3" className="bg-[#081429]">초3</option>
-              <option value="초4" className="bg-[#081429]">초4</option>
-              <option value="초5" className="bg-[#081429]">초5</option>
-              <option value="초6" className="bg-[#081429]">초6</option>
-              <option value="middle" className="bg-[#081429]">--- 중학생 ---</option>
-              <option value="중1" className="bg-[#081429]">중1</option>
-              <option value="중2" className="bg-[#081429]">중2</option>
-              <option value="중3" className="bg-[#081429]">중3</option>
-              <option value="high" className="bg-[#081429]">--- 고등학생 ---</option>
-              <option value="고1" className="bg-[#081429]">고1</option>
-              <option value="고2" className="bg-[#081429]">고2</option>
-              <option value="고3" className="bg-[#081429]">고3</option>
-              <option value="other" className="bg-[#081429]">--- 기타 ---</option>
+              <option value="all" className="bg-primary">전체</option>
+              <option value="elementary" className="bg-primary">--- 초등학생 ---</option>
+              <option value="초1" className="bg-primary">초1</option>
+              <option value="초2" className="bg-primary">초2</option>
+              <option value="초3" className="bg-primary">초3</option>
+              <option value="초4" className="bg-primary">초4</option>
+              <option value="초5" className="bg-primary">초5</option>
+              <option value="초6" className="bg-primary">초6</option>
+              <option value="middle" className="bg-primary">--- 중학생 ---</option>
+              <option value="중1" className="bg-primary">중1</option>
+              <option value="중2" className="bg-primary">중2</option>
+              <option value="중3" className="bg-primary">중3</option>
+              <option value="high" className="bg-primary">--- 고등학생 ---</option>
+              <option value="고1" className="bg-primary">고1</option>
+              <option value="고2" className="bg-primary">고2</option>
+              <option value="고3" className="bg-primary">고3</option>
+              <option value="other" className="bg-primary">--- 기타 ---</option>
             </select>
           </div>
 
@@ -377,7 +377,7 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
             <span className="text-xs text-gray-300">선생님</span>
             <div className="relative group">
               <button
-                className={`px-3 py-1.5 bg-white/10 border border-white/10 rounded-sm text-xs cursor-pointer hover:border-white/30 transition-colors min-w-[120px] text-left ${studentFilters.teacher !== 'all' ? 'text-[#fdb813] border-[#fdb813]/50' : 'text-white'}`}
+                className={`px-3 py-1.5 bg-white/10 border border-white/10 rounded-sm text-xs cursor-pointer hover:border-white/30 transition-colors min-w-[120px] text-left ${studentFilters.teacher !== 'all' ? 'text-accent border-accent/50' : 'text-white'}`}
               >
                 {studentFilters.teacher === 'all' ? '전체' : studentFilters.teacher}
                 <ChevronDown size={12} className="inline ml-2 float-right" />
@@ -385,7 +385,7 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
               <div className="absolute top-full right-0 mt-1 bg-[#1e293b] border border-white/20 rounded-sm shadow-xl p-2 hidden group-hover:block z-[70] min-w-[200px]">
                 <button
                   onClick={() => setStudentFilters(prev => ({ ...prev, teacher: 'all' }))}
-                  className={`w-full text-left px-2 py-1 rounded text-xs mb-1 ${studentFilters.teacher === 'all' ? 'bg-[#fdb813] text-[#081429] font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                  className={`w-full text-left px-2 py-1 rounded text-xs mb-1 ${studentFilters.teacher === 'all' ? 'bg-accent text-primary font-bold' : 'text-gray-300 hover:bg-white/10'}`}
                 >
                   전체
                 </button>
@@ -467,11 +467,11 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
             <select
               value={studentSortBy}
               onChange={(e) => setStudentSortBy(e.target.value as typeof studentSortBy)}
-              className="px-3 py-1.5 bg-white/10 border border-white/10 rounded-sm text-white text-xs focus:outline-none focus:ring-1 focus:ring-[#fdb813]/50 cursor-pointer min-w-[120px]"
+              className="px-3 py-1.5 bg-white/10 border border-white/10 rounded-sm text-white text-xs focus:outline-none focus:ring-1 focus:ring-accent/50 cursor-pointer min-w-[120px]"
             >
-              <option value="name" className="bg-[#081429]">이름순</option>
-              <option value="grade" className="bg-[#081429]">학년순</option>
-              <option value="startDate" className="bg-[#081429]">등록일순</option>
+              <option value="name" className="bg-primary">이름순</option>
+              <option value="grade" className="bg-primary">학년순</option>
+              <option value="startDate" className="bg-primary">등록일순</option>
             </select>
           </div>
 
