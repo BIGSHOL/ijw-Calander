@@ -74,7 +74,9 @@ interface MathTimetableContentProps {
     showStudents: boolean;
     setShowStudents: (show: boolean) => void;
     showHoldStudents: boolean;
+    setShowHoldStudents: (show: boolean) => void;
     showWithdrawnStudents: boolean;
+    setShowWithdrawnStudents: (show: boolean) => void;
     dragOverClassId: string | null;
     handleDragStart: (e: React.DragEvent, studentId: string, classId: string, zone?: string) => void;
     handleDragOver: (e: React.DragEvent, classId: string) => void;
@@ -146,7 +148,9 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     showStudents,
     setShowStudents,
     showHoldStudents,
+    setShowHoldStudents,
     showWithdrawnStudents,
+    setShowWithdrawnStudents,
     dragOverClassId,
     handleDragStart,
     handleDragOver,
@@ -460,6 +464,10 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     setShowSchool={setShowSchool}
                     showGrade={showGrade}
                     setShowGrade={setShowGrade}
+                    showHoldStudents={showHoldStudents}
+                    setShowHoldStudents={setShowHoldStudents}
+                    showWithdrawnStudents={showWithdrawnStudents}
+                    setShowWithdrawnStudents={setShowWithdrawnStudents}
                 />
 
                 {/* Embed Token Manager Modal - 마스터 전용 */}
@@ -974,7 +982,9 @@ const TimetableManager = ({
                 showStudents={showStudents}
                 setShowStudents={setShowStudents}
                 showHoldStudents={showHoldStudents}
+                setShowHoldStudents={setShowHoldStudents}
                 showWithdrawnStudents={showWithdrawnStudents}
+                setShowWithdrawnStudents={setShowWithdrawnStudents}
                 dragOverClassId={dragOverClassId}
                 handleDragStart={handleDragStart}
                 handleDragOver={handleDragOver}

@@ -4,6 +4,8 @@ import {
     ArrowRightLeft, Copy, Upload, Save, Link2
 } from 'lucide-react';
 import { UnifiedStudent, TimetableClass } from '../../../../types';
+import { formatSchoolGrade } from '../../../../utils/studentUtils';
+import PortalTooltip from '../../../Common/PortalTooltip';
 
 interface TimetableHeaderProps {
     weekLabel: string;
@@ -96,20 +98,55 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
             });
         });
 
-        let withdrawnThisWeek = 0;
+        // 대기 학생 목록 (상세 정보 포함)
+        const onHoldStudents: Array<{ id: string; name: string; school: string; grade: string; enrollmentDate?: string }> = [];
+        onHoldStudentIds.forEach(studentId => {
+            const student = studentMap[studentId];
+            if (student) {
+                onHoldStudents.push({
+                    id: student.id,
+                    name: student.name,
+                    school: student.school || '',
+                    grade: student.grade || '',
+                    enrollmentDate: student.enrollmentDate
+                });
+            }
+        });
 
-        // 퇴원 예정 학생 중 이번 주에 퇴원하는 학생 카운트
+        // 퇴원 학생 목록 (퇴원일이 오늘이거나 과거)
+        const withdrawnStudents: Array<{ id: string; name: string; school: string; grade: string; withdrawalDate?: string }> = [];
+        // 퇴원 예정 학생 목록 (퇴원일이 미래)
+        const withdrawnFutureStudents: Array<{ id: string; name: string; school: string; grade: string; withdrawalDate?: string }> = [];
+
         withdrawnStudentIds.forEach(studentId => {
             const student = studentMap[studentId];
-            if (student?.withdrawalDate && student.withdrawalDate >= today && student.withdrawalDate <= weekEnd) {
-                withdrawnThisWeek++;
+            if (student?.withdrawalDate) {
+                const studentInfo = {
+                    id: student.id,
+                    name: student.name,
+                    school: student.school || '',
+                    grade: student.grade || '',
+                    withdrawalDate: student.withdrawalDate
+                };
+
+                if (student.withdrawalDate <= today) {
+                    // 오늘이거나 과거 퇴원
+                    withdrawnStudents.push(studentInfo);
+                } else {
+                    // 미래 퇴원 예정
+                    withdrawnFutureStudents.push(studentInfo);
+                }
             }
         });
 
         return {
-            activeCount: activeStudentIds.size,      // 재원생 (중복 제거됨)
-            onHoldCount: onHoldStudentIds.size,      // 대기 (중복 제거됨)
-            withdrawnThisWeek                         // 이번 주 퇴원 예정
+            activeCount: activeStudentIds.size,          // 재원생 (중복 제거됨)
+            onHoldCount: onHoldStudentIds.size,          // 대기 (중복 제거됨)
+            withdrawnCount: withdrawnStudents.length,    // 퇴원 (과거/오늘)
+            withdrawnFutureCount: withdrawnFutureStudents.length,  // 퇴원 예정 (미래)
+            onHoldStudents,                              // 대기 학생 상세 목록
+            withdrawnStudents,                           // 퇴원 학생 상세 목록
+            withdrawnFutureStudents                      // 퇴원 예정 학생 상세 목록
         };
     }, [filteredClasses, studentMap, currentWeekStart]);
 
@@ -146,16 +183,70 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                         <span className="text-xs font-bold text-green-800">{studentCounts.activeCount}</span>
                     </div>
                     {studentCounts.onHoldCount > 0 && (
-                        <div className="flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-sm">
-                            <span className="text-xxs text-amber-700 font-medium">대기</span>
-                            <span className="text-xs font-bold text-amber-800">{studentCounts.onHoldCount}</span>
-                        </div>
+                        <PortalTooltip
+                            content={
+                                <div className="bg-gray-800 text-white text-xs px-3 py-2 rounded shadow-lg space-y-1">
+                                    {studentCounts.onHoldStudents.map(s => {
+                                        const schoolGrade = formatSchoolGrade(s.school, s.grade);
+                                        return (
+                                            <div key={s.id} className="whitespace-nowrap">
+                                                {s.name}/{schoolGrade !== '-' ? schoolGrade : '미입력'}
+                                                {s.enrollmentDate && ` (예정: ${s.enrollmentDate})`}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            }
+                        >
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-sm cursor-pointer">
+                                <span className="text-xxs text-amber-700 font-medium">대기</span>
+                                <span className="text-xs font-bold text-amber-800">{studentCounts.onHoldCount}</span>
+                            </div>
+                        </PortalTooltip>
                     )}
-                    {studentCounts.withdrawnThisWeek > 0 && (
-                        <div className="flex items-center gap-1 px-2 py-0.5 bg-red-50 border border-red-200 rounded-sm">
-                            <span className="text-xxs text-red-700 font-medium">퇴원 예정</span>
-                            <span className="text-xs font-bold text-red-800">{studentCounts.withdrawnThisWeek}</span>
-                        </div>
+                    {studentCounts.withdrawnCount > 0 && (
+                        <PortalTooltip
+                            content={
+                                <div className="bg-gray-800 text-white text-xs px-3 py-2 rounded shadow-lg space-y-1">
+                                    {studentCounts.withdrawnStudents.map(s => {
+                                        const schoolGrade = formatSchoolGrade(s.school, s.grade);
+                                        return (
+                                            <div key={s.id} className="whitespace-nowrap">
+                                                {s.name}/{schoolGrade !== '-' ? schoolGrade : '미입력'}
+                                                {s.withdrawalDate && ` (퇴원일: ${s.withdrawalDate})`}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            }
+                        >
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 border border-gray-300 rounded-sm cursor-pointer">
+                                <span className="text-xxs text-gray-700 font-medium">퇴원</span>
+                                <span className="text-xs font-bold text-gray-800">{studentCounts.withdrawnCount}</span>
+                            </div>
+                        </PortalTooltip>
+                    )}
+                    {studentCounts.withdrawnFutureCount > 0 && (
+                        <PortalTooltip
+                            content={
+                                <div className="bg-gray-800 text-white text-xs px-3 py-2 rounded shadow-lg space-y-1">
+                                    {studentCounts.withdrawnFutureStudents.map(s => {
+                                        const schoolGrade = formatSchoolGrade(s.school, s.grade);
+                                        return (
+                                            <div key={s.id} className="whitespace-nowrap">
+                                                {s.name}/{schoolGrade !== '-' ? schoolGrade : '미입력'}
+                                                {s.withdrawalDate && ` (퇴원 예정: ${s.withdrawalDate})`}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            }
+                        >
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-red-50 border border-red-200 rounded-sm cursor-pointer">
+                                <span className="text-xxs text-red-700 font-medium">퇴원 예정</span>
+                                <span className="text-xs font-bold text-red-800">{studentCounts.withdrawnFutureCount}</span>
+                            </div>
+                        </PortalTooltip>
                     )}
                 </div>
             </div>

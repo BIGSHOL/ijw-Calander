@@ -114,26 +114,6 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     const classNames = useMemo(() => mathClasses.map(c => c.name), [mathClasses]);
     const { classDataMap, isLoading: studentsLoading, refetch: refetchClassStudents } = useMathClassStudents(classNames, studentMap);
 
-    // Student Stats 계산
-    const studentStats = useMemo(() => {
-        let active = 0;
-        let withdrawn = 0;
-
-        Object.values(classDataMap).forEach(data => {
-            if (data?.studentList) {
-                data.studentList.forEach((s: TimetableStudent) => {
-                    if (s.withdrawalDate) {
-                        withdrawn++;
-                    } else if (!s.onHold) {
-                        active++;
-                    }
-                });
-            }
-        });
-
-        return { active, withdrawn };
-    }, [classDataMap]);
-
     // Filter by search term
     const filteredClasses = useMemo(() => {
         return mathClasses
@@ -348,18 +328,6 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                             placeholder="수업명 검색..."
                             className="pl-8 pr-3 py-1.5 text-xs border border-gray-300 rounded-sm w-48 focus:ring-2 focus:ring-indigo-400 outline-none shadow-sm"
                         />
-                    </div>
-
-                    {/* Student Stats Badges */}
-                    <div className="flex items-center gap-1.5">
-                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-sm text-xxs font-bold">
-                            재원 {studentStats.active}
-                        </span>
-                        {studentStats.withdrawn > 0 && (
-                            <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-sm text-xxs font-bold">
-                                퇴원 {studentStats.withdrawn}
-                            </span>
-                        )}
                     </div>
                 </div>
 
