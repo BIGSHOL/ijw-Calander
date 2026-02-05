@@ -9,11 +9,11 @@
 
 import React, { useState, useMemo } from 'react';
 import { X, AlertTriangle, RefreshCw, Check, Trash2, ArrowRight, CheckSquare, Square } from 'lucide-react';
-import { useStudents } from '../../hooks/useStudents';
 import { useClasses } from '../../hooks/useClasses';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
+import { useEnrollmentSync } from './hooks/useEnrollmentSync';
 
 interface MismatchedEnrollment {
   studentId: string;
@@ -31,7 +31,7 @@ interface EnrollmentSyncModalProps {
 
 const EnrollmentSyncModal: React.FC<EnrollmentSyncModalProps> = ({ isOpen, onClose }) => {
   const queryClient = useQueryClient();
-  const { students, refetch: refetchStudents } = useStudents(true);
+  const { enrollments: allEnrollments, isLoading: enrollmentsLoading, refetch: refetchEnrollments } = useEnrollmentSync(isOpen);
   const { classes } = useClasses();
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [fixTargets, setFixTargets] = useState<Record<string, string>>({}); // key -> newClassName
@@ -99,45 +99,41 @@ const EnrollmentSyncModal: React.FC<EnrollmentSyncModalProps> = ({ isOpen, onClo
   const mismatchedEnrollments = useMemo(() => {
     const mismatches: MismatchedEnrollment[] = [];
 
-    if (!students) return mismatches;
+    if (!allEnrollments) return mismatches;
 
-    students.forEach(student => {
-      if (!student.enrollments) return;
+    allEnrollments.forEach(enrollment => {
+      const subject = enrollment.subject || 'math';
+      const className = enrollment.className;
 
-      student.enrollments.forEach((enrollment: any) => {
-        const subject = enrollment.subject || 'math';
-        const className = enrollment.className;
+      if (!className) return;
 
-        if (!className) return;
+      // 필터 적용
+      if (subjectFilter !== 'all' && subject !== subjectFilter) return;
 
-        // 필터 적용
-        if (subjectFilter !== 'all' && subject !== subjectFilter) return;
+      const validNames = validClassNames[subject] || new Set();
 
-        const validNames = validClassNames[subject] || new Set();
+      // 정확히 일치하는 수업이 없는 경우
+      if (!validNames.has(className)) {
+        // 유사한 수업명 찾기 (부분 일치 또는 레벤슈타인 거리)
+        const suggestedMatches = Array.from(validNames).filter(name =>
+          name.includes(className) ||
+          className.includes(name) ||
+          levenshteinDistance(name, className) <= 3
+        ).slice(0, 5);
 
-        // 정확히 일치하는 수업이 없는 경우
-        if (!validNames.has(className)) {
-          // 유사한 수업명 찾기 (부분 일치 또는 레벤슈타인 거리)
-          const suggestedMatches = Array.from(validNames).filter(name =>
-            name.includes(className) ||
-            className.includes(name) ||
-            levenshteinDistance(name, className) <= 3
-          ).slice(0, 5);
-
-          mismatches.push({
-            studentId: student.id,
-            studentName: student.name || '이름없음',
-            enrollmentId: enrollment.id,
-            enrollmentClassName: className,
-            subject,
-            suggestedMatches,
-          });
-        }
-      });
+        mismatches.push({
+          studentId: enrollment.studentId,
+          studentName: enrollment.studentName,
+          enrollmentId: enrollment.enrollmentId,
+          enrollmentClassName: className,
+          subject,
+          suggestedMatches,
+        });
+      }
     });
 
     return mismatches;
-  }, [students, validClassNames, subjectFilter]);
+  }, [allEnrollments, validClassNames, subjectFilter]);
 
   // 아이템 키 생성
   const getItemKey = (m: MismatchedEnrollment) => `${m.studentId}_${m.enrollmentId}`;
@@ -208,7 +204,7 @@ const EnrollmentSyncModal: React.FC<EnrollmentSyncModalProps> = ({ isOpen, onClo
     setIsFixing(false);
 
     // 데이터 새로고침
-    await refetchStudents();
+    await refetchEnrollments();
     queryClient.invalidateQueries({ queryKey: ['students'] });
     queryClient.invalidateQueries({ queryKey: ['students', true] });
 
@@ -246,7 +242,7 @@ const EnrollmentSyncModal: React.FC<EnrollmentSyncModalProps> = ({ isOpen, onClo
     setIsFixing(false);
 
     // 데이터 새로고침
-    await refetchStudents();
+    await refetchEnrollments();
     queryClient.invalidateQueries({ queryKey: ['students'] });
     queryClient.invalidateQueries({ queryKey: ['students', true] });
 
@@ -256,13 +252,13 @@ const EnrollmentSyncModal: React.FC<EnrollmentSyncModalProps> = ({ isOpen, onClo
   if (!isOpen) return null;
 
   // 데이터 로딩 중
-  if (!students || !classes) {
+  if (enrollmentsLoading || !classes) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-lg shadow-xl p-8">
           <div className="flex items-center gap-3">
             <RefreshCw className="w-5 h-5 animate-spin text-amber-500" />
-            <span className="text-gray-700">데이터 로딩 중...</span>
+            <span className="text-gray-700">Enrollment 데이터 로딩 중...</span>
           </div>
         </div>
       </div>

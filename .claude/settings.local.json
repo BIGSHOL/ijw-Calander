@@ -53,14 +53,16 @@
       "Read(//f/**)",
       "Bash(npm run test:run:*)",
       "Bash(if not exist \"f:\\\\ijw-calander\\\\design\" mkdir \"f:\\\\ijw-calander\\\\design\")",
-      "Read(//c/Users/user/**)"
+      "Read(//c/Users/user/**)",
+      "Bash(claude config list:*)"
     ],
     "additionalDirectories": [
       "d:\\ijw-calander\\components\\Timetable\\English",
       "f:\\ijw-calander\\.claude",
       "f:\\ijw-calander\\.claude\\agents",
       "f:\\ijw-calander",
-      "f:\\ijw-calander\\my-video"
+      "f:\\ijw-calander\\my-video",
+      "d:\\ijw-calander\\designs"
     ]
   },
   "enableAllProjectMcpServers": true,
