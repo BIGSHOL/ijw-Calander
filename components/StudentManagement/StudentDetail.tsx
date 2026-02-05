@@ -12,7 +12,8 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { collection, getDocs, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
-import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2, Calendar, CreditCard } from 'lucide-react';
+import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2, Calendar, CreditCard, AlertTriangle } from 'lucide-react';
+import { useStudentEnrollmentValidation } from './hooks/useStudentEnrollmentValidation';
 
 interface StudentDetailProps {
   student: UnifiedStudent;
@@ -27,8 +28,12 @@ type TabType = 'basic' | 'courses' | 'grades' | 'attendance' | 'consultations' |
 const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false, readOnly = false, currentUser }) => {
   const [activeTab, setActiveTab] = useState<TabType>('basic');
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
+  const [showEnrollmentWarning, setShowEnrollmentWarning] = useState(true);
   const { updateStudent, deleteStudent } = useStudents();
   const queryClient = useQueryClient();
+
+  // Enrollment 유효성 검사
+  const { hasIssues, invalidEnrollments } = useStudentEnrollmentValidation(student);
 
   // 권한 체크
   const { hasPermission } = usePermissions(currentUser || null);
@@ -153,6 +158,47 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
           )}
         </div>
       </div>
+
+      {/* Enrollment 유효성 경고 */}
+      {hasIssues && showEnrollmentWarning && (
+        <div className="bg-amber-50 border-b border-amber-200 px-3 py-2">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-semibold text-amber-900 mb-1">
+                Enrollment 불일치 ({invalidEnrollments.length}개)
+              </div>
+              <div className="text-xs text-amber-700 space-y-1">
+                {invalidEnrollments.map((invalid, idx) => (
+                  <div key={invalid.enrollmentId} className="flex items-center gap-2">
+                    <span className="font-medium">"{invalid.className}"</span>
+                    <span className="text-amber-600">→</span>
+                    <span className="text-gray-600">수업 목록에 없음</span>
+                    {invalid.suggestedClasses.length > 0 && (
+                      <span className="text-gray-500">
+                        (추천: {invalid.suggestedClasses.join(', ')})
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => setActiveTab('courses')}
+                className="mt-2 text-xs text-amber-700 hover:text-amber-900 font-semibold underline"
+              >
+                수업 탭에서 수정하기 →
+              </button>
+            </div>
+            <button
+              onClick={() => setShowEnrollmentWarning(false)}
+              className="text-amber-600 hover:text-amber-800 p-1"
+              title="경고 닫기"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 탭 네비게이션 */}
       <div className="border-b border-gray-200 bg-white px-3">
