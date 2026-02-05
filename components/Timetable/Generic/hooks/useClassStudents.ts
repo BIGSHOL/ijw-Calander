@@ -110,10 +110,15 @@ export function useClassStudents(
         if (!studentId) return;
 
         classStudentMap[className].add(studentId);
+
+        // 배정 예정 여부 확인
+        const today = new Date().toISOString().split('T')[0];
+        const isScheduled = data.enrollmentDate && data.enrollmentDate > today;
+
         enrollmentDataMap[className][studentId] = {
           enrollmentDate: data.enrollmentDate,
           withdrawalDate: data.withdrawalDate || data.endDate,  // endDate도 퇴원으로 처리
-          onHold: data.onHold,
+          onHold: isScheduled || data.onHold,  // 배정 예정 학생은 자동으로 대기 처리
           attendanceDays: data.attendanceDays || [],
         };
       });
