@@ -24,7 +24,7 @@ const ClassDetailModal = lazy(() => import('../ClassManagement/ClassDetailModal'
 const StudentDetailModal = lazy(() => import('../StudentManagement/StudentDetailModal'));
 const SimpleViewSettingsModal = lazy(() => import('./Math/components/Modals/SimpleViewSettingsModal'));
 const ScenarioManagementModal = lazy(() => import('./Math/ScenarioManagementModal'));
-import { ClassInfo } from '../../hooks/useClasses';
+import { ClassInfo, useClasses } from '../../hooks/useClasses';
 import { ALL_WEEKDAYS, MATH_PERIODS, ENGLISH_PERIODS } from './constants';
 import { MathSimulationProvider, useMathSimulation } from './Math/context/SimulationContext';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
@@ -397,6 +397,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                             classKeywords={classKeywords}
                             currentUser={currentUser}
                             studentMap={studentMap}
+                            classesData={classesData}
                             isSimulationMode={isScenarioMode}
                             canSimulation={canEditMath}
                             onToggleSimulation={handleToggleSimulation}
@@ -556,6 +557,9 @@ const TimetableManager = ({
 
     // Hook Integration: Classes Data (MUST be called before any conditional returns)
     const { classes, loading: classesLoading } = useTimetableClasses();
+
+    // Hook Integration: Class Info (담임 정보 등)
+    const { data: classesData } = useClasses('math');
 
     // Hook Integration: Unified Students
     const { students: globalStudents } = useStudents(true);  // 퇴원생 포함 (시간표에서 필요)
