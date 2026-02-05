@@ -59,6 +59,7 @@ export const useTeachers = (enabled: boolean = true) => {
                         englishName: staff.englishName,
                         subjects: staff.subjects,
                         isHidden: staff.isHiddenInTimetable || false,
+                        isHiddenInAttendance: staff.isHiddenInAttendance || false,
                         isNative: staff.isNative || false,
                         bgColor: staff.bgColor,
                         textColor: staff.textColor,

@@ -343,6 +343,7 @@ export function useStudentFilterState() {
       grade: 'all',
       status: 'active',
       subjects: [],
+      subjectFilterMode: 'OR',
       teacher: 'all',
       excludeNoEnrollment: false,
     });

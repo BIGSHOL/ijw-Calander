@@ -137,8 +137,10 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   // Available teachers for filter dropdown (based on manage permission for current subject)
   const availableTeachers = useMemo(() => {
     if (!canManageCurrentSubject) return [];
-    // Filter by subject
+    // Filter by subject and exclude hidden teachers
     return teachers.filter(t => {
+      // 출석부에서 숨김 처리된 강사 제외
+      if (t.isHiddenInAttendance) return false;
       if (selectedSubject === 'math') return t.subjects?.includes('math');
       if (selectedSubject === 'english') return t.subjects?.includes('english');
       return true;

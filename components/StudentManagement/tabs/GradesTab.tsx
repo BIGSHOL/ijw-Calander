@@ -276,13 +276,13 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
     return (
         <div className="space-y-2">
             {/* 레벨테스트 섹션 */}
-            <div className="bg-white border border-indigo-200">
+            <div className="bg-white border border-gray-200 overflow-hidden">
                 <div
-                    className="flex items-center justify-between px-2 py-1.5 bg-indigo-50 cursor-pointer"
+                    className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-pointer"
                     onClick={() => setShowLevelTests(!showLevelTests)}
                 >
                     <div className="flex items-center gap-1.5">
-                        <Zap size={12} className="text-indigo-600" />
+                        <Zap size={12} className="text-[#081429]" />
                         <h4 className="text-xs font-bold text-[#081429]">레벨테스트</h4>
                         <span className="text-xxs text-gray-500">({levelTests.length})</span>
                     </div>
@@ -293,7 +293,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                     e.stopPropagation();
                                     setIsAddingLevelTest(true);
                                 }}
-                                className="flex items-center gap-1 px-1.5 py-0.5 bg-indigo-600 text-white rounded-sm text-xxs hover:bg-indigo-700 transition-colors"
+                                className="flex items-center gap-1 px-1.5 py-0.5 bg-[#081429] text-white rounded-sm text-xxs hover:bg-[#1a2845] transition-colors"
                             >
                                 <Plus size={10} />
                                 추가
@@ -301,7 +301,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                         )}
                         <ChevronDown
                             size={14}
-                            className={`text-gray-400 transition-transform ${showLevelTests ? '' : '-rotate-90'}`}
+                            className={`text-gray-400 transition-transform ${showLevelTests ? '' : 'rotate-180'}`}
                         />
                     </div>
                 </div>
@@ -315,7 +315,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                 {levelTests.slice(0, 3).map((test) => (
                                     <div
                                         key={test.id}
-                                        className="flex items-center gap-2 p-1.5 bg-gray-50 rounded-sm hover:bg-indigo-50 transition-colors group"
+                                        className="flex items-center gap-2 p-1.5 bg-gray-50 rounded-sm hover:bg-[#fdb813]/10 transition-colors group"
                                     >
                                         <div className="flex-1">
                                             <div className="flex items-center gap-1.5">
@@ -358,13 +358,13 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
             </div>
 
             {/* 목표 설정 섹션 */}
-            <div className="bg-white border border-amber-200">
+            <div className="bg-white border border-gray-200 overflow-hidden">
                 <div
-                    className="flex items-center justify-between px-2 py-1.5 bg-amber-50 cursor-pointer"
+                    className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-pointer"
                     onClick={() => setShowGoals(!showGoals)}
                 >
                     <div className="flex items-center gap-1.5">
-                        <Target size={12} className="text-amber-600" />
+                        <Target size={12} className="text-[#081429]" />
                         <h4 className="text-xs font-bold text-[#081429]">시험 목표</h4>
                         <span className="text-xxs text-gray-500">({goalSettings.length})</span>
                     </div>
@@ -375,7 +375,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                     e.stopPropagation();
                                     setIsAddingGoal(true);
                                 }}
-                                className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-600 text-white rounded-sm text-xxs hover:bg-amber-700 transition-colors"
+                                className="flex items-center gap-1 px-1.5 py-0.5 bg-[#081429] text-white rounded-sm text-xxs hover:bg-[#1a2845] transition-colors"
                             >
                                 <Plus size={10} />
                                 추가
@@ -383,7 +383,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                         )}
                         <ChevronDown
                             size={14}
-                            className={`text-gray-400 transition-transform ${showGoals ? '' : '-rotate-90'}`}
+                            className={`text-gray-400 transition-transform ${showGoals ? '' : 'rotate-180'}`}
                         />
                     </div>
                 </div>
@@ -401,7 +401,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                     return (
                                         <div
                                             key={goal.id}
-                                            className="flex items-center gap-2 p-1.5 bg-gray-50 rounded-sm hover:bg-amber-50 transition-colors group"
+                                            className="flex items-center gap-2 p-1.5 bg-gray-50 rounded-sm hover:bg-[#fdb813]/10 transition-colors group"
                                         >
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-1.5">
@@ -459,13 +459,13 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
             </div>
 
             {/* 학습 코멘트 섹션 */}
-            <div className="bg-white border border-emerald-200">
+            <div className="bg-white border border-gray-200 overflow-hidden">
                 <div
-                    className="flex items-center justify-between px-2 py-1.5 bg-emerald-50 cursor-pointer"
+                    className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-pointer"
                     onClick={() => setShowComments(!showComments)}
                 >
                     <div className="flex items-center gap-1.5">
-                        <MessageSquare size={12} className="text-emerald-600" />
+                        <MessageSquare size={12} className="text-[#081429]" />
                         <h4 className="text-xs font-bold text-[#081429]">학습 코멘트</h4>
                         <span className="text-xxs text-gray-500">({latestComments.length})</span>
                     </div>
@@ -476,7 +476,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                     e.stopPropagation();
                                     setIsAddingComment(true);
                                 }}
-                                className="flex items-center gap-1 px-1.5 py-0.5 bg-emerald-600 text-white rounded-sm text-xxs hover:bg-emerald-700 transition-colors"
+                                className="flex items-center gap-1 px-1.5 py-0.5 bg-[#081429] text-white rounded-sm text-xxs hover:bg-[#1a2845] transition-colors"
                             >
                                 <Plus size={10} />
                                 추가
@@ -484,7 +484,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                         )}
                         <ChevronDown
                             size={14}
-                            className={`text-gray-400 transition-transform ${showComments ? '' : '-rotate-90'}`}
+                            className={`text-gray-400 transition-transform ${showComments ? '' : 'rotate-180'}`}
                         />
                     </div>
                 </div>

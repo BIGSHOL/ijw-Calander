@@ -3,7 +3,7 @@
 // 영어 강사별 시간표 탭
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Edit3, Move, Eye, Settings, ArrowRightLeft, Copy, Upload, Save, Image } from 'lucide-react';
+import { Edit3, Move } from 'lucide-react';
 import { addDays, format } from 'date-fns';
 import { EN_PERIODS, EN_WEEKDAYS, getCellKey, getTeacherColor, getContrastColor, formatClassNameWithBreaks, isExcludedStudent } from './englishUtils';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -37,26 +37,28 @@ interface EnglishTeacherTabProps {
     scheduleData: ScheduleData;
     onRefresh?: () => void;
     onUpdateLocal?: (newData: ScheduleData) => void;
-    onOpenOrderModal?: () => void;
     classKeywords?: ClassKeywordColor[];  // For keyword color coding
     currentUser: any;
     targetCollection?: string;
     isSimulationMode?: boolean;  // 시뮬레이션 모드 여부
-    // Simulation controls
-    canSimulation?: boolean;
-    onToggleSimulation?: () => void;
-    onCopyLiveToDraft?: () => void;
-    onPublishToLive?: () => void;
-    onOpenScenarioModal?: () => void;
-    canPublish?: boolean;
     labRooms?: string[];
     studentMap?: Record<string, any>;
     currentWeekStart?: Date;  // 주차 시작일 (날짜 표시용)
+    // 헤더 연동: 조회/수정 모드
+    headerMode?: 'view' | 'edit';
+    // 헤더에서 관리하는 뷰 설정 (보기 모달로 이동)
+    viewSize?: ViewSize;
+    setViewSize?: (size: ViewSize) => void;
+    visibleWeekdays?: Set<string>;
+    setVisibleWeekdays?: (days: Set<string>) => void;
+    // 이미지 내보내기 모달 (헤더에서 관리)
+    isExportModalOpen?: boolean;
+    setExportModalOpen?: (open: boolean) => void;
 }
 
 type ViewSize = 'small' | 'medium' | 'large';
 
-const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teachersData, scheduleData, onUpdateLocal, onOpenOrderModal, classKeywords = [], currentUser, isSimulationMode = false, canSimulation = false, onToggleSimulation, onCopyLiveToDraft, onPublishToLive, onOpenScenarioModal, canPublish = false, labRooms = [], studentMap = {}, currentWeekStart }) => {
+const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teachersData, scheduleData, onUpdateLocal, classKeywords = [], currentUser, isSimulationMode = false, labRooms = [], studentMap = {}, currentWeekStart, headerMode = 'view', viewSize: propViewSize, setViewSize: propSetViewSize, visibleWeekdays: propVisibleWeekdays, setVisibleWeekdays: propSetVisibleWeekdays, isExportModalOpen: propIsExportModalOpen, setExportModalOpen: propSetExportModalOpen }) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
     const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
@@ -112,15 +114,32 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
         return active.length;
     };
 
-    // 시뮬레이션 모드에서는 항상 수정모드
-    const [mode, setMode] = useState<'view' | 'edit' | 'move'>(isSimulationMode ? 'edit' : 'view');
-    useEffect(() => {
-        if (isSimulationMode) setMode('edit');
-    }, [isSimulationMode]);
+    // 내부 모드 상태: headerMode가 'view'면 'view', 'edit'면 내부적으로 'edit' 또는 'move'
+    const [internalEditMode, setInternalEditMode] = useState<'edit' | 'move'>('edit');
+
+    // 최종 mode: headerMode에 따라 결정
+    const mode: 'view' | 'edit' | 'move' = useMemo(() => {
+        if (isSimulationMode) return 'edit'; // 시뮬레이션 모드에서는 항상 편집
+        if (headerMode === 'view') return 'view';
+        return internalEditMode; // headerMode === 'edit'일 때 내부 서브모드 사용
+    }, [headerMode, internalEditMode, isSimulationMode]);
+
+    const setMode = (newMode: 'view' | 'edit' | 'move') => {
+        if (newMode === 'view') return; // 'view'는 헤더에서 관리
+        setInternalEditMode(newMode as 'edit' | 'move');
+    };
     const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
     const [filterTeacher, setFilterTeacher] = useState<string>('all');
-    const [viewSize, setViewSize] = useState<ViewSize>('medium');
-    const [visibleWeekdays, setVisibleWeekdays] = useState<Set<string>>(new Set(EN_WEEKDAYS));
+
+    // 뷰 사이즈: props가 있으면 props 사용, 없으면 내부 상태 사용
+    const [internalViewSize, setInternalViewSize] = useState<ViewSize>('medium');
+    const viewSize = propViewSize ?? internalViewSize;
+    const setViewSize = propSetViewSize ?? setInternalViewSize;
+
+    // 표시 요일: props가 있으면 props 사용, 없으면 내부 상태 사용
+    const [internalVisibleWeekdays, setInternalVisibleWeekdays] = useState<Set<string>>(new Set(EN_WEEKDAYS));
+    const visibleWeekdays = propVisibleWeekdays ?? internalVisibleWeekdays;
+    const setVisibleWeekdays = propSetVisibleWeekdays ?? setInternalVisibleWeekdays;
 
     // Drag Selection State
     const [isSelectionDragging, setIsSelectionDragging] = useState(false);
@@ -138,8 +157,10 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
     const [pendingMove, setPendingMove] = useState<{ source: any, target: any, sourceData: ScheduleCell } | null>(null);
     const dragSource = useRef<{ tIdx: number, pIdx: number, dIdx: number } | null>(null);
 
-    // 이미지 내보내기 상태
-    const [isExportModalOpen, setExportModalOpen] = useState(false);
+    // 이미지 내보내기 상태: props가 있으면 props 사용, 없으면 내부 상태 사용
+    const [internalExportModalOpen, setInternalExportModalOpen] = useState(false);
+    const isExportModalOpen = propIsExportModalOpen ?? internalExportModalOpen;
+    const setExportModalOpen = propSetExportModalOpen ?? setInternalExportModalOpen;
 
     // Initialize/Sync Local State
     useEffect(() => {
@@ -644,169 +665,48 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
             className="flex flex-col h-full relative"
             onMouseUp={handleMouseUp}
         >
-            {/* Toolbar */}
-            <div className={`flex items - center justify - between px - 4 py - 2 bg - gray - 50 border - b flex - shrink - 0 relative z - 20`}>
-                <div className="flex items-center gap-2">
-                    {/* View Size Controls */}
-                    <div className="flex items-center bg-gray-100 rounded-sm p-0.5 mr-2 flex-shrink-0">
-                        <button
-                            onClick={() => setViewSize('small')}
-                            className={`px-2 py-0.5 text-xs font-bold rounded-sm transition-all whitespace-nowrap ${viewSize === 'small' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'} `}
-                        >
-                            작게
-                        </button>
-                        <button
-                            onClick={() => setViewSize('medium')}
-                            className={`px-2 py-0.5 text-xs font-bold rounded-sm transition-all whitespace-nowrap ${viewSize === 'medium' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'} `}
-                        >
-                            보통
-                        </button>
-                        <button
-                            onClick={() => setViewSize('large')}
-                            className={`px-2 py-0.5 text-xs font-bold rounded-sm transition-all whitespace-nowrap ${viewSize === 'large' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'} `}
-                        >
-                            크게
-                        </button>
-                    </div>
-
-                    {/* Teacher Order Button - Gated by edit permission */}
-                    {canEditEnglish && (
-                        <button
-                            onClick={onOpenOrderModal}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-gray-800 text-white rounded-sm hover:bg-gray-700 transition-colors text-xs font-bold shadow-sm"
-                        >
-                            <Settings size={14} />
-                            강사 순서
-                        </button>
-                    )}
-
-                    {!isSimulationMode && (
-                        <>
-                            <div className="h-6 w-px bg-gray-300 mx-2" />
-
-                            {/* Mode Toggle */}
+            {/* Toolbar - 수정 모드에서만 표시 */}
+            {headerMode === 'edit' && (
+                <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b flex-shrink-0 relative z-20">
+                    <div className="flex items-center gap-2">
+                        {/* 편집/이동 서브모드 */}
+                        {!isSimulationMode && canEditEnglish && (
                             <div className="flex bg-gray-200 rounded-sm p-0.5 gap-0.5">
                                 <button
-                                    onClick={() => changeMode('view')}
-                                    className={`px-2 py-0.5 text-xs font-bold rounded-sm transition-all flex items-center ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500'} `}
+                                    onClick={() => changeMode('edit')}
+                                    className={`px-2 py-0.5 text-xs font-bold rounded-sm transition-all flex items-center ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'} `}
                                 >
-                                    <Eye size={10} className="mr-1" />조회
+                                    <Edit3 size={10} className="mr-1" />편집
                                 </button>
-                                {canEditEnglish && (
-                                    <button
-                                        onClick={() => changeMode('edit')}
-                                        className={`px-2 py-0.5 text-xs font-bold rounded-sm transition-all flex items-center ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'} `}
-                                    >
-                                        <Edit3 size={10} className="mr-1" />편집
-                                    </button>
-                                )}
-                                {canEditEnglish && (
-                                    <button
-                                        onClick={() => changeMode('move')}
-                                        className={`px-2 py-0.5 text-xs font-bold rounded-sm transition-all flex items-center ${mode === 'move' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-500'} `}
-                                    >
-                                        <Move size={10} className="mr-1" />이동
-                                    </button>
-                                )}
+                                <button
+                                    onClick={() => changeMode('move')}
+                                    className={`px-2 py-0.5 text-xs font-bold rounded-sm transition-all flex items-center ${mode === 'move' ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-500'} `}
+                                >
+                                    <Move size={10} className="mr-1" />이동
+                                </button>
                             </div>
-                        </>
-                    )}
+                        )}
 
-                    {/* Teacher Filter */}
-                    <select
-                        value={filterTeacher}
-                        onChange={(e) => setFilterTeacher(e.target.value)}
-                        className="px-2 py-1 text-xs border rounded-sm"
-                    >
-                        <option value="all">전체 강사</option>
-                        {teachers.map(t => {
-                            const teacherData = teachersData.find(td => td.name === t);
-                            const displayName = teacherData?.englishName || t;
-                            return (
-                                <option key={t} value={t}>{displayName}</option>
-                            );
-                        })}
-                    </select>
-
-                    <div className="h-6 w-px bg-gray-300 mx-2" />
-
-                    {/* Weekday Visibility Toggles */}
-                    <div className="flex items-center gap-1 bg-gray-100 rounded-sm px-2 py-1">
-                        <span className="text-xxs text-gray-500 mr-1">요일:</span>
-                        {EN_WEEKDAYS.map(day => (
-                            <label key={day} className="flex items-center gap-0.5 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={visibleWeekdays.has(day)}
-                                    onChange={() => toggleWeekday(day)}
-                                    className="w-3 h-3 cursor-pointer"
-                                />
-                                <span className="text-xxs text-gray-700">{day}</span>
-                            </label>
-                        ))}
+                        {/* Teacher Filter */}
+                        <select
+                            value={filterTeacher}
+                            onChange={(e) => setFilterTeacher(e.target.value)}
+                            className="px-2 py-1 text-xs border rounded-sm"
+                        >
+                            <option value="all">전체 강사</option>
+                            {teachers.map(t => {
+                                const teacherData = teachersData.find(td => td.name === t);
+                                const displayName = teacherData?.englishName || t;
+                                return (
+                                    <option key={t} value={t}>{displayName}</option>
+                                );
+                            })}
+                        </select>
                     </div>
-
-                    {/* Simulation Mode Toggle */}
-                    {canSimulation && (
-                        <>
-                            <div className="h-6 w-px bg-gray-300 mx-2" />
-                            <div
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-100 border-orange-300' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
-                                onClick={onToggleSimulation}
-                            >
-                                <ArrowRightLeft size={14} className={isSimulationMode ? 'text-orange-600' : 'text-gray-500'} />
-                                <span className={`text-xs font-bold ${isSimulationMode ? 'text-orange-700' : 'text-gray-600'}`}>
-                                    {isSimulationMode ? '시뮬레이션' : '실시간'}
-                                </span>
-                            </div>
-                        </>
-                    )}
-
-                    {/* 이미지 내보내기 버튼 (조회 권한 있으면 표시) */}
-                    {canViewEnglish && (
-                        <button
-                            onClick={() => setExportModalOpen(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-sm font-bold text-xs hover:bg-emerald-700 transition-colors shadow-sm"
-                            title="시간표 이미지로 내보내기"
-                        >
-                            <Image size={14} />
-                            이미지 저장
-                        </button>
-                    )}
-                </div>
-            </div>
-
-            {/* Row 3: Simulation Action Bar */}
-            {isSimulationMode && canEditEnglish && (
-                <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-orange-50 border-b border-orange-200 flex-shrink-0">
-                    <button
-                        onClick={onCopyLiveToDraft}
-                        className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-orange-300 text-orange-700 rounded-sm text-xs font-bold hover:bg-orange-50 shadow-sm transition-colors"
-                        title="현재 실시간 시간표를 복사해옵니다 (기존 시뮬레이션 데이터 덮어쓰기)"
-                    >
-                        <Copy size={12} />
-                        현재 상태 가져오기
-                    </button>
-                    {canPublish && (
-                        <button
-                            onClick={onPublishToLive}
-                            className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-600 text-white rounded-sm text-xs font-bold hover:bg-orange-700 shadow-sm transition-colors"
-                            title="시뮬레이션 내용을 실제 시간표에 적용합니다 (주의)"
-                        >
-                            <Upload size={12} />
-                            실제 반영
-                        </button>
-                    )}
-                    <button
-                        onClick={onOpenScenarioModal}
-                        className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 border border-purple-300 text-purple-700 rounded-sm text-xs font-bold hover:bg-purple-200 shadow-sm transition-colors"
-                        title="시나리오 저장/불러오기"
-                    >
-                        <Save size={12} />
-                        시나리오 관리
-                    </button>
                 </div>
             )}
+
+            {/* 시뮬레이션 액션 바는 상단 헤더로 이동됨 */}
 
             {/* Move Confirm Bar */}
             <MoveConfirmBar
@@ -1094,6 +994,8 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                 teachersData={teachersData}
                 scheduleData={scheduleData}
                 visibleWeekdays={visibleWeekdays}
+                classKeywords={classKeywords}
+                currentWeekStart={currentWeekStart}
             />
         </div>
     );

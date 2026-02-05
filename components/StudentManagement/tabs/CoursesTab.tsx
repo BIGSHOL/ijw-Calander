@@ -1024,16 +1024,16 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
             ({scheduledEnrollments.length}개)
           </span>
           {scheduledEnrollments.length > 0 && (
-            <span className="text-xxs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-sm">
-              🗓️ 시작일 전
+            <span className="text-xxs text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded-sm">
+              시작일 전
             </span>
           )}
           <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showScheduledClasses ? '' : 'rotate-180'}`} />
         </div>
         {showScheduledClasses && (
-        <div className="bg-amber-50/30 border border-amber-200 overflow-hidden">
+        <div className="bg-white border border-gray-200 overflow-hidden">
           {/* 테이블 헤더 */}
-          <div className="flex items-center gap-2 px-2 py-1 bg-amber-100/50 border-b border-amber-200 text-xxs font-medium text-[#373d41]">
+          <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-[#373d41]">
             <span className="w-8 shrink-0">과목</span>
             <span className="w-52 shrink-0">수업명</span>
             <span className="w-14 shrink-0">강사</span>
@@ -1050,8 +1050,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
 
           {scheduledEnrollments.length === 0 ? (
             <div className="text-center py-6">
-              <BookOpen className="w-8 h-8 mx-auto mb-2 text-amber-300" />
-              <p className="text-amber-600 text-xs">배정 예정 수업이 없습니다</p>
+              <BookOpen className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+              <p className="text-gray-500 text-xs">배정 예정 수업이 없습니다</p>
             </div>
           ) : (
             <div>
@@ -1066,7 +1066,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
                 return (
                   <div
                     key={`scheduled-${group.subject}-${index}`}
-                    className="flex items-center gap-2 px-2 py-1.5 border-b border-amber-200 hover:bg-amber-100/30 transition-colors cursor-pointer"
+                    className="flex items-center gap-2 px-2 py-1.5 border-b border-gray-100 hover:bg-[#fdb813]/5 transition-colors cursor-pointer"
                     onClick={() => handleClassClick(group)}
                   >
                     {/* 과목 뱃지 */}
@@ -1112,10 +1112,10 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
                     {/* 시작 예정일 (compact 모드가 아닐 때만) */}
                     {!compact && (
                       <>
-                        <span className="w-16 shrink-0 text-xxs text-amber-700 font-medium text-center">
+                        <span className="w-16 shrink-0 text-xxs text-[#373d41] font-medium text-center">
                           {formatDate(group.startDate)}
                         </span>
-                        <span className="w-14 shrink-0 text-xxs font-bold text-amber-600 text-center">
+                        <span className="w-14 shrink-0 text-xxs font-bold text-blue-600 text-center">
                           예정
                         </span>
                       </>

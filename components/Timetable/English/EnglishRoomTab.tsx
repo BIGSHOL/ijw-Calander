@@ -28,6 +28,8 @@ interface ScheduleCell {
 
 type ScheduleData = Record<string, ScheduleCell>;
 
+type ViewSize = 'small' | 'medium' | 'large';
+
 interface EnglishRoomTabProps {
     teachers: string[];
     scheduleData: ScheduleData;
@@ -37,14 +39,17 @@ interface EnglishRoomTabProps {
     labRooms?: string[];
     studentMap?: Record<string, any>;
     currentWeekStart?: Date;  // 주차 시작일 (날짜 표시용)
+    // 부모(EnglishTimetable)에서 관리하는 뷰 설정
+    viewSize?: ViewSize;
+    visibleWeekdays?: Set<string>;
+    filterRoom?: string;  // 강의실 필터 (부모에서 관리)
 }
 
-type ViewSize = 'small' | 'medium' | 'large';
-
-const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData, teachersData, classKeywords = [], currentUser, labRooms = [], studentMap = {}, currentWeekStart }) => {
-    const [viewSize, setViewSize] = useState<ViewSize>('medium');
-    const [filterRoom, setFilterRoom] = useState<string>('all');
-    const [visibleWeekdays, setVisibleWeekdays] = useState<Set<string>>(new Set(EN_WEEKDAYS));
+const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData, teachersData, classKeywords = [], currentUser, labRooms = [], studentMap = {}, currentWeekStart, viewSize = 'medium', visibleWeekdays: propVisibleWeekdays, filterRoom: propFilterRoom = 'all' }) => {
+    // 부모에서 전달받은 visibleWeekdays 사용 (없으면 전체 요일)
+    const visibleWeekdays = propVisibleWeekdays || new Set(EN_WEEKDAYS);
+    // 강의실 필터는 부모에서 관리
+    const filterRoom = propFilterRoom;
 
     // localStorage에서 강의실 순서 로드
     const roomOrder = useMemo<string[]>(() => {
@@ -103,19 +108,6 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
         });
         return dates;
     }, [currentWeekStart]);
-
-    // Toggle weekday visibility
-    const toggleWeekday = (day: string) => {
-        setVisibleWeekdays(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(day)) {
-                newSet.delete(day);
-            } else {
-                newSet.add(day);
-            }
-            return newSet;
-        });
-    };
 
     // Transform data to room-based view
     const roomScheduleData = useMemo(() => {
@@ -195,67 +187,6 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
 
     return (
         <div className="flex flex-col h-full">
-            {/* Toolbar */}
-            <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b flex-shrink-0 relative z-20">
-                <div className="flex items-center gap-2">
-                    {/* View Size Controls */}
-                    <div className="flex items-center bg-gray-100 rounded-sm p-0.5 mr-2 flex-shrink-0">
-                        <button
-                            onClick={() => setViewSize('small')}
-                            className={`px-2 py-0.5 text-xs font-bold rounded-sm transition-all whitespace-nowrap ${viewSize === 'small' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
-                        >
-                            작게
-                        </button>
-                        <button
-                            onClick={() => setViewSize('medium')}
-                            className={`px-2 py-0.5 text-xs font-bold rounded-sm transition-all whitespace-nowrap ${viewSize === 'medium' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
-                        >
-                            보통
-                        </button>
-                        <button
-                            onClick={() => setViewSize('large')}
-                            className={`px-2 py-0.5 text-xs font-bold rounded-sm transition-all whitespace-nowrap ${viewSize === 'large' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
-                        >
-                            크게
-                        </button>
-                    </div>
-
-                    {/* Room Filter */}
-                    <select
-                        value={filterRoom}
-                        onChange={(e) => setFilterRoom(e.target.value)}
-                        className="px-2 py-1 text-xs border rounded-sm"
-                    >
-                        <option value="all">전체 강의실</option>
-                        {rooms.map(r => (
-                            <option key={r} value={r}>{r}</option>
-                        ))}
-                    </select>
-
-                    <div className="h-6 w-px bg-gray-300 mx-2" />
-
-                    {/* Weekday Visibility Toggles */}
-                    <div className="flex items-center gap-1 bg-gray-100 rounded-sm px-2 py-1">
-                        <span className="text-xxs text-gray-500 mr-1">요일:</span>
-                        {EN_WEEKDAYS.map(day => (
-                            <label key={day} className="flex items-center gap-0.5 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={visibleWeekdays.has(day)}
-                                    onChange={() => toggleWeekday(day)}
-                                    className="w-3 h-3 cursor-pointer"
-                                />
-                                <span className="text-xxs text-gray-700">{day}</span>
-                            </label>
-                        ))}
-                    </div>
-                </div>
-
-                <span className="text-xxs text-indigo-400 font-normal">
-                    * 수정은 '강사별 시간표'에서만 가능합니다.
-                </span>
-            </div>
-
             {/* Schedule Grid */}
             <div className="flex-1 overflow-auto p-2 bg-gray-100">
                 {filteredRooms.length === 0 ? (

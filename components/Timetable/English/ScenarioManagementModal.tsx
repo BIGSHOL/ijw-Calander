@@ -636,7 +636,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                                                             {activeOperation === scenario.id ? (
                                                                                 <div className="animate-spin w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full" />
                                                                             ) : (
-                                                                                <Download size={12} />
+                                                                                <Upload size={12} />
                                                                             )}
                                                                         </button>
                                                                     )}
@@ -651,7 +651,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                                                             {activeOperation === `overwrite_${scenario.id}` ? (
                                                                                 <div className="animate-spin w-3 h-3 border-2 border-orange-500 border-t-transparent rounded-full" />
                                                                             ) : (
-                                                                                <Upload size={12} />
+                                                                                <Download size={12} />
                                                                             )}
                                                                         </button>
                                                                     )}

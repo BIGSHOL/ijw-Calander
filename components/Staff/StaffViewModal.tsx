@@ -387,10 +387,10 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
               )}
 
               {/* Attributes (Teacher Only) */}
-              {staff.role === 'teacher' && (staff.isNative || staff.isHiddenInTimetable) && (
+              {staff.role === 'teacher' && (staff.isNative || staff.isHiddenInTimetable || staff.isHiddenInAttendance) && (
                 <div className="flex items-center gap-2 px-2 py-1.5">
                   <span className="w-16 shrink-0 text-xs font-medium text-[#373d41] ml-5">속성</span>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     {staff.isNative && (
                       <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded">
                         <Globe className="w-3 h-3" />
@@ -401,6 +401,12 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
                       <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
                         <EyeOff className="w-3 h-3" />
                         시간표 숨김
+                      </span>
+                    )}
+                    {staff.isHiddenInAttendance && (
+                      <span className="flex items-center gap-1 text-xs px-2 py-0.5 bg-orange-100 text-orange-600 rounded">
+                        <EyeOff className="w-3 h-3" />
+                        출석부 숨김
                       </span>
                     )}
                   </div>

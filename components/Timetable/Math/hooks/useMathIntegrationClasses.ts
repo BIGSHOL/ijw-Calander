@@ -64,13 +64,28 @@ export const useMathIntegrationClasses = (
             let hasWeekday = false;
             let hasWeekend = false;
 
-            // 스케줄 파싱 (형식: "월 1-1" 또는 "월 1")
-            (cls.schedule || []).forEach(slot => {
-                const parts = slot.trim().split(/\s+/);
-                if (parts.length < 2) return;
+            // 스케줄 파싱 (형식: "월 1-1" 또는 "월 1" 또는 { day: "월", periodId: "1-1" })
+            // legacySchedule이 있으면 먼저 사용 (문자열 배열)
+            const scheduleArray = (cls as any).legacySchedule || cls.schedule || [];
+            scheduleArray.forEach((slot: any) => {
+                let day: string;
+                let periodPart: string;
 
-                const day = parts[0];
-                const periodPart = parts[1];
+                // 객체 형식 처리: { day: "월", periodId: "1-1" }
+                if (typeof slot === 'object' && slot !== null) {
+                    day = slot.day;
+                    periodPart = slot.periodId || slot.period || '';
+                } else if (typeof slot === 'string') {
+                    // 문자열 형식 처리: "월 1-1"
+                    const parts = slot.trim().split(/\s+/);
+                    if (parts.length < 2) return;
+                    day = parts[0];
+                    periodPart = parts[1];
+                } else {
+                    return; // 알 수 없는 형식 스킵
+                }
+
+                if (!day || !periodPart) return;
 
                 // 주말/평일 감지
                 if (day === '토' || day === '일') {

@@ -32,6 +32,11 @@ export interface DisplayOptions {
     showRoom: boolean;
     showTeacher: boolean;
     showSchedule: boolean;
+    // 학생 정보 옵션
+    showSchool?: boolean;
+    showGrade?: boolean;
+    showHoldStudents?: boolean;
+    showWithdrawnStudents?: boolean;
 }
 
 export interface ClassStudentData {
@@ -48,6 +53,8 @@ interface StudentItemProps {
     onStudentClick?: (studentId: string) => void;
     onDragStart?: (e: React.DragEvent, student: TimetableStudent) => void;
     classDays?: string[];  // 수업의 모든 요일 (수학 부분등원 뱃지용)
+    showSchool?: boolean;  // 학교 표시 여부
+    showGrade?: boolean;   // 학년 표시 여부
 }
 
 const StudentItem: React.FC<StudentItemProps> = ({
@@ -57,7 +64,9 @@ const StudentItem: React.FC<StudentItemProps> = ({
     showEnglishName = false,
     onStudentClick,
     onDragStart,
-    classDays = []
+    classDays = [],
+    showSchool = true,
+    showGrade = true
 }) => {
     const [isHovered, setIsHovered] = useState(false);
     const isClickable = !!onStudentClick;
@@ -119,9 +128,11 @@ const StudentItem: React.FC<StudentItemProps> = ({
                     </span>
                 )}
             </span>
-            <span className={`text-micro ml-1 shrink-0 text-right leading-none ${isHovered && isClickable ? '' : (style.subTextClass || 'text-gray-500')}`}>
-                {formatSchoolGrade(student.school, student.grade)}
-            </span>
+            {(showSchool || showGrade) && (
+                <span className={`text-micro ml-1 shrink-0 text-right leading-none ${isHovered && isClickable ? '' : (style.subTextClass || 'text-gray-500')}`}>
+                    {formatSchoolGrade(showSchool ? student.school : undefined, showGrade ? student.grade : undefined)}
+                </span>
+            )}
         </div>
     );
 };
@@ -793,12 +804,16 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                             <div className="h-[230px] flex flex-col items-center justify-center bg-indigo-50 text-indigo-900 font-bold text-sm leading-relaxed select-none border-b border-indigo-100">
                                 <span>재</span><span>원</span><span>생</span>
                             </div>
-                            <div className="flex items-center justify-center bg-pink-100 text-pink-700 font-bold text-xs h-[80px] border-b border-pink-200 select-none">
-                                대기
-                            </div>
-                            <div className="flex items-center justify-center bg-gray-100 text-gray-600 font-bold text-xs h-[80px] select-none">
-                                퇴원
-                            </div>
+                            {displayOptions?.showHoldStudents !== false && (
+                                <div className="flex items-center justify-center bg-pink-100 text-pink-700 font-bold text-xs h-[80px] border-b border-pink-200 select-none">
+                                    대기
+                                </div>
+                            )}
+                            {displayOptions?.showWithdrawnStudents !== false && (
+                                <div className="flex items-center justify-center bg-gray-100 text-gray-600 font-bold text-xs h-[80px] select-none">
+                                    퇴원
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="flex flex-col bg-white border-r border-gray-300">
@@ -832,104 +847,116 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                 onStudentClick={onStudentClick}
                                                 onDragStart={onMoveStudent ? handleDragStart : undefined}
                                                 classDays={!isEnglish ? classInfo.finalDays : undefined}
+                                                showSchool={displayOptions?.showSchool !== false}
+                                                showGrade={displayOptions?.showGrade !== false}
                                             />
                                         ))
                                     )}
                                 </div>
                             </div>
 
-                            {/* 대기 Section (배정 예정 + 휴원) */}
-                            <div className="h-[80px] flex flex-col bg-pink-50 border-b border-pink-200 px-2 py-1 overflow-y-auto custom-scrollbar">
-                                {holdStudents.length === 0 && scheduledStudents.length === 0 ? (
-                                    <span className="text-xxs text-pink-300 flex items-center justify-center h-full">-</span>
-                                ) : (
-                                    <>
-                                        {/* 배정 예정 학생 */}
-                                        {scheduledStudents.slice(0, 3).map((student) => (
-                                            <div
-                                                key={student.id}
-                                                className="flex items-center text-[12px] py-0.5 px-1 bg-amber-50 text-amber-800 mb-0.5 cursor-pointer hover:bg-amber-100"
-                                                title={student.enrollmentDate ? `수업시작: ${student.enrollmentDate}` : '배정 예정'}
-                                                onClick={() => onStudentClick?.(student.id)}
-                                            >
-                                                <div className="flex items-center flex-1 min-w-0">
-                                                    <span className="font-medium shrink-0">{student.name}</span>
-                                                    {isEnglish && student.englishName && <span className="ml-1 text-amber-600 truncate max-w-[60px]" title={student.englishName}>({student.englishName})</span>}
+                            {/* 대기 Section (배정 예정 + 휴원) - showHoldStudents 옵션 적용 */}
+                            {displayOptions?.showHoldStudents !== false && (
+                                <div className="h-[80px] flex flex-col bg-pink-50 border-b border-pink-200 px-2 py-1 overflow-y-auto custom-scrollbar">
+                                    {holdStudents.length === 0 && scheduledStudents.length === 0 ? (
+                                        <span className="text-xxs text-pink-300 flex items-center justify-center h-full">-</span>
+                                    ) : (
+                                        <>
+                                            {/* 배정 예정 학생 */}
+                                            {scheduledStudents.slice(0, 3).map((student) => (
+                                                <div
+                                                    key={student.id}
+                                                    className="flex items-center text-[12px] py-0.5 px-1 bg-amber-50 text-amber-800 mb-0.5 cursor-pointer hover:bg-amber-100"
+                                                    title={student.enrollmentDate ? `수업시작: ${student.enrollmentDate}` : '배정 예정'}
+                                                    onClick={() => onStudentClick?.(student.id)}
+                                                >
+                                                    <div className="flex items-center flex-1 min-w-0">
+                                                        <span className="font-medium shrink-0">{student.name}</span>
+                                                        {isEnglish && student.englishName && <span className="ml-1 text-amber-600 truncate max-w-[60px]" title={student.englishName}>({student.englishName})</span>}
+                                                    </div>
+                                                    {(displayOptions?.showSchool !== false || displayOptions?.showGrade !== false) && (
+                                                        <span className="text-xxs shrink-0 text-amber-600 text-right leading-none ml-1">
+                                                            {formatSchoolGrade(displayOptions?.showSchool !== false ? student.school : undefined, displayOptions?.showGrade !== false ? student.grade : undefined)}
+                                                        </span>
+                                                    )}
                                                 </div>
-                                                <span className="text-xxs shrink-0 text-amber-600 text-right leading-none ml-1">
-                                                    {formatSchoolGrade(student.school, student.grade)}
-                                                </span>
-                                            </div>
-                                        ))}
-                                        {scheduledStudents.length > 3 && (
-                                            <span className="text-micro text-amber-500">+{scheduledStudents.length - 3}명 예정</span>
-                                        )}
-                                        {/* 휴원 학생 */}
-                                        {holdStudents.slice(0, 3).map((student) => (
-                                            <div
-                                                key={student.id}
-                                                className="flex items-center text-[12px] py-0.5 px-1 bg-amber-50 text-amber-800 mb-0.5 cursor-pointer hover:bg-amber-100"
-                                                title={student.enrollmentDate ? `수업시작: ${student.enrollmentDate}` : '휴원'}
-                                                onClick={() => onStudentClick?.(student.id)}
-                                            >
-                                                <div className="flex items-center flex-1 min-w-0">
-                                                    <span className="font-medium shrink-0">{student.name}</span>
-                                                    {isEnglish && student.englishName && <span className="ml-1 text-amber-600 truncate max-w-[60px]" title={student.englishName}>({student.englishName})</span>}
+                                            ))}
+                                            {scheduledStudents.length > 3 && (
+                                                <span className="text-micro text-amber-500">+{scheduledStudents.length - 3}명 예정</span>
+                                            )}
+                                            {/* 휴원 학생 */}
+                                            {holdStudents.slice(0, 3).map((student) => (
+                                                <div
+                                                    key={student.id}
+                                                    className="flex items-center text-[12px] py-0.5 px-1 bg-amber-50 text-amber-800 mb-0.5 cursor-pointer hover:bg-amber-100"
+                                                    title={student.enrollmentDate ? `수업시작: ${student.enrollmentDate}` : '휴원'}
+                                                    onClick={() => onStudentClick?.(student.id)}
+                                                >
+                                                    <div className="flex items-center flex-1 min-w-0">
+                                                        <span className="font-medium shrink-0">{student.name}</span>
+                                                        {isEnglish && student.englishName && <span className="ml-1 text-amber-600 truncate max-w-[60px]" title={student.englishName}>({student.englishName})</span>}
+                                                    </div>
+                                                    {(displayOptions?.showSchool !== false || displayOptions?.showGrade !== false) && (
+                                                        <span className="text-xxs shrink-0 text-amber-600 text-right leading-none ml-1">
+                                                            {formatSchoolGrade(displayOptions?.showSchool !== false ? student.school : undefined, displayOptions?.showGrade !== false ? student.grade : undefined)}
+                                                        </span>
+                                                    )}
                                                 </div>
-                                                <span className="text-xxs shrink-0 text-amber-600 text-right leading-none ml-1">
-                                                    {formatSchoolGrade(student.school, student.grade)}
-                                                </span>
-                                            </div>
-                                        ))}
-                                        {holdStudents.length > 3 && (
-                                            <span className="text-micro text-amber-500">+{holdStudents.length - 3}명 휴원</span>
-                                        )}
-                                    </>
-                                )}
-                            </div>
+                                            ))}
+                                            {holdStudents.length > 3 && (
+                                                <span className="text-micro text-amber-500">+{holdStudents.length - 3}명 휴원</span>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            )}
 
-                            {/* 퇴원생 Section */}
-                            <div className="h-[80px] flex flex-col bg-gray-100 px-2 py-1 overflow-y-auto custom-scrollbar">
-                                {withdrawnStudents.length === 0 ? (
-                                    <span className="text-xxs text-gray-500 flex items-center justify-center h-full">-</span>
-                                ) : (
-                                    <>
-                                        {withdrawnStudents.slice(0, 3).map((student) => (
-                                            <div
-                                                key={student.id}
-                                                className="flex items-center text-[12px] py-0.5 px-1 bg-black text-white mb-0.5 cursor-pointer hover:bg-gray-800 group relative"
-                                                title={student.withdrawalDate ? `퇴원일: ${student.withdrawalDate}` : undefined}
-                                                onClick={() => onStudentClick?.(student.id)}
-                                            >
-                                                <div className="flex items-center flex-1 min-w-0">
-                                                    <span className="font-medium shrink-0">{student.name}</span>
-                                                    {isEnglish && student.englishName && <span className="ml-1 text-gray-400 truncate max-w-[60px]" title={student.englishName}>({student.englishName})</span>}
+                            {/* 퇴원생 Section - showWithdrawnStudents 옵션 적용 */}
+                            {displayOptions?.showWithdrawnStudents !== false && (
+                                <div className="h-[80px] flex flex-col bg-gray-100 px-2 py-1 overflow-y-auto custom-scrollbar">
+                                    {withdrawnStudents.length === 0 ? (
+                                        <span className="text-xxs text-gray-500 flex items-center justify-center h-full">-</span>
+                                    ) : (
+                                        <>
+                                            {withdrawnStudents.slice(0, 3).map((student) => (
+                                                <div
+                                                    key={student.id}
+                                                    className="flex items-center text-[12px] py-0.5 px-1 bg-black text-white mb-0.5 cursor-pointer hover:bg-gray-800 group relative"
+                                                    title={student.withdrawalDate ? `퇴원일: ${student.withdrawalDate}` : undefined}
+                                                    onClick={() => onStudentClick?.(student.id)}
+                                                >
+                                                    <div className="flex items-center flex-1 min-w-0">
+                                                        <span className="font-medium shrink-0">{student.name}</span>
+                                                        {isEnglish && student.englishName && <span className="ml-1 text-gray-400 truncate max-w-[60px]" title={student.englishName}>({student.englishName})</span>}
+                                                    </div>
+                                                    {(displayOptions?.showSchool !== false || displayOptions?.showGrade !== false) && (
+                                                        <span className="text-xxs shrink-0 text-gray-300 text-right leading-none ml-1">
+                                                            {formatSchoolGrade(displayOptions?.showSchool !== false ? student.school : undefined, displayOptions?.showGrade !== false ? student.grade : undefined)}
+                                                        </span>
+                                                    )}
+                                                    {mode === 'edit' && onRestoreEnrollment && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (window.confirm(`${student.name} 학생의 수업 종료를 취소하시겠습니까?`)) {
+                                                                    onRestoreEnrollment(student.id, classInfo.name);
+                                                                }
+                                                            }}
+                                                            className="absolute right-1 text-xxs text-yellow-400 hover:text-yellow-300 opacity-0 group-hover:opacity-100 transition-opacity bg-black px-0.5"
+                                                            title="수업 종료 취소"
+                                                        >
+                                                            복구
+                                                        </button>
+                                                    )}
                                                 </div>
-                                                <span className="text-xxs shrink-0 text-gray-300 text-right leading-none ml-1">
-                                                    {formatSchoolGrade(student.school, student.grade)}
-                                                </span>
-                                                {mode === 'edit' && onRestoreEnrollment && (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (window.confirm(`${student.name} 학생의 수업 종료를 취소하시겠습니까?`)) {
-                                                                onRestoreEnrollment(student.id, classInfo.name);
-                                                            }
-                                                        }}
-                                                        className="absolute right-1 text-xxs text-yellow-400 hover:text-yellow-300 opacity-0 group-hover:opacity-100 transition-opacity bg-black px-0.5"
-                                                        title="수업 종료 취소"
-                                                    >
-                                                        복구
-                                                    </button>
-                                                )}
-                                            </div>
-                                        ))}
-                                        {withdrawnStudents.length > 3 && (
-                                            <span className="text-micro text-gray-400">+{withdrawnStudents.length - 3}명</span>
-                                        )}
-                                    </>
-                                )}
-                            </div>
+                                            ))}
+                                            {withdrawnStudents.length > 3 && (
+                                                <span className="text-micro text-gray-400">+{withdrawnStudents.length - 3}명</span>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )
                 ) : null}
