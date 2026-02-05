@@ -338,6 +338,9 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
                     isMaster={isMaster}
                     onOpenEmbedManager={() => setIsEmbedManagerOpen(true)}
+                    studentMap={studentMap}
+                    currentWeekStart={currentMonday}
+                    filteredClasses={filteredClasses}
                 />
 
                 {/* Timetable Content - viewType에 따라 분기 */}

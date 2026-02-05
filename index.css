@@ -3,8 +3,17 @@
 @tailwind utilities;
 
 /* 반응형 비활성화 - 고정 레이아웃 테스트 */
-body {
+html, body {
   min-width: 1280px;
+  overflow: hidden !important;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+#root {
+  height: 100vh;
+  overflow: hidden !important;
 }
 
 /* Global Focus Indicators - Addresses Issue #6 */

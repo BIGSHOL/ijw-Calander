@@ -1688,7 +1688,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     // 뷰 모드에 따라 다른 레이아웃 렌더링
     if (timetableViewMode === 'day-based') {
         return (
-            <div className="overflow-x-auto overflow-y-auto" style={{ height: 'calc(100vh - 240px)' }}>
+            <div className="overflow-auto h-full">
                 <div className="flex gap-4">
                     {dayBasedData.map(({ day, resources }) => renderDayBasedTable(day, resources))}
                 </div>
@@ -1698,7 +1698,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
     // teacher-based 뷰 (기존)
     return (
-        <div className="overflow-x-auto overflow-y-auto" style={{ height: 'calc(100vh - 240px)' }}>
+        <div className="overflow-auto h-full">
             <div className="flex gap-4">
                 {/* 월/목 테이블 */}
                 {monThuActiveResources.length > 0 && renderTable(monThuActiveResources, monThuResourceDaysMap, '월/목')}

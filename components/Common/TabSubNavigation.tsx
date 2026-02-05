@@ -1,10 +1,12 @@
 import React from 'react';
+import { useHeaderCollapse } from '../../contexts/HeaderCollapseContext';
 
 interface TabSubNavigationProps {
   children: React.ReactNode;
   className?: string;
   variant?: 'compact' | 'normal';
   showBorder?: boolean;
+  ignoreCollapse?: boolean; // 접기 무시 옵션 (특정 네비게이션에만 적용)
 }
 
 /**
@@ -36,8 +38,16 @@ export const TabSubNavigation: React.FC<TabSubNavigationProps> = ({
   children,
   className = '',
   variant = 'compact',
-  showBorder = true
+  showBorder = true,
+  ignoreCollapse = false
 }) => {
+  const { isHeaderCollapsed } = useHeaderCollapse();
+
+  // 헤더가 접혀있고 ignoreCollapse가 false이면 숨김
+  if (isHeaderCollapsed && !ignoreCollapse) {
+    return null;
+  }
+
   const variantClasses = {
     compact: 'h-10 px-4 gap-2',
     normal: 'h-12 px-6 gap-3'

@@ -185,7 +185,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
 
   if (loading) {
     return (
-      <div className="w-full h-full overflow-auto p-6 bg-gray-50">
+      <div className="w-full p-6 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <DashboardHeader userProfile={userProfile} staffMember={staffMember} />
           <div className="flex items-center justify-center h-64">
@@ -197,7 +197,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
   }
 
   return (
-    <div className="w-full h-full overflow-auto p-3 bg-gray-50">
+    <div className="w-full p-3 bg-gray-50">
       <div className="max-w-[1800px] mx-auto space-y-3">
         <DashboardHeader userProfile={userProfile} staffMember={staffMember} />
 

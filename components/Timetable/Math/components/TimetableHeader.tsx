@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
     ChevronLeft, ChevronRight, Search, X, Settings, Eye, Edit, SlidersHorizontal,
     ArrowRightLeft, Copy, Upload, Save, Link2
 } from 'lucide-react';
+import { UnifiedStudent, TimetableClass } from '../../../../types';
 
 interface TimetableHeaderProps {
     weekLabel: string;
@@ -31,6 +32,10 @@ interface TimetableHeaderProps {
     // 공유 링크 (마스터 전용)
     isMaster?: boolean;
     onOpenEmbedManager?: () => void;
+    // 학생 데이터 (카운트용)
+    studentMap?: Record<string, UnifiedStudent>;
+    currentWeekStart?: Date;
+    filteredClasses?: TimetableClass[];
 }
 
 const TimetableHeader: React.FC<TimetableHeaderProps> = ({
@@ -56,8 +61,58 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     onPublishDraftToLive,
     onOpenScenarioModal,
     isMaster = false,
-    onOpenEmbedManager
+    onOpenEmbedManager,
+    studentMap = {},
+    currentWeekStart,
+    filteredClasses = []
 }) => {
+    // 학생 수 카운트 계산 (현재 시간표에 등록된 학생만, 중복 제거)
+    const studentCounts = useMemo(() => {
+        // 시간표에 등록된 학생 ID 수집 (중복 제거를 위해 Set 사용)
+        const activeStudentIds = new Set<string>();
+        const onHoldStudentIds = new Set<string>();
+        const withdrawnStudentIds = new Set<string>();
+
+        const today = new Date().toISOString().split('T')[0];
+        const weekEnd = currentWeekStart
+            ? new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            : today;
+
+        // 각 수업의 학생 목록에서 학생 ID 수집 (ClassCard 로직과 동일)
+        filteredClasses.forEach(cls => {
+            cls.studentList?.forEach(student => {
+                // 재원생: 퇴원일 없고 대기 아님
+                if (!student.withdrawalDate && !student.onHold) {
+                    activeStudentIds.add(student.id);
+                }
+                // 대기생: 대기 상태이고 퇴원일 없음
+                else if (student.onHold && !student.withdrawalDate) {
+                    onHoldStudentIds.add(student.id);
+                }
+                // 퇴원생: 퇴원일 있음
+                else if (student.withdrawalDate) {
+                    withdrawnStudentIds.add(student.id);
+                }
+            });
+        });
+
+        let withdrawnThisWeek = 0;
+
+        // 퇴원 예정 학생 중 이번 주에 퇴원하는 학생 카운트
+        withdrawnStudentIds.forEach(studentId => {
+            const student = studentMap[studentId];
+            if (student?.withdrawalDate && student.withdrawalDate >= today && student.withdrawalDate <= weekEnd) {
+                withdrawnThisWeek++;
+            }
+        });
+
+        return {
+            activeCount: activeStudentIds.size,      // 재원생 (중복 제거됨)
+            onHoldCount: onHoldStudentIds.size,      // 대기 (중복 제거됨)
+            withdrawnThisWeek                         // 이번 주 퇴원 예정
+        };
+    }, [filteredClasses, studentMap, currentWeekStart]);
+
     return (
         <div className="bg-gray-50 h-10 flex items-center justify-between px-4 border-b border-gray-200 flex-shrink-0 text-xs">
             {/* Left: Week Info */}
@@ -82,6 +137,26 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                     >
                         <ChevronRight size={14} />
                     </button>
+                </div>
+
+                {/* 학생 수 카운트 */}
+                <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-300">
+                    <div className="flex items-center gap-1 px-2 py-0.5 bg-green-50 border border-green-200 rounded-sm">
+                        <span className="text-xxs text-green-700 font-medium">재원</span>
+                        <span className="text-xs font-bold text-green-800">{studentCounts.activeCount}</span>
+                    </div>
+                    {studentCounts.onHoldCount > 0 && (
+                        <div className="flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-sm">
+                            <span className="text-xxs text-amber-700 font-medium">대기</span>
+                            <span className="text-xs font-bold text-amber-800">{studentCounts.onHoldCount}</span>
+                        </div>
+                    )}
+                    {studentCounts.withdrawnThisWeek > 0 && (
+                        <div className="flex items-center gap-1 px-2 py-0.5 bg-red-50 border border-red-200 rounded-sm">
+                            <span className="text-xxs text-red-700 font-medium">퇴원 예정</span>
+                            <span className="text-xs font-bold text-red-800">{studentCounts.withdrawnThisWeek}</span>
+                        </div>
+                    )}
                 </div>
             </div>
 
