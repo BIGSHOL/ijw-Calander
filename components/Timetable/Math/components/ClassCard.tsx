@@ -297,9 +297,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 students = targetCls.studentIds.map(id => studentMap[id]).filter(Boolean);
             }
 
-            // 입학일 필터링
+            // 입학일 필터링 - 단, 대기 학생(배정 예정 포함)은 미래 입학일이어도 표시
             students = students.filter(s => {
                 if (!s.enrollmentDate) return true;
+                if (s.onHold) return true;  // 대기 학생은 미래 입학일이어도 대기 섹션에 표시
                 return s.enrollmentDate <= today;
             });
 
@@ -717,7 +718,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                         const sg = formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null);
                                                         if (sg && sg !== '-') text += `/${sg}`;
                                                     }
-                                                    return <li key={s.id} className="text-xxs leading-tight bg-amber-50 text-amber-800 px-1 py-0.5 truncate">{text}</li>;
+                                                    const tooltipText = s.enrollmentDate ? `예정일: ${s.enrollmentDate}` : undefined;
+                                                    return <li key={s.id} className="text-xxs leading-tight bg-amber-50 text-amber-800 px-1 py-0.5 truncate cursor-help" title={tooltipText}>{text}</li>;
                                                 })}
                                             </ul>
                                         ) : (
@@ -736,7 +738,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                         const sg = formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null);
                                                         if (sg && sg !== '-') text += `/${sg}`;
                                                     }
-                                                    return <li key={s.id} className="text-xxs leading-tight bg-black text-white px-1 py-0.5 truncate">{text}</li>;
+                                                    const tooltipText = s.withdrawalDate ? `퇴원일: ${s.withdrawalDate}` : undefined;
+                                                    return <li key={s.id} className="text-xxs leading-tight bg-black text-white px-1 py-0.5 truncate cursor-help" title={tooltipText}>{text}</li>;
                                                 })}
                                             </ul>
                                         ) : (

@@ -143,11 +143,13 @@ export const useMathClassStudents = (
                 // 모든 학생 포함 (퇴원/휴원도 카드에서 별도 섹션으로 표시)
                 classStudentMap[className].add(studentId);
 
+                const finalOnHold = isScheduled || enrollment.onHold;
+
                 enrollmentDataMap[className][studentId] = {
                     enrollmentDocId: enrollment.id,  // Firestore 실제 문서 ID
                     enrollmentDate: startDate,
                     withdrawalDate: withdrawalDate || endDate,  // endDate도 퇴원으로 처리
-                    onHold: isScheduled || enrollment.onHold,  // 배정 예정 학생은 자동으로 대기 처리
+                    onHold: finalOnHold,  // 배정 예정 학생은 자동으로 대기 처리
                     attendanceDays: enrollment.attendanceDays || [],
                     isScheduled,  // 배정 예정 플래그
                     isTransferred: hasActiveInOtherClass,  // 반이동 나감 (퇴원 섹션에서 제외)
@@ -178,7 +180,7 @@ export const useMathClassStudents = (
                     // 2. baseStudent.startDate (학생 기본정보의 등록일 - fallback)
                     const classEnrollmentDate = enrollmentData.enrollmentDate || baseStudent.startDate;
 
-                    return {
+                    const timetableStudent = {
                         id,
                         name: baseStudent.name || '',
                         englishName: baseStudent.englishName || '',
@@ -195,6 +197,8 @@ export const useMathClassStudents = (
                         enrollmentDocId: enrollmentData.enrollmentDocId,
                         isSlotTeacher: enrollmentData.isSlotTeacher || false,
                     } as TimetableStudent;
+
+                    return timetableStudent;
                 })
                 .filter(Boolean) as TimetableStudent[];
 
