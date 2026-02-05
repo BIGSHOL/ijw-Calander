@@ -308,8 +308,9 @@ export interface StudentFilters {
   searchQuery: string;
   searchField: SearchField;  // 검색 필드 선택
   grade: string;
-  status: 'all' | 'prospect' | 'active' | 'on_hold' | 'withdrawn';
+  status: 'all' | 'prospect' | 'active' | 'on_hold' | 'withdrawn' | 'no_enrollment';  // 미수강 추가
   subjects: string[];  // 선택된 과목 배열 (빈 배열 = 전체)
+  subjectFilterMode: 'OR' | 'AND';  // 과목 필터 모드 (OR: 하나라도 수강, AND: 모두 수강)
   teacher: string;  // 'all' 또는 선생님 이름
   excludeNoEnrollment: boolean;  // 미수강 학생 제외
 }
@@ -321,6 +322,7 @@ export function useStudentFilterState() {
     grade: 'all',
     status: 'active',
     subjects: [],
+    subjectFilterMode: 'OR',  // 기본값: OR (하나라도 수강)
     teacher: 'all',
     excludeNoEnrollment: false,
   });

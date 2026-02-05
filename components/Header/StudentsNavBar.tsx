@@ -125,6 +125,20 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
             </TabButton>
           </div>
 
+          {/* Subject Filter Mode Toggle - OR/AND */}
+          {studentFilters.subjects.length > 1 && (
+            <button
+              onClick={() => setStudentFilters(prev => ({
+                ...prev,
+                subjectFilterMode: prev.subjectFilterMode === 'OR' ? 'AND' : 'OR'
+              }))}
+              className="px-2 py-1 bg-white/10 border border-white/10 rounded-sm text-xxs text-white hover:bg-white/20 transition-colors"
+              title={studentFilters.subjectFilterMode === 'OR' ? '하나라도 수강 (클릭하면 모두 수강으로 변경)' : '모두 수강 (클릭하면 하나라도 수강으로 변경)'}
+            >
+              {studentFilters.subjectFilterMode === 'OR' ? '또는' : '그리고'}
+            </button>
+          )}
+
           {/* Status Toggle */}
           <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm">
             <TabButton
@@ -165,6 +179,14 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
               className="px-3 py-1"
             >
               퇴원
+            </TabButton>
+            <TabButton
+              active={studentFilters.status === 'no_enrollment'}
+              onClick={() => setStudentFilters(prev => ({ ...prev, status: 'no_enrollment' }))}
+              variant="tab-status-cancelled"
+              className="px-3 py-1"
+            >
+              미수강
             </TabButton>
           </div>
 

@@ -208,7 +208,7 @@ const filterByGrade = (students: UnifiedStudent[], grade: string): UnifiedStuden
 };
 
 /**
- * Filter students by status (완전한 구현 - prospect/on_hold 지원)
+ * Filter students by status (완전한 구현 - prospect/on_hold/no_enrollment 지원)
  */
 const filterByStatus = (students: UnifiedStudent[], status: string): UnifiedStudent[] => {
     if (status === 'all') return students;
@@ -232,15 +232,28 @@ const filterByStatus = (students: UnifiedStudent[], status: string): UnifiedStud
             return false;
         }
 
+        if (status === 'no_enrollment') {
+            // 현재 수강 중인 enrollment가 없는 학생 (배정 예정 제외)
+            const today = new Date().toISOString().split('T')[0];
+            const activeStartedEnrollments = (s.enrollments || []).filter(e => {
+                if (e.endDate) return false;
+                const startDate = e.startDate;
+                const isFuture = startDate && startDate > today;
+                return !isFuture;
+            });
+            return activeStartedEnrollments.length === 0;
+        }
+
         return studentStatus === status;
     });
 };
 
 /**
- * Filter students by subjects (OR condition)
+ * Filter students by subjects (OR/AND condition)
  * CoursesTab과 동일한 로직: 현재 수강 중인 수업만 (배정 예정 제외)
+ * @param mode - 'OR': 하나라도 수강, 'AND': 모두 수강
  */
-const filterBySubjects = (students: UnifiedStudent[], subjects: string[]): UnifiedStudent[] => {
+const filterBySubjects = (students: UnifiedStudent[], subjects: string[], mode: 'OR' | 'AND' = 'OR'): UnifiedStudent[] => {
     if (subjects.length === 0) return students;
 
     const today = new Date().toISOString().split('T')[0];
@@ -259,7 +272,13 @@ const filterBySubjects = (students: UnifiedStudent[], subjects: string[]): Unifi
             })
             .map((e) => e.subject);
 
-        return subjects.some((subject) => studentSubjects.includes(subject as any));
+        if (mode === 'AND') {
+            // AND 모드: 모든 선택된 과목을 수강하는 학생만
+            return subjects.every((subject) => studentSubjects.includes(subject as any));
+        } else {
+            // OR 모드: 하나라도 수강하는 학생
+            return subjects.some((subject) => studentSubjects.includes(subject as any));
+        }
     });
 };
 
@@ -366,8 +385,8 @@ export const useStudentFilters = (
     );
 
     const subjectFiltered = useMemo(
-        () => filterBySubjects(statusFiltered, filters.subjects),
-        [statusFiltered, filters.subjects]
+        () => filterBySubjects(statusFiltered, filters.subjects, filters.subjectFilterMode),
+        [statusFiltered, filters.subjects, filters.subjectFilterMode]
     );
 
     const teacherFiltered = useMemo(
