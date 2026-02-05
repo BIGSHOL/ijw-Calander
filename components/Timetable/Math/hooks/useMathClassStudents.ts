@@ -147,7 +147,7 @@ export const useMathClassStudents = (
                     enrollmentDocId: enrollment.id,  // Firestore 실제 문서 ID
                     enrollmentDate: startDate,
                     withdrawalDate: withdrawalDate || endDate,  // endDate도 퇴원으로 처리
-                    onHold: enrollment.onHold,
+                    onHold: isScheduled || enrollment.onHold,  // 배정 예정 학생은 자동으로 대기 처리
                     attendanceDays: enrollment.attendanceDays || [],
                     isScheduled,  // 배정 예정 플래그
                     isTransferred: hasActiveInOtherClass,  // 반이동 나감 (퇴원 섹션에서 제외)

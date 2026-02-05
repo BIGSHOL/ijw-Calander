@@ -21,61 +21,6 @@ const StudentList: React.FC<StudentListProps> = ({
     setCurrentPage(1);
   }, [students.length]);
 
-  // 페이지네이션은 전체 학생 수 기준으로 (섹션 구분과 무관)
-  const totalPages = Math.ceil(students.length / pageSize);
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-
-  // 각 섹션의 페이지네이션된 학생 목록
-  const paginatedSections = useMemo(() => {
-    let currentIndex = 0;
-    const result = {
-      active: [] as UnifiedStudent[],
-      onHold: [] as UnifiedStudent[],
-      withdrawing: [] as UnifiedStudent[]
-    };
-
-    // 재원생 섹션
-    for (let i = 0; i < activeStudents.length; i++) {
-      if (currentIndex >= startIndex && currentIndex < endIndex) {
-        result.active.push(activeStudents[i]);
-      }
-      currentIndex++;
-      if (currentIndex >= endIndex) return result;
-    }
-
-    // 대기생 섹션
-    for (let i = 0; i < onHoldStudents.length; i++) {
-      if (currentIndex >= startIndex && currentIndex < endIndex) {
-        result.onHold.push(onHoldStudents[i]);
-      }
-      currentIndex++;
-      if (currentIndex >= endIndex) return result;
-    }
-
-    // 퇴원 예정 섹션
-    for (let i = 0; i < withdrawingThisWeekStudents.length; i++) {
-      if (currentIndex >= startIndex && currentIndex < endIndex) {
-        result.withdrawing.push(withdrawingThisWeekStudents[i]);
-      }
-      currentIndex++;
-      if (currentIndex >= endIndex) return result;
-    }
-
-    return result;
-  }, [activeStudents, onHoldStudents, withdrawingThisWeekStudents, startIndex, endIndex]);
-
-  // 페이지 크기 변경 시 첫 페이지로 이동
-  const handlePageSizeChange = (newSize: number) => {
-    setPageSize(newSize);
-    setCurrentPage(1);
-  };
-
-  // 페이지 변경 시 스크롤 최상단으로
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-  };
-
   // 오늘 날짜 (YYYY-MM-DD 형식 문자열) - CoursesTab과 동일한 방식
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
@@ -142,6 +87,61 @@ const StudentList: React.FC<StudentListProps> = ({
       withdrawingThisWeekStudents: withdrawing
     };
   }, [students, today, weekEnd]);
+
+  // 페이지네이션은 전체 학생 수 기준으로 (섹션 구분과 무관)
+  const totalPages = Math.ceil(students.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+
+  // 각 섹션의 페이지네이션된 학생 목록
+  const paginatedSections = useMemo(() => {
+    let currentIndex = 0;
+    const result = {
+      active: [] as UnifiedStudent[],
+      onHold: [] as UnifiedStudent[],
+      withdrawing: [] as UnifiedStudent[]
+    };
+
+    // 재원생 섹션
+    for (let i = 0; i < activeStudents.length; i++) {
+      if (currentIndex >= startIndex && currentIndex < endIndex) {
+        result.active.push(activeStudents[i]);
+      }
+      currentIndex++;
+      if (currentIndex >= endIndex) return result;
+    }
+
+    // 대기생 섹션
+    for (let i = 0; i < onHoldStudents.length; i++) {
+      if (currentIndex >= startIndex && currentIndex < endIndex) {
+        result.onHold.push(onHoldStudents[i]);
+      }
+      currentIndex++;
+      if (currentIndex >= endIndex) return result;
+    }
+
+    // 퇴원 예정 섹션
+    for (let i = 0; i < withdrawingThisWeekStudents.length; i++) {
+      if (currentIndex >= startIndex && currentIndex < endIndex) {
+        result.withdrawing.push(withdrawingThisWeekStudents[i]);
+      }
+      currentIndex++;
+      if (currentIndex >= endIndex) return result;
+    }
+
+    return result;
+  }, [activeStudents, onHoldStudents, withdrawingThisWeekStudents, startIndex, endIndex]);
+
+  // 페이지 크기 변경 시 첫 페이지로 이동
+  const handlePageSizeChange = (newSize: number) => {
+    setPageSize(newSize);
+    setCurrentPage(1);
+  };
+
+  // 페이지 변경 시 스크롤 최상단으로
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
 
   const getStatusBadge = (status: string | undefined) => {
     switch (status) {
