@@ -54,7 +54,10 @@
       "Bash(npm run test:run:*)",
       "Bash(if not exist \"f:\\\\ijw-calander\\\\design\" mkdir \"f:\\\\ijw-calander\\\\design\")",
       "Read(//c/Users/user/**)",
-      "Bash(claude config list:*)"
+      "Bash(claude config list:*)",
+      "Bash(npm audit:*)",
+      "Bash(npm update:*)",
+      "Bash(npm run test:coverage:*)"
     ],
     "additionalDirectories": [
       "d:\\ijw-calander\\components\\Timetable\\English",

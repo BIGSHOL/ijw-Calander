@@ -1,8 +1,8 @@
 # Claude Code Agent System
 
 > **Project**: ijw-calander (Academy Management System)
-> **Updated**: 2026-01-31
-> **Structure**: 14 Teams, 82 Agents + 1 Director Command
+> **Updated**: 2026-02-06
+> **Structure**: 15 Teams, 89 Agents + 1 Director Command
 
 ---
 
@@ -25,6 +25,7 @@ refactor (Director Command, opus model)
 |-- Mobile View Team (mobile-view-lead) .... 6 agents
 |-- Desktop View Team (desktop-view-lead) .. 6 agents
 |-- Tablet View Team (tablet-view-lead) .... 6 agents
+|-- Mobile Team (mobile-lead) .............. 7 agents
 ```
 
 Director: `.claude/commands/refactor.md` (opus model, Task tool access)
@@ -226,6 +227,26 @@ Focus: Space utilization, information density, keyboard/mouse UX
 Breakpoint: 768px~1023px (`md:`)
 Focus: Portrait/landscape adaptation, hybrid input, split view
 
+### 15. Mobile Team (모바일화 전담)
+
+| Agent | Role |
+|-------|------|
+| mobile-lead | Team lead. PWA/네이티브 앱 전환/모바일 전략 총괄 |
+| pwa-specialist | Service Worker, Web App Manifest, 캐싱 전략 |
+| native-build-specialist | Capacitor 네이티브 빌드, 앱스토어 배포 |
+| offline-specialist | 오프라인 지원, Firestore persistence, 동기화 |
+| mobile-push-specialist | FCM 푸시 알림, 알림 카테고리 관리 |
+| mobile-testing-specialist | 모바일 테스팅, Lighthouse, 디바이스 호환성 |
+| mobile-ux-specialist | 모바일 UI/UX, 터치 인터랙션, 네비게이션 패턴 |
+
+Focus: PWA, 네이티브 앱 전환, 오프라인 지원, 푸시 알림, 모바일 UX
+
+> **Mobile View Team vs Mobile Team**
+> - Mobile View Team: 반응형 UI (~767px 화면 대응)
+> - Mobile Team: 모바일 앱화 (PWA, 오프라인, 푸시, 네이티브 빌드)
+>
+> **협력 관계**: 두 팀은 긴밀히 협업합니다. Mobile View Team이 반응형 레이아웃을 구현하면, Mobile Team이 PWA/오프라인/푸시를 추가하여 완전한 모바일 경험을 제공합니다.
+
 ---
 
 ## Shared Agents
@@ -234,6 +255,8 @@ Some agents serve on multiple teams:
 
 | Agent | Primary Team | Shared With |
 |-------|-------------|-------------|
+| mobile-ux-specialist | Mobile | Mobile View (터치 UX 협업) |
+| touch-ux | Mobile View | Mobile (모바일 UX 협업) |
 | firebase-cost-optimizer | Backend | Cost Optimization |
 | migration-helper | Database | Migration |
 | bug-hunter | Test | Debug |
@@ -260,6 +283,7 @@ Some agents serve on multiple teams:
 | P1 (high) | Performance issue | Cost Optimization + Debug |
 | P1 (high) | Data migration | Migration + DB |
 | P2 (medium) | UI/UX improvement | Design + Frontend |
+| P2 (medium) | 모바일화/PWA | Mobile + Mobile View |
 | P2 (medium) | Refactoring | Review + related teams |
 | P2 (medium) | Content update | Content |
 | P2 (medium) | Test writing | Test |
@@ -298,6 +322,9 @@ Task(subagent_type="bug-hunter", prompt="Fix attendance error")
 | Data migration | migration-lead |
 | Report summary | report-summarizer |
 | Test writing | test-writer |
+| PWA/모바일화 | mobile-lead |
+| 푸시 알림 | mobile-push-specialist |
+| 오프라인 지원 | offline-specialist |
 
 ---
 
@@ -314,7 +341,13 @@ Task(subagent_type="bug-hunter", prompt="Fix attendance error")
 
 ## Changelog
 
-### v2.0 (2026-01-31) - Current
+### v2.1 (2026-02-06) - Current
+- Added Mobile Team (mobile-lead): 모바일화 전담팀
+- New agents: pwa-specialist, native-build-specialist, offline-specialist, mobile-push-specialist, mobile-testing-specialist, mobile-ux-specialist
+- Mobile Team ↔ Mobile View Team 협력 관계 정의
+- 15 Teams, 89 Agents total
+
+### v2.0 (2026-01-31)
 - Complete restructure: flat 17-agent system -> 11-team hierarchy
 - Added Director command (opus model) for orchestration
 - Created 6 new teams: Frontend, Backend, Database, Design, Debug, Content
