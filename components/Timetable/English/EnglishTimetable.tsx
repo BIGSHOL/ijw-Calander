@@ -63,6 +63,10 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [labRooms, setLabRooms] = useState<string[]>([]);
 
+    // Header controls (mode, search) - managed at parent level for class view
+    const [mode, setMode] = useState<'view' | 'edit'>('view');
+    const [searchQuery, setSearchQuery] = useState('');
+
     // SimulationContext 사용
     const simulation = useSimulation();
     const { isScenarioMode: isSimulationMode, currentScenarioName, enterScenarioMode: enterSimulationMode, exitScenarioMode: exitSimulationMode, loadFromLive, publishToLive, setCurrentScenarioName, canUndo, canRedo, undo, redo, history, historyIndex, getHistoryDescription } = simulation;
@@ -611,6 +615,10 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 canPublish={isMaster || hasPermission('timetable.english.simulation')}
                                 onSimulationLevelUp={isSimulationMode ? handleSimulationLevelUp : undefined}
                                 currentWeekStart={currentWeekStart}
+                                mode={mode}
+                                setMode={setMode}
+                                searchTerm={searchQuery}
+                                setSearchTerm={setSearchQuery}
                             />
                         )}
                         {viewType === 'room' && (
