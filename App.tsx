@@ -41,6 +41,7 @@ import GlobalSearch from './components/Common/GlobalSearch';
 import { RoleSimulationProvider, SimulationState, getEffectiveUserProfile } from './hooks/useRoleSimulation';
 import RoleSimulationBanner from './components/Common/RoleSimulationBanner';
 import ErrorBoundary from './components/Common/ErrorBoundary';
+import { HeaderCollapseProvider } from './contexts/HeaderCollapseContext';
 import { TimetableNavBar } from './components/Header/TimetableNavBar';
 import { CalendarFilterBar } from './components/Header/CalendarFilterBar';
 import { CalendarFilterPopover } from './components/Header/CalendarFilterPopover';
@@ -807,17 +808,17 @@ const App: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className={`no-print z-40 sticky top-0 bg-[#081429] shadow-lg flex flex-col transition-all duration-300 ${isHeaderCollapsed ? 'h-12' : ''}`} role="banner">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+        <header className={`no-print z-40 sticky top-0 bg-[#081429] shadow-lg flex flex-col transition-all duration-300 ${isHeaderCollapsed ? 'overflow-hidden' : ''}`} role="banner">
           {/* Row 1: Primary Header (Navy) */}
-          <div className={`bg-[#081429] flex items-center justify-between px-4 md:px-6 border-b border-white/10 z-50 relative transition-all duration-300 ${isHeaderCollapsed ? 'h-12' : 'h-16'}`}>
+          <div className={`bg-[#081429] flex items-center justify-between px-4 md:px-6 z-50 relative transition-all duration-300 ${isHeaderCollapsed ? 'h-10 border-b-0' : 'h-16 border-b border-white/10'}`}>
 
             {/* Left: Breadcrumb Navigation - Addresses Issue #21 */}
             <div className="flex items-center gap-4 flex-1 min-w-0">
-              <Breadcrumb items={breadcrumbItems} showHome={false} />
+              {!isHeaderCollapsed && <Breadcrumb items={breadcrumbItems} showHome={false} />}
 
               {/* User Info Display (Desktop) */}
-              {currentUser && (
+              {currentUser && !isHeaderCollapsed && (
                 <div className="hidden lg:flex flex-row items-center gap-1.5 ml-4 pl-4 border-l border-white/10">
                   {/* Role Badge */}
                   {userProfile?.role && (
@@ -849,23 +850,23 @@ const App: React.FC = () => {
 
 
             {/* Right: Actions */}
-            <div className="flex items-center justify-end gap-3 w-[250px]">
+            <div className={`flex items-center justify-end gap-3 transition-all duration-300 ${isHeaderCollapsed ? 'w-auto' : 'w-[250px]'}`}>
               {/* Header Collapse Toggle */}
               <button
                 onClick={() => setIsHeaderCollapsed(!isHeaderCollapsed)}
                 className="text-gray-400 hover:text-white transition-colors"
                 title={isHeaderCollapsed ? "네비게이션 펼치기" : "네비게이션 접기"}
               >
-                {isHeaderCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+                {isHeaderCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={20} />}
               </button>
 
-              {hasPermission('settings.access') && (
+              {!isHeaderCollapsed && hasPermission('settings.access') && (
                 <button onClick={() => setIsSettingsOpen(true)} className="text-gray-400 hover:text-white transition-colors">
                   <Settings size={20} />
                 </button>
               )}
               {/* Memo/Messenger */}
-              {currentUser && (
+              {!isHeaderCollapsed && currentUser && (
                 <MemoDropdown
                   isMemoDropdownOpen={isMemoDropdownOpen}
                   setIsMemoDropdownOpen={setIsMemoDropdownOpen}
@@ -878,7 +879,7 @@ const App: React.FC = () => {
               )}
 
               {/* Profile Dropdown */}
-              {currentUser && (
+              {!isHeaderCollapsed && currentUser && (
                 <div className="relative">
                   <button
                     onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
@@ -963,7 +964,7 @@ const App: React.FC = () => {
           )}
 
           {/* Row 2: Timetable Filter Bar - Only show in timetable mode */}
-          {appMode === 'timetable' && (
+          {appMode === 'timetable' && !isHeaderCollapsed && (
             <TimetableNavBar
               timetableSubject={timetableSubject}
               setTimetableSubject={setTimetableSubject}
@@ -981,6 +982,7 @@ const App: React.FC = () => {
         </header >
 
         <main id="main-content" className="flex-1 flex flex-col md:flex-row overflow-hidden" role="main">
+          <HeaderCollapseProvider isHeaderCollapsed={isHeaderCollapsed}>
           {/* Render Gating: If permission fails, show nothing (Redirect will happen in useEffect) */}
           <ErrorBoundary key={appMode}>
           {!canAccessTab(appMode) ? (
@@ -990,7 +992,7 @@ const App: React.FC = () => {
           ) : appMode === 'dashboard' ? (
             /* Dashboard View */
             <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 overflow-hidden">
+              <div className="w-full flex-1 overflow-auto bg-gray-50">
                 <DashboardTab userProfile={effectiveProfile} staffMember={effectiveStaffMember} />
               </div>
             </Suspense>
@@ -1077,7 +1079,7 @@ const App: React.FC = () => {
           ) : appMode === 'timetable' ? (
             /* Timetable View */
             <Suspense fallback={<TabLoadingFallback />}>
-              <div className="w-full flex-1 overflow-hidden">
+              <div className="w-full flex-1 overflow-auto">
                 <TimetableManager
                   subjectTab={timetableSubject}
                   onSubjectChange={setTimetableSubject}
@@ -1256,6 +1258,7 @@ const App: React.FC = () => {
               </button>
             </div>
           )}
+          </HeaderCollapseProvider>
         </main>
       </div>
 

@@ -515,7 +515,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
           if (docSnap.exists()) {
             await updateDoc(docRef, {
               endDate: endDate,
-              withdrawalDate: endDate,  // 통합뷰 퇴원 섹션 표시용
+              updatedAt: new Date().toISOString(),
             });
           }
         }
@@ -532,7 +532,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         for (const docSnap of snapshot.docs) {
           await updateDoc(docSnap.ref, {
             endDate: endDate,
-            withdrawalDate: endDate,  // 통합뷰 퇴원 섹션 표시용
+            updatedAt: new Date().toISOString(),
           });
         }
       }

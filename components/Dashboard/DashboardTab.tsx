@@ -138,7 +138,7 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ userProfile, staffMember })
     // MASTER/Admin은 직원 선택기와 함께 렌더링
     if (canViewOtherDashboards) {
       return (
-        <div className="w-full h-full overflow-auto bg-gray-50">
+        <>
           <StaffSelector
             allStaff={allStaff || []}
             selectedStaffId={selectedStaffId}
@@ -146,8 +146,10 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ userProfile, staffMember })
             currentUserName={staffMember?.name}
             loading={staffLoading}
           />
-          {dashboardContent}
-        </div>
+          <div className="w-full bg-gray-50 p-6">
+            {dashboardContent}
+          </div>
+        </>
       );
     }
 
@@ -158,7 +160,7 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ userProfile, staffMember })
 
     // 오류 발생 시 기본 화면 표시
     return (
-      <div className="w-full h-full overflow-auto p-6 bg-gray-50">
+      <div className="w-full p-6 bg-gray-50">
         <div className="max-w-4xl mx-auto">
           <div className="bg-white rounded-sm p-12 shadow-sm border border-gray-100 text-center">
             <div className="text-6xl mb-4">🏠</div>

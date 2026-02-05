@@ -274,7 +274,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   };
 
   return (
-    <div className="w-full h-full overflow-auto p-3 bg-gray-50">
+    <div className="w-full p-3 bg-gray-50">
       <div className="max-w-[1800px] mx-auto">
         <DashboardHeader userProfile={userProfile} staffMember={staffMember} onRefresh={handleRefresh} />
 
