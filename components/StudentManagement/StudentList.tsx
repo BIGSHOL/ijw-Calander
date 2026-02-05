@@ -176,9 +176,12 @@ const StudentList: React.FC<StudentListProps> = ({
                   </div>
                   {/* 2번째 줄: 과목 (현재 수강 중인 수업만 표시 - 시작했고 종료되지 않은 것) */}
                   {student.enrollments && student.enrollments.filter(e => {
+                    // 배정 예정 수업 제외 (isScheduled 플래그)
+                    if (e.isScheduled) return false;
+
                     const now = new Date();
-                    const startDate = e.startDate ? new Date(e.startDate) : null;
-                    const endDate = e.endDate ? new Date(e.endDate) : null;
+                    const startDate = e.startDate ? new Date(e.startDate) : (e.enrollmentDate ? new Date(e.enrollmentDate) : null);
+                    const endDate = e.endDate ? new Date(e.endDate) : (e.withdrawalDate ? new Date(e.withdrawalDate) : null);
 
                     // 아직 시작하지 않은 수업 제외 (배정 예정)
                     if (startDate && startDate > now) return false;
@@ -190,9 +193,12 @@ const StudentList: React.FC<StudentListProps> = ({
                   }).length > 0 && (
                     <div className="flex items-center gap-1 pl-0.5">
                       {Array.from(new Set(student.enrollments.filter(e => {
+                        // 배정 예정 수업 제외 (isScheduled 플래그)
+                        if (e.isScheduled) return false;
+
                         const now = new Date();
-                        const startDate = e.startDate ? new Date(e.startDate) : null;
-                        const endDate = e.endDate ? new Date(e.endDate) : null;
+                        const startDate = e.startDate ? new Date(e.startDate) : (e.enrollmentDate ? new Date(e.enrollmentDate) : null);
+                        const endDate = e.endDate ? new Date(e.endDate) : (e.withdrawalDate ? new Date(e.withdrawalDate) : null);
 
                         // 아직 시작하지 않은 수업 제외 (배정 예정)
                         if (startDate && startDate > now) return false;
