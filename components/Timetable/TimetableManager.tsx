@@ -407,6 +407,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                             currentWeekStart={currentMonday}
                             isViewSettingsOpen={isViewSettingsOpen}
                             setIsViewSettingsOpen={setIsViewSettingsOpen}
+                            searchQuery={searchQuery}
                         />
                     </div>
                 )}
