@@ -266,6 +266,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
     // === 입학일 기반 스타일 (영어 시간표와 동일) ===
     const getEnrollmentStyle = (student: any) => {
+        // 반이동 학생 (다른 반에서 이동해 온 학생) - 초록 배경에 검은 글씨
+        if (student.isTransferredIn) {
+            return { bg: 'bg-green-200', text: 'text-gray-900 font-bold' };
+        }
         if (student.enrollmentDate) {
             const days = Math.ceil((Date.now() - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
             if (days <= 30) return { bg: 'bg-red-500', text: 'text-white font-bold' };
@@ -333,6 +337,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
         // 신입생 정렬 가중치 함수 (영어 시간표와 동일)
         const getEnrollmentWeight = (student: any) => {
+            // 반이동 학생 (다른 반에서 이동해 온 학생)이 가장 상단 (가중치 -1)
+            if (student.isTransferredIn) return -1;
             // underline 학생 최상단 (가중치 0)
             if (student.underline) return 0;
             // enrollmentDate 기반 가중치
@@ -392,6 +398,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
         // 신입생 정렬 가중치 함수 (영어 시간표와 동일)
         const getEnrollmentWeight = (student: any) => {
+            // 반이동 학생 (다른 반에서 이동해 온 학생)이 가장 상단 (가중치 -1)
+            if (student.isTransferredIn) return -1;
             if (student.underline) return 0;
             if (student.enrollmentDate) {
                 const days = Math.ceil((Date.now() - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));

@@ -28,7 +28,7 @@ const COLORS = {
 
 // 컬럼 정의
 type ColumnKey =
-    | 'createdAt' | 'receiver' | 'studentName' | 'schoolGrade' | 'parentPhone' | 'address'
+    | 'createdAt' | 'receiver' | 'studentName' | 'school' | 'grade' | 'parentPhone' | 'address'
     | 'consultationDate' | 'subject' | 'counselor' | 'status' | 'registrar'
     | 'paymentAmount' | 'paymentDate' | 'notes' | 'nonRegistrationReason'
     | 'followUpDate' | 'followUpContent' | 'consultationPath';
@@ -41,29 +41,30 @@ interface ColumnConfig {
 }
 
 const COLUMNS: ColumnConfig[] = [
-    { key: 'createdAt', label: '접수일', defaultVisible: true, minWidth: '90px' },
-    { key: 'receiver', label: '수신자', defaultVisible: true, minWidth: '80px' },
-    { key: 'studentName', label: '이름', defaultVisible: true, minWidth: '80px' },
-    { key: 'schoolGrade', label: '학교학년', defaultVisible: true, minWidth: '100px' },
-    { key: 'parentPhone', label: '연락처', defaultVisible: true, minWidth: '120px' },
-    { key: 'address', label: '주소', defaultVisible: false, minWidth: '150px' },
     { key: 'consultationDate', label: '상담일', defaultVisible: true, minWidth: '110px' },
+    { key: 'studentName', label: '이름', defaultVisible: true, minWidth: '80px' },
+    { key: 'school', label: '학교', defaultVisible: true, minWidth: '100px' },
+    { key: 'grade', label: '학년', defaultVisible: true, minWidth: '60px' },
     { key: 'subject', label: '상담과목', defaultVisible: true, minWidth: '80px' },
+    { key: 'parentPhone', label: '연락처', defaultVisible: true, minWidth: '120px' },
     { key: 'counselor', label: '상담자', defaultVisible: true, minWidth: '80px' },
     { key: 'status', label: '등록여부', defaultVisible: true, minWidth: '90px' },
-    { key: 'registrar', label: '등록자', defaultVisible: true, minWidth: '80px' },
-    { key: 'paymentAmount', label: '결제금액', defaultVisible: true, minWidth: '100px' },
-    { key: 'paymentDate', label: '결제일', defaultVisible: true, minWidth: '90px' },
     { key: 'notes', label: '내용', defaultVisible: true, minWidth: '150px' },
-    { key: 'nonRegistrationReason', label: '미등록사유', defaultVisible: true, minWidth: '120px' },
-    { key: 'followUpDate', label: '후속조치일', defaultVisible: true, minWidth: '100px' },
-    { key: 'followUpContent', label: '후속조치 내용', defaultVisible: true, minWidth: '150px' },
-    { key: 'consultationPath', label: '상담경로', defaultVisible: true, minWidth: '100px' },
+    { key: 'createdAt', label: '접수일', defaultVisible: false, minWidth: '90px' },
+    { key: 'receiver', label: '수신자', defaultVisible: false, minWidth: '80px' },
+    { key: 'address', label: '주소', defaultVisible: false, minWidth: '150px' },
+    { key: 'registrar', label: '등록자', defaultVisible: false, minWidth: '80px' },
+    { key: 'paymentAmount', label: '결제금액', defaultVisible: false, minWidth: '100px' },
+    { key: 'paymentDate', label: '결제일', defaultVisible: false, minWidth: '90px' },
+    { key: 'nonRegistrationReason', label: '미등록사유', defaultVisible: false, minWidth: '120px' },
+    { key: 'followUpDate', label: '후속조치일', defaultVisible: false, minWidth: '100px' },
+    { key: 'followUpContent', label: '후속조치 내용', defaultVisible: false, minWidth: '150px' },
+    { key: 'consultationPath', label: '상담경로', defaultVisible: false, minWidth: '100px' },
 ];
-// 핵심 8개 컬럼 (새 디폴트)
+// 핵심 9개 컬럼 (새 디폴트) - 상담일이 가장 왼쪽
 const DEFAULT_VISIBLE_COLUMNS: ColumnKey[] = [
-    'studentName', 'schoolGrade', 'parentPhone', 'consultationDate',
-    'subject', 'counselor', 'status', 'notes'
+    'consultationDate', 'studentName', 'school', 'grade', 'subject',
+    'parentPhone', 'counselor', 'status', 'notes'
 ];
 
 // localStorage에서 저장된 컬럼 설정 로드
@@ -186,10 +187,15 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                 return <span className="text-slate-600">{record.receiver || '-'}</span>;
             case 'studentName':
                 return <span className="font-semibold" style={{ color: COLORS.navy }}>{record.studentName}</span>;
-            case 'schoolGrade':
-                // grade에서 "초", "중", "고"를 제거하고 숫자만 추출
-                const gradeNum = String(record.grade || '').replace(/^[초중고]/, '');
-                return <span className="text-slate-700">{record.schoolName}{gradeNum}</span>;
+            case 'school':
+                // 학교명을 짧게 표시 (초등학교 → 초, 중학교 → 중, 고등학교 → 고)
+                const displaySchool = (record.schoolName || '')
+                    .replace('초등학교', '초')
+                    .replace('중학교', '중')
+                    .replace('고등학교', '고');
+                return <span className="text-slate-700">{displaySchool}</span>;
+            case 'grade':
+                return <span className="text-slate-700">{record.grade}</span>;
             case 'parentPhone':
                 return <span className="text-slate-600">{record.parentPhone}</span>;
             case 'address':
@@ -307,13 +313,6 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                         {col.label}
                                     </th>
                                 ))}
-                                <th
-                                    scope="col"
-                                    className="px-2 py-1.5 text-right text-xxs font-medium sticky right-0 bg-gray-50"
-                                    style={{ color: COLORS.gray, minWidth: '70px' }}
-                                >
-                                    관리
-                                </th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -321,6 +320,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                 currentData.map((record, idx) => (
                                     <tr
                                         key={record.id}
+                                        onClick={() => onEdit(record)}
                                         className="hover:bg-gray-50 transition-colors cursor-pointer group"
                                         style={{ backgroundColor: idx % 2 === 0 ? 'white' : '#fafafa' }}
                                     >
@@ -329,49 +329,6 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                                 {getCellValue(record, col.key)}
                                             </td>
                                         ))}
-                                        <td className="px-2 py-1.5 whitespace-nowrap text-right text-xs font-medium sticky right-0 bg-inherit" style={{ minWidth: '70px' }}>
-                                            <div className="flex justify-end space-x-1">
-                                                {/* 수정 버튼 - canManage 또는 본인 작성 상담만 */}
-                                                {canEditRecord(record) && (
-                                                    <button
-                                                        onClick={() => onEdit(record)}
-                                                        className="p-1.5 rounded-sm transition-colors"
-                                                        style={{ color: COLORS.navy }}
-                                                        title="수정"
-                                                    >
-                                                        <Edit2 size={14} />
-                                                    </button>
-                                                )}
-                                                {/* 원생 전환 버튼 - canConvert 권한 + 이미 전환된 경우 비활성화 */}
-                                                {canConvert && onConvertToStudent && !record.registeredStudentId && (
-                                                    <button
-                                                        onClick={() => onConvertToStudent(record)}
-                                                        className="p-1.5 rounded-sm transition-colors text-green-600 hover:bg-green-50"
-                                                        title="원생으로 전환"
-                                                    >
-                                                        <UserPlus size={14} />
-                                                    </button>
-                                                )}
-                                                {/* 전환 완료 표시 */}
-                                                {record.registeredStudentId && (
-                                                    <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-sm whitespace-nowrap" title="이미 원생으로 전환됨">
-                                                        ✓ 전환완료
-                                                    </span>
-                                                )}
-                                                {/* 삭제 버튼 - canManage 또는 본인 작성 상담만 */}
-                                                {canEditRecord(record) && (
-                                                    <button
-                                                        onClick={() => {
-                                                            if (window.confirm('정말로 삭제하시겠습니까?')) onDelete(record.id);
-                                                        }}
-                                                        className="text-red-500 p-1.5 hover:bg-red-50 rounded-sm transition-colors"
-                                                        title="삭제"
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </td>
                                     </tr>
                                 ))
                             ) : (
@@ -390,14 +347,21 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
             <div className="md:hidden space-y-3">
                 {currentData.length > 0 ? (
                     currentData.map((record) => (
-                        <div key={record.id} className="p-4 rounded-sm shadow-sm border flex flex-col gap-3" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
+                        <div
+                            key={record.id}
+                            onClick={() => onEdit(record)}
+                            className="p-4 rounded-sm shadow-sm border flex flex-col gap-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                            style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}
+                        >
                             <div className="flex justify-between items-start">
                                 <div className="flex flex-col">
                                     <div className="flex items-center gap-2 mb-1">
                                         <span className="text-lg font-bold" style={{ color: COLORS.navy }}>{record.studentName}</span>
                                         <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: `${COLORS.navy}10`, color: COLORS.navy }}>{record.grade}</span>
                                     </div>
-                                    <span className="text-sm" style={{ color: COLORS.gray }}>{record.schoolName}</span>
+                                    <span className="text-sm" style={{ color: COLORS.gray }}>
+                                        {(record.schoolName || '').replace('초등학교', '초').replace('중학교', '중').replace('고등학교', '고')}
+                                    </span>
                                 </div>
                                 <span className={`px-2.5 py-1 text-xs font-bold rounded-sm border ${CONSULTATION_STATUS_COLORS[record.status]}`}>
                                     {record.status}
@@ -432,29 +396,6 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                         <div className="flex items-center font-medium" style={{ color: '#059669' }}>
                                             <Banknote size={12} className="mr-1" /> ₩{record.paymentAmount}
                                         </div>
-                                    )}
-                                </div>
-                                <div className="flex gap-2">
-                                    {/* 수정 버튼 - canManage 또는 본인 작성 상담만 */}
-                                    {canEditRecord(record) && (
-                                        <button
-                                            onClick={() => onEdit(record)}
-                                            className="p-2 rounded-sm"
-                                            style={{ backgroundColor: `${COLORS.yellow}20`, color: COLORS.navy }}
-                                        >
-                                            <Edit2 size={16} />
-                                        </button>
-                                    )}
-                                    {/* 삭제 버튼 - canManage 또는 본인 작성 상담만 */}
-                                    {canEditRecord(record) && (
-                                        <button
-                                            onClick={() => {
-                                                if (window.confirm('삭제하시겠습니까?')) onDelete(record.id);
-                                            }}
-                                            className="p-2 text-red-500 bg-red-50 rounded-sm"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
                                     )}
                                 </div>
                             </div>

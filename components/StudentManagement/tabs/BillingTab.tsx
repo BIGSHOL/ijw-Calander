@@ -8,7 +8,8 @@ import {
   CheckCircle,
   AlertTriangle,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ChevronDown
 } from 'lucide-react';
 
 interface BillingTabProps {
@@ -27,6 +28,11 @@ const BillingTab: React.FC<BillingTabProps> = ({ student, readOnly = true }) => 
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'paid'>('all');
   const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // 섹션 접기/펼치기 상태
+  const [showStats, setShowStats] = useState(true);
+  const [showRecords, setShowRecords] = useState(true);
+  const [showOverallStats, setShowOverallStats] = useState(true);
 
   const { records, stats, isLoading, error } = useStudentBilling({
     studentName: student.name,
@@ -122,7 +128,18 @@ const BillingTab: React.FC<BillingTabProps> = ({ student, readOnly = true }) => 
         </div>
       </div>
 
+      {/* 수납 통계 섹션 */}
+      <div
+        className="flex items-center gap-2 cursor-pointer"
+        onClick={() => setShowStats(!showStats)}
+      >
+        <h4 className="text-xs font-bold text-[#081429]">수납 통계</h4>
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showStats ? '' : 'rotate-180'}`} />
+      </div>
+
       {/* 통계 카드 */}
+      {showStats && (
+      <>
       <div className="grid grid-cols-3 gap-2">
         <div className="bg-blue-50 border border-blue-200 rounded-sm p-2">
           <p className="text-xs text-gray-500 mb-0.5">총 청구</p>
@@ -150,8 +167,21 @@ const BillingTab: React.FC<BillingTabProps> = ({ student, readOnly = true }) => 
           </span>
         </div>
       )}
+      </>
+      )}
+
+      {/* 수납 내역 섹션 */}
+      <div
+        className="flex items-center gap-2 cursor-pointer"
+        onClick={() => setShowRecords(!showRecords)}
+      >
+        <h4 className="text-xs font-bold text-[#081429]">수납 내역</h4>
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showRecords ? '' : 'rotate-180'}`} />
+      </div>
 
       {/* 수납 기록 테이블 */}
+      {showRecords && (
+      <>
       <div className="bg-white border border-gray-200 rounded-sm overflow-hidden">
         {/* 테이블 헤더 */}
         <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-gray-600">
@@ -279,8 +309,22 @@ const BillingTab: React.FC<BillingTabProps> = ({ student, readOnly = true }) => 
           </div>
         </div>
       )}
+      </>
+      )}
+
+      {/* 전체 통계 섹션 */}
+      {records.length > 0 && (
+      <>
+      <div
+        className="flex items-center gap-2 cursor-pointer"
+        onClick={() => setShowOverallStats(!showOverallStats)}
+      >
+        <h4 className="text-xs font-bold text-[#081429]">전체 통계</h4>
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showOverallStats ? '' : 'rotate-180'}`} />
+      </div>
 
       {/* 전체 통계 */}
+      {showOverallStats && (
       {records.length > 0 && (
         <div className="bg-gray-50 border border-gray-200 rounded-sm p-2">
           <p className="text-xxs text-gray-500 mb-1">전체 기간 통계</p>
@@ -291,6 +335,8 @@ const BillingTab: React.FC<BillingTabProps> = ({ student, readOnly = true }) => 
             <span className="text-blue-600">수납률 {stats.collectionRate.toFixed(1)}%</span>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );
