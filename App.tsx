@@ -81,7 +81,7 @@ const ResourceDashboard = lazy(() => import('./components/Resources').then(m => 
 const WithdrawalManagementTab = lazy(() => import('./components/WithdrawalManagement/WithdrawalManagementTab'));
 const CalendarSettingsModal = lazy(() => import('./components/Calendar/CalendarSettingsModal'));
 // ProspectManagementTab removed - merged into ConsultationManager
-import { Settings, User as UserIcon } from 'lucide-react';
+import { Settings, User as UserIcon, ChevronUp, ChevronDown } from 'lucide-react';
 import { db, auth } from './firebaseConfig';
 import { collection, onSnapshot, doc, deleteDoc, query, where, updateDoc, getDocs } from 'firebase/firestore';
 import { User } from 'firebase/auth';
@@ -147,6 +147,9 @@ const App: React.FC = () => {
     isProfileMenuOpen, setIsProfileMenuOpen, isPermissionViewOpen, setIsPermissionViewOpen,
     isGlobalSearchOpen, setIsGlobalSearchOpen, isAttendanceAddStudentModalOpen, setIsAttendanceAddStudentModalOpen,
   } = modalState;
+
+  // Header collapse state
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
 
   const {
     timetableSubject, setTimetableSubject, timetableViewType, setTimetableViewType,
@@ -805,9 +808,9 @@ const App: React.FC = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="no-print z-40 sticky top-0 bg-[#081429] shadow-lg flex flex-col" role="banner">
+        <header className={`no-print z-40 sticky top-0 bg-[#081429] shadow-lg flex flex-col transition-all duration-300 ${isHeaderCollapsed ? 'h-12' : ''}`} role="banner">
           {/* Row 1: Primary Header (Navy) */}
-          <div className="bg-[#081429] h-16 flex items-center justify-between px-4 md:px-6 border-b border-white/10 z-50 relative">
+          <div className={`bg-[#081429] flex items-center justify-between px-4 md:px-6 border-b border-white/10 z-50 relative transition-all duration-300 ${isHeaderCollapsed ? 'h-12' : 'h-16'}`}>
 
             {/* Left: Breadcrumb Navigation - Addresses Issue #21 */}
             <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -847,6 +850,14 @@ const App: React.FC = () => {
 
             {/* Right: Actions */}
             <div className="flex items-center justify-end gap-3 w-[250px]">
+              {/* Header Collapse Toggle */}
+              <button
+                onClick={() => setIsHeaderCollapsed(!isHeaderCollapsed)}
+                className="text-gray-400 hover:text-white transition-colors"
+                title={isHeaderCollapsed ? "네비게이션 펼치기" : "네비게이션 접기"}
+              >
+                {isHeaderCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+              </button>
 
               {hasPermission('settings.access') && (
                 <button onClick={() => setIsSettingsOpen(true)} className="text-gray-400 hover:text-white transition-colors">
@@ -883,7 +894,7 @@ const App: React.FC = () => {
           </div>
 
           {/* Row 2: Filter Bar (Slate) - Only show in calendar mode */}
-          {appMode === 'calendar' && (
+          {appMode === 'calendar' && !isHeaderCollapsed && (
             <CalendarFilterBar
               isFilterOpen={isFilterOpen}
               setIsFilterOpen={setIsFilterOpen}
@@ -898,7 +909,7 @@ const App: React.FC = () => {
           )}
 
           {/* Row 3: Attendance Navigation Bar - Only show in attendance mode */}
-          {appMode === 'attendance' && (
+          {appMode === 'attendance' && !isHeaderCollapsed && (
             <AttendanceNavBar
               effectiveProfile={effectiveProfile}
               hasPermission={hasPermission}
@@ -919,7 +930,7 @@ const App: React.FC = () => {
           )}
 
           {/* Row 4: Students Navigation Bar - Only show in students mode */}
-          {appMode === 'students' && (
+          {appMode === 'students' && !isHeaderCollapsed && (
             <StudentsNavBar
               studentFilters={studentFilters}
               setStudentFilters={setStudentFilters}
@@ -932,7 +943,7 @@ const App: React.FC = () => {
           )}
 
           {/* Filter Popover Panel */}
-          {appMode === 'calendar' && (
+          {appMode === 'calendar' && !isHeaderCollapsed && (
             <CalendarFilterPopover
               isFilterOpen={isFilterOpen}
               setIsFilterOpen={setIsFilterOpen}

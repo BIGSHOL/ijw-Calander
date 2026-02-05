@@ -6,6 +6,7 @@ import { UnifiedStudent, SubjectType } from '../../types';
 import { useClasses } from '../../hooks/useClasses';
 import { SUBJECT_LABELS, SUBJECT_COLORS } from '../../utils/styleUtils';
 import { useQueryClient } from '@tanstack/react-query';
+import { formatScheduleCompact, SubjectForSchedule } from '../Timetable/constants';
 
 interface AssignClassModalProps {
     isOpen: boolean;
@@ -253,37 +254,42 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                                     </div>
                                 ) : (
                                     <div className="max-h-[220px] overflow-y-auto border border-gray-300 rounded-sm">
-                                        {availableClasses.map((cls) => (
-                                            <label
-                                                key={cls.id}
-                                                className={`flex items-center gap-2 p-2 border-b last:border-b-0 cursor-pointer transition-colors ${selectedClassName === cls.className
-                                                        ? 'bg-[#fdb813]/10 border-l-2 border-l-[#fdb813]'
-                                                        : 'hover:bg-gray-50'
-                                                    }`}
-                                            >
-                                                <input
-                                                    type="radio"
-                                                    name="className"
-                                                    value={cls.className}
-                                                    checked={selectedClassName === cls.className}
-                                                    onChange={(e) => setSelectedClassName(e.target.value)}
-                                                    className="w-3.5 h-3.5 text-[#fdb813] focus:ring-[#fdb813]"
-                                                />
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="font-bold text-xs text-[#081429] truncate">
-                                                        {cls.className}
-                                                    </div>
-                                                    <div className="text-xxs text-gray-600 mt-0.5">
-                                                        {cls.teacher} · {cls.studentCount || 0}명
-                                                    </div>
-                                                    {cls.schedule && cls.schedule.length > 0 && (
-                                                        <div className="text-xxs text-gray-500 mt-0.5 truncate">
-                                                            📅 {cls.schedule.join(', ')}
+                                        {availableClasses.map((cls) => {
+                                            const subjectForSchedule: SubjectForSchedule = selectedSubject === 'english' ? 'english' : 'math';
+                                            const scheduleText = formatScheduleCompact(cls.schedule || [], subjectForSchedule, false);
+
+                                            return (
+                                                <label
+                                                    key={cls.id}
+                                                    className={`flex items-center gap-2 p-2 border-b last:border-b-0 cursor-pointer transition-colors ${selectedClassName === cls.className
+                                                            ? 'bg-[#fdb813]/10 border-l-2 border-l-[#fdb813]'
+                                                            : 'hover:bg-gray-50'
+                                                        }`}
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        name="className"
+                                                        value={cls.className}
+                                                        checked={selectedClassName === cls.className}
+                                                        onChange={(e) => setSelectedClassName(e.target.value)}
+                                                        className="w-3.5 h-3.5 text-[#fdb813] focus:ring-[#fdb813]"
+                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="font-bold text-xs text-[#081429] truncate">
+                                                            {cls.className}
                                                         </div>
-                                                    )}
-                                                </div>
-                                            </label>
-                                        ))}
+                                                        <div className="text-xxs text-gray-600 mt-0.5">
+                                                            {cls.teacher} · {cls.studentCount || 0}명
+                                                        </div>
+                                                        {cls.schedule && cls.schedule.length > 0 && (
+                                                            <div className="text-xxs text-gray-500 mt-0.5 truncate">
+                                                                📅 {scheduleText}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </label>
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
