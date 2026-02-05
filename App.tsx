@@ -97,10 +97,17 @@ import { INJAEWON_LOGO, getJobTitleStyle } from './utils/styleUtils';
 
 import { VideoLoading } from './components/Common/VideoLoading';
 
+// Embed Mode Support
+import EmbedRouter, { isEmbedMode } from './components/Embed/EmbedRouter';
+
 // Lazy loading 폴백 컴포넌트
 const TabLoadingFallback = () => <VideoLoading className="flex-1 h-full" />;
 
 const App: React.FC = () => {
+  // 임베드 모드 체크 - URL에 ?embed=xxx&token=xxx 가 있으면 임베드 페이지만 렌더링
+  if (isEmbedMode()) {
+    return <EmbedRouter />;
+  }
 
   // App Mode (Top-level navigation) - null until permissions are loaded
   const [appMode, setAppMode] = useState<AppTab | null>(null);

@@ -91,9 +91,12 @@ export const useMathClassStudents = (
         const classStudentMap: Record<string, Set<string>> = {};
         const enrollmentDataMap: Record<string, Record<string, any>> = {};
 
+        // 정규화된 className 맵 (trim된 이름 → 원본 이름)
+        const normalizedClassNames = new Map<string, string>();
         classNames.forEach(name => {
             classStudentMap[name] = new Set();
             enrollmentDataMap[name] = {};
+            normalizedClassNames.set(name.trim(), name);
         });
 
         // Iterate all students and collect enrollment data for requested classes
@@ -103,8 +106,19 @@ export const useMathClassStudents = (
             student.enrollments.forEach((enrollment: any) => {
                 if (enrollment.subject !== 'math') return;
 
-                const className = enrollment.className as string;
-                if (!className || !classNames.includes(className)) return;
+                const rawClassName = enrollment.className as string;
+                if (!rawClassName) return;
+
+                // 정확한 매칭 또는 trim된 이름으로 매칭
+                let className = rawClassName;
+                if (!classNames.includes(rawClassName)) {
+                    const trimmedMatch = normalizedClassNames.get(rawClassName.trim());
+                    if (trimmedMatch) {
+                        className = trimmedMatch;
+                    } else {
+                        return; // 매칭되는 수업 없음
+                    }
+                }
 
                 const startDate = convertTimestampToDate(enrollment.enrollmentDate || enrollment.startDate);
                 const withdrawalDate = convertTimestampToDate(enrollment.withdrawalDate);
