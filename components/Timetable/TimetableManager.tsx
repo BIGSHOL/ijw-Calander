@@ -106,6 +106,8 @@ interface MathTimetableContentProps {
     isMaster: boolean;
     isEmbedManagerOpen: boolean;
     setIsEmbedManagerOpen: (open: boolean) => void;
+    // 클래스 상세 정보
+    classesData: ClassInfo[];
 }
 
 const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
@@ -179,6 +181,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     isMaster,
     isEmbedManagerOpen,
     setIsEmbedManagerOpen,
+    classesData,
 }) => {
     const simulation = useMathSimulation();
     const { isScenarioMode, enterScenarioMode, exitScenarioMode, loadFromLive, publishToLive } = simulation;
@@ -1025,6 +1028,7 @@ const TimetableManager = ({
                 isMaster={isMaster}
                 isEmbedManagerOpen={isEmbedManagerOpen}
                 setIsEmbedManagerOpen={setIsEmbedManagerOpen}
+                classesData={classesData}
             />
         </MathSimulationProvider>
     );
