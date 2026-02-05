@@ -29,7 +29,7 @@ const TimetableSettingsModal: React.FC<TimetableSettingsModalProps> = ({
       >
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-          <h2 className="text-sm font-bold text-[#081429] flex items-center gap-1.5">
+          <h2 className="text-sm font-bold text-primary flex items-center gap-1.5">
             <Settings size={16} />
             수업 설정
           </h2>

@@ -138,9 +138,9 @@ const AttendanceNumberMigrationModal: React.FC<AttendanceNumberMigrationModalPro
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] bg-black/50">
       <div className="bg-white rounded-sm shadow-2xl w-[90%] max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* 헤더 */}
-        <div className="bg-[#081429] px-6 py-4 flex items-center justify-between">
+        <div className="bg-primary px-6 py-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Hash size={20} className="text-[#fdb813]" />
+            <Hash size={20} className="text-accent" />
             출결번호 일괄 생성
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">
@@ -166,7 +166,7 @@ const AttendanceNumberMigrationModal: React.FC<AttendanceNumberMigrationModalPro
             <div className="space-y-2">
               {loading ? (
                 <div className="text-center py-8">
-                  <Loader2 className="w-12 h-12 animate-spin text-[#fdb813] mx-auto mb-3" />
+                  <Loader2 className="w-12 h-12 animate-spin text-accent mx-auto mb-3" />
                   <p className="text-gray-600">학생 데이터 분석 중...</p>
                 </div>
               ) : (
@@ -174,8 +174,8 @@ const AttendanceNumberMigrationModal: React.FC<AttendanceNumberMigrationModalPro
                   {/* Section 1: 마이그레이션 개요 */}
                   <div className="bg-white border border-gray-200 overflow-hidden">
                     <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                      <Database className="w-3 h-3 text-[#081429]" />
-                      <h3 className="text-[#081429] font-bold text-xs">마이그레이션 개요</h3>
+                      <Database className="w-3 h-3 text-primary" />
+                      <h3 className="text-primary font-bold text-xs">마이그레이션 개요</h3>
                     </div>
                     <div className="p-3">
                       <div className="grid grid-cols-2 gap-3">
@@ -194,8 +194,8 @@ const AttendanceNumberMigrationModal: React.FC<AttendanceNumberMigrationModalPro
                   {/* Section 2: 생성 규칙 */}
                   <div className="bg-white border border-gray-200 overflow-hidden">
                     <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                      <FileText className="w-3 h-3 text-[#081429]" />
-                      <h3 className="text-[#081429] font-bold text-xs">생성 규칙</h3>
+                      <FileText className="w-3 h-3 text-primary" />
+                      <h3 className="text-primary font-bold text-xs">생성 규칙</h3>
                     </div>
                     <div className="p-3">
                       <div className="bg-blue-50 border border-blue-200 rounded-sm p-3">
@@ -225,8 +225,8 @@ const AttendanceNumberMigrationModal: React.FC<AttendanceNumberMigrationModalPro
                   {studentsWithoutAttendance > 0 && (
                     <div className="bg-white border border-gray-200 overflow-hidden">
                       <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                        <TrendingUp className="w-3 h-3 text-[#081429]" />
-                        <h3 className="text-[#081429] font-bold text-xs">생성 미리보기</h3>
+                        <TrendingUp className="w-3 h-3 text-primary" />
+                        <h3 className="text-primary font-bold text-xs">생성 미리보기</h3>
                       </div>
                       <div className="p-3">
                         <p className="text-xs text-gray-600 mb-2 font-medium">
@@ -238,7 +238,7 @@ const AttendanceNumberMigrationModal: React.FC<AttendanceNumberMigrationModalPro
                             .map(([id, number], idx) => (
                               <div key={id} className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded-sm">
                                 <span className="text-gray-400 w-5">{idx + 1}.</span>
-                                <span className="font-mono font-bold text-[#fdb813]">{number}</span>
+                                <span className="font-mono font-bold text-accent">{number}</span>
                                 <span className="text-gray-400 text-xxs">({id})</span>
                               </div>
                             ))}
@@ -250,8 +250,8 @@ const AttendanceNumberMigrationModal: React.FC<AttendanceNumberMigrationModalPro
                   {/* Section 4: 주의사항 */}
                   <div className="bg-white border border-gray-200 overflow-hidden">
                     <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                      <AlertTriangle className="w-3 h-3 text-[#081429]" />
-                      <h3 className="text-[#081429] font-bold text-xs">주의사항</h3>
+                      <AlertTriangle className="w-3 h-3 text-primary" />
+                      <h3 className="text-primary font-bold text-xs">주의사항</h3>
                     </div>
                     <div className="p-3">
                       <div className="bg-yellow-50 border border-yellow-200 rounded-sm p-3">
@@ -283,19 +283,19 @@ const AttendanceNumberMigrationModal: React.FC<AttendanceNumberMigrationModalPro
               {/* Section 1: 진행 상황 */}
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                  <Loader2 className="w-3 h-3 text-[#081429] animate-spin" />
-                  <h3 className="text-[#081429] font-bold text-xs">진행 상황</h3>
+                  <Loader2 className="w-3 h-3 text-primary animate-spin" />
+                  <h3 className="text-primary font-bold text-xs">진행 상황</h3>
                 </div>
                 <div className="p-6">
                   <div className="text-center space-y-4">
-                    <Loader2 className="w-16 h-16 animate-spin text-[#fdb813] mx-auto" />
+                    <Loader2 className="w-16 h-16 animate-spin text-accent mx-auto" />
                     <div>
                       <h3 className="text-xl font-bold text-gray-900 mb-2">출결번호 생성 중...</h3>
                       <p className="text-gray-600 text-sm">잠시만 기다려주세요.</p>
                     </div>
                     <div className="w-full bg-gray-200 rounded-sm h-3 overflow-hidden">
                       <div
-                        className="bg-[#fdb813] h-full transition-all duration-300 rounded-sm"
+                        className="bg-accent h-full transition-all duration-300 rounded-sm"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
@@ -313,7 +313,7 @@ const AttendanceNumberMigrationModal: React.FC<AttendanceNumberMigrationModalPro
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
                   <Check className="w-3 h-3 text-green-600" />
-                  <h3 className="text-[#081429] font-bold text-xs">결과 요약</h3>
+                  <h3 className="text-primary font-bold text-xs">결과 요약</h3>
                 </div>
                 <div className="p-6">
                   <div className="text-center space-y-4">
@@ -321,7 +321,7 @@ const AttendanceNumberMigrationModal: React.FC<AttendanceNumberMigrationModalPro
                       <Check className="w-10 h-10 text-green-600" strokeWidth={3} />
                     </div>
                     <div>
-                      <h3 className="text-2xl font-bold text-[#081429]">출결번호 생성 완료!</h3>
+                      <h3 className="text-2xl font-bold text-primary">출결번호 생성 완료!</h3>
                       <p className="text-gray-600 mt-2">
                         <span className="text-green-600 font-bold">{studentsWithoutAttendance}명</span>의 학생에게 출결번호가 생성되었습니다.
                       </p>
@@ -333,8 +333,8 @@ const AttendanceNumberMigrationModal: React.FC<AttendanceNumberMigrationModalPro
               {/* Section 2: 완료 상세 */}
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                  <Info className="w-3 h-3 text-[#081429]" />
-                  <h3 className="text-[#081429] font-bold text-xs">완료 상세</h3>
+                  <Info className="w-3 h-3 text-primary" />
+                  <h3 className="text-primary font-bold text-xs">완료 상세</h3>
                 </div>
                 <div className="p-3">
                   <div className="bg-green-50 border border-green-200 rounded-sm p-3">
@@ -375,7 +375,7 @@ const AttendanceNumberMigrationModal: React.FC<AttendanceNumberMigrationModalPro
                 className={`px-4 py-2 rounded-sm transition-colors flex items-center gap-2 font-bold ${
                   loading || studentsWithoutAttendance === 0
                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-[#fdb813] text-[#081429] hover:bg-[#fdb813]/90'
+                    : 'bg-accent text-primary hover:bg-accent/90'
                 }`}
               >
                 <Hash size={16} />
@@ -387,7 +387,7 @@ const AttendanceNumberMigrationModal: React.FC<AttendanceNumberMigrationModalPro
           {step === 'done' && (
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-[#081429] text-white hover:bg-[#081429]/90 rounded-sm transition-colors"
+              className="px-4 py-2 bg-primary text-white hover:bg-primary/90 rounded-sm transition-colors"
             >
               닫기
             </button>

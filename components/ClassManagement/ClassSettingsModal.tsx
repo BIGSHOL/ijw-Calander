@@ -278,7 +278,7 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
                 onClick={() => setActiveTab('general')}
                 className={`px-4 py-2 font-bold text-xs transition-all border-b-2 ${
                     activeTab === 'general'
-                        ? 'border-[#fdb813] text-[#081429]'
+                        ? 'border-accent text-primary'
                         : 'border-transparent text-gray-400 hover:text-gray-600'
                 }`}
             >
@@ -291,7 +291,7 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
                 onClick={() => setActiveTab('room')}
                 className={`px-4 py-2 font-bold text-xs transition-all border-b-2 ${
                     activeTab === 'room'
-                        ? 'border-[#fdb813] text-[#081429]'
+                        ? 'border-accent text-primary'
                         : 'border-transparent text-gray-400 hover:text-gray-600'
                 }`}
             >
@@ -309,8 +309,8 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
             {/* Section 1: 수업 키워드 관리 */}
             <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
-                    <Hash className="w-3 h-3 text-[#081429]" />
-                    <h3 className="text-[#081429] font-bold text-xs">수업 키워드 관리</h3>
+                    <Hash className="w-3 h-3 text-primary" />
+                    <h3 className="text-primary font-bold text-xs">수업 키워드 관리</h3>
                 </div>
                 <div className="px-1.5 py-1">
                     <p className="text-xs text-gray-500 mb-3">
@@ -390,8 +390,8 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
             {canEdit && (
                 <div className="bg-white border border-gray-200 overflow-hidden">
                     <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                        <Plus className="w-3 h-3 text-[#081429]" />
-                        <h3 className="text-[#081429] font-bold text-xs">키워드 추가</h3>
+                        <Plus className="w-3 h-3 text-primary" />
+                        <h3 className="text-primary font-bold text-xs">키워드 추가</h3>
                     </div>
                     <div className="px-1.5 py-1">
                         <div className="flex items-end gap-2">
@@ -402,7 +402,7 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
                                     placeholder="예: Phonics"
                                     value={newKeyword}
                                     onChange={(e) => setNewKeyword(e.target.value)}
-                                    className="w-full px-2 py-1 border border-gray-200 rounded text-xs focus:border-[#fdb813] outline-none"
+                                    className="w-full px-2 py-1 border border-gray-200 rounded text-xs focus:border-accent outline-none"
                                     onKeyDown={(e) => e.key === 'Enter' && handleAddKeyword()}
                                 />
                             </div>
@@ -432,7 +432,7 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
                             </div>
                             <button
                                 onClick={handleAddKeyword}
-                                className="px-3 py-1 bg-[#081429] text-white rounded text-xs font-bold hover:brightness-110 whitespace-nowrap"
+                                className="px-3 py-1 bg-primary text-white rounded text-xs font-bold hover:brightness-110 whitespace-nowrap"
                             >
                                 추가
                             </button>
@@ -444,8 +444,8 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
             {/* Section 3: 스케줄 표기 방식 */}
             <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
-                    <Clock className="w-3 h-3 text-[#081429]" />
-                    <h3 className="text-[#081429] font-bold text-xs">스케줄 표기 방식</h3>
+                    <Clock className="w-3 h-3 text-primary" />
+                    <h3 className="text-primary font-bold text-xs">스케줄 표기 방식</h3>
                 </div>
                 <div className="px-1.5 py-1">
                     <p className="text-xs text-gray-500 mb-3">
@@ -459,7 +459,7 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
                             {/* 수학 */}
                             <div className="flex items-center justify-between p-2 bg-amber-50 rounded-sm border border-amber-200">
                                 <div className="flex items-center gap-2">
-                                    <span className="px-1.5 py-0.5 bg-[#fdb813] text-[#081429] rounded text-xs font-bold">수학</span>
+                                    <span className="px-1.5 py-0.5 bg-accent text-primary rounded text-xs font-bold">수학</span>
                                     <span className="text-xs text-gray-600">
                                         {scheduleDisplay.math === 'period' ? '월목 4교시' : '월목 20:10~22:00'}
                                     </span>
@@ -470,7 +470,7 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
                                         disabled={!canEdit}
                                         className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
                                             scheduleDisplay.math === 'period'
-                                                ? 'bg-[#081429] text-white'
+                                                ? 'bg-primary text-white'
                                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                         } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
@@ -482,7 +482,7 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
                                         disabled={!canEdit}
                                         className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
                                             scheduleDisplay.math === 'time'
-                                                ? 'bg-[#081429] text-white'
+                                                ? 'bg-primary text-white'
                                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                         } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
@@ -495,7 +495,7 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
                             {/* 영어 */}
                             <div className="flex items-center justify-between p-2 bg-slate-50 rounded-sm border border-slate-200">
                                 <div className="flex items-center gap-2">
-                                    <span className="px-1.5 py-0.5 bg-[#081429] text-white rounded text-xs font-bold">영어</span>
+                                    <span className="px-1.5 py-0.5 bg-primary text-white rounded text-xs font-bold">영어</span>
                                     <span className="text-xs text-gray-600">
                                         {scheduleDisplay.english === 'period' ? '월목 1~3교시' : '월목 14:20~16:20'}
                                     </span>
@@ -506,7 +506,7 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
                                         disabled={!canEdit}
                                         className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
                                             scheduleDisplay.english === 'period'
-                                                ? 'bg-[#081429] text-white'
+                                                ? 'bg-primary text-white'
                                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                         } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
@@ -518,7 +518,7 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
                                         disabled={!canEdit}
                                         className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
                                             scheduleDisplay.english === 'time'
-                                                ? 'bg-[#081429] text-white'
+                                                ? 'bg-primary text-white'
                                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                         } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
@@ -540,8 +540,8 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
             {/* Section 1: 사용 가능한 강의실 */}
             <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
-                    <DoorOpen className="w-3 h-3 text-[#081429]" />
-                    <h3 className="text-[#081429] font-bold text-xs">사용 가능한 강의실</h3>
+                    <DoorOpen className="w-3 h-3 text-primary" />
+                    <h3 className="text-primary font-bold text-xs">사용 가능한 강의실</h3>
                 </div>
                 <div className="px-1.5 py-1">
                     <p className="text-xs text-gray-500 mb-3">
@@ -579,8 +579,8 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
             {/* Section 2: 실습실 설정 */}
             <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
-                    <FlaskConical className="w-3 h-3 text-[#081429]" />
-                    <h3 className="text-[#081429] font-bold text-xs">실습실 설정</h3>
+                    <FlaskConical className="w-3 h-3 text-primary" />
+                    <h3 className="text-primary font-bold text-xs">실습실 설정</h3>
                 </div>
                 <div className="px-1.5 py-1">
                     <p className="text-xs text-gray-500 mb-3">
@@ -627,8 +627,8 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
             {/* Section 3: 강의실 순서 */}
             <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
-                    <Settings className="w-3 h-3 text-[#081429]" />
-                    <h3 className="text-[#081429] font-bold text-xs">강의실 순서</h3>
+                    <Settings className="w-3 h-3 text-primary" />
+                    <h3 className="text-primary font-bold text-xs">강의실 순서</h3>
                 </div>
                 <div className="px-1.5 py-1">
                     <p className="text-xs text-gray-500 mb-3">
@@ -713,8 +713,8 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-2 py-1.5 border-b border-gray-200">
-                    <h2 className="text-sm font-bold text-[#081429] flex items-center gap-1.5">
-                        <Settings size={16} className="text-[#081429]" />
+                    <h2 className="text-sm font-bold text-primary flex items-center gap-1.5">
+                        <Settings size={16} className="text-primary" />
                         수업 설정
                     </h2>
                     <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">

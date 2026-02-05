@@ -247,8 +247,8 @@ const LevelSettingsModal: React.FC<LevelSettingsModalProps> = ({ isOpen, onClose
                     {/* Section 1: 레벨 목록 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <GraduationCap className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">레벨 목록</h3>
+                            <GraduationCap className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">레벨 목록</h3>
                             <span className="text-xxs text-gray-400 ml-1">({levels.length}개)</span>
                         </div>
                         <div className="p-2">
@@ -291,13 +291,13 @@ const LevelSettingsModal: React.FC<LevelSettingsModalProps> = ({ isOpen, onClose
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
                             {editId ? (
                                 <>
-                                    <Edit2 className="w-3 h-3 text-[#081429]" />
-                                    <h3 className="text-[#081429] font-bold text-xs">레벨 수정</h3>
+                                    <Edit2 className="w-3 h-3 text-primary" />
+                                    <h3 className="text-primary font-bold text-xs">레벨 수정</h3>
                                 </>
                             ) : (
                                 <>
-                                    <Plus className="w-3 h-3 text-[#081429]" />
-                                    <h3 className="text-[#081429] font-bold text-xs">레벨 추가</h3>
+                                    <Plus className="w-3 h-3 text-primary" />
+                                    <h3 className="text-primary font-bold text-xs">레벨 추가</h3>
                                 </>
                             )}
                         </div>
@@ -346,8 +346,8 @@ const LevelSettingsModal: React.FC<LevelSettingsModalProps> = ({ isOpen, onClose
                     {/* Section 3: 작업 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <Settings className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">작업</h3>
+                            <Settings className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">작업</h3>
                         </div>
                         <div className="p-2">
                             <button

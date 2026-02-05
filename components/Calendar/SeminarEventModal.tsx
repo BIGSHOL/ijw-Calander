@@ -266,7 +266,7 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
       <div className="bg-white rounded-sm shadow-xl max-w-3xl p-0 relative max-h-[85vh] flex flex-col overflow-hidden border border-gray-200" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-          <h2 className="text-sm font-bold text-[#081429] flex items-center gap-2">
+          <h2 className="text-sm font-bold text-primary flex items-center gap-2">
             <Mic size={18} className="text-purple-500" />
             {isViewMode ? '세미나 상세' : (existingEvent ? '세미나 수정' : '새 세미나 추가')}
           </h2>
@@ -305,12 +305,12 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
                   <Calendar className="w-3 h-3 text-purple-600" />
-                  <h3 className="text-[#081429] font-bold text-xs">기본 정보</h3>
+                  <h3 className="text-primary font-bold text-xs">기본 정보</h3>
                 </div>
                 <div className="divide-y divide-gray-100">
                   {/* Title Row */}
                   <div className="flex items-center gap-2 px-2 py-1.5">
-                    <span className="w-12 shrink-0 text-xs font-medium text-[#373d41]">제목 <span className="text-red-500">*</span></span>
+                    <span className="w-12 shrink-0 text-xs font-medium text-primary-700">제목 <span className="text-red-500">*</span></span>
                     <input
                       type="text"
                       required
@@ -327,7 +327,7 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-1">
                         <Clock className="w-3 h-3 text-gray-400" />
-                        <span className="text-xs font-medium text-[#373d41]">일시 <span className="text-red-500">*</span></span>
+                        <span className="text-xs font-medium text-primary-700">일시 <span className="text-red-500">*</span></span>
                       </div>
                       <label className="flex items-center gap-1.5 cursor-pointer">
                         <input
@@ -385,7 +385,7 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
 
                   {/* Description Row */}
                   <div className="px-2 py-1.5">
-                    <span className="text-xs font-medium text-[#373d41] block mb-1 flex items-center gap-1">
+                    <span className="text-xs font-medium text-primary-700 block mb-1 flex items-center gap-1">
                       <AlignLeft className="w-3 h-3 text-gray-400" />
                       세미나 소개
                     </span>
@@ -404,13 +404,13 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
                   <Tag className="w-3 h-3 text-purple-600" />
-                  <h3 className="text-[#081429] font-bold text-xs">부서 및 태그</h3>
+                  <h3 className="text-primary font-bold text-xs">부서 및 태그</h3>
                 </div>
                 <div className="divide-y divide-gray-100">
                   {/* Department Row */}
                   <div className="px-2 py-1.5">
                     <div className="flex items-center gap-2">
-                      <span className="w-12 shrink-0 text-xs font-medium text-[#373d41]">부서 <span className="text-red-500">*</span></span>
+                      <span className="w-12 shrink-0 text-xs font-medium text-primary-700">부서 <span className="text-red-500">*</span></span>
                       <div className="flex-1 relative">
                         <button
                           type="button"
@@ -452,7 +452,7 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
 
                   {/* Color Pickers Row */}
                   <div className="flex items-center gap-2 px-2 py-1.5">
-                    <span className="w-12 shrink-0 text-xs font-medium text-[#373d41]">색상</span>
+                    <span className="w-12 shrink-0 text-xs font-medium text-primary-700">색상</span>
                     <div className="flex gap-3 items-center">
                       <div className="flex flex-col gap-0.5 items-center">
                         <input
@@ -501,12 +501,12 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
                   <Mic className="w-3 h-3 text-purple-600" />
-                  <h3 className="text-[#081429] font-bold text-xs">강연자 정보</h3>
+                  <h3 className="text-primary font-bold text-xs">강연자 정보</h3>
                 </div>
                 <div className="divide-y divide-gray-100">
                   {/* Speaker Name Row */}
                   <div className="flex items-center gap-2 px-2 py-1.5">
-                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">발표자</span>
+                    <span className="w-16 shrink-0 text-xs font-medium text-primary-700">발표자</span>
                     <input
                       type="text"
                       value={speaker}
@@ -519,7 +519,7 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
 
                   {/* Speaker Bio Row */}
                   <div className="px-2 py-1.5">
-                    <span className="text-xs font-medium text-[#373d41] block mb-1">발표자 소개</span>
+                    <span className="text-xs font-medium text-primary-700 block mb-1">발표자 소개</span>
                     <textarea
                       value={speakerBio}
                       disabled={isViewMode || !canEditCurrent}
@@ -535,13 +535,13 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
                   <UserCheck className="w-3 h-3 text-purple-600" />
-                  <h3 className="text-[#081429] font-bold text-xs">운영 정보</h3>
+                  <h3 className="text-primary font-bold text-xs">운영 정보</h3>
                 </div>
                 <div className="divide-y divide-gray-100">
                   {/* Manager & Contact Row */}
                   <div className="grid grid-cols-2 gap-2 px-2 py-1.5">
                     <div>
-                      <span className="text-xs font-medium text-[#373d41] block mb-1">담당자</span>
+                      <span className="text-xs font-medium text-primary-700 block mb-1">담당자</span>
                       <input
                         type="text"
                         value={manager}
@@ -552,7 +552,7 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
                       />
                     </div>
                     <div>
-                      <span className="text-xs font-medium text-[#373d41] block mb-1 flex items-center gap-1">
+                      <span className="text-xs font-medium text-primary-700 block mb-1 flex items-center gap-1">
                         <Mail className="w-3 h-3 text-gray-400" />
                         연락처
                       </span>
@@ -570,7 +570,7 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
                   {/* Venue & Max Attendees Row */}
                   <div className="grid grid-cols-2 gap-2 px-2 py-1.5">
                     <div>
-                      <span className="text-xs font-medium text-[#373d41] block mb-1 flex items-center gap-1">
+                      <span className="text-xs font-medium text-primary-700 block mb-1 flex items-center gap-1">
                         <MapPin className="w-3 h-3 text-gray-400" />
                         장소
                       </span>
@@ -584,7 +584,7 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
                       />
                     </div>
                     <div>
-                      <span className="text-xs font-medium text-[#373d41] block mb-1 flex items-center gap-1">
+                      <span className="text-xs font-medium text-primary-700 block mb-1 flex items-center gap-1">
                         <Users className="w-3 h-3 text-gray-400" />
                         최대 인원
                       </span>
@@ -606,12 +606,12 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
                   <FileText className="w-3 h-3 text-purple-600" />
-                  <h3 className="text-[#081429] font-bold text-xs">자료 및 링크</h3>
+                  <h3 className="text-primary font-bold text-xs">자료 및 링크</h3>
                 </div>
                 <div className="divide-y divide-gray-100">
                   {/* Materials Row */}
                   <div className="px-2 py-1.5">
-                    <span className="text-xs font-medium text-[#373d41] block mb-1">자료 링크</span>
+                    <span className="text-xs font-medium text-primary-700 block mb-1">자료 링크</span>
                     <div className="flex gap-2 mb-2">
                       <input
                         type="text"
@@ -662,7 +662,7 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
                   {/* Registration Deadline & Public Toggle Row */}
                   <div className="px-2 py-1.5">
                     <div className="mb-2">
-                      <span className="text-xs font-medium text-[#373d41] block mb-1 flex items-center gap-1">
+                      <span className="text-xs font-medium text-primary-700 block mb-1 flex items-center gap-1">
                         <Calendar className="w-3 h-3 text-gray-400" />
                         등록 마감일
                       </span>
@@ -704,7 +704,7 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
                   <UserCheck className="w-3 h-3 text-purple-600" />
-                  <h3 className="text-[#081429] font-bold text-xs">참가 신청 설정</h3>
+                  <h3 className="text-primary font-bold text-xs">참가 신청 설정</h3>
                 </div>
                 <div className="p-3">
                   <div className="grid grid-cols-3 gap-3">
@@ -730,7 +730,7 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
                   <Users className="w-3 h-3 text-purple-600" />
-                  <h3 className="text-[#081429] font-bold text-xs">참가자 목록</h3>
+                  <h3 className="text-primary font-bold text-xs">참가자 목록</h3>
                 </div>
                 <div className="p-3">
                   {attendees.length === 0 ? (

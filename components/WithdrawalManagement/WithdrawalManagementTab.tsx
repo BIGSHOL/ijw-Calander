@@ -92,7 +92,7 @@ const WithdrawalManagementTab: React.FC<WithdrawalManagementTabProps> = ({ curre
   return (
     <div className="flex flex-col h-full bg-gray-50">
       {/* 상단 필터 바 */}
-      <div className="bg-white border-b px-3 py-2 space-y-2" style={{ borderColor: '#08142915' }}>
+      <div className="bg-white border-b px-3 py-2 space-y-2" style={{ borderColor: 'rgba(8, 20, 41, 0.15)' }}>
         {/* 검색 + 필터 토글 + 새로고침 */}
         <div className="flex items-center gap-2">
           <div className="flex-1 relative">
@@ -102,8 +102,8 @@ const WithdrawalManagementTab: React.FC<WithdrawalManagementTabProps> = ({ curre
               value={filters.search}
               onChange={(e) => updateFilter('search', e.target.value)}
               placeholder="이름 검색..."
-              className="w-full pl-7 pr-7 py-1.5 text-xs border rounded-sm focus:outline-none focus:ring-1 focus:ring-[#081429] focus:border-[#081429]"
-              style={{ borderColor: '#08142920' }}
+              className="w-full pl-7 pr-7 py-1.5 text-xs border rounded-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+              style={{ borderColor: 'rgba(8, 20, 41, 0.2)' }}
             />
             {filters.search && (
               <button
@@ -118,8 +118,8 @@ const WithdrawalManagementTab: React.FC<WithdrawalManagementTabProps> = ({ curre
             onClick={() => setShowFilters(v => !v)}
             className={`flex items-center gap-1 px-2 py-1.5 text-xs rounded-sm border transition-colors ${
               showFilters || activeFilterCount > 0
-                ? 'bg-[#081429] text-white border-[#081429]'
-                : 'bg-white text-[#081429] border-gray-300 hover:bg-gray-50'
+                ? 'bg-primary text-white border-primary'
+                : 'bg-white text-primary border-gray-300 hover:bg-gray-50'
             }`}
           >
             <Filter className="w-3.5 h-3.5" />
@@ -147,8 +147,8 @@ const WithdrawalManagementTab: React.FC<WithdrawalManagementTabProps> = ({ curre
             <select
               value={filters.entryType}
               onChange={(e) => updateFilter('entryType', e.target.value)}
-              className="text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#081429]"
-              style={{ borderColor: '#08142920' }}
+              className="text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+              style={{ borderColor: 'rgba(8, 20, 41, 0.2)' }}
             >
               {ENTRY_TYPE_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -159,8 +159,8 @@ const WithdrawalManagementTab: React.FC<WithdrawalManagementTabProps> = ({ curre
             <select
               value={filters.subject}
               onChange={(e) => updateFilter('subject', e.target.value)}
-              className="text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#081429]"
-              style={{ borderColor: '#08142920' }}
+              className="text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+              style={{ borderColor: 'rgba(8, 20, 41, 0.2)' }}
             >
               {SUBJECT_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -171,8 +171,8 @@ const WithdrawalManagementTab: React.FC<WithdrawalManagementTabProps> = ({ curre
             <select
               value={filters.staffId}
               onChange={(e) => updateFilter('staffId', e.target.value)}
-              className="text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#081429]"
-              style={{ borderColor: '#08142920' }}
+              className="text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+              style={{ borderColor: 'rgba(8, 20, 41, 0.2)' }}
             >
               <option value="">전체 강사</option>
               {teacherOptions.map(opt => (
@@ -184,8 +184,8 @@ const WithdrawalManagementTab: React.FC<WithdrawalManagementTabProps> = ({ curre
             <select
               value={filters.reason}
               onChange={(e) => updateFilter('reason', e.target.value)}
-              className="text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#081429]"
-              style={{ borderColor: '#08142920' }}
+              className="text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+              style={{ borderColor: 'rgba(8, 20, 41, 0.2)' }}
             >
               {WITHDRAWAL_REASONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -198,16 +198,16 @@ const WithdrawalManagementTab: React.FC<WithdrawalManagementTabProps> = ({ curre
                 type="date"
                 value={filters.dateFrom}
                 onChange={(e) => updateFilter('dateFrom', e.target.value)}
-                className="flex-1 text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#081429]"
-                style={{ borderColor: '#08142920' }}
+                className="flex-1 text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+                style={{ borderColor: 'rgba(8, 20, 41, 0.2)' }}
               />
               <span className="text-xs text-gray-400">~</span>
               <input
                 type="date"
                 value={filters.dateTo}
                 onChange={(e) => updateFilter('dateTo', e.target.value)}
-                className="flex-1 text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#081429]"
-                style={{ borderColor: '#08142920' }}
+                className="flex-1 text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+                style={{ borderColor: 'rgba(8, 20, 41, 0.2)' }}
               />
             </div>
 
@@ -215,8 +215,8 @@ const WithdrawalManagementTab: React.FC<WithdrawalManagementTabProps> = ({ curre
             <select
               value={filters.sortBy}
               onChange={(e) => updateFilter('sortBy', e.target.value as 'withdrawalDate' | 'name')}
-              className="text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#081429]"
-              style={{ borderColor: '#08142920' }}
+              className="text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+              style={{ borderColor: 'rgba(8, 20, 41, 0.2)' }}
             >
               {SORT_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -249,7 +249,7 @@ const WithdrawalManagementTab: React.FC<WithdrawalManagementTabProps> = ({ curre
       {/* 메인 콘텐츠: 좌측 목록 + 우측 상세 */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* 좌측 목록 */}
-        <div className={`${selectedEntry ? 'hidden md:flex' : 'flex'} md:w-[30%] flex-col border-r overflow-hidden`} style={{ borderColor: '#08142910' }}>
+        <div className={`${selectedEntry ? 'hidden md:flex' : 'flex'} md:w-[30%] flex-col border-r overflow-hidden`} style={{ borderColor: 'rgba(8, 20, 41, 0.1)' }}>
           <WithdrawalStudentList
             entries={filteredEntries}
             selectedEntry={selectedEntry}
@@ -262,14 +262,14 @@ const WithdrawalManagementTab: React.FC<WithdrawalManagementTabProps> = ({ curre
           {selectedEntry ? (
             <>
               {/* 모바일 뒤로가기 */}
-              <div className="md:hidden flex items-center gap-2 px-3 py-2 border-b bg-white" style={{ borderColor: '#08142915' }}>
+              <div className="md:hidden flex items-center gap-2 px-3 py-2 border-b bg-white" style={{ borderColor: 'rgba(8, 20, 41, 0.15)' }}>
                 <button
                   onClick={() => setSelectedEntry(null)}
                   className="p-1 hover:bg-gray-100 rounded-sm transition-colors"
                 >
-                  <ArrowLeft className="w-4 h-4" style={{ color: '#081429' }} />
+                  <ArrowLeft className="w-4 h-4" style={{ color: 'rgb(8, 20, 41)' /* primary */ }} />
                 </button>
-                <span className="text-xs font-medium" style={{ color: '#081429' }}>{selectedEntry.student.name}</span>
+                <span className="text-xs font-medium" style={{ color: 'rgb(8, 20, 41)' /* primary */ }}>{selectedEntry.student.name}</span>
               </div>
               <WithdrawalStudentDetail
                 entry={selectedEntry}

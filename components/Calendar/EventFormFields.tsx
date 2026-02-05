@@ -154,20 +154,20 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
       {/* Section 1: 기본 정보 (제목, 부서) */}
       <div className="bg-white border border-gray-200 overflow-hidden">
         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-          <Type className="w-3 h-3 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-xs">기본 정보</h3>
+          <Type className="w-3 h-3 text-primary" />
+          <h3 className="text-primary font-bold text-xs">기본 정보</h3>
         </div>
         <div className="divide-y divide-gray-100">
           {/* Title Row */}
           <div className="flex items-center gap-2 px-2 py-1.5">
-            <span className="w-12 shrink-0 text-xs font-medium text-[#373d41]">제목 <span className="text-red-500">*</span></span>
+            <span className="w-12 shrink-0 text-xs font-medium text-primary-700">제목 <span className="text-red-500">*</span></span>
             <input
               type="text"
               required
               value={title}
               disabled={isViewMode || !canEditCurrent}
               onChange={(e) => setTitle(e.target.value)}
-              className={`flex-1 px-2 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+              className={`flex-1 px-2 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
               placeholder="일정 제목을 입력하세요"
             />
           </div>
@@ -175,12 +175,12 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
           {/* Department Row */}
           <div className="px-2 py-1.5">
             <div className="flex items-center gap-2">
-              <span className="w-12 shrink-0 text-xs font-medium text-[#373d41]">부서</span>
+              <span className="w-12 shrink-0 text-xs font-medium text-primary-700">부서</span>
               <div className="flex-1 relative">
                 <button
                   type="button"
                   onClick={() => setIsDeptDropdownOpen(!isDeptDropdownOpen)}
-                  className="w-full text-left px-2 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] bg-white flex justify-between items-center outline-none"
+                  className="w-full text-left px-2 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent bg-white flex justify-between items-center outline-none"
                 >
                   <span className={`text-xs ${departmentIds.length === 0 ? 'text-gray-400' : 'text-gray-800'}`}>
                     {departmentIds.length === 0
@@ -228,7 +228,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
                             }}
                             className="w-3.5 h-3.5 rounded border-gray-300 accent-[#081429]"
                           />
-                          <span className={`text-xs ${isSelected ? 'font-bold text-[#081429]' : 'text-gray-700'}`}>
+                          <span className={`text-xs ${isSelected ? 'font-bold text-primary' : 'text-gray-700'}`}>
                             {dept.name}
                           </span>
                           {!hasEditAccess && hasViewAccess && (
@@ -252,8 +252,8 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
       <div className="bg-white border border-gray-200 overflow-hidden">
         <div className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200">
           <div className="flex items-center gap-1">
-            <Clock className="w-3 h-3 text-[#081429]" />
-            <h3 className="text-[#081429] font-bold text-xs">일시</h3>
+            <Clock className="w-3 h-3 text-primary" />
+            <h3 className="text-primary font-bold text-xs">일시</h3>
           </div>
           <label className="flex items-center gap-1.5 cursor-pointer">
             <input
@@ -261,7 +261,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
               checked={isAllDay}
               disabled={isViewMode || !canEditCurrent}
               onChange={(e) => setIsAllDay(e.target.checked)}
-              className="w-3 h-3 rounded text-[#fdb813] focus:ring-[#fdb813] border-gray-300"
+              className="w-3 h-3 rounded text-accent focus:ring-accent border-gray-300"
             />
             <span className="text-xxs text-gray-500">하루종일</span>
           </label>
@@ -283,7 +283,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
                     setEndDate(newDate);
                   }
                 }}
-                className={`w-32 px-2 py-1 border border-gray-300 focus:ring-1 focus:ring-[#fdb813] outline-none text-xs ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                className={`w-32 px-2 py-1 border border-gray-300 focus:ring-1 focus:ring-accent outline-none text-xs ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
               />
               <input
                 type="time"
@@ -291,7 +291,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
                 value={startTime}
                 disabled={isViewMode || !canEditCurrent || isAllDay}
                 onChange={(e) => setStartTime(e.target.value)}
-                className={`w-24 px-2 py-1 border border-gray-300 focus:ring-1 focus:ring-[#fdb813] outline-none text-xs ${(!canEditCurrent || isAllDay) ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                className={`w-24 px-2 py-1 border border-gray-300 focus:ring-1 focus:ring-accent outline-none text-xs ${(!canEditCurrent || isAllDay) ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
               />
             </div>
 
@@ -307,7 +307,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
                 disabled={isViewMode || !canEditCurrent}
                 onChange={(e) => setEndDate(e.target.value)}
                 min={startDate}
-                className={`w-32 px-2 py-1 border border-gray-300 focus:ring-1 focus:ring-[#fdb813] outline-none text-xs ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                className={`w-32 px-2 py-1 border border-gray-300 focus:ring-1 focus:ring-accent outline-none text-xs ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
               />
               <input
                 type="time"
@@ -315,7 +315,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
                 value={endTime}
                 disabled={isViewMode || !canEditCurrent || isAllDay}
                 onChange={(e) => setEndTime(e.target.value)}
-                className={`w-24 px-2 py-1 border border-gray-300 focus:ring-1 focus:ring-[#fdb813] outline-none text-xs ${(!canEditCurrent || isAllDay) ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                className={`w-24 px-2 py-1 border border-gray-300 focus:ring-1 focus:ring-accent outline-none text-xs ${(!canEditCurrent || isAllDay) ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
               />
             </div>
           </div>
@@ -325,18 +325,18 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
       {/* Section 3: 상세 정보 */}
       <div className="bg-white border border-gray-200 overflow-hidden">
         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-          <AlignLeft className="w-3 h-3 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-xs">상세 정보</h3>
+          <AlignLeft className="w-3 h-3 text-primary" />
+          <h3 className="text-primary font-bold text-xs">상세 정보</h3>
         </div>
         <div className="divide-y divide-gray-100">
           {/* Description Row */}
           <div className="px-2 py-1.5">
-            <span className="text-xs font-medium text-[#373d41] block mb-1">내용</span>
+            <span className="text-xs font-medium text-primary-700 block mb-1">내용</span>
             <textarea
               value={description}
               disabled={isViewMode || !canEditCurrent}
               onChange={(e) => setDescription(e.target.value)}
-              className={`w-full px-2 py-1 border border-gray-300 focus:ring-1 focus:ring-[#fdb813] outline-none min-h-[80px] resize-y text-xs ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+              className={`w-full px-2 py-1 border border-gray-300 focus:ring-1 focus:ring-accent outline-none min-h-[80px] resize-y text-xs ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
               placeholder="일정의 자세한 내용을 입력하세요"
             />
           </div>
@@ -344,7 +344,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
           {/* Reference URL Row */}
           <div className="flex items-center gap-2 px-2 py-1.5">
             <LinkIcon className="w-3 h-3 text-gray-400 shrink-0" />
-            <span className="w-10 shrink-0 text-xs font-medium text-[#373d41]">링크</span>
+            <span className="w-10 shrink-0 text-xs font-medium text-primary-700">링크</span>
             {isViewMode && referenceUrl ? (
               <a
                 href={referenceUrl.startsWith('http') ? referenceUrl : `https://${referenceUrl}`}
@@ -360,7 +360,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
                 value={referenceUrl}
                 disabled={isViewMode || !canEditCurrent}
                 onChange={(e) => setReferenceUrl(e.target.value)}
-                className={`flex-1 px-2 py-1 border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none text-xs ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                className={`flex-1 px-2 py-1 border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none text-xs ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
                 placeholder="Notion, 구글 시트 URL 등"
               />
             )}
@@ -371,13 +371,13 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
       {/* Section 4: 표시 설정 (색상, 반복, 해시태그) */}
       <div className="bg-white border border-gray-200 overflow-hidden">
         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-          <Palette className="w-3 h-3 text-[#081429]" />
-          <h3 className="text-[#081429] font-bold text-xs">표시 설정</h3>
+          <Palette className="w-3 h-3 text-primary" />
+          <h3 className="text-primary font-bold text-xs">표시 설정</h3>
         </div>
         <div className="divide-y divide-gray-100">
           {/* Color Pickers Row */}
           <div className="flex items-center gap-2 px-2 py-1.5">
-            <span className="w-12 shrink-0 text-xs font-medium text-[#373d41]">색상</span>
+            <span className="w-12 shrink-0 text-xs font-medium text-primary-700">색상</span>
             <div className="flex gap-3 items-center">
               <div className="flex flex-col gap-0.5 items-center">
                 <input
@@ -419,11 +419,11 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
           {!existingEvent && (
             <div className="flex items-center gap-2 px-2 py-1.5">
               <RefreshCw className="w-3 h-3 text-gray-400 shrink-0" />
-              <span className="w-10 shrink-0 text-xs font-medium text-[#373d41]">반복</span>
+              <span className="w-10 shrink-0 text-xs font-medium text-primary-700">반복</span>
               <select
                 value={recurrenceType}
                 onChange={(e) => setRecurrenceType(e.target.value as any)}
-                className="flex-1 px-2 py-1 border border-gray-300 focus:ring-1 focus:ring-[#fdb813] outline-none text-xs bg-white max-w-[120px]"
+                className="flex-1 px-2 py-1 border border-gray-300 focus:ring-1 focus:ring-accent outline-none text-xs bg-white max-w-[120px]"
               >
                 <option value="none">반복 없음</option>
                 <option value="daily">매일</option>
@@ -438,7 +438,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
                   <select
                     value={recurrenceCount}
                     onChange={(e) => setRecurrenceCount(Number(e.target.value))}
-                    className="w-16 px-2 py-1 border border-gray-300 focus:ring-1 focus:ring-[#fdb813] outline-none text-xs bg-white"
+                    className="w-16 px-2 py-1 border border-gray-300 focus:ring-1 focus:ring-accent outline-none text-xs bg-white"
                   >
                     {Array.from({ length: 30 }, (_, i) => i + 1).map(n => (
                       <option key={n} value={n}>{n}회</option>
@@ -453,7 +453,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
           {/* Hashtags Row */}
           <div className="flex items-start gap-2 px-2 py-1.5">
             <Hash className="w-3 h-3 text-gray-400 shrink-0 mt-1" />
-            <span className="w-10 shrink-0 text-xs font-medium text-[#373d41] mt-0.5">태그</span>
+            <span className="w-10 shrink-0 text-xs font-medium text-primary-700 mt-0.5">태그</span>
             <div className="flex-1">
               <HashtagCombobox
                 availableTags={availableTags}
@@ -476,12 +476,12 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
       {existingEvent && (
         <div className="bg-white border border-gray-200 overflow-hidden">
           <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-            <User className="w-3 h-3 text-[#081429]" />
-            <h3 className="text-[#081429] font-bold text-xs">작성자 정보</h3>
+            <User className="w-3 h-3 text-primary" />
+            <h3 className="text-primary font-bold text-xs">작성자 정보</h3>
           </div>
           <div className="divide-y divide-gray-100">
             <div className="flex items-center gap-2 px-2 py-1.5">
-              <span className="w-12 shrink-0 text-xs font-medium text-[#373d41]">작성자</span>
+              <span className="w-12 shrink-0 text-xs font-medium text-primary-700">작성자</span>
               {currentUser?.canManageEventAuthors ? (
                 <select
                   value={authorId}
@@ -492,14 +492,14 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
                       setAuthorName(`${selectedUser.email.split('@')[0]} ${selectedUser.jobTitle ? `(${selectedUser.jobTitle})` : ''}`);
                     }
                   }}
-                  className="flex-1 px-2 py-1 border border-gray-300 text-xs outline-none focus:border-[#fdb813] cursor-pointer focus:ring-1 focus:ring-[#fdb813] bg-white"
+                  className="flex-1 px-2 py-1 border border-gray-300 text-xs outline-none focus:border-accent cursor-pointer focus:ring-1 focus:ring-accent bg-white"
                 >
                   {users.filter(u => u.status === 'approved').map(u => (
                     <option key={u.uid} value={u.uid}>{u.email.split('@')[0]} {u.jobTitle ? `(${u.jobTitle})` : ''}</option>
                   ))}
                 </select>
               ) : (
-                <span className="flex-1 text-xs text-[#081429]">{authorName || '작성자 정보 없음'}</span>
+                <span className="flex-1 text-xs text-primary">{authorName || '작성자 정보 없음'}</span>
               )}
             </div>
 

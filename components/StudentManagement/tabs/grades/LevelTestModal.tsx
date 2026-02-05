@@ -55,7 +55,7 @@ const LevelTestModal: React.FC<LevelTestModalProps> = ({ onClose, studentId, stu
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]" onClick={onClose}>
             <div className="bg-white rounded-sm shadow-xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-                    <h3 className="text-sm font-bold text-[#081429] flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-primary flex items-center gap-2">
                         <Zap size={16} className="text-indigo-600" />
                         레벨테스트 추가
                     </h3>
@@ -68,13 +68,13 @@ const LevelTestModal: React.FC<LevelTestModalProps> = ({ onClose, studentId, stu
                     {/* Section: 테스트 정보 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <FileText className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">테스트 정보</h3>
+                            <FileText className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">테스트 정보</h3>
                         </div>
                         <div className="divide-y divide-gray-100">
                             {/* Subject & Test Type Row */}
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-12 shrink-0 text-xs font-medium text-[#373d41]">과목</span>
+                                <span className="w-12 shrink-0 text-xs font-medium text-primary-700">과목</span>
                                 <select
                                     value={subject}
                                     onChange={(e) => setSubject(e.target.value as any)}
@@ -87,7 +87,7 @@ const LevelTestModal: React.FC<LevelTestModalProps> = ({ onClose, studentId, stu
 
                             {/* Test Type Row */}
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-12 shrink-0 text-xs font-medium text-[#373d41]">유형</span>
+                                <span className="w-12 shrink-0 text-xs font-medium text-primary-700">유형</span>
                                 <select
                                     value={testType}
                                     onChange={(e) => setTestType(e.target.value as any)}
@@ -102,7 +102,7 @@ const LevelTestModal: React.FC<LevelTestModalProps> = ({ onClose, studentId, stu
                             {/* Test Date Row */}
                             <div className="flex items-center gap-2 px-2 py-1.5">
                                 <Calendar className="w-3 h-3 text-gray-400 shrink-0" />
-                                <span className="w-10 shrink-0 text-xs font-medium text-[#373d41]">날짜</span>
+                                <span className="w-10 shrink-0 text-xs font-medium text-primary-700">날짜</span>
                                 <input
                                     type="date"
                                     value={testDate}
@@ -114,7 +114,7 @@ const LevelTestModal: React.FC<LevelTestModalProps> = ({ onClose, studentId, stu
                             {/* Score Row */}
                             <div className="flex items-center gap-2 px-2 py-1.5">
                                 <Target className="w-3 h-3 text-gray-400 shrink-0" />
-                                <span className="w-10 shrink-0 text-xs font-medium text-[#373d41]">점수</span>
+                                <span className="w-10 shrink-0 text-xs font-medium text-primary-700">점수</span>
                                 <input
                                     type="number"
                                     value={score}

@@ -30,7 +30,7 @@ export const MemoDropdown: React.FC<MemoDropdownProps> = ({
     <div className="relative">
       <button
         onClick={() => setIsMemoDropdownOpen(!isMemoDropdownOpen)}
-        className={`relative transition-colors mt-[5px] ${isMemoDropdownOpen ? 'text-[#fdb813]' : 'text-gray-400 hover:text-white'}`}
+        className={`relative transition-colors mt-[5px] ${isMemoDropdownOpen ? 'text-accent' : 'text-gray-400 hover:text-white'}`}
       >
         <MessageCircle size={20} />
         {unreadMemoCount > 0 && (
@@ -46,18 +46,18 @@ export const MemoDropdown: React.FC<MemoDropdownProps> = ({
           <div className="absolute right-0 mt-2 w-80 bg-white rounded-sm shadow-2xl border border-gray-100 z-[120] overflow-hidden">
             <div className="p-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
               <span className="font-bold text-gray-700 text-sm flex items-center gap-2">
-                <Mail size={14} /> 받�? 메모
+                <Mail size={14} /> 받�? 메모
               </span>
               <button
                 onClick={() => { setIsMemoModalOpen(true); setIsMemoDropdownOpen(false); }}
-                className="text-xs px-2 py-1 bg-[#081429] text-white rounded font-bold hover:brightness-125"
+                className="text-xs px-2 py-1 bg-primary text-white rounded font-bold hover:brightness-125"
               >
                 + ??메모
               </button>
             </div>
             <div className="max-h-64 overflow-y-auto">
               {taskMemos.length === 0 ? (
-                <div className="p-6 text-center text-gray-400 text-sm">받�? 메모가 ?�습?�다</div>
+                <div className="p-6 text-center text-gray-400 text-sm">받�? 메모가 ?�습?�다</div>
               ) : (
                 taskMemos.map(memo => (
                   <div

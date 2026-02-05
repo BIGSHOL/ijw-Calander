@@ -168,7 +168,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
                         {/* 수학 */}
                         <div className="flex items-center justify-between p-3 bg-amber-50 rounded-sm border border-amber-200">
                             <div className="flex items-center gap-2">
-                                <span className="px-2 py-1 bg-[#fdb813] text-[#081429] rounded text-xs font-bold">수학</span>
+                                <span className="px-2 py-1 bg-accent text-primary rounded text-xs font-bold">수학</span>
                                 <span className="text-sm text-gray-600">
                                     {scheduleDisplay.math === 'period' ? '월목 4교시' : '월목 20:10~22:00'}
                                 </span>
@@ -179,7 +179,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
                                     disabled={!canEdit}
                                     className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors ${
                                         scheduleDisplay.math === 'period'
-                                            ? 'bg-[#081429] text-white'
+                                            ? 'bg-primary text-white'
                                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                     } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
@@ -191,7 +191,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
                                     disabled={!canEdit}
                                     className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors ${
                                         scheduleDisplay.math === 'time'
-                                            ? 'bg-[#081429] text-white'
+                                            ? 'bg-primary text-white'
                                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                     } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
@@ -204,7 +204,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
                         {/* 영어 */}
                         <div className="flex items-center justify-between p-3 bg-slate-50 rounded-sm border border-slate-200">
                             <div className="flex items-center gap-2">
-                                <span className="px-2 py-1 bg-[#081429] text-white rounded text-xs font-bold">영어</span>
+                                <span className="px-2 py-1 bg-primary text-white rounded text-xs font-bold">영어</span>
                                 <span className="text-sm text-gray-600">
                                     {scheduleDisplay.english === 'period' ? '월목 1~3교시' : '월목 14:20~16:20'}
                                 </span>
@@ -215,7 +215,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
                                     disabled={!canEdit}
                                     className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors ${
                                         scheduleDisplay.english === 'period'
-                                            ? 'bg-[#081429] text-white'
+                                            ? 'bg-primary text-white'
                                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                     } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
@@ -227,7 +227,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
                                     disabled={!canEdit}
                                     className={`px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors ${
                                         scheduleDisplay.english === 'time'
-                                            ? 'bg-[#081429] text-white'
+                                            ? 'bg-primary text-white'
                                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                     } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 >
@@ -261,7 +261,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
                                 placeholder="예: Phonics"
                                 value={newKeyword}
                                 onChange={(e) => setNewKeyword(e.target.value)}
-                                className="w-full px-2.5 py-1.5 border border-gray-200 rounded text-sm focus:border-[#fdb813] outline-none"
+                                className="w-full px-2.5 py-1.5 border border-gray-200 rounded text-sm focus:border-accent outline-none"
                                 onKeyDown={(e) => e.key === 'Enter' && handleAddKeyword()}
                             />
                         </div>
@@ -291,7 +291,7 @@ const ClassesTab: React.FC<ClassesTabProps> = ({ isMaster, canEdit = isMaster })
                         </div>
                         <button
                             onClick={handleAddKeyword}
-                            className="px-4 py-1.5 bg-[#081429] text-white rounded-sm text-sm font-bold hover:brightness-110 whitespace-nowrap"
+                            className="px-4 py-1.5 bg-primary text-white rounded-sm text-sm font-bold hover:brightness-110 whitespace-nowrap"
                         >
                             추가
                         </button>

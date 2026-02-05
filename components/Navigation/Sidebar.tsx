@@ -64,7 +64,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const MobileMenuButton = () => (
     <button
       onClick={toggleMobileMenu}
-      className="md:hidden fixed top-4 left-4 z-50 p-2 bg-[#081429] text-white rounded-sm shadow-lg border border-white/10 hover:bg-[#0a1633] transition-colors"
+      className="md:hidden fixed top-4 left-4 z-50 p-2 bg-primary text-white rounded-sm shadow-lg border border-white/10 hover:bg-[#0a1633] transition-colors"
       aria-label={isMobileOpen ? '메뉴 닫기' : '메뉴 열기'}
     >
       {isMobileOpen ? <X size={20} /> : <Menu size={20} />}
@@ -74,13 +74,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   const sidebarContent = (
     <>
       {/* Sidebar Header - 컴팩트 */}
-      <div className="bg-[#081429] text-white border-b border-white/10 px-2 py-2 flex items-center justify-between">
+      <div className="bg-primary text-white border-b border-white/10 px-2 py-2 flex items-center justify-between">
         {!isCollapsed && (
           <div className="flex items-center gap-2">
             {logoUrl ? (
               <img src={logoUrl} alt="Logo" className="w-8 h-8 rounded object-contain" />
             ) : (
-              <div className="w-8 h-8 bg-[#fdb813] rounded flex items-center justify-center font-bold text-[#081429] text-sm">
+              <div className="w-8 h-8 bg-accent rounded flex items-center justify-center font-bold text-primary text-sm">
                 IW
               </div>
             )}
@@ -95,7 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             {logoUrl ? (
               <img src={logoUrl} alt="Logo" className="w-8 h-8 rounded object-contain" />
             ) : (
-              <div className="w-8 h-8 bg-[#fdb813] rounded flex items-center justify-center font-bold text-[#081429] text-sm">
+              <div className="w-8 h-8 bg-accent rounded flex items-center justify-center font-bold text-primary text-sm">
                 IW
               </div>
             )}
@@ -147,7 +147,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       key={tab}
                       onClick={() => onTabSelect(tab)}
                       className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs font-medium transition-all ${isActive
-                        ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                        ? 'bg-accent text-primary shadow-sm'
                         : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                         } ${isCollapsed ? 'justify-center' : ''}`}
                       aria-label={`${meta.label} 탭으로 이동`}

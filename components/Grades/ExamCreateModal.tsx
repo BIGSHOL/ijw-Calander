@@ -74,7 +74,7 @@ const ExamCreateModal: React.FC<ExamCreateModalProps> = ({
     <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
       <div className="bg-white rounded-sm shadow-xl w-full max-w-lg mx-4 max-h-[85vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-          <h2 className="text-sm font-bold text-[#081429]">새 시험 등록</h2>
+          <h2 className="text-sm font-bold text-primary">새 시험 등록</h2>
           <button
             onClick={onClose}
             className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
@@ -87,35 +87,35 @@ const ExamCreateModal: React.FC<ExamCreateModalProps> = ({
           {/* 기본 정보 */}
           <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-              <FileText className="w-3 h-3 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-xs">기본 정보</h3>
+              <FileText className="w-3 h-3 text-primary" />
+              <h3 className="text-primary font-bold text-xs">기본 정보</h3>
             </div>
             <div className="divide-y divide-gray-100">
               <div className="flex items-center gap-2 px-2 py-1.5">
-                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">시험명 *</span>
+                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">시험명 *</span>
                 <input
                   type="text"
                   value={newExam.title}
                   onChange={(e) => setNewExam(prev => ({ ...prev, title: e.target.value }))}
                   placeholder="예: 1월 모의고사"
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                 />
               </div>
               <div className="flex items-center gap-2 px-2 py-1.5">
-                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">날짜</span>
+                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">날짜</span>
                 <input
                   type="date"
                   value={newExam.date}
                   onChange={(e) => setNewExam(prev => ({ ...prev, date: e.target.value }))}
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                 />
-                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">만점</span>
+                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">만점</span>
                 <input
                   type="number"
                   value={newExam.maxScore}
                   onChange={(e) => setNewExam(prev => ({ ...prev, maxScore: Number(e.target.value) }))}
                   min={1}
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                 />
               </div>
             </div>
@@ -124,26 +124,26 @@ const ExamCreateModal: React.FC<ExamCreateModalProps> = ({
           {/* 분류 */}
           <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-              <BookOpen className="w-3 h-3 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-xs">분류</h3>
+              <BookOpen className="w-3 h-3 text-primary" />
+              <h3 className="text-primary font-bold text-xs">분류</h3>
             </div>
             <div className="divide-y divide-gray-100">
               <div className="flex items-center gap-2 px-2 py-1.5">
-                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">유형</span>
+                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">유형</span>
                 <select
                   value={newExam.type}
                   onChange={(e) => setNewExam(prev => ({ ...prev, type: e.target.value as ExamType }))}
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                 >
                   {Object.entries(EXAM_TYPE_LABELS).map(([value, label]) => (
                     <option key={value} value={value}>{label}</option>
                   ))}
                 </select>
-                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">과목</span>
+                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">과목</span>
                 <select
                   value={newExam.subject}
                   onChange={(e) => setNewExam(prev => ({ ...prev, subject: e.target.value as 'math' | 'english' | 'both', targetClassIds: [] }))}
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                 >
                   <option value="math">수학</option>
                   <option value="english">영어</option>
@@ -156,12 +156,12 @@ const ExamCreateModal: React.FC<ExamCreateModalProps> = ({
           {/* 시험 범위 */}
           <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-              <Building2 className="w-3 h-3 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-xs">시험 범위</h3>
+              <Building2 className="w-3 h-3 text-primary" />
+              <h3 className="text-primary font-bold text-xs">시험 범위</h3>
             </div>
             <div className="divide-y divide-gray-100">
               <div className="flex items-center gap-2 px-2 py-1.5">
-                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">범위</span>
+                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">범위</span>
                 <select
                   value={newExam.scope}
                   onChange={(e) => setNewExam(prev => ({
@@ -170,7 +170,7 @@ const ExamCreateModal: React.FC<ExamCreateModalProps> = ({
                     targetClassIds: [],
                     targetGrades: [],
                   }))}
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                 >
                   {Object.entries(EXAM_SCOPE_LABELS).map(([value, label]) => (
                     <option key={value} value={value}>{label}</option>
@@ -181,7 +181,7 @@ const ExamCreateModal: React.FC<ExamCreateModalProps> = ({
               {/* 대상 선택: 반별 */}
               {newExam.scope === 'class' && (
                 <div className="px-2 py-2">
-                  <label className="block text-xs font-medium text-[#373d41] mb-2">대상 반 선택</label>
+                  <label className="block text-xs font-medium text-primary-700 mb-2">대상 반 선택</label>
                   {/* 검색 필드 */}
                   <div className="relative mb-2">
                     <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -190,7 +190,7 @@ const ExamCreateModal: React.FC<ExamCreateModalProps> = ({
                       value={classSearchQuery}
                       onChange={(e) => setClassSearchQuery(e.target.value)}
                       placeholder="반 검색..."
-                      className="w-full pl-7 pr-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                      className="w-full pl-7 pr-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                     />
                   </div>
                   <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-sm p-2 space-y-1">
@@ -228,7 +228,7 @@ const ExamCreateModal: React.FC<ExamCreateModalProps> = ({
               {/* 대상 선택: 학년별 */}
               {newExam.scope === 'grade' && (
                 <div className="px-2 py-2">
-                  <label className="block text-xs font-medium text-[#373d41] mb-2">대상 학년 선택</label>
+                  <label className="block text-xs font-medium text-primary-700 mb-2">대상 학년 선택</label>
                   <div className="flex flex-wrap gap-2">
                     {GRADE_OPTIONS.map(grade => (
                       <label key={grade} className="flex items-center gap-1 px-3 py-1.5 border border-gray-200 rounded-sm hover:bg-gray-50 cursor-pointer">
@@ -257,7 +257,7 @@ const ExamCreateModal: React.FC<ExamCreateModalProps> = ({
               {/* 대상 선택: 학교별 */}
               {newExam.scope === 'school' && (
                 <div className="px-2 py-2">
-                  <label className="block text-xs font-medium text-[#373d41] mb-2">대상 학교 선택</label>
+                  <label className="block text-xs font-medium text-primary-700 mb-2">대상 학교 선택</label>
                   {/* 검색 필드 */}
                   <div className="relative mb-2">
                     <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -266,7 +266,7 @@ const ExamCreateModal: React.FC<ExamCreateModalProps> = ({
                       value={schoolSearchQuery}
                       onChange={(e) => setSchoolSearchQuery(e.target.value)}
                       placeholder="학교 검색..."
-                      className="w-full pl-7 pr-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                      className="w-full pl-7 pr-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                     />
                   </div>
                   <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-sm p-2 space-y-1">
@@ -305,8 +305,8 @@ const ExamCreateModal: React.FC<ExamCreateModalProps> = ({
           {/* 태그 */}
           <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-              <Tag className="w-3 h-3 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-xs">태그</h3>
+              <Tag className="w-3 h-3 text-primary" />
+              <h3 className="text-primary font-bold text-xs">태그</h3>
             </div>
             <div className="divide-y divide-gray-100">
               <div className="flex items-center gap-2 px-2 py-1.5">
@@ -325,7 +325,7 @@ const ExamCreateModal: React.FC<ExamCreateModalProps> = ({
                     }
                   }}
                   placeholder="태그 입력 후 Enter (예: 내신대비)"
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                 />
               </div>
               {newExam.tags.length > 0 && (
@@ -362,7 +362,7 @@ const ExamCreateModal: React.FC<ExamCreateModalProps> = ({
           <button
             onClick={onSubmit}
             disabled={!newExam.title || isSubmitting}
-            className="flex items-center gap-1 px-3 py-1.5 bg-[#fdb813] text-[#081429] text-xs font-semibold rounded-sm hover:bg-[#e5a60f] disabled:opacity-50"
+            className="flex items-center gap-1 px-3 py-1.5 bg-accent text-primary text-xs font-semibold rounded-sm hover:bg-[#e5a60f] disabled:opacity-50"
           >
             {isSubmitting ? (
               <Loader2 className="w-3 h-3 animate-spin" />

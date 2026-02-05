@@ -139,10 +139,10 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                         // View Mode
                         <>
                             <div className={`flex items-center gap-3 flex-1 ${canEdit ? 'cursor-pointer' : ''}`} onClick={() => canEdit && startEditing(student)}>
-                                <span className="w-5 h-5 rounded-sm bg-[#081429] text-[#fdb813] text-xxs font-bold flex items-center justify-center shrink-0">
+                                <span className="w-5 h-5 rounded-sm bg-primary text-accent text-xxs font-bold flex items-center justify-center shrink-0">
                                     {idx + 1}
                                 </span>
-                                <span className={`font-bold text-sm ${student.underline ? 'underline text-blue-600' : 'text-[#373d41]'} ${student.isMoved ? 'text-blue-600' : ''}`}>
+                                <span className={`font-bold text-sm ${student.underline ? 'underline text-blue-600' : 'text-primary-700'} ${student.isMoved ? 'text-blue-600' : ''}`}>
                                     {student.name}
                                     {student.englishName && <span className={`font-normal ${student.underline || student.isMoved ? 'text-blue-400' : 'text-gray-500'}`}>({student.englishName})</span>}
                                 </span>

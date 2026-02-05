@@ -24,8 +24,8 @@ const SessionSettingsModal: React.FC<SessionSettingsModalProps> = ({
       >
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-          <h2 className="text-sm font-bold text-[#081429] flex items-center gap-1.5">
-            <Calendar size={16} className="text-[#fdb813]" />
+          <h2 className="text-sm font-bold text-primary flex items-center gap-1.5">
+            <Calendar size={16} className="text-accent" />
             세션 기간 설정
             <span className="ml-2 px-1.5 py-0.5 bg-yellow-500 text-xxs font-bold rounded">관리자</span>
           </h2>

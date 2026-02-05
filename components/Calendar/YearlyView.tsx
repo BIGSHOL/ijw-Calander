@@ -172,16 +172,16 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                     <div className="flex items-center gap-1 p-1 bg-[#f8fafc] rounded-none border border-gray-200 shadow-sm">
                         <button
                             onClick={() => onDateChange(subYears(currentDate, 1))}
-                            className="p-1.5 hover:bg-white hover:shadow-md rounded-none transition-all text-gray-400 hover:text-[#081429]"
+                            className="p-1.5 hover:bg-white hover:shadow-md rounded-none transition-all text-gray-400 hover:text-primary"
                         >
                             <ChevronLeft size={16} strokeWidth={3} />
                         </button>
-                        <span className="px-3 py-1 text-sm font-bold text-[#081429]">
+                        <span className="px-3 py-1 text-sm font-bold text-primary">
                             {currentYear}년
                         </span>
                         <button
                             onClick={() => onDateChange(addYears(currentDate, 1))}
-                            className="p-1.5 hover:bg-white hover:shadow-md rounded-none transition-all text-gray-400 hover:text-[#081429]"
+                            className="p-1.5 hover:bg-white hover:shadow-md rounded-none transition-all text-gray-400 hover:text-primary"
                         >
                             <ChevronRight size={16} strokeWidth={3} />
                         </button>
@@ -221,11 +221,11 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                     onDoubleClick={() => handleMonthDoubleClick(month)}
                                     className={`
                                     bg-white rounded-none shadow-sm border p-1.5 sm:p-2 transition-all cursor-pointer
-                                    ${isSelected ? 'ring-2 ring-[#fdb813] border-transparent' : 'border-gray-100 hover:border-[#fdb813]/50'}
+                                    ${isSelected ? 'ring-2 ring-[#fdb813] border-transparent' : 'border-gray-100 hover:border-accent/50'}
                                 `}
                                 >
                                     <div className="flex justify-between items-center mb-1 sm:mb-1.5">
-                                        <h3 className={`text-xxs sm:text-xs lg:text-sm font-bold ${isSelected ? 'text-[#081429]' : 'text-gray-600'}`}>
+                                        <h3 className={`text-xxs sm:text-xs lg:text-sm font-bold ${isSelected ? 'text-primary' : 'text-gray-600'}`}>
                                             {format(month, 'M월')}
                                         </h3>
 
@@ -243,7 +243,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                                         className="flex items-center gap-0.5 text-nano sm:text-xxs lg:text-xs px-1 sm:px-1.5 lg:px-2 py-0.5 rounded-none font-bold transition-all"
                                                         style={{
                                                             backgroundColor: isSelected ? '#fdb813' : '#fdb81380',
-                                                            color: '#081429'
+                                                            color: 'rgb(8, 20, 41)' /* primary */
                                                         }}
                                                         role="status"
                                                         aria-label={`${format(month, 'M월')}에 ${bucketCount}개의 버킷리스트 항목`}
@@ -259,7 +259,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                             {isSelected && (
                                                 <span
                                                     className="text-[6px] sm:text-nano px-1 py-0.5 rounded-none font-bold"
-                                                    style={{ backgroundColor: '#fdb813', color: '#081429' }}
+                                                    style={{ backgroundColor: 'rgb(253, 184, 19)' /* accent */, color: 'rgb(8, 20, 41)' /* primary */ }}
                                                 >
                                                     선택됨
                                                 </span>
@@ -282,10 +282,10 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                             // Brand colors: Navy #081429, Yellow #fdb813, Gray #373d41
                                             const getDensityStyle = () => {
                                                 if (count === 0) return {};
-                                                if (count >= 5) return { backgroundColor: '#081429', color: '#fdb813' }; // Navy bg, Yellow text
-                                                if (count >= 3) return { backgroundColor: '#373d41', color: '#fdb813' }; // Gray bg, Yellow text
-                                                if (count >= 2) return { backgroundColor: '#fdb813', color: '#081429' }; // Yellow bg, Navy text
-                                                return { backgroundColor: '#fdb81340', color: '#081429' }; // Light Yellow bg, Navy text
+                                                if (count >= 5) return { backgroundColor: 'rgb(8, 20, 41)' /* primary */, color: 'rgb(253, 184, 19)' /* accent */ }; // Navy bg, Yellow text
+                                                if (count >= 3) return { backgroundColor: 'rgb(51, 78, 104)' /* primary-700 */, color: 'rgb(253, 184, 19)' /* accent */ }; // Gray bg, Yellow text
+                                                if (count >= 2) return { backgroundColor: 'rgb(253, 184, 19)' /* accent */, color: 'rgb(8, 20, 41)' /* primary */ }; // Yellow bg, Navy text
+                                                return { backgroundColor: 'rgba(253, 184, 19, 0.4)' /* accent with opacity */, color: 'rgb(8, 20, 41)' /* primary */ }; // Light Yellow bg, Navy text
                                             };
 
                                             return (
@@ -325,8 +325,8 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                         {/* Header with Department Summary Chips */}
                         <div className="flex items-center justify-between px-3 py-2 bg-gray-50/80 border-b border-gray-100">
                             <div className="flex items-center gap-2">
-                                <CalendarIcon size={14} className="text-[#fdb813]" />
-                                <span className="text-sm font-bold text-[#081429]">
+                                <CalendarIcon size={14} className="text-accent" />
+                                <span className="text-sm font-bold text-primary">
                                     {format(selectedMonth, 'M월')}
                                 </span>
                                 <span className="text-xs text-gray-400">
@@ -359,10 +359,10 @@ const YearlyView: React.FC<YearlyViewProps> = ({
 
                         {/* Bucket List Section */}
                         {onAddBucket && (
-                            <div className="px-3 py-2 bg-[#fdb813]/10 border-b border-[#fdb813]/20">
+                            <div className="px-3 py-2 bg-accent/10 border-b border-accent/20">
                                 <div className="flex items-center gap-2 mb-2">
-                                    <Flag size={12} className="text-[#fdb813]" />
-                                    <span className="text-xs font-bold text-[#081429]">
+                                    <Flag size={12} className="text-accent" />
+                                    <span className="text-xs font-bold text-primary">
                                         {format(selectedMonth, 'M월')} 버킷리스트
                                     </span>
                                     <span className="text-xxs text-gray-400">
@@ -400,14 +400,14 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                                 className={`
                                                 flex-shrink-0 w-28 p-2 rounded-none border cursor-pointer group hover:shadow-md transition-all
                                                 ${bucket.priority === 'high' ? 'bg-red-50 border-red-200' :
-                                                        bucket.priority === 'medium' ? 'bg-[#fdb813]/20 border-[#fdb813]/40' :
+                                                        bucket.priority === 'medium' ? 'bg-accent/20 border-accent/40' :
                                                             'bg-gray-50 border-gray-200'}
                                             `}
                                             >
                                                 <div className="flex items-start justify-between">
                                                     <div className={`text-nano px-1 py-0.5 rounded-none font-bold
                                                     ${bucket.priority === 'high' ? 'bg-red-500 text-white' :
-                                                            bucket.priority === 'medium' ? 'bg-[#081429] text-[#fdb813]' :
+                                                            bucket.priority === 'medium' ? 'bg-primary text-accent' :
                                                                 'bg-gray-400 text-white'}
                                                 `}>
                                                         {bucket.priority === 'high' ? '높음' : bucket.priority === 'medium' ? '중간' : '낮음'}
@@ -480,7 +480,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                                             setEditingBucketItem(null);
                                             setIsBucketModalOpen(true);
                                         }}
-                                        className="flex-shrink-0 w-28 p-2 rounded-none border-2 border-dashed border-gray-300 hover:border-[#fdb813] flex items-center justify-center gap-1 text-gray-400 hover:text-[#fdb813] transition-colors"
+                                        className="flex-shrink-0 w-28 p-2 rounded-none border-2 border-dashed border-gray-300 hover:border-accent flex items-center justify-center gap-1 text-gray-400 hover:text-accent transition-colors"
                                     >
                                         <Plus size={12} />
                                         <span className="text-xxs font-bold">추가</span>

@@ -272,7 +272,7 @@ const TeacherIdMigrationModal: React.FC<TeacherIdMigrationModalProps> = ({ onClo
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
           <div>
-            <h2 className="text-sm font-bold text-[#081429]">teacherId → staffId 마이그레이션</h2>
+            <h2 className="text-sm font-bold text-primary">teacherId → staffId 마이그레이션</h2>
             <p className="text-xs text-gray-500 mt-0.5">
               {step === 'preview' && '자동 매칭 결과를 확인하세요'}
               {step === 'manual-mapping' && '매칭되지 않은 항목을 수동으로 매칭하세요'}

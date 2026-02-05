@@ -73,7 +73,7 @@ const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-orange-50 rounded-t-2xl">
             <div className="flex items-center gap-2">
-              <Users size={20} className="text-[#fdb813]" />
+              <Users size={20} className="text-accent" />
               <h3 className="text-lg font-bold text-gray-900">참가자 관리</h3>
             </div>
             <button
@@ -107,12 +107,12 @@ const ParticipantsPanel: React.FC<ParticipantsPanelProps> = ({
                   onChange={(e) => setNewParticipantName(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleAddParticipant()}
                   placeholder="이름 입력"
-                  className="flex-1 px-3 py-2 border border-amber-300 rounded-sm text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
+                  className="flex-1 px-3 py-2 border border-amber-300 rounded-sm text-sm focus:ring-2 focus:ring-accent outline-none"
                 />
                 <button
                   onClick={handleAddParticipant}
                   disabled={!newParticipantName.trim()}
-                  className="px-4 py-2 bg-[#fdb813] text-[#081429] rounded-sm font-bold text-sm hover:bg-[#e5a610] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-4 py-2 bg-accent text-primary rounded-sm font-bold text-sm hover:bg-accent-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   추가
                 </button>

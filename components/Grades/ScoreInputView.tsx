@@ -70,7 +70,7 @@ const ScoreInputView: React.FC<ScoreInputViewProps> = ({
     <div className="bg-white border border-gray-200">
       <div className="px-3 py-2 border-b border-gray-200 flex items-center justify-between bg-gray-50">
         <div>
-          <h2 className="font-bold text-sm text-[#081429]">{selectedExam.title}</h2>
+          <h2 className="font-bold text-sm text-primary">{selectedExam.title}</h2>
           <p className="text-xs text-gray-500">
             {selectedExam.date} | {selectedExam.subject === 'both' ? '통합' : selectedExam.subject === 'math' ? '수학' : '영어'} | 만점 {selectedExam.maxScore}점
           </p>

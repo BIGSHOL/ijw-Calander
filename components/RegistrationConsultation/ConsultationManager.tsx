@@ -33,9 +33,10 @@ function parseLevelTestScore(scoreStr: string | undefined): number | null {
 
 interface ConsultationManagerProps {
     userProfile: UserProfile | null;
+    onNavigateToStudent?: (studentId: string) => void;  // 원생 프로필로 이동 콜백
 }
 
-const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }) => {
+const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, onNavigateToStudent }) => {
     const { hasPermission } = usePermissions(userProfile);
     const isMaster = userProfile?.role === 'master';
 
@@ -446,7 +447,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                                 <select
                                     value={selectedYear}
                                     onChange={(e) => setSelectedYear(e.target.value)}
-                                    className="px-2 py-0.5 rounded bg-[#1e293b] border border-gray-600 text-white text-xs font-bold focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                    className="px-2 py-0.5 rounded bg-[#1e293b] border border-gray-600 text-white text-xs font-bold focus:border-accent focus:ring-1 focus:ring-accent outline-none"
                                     style={{ color: 'white' }}
                                 >
                                     <option value="all" style={{ backgroundColor: 'white', color: 'black' }}>전체 연도</option>
@@ -460,7 +461,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                                     <button
                                         onClick={handlePrevMonth}
                                         disabled={selectedYear === 'all'}
-                                        className="p-0.5 text-gray-400 hover:text-[#fdb813] disabled:opacity-30 disabled:hover:text-gray-400 transition-colors"
+                                        className="p-0.5 text-gray-400 hover:text-accent disabled:opacity-30 disabled:hover:text-gray-400 transition-colors"
                                     >
                                         <ChevronLeft size={14} />
                                     </button>
@@ -479,7 +480,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                                     <button
                                         onClick={handleNextMonth}
                                         disabled={selectedYear === 'all'}
-                                        className="p-1 text-gray-400 hover:text-[#fdb813] disabled:opacity-30 disabled:hover:text-gray-400 transition-colors"
+                                        className="p-1 text-gray-400 hover:text-accent disabled:opacity-30 disabled:hover:text-gray-400 transition-colors"
                                     >
                                         <ChevronRight size={14} />
                                     </button>
@@ -499,7 +500,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                                 </div>
                                 <input
                                     type="text"
-                                    className="block w-56 pl-8 pr-2.5 py-1.5 rounded-sm text-xs leading-5 placeholder-gray-500 bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] transition-all"
+                                    className="block w-56 pl-8 pr-2.5 py-1.5 rounded-sm text-xs leading-5 placeholder-gray-500 bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent transition-all"
                                     placeholder="학생명, 번호, 담당자 검색..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -539,7 +540,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                     {(canConvert || canManage) && (
                         <button
                             onClick={() => setShowMigrationModal(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-sm shadow-lg hover:shadow-green-500/30 transition-all text-xs font-bold"
+                            className="flex items-center gap-2 px-4 py-2 bg-success hover:bg-[#059669] text-white rounded-sm shadow-lg hover:shadow-green-500/30 transition-all text-xs font-bold"
                         >
                             <Upload size={16} />
                             DB 불러오기
@@ -550,7 +551,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                     {canCreate && (
                         <button
                             onClick={openAddModal}
-                            className="flex items-center gap-2 px-4 py-2 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded-sm shadow-lg hover:shadow-blue-500/30 transition-all text-xs font-bold"
+                            className="flex items-center gap-2 px-4 py-2 bg-info hover:bg-[#2563eb] text-white rounded-sm shadow-lg hover:shadow-blue-500/30 transition-all text-xs font-bold"
                         >
                             <Plus size={16} />
                             상담 등록
@@ -630,6 +631,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile }
                             onEdit={openEditModal}
                             onDelete={handleDeleteRecord}
                             onConvertToStudent={handleConvertToStudent}
+                            onNavigateToStudent={onNavigateToStudent}
                             currentUserId={userProfile?.uid}
                             canEdit={canEdit}
                             canManage={canManage}

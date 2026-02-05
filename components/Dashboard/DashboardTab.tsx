@@ -30,7 +30,7 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ userProfile, staffMember })
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-[#fdb813] border-t-transparent rounded-sm animate-spin" />
+          <div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-sm animate-spin" />
           <span className="text-sm text-gray-500">로딩 중...</span>
         </div>
       </div>
@@ -164,7 +164,7 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ userProfile, staffMember })
         <div className="max-w-4xl mx-auto">
           <div className="bg-white rounded-sm p-12 shadow-sm border border-gray-100 text-center">
             <div className="text-6xl mb-4">🏠</div>
-            <h2 className="text-2xl font-bold text-[#081429] mb-2">대시보드</h2>
+            <h2 className="text-2xl font-bold text-primary mb-2">대시보드</h2>
             <p className="text-gray-500 mb-6">
               환영합니다! 좌측 메뉴에서 원하는 기능을 선택해주세요.
             </p>

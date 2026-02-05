@@ -535,10 +535,10 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
   return (
     <div className="flex flex-col h-full bg-gray-50">
       {/* 헤더 */}
-      <div className="bg-[#081429] px-6 py-3 flex items-center justify-between">
+      <div className="bg-primary px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <FolderOpen size={18} className="text-[#fdb813]" />
+            <FolderOpen size={18} className="text-accent" />
             <h1 className="text-sm font-bold text-white">자료실</h1>
           </div>
 
@@ -547,7 +547,7 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
             <button
               onClick={handleHomeClick}
               className={`px-2 py-1 rounded transition-colors ${
-                !currentMain ? 'bg-[#fdb813] text-[#081429] font-bold' : 'text-gray-400 hover:text-white hover:bg-white/10'
+                !currentMain ? 'bg-accent text-primary font-bold' : 'text-gray-400 hover:text-white hover:bg-white/10'
               }`}
             >
               <Home size={14} />
@@ -558,7 +558,7 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
                 <button
                   onClick={() => { setCurrentSub(null); setSelectedResource(null); }}
                   className={`px-2 py-1 rounded transition-colors ${
-                    !currentSub ? 'bg-[#fdb813] text-[#081429] font-bold' : 'text-gray-400 hover:text-white hover:bg-white/10'
+                    !currentSub ? 'bg-accent text-primary font-bold' : 'text-gray-400 hover:text-white hover:bg-white/10'
                   }`}
                 >
                   {currentMain}
@@ -568,7 +568,7 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
             {currentSub && (
               <>
                 <ChevronRight size={14} className="text-gray-500" />
-                <span className="px-2 py-1 bg-[#fdb813] text-[#081429] font-bold rounded">
+                <span className="px-2 py-1 bg-accent text-primary font-bold rounded">
                   {currentSub}
                 </span>
               </>
@@ -585,7 +585,7 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="검색..."
-              className="w-48 pl-9 pr-8 py-1.5 bg-white/10 border border-white/20 rounded-sm text-xs text-white placeholder-gray-400 focus:bg-white/20 focus:border-[#fdb813] focus:outline-none transition-colors"
+              className="w-48 pl-9 pr-8 py-1.5 bg-white/10 border border-white/20 rounded-sm text-xs text-white placeholder-gray-400 focus:bg-white/20 focus:border-accent focus:outline-none transition-colors"
             />
             {searchQuery && (
               <button
@@ -660,7 +660,7 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
                 setEditingResource(null);
                 setIsAddModalOpen(true);
               }}
-              className="flex items-center gap-2 px-4 py-2 bg-[#fdb813] text-[#081429] rounded-sm text-xs font-bold hover:bg-[#fdb813]/90 transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-accent text-primary rounded-sm text-xs font-bold hover:bg-accent/90 transition-colors"
             >
               <Plus size={14} />
               추가
@@ -679,7 +679,7 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
               {categoryOrder.length > 0 && (
                 <button
                   onClick={handleResetCategoryOrder}
-                  className="flex items-center gap-1 text-xxs text-gray-400 hover:text-[#fdb813] transition-colors"
+                  className="flex items-center gap-1 text-xxs text-gray-400 hover:text-accent transition-colors"
                   title="가나다 순으로 초기화"
                 >
                   <RotateCcw size={10} />
@@ -699,15 +699,15 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
                   onClick={() => handleMainClick(main)}
                   className={`flex flex-col items-center gap-2 p-4 min-w-[100px] rounded-sm border-2 cursor-pointer transition-all group ${
                     draggedCategory === main
-                      ? 'border-[#fdb813] opacity-50'
-                      : 'border-gray-200 hover:border-[#fdb813] hover:bg-[#fdb813]/5'
+                      ? 'border-accent opacity-50'
+                      : 'border-gray-200 hover:border-accent hover:bg-accent/5'
                   }`}
                 >
                   <div className="relative">
                     <GripVertical size={12} className="absolute -left-5 top-2 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab" />
-                    <Folder size={32} className="text-[#fdb813] group-hover:scale-110 transition-transform" />
+                    <Folder size={32} className="text-accent group-hover:scale-110 transition-transform" />
                   </div>
-                  <span className="text-xs font-bold text-[#081429]">{main}</span>
+                  <span className="text-xs font-bold text-primary">{main}</span>
                   {mainCounts[main] > 0 && (
                     <span className="text-xxs text-gray-500">{mainCounts[main]}개</span>
                   )}
@@ -721,8 +721,8 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
         {!currentMain && recentResources.length > 0 && (
           <div className="p-4 border-b border-gray-200 bg-white">
             <div className="flex items-center gap-2 mb-3">
-              <Clock size={14} className="text-[#fdb813]" />
-              <h3 className="text-xs font-bold text-[#081429]">최근 추가</h3>
+              <Clock size={14} className="text-accent" />
+              <h3 className="text-xs font-bold text-primary">최근 추가</h3>
             </div>
             <div className="bg-white rounded-sm border border-gray-200 overflow-hidden">
               <div className="divide-y divide-gray-100">
@@ -752,7 +752,7 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
               {subCategoryOrders[currentMain]?.length > 0 && (
                 <button
                   onClick={handleResetSubCategoryOrder}
-                  className="flex items-center gap-1 text-xxs text-gray-400 hover:text-[#081429] transition-colors"
+                  className="flex items-center gap-1 text-xxs text-gray-400 hover:text-primary transition-colors"
                   title="가나다 순으로 초기화"
                 >
                   <RotateCcw size={10} />
@@ -772,15 +772,15 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
                   onClick={() => handleSubClick(sub)}
                   className={`flex flex-col items-center gap-2 p-3 min-w-[90px] rounded-sm border-2 cursor-pointer transition-all group ${
                     draggedSubCategory === sub
-                      ? 'border-[#081429] opacity-50'
-                      : 'border-gray-200 hover:border-[#081429] hover:bg-[#081429]/5'
+                      ? 'border-primary opacity-50'
+                      : 'border-gray-200 hover:border-primary hover:bg-primary/5'
                   }`}
                 >
                   <div className="relative">
                     <GripVertical size={10} className="absolute -left-4 top-1.5 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab" />
-                    <Folder size={28} className="text-[#081429] group-hover:scale-110 transition-transform" />
+                    <Folder size={28} className="text-primary group-hover:scale-110 transition-transform" />
                   </div>
-                  <span className="text-xs font-medium text-[#081429]">{sub}</span>
+                  <span className="text-xs font-medium text-primary">{sub}</span>
                   {subCounts[sub] > 0 && (
                     <span className="text-xxs text-gray-500">{subCounts[sub]}개</span>
                   )}
@@ -807,7 +807,7 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
                       setEditingResource(null);
                       setIsAddModalOpen(true);
                     }}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#081429] text-white rounded-sm text-sm font-medium hover:bg-[#081429]/90 transition-colors"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-sm text-sm font-medium hover:bg-primary/90 transition-colors"
                   >
                     <Plus size={14} />
                     리소스 추가하기

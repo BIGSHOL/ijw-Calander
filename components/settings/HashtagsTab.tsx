@@ -157,7 +157,7 @@ const HashtagsTab: React.FC<HashtagsTabProps> = ({ isMaster }) => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-sm h-8 w-8 border-b-2 border-[#fdb813]" />
+        <div className="animate-spin rounded-sm h-8 w-8 border-b-2 border-accent" />
       </div>
     );
   }
@@ -168,7 +168,7 @@ const HashtagsTab: React.FC<HashtagsTabProps> = ({ isMaster }) => {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-            <Hash size={20} className="text-[#fdb813]" />
+            <Hash size={20} className="text-accent" />
             해시태그 관리
           </h3>
           <p className="text-sm text-gray-500 mt-1">
@@ -178,7 +178,7 @@ const HashtagsTab: React.FC<HashtagsTabProps> = ({ isMaster }) => {
         {hasChanges && (
           <button
             onClick={handleSave}
-            className="flex items-center gap-2 px-4 py-2 bg-[#fdb813] text-[#081429] rounded-sm font-bold text-sm hover:bg-[#e5a610] transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-accent text-primary rounded-sm font-bold text-sm hover:bg-accent-600 transition-colors"
           >
             <Save size={16} />
             변경사항 저장
@@ -200,7 +200,7 @@ const HashtagsTab: React.FC<HashtagsTabProps> = ({ isMaster }) => {
               value={newTagName}
               onChange={(e) => setNewTagName(e.target.value)}
               placeholder="예: 학부모상담"
-              className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm focus:ring-2 focus:ring-accent outline-none"
             />
           </div>
           <div className="w-32">
@@ -210,7 +210,7 @@ const HashtagsTab: React.FC<HashtagsTabProps> = ({ isMaster }) => {
               value={newTagId}
               onChange={(e) => setNewTagId(e.target.value)}
               placeholder="자동 생성"
-              className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm focus:ring-2 focus:ring-[#fdb813] outline-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm focus:ring-2 focus:ring-accent outline-none"
             />
           </div>
           <div>
@@ -224,7 +224,7 @@ const HashtagsTab: React.FC<HashtagsTabProps> = ({ isMaster }) => {
           </div>
           <button
             onClick={handleAddTag}
-            className="px-4 py-2 bg-[#081429] text-white rounded-sm font-bold text-sm hover:bg-[#0a1a35] transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-primary text-white rounded-sm font-bold text-sm hover:bg-primary-800 transition-colors flex items-center gap-2"
           >
             <Plus size={16} />
             추가

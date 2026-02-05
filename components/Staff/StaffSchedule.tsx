@@ -137,7 +137,7 @@ const StaffSchedule: React.FC<StaffScheduleProps> = ({ staff }) => {
                 onClick={() => setSelectedDay(day.key)}
                 className={`px-4 py-2 rounded-sm font-medium transition-colors ${
                   selectedDay === day.key
-                    ? 'bg-[#081429] text-white'
+                    ? 'bg-primary text-white'
                     : day.key === 'sat'
                     ? 'text-blue-600 hover:bg-blue-50'
                     : day.key === 'sun'
@@ -208,15 +208,15 @@ const StaffSchedule: React.FC<StaffScheduleProps> = ({ staff }) => {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <Calendar className="w-6 h-6 text-[#081429]" />
-          <h2 className="text-lg font-bold text-[#081429]">근무 일정</h2>
+          <Calendar className="w-6 h-6 text-primary" />
+          <h2 className="text-lg font-bold text-primary">근무 일정</h2>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setViewMode('day')}
             className={`px-3 py-1.5 rounded-sm text-sm font-medium transition-colors ${
               viewMode === 'day'
-                ? 'bg-[#081429] text-white'
+                ? 'bg-primary text-white'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >
@@ -226,7 +226,7 @@ const StaffSchedule: React.FC<StaffScheduleProps> = ({ staff }) => {
             onClick={() => setViewMode('week')}
             className={`px-3 py-1.5 rounded-sm text-sm font-medium transition-colors ${
               viewMode === 'week'
-                ? 'bg-[#081429] text-white'
+                ? 'bg-primary text-white'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >

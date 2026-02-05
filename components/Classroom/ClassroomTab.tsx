@@ -29,8 +29,8 @@ const ClassroomTab: React.FC = () => {
   const [timeRange, setTimeRange] = useState<{ start: number; end: number }>(() => {
     try {
       const saved = localStorage.getItem(TIME_RANGE_KEY);
-      return saved ? JSON.parse(saved) : { start: 9, end: 22 };
-    } catch { return { start: 9, end: 22 }; }
+      return saved ? JSON.parse(saved) : { start: 13, end: 22 };
+    } catch { return { start: 13, end: 22 }; }
   });
 
   useEffect(() => {

@@ -1,10 +1,12 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { addDays } from 'date-fns';
 import {
     ChevronLeft, ChevronRight, Search, X, Settings, Eye, Edit, SlidersHorizontal,
     ArrowRightLeft, Copy, Upload, Save, Link2, Users, ChevronUp, ChevronDown, GripVertical, Download
 } from 'lucide-react';
 import { UnifiedStudent, TimetableClass } from '../../../../types';
 import { formatSchoolGrade } from '../../../../utils/studentUtils';
+import { formatDateKey } from '../../../../utils/dateUtils';
 import PortalTooltip from '../../../Common/PortalTooltip';
 import { useMathConfig } from '../hooks/useMathConfig';
 
@@ -132,10 +134,10 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     onIntegrationDisplayOptionsChange
 }) => {
     // 드롭다운 상태
-    const [isTeacherOrderDropdownOpen, setIsTeacherOrderDropdownOpen] = useState(false);
-    const teacherOrderDropdownRef = useRef<HTMLDivElement>(null);
     const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
     const viewDropdownRef = useRef<HTMLDivElement>(null);
+    const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false);
+    const moreDropdownRef = useRef<HTMLDivElement>(null);
 
     // 강사 순서 관리 훅
     const { mathConfig, handleSaveTeacherOrder } = useMathConfig();
@@ -152,18 +154,18 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
 
     // 드롭다운 외부 클릭 시 닫기
     useEffect(() => {
-        if (!isTeacherOrderDropdownOpen && !isViewDropdownOpen) return;
+        if (!isViewDropdownOpen && !isMoreDropdownOpen) return;
         const handleClickOutside = (event: MouseEvent) => {
-            if (teacherOrderDropdownRef.current && !teacherOrderDropdownRef.current.contains(event.target as Node)) {
-                setIsTeacherOrderDropdownOpen(false);
-            }
             if (viewDropdownRef.current && !viewDropdownRef.current.contains(event.target as Node)) {
                 setIsViewDropdownOpen(false);
+            }
+            if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target as Node)) {
+                setIsMoreDropdownOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isTeacherOrderDropdownOpen, isViewDropdownOpen]);
+    }, [isViewDropdownOpen, isMoreDropdownOpen]);
 
     // 학생 수 카운트 계산 (현재 시간표에 등록된 학생만, 중복 제거)
     const studentCounts = useMemo(() => {
@@ -172,9 +174,9 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
         const onHoldStudentIds = new Set<string>();
         const withdrawnStudentIds = new Set<string>();
 
-        const today = new Date().toISOString().split('T')[0];
+        const today = formatDateKey(new Date());
         const weekEnd = currentWeekStart
-            ? new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            ? formatDateKey(addDays(currentWeekStart, 6))
             : today;
 
         // 각 수업의 학생 목록에서 학생 ID 수집 (ClassCard 로직과 완전히 동일)
@@ -355,6 +357,8 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                 <span>
                     {isSimulationMode && currentScenarioName
                         ? currentScenarioName
+                        : viewType === 'teacher' ? '인재원 수학 강사 시간표'
+                        : viewType === 'room' ? '인재원 수학 강의실 시간표'
                         : '인재원 수학 통합 시간표'
                     }
                 </span>
@@ -415,7 +419,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder={viewType === 'class' ? '수업명 검색...' : '학생 검색...'}
-                        className="pl-7 pr-6 py-1 w-32 text-xs border border-gray-300 rounded-sm bg-white text-gray-700 placeholder-gray-400 outline-none focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813]"
+                        className="pl-7 pr-6 py-1 w-32 text-xs border border-gray-300 rounded-sm bg-white text-gray-700 placeholder-gray-400 outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                     />
                     {searchQuery && (
                         <button
@@ -430,89 +434,51 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                 {/* Separator */}
                 <div className="w-px h-4 bg-gray-300 mx-1"></div>
 
-                {/* Order Settings - 인라인 드롭다운 */}
-                {viewType === 'teacher' && (
-                    <div className="relative" ref={teacherOrderDropdownRef}>
+                {/* 더보기 드롭다운 (공유 + 저장 통합) */}
+                {(onExportImage || (isMaster && onOpenEmbedManager)) && (
+                    <div className="relative" ref={moreDropdownRef}>
                         <button
-                            onClick={() => setIsTeacherOrderDropdownOpen(!isTeacherOrderDropdownOpen)}
+                            onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
                             className="px-2 py-1 border border-gray-300 rounded-sm text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-1"
-                            title="강사 순서 설정"
+                            title="더보기"
                         >
-                            <Users size={12} />
-                            강사 순서
+                            <Download size={12} />
+                            내보내기
                         </button>
-                        {isTeacherOrderDropdownOpen && (
-                            <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-sm shadow-lg z-50 min-w-[180px] max-h-[300px] overflow-y-auto">
-                                <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
-                                    <span className="text-xs font-bold text-gray-700">강사 순서</span>
-                                </div>
-                                {mathConfig.teacherOrder.length === 0 ? (
-                                    <div className="px-3 py-4 text-xs text-gray-400 text-center">
-                                        강사 목록이 없습니다
-                                    </div>
-                                ) : (
-                                    <div className="py-1">
-                                        {mathConfig.teacherOrder.map((teacher, index) => (
-                                            <div
-                                                key={teacher}
-                                                className="flex items-center justify-between px-2 py-1.5 hover:bg-gray-50 group"
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    <GripVertical size={12} className="text-gray-300" />
-                                                    <span className="text-xs text-gray-700">{teacher}</span>
-                                                </div>
-                                                <div className="flex items-center gap-0.5">
-                                                    <button
-                                                        onClick={() => moveTeacher(index, 'up')}
-                                                        disabled={index === 0}
-                                                        className={`p-0.5 rounded-sm ${index === 0 ? 'text-gray-200' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
-                                                    >
-                                                        <ChevronUp size={14} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => moveTeacher(index, 'down')}
-                                                        disabled={index === mathConfig.teacherOrder.length - 1}
-                                                        className={`p-0.5 rounded-sm ${index === mathConfig.teacherOrder.length - 1 ? 'text-gray-200' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
-                                                    >
-                                                        <ChevronDown size={14} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                        {isMoreDropdownOpen && (
+                            <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-sm shadow-lg z-50 min-w-[140px]">
+                                {onExportImage && (
+                                    <button
+                                        onClick={() => {
+                                            onExportImage();
+                                            setIsMoreDropdownOpen(false);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
+                                    >
+                                        <Download size={12} />
+                                        이미지 저장
+                                    </button>
+                                )}
+                                {isMaster && onOpenEmbedManager && (
+                                    <button
+                                        onClick={() => {
+                                            onOpenEmbedManager();
+                                            setIsMoreDropdownOpen(false);
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-indigo-700 hover:bg-indigo-50 transition-colors"
+                                    >
+                                        <Link2 size={12} />
+                                        공유 링크 관리
+                                    </button>
                                 )}
                             </div>
                         )}
                     </div>
                 )}
 
-                {/* Embed Share Link - 마스터만 */}
-                {isMaster && onOpenEmbedManager && (
-                    <button
-                        onClick={onOpenEmbedManager}
-                        className="flex items-center gap-1 px-2 py-1 bg-indigo-50 border border-indigo-300 text-indigo-700 rounded-sm text-xs font-bold hover:bg-indigo-100 transition-colors"
-                        title="외부 공유 링크 관리"
-                    >
-                        <Link2 size={12} />
-                        공유
-                    </button>
-                )}
-
-                {/* 통합뷰 전용 버튼들 (저장, 보기) */}
+                {/* 통합뷰 전용 버튼들 (보기) */}
                 {viewType === 'class' && (
                     <>
-                        {/* 이미지 저장 */}
-                        {onExportImage && (
-                            <button
-                                onClick={onExportImage}
-                                className="flex items-center gap-1 px-2 py-1 bg-white border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 text-xs font-bold"
-                                title="시간표 이미지 저장"
-                            >
-                                <Download size={12} />
-                                저장
-                            </button>
-                        )}
-
                         {/* 통합뷰 보기 설정 드롭다운 */}
                         {integrationDisplayOptions && onIntegrationDisplayOptionsChange && (
                             <div className="relative" ref={viewDropdownRef}>
@@ -533,7 +499,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                 <button
                                                     onClick={() => onIntegrationDisplayOptionsChange('showStudents', !integrationDisplayOptions.showStudents)}
                                                     className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${
-                                                        integrationDisplayOptions.showStudents ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                        integrationDisplayOptions.showStudents ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
                                                     }`}
                                                 >
                                                     학생목록
@@ -541,7 +507,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                 <button
                                                     onClick={() => onIntegrationDisplayOptionsChange('showRoom', !integrationDisplayOptions.showRoom)}
                                                     className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${
-                                                        integrationDisplayOptions.showRoom ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                        integrationDisplayOptions.showRoom ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
                                                     }`}
                                                 >
                                                     강의실
@@ -549,7 +515,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                 <button
                                                     onClick={() => onIntegrationDisplayOptionsChange('showTeacher', !integrationDisplayOptions.showTeacher)}
                                                     className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${
-                                                        integrationDisplayOptions.showTeacher ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                        integrationDisplayOptions.showTeacher ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
                                                     }`}
                                                 >
                                                     담임 정보
@@ -557,7 +523,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                 <button
                                                     onClick={() => onIntegrationDisplayOptionsChange('showSchedule', !integrationDisplayOptions.showSchedule)}
                                                     className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${
-                                                        integrationDisplayOptions.showSchedule ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                        integrationDisplayOptions.showSchedule ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
                                                     }`}
                                                 >
                                                     스케줄
@@ -571,7 +537,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                 <button
                                                     onClick={() => onIntegrationDisplayOptionsChange('showSchool', !integrationDisplayOptions.showSchool)}
                                                     className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${
-                                                        integrationDisplayOptions.showSchool ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                        integrationDisplayOptions.showSchool ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
                                                     }`}
                                                 >
                                                     학교
@@ -579,7 +545,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                 <button
                                                     onClick={() => onIntegrationDisplayOptionsChange('showGrade', !integrationDisplayOptions.showGrade)}
                                                     className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${
-                                                        integrationDisplayOptions.showGrade ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                        integrationDisplayOptions.showGrade ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
                                                     }`}
                                                 >
                                                     학년
@@ -587,7 +553,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                 <button
                                                     onClick={() => onIntegrationDisplayOptionsChange('showHoldStudents', !integrationDisplayOptions.showHoldStudents)}
                                                     className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${
-                                                        integrationDisplayOptions.showHoldStudents ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                        integrationDisplayOptions.showHoldStudents ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
                                                     }`}
                                                 >
                                                     대기
@@ -595,7 +561,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                 <button
                                                     onClick={() => onIntegrationDisplayOptionsChange('showWithdrawnStudents', !integrationDisplayOptions.showWithdrawnStudents)}
                                                     className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${
-                                                        integrationDisplayOptions.showWithdrawnStudents ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                        integrationDisplayOptions.showWithdrawnStudents ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
                                                     }`}
                                                 >
                                                     퇴원
@@ -605,23 +571,6 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                     </div>
                                 )}
                             </div>
-                        )}
-                    </>
-                )}
-
-                {/* 강사뷰/날짜뷰 전용 버튼들 */}
-                {viewType !== 'class' && (
-                    <>
-                        {/* 이미지 저장 */}
-                        {onExportImage && (
-                            <button
-                                onClick={onExportImage}
-                                className="flex items-center gap-1 px-2 py-1 bg-white border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 text-xs font-bold"
-                                title="시간표 이미지 저장"
-                            >
-                                <Download size={12} />
-                                저장
-                            </button>
                         )}
                     </>
                 )}
@@ -656,7 +605,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                             }}
                                             className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${
                                                 ['월', '화', '수', '목', '금'].some(d => selectedDays.includes(d))
-                                                    ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                                    ? 'bg-accent text-primary border-accent'
                                                     : 'bg-gray-100 text-gray-400 border-gray-200'
                                             }`}
                                         >
@@ -674,7 +623,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                             }}
                                             className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${
                                                 ['토', '일'].some(d => selectedDays.includes(d))
-                                                    ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                                    ? 'bg-accent text-primary border-accent'
                                                     : 'bg-gray-100 text-gray-400 border-gray-200'
                                             }`}
                                         >
@@ -691,7 +640,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                         <button
                                             onClick={() => setShowStudents(!showStudents)}
                                             className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${
-                                                showStudents ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                showStudents ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
                                             }`}
                                         >
                                             학생목록
@@ -701,7 +650,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                         <button
                                             onClick={() => setShowClassName(!showClassName)}
                                             className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${
-                                                showClassName ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                showClassName ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
                                             }`}
                                         >
                                             수업명
@@ -711,7 +660,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                         <button
                                             onClick={() => setShowSchool(!showSchool)}
                                             className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${
-                                                showSchool ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                showSchool ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
                                             }`}
                                         >
                                             학교
@@ -721,7 +670,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                         <button
                                             onClick={() => setShowGrade(!showGrade)}
                                             className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${
-                                                showGrade ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                showGrade ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
                                             }`}
                                         >
                                             학년
@@ -731,7 +680,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                         <button
                                             onClick={() => setShowHoldStudents(!showHoldStudents)}
                                             className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${
-                                                showHoldStudents ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                showHoldStudents ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
                                             }`}
                                         >
                                             대기
@@ -741,7 +690,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                         <button
                                             onClick={() => setShowWithdrawnStudents(!showWithdrawnStudents)}
                                             className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${
-                                                showWithdrawnStudents ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                showWithdrawnStudents ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
                                             }`}
                                         >
                                             퇴원
@@ -763,7 +712,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                     onClick={() => setColumnWidth(w)}
                                                     className={`flex-1 py-1 text-micro rounded-sm border ${
                                                         columnWidth === w
-                                                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold'
+                                                            ? 'bg-accent text-primary border-accent font-bold'
                                                             : 'border-gray-300 text-gray-500 hover:bg-gray-50'
                                                     }`}
                                                 >
@@ -782,7 +731,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                     onClick={() => setRowHeight(h)}
                                                     className={`flex-1 py-1 text-micro rounded-sm border ${
                                                         rowHeight === h
-                                                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold'
+                                                            ? 'bg-accent text-primary border-accent font-bold'
                                                             : 'border-gray-300 text-gray-500 hover:bg-gray-50'
                                                     }`}
                                                 >
@@ -801,7 +750,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                     onClick={() => setFontSize(f)}
                                                     className={`flex-1 py-1 text-xxs rounded-sm border ${
                                                         fontSize === f
-                                                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813] font-bold'
+                                                            ? 'bg-accent text-primary border-accent font-bold'
                                                             : 'border-gray-300 text-gray-500 hover:bg-gray-50'
                                                     }`}
                                                 >
@@ -809,6 +758,43 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                 </button>
                                             ))}
                                         </div>
+                                    </div>
+                                </div>
+                            )}
+                            {/* 강사 순서 설정 - 강사뷰에서만 표시 */}
+                            {viewType === 'teacher' && mathConfig.teacherOrder.length > 0 && (
+                                <div className="px-3 py-2 border-t border-gray-100">
+                                    <div className="text-xxs font-bold text-gray-600 mb-2 flex items-center gap-1">
+                                        <Users size={12} />
+                                        강사 순서
+                                    </div>
+                                    <div className="space-y-0.5 max-h-[150px] overflow-y-auto">
+                                        {mathConfig.teacherOrder.map((teacher, index) => (
+                                            <div key={teacher} className="flex items-center justify-between px-2 py-1.5 hover:bg-gray-50 rounded-sm group">
+                                                <div className="flex items-center gap-2">
+                                                    <GripVertical size={12} className="text-gray-300" />
+                                                    <span className="text-xs text-gray-700">{teacher}</span>
+                                                </div>
+                                                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button
+                                                        onClick={() => moveTeacher(index, 'up')}
+                                                        disabled={index === 0}
+                                                        className="p-0.5 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                                        title="위로 이동"
+                                                    >
+                                                        <ChevronUp size={14} className="text-gray-500" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => moveTeacher(index, 'down')}
+                                                        disabled={index === mathConfig.teacherOrder.length - 1}
+                                                        className="p-0.5 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                                        title="아래로 이동"
+                                                    >
+                                                        <ChevronDown size={14} className="text-gray-500" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             )}

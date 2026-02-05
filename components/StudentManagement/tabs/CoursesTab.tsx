@@ -627,7 +627,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
   if (loadingTeachers) {
     return (
       <div className="text-center py-6">
-        <div className="animate-spin w-5 h-5 border-2 border-[#fdb813] border-t-transparent rounded-sm mx-auto mb-2"></div>
+        <div className="animate-spin w-5 h-5 border-2 border-accent border-t-transparent rounded-sm mx-auto mb-2"></div>
         <p className="text-gray-500 text-xs">수업 정보 불러오는 중...</p>
       </div>
     );
@@ -706,7 +706,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
       <div
         key={`${group.subject}-${index}`}
         onClick={() => !isDeleting && handleClassClick(group)}
-        className={`flex items-center gap-2 px-2 py-1.5 border-b border-gray-100 hover:bg-[#fdb813]/5 transition-colors ${isDeleting ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
+        className={`flex items-center gap-2 px-2 py-1.5 border-b border-gray-100 hover:bg-accent/5 transition-colors ${isDeleting ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
       >
         {/* 과목 뱃지 */}
         <span
@@ -720,14 +720,14 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         </span>
 
         {/* 수업명 */}
-        <span className="w-52 shrink-0 text-xs text-[#081429] truncate font-medium">
+        <span className="w-52 shrink-0 text-xs text-primary truncate font-medium">
           {group.className}
         </span>
 
         {/* 강사 */}
         <div className="w-14 shrink-0 flex items-center gap-0.5">
           <User className="w-3 h-3 text-gray-400" />
-          <span className="text-xxs text-[#373d41] truncate">
+          <span className="text-xxs text-primary-700 truncate">
             {mainTeacher || visibleTeachers[0] || actualClass?.teacher || '-'}
           </span>
         </div>
@@ -740,7 +740,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         {/* 학생수 */}
         <div className="w-10 shrink-0 flex items-center justify-center gap-0.5">
           <Users className="w-3 h-3 text-gray-400" />
-          <span className="text-xxs font-medium text-[#081429]">
+          <span className="text-xxs font-medium text-primary">
             {actualClass?.studentCount || 0}
           </span>
         </div>
@@ -751,7 +751,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
             {canEditEnrollmentDates && !readOnly && editingDate?.key === `${group.subject}_${group.className}` && editingDate?.field === 'startDate' ? (
               <input
                 type="date"
-                className="w-24 shrink-0 text-xxs text-[#373d41] text-center border border-blue-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                className="w-24 shrink-0 text-xxs text-primary-700 text-center border border-blue-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
                 defaultValue={group.startDate || ''}
                 autoFocus
                 onBlur={(e) => {
@@ -769,7 +769,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
               />
             ) : (
               <span
-                className={`w-16 shrink-0 text-xxs text-[#373d41] text-center ${canEditEnrollmentDates && !readOnly ? 'cursor-pointer hover:text-blue-600 hover:underline' : ''}`}
+                className={`w-16 shrink-0 text-xxs text-primary-700 text-center ${canEditEnrollmentDates && !readOnly ? 'cursor-pointer hover:text-blue-600 hover:underline' : ''}`}
                 onClick={(e) => {
                   if (canEditEnrollmentDates && !readOnly) {
                     e.stopPropagation();
@@ -833,14 +833,14 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         </span>
 
         {/* 수업명 */}
-        <span className="w-40 shrink-0 text-xs text-[#373d41] truncate">
+        <span className="w-40 shrink-0 text-xs text-primary-700 truncate">
           {group.className}
         </span>
 
         {/* 강사 */}
         <div className="w-14 shrink-0 flex items-center gap-0.5">
           <User className="w-3 h-3 text-gray-400" />
-          <span className="text-xxs text-[#373d41] truncate">
+          <span className="text-xxs text-primary-700 truncate">
             {firstTeacherName || actualClass?.teacher || '-'}
           </span>
         </div>
@@ -855,7 +855,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         {canEditEnrollmentDates && !readOnly && !compact && editingDate?.key === `completed_${group.subject}_${group.className}` && editingDate?.field === 'startDate' ? (
           <input
             type="date"
-            className="w-24 shrink-0 text-xxs text-[#373d41] text-center border border-blue-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+            className="w-24 shrink-0 text-xxs text-primary-700 text-center border border-blue-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
             defaultValue={group.startDate || ''}
             autoFocus
             onBlur={(e) => {
@@ -873,7 +873,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
           />
         ) : (
           <span
-            className={`w-16 shrink-0 text-xxs text-[#373d41] text-center ${canEditEnrollmentDates && !readOnly && !compact ? 'cursor-pointer hover:text-blue-600 hover:underline' : ''}`}
+            className={`w-16 shrink-0 text-xxs text-primary-700 text-center ${canEditEnrollmentDates && !readOnly && !compact ? 'cursor-pointer hover:text-blue-600 hover:underline' : ''}`}
             onClick={(e) => {
               if (canEditEnrollmentDates && !readOnly && !compact) {
                 e.stopPropagation();
@@ -890,7 +890,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         {canEditEnrollmentDates && !readOnly && !compact && editingDate?.key === `completed_${group.subject}_${group.className}` && editingDate?.field === 'endDate' ? (
           <input
             type="date"
-            className="w-24 shrink-0 text-xxs text-[#373d41] text-center border border-blue-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+            className="w-24 shrink-0 text-xxs text-primary-700 text-center border border-blue-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
             defaultValue={group.endDate || ''}
             autoFocus
             onBlur={(e) => {
@@ -908,7 +908,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
           />
         ) : (
           <span
-            className={`w-16 shrink-0 text-xxs text-[#373d41] text-center ${canEditEnrollmentDates && !readOnly && !compact ? 'cursor-pointer hover:text-blue-600 hover:underline' : ''}`}
+            className={`w-16 shrink-0 text-xxs text-primary-700 text-center ${canEditEnrollmentDates && !readOnly && !compact ? 'cursor-pointer hover:text-blue-600 hover:underline' : ''}`}
             onClick={(e) => {
               if (canEditEnrollmentDates && !readOnly && !compact) {
                 e.stopPropagation();
@@ -952,8 +952,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
           className="flex items-center gap-2 cursor-pointer"
           onClick={() => setShowCurrentClasses(!showCurrentClasses)}
         >
-          <h3 className="text-xs font-bold text-[#081429]">수강 중인 수업</h3>
-          <span className="text-xs text-[#373d41]">
+          <h3 className="text-xs font-bold text-primary">수강 중인 수업</h3>
+          <span className="text-xs text-primary-700">
             ({groupedEnrollments.length}개)
           </span>
           <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showCurrentClasses ? '' : 'rotate-180'}`} />
@@ -961,7 +961,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         {!readOnly && (
           <button
             onClick={() => setIsAssignModalOpen(true)}
-            className="bg-[#fdb813] text-[#081429] px-2 py-1 rounded-sm text-xs font-semibold hover:bg-[#e5a711] transition-colors flex items-center gap-1"
+            className="bg-accent text-primary px-2 py-1 rounded-sm text-xs font-semibold hover:bg-[#e5a711] transition-colors flex items-center gap-1"
           >
             <Plus className="w-3 h-3" />
             배정
@@ -973,7 +973,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
       {showCurrentClasses && (
       <div className="bg-white border border-gray-200 overflow-hidden">
         {/* 테이블 헤더 */}
-        <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-[#373d41]">
+        <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-primary-700">
           <span className="w-8 shrink-0">과목</span>
           <span className="w-52 shrink-0">수업명</span>
           <span className="w-14 shrink-0">강사</span>
@@ -1019,8 +1019,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
           className="flex items-center gap-2 mb-2 cursor-pointer"
           onClick={() => setShowScheduledClasses(!showScheduledClasses)}
         >
-          <h3 className="text-xs font-bold text-[#081429]">배정 예정 수업</h3>
-          <span className="text-xs text-[#373d41]">
+          <h3 className="text-xs font-bold text-primary">배정 예정 수업</h3>
+          <span className="text-xs text-primary-700">
             ({scheduledEnrollments.length}개)
           </span>
           {scheduledEnrollments.length > 0 && (
@@ -1033,7 +1033,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         {showScheduledClasses && (
         <div className="bg-white border border-gray-200 overflow-hidden">
           {/* 테이블 헤더 */}
-          <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-[#373d41]">
+          <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-primary-700">
             <span className="w-8 shrink-0">과목</span>
             <span className="w-52 shrink-0">수업명</span>
             <span className="w-14 shrink-0">강사</span>
@@ -1066,7 +1066,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
                 return (
                   <div
                     key={`scheduled-${group.subject}-${index}`}
-                    className="flex items-center gap-2 px-2 py-1.5 border-b border-gray-100 hover:bg-[#fdb813]/5 transition-colors cursor-pointer"
+                    className="flex items-center gap-2 px-2 py-1.5 border-b border-gray-100 hover:bg-accent/5 transition-colors cursor-pointer"
                     onClick={() => handleClassClick(group)}
                   >
                     {/* 과목 뱃지 */}
@@ -1081,14 +1081,14 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
                     </span>
 
                     {/* 수업명 */}
-                    <span className="w-52 shrink-0 text-xs text-[#373d41] font-medium truncate">
+                    <span className="w-52 shrink-0 text-xs text-primary-700 font-medium truncate">
                       {group.className}
                     </span>
 
                     {/* 강사 */}
                     <div className="w-14 shrink-0 flex items-center gap-0.5">
                       <User className="w-3 h-3 text-gray-400" />
-                      <span className="text-xxs text-[#373d41] truncate">
+                      <span className="text-xxs text-primary-700 truncate">
                         {getTeacherByIdOrName(getMainTeacher(group))?.name || actualClass?.teacher || '-'}
                       </span>
                     </div>
@@ -1104,7 +1104,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
                     {/* 학생수 */}
                     <div className="w-10 shrink-0 flex items-center justify-center gap-0.5">
                       <Users className="w-3 h-3 text-gray-400" />
-                      <span className="text-xxs font-medium text-[#081429]">
+                      <span className="text-xxs font-medium text-primary">
                         {actualClass?.studentCount || 0}
                       </span>
                     </div>
@@ -1112,7 +1112,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
                     {/* 시작 예정일 (compact 모드가 아닐 때만) */}
                     {!compact && (
                       <>
-                        <span className="w-16 shrink-0 text-xxs text-[#373d41] font-medium text-center">
+                        <span className="w-16 shrink-0 text-xxs text-primary-700 font-medium text-center">
                           {formatDate(group.startDate)}
                         </span>
                         <span className="w-14 shrink-0 text-xxs font-bold text-blue-600 text-center">
@@ -1151,8 +1151,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
           className="flex items-center gap-2 mb-2 cursor-pointer"
           onClick={() => setShowCompletedClasses(!showCompletedClasses)}
         >
-          <h3 className="text-xs font-bold text-[#373d41]">지난 수업</h3>
-          <span className="text-xs text-[#373d41]">
+          <h3 className="text-xs font-bold text-primary-700">지난 수업</h3>
+          <span className="text-xs text-primary-700">
             ({completedClasses.length}개)
           </span>
           <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showCompletedClasses ? '' : 'rotate-180'}`} />
@@ -1160,7 +1160,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
         {showCompletedClasses && (
         <div className="bg-white border border-gray-200 overflow-hidden">
           {/* 테이블 헤더 - 수강중인 수업과 열 위치 동일하게 */}
-          <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-[#373d41]">
+          <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-primary-700">
             <span className="w-8 shrink-0">과목</span>
             <span className="w-52 shrink-0">수업명</span>
             <span className="w-14 shrink-0">강사</span>

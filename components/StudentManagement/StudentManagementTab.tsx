@@ -31,9 +31,11 @@ interface StudentManagementTabProps {
   filters: StudentFilters;
   sortBy: 'name' | 'grade' | 'startDate';
   currentUser?: UserProfile | null;
+  initialSelectedStudentId?: string;  // 다른 탭에서 이동 시 자동 선택할 학생 ID
+  onStudentSelected?: () => void;      // 학생 선택 후 콜백 (initialSelectedStudentId 초기화용)
 }
 
-const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, sortBy, currentUser }) => {
+const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, sortBy, currentUser, initialSelectedStudentId, onStudentSelected }) => {
   const { hasPermission } = usePermissions(currentUser);
   const isMaster = currentUser?.role === 'master';
   const canView = isMaster || hasPermission('students.view');
@@ -61,6 +63,17 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
       }
     }
   }, [students, selectedStudent?.id]); // selectedStudent 전체가 아닌 id만 의존성으로 추가
+
+  // 다른 탭에서 이동 시 학생 자동 선택 (initialSelectedStudentId 사용)
+  useEffect(() => {
+    if (initialSelectedStudentId && students.length > 0) {
+      const targetStudent = students.find(s => s.id === initialSelectedStudentId);
+      if (targetStudent) {
+        setSelectedStudent(targetStudent);
+        onStudentSelected?.(); // 콜백 호출하여 initialSelectedStudentId 초기화
+      }
+    }
+  }, [initialSelectedStudentId, students, onStudentSelected]);
 
   // 검색어가 있고 메모리 결과가 적으면 과거 퇴원생 자동 검색
   useEffect(() => {
@@ -141,7 +154,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-[#fdb813] mx-auto mb-2" />
+          <Loader2 className="w-8 h-8 animate-spin text-accent mx-auto mb-2" />
           <p className="text-gray-600">학생 목록을 불러오는 중...</p>
         </div>
       </div>
@@ -164,12 +177,12 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
       {/* 좌측 패널: 학생 목록 - 모바일에서 학생 선택 시 숨김 */}
       <div className={`
         w-full md:w-[28%] md:min-w-[280px] md:max-w-[350px]
-        border-r border-gray-300 bg-white flex flex-col
+        border-r border-gray-300 bg-white flex flex-col min-h-0 overflow-hidden
         ${selectedStudent ? 'hidden md:flex' : 'flex'}
       `}>
-        <div className="p-3 border-b border-gray-200 bg-[#081429] flex items-center justify-between">
+        <div className="p-3 border-b border-gray-200 bg-primary flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-[#fdb813]" />
+            <Users className="w-4 h-4 text-accent" />
             <span className="text-sm font-bold text-white">학생 목록</span>
           </div>
           <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
@@ -205,7 +218,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
                 </button>
                 <button
                   onClick={() => setShowBulkEnglishNameModal(true)}
-                  className="p-1.5 text-[#fdb813] hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"
+                  className="p-1.5 text-accent hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"
                   title="일괄 영어이름 업데이트"
                 >
                   <Languages className="w-3.5 h-3.5" />
@@ -247,8 +260,8 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
         </div>
         {/* 과거 퇴원생 검색 중 안내 */}
         {isSearchingOld && (
-          <div className="p-2 bg-[#081429] border-b border-[#373d41]/20">
-            <p className="text-xs text-[#fdb813] flex items-center gap-1.5 font-medium">
+          <div className="p-2 bg-primary border-b border-primary-700/20">
+            <p className="text-xs text-accent flex items-center gap-1.5 font-medium">
               <Loader2 className="w-3 h-3 animate-spin" />
               과거 퇴원생 검색 중...
             </p>
@@ -257,8 +270,8 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
 
         {/* 과거 퇴원생 검색 결과 안내 */}
         {oldWithdrawnStudents.length > 0 && !isSearchingOld && (
-          <div className="p-2 bg-[#fdb813]/10 border-b border-[#fdb813]/20">
-            <p className="text-xs text-[#081429] font-medium">
+          <div className="p-2 bg-accent/10 border-b border-accent/20">
+            <p className="text-xs text-primary font-medium">
               <ClipboardList className="inline-block w-4 h-4 mr-1" />
               과거 퇴원생 {oldWithdrawnStudents.length}명 포함됨 (90일 이전)
             </p>
@@ -280,10 +293,10 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
         {selectedStudent ? (
           <>
             {/* 모바일 전용 뒤로가기 버튼 */}
-            <div className="md:hidden p-2 border-b border-gray-200 bg-[#081429]">
+            <div className="md:hidden p-2 border-b border-gray-200 bg-primary">
               <button
                 onClick={() => setSelectedStudent(null)}
-                className="flex items-center gap-2 text-white hover:text-[#fdb813] transition-colors"
+                className="flex items-center gap-2 text-white hover:text-accent transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
                 <span className="text-sm font-medium">목록으로</span>

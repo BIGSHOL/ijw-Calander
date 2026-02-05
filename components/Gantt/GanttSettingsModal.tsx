@@ -32,8 +32,8 @@ const GanttSettingsModal: React.FC<GanttSettingsModalProps> = ({
       >
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
-          <h2 className="text-sm font-bold text-[#081429] flex items-center gap-1.5">
-            <span className="text-[#fdb813]">⚙️</span>
+          <h2 className="text-sm font-bold text-primary flex items-center gap-1.5">
+            <span className="text-accent">⚙️</span>
             간트 차트 설정
           </h2>
           <button
@@ -50,7 +50,7 @@ const GanttSettingsModal: React.FC<GanttSettingsModalProps> = ({
             onClick={() => setActiveTab('departments')}
             className={`px-4 py-2 font-bold text-xs transition-all border-b-2 ${
               activeTab === 'departments'
-                ? 'border-[#fdb813] text-[#081429]'
+                ? 'border-accent text-primary'
                 : 'border-transparent text-gray-400 hover:text-gray-600'
             }`}
           >
@@ -63,7 +63,7 @@ const GanttSettingsModal: React.FC<GanttSettingsModalProps> = ({
             onClick={() => setActiveTab('categories')}
             className={`px-4 py-2 font-bold text-xs transition-all border-b-2 ${
               activeTab === 'categories'
-                ? 'border-[#fdb813] text-[#081429]'
+                ? 'border-accent text-primary'
                 : 'border-transparent text-gray-400 hover:text-gray-600'
             }`}
           >
@@ -79,8 +79,8 @@ const GanttSettingsModal: React.FC<GanttSettingsModalProps> = ({
           {activeTab === 'departments' && (
             <div className="bg-white border border-gray-200 overflow-hidden">
               <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                <Building2 className="w-3 h-3 text-[#081429]" />
-                <h3 className="text-[#081429] font-bold text-xs">부서 관리</h3>
+                <Building2 className="w-3 h-3 text-primary" />
+                <h3 className="text-primary font-bold text-xs">부서 관리</h3>
               </div>
               <div className="p-2">
                 <DepartmentsTab isMaster={currentUser?.role === 'master'} />
@@ -90,8 +90,8 @@ const GanttSettingsModal: React.FC<GanttSettingsModalProps> = ({
           {activeTab === 'categories' && (
             <div className="bg-white border border-gray-200 overflow-hidden">
               <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                <Tag className="w-3 h-3 text-[#081429]" />
-                <h3 className="text-[#081429] font-bold text-xs">카테고리 관리</h3>
+                <Tag className="w-3 h-3 text-primary" />
+                <h3 className="text-primary font-bold text-xs">카테고리 관리</h3>
               </div>
               <div className="p-2">
                 <GanttCategoriesTab isMaster={currentUser?.role === 'master'} />

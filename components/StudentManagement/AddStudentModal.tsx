@@ -202,7 +202,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
 
     // 입력 필드 클래스
     const inputClass = (hasError: boolean) =>
-        `flex-1 px-2 py-1 text-xs border focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none ${
+        `flex-1 px-2 py-1 text-xs border focus:ring-1 focus:ring-accent focus:border-accent outline-none ${
             hasError ? 'border-red-400 bg-red-50' : 'border-gray-300'
         }`;
 
@@ -214,8 +214,8 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
             >
                 {/* 헤더 */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
-                    <h2 className="text-sm font-bold text-[#081429] flex items-center gap-2">
-                        <UserPlus size={16} className="text-[#fdb813]" />
+                    <h2 className="text-sm font-bold text-primary flex items-center gap-2">
+                        <UserPlus size={16} className="text-accent" />
                         새 학생 등록
                     </h2>
                     <button
@@ -232,12 +232,12 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                     {/* Section 1: 기본 정보 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <User className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">기본 정보</h3>
+                            <User className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">기본 정보</h3>
                         </div>
                         <div className="divide-y divide-gray-100">
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">이름 <span className="text-red-500">*</span></span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">이름 <span className="text-red-500">*</span></span>
                                 <input
                                     type="text"
                                     value={values.name}
@@ -252,7 +252,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                                 )}
                             </div>
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">영어이름</span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">영어이름</span>
                                 <input
                                     type="text"
                                     value={values.englishName}
@@ -262,7 +262,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                                 />
                             </div>
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">성별 <span className="text-red-500">*</span></span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">성별 <span className="text-red-500">*</span></span>
                                 <div className="flex items-center gap-4">
                                     <label className="flex items-center gap-1.5 cursor-pointer">
                                         <input
@@ -270,7 +270,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                                             name="gender"
                                             checked={values.gender === 'male'}
                                             onChange={() => handleChange('gender', 'male')}
-                                            className="w-3 h-3 text-[#fdb813] focus:ring-[#fdb813]"
+                                            className="w-3 h-3 text-accent focus:ring-accent"
                                         />
                                         <span className="text-xs">남</span>
                                     </label>
@@ -280,7 +280,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                                             name="gender"
                                             checked={values.gender === 'female'}
                                             onChange={() => handleChange('gender', 'female')}
-                                            className="w-3 h-3 text-[#fdb813] focus:ring-[#fdb813]"
+                                            className="w-3 h-3 text-accent focus:ring-accent"
                                         />
                                         <span className="text-xs">여</span>
                                     </label>
@@ -292,12 +292,12 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                     {/* Section 2: 학교 정보 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <School className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">학교 정보</h3>
+                            <School className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">학교 정보</h3>
                         </div>
                         <div className="divide-y divide-gray-100">
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">학교 <span className="text-red-500">*</span></span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">학교 <span className="text-red-500">*</span></span>
                                 <input
                                     type="text"
                                     value={values.school}
@@ -311,7 +311,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                                 )}
                             </div>
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">학년 <span className="text-red-500">*</span></span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">학년 <span className="text-red-500">*</span></span>
                                 <select
                                     value={values.grade}
                                     onChange={(e) => handleChange('grade', e.target.value)}
@@ -328,7 +328,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                                 )}
                             </div>
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">졸업연도</span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">졸업연도</span>
                                 <input
                                     type="text"
                                     value={values.graduationYear}
@@ -343,12 +343,12 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                     {/* Section 3: 연락처 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <Phone className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">연락처</h3>
+                            <Phone className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">연락처</h3>
                         </div>
                         <div className="divide-y divide-gray-100">
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">원생폰</span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">원생폰</span>
                                 <input
                                     type="tel"
                                     value={values.studentPhone}
@@ -362,7 +362,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                                 )}
                             </div>
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">집전화</span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">집전화</span>
                                 <input
                                     type="tel"
                                     value={values.homePhone}
@@ -372,7 +372,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                                 />
                             </div>
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">보호자</span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">보호자</span>
                                 <div className="flex gap-1 flex-1">
                                     <input
                                         type="tel"
@@ -385,7 +385,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                                     <select
                                         value={values.parentRelation}
                                         onChange={(e) => handleChange('parentRelation', e.target.value)}
-                                        className="w-14 px-1 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                        className="w-14 px-1 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-accent outline-none"
                                     >
                                         {RELATION_OPTIONS.map(opt => (
                                             <option key={opt} value={opt}>{opt}</option>
@@ -395,7 +395,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                                         type="text"
                                         value={values.parentName}
                                         onChange={(e) => handleChange('parentName', e.target.value)}
-                                        className="w-20 px-2 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                        className="w-20 px-2 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-accent outline-none"
                                         placeholder="보호자명"
                                     />
                                 </div>
@@ -411,12 +411,12 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                     {/* Section 4: 주소 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <MapPin className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">주소</h3>
+                            <MapPin className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">주소</h3>
                         </div>
                         <div className="divide-y divide-gray-100">
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">우편번호</span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">우편번호</span>
                                 <input
                                     type="text"
                                     value={values.zipCode}
@@ -426,7 +426,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                                 />
                             </div>
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">주소</span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">주소</span>
                                 <input
                                     type="text"
                                     value={values.address}
@@ -436,7 +436,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                                 />
                             </div>
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">상세주소</span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">상세주소</span>
                                 <input
                                     type="text"
                                     value={values.addressDetail}
@@ -451,12 +451,12 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                     {/* Section 5: 추가 정보 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <Cake className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">추가 정보</h3>
+                            <Cake className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">추가 정보</h3>
                         </div>
                         <div className="divide-y divide-gray-100">
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">생년월일</span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">생년월일</span>
                                 <input
                                     type="date"
                                     value={values.birthDate}
@@ -465,7 +465,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                                 />
                             </div>
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">닉네임</span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">닉네임</span>
                                 <input
                                     type="text"
                                     value={values.nickname}
@@ -475,7 +475,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                                 />
                             </div>
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">등록일</span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">등록일</span>
                                 <input
                                     type="date"
                                     value={values.startDate}
@@ -484,7 +484,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                                 />
                             </div>
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">입학동기</span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">입학동기</span>
                                 <input
                                     type="text"
                                     value={values.enrollmentReason}
@@ -499,14 +499,14 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                     {/* Section 6: 메모 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <FileText className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">메모</h3>
+                            <FileText className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">메모</h3>
                         </div>
                         <div className="p-2">
                             <textarea
                                 value={values.memo}
                                 onChange={(e) => handleChange('memo', e.target.value)}
-                                className="w-full px-2 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] outline-none resize-none"
+                                className="w-full px-2 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-accent outline-none resize-none"
                                 rows={2}
                                 placeholder="특이사항이나 메모"
                             />
@@ -527,7 +527,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                     <button
                         onClick={handleSubmit}
                         disabled={isSubmitting}
-                        className="px-3 py-1.5 bg-[#fdb813] text-[#081429] text-xs font-semibold hover:bg-[#e5a60f] transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                        className="px-3 py-1.5 bg-accent text-primary text-xs font-semibold hover:bg-[#e5a60f] transition-colors disabled:opacity-50 flex items-center gap-1.5"
                     >
                         {isSubmitting ? (
                             <>

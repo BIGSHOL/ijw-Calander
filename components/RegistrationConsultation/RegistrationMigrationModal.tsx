@@ -484,8 +484,8 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
         {/* 헤더 */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
           <div className="flex items-center gap-2">
-            <Database className="w-5 h-5 text-[#fdb813]" />
-            <h2 className="text-sm font-bold text-[#081429]">등록 상담 DB 불러오기</h2>
+            <Database className="w-5 h-5 text-accent" />
+            <h2 className="text-sm font-bold text-primary">등록 상담 DB 불러오기</h2>
           </div>
           <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
             <X size={18} />
@@ -500,12 +500,12 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
               {/* Section: 파일 업로드 */}
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-200">
-                  <Upload className="w-4 h-4 text-[#fdb813]" />
-                  <h3 className="text-sm font-bold text-[#081429]">Excel 파일 업로드</h3>
+                  <Upload className="w-4 h-4 text-accent" />
+                  <h3 className="text-sm font-bold text-primary">Excel 파일 업로드</h3>
                 </div>
 
                 <div className="text-center">
-                  <Upload className="w-16 h-16 mx-auto mb-4 text-[#fdb813]" />
+                  <Upload className="w-16 h-16 mx-auto mb-4 text-accent" />
                   <p className="text-gray-600 mb-6">
                     월별 시트 (예: 1월, 2월, ...)가 포함된 엑셀 파일을 선택하세요.
                   </p>
@@ -518,7 +518,7 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
                       className="hidden"
                       disabled={loading}
                     />
-                    <div className="px-6 py-3 bg-[#fdb813] text-[#081429] rounded-sm font-semibold cursor-pointer hover:bg-[#e5a711] transition-colors inline-flex items-center gap-2">
+                    <div className="px-6 py-3 bg-accent text-primary rounded-sm font-semibold cursor-pointer hover:bg-[#e5a711] transition-colors inline-flex items-center gap-2">
                       {loading ? (
                         <>
                           <Loader2 className="w-5 h-5 animate-spin" />
@@ -550,8 +550,8 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
               {/* Section: 시트 선택 */}
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-200">
-                  <FileSpreadsheet className="w-4 h-4 text-[#fdb813]" />
-                  <h3 className="text-sm font-bold text-[#081429]">불러올 시트 선택</h3>
+                  <FileSpreadsheet className="w-4 h-4 text-accent" />
+                  <h3 className="text-sm font-bold text-primary">불러올 시트 선택</h3>
                 </div>
 
                 <p className="text-sm text-gray-600 mb-4">
@@ -590,8 +590,8 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
                       }}
                       className={`px-4 py-3 rounded-sm border-2 transition-all font-medium text-sm ${
                         selectedSheets.has(sheetName)
-                          ? 'bg-[#fdb813] border-[#fdb813] text-[#081429] shadow-md'
-                          : 'bg-white border-gray-300 text-gray-700 hover:border-[#fdb813]/50'
+                          ? 'bg-accent border-accent text-primary shadow-md'
+                          : 'bg-white border-gray-300 text-gray-700 hover:border-accent/50'
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -639,7 +639,7 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
                   <button
                     onClick={handleParseSelectedSheets}
                     disabled={selectedSheets.size === 0 || loading}
-                    className="px-6 py-2 bg-[#fdb813] text-[#081429] rounded-sm font-semibold hover:bg-[#e5a711] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="px-6 py-2 bg-accent text-primary rounded-sm font-semibold hover:bg-[#e5a711] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     {loading ? (
                       <>
@@ -663,8 +663,8 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
               {/* Section: 마이그레이션 통계 */}
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-200">
-                  <Eye className="w-4 h-4 text-[#fdb813]" />
-                  <h3 className="text-sm font-bold text-[#081429]">마이그레이션 통계</h3>
+                  <Eye className="w-4 h-4 text-accent" />
+                  <h3 className="text-sm font-bold text-primary">마이그레이션 통계</h3>
                 </div>
 
                 <div className="p-4 bg-blue-50 border border-blue-200 rounded-sm">
@@ -692,13 +692,13 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
               {/* Section: 데이터 미리보기 */}
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-200">
-                  <Database className="w-4 h-4 text-[#fdb813]" />
-                  <h3 className="text-sm font-bold text-[#081429]">데이터 미리보기</h3>
+                  <Database className="w-4 h-4 text-accent" />
+                  <h3 className="text-sm font-bold text-primary">데이터 미리보기</h3>
                 </div>
 
                 <div className="border border-gray-200 rounded-sm overflow-hidden">
                   <div className="bg-gray-50 px-3 py-2 border-b border-gray-200 flex items-center justify-between">
-                    <h4 className="text-sm font-bold text-[#081429]">
+                    <h4 className="text-sm font-bold text-primary">
                       전체 {stats.total}개
                     </h4>
                     <div className="text-xs text-gray-600">
@@ -811,7 +811,7 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
                   <button
                     onClick={handleMigrate}
                     disabled={stats.new === 0}
-                    className="px-4 py-2 bg-[#fdb813] text-[#081429] rounded-sm font-semibold hover:bg-[#e5a711] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="px-4 py-2 bg-accent text-primary rounded-sm font-semibold hover:bg-[#e5a711] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                   >
                     <Database className="w-4 h-4" />
                     {stats.new}개 마이그레이션 실행
@@ -827,17 +827,17 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
               {/* Section: 마이그레이션 진행 */}
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-200">
-                  <PlayCircle className="w-4 h-4 text-[#fdb813]" />
-                  <h3 className="text-sm font-bold text-[#081429]">마이그레이션 진행 중</h3>
+                  <PlayCircle className="w-4 h-4 text-accent" />
+                  <h3 className="text-sm font-bold text-primary">마이그레이션 진행 중</h3>
                 </div>
 
                 <div className="text-center py-8">
-                  <Loader2 className="w-16 h-16 mx-auto mb-4 text-[#fdb813] animate-spin" />
+                  <Loader2 className="w-16 h-16 mx-auto mb-4 text-accent animate-spin" />
                   <p className="text-gray-600 mb-4">잠시만 기다려주세요.</p>
 
                   <div className="w-full max-w-md mx-auto bg-gray-200 rounded-sm h-4 overflow-hidden">
                     <div
-                      className="bg-[#fdb813] h-full transition-all duration-300"
+                      className="bg-accent h-full transition-all duration-300"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
@@ -854,7 +854,7 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-200">
                   <CheckCircle2 className="w-4 h-4 text-green-600" />
-                  <h3 className="text-sm font-bold text-[#081429]">마이그레이션 완료</h3>
+                  <h3 className="text-sm font-bold text-primary">마이그레이션 완료</h3>
                 </div>
 
                 <div className="text-center py-8">
@@ -870,7 +870,7 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
                       onSuccess();
                       onClose();
                     }}
-                    className="px-6 py-3 bg-[#fdb813] text-[#081429] rounded-sm font-semibold hover:bg-[#e5a711] transition-colors"
+                    className="px-6 py-3 bg-accent text-primary rounded-sm font-semibold hover:bg-[#e5a711] transition-colors"
                   >
                     확인
                   </button>

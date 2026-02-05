@@ -64,7 +64,7 @@ const TabGroupDropdown: React.FC<TabGroupDropdownProps> = ({
         onClick={() => onTabSelect(singleTab)}
         className={`px-3 py-1.5 rounded-sm text-xs font-bold transition-all flex items-center gap-1.5 ${
           active
-            ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+            ? 'bg-accent text-primary shadow-sm'
             : 'text-gray-400 hover:text-white hover:bg-white/5'
         }`}
         aria-label={`${meta.label} 탭으로 이동`}
@@ -95,7 +95,7 @@ const TabGroupDropdown: React.FC<TabGroupDropdownProps> = ({
       <button
         className={`px-3 py-1.5 rounded-sm text-xs font-bold transition-all flex items-center gap-1.5 ${
           isActive
-            ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+            ? 'bg-accent text-primary shadow-sm'
             : 'text-gray-400 hover:text-white hover:bg-white/5'
         }`}
         aria-haspopup="true"
@@ -132,7 +132,7 @@ const TabGroupDropdown: React.FC<TabGroupDropdownProps> = ({
                 }}
                 className={`w-full px-4 py-2 text-left text-xs font-medium transition-colors flex items-center gap-2 ${
                   active
-                    ? 'bg-[#fdb813]/20 text-[#fdb813]'
+                    ? 'bg-accent/20 text-accent'
                     : 'text-gray-300 hover:bg-white/10 hover:text-white'
                 }`}
                 role="menuitem"

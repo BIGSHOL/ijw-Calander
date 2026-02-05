@@ -48,7 +48,7 @@ export const CalendarFilterPopover: React.FC<CalendarFilterPopoverProps> = ({
         <div className="flex justify-between items-center mb-4">
           <div className="flex flex-col gap-2">
             <h3 className="text-white font-bold flex items-center gap-2">
-              <Filter size={16} className="text-[#fdb813]" /> 부서 선택
+              <Filter size={16} className="text-accent" /> 부서 선택
             </h3>
 
             {/* Category Filter Chips */}
@@ -57,7 +57,7 @@ export const CalendarFilterPopover: React.FC<CalendarFilterPopoverProps> = ({
                 <button
                   onClick={() => setSelectedCategory(null)}
                   className={`px-3 py-1 rounded-sm text-xs font-bold transition-all border ${selectedCategory === null
-                    ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                    ? 'bg-accent text-primary border-accent'
                     : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'
                     }`}
                 >
@@ -68,7 +68,7 @@ export const CalendarFilterPopover: React.FC<CalendarFilterPopoverProps> = ({
                     key={cat}
                     onClick={() => setSelectedCategory(prev => prev === cat ? null : cat)}
                     className={`px-3 py-1 rounded-sm text-xs font-bold transition-all border ${selectedCategory === cat
-                      ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                      ? 'bg-accent text-primary border-accent'
                       : 'bg-transparent text-gray-400 border-gray-700 hover:border-gray-500'
                       }`}
                   >
@@ -84,8 +84,8 @@ export const CalendarFilterPopover: React.FC<CalendarFilterPopoverProps> = ({
             <button
               onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
               className={`px-3 py-1.5 rounded flex items-center gap-1.5 text-xs font-bold border transition-all ${showFavoritesOnly
-                ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
-                : 'bg-transparent text-gray-400 border-gray-700 hover:border-[#fdb813]/50'
+                ? 'bg-accent text-primary border-accent'
+                : 'bg-transparent text-gray-400 border-gray-700 hover:border-accent/50'
                 }`}
             >
               <Star size={12} className={showFavoritesOnly ? 'fill-current' : ''} />
@@ -117,7 +117,7 @@ export const CalendarFilterPopover: React.FC<CalendarFilterPopoverProps> = ({
                     flex items-center gap-2 px-3 py-2.5 rounded-sm border text-xs font-bold transition-all
                     ${isHidden
                       ? 'bg-transparent border-gray-700 text-gray-500'
-                      : 'bg-[#081429] border-[#fdb813]/30 text-white shadow-sm ring-1 ring-[#fdb813]/20'
+                      : 'bg-primary border-accent/30 text-white shadow-sm ring-1 ring-[#fdb813]/20'
                     }
                   `}
                 >
@@ -131,7 +131,7 @@ export const CalendarFilterPopover: React.FC<CalendarFilterPopoverProps> = ({
                   >
                     <Star
                       size={14}
-                      className={isFavorite ? 'text-[#fdb813] fill-[#fdb813]' : 'text-gray-600 hover:text-[#fdb813]'}
+                      className={isFavorite ? 'text-accent fill-[#fdb813]' : 'text-gray-600 hover:text-accent'}
                     />
                   </button>
 
@@ -142,7 +142,7 @@ export const CalendarFilterPopover: React.FC<CalendarFilterPopoverProps> = ({
                   >
                     <span className={`w-2 h-2 rounded-sm ${isHidden ? 'bg-gray-700' : ''}`} style={{ backgroundColor: !isHidden ? (dept.color?.startsWith('#') ? dept.color : 'white') : undefined }} />
                     <span className="truncate flex-1">{dept.name}</span>
-                    {isHidden ? <EyeOff size={12} /> : <Eye size={12} className="text-[#fdb813]" />}
+                    {isHidden ? <EyeOff size={12} /> : <Eye size={12} className="text-accent" />}
                   </button>
                 </div>
               )
@@ -152,7 +152,7 @@ export const CalendarFilterPopover: React.FC<CalendarFilterPopoverProps> = ({
 
       {/* Close Handle */}
       <div
-        className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full bg-[#1e293b] px-6 py-0.5 rounded-b-xl border-b border-x border-gray-700 cursor-pointer hover:bg-[#081429] transition-colors"
+        className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full bg-[#1e293b] px-6 py-0.5 rounded-b-xl border-b border-x border-gray-700 cursor-pointer hover:bg-primary transition-colors"
         onClick={() => setIsFilterOpen(false)}
       >
         <ChevronUp size={16} className="text-gray-400" />

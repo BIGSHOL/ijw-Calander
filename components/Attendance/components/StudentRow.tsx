@@ -112,17 +112,17 @@ const StudentRow = React.memo(({
   return (
     <tr className="group hover:bg-gray-50 transition-colors">
       {/* Fixed Columns - Compact */}
-      <td className="p-1 sticky left-0 z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 text-center text-[#373d41]/50 font-mono text-xxs align-middle w-8">
+      <td className="p-1 sticky left-0 z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 text-center text-primary-700/50 font-mono text-xxs align-middle w-8">
         {idx}
       </td>
       <td className="p-1 sticky left-8 z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle w-[70px]">
         <button
           onClick={() => onEditStudent(student)}
-          className="text-left w-full hover:text-[#081429] font-bold text-[#373d41] truncate flex items-center gap-0.5 text-xs"
+          className="text-left w-full hover:text-primary font-bold text-primary-700 truncate flex items-center gap-0.5 text-xs"
         >
           <span className="truncate">{student.name}</span>
           {isNew && (
-            <span className="inline-flex items-center px-1 py-0.5 rounded-sm bg-[#fdb813] text-[#081429] text-nano font-extrabold">
+            <span className="inline-flex items-center px-1 py-0.5 rounded-sm bg-accent text-primary text-nano font-extrabold">
               N
             </span>
           )}
@@ -135,7 +135,7 @@ const StudentRow = React.memo(({
       </td>
       <td className="p-1 sticky left-[102px] z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle w-[80px]">
         <div className="flex flex-col gap-0.5 justify-center">
-          <div className="text-xxs text-[#373d41] font-medium truncate" title={formatSchoolGrade(student.school, student.grade)}>
+          <div className="text-xxs text-primary-700 font-medium truncate" title={formatSchoolGrade(student.school, student.grade)}>
             {formatSchoolGrade(student.school, student.grade)}
           </div>
           <button
@@ -215,7 +215,7 @@ const StudentRow = React.memo(({
           })}
         </div>
       </td>
-      <td className="p-1 sticky left-[252px] z-[90] border-r border-b border-gray-200 text-center font-bold text-[#081429] bg-[#f0f4f8] align-middle w-[36px] text-xs">
+      <td className="p-1 sticky left-[252px] z-[90] border-r border-b border-gray-200 text-center font-bold text-primary bg-[#f0f4f8] align-middle w-[36px] text-xs">
         {attendedUnits}
       </td>
 

@@ -518,7 +518,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
         <div className="max-w-7xl mx-auto">
           <DashboardHeader userProfile={userProfile} staffMember={staffMember} />
           <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-sm h-12 w-12 border-4 border-[#fdb813] border-t-transparent"></div>
+            <div className="animate-spin rounded-sm h-12 w-12 border-4 border-accent border-t-transparent"></div>
           </div>
         </div>
       </div>
@@ -537,7 +537,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
               <h3 className="text-xs font-medium text-gray-500">전체 수업</h3>
               <BookOpen className="w-4 h-4 text-blue-500" />
             </div>
-            <p className="text-2xl font-bold text-[#081429]">{myClasses.length}</p>
+            <p className="text-2xl font-bold text-primary">{myClasses.length}</p>
             <p className="text-xxs text-gray-400 mt-0.5">담당 중인 수업</p>
           </div>
 
@@ -546,7 +546,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
               <h3 className="text-xs font-medium text-gray-500">오늘 수업</h3>
               <Calendar className="w-4 h-4 text-green-500" />
             </div>
-            <p className="text-2xl font-bold text-[#081429]">{todayClasses.length}</p>
+            <p className="text-2xl font-bold text-primary">{todayClasses.length}</p>
             <p className="text-xxs text-gray-400 mt-0.5">{dayOfWeek}요일 수업</p>
           </div>
 
@@ -555,7 +555,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
               <h3 className="text-xs font-medium text-gray-500">내 학생</h3>
               <Users className="w-4 h-4 text-purple-500" />
             </div>
-            <p className="text-2xl font-bold text-[#081429]">{myStudents.length}</p>
+            <p className="text-2xl font-bold text-primary">{myStudents.length}</p>
             <p className="text-xxs text-gray-400 mt-0.5">담당 학생 수</p>
           </div>
 
@@ -564,7 +564,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
               <h3 className="text-xs font-medium text-gray-500">상담 예정</h3>
               <Clock className="w-4 h-4 text-orange-500" />
             </div>
-            <p className="text-2xl font-bold text-[#081429]">0</p>
+            <p className="text-2xl font-bold text-primary">0</p>
             <p className="text-xxs text-gray-400 mt-0.5">예정된 상담</p>
           </div>
         </div>
@@ -575,8 +575,8 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
           <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100 flex flex-col">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-[#081429]" />
-                <h2 className="text-sm font-bold text-[#081429]">내 수업</h2>
+                <BookOpen className="w-4 h-4 text-primary" />
+                <h2 className="text-sm font-bold text-primary">내 수업</h2>
                 <span className="text-xs text-gray-500">({sortedClasses.length}개)</span>
               </div>
               {sortedClasses.length > 10 && (
@@ -611,7 +611,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                 }}
                 className={`px-3 py-1 text-xs rounded-sm transition-colors ${
                   classFilter === 'all'
-                    ? 'bg-[#081429] text-white font-bold'
+                    ? 'bg-primary text-white font-bold'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
@@ -699,7 +699,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                         >
                           <td className="px-2">
                             <div className="flex items-center gap-1">
-                              <span className="text-xs font-medium text-[#081429]">{cls.className}</span>
+                              <span className="text-xs font-medium text-primary">{cls.className}</span>
                               {isTodayClass && (
                                 <span className="text-micro px-1 py-0.5 rounded bg-amber-200 text-amber-800 font-bold">
                                   오늘
@@ -764,8 +764,8 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
           <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100 flex flex-col">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-[#081429]" />
-                <h2 className="text-sm font-bold text-[#081429]">내 학생</h2>
+                <Users className="w-4 h-4 text-primary" />
+                <h2 className="text-sm font-bold text-primary">내 학생</h2>
                 <span className="text-xs text-gray-500">({myStudents.length}명)</span>
               </div>
               {myStudents.length > 10 && (
@@ -807,7 +807,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                       <th className="text-left px-2 text-xs font-bold text-gray-700">
                         <button
                           onClick={() => handleSortChange('name')}
-                          className="flex items-center gap-1 hover:text-[#081429] transition-colors"
+                          className="flex items-center gap-1 hover:text-primary transition-colors"
                         >
                           이름
                           {studentSortBy === 'name' ? (
@@ -820,7 +820,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                       <th className="text-left px-2 text-xs font-bold text-gray-700">
                         <button
                           onClick={() => handleSortChange('school')}
-                          className="flex items-center gap-1 hover:text-[#081429] transition-colors"
+                          className="flex items-center gap-1 hover:text-primary transition-colors"
                         >
                           학교
                           {studentSortBy === 'school' ? (
@@ -833,7 +833,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                       <th className="text-left px-2 text-xs font-bold text-gray-700">
                         <button
                           onClick={() => handleSortChange('grade')}
-                          className="flex items-center gap-1 hover:text-[#081429] transition-colors"
+                          className="flex items-center gap-1 hover:text-primary transition-colors"
                         >
                           학년
                           {studentSortBy === 'grade' ? (
@@ -851,7 +851,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
                   <tbody>
                     {sortedStudents.slice((studentPage - 1) * 10, studentPage * 10).map(student => (
                       <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50 h-[36px]">
-                        <td className="px-2 text-xs font-medium text-[#081429] whitespace-nowrap">{student.name}</td>
+                        <td className="px-2 text-xs font-medium text-primary whitespace-nowrap">{student.name}</td>
                         <td className="px-2 text-xs text-gray-600 whitespace-nowrap">{student.school || '-'}</td>
                         <td className="px-2 text-xs text-gray-600 whitespace-nowrap">{student.grade || '-'}</td>
                         <td className="px-2">

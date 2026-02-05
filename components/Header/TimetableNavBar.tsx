@@ -29,7 +29,7 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
   setIsTimetableSettingsOpen,
 }) => {
   return (
-    <div className="bg-[#081429] h-10 flex items-center px-6 border-b border-gray-700 relative z-30 text-xs">
+    <div className="bg-primary h-10 flex items-center px-6 border-b border-gray-700 relative z-30 text-xs">
       {/* Main Filter Toggle - Only show for Math */
         /* Removed Global Option Settings Button */
       }
@@ -40,7 +40,7 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
         <select
           value={timetableSubject}
           onChange={(e) => setTimetableSubject(e.target.value as SubjectType)}
-          className="px-2 py-0.5 rounded bg-[#fdb813] text-[#081429] font-bold text-xs hover:brightness-110 transition-all cursor-pointer border-none outline-none"
+          className="px-2 py-0.5 rounded bg-accent text-primary font-bold text-xs hover:brightness-110 transition-all cursor-pointer border-none outline-none"
           title="과목 선택"
         >
           {hasPermission('timetable.math.view') && (
@@ -68,7 +68,7 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
                 return canViewIntegrated ? 'class' : 'teacher';
               });
             }}
-            className="px-2 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
+            className="px-2 py-0.5 rounded bg-primary border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
             title="클릭하여 보기방식 전환"
           >
             {timetableViewType === 'class'
@@ -92,7 +92,7 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
                 setTimetableViewType('class');
               }
             }}
-            className="px-2 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
+            className="px-2 py-0.5 rounded bg-primary border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
             title="클릭하여 보기방식 전환"
           >
             {timetableViewType === 'class'
@@ -109,7 +109,7 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
         {/* Timetable Settings Button - 수업 설정만 */}
         <button
           onClick={() => setIsTimetableSettingsOpen(true)}
-          className="p-1 rounded bg-[#081429] border border-gray-700 text-white hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
+          className="p-1 rounded bg-primary border border-gray-700 text-white hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
           title="수업 설정"
         >
           <Settings size={14} />

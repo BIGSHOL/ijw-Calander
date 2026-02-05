@@ -350,7 +350,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     if (loading) {
         return (
             <div className="flex items-center justify-center h-full">
-                <div className="animate-spin rounded-sm h-12 w-12 border-4 border-[#fdb813] border-t-transparent"></div>
+                <div className="animate-spin rounded-sm h-12 w-12 border-4 border-accent border-t-transparent"></div>
             </div>
         );
     }
@@ -572,9 +572,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                             onClose={() => setIsScenarioModalOpen(false)}
                             currentUser={currentUser}
                             isSimulationMode={isScenarioMode}
-                            onLoadScenario={(name) => {
-                                console.log('시나리오 불러오기:', name);
-                            }}
+                            onLoadScenario={() => {}}
                         />
                     </Suspense>
                 )}
@@ -933,7 +931,7 @@ const TimetableManager = ({
     if (loading) {
         return (
             <div className="flex items-center justify-center h-full">
-                <div className="animate-spin rounded-sm h-12 w-12 border-4 border-[#fdb813] border-t-transparent"></div>
+                <div className="animate-spin rounded-sm h-12 w-12 border-4 border-accent border-t-transparent"></div>
             </div>
         );
     }

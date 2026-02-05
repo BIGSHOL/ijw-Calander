@@ -47,7 +47,7 @@ export const EntryForm: React.FC<EntryFormProps> = ({ initialData, existingAcade
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
             <div className="bg-white rounded-sm shadow-xl w-full max-w-md overflow-hidden">
-                <div className="px-6 py-4 border-b border-[#373d41]/10 flex justify-between items-center bg-[#081429]">
+                <div className="px-6 py-4 border-b border-primary-700/10 flex justify-between items-center bg-primary">
                     <h3 className="text-lg font-semibold text-white">
                         {initialData ? '수강료 정보 수정' : '수강료 등록'}
                     </h3>
@@ -58,7 +58,7 @@ export const EntryForm: React.FC<EntryFormProps> = ({ initialData, existingAcade
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-[#373d41] mb-1">
+                        <label className="block text-sm font-medium text-primary-700 mb-1">
                             사업장 (학원명)
                         </label>
                         <div className="relative">
@@ -68,7 +68,7 @@ export const EntryForm: React.FC<EntryFormProps> = ({ initialData, existingAcade
                                 required
                                 value={academyName}
                                 onChange={(e) => setAcademyName(e.target.value)}
-                                className="w-full px-4 py-2 rounded-sm border border-gray-200 focus:border-[#fdb813] focus:ring-2 focus:ring-[#fdb813]/20 outline-none transition-all"
+                                className="w-full px-4 py-2 rounded-sm border border-gray-200 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all"
                                 placeholder="사업장명을 직접 입력하세요"
                                 autoFocus={!initialData}
                             />
@@ -83,7 +83,7 @@ export const EntryForm: React.FC<EntryFormProps> = ({ initialData, existingAcade
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-[#373d41] mb-1">
+                        <label className="block text-sm font-medium text-primary-700 mb-1">
                             예상 수강료 (원)
                         </label>
                         <input
@@ -91,20 +91,20 @@ export const EntryForm: React.FC<EntryFormProps> = ({ initialData, existingAcade
                             required
                             value={projectedFee ? parseInt(projectedFee).toLocaleString() : ''}
                             onChange={handleFeeChange}
-                            className="w-full px-4 py-2 rounded-sm border border-gray-200 focus:border-[#fdb813] focus:ring-2 focus:ring-[#fdb813]/20 outline-none transition-all font-mono"
+                            className="w-full px-4 py-2 rounded-sm border border-gray-200 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all font-mono"
                             placeholder="0"
                         />
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-[#373d41] mb-1">
+                        <label className="block text-sm font-medium text-primary-700 mb-1">
                             증감 및 특이 사유 <span className="text-gray-400 font-normal text-xs ml-1">(선택)</span>
                         </label>
                         <textarea
                             value={reason}
                             onChange={(e) => setReason(e.target.value)}
                             rows={3}
-                            className="w-full px-4 py-2 rounded-sm border border-gray-200 focus:border-[#fdb813] focus:ring-2 focus:ring-[#fdb813]/20 outline-none transition-all resize-none"
+                            className="w-full px-4 py-2 rounded-sm border border-gray-200 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all resize-none"
                             placeholder="특이사항이 있는 경우 입력하세요"
                         />
                     </div>
@@ -113,13 +113,13 @@ export const EntryForm: React.FC<EntryFormProps> = ({ initialData, existingAcade
                         <button
                             type="button"
                             onClick={onCancel}
-                            className="flex-1 px-4 py-2.5 rounded-sm border border-gray-200 text-[#373d41] font-medium hover:bg-gray-50 transition-colors"
+                            className="flex-1 px-4 py-2.5 rounded-sm border border-gray-200 text-primary-700 font-medium hover:bg-gray-50 transition-colors"
                         >
                             취소
                         </button>
                         <button
                             type="submit"
-                            className="flex-1 px-4 py-2.5 rounded-sm bg-[#fdb813] text-[#081429] font-bold hover:brightness-110 transition-all flex items-center justify-center gap-2"
+                            className="flex-1 px-4 py-2.5 rounded-sm bg-accent text-primary font-bold hover:brightness-110 transition-all flex items-center justify-center gap-2"
                         >
                             <Save size={18} />
                             저장하기

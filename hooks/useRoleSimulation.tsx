@@ -115,7 +115,6 @@ export function RoleSimulationProvider({
       simulatedRole: role,
       simulatedUserProfile: null,
     });
-    console.log(`[RoleSimulation] Started role simulation: ${ROLE_LABELS[role]}`);
   }, [canSimulate, updateState]);
 
   // 사용자 시뮬레이션 시작
@@ -133,16 +132,10 @@ export function RoleSimulationProvider({
       simulatedRole: userProfile.role,
       simulatedUserProfile: userProfile,
     });
-    console.log(`[RoleSimulation] Started user simulation: ${userProfile.displayName || userProfile.email} (${ROLE_LABELS[userProfile.role]})`);
   }, [canSimulate, updateState]);
 
   // 시뮬레이션 종료
   const stopSimulation = useCallback(() => {
-    if (simulationType === 'user' && simulatedUserProfile) {
-      console.log(`[RoleSimulation] Stopped user simulation: ${simulatedUserProfile.displayName || simulatedUserProfile.email}`);
-    } else if (simulationType === 'role' && simulatedRole) {
-      console.log(`[RoleSimulation] Stopped role simulation: ${ROLE_LABELS[simulatedRole]}`);
-    }
     updateState({
       simulationType: null,
       simulatedRole: null,

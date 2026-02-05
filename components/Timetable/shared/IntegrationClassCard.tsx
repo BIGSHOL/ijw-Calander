@@ -6,6 +6,7 @@ import { Eye, EyeOff, Users, MoreVertical, TrendingUp, TrendingDown, ArrowUpCirc
 import { Teacher, TimetableStudent, ClassKeywordColor, EnglishLevel } from '../../../types';
 import IntegrationMiniGridRow, { PeriodInfo, ScheduleCell } from './IntegrationMiniGridRow';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
+import { formatDateKey } from '../../../utils/dateUtils';
 import LevelUpConfirmModal from '../English/LevelUpConfirmModal';
 import { isValidLevel, numberLevelUp, classLevelUp, isMaxLevel, numberLevelDown, classLevelDown, isMinLevel, canNumberLevelDown, canNumberLevelUp, EN_PERIODS, INJAE_PERIODS } from '../English/englishUtils';
 import { collection, getDocs, writeBatch, doc, query, where, collectionGroup } from 'firebase/firestore';
@@ -241,7 +242,6 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
             }
 
             // 2. 충돌 없음 → 바로 실행
-            console.log('[LevelChange] Starting:', oldClassName, '→', newClassName);
             const batch = writeBatch(db);
 
             // Classes 컬렉션 업데이트
@@ -249,7 +249,6 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
             classesSnapshot.docs.forEach(docSnap => {
                 const data = docSnap.data();
                 if (data.className === oldClassName && data.subject === 'english') {
-                    console.log('[LevelChange] Classes collection match:', docSnap.id);
                     batch.update(doc(db, CLASS_COLLECTION, docSnap.id), { className: newClassName });
                     classesCount++;
                 }
@@ -265,13 +264,11 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
             let enrollmentsCount = 0;
 
             enrollmentsSnapshot.docs.forEach(docSnap => {
-                console.log('[LevelChange] Enrollment match:', docSnap.ref.path);
                 batch.update(docSnap.ref, { className: newClassName });
                 enrollmentsCount++;
             });
 
             const totalUpdates = classesCount + enrollmentsCount;
-            console.log('[LevelChange] Total updates:', { classesCount, enrollmentsCount });
 
             if (totalUpdates === 0) {
                 alert('업데이트할 데이터가 없습니다.');
@@ -279,13 +276,11 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
             }
 
             await batch.commit();
-            console.log('[LevelChange] Batch commit successful');
 
             // React Query 캐시 무효화
             queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
             queryClient.invalidateQueries({ queryKey: ['students'] });
             queryClient.invalidateQueries({ queryKey: ['classes'] });
-            console.log('[LevelChange] Cache invalidated');
 
             // 성공 메시지 (간단하게)
             const directionText = direction === 'up' ? '레벨업' : '레벨다운';
@@ -373,12 +368,12 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     }, [classStudentData]);
 
     // 학생 목록 업데이트 (moveChanges 반영)
-    // currentWeekStart가 있으면 해당 주의 시작일 기준, 없으면 오늘 기준
+    // currentWeekStart가 있으면 해당 주의 시작일 기준, 없으면 오늘 기준 (KST)
     const referenceDate = useMemo(() => {
         if (currentWeekStart) {
-            return currentWeekStart.toISOString().split('T')[0];
+            return formatDateKey(currentWeekStart);
         }
-        return new Date().toISOString().split('T')[0];
+        return formatDateKey(new Date());
     }, [currentWeekStart]);
 
     useEffect(() => {
@@ -967,9 +962,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                 <LevelUpConfirmModal
                     isOpen={levelUpModal.isOpen}
                     onClose={() => setLevelUpModal({ ...levelUpModal, isOpen: false })}
-                    onSuccess={() => {
-                        console.log('[IntegrationClassCard] Level change succeeded for', classInfo.name, '→', levelUpModal.newName);
-                    }}
+                    onSuccess={() => {}}
                     oldClassName={classInfo.name}
                     newClassName={levelUpModal.newName}
                     type={levelUpModal.type}

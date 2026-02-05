@@ -478,7 +478,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
             <div className="flex items-center gap-0.5 p-0.5 bg-[#f8fafc] rounded-sm border border-gray-200 shadow-sm flex-none">
               <button
                 onClick={handlePrev}
-                className="p-1 @xs:p-1.5 @sm:p-2 hover:bg-white hover:text-[#fdb813] hover:shadow-md rounded-sm transition-all text-gray-400 hover:text-[#081429]"
+                className="p-1 @xs:p-1.5 @sm:p-2 hover:bg-white hover:text-accent hover:shadow-md rounded-sm transition-all text-gray-400 hover:text-primary"
               >
                 <ChevronLeft size={14} className="@sm:w-4 @sm:h-4 @lg:w-5 @lg:h-5" strokeWidth={3} />
               </button>
@@ -522,7 +522,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
 
               <button
                 onClick={handleNext}
-                className="p-1 @xs:p-1.5 @sm:p-2 hover:bg-white hover:text-[#fdb813] hover:shadow-md rounded-sm transition-all text-gray-400 hover:text-[#081429]"
+                className="p-1 @xs:p-1.5 @sm:p-2 hover:bg-white hover:text-accent hover:shadow-md rounded-sm transition-all text-gray-400 hover:text-primary"
               >
                 <ChevronRight size={14} className="@sm:w-4 @sm:h-4 @lg:w-5 @lg:h-5" strokeWidth={3} />
               </button>
@@ -545,7 +545,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                         }
                       }}
                       onFocus={() => setIsFilterOpen(true)}
-                      className="w-full pl-10 pr-4 py-1.5 bg-gray-50 border border-gray-200 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813]/50 transition-all font-medium text-xs"
+                      className="w-full pl-10 pr-4 py-1.5 bg-gray-50 border border-gray-200 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent/50 transition-all font-medium text-xs"
                     />
 
 
@@ -561,7 +561,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                   </div>
                   <button
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
-                    className={`p-1.5 rounded-sm border transition-all flex items-center gap-1 font-bold whitespace-nowrap text-xs ${isFilterOpen || activeSearch.depts.length > 0 || activeSearch.baseDate ? 'bg-[#081429] text-white border-[#081429]' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
+                    className={`p-1.5 rounded-sm border transition-all flex items-center gap-1 font-bold whitespace-nowrap text-xs ${isFilterOpen || activeSearch.depts.length > 0 || activeSearch.baseDate ? 'bg-primary text-white border-primary' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`}
                   >
                     <Filter size={18} />
                     <span className="hidden md:inline text-sm">필터</span>
@@ -593,7 +593,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                               else setSelectedDeptsInput([...selectedDeptsInput, dept.id]);
                             }}
                             className={`px-2 py-1 rounded-sm text-xs font-bold border transition-colors ${selectedDeptsInput.includes(dept.id)
-                              ? 'bg-[#081429] text-white border-[#081429]'
+                              ? 'bg-primary text-white border-primary'
                               : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                               }`}
                           >
@@ -635,7 +635,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                               <button
                                 key={d}
                                 onClick={() => setFilterDurationInput(d)}
-                                className={`px-3 py-1 rounded-sm text-xs font-bold transition-all ${filterDurationInput === d ? 'bg-white shadow text-[#081429]' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`px-3 py-1 rounded-sm text-xs font-bold transition-all ${filterDurationInput === d ? 'bg-white shadow text-primary' : 'text-gray-500 hover:text-gray-700'}`}
                               >
                                 {d === '1w' ? '1주일' : d === '1m' ? '1개월' : '1년'}
                               </button>
@@ -659,7 +659,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                       </button>
                       <button
                         onClick={handleApplyFilter}
-                        className="px-4 py-1.5 rounded-sm text-xs font-bold text-white bg-[#081429] hover:bg-[#081429]/90 shadow-lg shadow-[#081429]/20 transition-all flex items-center gap-2"
+                        className="px-4 py-1.5 rounded-sm text-xs font-bold text-white bg-primary hover:bg-primary/90 shadow-lg shadow-[#081429]/20 transition-all flex items-center gap-2"
                       >
                         <Search size={14} />
                         조회하기
@@ -768,7 +768,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
             {/* Right Action Group (Right) - Only show My Events on Primary View */}
             {isPrimaryView && (
               <div className="flex items-center gap-1 @sm:gap-2 @lg:gap-3 w-auto justify-end flex-none">
-                <div className="hidden @xl:flex text-xs font-bold text-[#081429] uppercase tracking-widest bg-[#fdb813]/10 px-2 py-1 rounded-sm border border-[#fdb813]/20">
+                <div className="hidden @xl:flex text-xs font-bold text-primary uppercase tracking-widest bg-accent/10 px-2 py-1 rounded-sm border border-accent/20">
                   {format(currentDate, 'yyyy. MM')}
                 </div>
                 <button
@@ -782,9 +782,9 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                 <div className="relative">
                   <button
                     onClick={() => setIsMyEventsOpen(true)}
-                    className="flex items-center gap-1 @sm:gap-1 bg-[#081429] hover:bg-[#081429]/90 text-white px-1.5 @xs:px-2 @sm:px-3 py-1 @sm:py-1.5 rounded-sm transition-all shadow-md hover:shadow-lg font-bold text-xxs @xs:text-xs transform hover:-translate-y-0.5"
+                    className="flex items-center gap-1 @sm:gap-1 bg-primary hover:bg-primary/90 text-white px-1.5 @xs:px-2 @sm:px-3 py-1 @sm:py-1.5 rounded-sm transition-all shadow-md hover:shadow-lg font-bold text-xxs @xs:text-xs transform hover:-translate-y-0.5"
                   >
-                    <List size={14} className="text-[#fdb813] @sm:w-4 @sm:h-4" />
+                    <List size={14} className="text-accent @sm:w-4 @sm:h-4" />
                     <span className="hidden @sm:inline">내 일정</span>
                   </button>
                   {/* Notification Badge */}
@@ -839,7 +839,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
           ) : (
             <div className="space-y-4">
               {viewMode === 'weekly' ? (
-                <div className="border-t-2 border-[#081429] pt-4">
+                <div className="border-t-2 border-primary pt-4">
                   <WeekBlock
                     weekDays={weeks.find(w => w.some(d => isSameDay(d, currentDate))) || weeks[0]}
                     departments={departments}
@@ -854,7 +854,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
                   />
                 </div>
               ) : (
-                <div className="border-t-2 border-[#081429] pt-4">
+                <div className="border-t-2 border-primary pt-4">
                   {weeks.map((week, idx) => (
                     <WeekBlock
                       key={`${format(currentDate, 'yyyy-MM')} -${idx} `}

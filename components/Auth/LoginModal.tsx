@@ -66,7 +66,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                         approvalStatus: isMaster ? 'approved' : (existingStaff.data().approvalStatus || 'pending'),
                         updatedAt: new Date().toISOString(),
                     });
-                    console.log('✅ Existing staff linked with new account:', existingStaff.id);
                 } else {
                     // 신규 staff 생성 (staff 컬렉션만 사용)
                     const newStaffRef = doc(collection(db, 'staff'));
@@ -87,7 +86,6 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                         updatedAt: new Date().toISOString(),
                     };
                     await setDoc(newStaffRef, newStaff);
-                    console.log('✅ New staff created from signup:', newStaffRef.id);
                 }
 
                 if (!isMaster) {
@@ -159,9 +157,9 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
             >
 
                 {/* Header */}
-                <div className="bg-[#081429] p-6 text-center shrink-0">
-                    <div className="bg-[#fdb813] w-16 h-16 rounded-sm flex items-center justify-center mx-auto mb-4 shadow-lg">
-                        {isSignUp ? <UserPlus size={32} className="text-[#081429]" /> : <LockIcon size={32} className="text-[#081429]" />}
+                <div className="bg-primary p-6 text-center shrink-0">
+                    <div className="bg-accent w-16 h-16 rounded-sm flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        {isSignUp ? <UserPlus size={32} className="text-primary" /> : <LockIcon size={32} className="text-primary" />}
                     </div>
                     <h2 id="login-modal-title" className="text-xl font-bold text-white">
                         {isForgotPassword ? '비밀번호 찾기' : (isSignUp ? '관리자/직원 가입' : '로그인')}
@@ -172,7 +170,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
 
                     <button
                         onClick={onClose}
-                        className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:ring-offset-2 focus:ring-offset-[#081429]"
+                        className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-[#081429]"
                         aria-label="닫기"
                     >
                         <X size={24} />
@@ -187,20 +185,20 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                         {!isSignUp && !isForgotPassword && (
                             <div className="bg-white border border-gray-200 overflow-hidden">
                                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                    <LogIn className="w-3 h-3 text-[#081429]" />
-                                    <h3 className="text-[#081429] font-bold text-xs">로그인 정보</h3>
+                                    <LogIn className="w-3 h-3 text-primary" />
+                                    <h3 className="text-primary font-bold text-xs">로그인 정보</h3>
                                 </div>
                                 <div className="divide-y divide-gray-100">
                                     {/* Email Row */}
                                     <div className="flex items-center gap-2 px-2 py-1.5">
                                         <Mail className="w-3 h-3 text-gray-400 shrink-0" />
-                                        <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">이메일</span>
+                                        <span className="w-14 shrink-0 text-xs font-medium text-primary-700">이메일</span>
                                         <input
                                             id="login-email"
                                             type="email"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                                             placeholder="name@example.com"
                                             required
                                             aria-required="true"
@@ -210,13 +208,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                                     {/* Password Row */}
                                     <div className="flex items-center gap-2 px-2 py-1.5">
                                         <KeyRound className="w-3 h-3 text-gray-400 shrink-0" />
-                                        <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">비밀번호</span>
+                                        <span className="w-14 shrink-0 text-xs font-medium text-primary-700">비밀번호</span>
                                         <input
                                             id="login-password"
                                             type="password"
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
-                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                                             placeholder="••••••••"
                                             required
                                             aria-required="true"
@@ -231,20 +229,20 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                         {isSignUp && !isForgotPassword && (
                             <div className="bg-white border border-gray-200 overflow-hidden">
                                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                    <LockIcon className="w-3 h-3 text-[#081429]" />
-                                    <h3 className="text-[#081429] font-bold text-xs">계정 정보</h3>
+                                    <LockIcon className="w-3 h-3 text-primary" />
+                                    <h3 className="text-primary font-bold text-xs">계정 정보</h3>
                                 </div>
                                 <div className="divide-y divide-gray-100">
                                     {/* Email Row */}
                                     <div className="flex items-center gap-2 px-2 py-1.5">
                                         <Mail className="w-3 h-3 text-gray-400 shrink-0" />
-                                        <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">이메일 <span className="text-red-500">*</span></span>
+                                        <span className="w-16 shrink-0 text-xs font-medium text-primary-700">이메일 <span className="text-red-500">*</span></span>
                                         <input
                                             id="signup-email"
                                             type="email"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                                             placeholder="name@example.com"
                                             required
                                             aria-required="true"
@@ -254,13 +252,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                                     {/* Password Row */}
                                     <div className="flex items-center gap-2 px-2 py-1.5">
                                         <KeyRound className="w-3 h-3 text-gray-400 shrink-0" />
-                                        <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">비밀번호 <span className="text-red-500">*</span></span>
+                                        <span className="w-16 shrink-0 text-xs font-medium text-primary-700">비밀번호 <span className="text-red-500">*</span></span>
                                         <input
                                             id="signup-password"
                                             type="password"
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
-                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                                             placeholder="••••••••"
                                             required
                                             aria-required="true"
@@ -270,12 +268,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                                     {/* Confirm Password Row */}
                                     <div className="flex items-center gap-2 px-2 py-1.5">
                                         <KeyRound className="w-3 h-3 text-gray-400 shrink-0" />
-                                        <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">비밀번호 확인 <span className="text-red-500">*</span></span>
+                                        <span className="w-16 shrink-0 text-xs font-medium text-primary-700">비밀번호 확인 <span className="text-red-500">*</span></span>
                                         <input
                                             type="password"
                                             value={confirmPassword}
                                             onChange={(e) => setConfirmPassword(e.target.value)}
-                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                                             placeholder="••••••••"
                                             required
                                         />
@@ -288,30 +286,30 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                         {isSignUp && !isForgotPassword && (
                             <div className="bg-white border border-gray-200 overflow-hidden">
                                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                    <User className="w-3 h-3 text-[#081429]" />
-                                    <h3 className="text-[#081429] font-bold text-xs">개인 정보</h3>
+                                    <User className="w-3 h-3 text-primary" />
+                                    <h3 className="text-primary font-bold text-xs">개인 정보</h3>
                                 </div>
                                 <div className="divide-y divide-gray-100">
                                     {/* Display Name Row */}
                                     <div className="flex items-center gap-2 px-2 py-1.5">
-                                        <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">이름(한글) <span className="text-red-500">*</span></span>
+                                        <span className="w-16 shrink-0 text-xs font-medium text-primary-700">이름(한글) <span className="text-red-500">*</span></span>
                                         <input
                                             type="text"
                                             value={displayName}
                                             onChange={(e) => setDisplayName(e.target.value)}
-                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                                             placeholder="홍길동"
                                             required
                                         />
                                     </div>
                                     {/* Job Title Row */}
                                     <div className="flex items-center gap-2 px-2 py-1.5">
-                                        <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">닉네임 <span className="text-gray-400 text-xs">(영어)</span></span>
+                                        <span className="w-16 shrink-0 text-xs font-medium text-primary-700">닉네임 <span className="text-gray-400 text-xs">(영어)</span></span>
                                         <input
                                             type="text"
                                             value={jobTitle}
                                             onChange={(e) => setJobTitle(e.target.value)}
-                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                                             placeholder="예: John, Alice"
                                         />
                                     </div>
@@ -323,8 +321,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                         {isForgotPassword && (
                             <div className="bg-white border border-gray-200 overflow-hidden">
                                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                    <LockIcon className="w-3 h-3 text-[#081429]" />
-                                    <h3 className="text-[#081429] font-bold text-xs">비밀번호 재설정</h3>
+                                    <LockIcon className="w-3 h-3 text-primary" />
+                                    <h3 className="text-primary font-bold text-xs">비밀번호 재설정</h3>
                                 </div>
                                 <div className="divide-y divide-gray-100">
                                     {/* Instructions */}
@@ -337,12 +335,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                                     {/* Email Row */}
                                     <div className="flex items-center gap-2 px-2 py-1.5">
                                         <Mail className="w-3 h-3 text-gray-400 shrink-0" />
-                                        <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">이메일</span>
+                                        <span className="w-14 shrink-0 text-xs font-medium text-primary-700">이메일</span>
                                         <input
                                             type="email"
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                                             placeholder="name@example.com"
                                             required
                                             autoComplete="email"
@@ -362,7 +360,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full py-3.5 bg-[#081429] text-white rounded-sm font-bold hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-70 disabled:cursor-not-allowed mt-4"
+                            className="w-full py-3.5 bg-primary text-white rounded-sm font-bold hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-70 disabled:cursor-not-allowed mt-4"
                         >
                             {loading ? (
                                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-sm animate-spin" />
@@ -385,7 +383,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                                         setIsForgotPassword(false);
                                         setError('');
                                     }}
-                                    className="text-sm font-bold text-[#fdb813] hover:underline"
+                                    className="text-sm font-bold text-accent hover:underline"
                                 >
                                     회원가입
                                 </button>
@@ -398,7 +396,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                                         setError('');
                                         setPassword('');
                                     }}
-                                    className="text-sm font-bold text-[#fdb813] hover:underline"
+                                    className="text-sm font-bold text-accent hover:underline"
                                 >
                                     비밀번호찾기
                                 </button>
@@ -415,7 +413,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                                     setDisplayName('');
                                     setJobTitle('');
                                 }}
-                                className="text-sm font-bold text-[#fdb813] hover:underline"
+                                className="text-sm font-bold text-accent hover:underline"
                             >
                                 로그인으로 돌아가기
                             </button>

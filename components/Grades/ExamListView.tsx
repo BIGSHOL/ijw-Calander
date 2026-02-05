@@ -29,7 +29,7 @@ const ExamListView: React.FC<ExamListViewProps> = ({
   return (
     <div className="bg-white border border-gray-200 overflow-hidden">
       {/* 헤더 행 */}
-      <div className="flex items-center gap-4 px-4 py-1.5 bg-gray-50 border-b border-gray-200 text-xs font-medium text-[#373d41] whitespace-nowrap">
+      <div className="flex items-center gap-4 px-4 py-1.5 bg-gray-50 border-b border-gray-200 text-xs font-medium text-primary-700 whitespace-nowrap">
         <span className="w-20 shrink-0">날짜</span>
         <span className="flex-1 min-w-[200px]">시험명</span>
         <span className="w-14 shrink-0 text-center">과목</span>
@@ -60,12 +60,12 @@ const ExamListView: React.FC<ExamListViewProps> = ({
                 onClick={() => onToggleExpand(isExpanded ? null : exam.id)}
               >
                 {/* 날짜 */}
-                <span className="text-xs text-[#373d41] w-20 shrink-0">
+                <span className="text-xs text-primary-700 w-20 shrink-0">
                   {exam.date}
                 </span>
 
                 {/* 시험명 */}
-                <span className="text-xs font-medium text-[#081429] flex-1 min-w-[200px] truncate">
+                <span className="text-xs font-medium text-primary flex-1 min-w-[200px] truncate">
                   {exam.title}
                 </span>
 

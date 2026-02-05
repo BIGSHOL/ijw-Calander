@@ -22,7 +22,7 @@ const StudentListModal: React.FC<Props> = ({ isOpen, onClose, title, students, t
       >
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-          <h3 className="text-sm font-bold text-[#081429] flex items-center gap-2">
+          <h3 className="text-sm font-bold text-primary flex items-center gap-2">
             {type === 'new' ? <UserPlus size={16} /> : <UserMinus size={16} />}
             {title}
           </h3>

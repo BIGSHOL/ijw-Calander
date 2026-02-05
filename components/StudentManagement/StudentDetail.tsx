@@ -123,7 +123,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
       {/* 헤더: 학생 이름 + 퇴원/재원 버튼 */}
       <div className={`px-3 py-2 border-b border-gray-200 bg-white ${compact ? 'pr-10' : ''}`}>
         <div className="flex items-center justify-between">
-          <span className="text-sm font-bold text-[#081429]">{student.name}</span>
+          <span className="text-sm font-bold text-primary">{student.name}</span>
 
           {/* 퇴원/재원/삭제 버튼 - compact 모드(모달)에서는 항상 숨김, 학생관리에서만 표시 */}
           {!compact && (
@@ -208,7 +208,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-1 px-1 py-1.5 text-xs font-bold border-b-2 transition-all ${activeTab === tab.id
-                ? 'text-[#081429] border-[#fdb813]'
+                ? 'text-primary border-accent'
                 : 'text-gray-400 border-transparent hover:text-gray-600'
                 }`}
             >

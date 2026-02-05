@@ -48,7 +48,7 @@ const ResourcePreviewPanel: React.FC<ResourcePreviewPanelProps> = ({
   return (
     <div className="h-full flex flex-col bg-white rounded-sm border border-gray-200 overflow-hidden">
       {/* 헤더 */}
-      <div className="p-4 border-b border-gray-200 bg-[#081429]">
+      <div className="p-4 border-b border-gray-200 bg-primary">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <span className="text-2xl">{resource.icon || typeIcon}</span>
@@ -62,7 +62,7 @@ const ResourcePreviewPanel: React.FC<ResourcePreviewPanelProps> = ({
               <>
                 <button
                   onClick={() => onEdit(resource)}
-                  className="p-1.5 text-gray-400 hover:text-[#fdb813] rounded transition-colors"
+                  className="p-1.5 text-gray-400 hover:text-accent rounded transition-colors"
                   title="수정"
                 >
                   <Edit2 size={14} />
@@ -80,7 +80,7 @@ const ResourcePreviewPanel: React.FC<ResourcePreviewPanelProps> = ({
               href={resource.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-1.5 text-gray-400 hover:text-[#fdb813] rounded transition-colors"
+              className="p-1.5 text-gray-400 hover:text-accent rounded transition-colors"
               title="새 탭에서 열기"
             >
               <ExternalLink size={14} />
@@ -93,19 +93,19 @@ const ResourcePreviewPanel: React.FC<ResourcePreviewPanelProps> = ({
       <div className="flex-1 overflow-y-auto p-6">
         {/* 대형 아이콘 */}
         <div className="flex justify-center mb-6">
-          <div className="w-24 h-24 rounded-sm bg-[#081429]/5 flex items-center justify-center">
+          <div className="w-24 h-24 rounded-sm bg-primary/5 flex items-center justify-center">
             <span className="text-5xl">{resource.icon || typeIcon}</span>
           </div>
         </div>
 
         {/* 제목 */}
-        <h2 className="text-lg font-bold text-[#081429] text-center mb-2">
+        <h2 className="text-lg font-bold text-primary text-center mb-2">
           {resource.title}
         </h2>
 
         {/* 타입 배지 */}
         <div className="flex justify-center mb-4">
-          <span className="text-xs font-medium px-3 py-1 rounded-sm bg-[#fdb813]/20 text-[#081429]">
+          <span className="text-xs font-medium px-3 py-1 rounded-sm bg-accent/20 text-primary">
             {typeIcon} {typeLabel}
           </span>
         </div>
@@ -124,7 +124,7 @@ const ResourcePreviewPanel: React.FC<ResourcePreviewPanelProps> = ({
             <Tag size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
             <div>
               <p className="text-xxs text-gray-400 mb-0.5">카테고리</p>
-              <div className="flex items-center gap-1 text-sm text-[#081429]">
+              <div className="flex items-center gap-1 text-sm text-primary">
                 {categoryParts.map((part, idx) => (
                   <span key={idx} className="flex items-center gap-1">
                     {idx > 0 && <ChevronRight size={12} className="text-gray-300" />}
@@ -140,7 +140,7 @@ const ResourcePreviewPanel: React.FC<ResourcePreviewPanelProps> = ({
             <User size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
             <div>
               <p className="text-xxs text-gray-400 mb-0.5">작성자</p>
-              <p className="text-sm text-[#081429]">{resource.createdByName || '-'}</p>
+              <p className="text-sm text-primary">{resource.createdByName || '-'}</p>
             </div>
           </div>
 
@@ -149,7 +149,7 @@ const ResourcePreviewPanel: React.FC<ResourcePreviewPanelProps> = ({
             <Calendar size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
             <div>
               <p className="text-xxs text-gray-400 mb-0.5">등록일</p>
-              <p className="text-sm text-[#081429]">{formatDate(resource.createdAt)}</p>
+              <p className="text-sm text-primary">{formatDate(resource.createdAt)}</p>
             </div>
           </div>
         </div>
@@ -160,7 +160,7 @@ const ResourcePreviewPanel: React.FC<ResourcePreviewPanelProps> = ({
             href={resource.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#081429] text-white rounded-sm text-sm font-medium hover:bg-[#081429]/90 transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-primary text-white rounded-sm text-sm font-medium hover:bg-primary/90 transition-colors"
           >
             <ExternalLink size={16} />
             새 탭에서 열기

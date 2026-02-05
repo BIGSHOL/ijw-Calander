@@ -506,7 +506,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
                     <div className="flex items-center gap-2">
                         <FileText size={18} />
-                        <h2 className="text-sm font-bold text-[#081429]">시나리오 관리</h2>
+                        <h2 className="text-sm font-bold text-primary">시나리오 관리</h2>
                         <span className="text-xs bg-purple-500 px-2 py-0.5 rounded-sm text-white">{scenarios.length}개</span>
                     </div>
                     <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
@@ -552,8 +552,8 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                             {/* Section 1: 시나리오 목록 */}
                             <div className="bg-white border border-gray-200 overflow-hidden">
                                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                    <FileText className="w-3 h-3 text-[#081429]" />
-                                    <h3 className="text-[#081429] font-bold text-xs">시나리오 목록</h3>
+                                    <FileText className="w-3 h-3 text-primary" />
+                                    <h3 className="text-primary font-bold text-xs">시나리오 목록</h3>
                                     <span className="text-xs text-gray-400 ml-auto">{scenarios.length}개</span>
                                 </div>
                                 <div className="p-2 space-y-2 max-h-[300px] overflow-y-auto">
@@ -724,13 +724,13 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                             {selectedScenario && (
                                 <div className="bg-white border border-gray-200 overflow-hidden">
                                     <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                        <FileText className="w-3 h-3 text-[#081429]" />
-                                        <h3 className="text-[#081429] font-bold text-xs">선택한 시나리오 정보</h3>
+                                        <FileText className="w-3 h-3 text-primary" />
+                                        <h3 className="text-primary font-bold text-xs">선택한 시나리오 정보</h3>
                                     </div>
                                     <div className="divide-y divide-gray-100">
                                         {/* Name Row */}
                                         <div className="flex items-center gap-2 px-2 py-1.5">
-                                            <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">이름</span>
+                                            <span className="w-16 shrink-0 text-xs font-medium text-primary-700">이름</span>
                                             {editingId === selectedScenario.id ? (
                                                 <input
                                                     type="text"
@@ -740,13 +740,13 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                                     autoFocus
                                                 />
                                             ) : (
-                                                <span className="flex-1 text-xs text-[#081429] font-bold">{selectedScenario.name}</span>
+                                                <span className="flex-1 text-xs text-primary font-bold">{selectedScenario.name}</span>
                                             )}
                                         </div>
 
                                         {/* Description Row */}
                                         <div className="flex items-start gap-2 px-2 py-1.5">
-                                            <span className="w-16 shrink-0 text-xs font-medium text-[#373d41] mt-1">설명</span>
+                                            <span className="w-16 shrink-0 text-xs font-medium text-primary-700 mt-1">설명</span>
                                             {editingId === selectedScenario.id ? (
                                                 <textarea
                                                     value={editingDesc}
@@ -765,7 +765,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                         {/* Stats Row */}
                                         {selectedScenario.stats && (
                                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">통계</span>
+                                                <span className="w-16 shrink-0 text-xs font-medium text-primary-700">통계</span>
                                                 <div className="flex-1 flex gap-3 text-xs text-gray-600">
                                                     <span>수업: <strong>{selectedScenario.stats.classCount}개</strong></span>
                                                     <span>학생: <strong>{selectedScenario.stats.studentCount}명</strong></span>
@@ -775,7 +775,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
 
                                         {/* Created By Row */}
                                         <div className="flex items-center gap-2 px-2 py-1.5">
-                                            <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">작성자</span>
+                                            <span className="w-16 shrink-0 text-xs font-medium text-primary-700">작성자</span>
                                             <span className="flex-1 text-xs text-gray-600 flex items-center gap-1">
                                                 <User size={10} />
                                                 {selectedScenario.createdBy}
@@ -784,7 +784,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
 
                                         {/* Created At Row */}
                                         <div className="flex items-center gap-2 px-2 py-1.5">
-                                            <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">생성일</span>
+                                            <span className="w-16 shrink-0 text-xs font-medium text-primary-700">생성일</span>
                                             <span className="flex-1 text-xs text-gray-600 flex items-center gap-1">
                                                 <Clock size={10} />
                                                 {formatDate(selectedScenario.createdAt)}
@@ -794,7 +794,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                         {/* Scheduled Apply Date (if exists) */}
                                         {(selectedScenario as any).scheduledApplyDate && (
                                             <div className="flex items-center gap-2 px-2 py-1.5 bg-purple-50">
-                                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">예약 적용</span>
+                                                <span className="w-16 shrink-0 text-xs font-medium text-primary-700">예약 적용</span>
                                                 <span className="flex-1 text-xs text-purple-700 flex items-center gap-1">
                                                     <CalendarClock size={10} />
                                                     {(selectedScenario as any).scheduledApplyDate}
@@ -832,8 +832,8 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                             {isSimulationMode && canEdit && (
                                 <div className="bg-white border border-gray-200 overflow-hidden">
                                     <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                        <Save className="w-3 h-3 text-[#081429]" />
-                                        <h3 className="text-[#081429] font-bold text-xs">새 시나리오 저장</h3>
+                                        <Save className="w-3 h-3 text-primary" />
+                                        <h3 className="text-primary font-bold text-xs">새 시나리오 저장</h3>
                                     </div>
                                     <div className="p-3">
                                         <p className="text-xs text-gray-500 mb-2">현재 시뮬레이션 상태를 새 시나리오로 저장합니다.</p>

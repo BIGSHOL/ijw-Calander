@@ -41,8 +41,7 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
         try {
             // 시뮬레이션 모드: 메모리 상태만 변경 (Firebase 미사용)
             if (isSimulationMode && onSimulationLevelUp) {
-                console.log('[LevelUp-Simulation] Renaming:', oldClassName, '→', newClassName);
-                const success = onSimulationLevelUp(oldClassName, newClassName);
+                                const success = onSimulationLevelUp(oldClassName, newClassName);
 
                 if (!success) {
                     // 충돌 등으로 실패 시 (alert는 renameScenarioClass에서 이미 표시됨)
@@ -58,7 +57,6 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
                 return;
             }
 
-            console.log('[LevelUp] Starting:', oldClassName, '→', newClassName);
             const batch = writeBatch(db);
 
             // 1. Update classes 컬렉션 (시간표 데이터)
@@ -69,7 +67,6 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
             classesSnapshot.docs.forEach(docSnap => {
                 const data = docSnap.data();
                 if (data.className === oldClassName && data.subject === 'english') {
-                    console.log('[LevelUp] Classes collection match:', docSnap.id);
                     batch.update(doc(db, CLASS_COLLECTION, docSnap.id), { className: newClassName });
                     classesCount++;
                 }
@@ -85,17 +82,14 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
             let enrollmentsCount = 0;
 
             enrollmentsSnapshot.docs.forEach(docSnap => {
-                console.log('[LevelUp] Enrollment match:', docSnap.ref.path);
                 batch.update(docSnap.ref, { className: newClassName });
                 enrollmentsCount++;
             });
 
-            console.log('[LevelUp] Classes updated:', classesCount, 'Enrollments updated:', enrollmentsCount);
 
             // customGroups는 classId 기반이므로 레벨업 시 settings 업데이트 불필요
 
             const totalUpdates = classesCount + enrollmentsCount;
-            console.log('[LevelUp] Total updates:', { classesCount, enrollmentsCount });
 
             if (totalUpdates === 0) {
                 setError('업데이트할 데이터가 없습니다.');
@@ -104,14 +98,12 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
             }
 
             await batch.commit();
-            console.log('[LevelUp] Batch commit successful');
             setUpdateCount(totalUpdates);
 
             // React Query 캐시 무효화 - 시간표 및 학생 관리에 즉시 반영
             queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
             queryClient.invalidateQueries({ queryKey: ['students'] });
             queryClient.invalidateQueries({ queryKey: ['classes'] });
-            console.log('[LevelUp] Cache invalidated');
 
             // Wait to show success message
             setTimeout(() => {

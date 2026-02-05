@@ -162,18 +162,19 @@ const StudentList: React.FC<StudentListProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       {/* 상단: 총 학생 수 + 페이지 크기 선택 + 페이지네이션 */}
-      <div className="px-2 py-1.5 border-b flex items-center justify-between" style={{ borderColor: '#08142915', backgroundColor: '#fafafa' }}>
+      <div className="px-2 py-1.5 border-b flex items-center justify-between" style={{ borderColor: 'rgba(8, 20, 41, 0.15)', backgroundColor: '#fafafa' }}>
         <div className="flex items-center gap-1">
-          <span className="text-xxs font-bold" style={{ color: '#081429' }}>
-            <span style={{ color: '#fdb813' }}>{students.length}</span>명
+          <span className="text-xxs font-bold" style={{ color: 'rgb(8, 20, 41)' /* primary */ }}>
+            <span style={{ color: 'rgb(253, 184, 19)' /* accent */ }}>{students.length}</span>명
           </span>
           <select
             value={pageSize}
             onChange={(e) => handlePageSizeChange(Number(e.target.value))}
             className="text-xxs border rounded-sm px-1 py-0.5 transition-all"
-            style={{ borderColor: '#08142920', color: '#081429', backgroundColor: 'white' }}
+            style={{ borderColor: 'rgba(8, 20, 41, 0.2)', color: 'rgb(8, 20, 41)' /* primary */, backgroundColor: 'white' }}
+            aria-label="페이지당 학생 수"
           >
             <option value={10}>10개</option>
             <option value={20}>20개</option>
@@ -182,12 +183,13 @@ const StudentList: React.FC<StudentListProps> = ({
           </select>
         </div>
         {totalPages > 1 && (
-          <nav className="flex items-center gap-0.5" aria-label="Pagination">
+          <nav className="flex items-center gap-0.5" aria-label="학생 목록 페이지 탐색">
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
               className="px-1.5 py-0.5 text-xxs hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded"
-              style={{ color: '#081429' }}
+              style={{ color: 'rgb(8, 20, 41)' /* primary */ }}
+              aria-label="이전 페이지"
             >
               이전
             </button>
@@ -210,10 +212,12 @@ const StudentList: React.FC<StudentListProps> = ({
                     onClick={() => handlePageChange(pageNum)}
                     className={`w-5 h-5 rounded-full text-xxs font-bold transition-colors ${
                       currentPage === pageNum
-                        ? 'text-[#081429]'
+                        ? 'text-primary'
                         : 'text-gray-600 hover:bg-gray-100'
                     }`}
-                    style={currentPage === pageNum ? { backgroundColor: '#fdb813' } : undefined}
+                    style={currentPage === pageNum ? { backgroundColor: 'rgb(253, 184, 19)' /* accent */ } : undefined}
+                    aria-label={`${pageNum}페이지${currentPage === pageNum ? ' (현재 페이지)' : ''}`}
+                    aria-current={currentPage === pageNum ? 'page' : undefined}
                   >
                     {pageNum}
                   </button>
@@ -224,7 +228,8 @@ const StudentList: React.FC<StudentListProps> = ({
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
               className="px-1.5 py-0.5 text-xxs hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed rounded"
-              style={{ color: '#081429' }}
+              style={{ color: 'rgb(8, 20, 41)' /* primary */ }}
+              aria-label="다음 페이지"
             >
               다음
             </button>
@@ -233,7 +238,7 @@ const StudentList: React.FC<StudentListProps> = ({
       </div>
 
       {/* 학생 목록 - 섹션별로 구분 */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto pb-4">
         {students.length === 0 ? (
           <div className="p-4 text-center text-gray-500 text-sm">
             <p>조건에 맞는 학생이 없습니다</p>
@@ -243,11 +248,11 @@ const StudentList: React.FC<StudentListProps> = ({
           <div>
             {/* 재원생 섹션 */}
             {paginatedSections.active.length > 0 && (
-              <div>
+              <section aria-labelledby="active-students-heading">
                 <div className="sticky top-0 px-2 py-1 bg-green-50 border-b border-green-200 z-10">
-                  <span className="text-xxs font-bold text-green-800">
+                  <h3 id="active-students-heading" className="text-xxs font-bold text-green-800">
                     재원 ({activeStudents.length}명)
-                  </span>
+                  </h3>
                 </div>
                 <ul className="divide-y divide-gray-100">
                   {paginatedSections.active.map((student) => (
@@ -255,17 +260,26 @@ const StudentList: React.FC<StudentListProps> = ({
                       key={student.id}
                       onClick={() => onSelectStudent(student)}
                       className={`px-2 py-1 cursor-pointer transition-colors ${selectedStudent?.id === student.id
-                        ? 'bg-[#fdb813]/10 border-l-2 border-[#fdb813]'
+                        ? 'bg-accent/10 border-l-2 border-accent'
                         : student.isOldWithdrawn
-                          ? 'hover:bg-[#fdb813]/5 bg-[#fdb813]/5'
-                          : 'hover:bg-[#081429]/5'
+                          ? 'hover:bg-accent/5 bg-accent/5'
+                          : 'hover:bg-primary/5'
                         }`}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${student.name} 학생 선택`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onSelectStudent(student);
+                        }
+                      }}
                     >
                       <div className="flex flex-col gap-0.5">
                         {/* 1번째 줄: 상태 + 이름 + 영어이름 + 학교/학년 */}
                         <div className="flex items-center gap-1">
                           {getStatusBadge(student.status)}
-                          <span className={`text-xs font-bold ${student.isOldWithdrawn ? 'text-[#fdb813]' : 'text-[#081429]'}`}>
+                          <span className={`text-xs font-bold ${student.isOldWithdrawn ? 'text-accent' : 'text-primary'}`}>
                             {student.name}
                           </span>
                           {student.englishName && (
@@ -277,7 +291,7 @@ const StudentList: React.FC<StudentListProps> = ({
                             </span>
                           )}
                           {student.isOldWithdrawn && (
-                            <span className="text-micro bg-[#fdb813]/20 text-[#fdb813] px-1 rounded-sm font-medium">과거</span>
+                            <span className="text-micro bg-accent/20 text-accent px-1 rounded-sm font-medium">과거</span>
                           )}
                           {(student.school || student.grade) && (
                             <span className="text-xxs text-gray-400">
@@ -320,16 +334,16 @@ const StudentList: React.FC<StudentListProps> = ({
                     </li>
                   ))}
                 </ul>
-              </div>
+              </section>
             )}
 
             {/* 대기생 섹션 */}
             {paginatedSections.onHold.length > 0 && (
-              <div>
+              <section aria-labelledby="onhold-students-heading">
                 <div className="sticky top-0 px-2 py-1 bg-amber-50 border-b border-amber-200 z-10">
-                  <span className="text-xxs font-bold text-amber-800">
+                  <h3 id="onhold-students-heading" className="text-xxs font-bold text-amber-800">
                     대기 ({onHoldStudents.length}명)
-                  </span>
+                  </h3>
                 </div>
                 <ul className="divide-y divide-gray-100">
                   {paginatedSections.onHold.map((student) => (
@@ -337,14 +351,23 @@ const StudentList: React.FC<StudentListProps> = ({
                       key={student.id}
                       onClick={() => onSelectStudent(student)}
                       className={`px-2 py-1 cursor-pointer transition-colors ${selectedStudent?.id === student.id
-                        ? 'bg-[#fdb813]/10 border-l-2 border-[#fdb813]'
-                        : 'hover:bg-[#081429]/5'
+                        ? 'bg-accent/10 border-l-2 border-accent'
+                        : 'hover:bg-primary/5'
                         }`}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${student.name} 학생 선택`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onSelectStudent(student);
+                        }
+                      }}
                     >
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-center gap-1">
                           {getStatusBadge(student.status)}
-                          <span className="text-xs font-bold text-[#081429]">{student.name}</span>
+                          <span className="text-xs font-bold text-primary">{student.name}</span>
                           {student.englishName && (
                             <span className="text-xxs text-gray-500 max-w-[60px] truncate" title={student.englishName}>({student.englishName})</span>
                           )}
@@ -360,16 +383,16 @@ const StudentList: React.FC<StudentListProps> = ({
                     </li>
                   ))}
                 </ul>
-              </div>
+              </section>
             )}
 
             {/* 퇴원 예정 섹션 (이번 주) */}
             {paginatedSections.withdrawing.length > 0 && (
-              <div>
+              <section aria-labelledby="withdrawing-students-heading">
                 <div className="sticky top-0 px-2 py-1 bg-red-50 border-b border-red-200 z-10">
-                  <span className="text-xxs font-bold text-red-800">
+                  <h3 id="withdrawing-students-heading" className="text-xxs font-bold text-red-800">
                     퇴원 예정 ({withdrawingThisWeekStudents.length}명) - 이번 주
-                  </span>
+                  </h3>
                 </div>
                 <ul className="divide-y divide-gray-100">
                   {paginatedSections.withdrawing.map((student) => (
@@ -377,14 +400,23 @@ const StudentList: React.FC<StudentListProps> = ({
                       key={student.id}
                       onClick={() => onSelectStudent(student)}
                       className={`px-2 py-1 cursor-pointer transition-colors ${selectedStudent?.id === student.id
-                        ? 'bg-[#fdb813]/10 border-l-2 border-[#fdb813]'
-                        : 'hover:bg-[#081429]/5'
+                        ? 'bg-accent/10 border-l-2 border-accent'
+                        : 'hover:bg-primary/5'
                         }`}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${student.name} 학생 선택`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onSelectStudent(student);
+                        }
+                      }}
                     >
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-center gap-1">
                           {getStatusBadge(student.status)}
-                          <span className="text-xs font-bold text-[#081429]">{student.name}</span>
+                          <span className="text-xs font-bold text-primary">{student.name}</span>
                           {student.englishName && (
                             <span className="text-xxs text-gray-500 max-w-[60px] truncate" title={student.englishName}>({student.englishName})</span>
                           )}
@@ -403,7 +435,7 @@ const StudentList: React.FC<StudentListProps> = ({
                     </li>
                   ))}
                 </ul>
-              </div>
+              </section>
             )}
           </div>
         )}

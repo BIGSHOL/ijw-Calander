@@ -43,8 +43,8 @@ const ClassStudentList: React.FC<ClassStudentListProps> = ({
   if (students.length === 0) {
     return (
       <div className="bg-gray-50 p-6 text-center border border-gray-200">
-        <Users className="w-10 h-10 mx-auto mb-2 opacity-30 text-[#373d41]" />
-        <p className="text-[#373d41] text-sm">수강 중인 학생이 없습니다.</p>
+        <Users className="w-10 h-10 mx-auto mb-2 opacity-30 text-primary-700" />
+        <p className="text-primary-700 text-sm">수강 중인 학생이 없습니다.</p>
       </div>
     );
   }
@@ -59,13 +59,13 @@ const ClassStudentList: React.FC<ClassStudentListProps> = ({
           <div
             onClick={() => handleStudentClick(student.id)}
             className={`flex items-center gap-2 flex-1 ${
-              onStudentClick ? 'cursor-pointer hover:text-[#fdb813]' : ''
+              onStudentClick ? 'cursor-pointer hover:text-accent' : ''
             }`}
           >
-            <span className="text-xs font-medium text-[#081429]">
+            <span className="text-xs font-medium text-primary">
               {student.name}
             </span>
-            <span className="text-xs text-[#373d41]">
+            <span className="text-xs text-primary-700">
               {formatSchoolGrade(student.school, student.grade)}
             </span>
             {/* 등원 요일이 수업 요일과 다른 경우에만 표시 */}

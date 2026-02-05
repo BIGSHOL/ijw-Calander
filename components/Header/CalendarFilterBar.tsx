@@ -32,14 +32,14 @@ export const CalendarFilterBar: React.FC<CalendarFilterBarProps> = ({
   setIsCalendarSettingsOpen,
 }) => {
   return (
-    <div className="bg-[#081429] h-10 flex items-center px-6 border-b border-gray-700 relative z-30 text-xs">
+    <div className="bg-primary h-10 flex items-center px-6 border-b border-gray-700 relative z-30 text-xs">
 
       {/* Main Filter Toggle */}
       <button
         onClick={() => setIsFilterOpen(!isFilterOpen)}
         className={`
           flex items-center gap-2 px-3 h-full border-r border-gray-700 hover:bg-white/5 transition-colors
-          ${isFilterOpen ? 'text-[#fdb813] font-bold bg-white/5' : 'text-gray-300'}
+          ${isFilterOpen ? 'text-accent font-bold bg-white/5' : 'text-gray-300'}
         `}
       >
         <Filter size={14} />
@@ -57,7 +57,7 @@ export const CalendarFilterBar: React.FC<CalendarFilterBarProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-gray-400">표시됨:</span>
             {visibleDepartments.slice(0, 5).map(d => (
-              <span key={d.id} className="px-1.5 py-0.5 rounded bg-[#081429] border border-gray-700 text-gray-300">
+              <span key={d.id} className="px-1.5 py-0.5 rounded bg-primary border border-gray-700 text-gray-300">
                 {d.name}
               </span>
             ))}
@@ -80,7 +80,7 @@ export const CalendarFilterBar: React.FC<CalendarFilterBarProps> = ({
               className={`
                 px-2 py-0.5 rounded-sm text-xs font-bold transition-all
                 ${viewMode === m
-                  ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                  ? 'bg-accent text-primary shadow-sm'
                   : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }
               `}
@@ -104,7 +104,7 @@ export const CalendarFilterBar: React.FC<CalendarFilterBarProps> = ({
                 className={`
                   px-2 py-0.5 rounded-sm text-xs font-bold transition-all
                   ${viewColumns === cols
-                    ? 'bg-[#fdb813] text-[#081429] shadow-sm'
+                    ? 'bg-accent text-primary shadow-sm'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                   }
                 `}

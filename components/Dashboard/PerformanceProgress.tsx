@@ -50,8 +50,8 @@ const PerformanceProgress: React.FC<PerformanceProgressProps> = ({
   return (
     <div className="bg-white rounded-sm border border-gray-200 p-6">
       <div className="flex items-center gap-2 mb-4">
-        <TrendingUp className="w-5 h-5 text-[#fdb813]" />
-        <h3 className="text-lg font-semibold text-[#081429]">
+        <TrendingUp className="w-5 h-5 text-accent" />
+        <h3 className="text-lg font-semibold text-primary">
           이달의 상담 성과
         </h3>
       </div>
@@ -66,7 +66,7 @@ const PerformanceProgress: React.FC<PerformanceProgressProps> = ({
             strokeWidth={8}
           />
           <div className="mt-2 text-center">
-            <div className="text-sm font-medium text-[#081429]">전체 목표</div>
+            <div className="text-sm font-medium text-primary">전체 목표</div>
             <div className="text-xs text-gray-500">
               {totalConsultations} / {monthlyTarget}건
             </div>
@@ -78,10 +78,10 @@ const PerformanceProgress: React.FC<PerformanceProgressProps> = ({
           {topPerformer ? (
             <>
               <div className="flex items-center gap-1 mb-2">
-                <Award className="w-5 h-5 text-[#fdb813]" />
+                <Award className="w-5 h-5 text-accent" />
                 <span className="text-sm font-medium text-gray-600">Top 상담자</span>
               </div>
-              <div className="text-xl font-bold text-[#081429]">
+              <div className="text-xl font-bold text-primary">
                 {topPerformer.name}
               </div>
               <div className="text-sm text-gray-500">
@@ -89,7 +89,7 @@ const PerformanceProgress: React.FC<PerformanceProgressProps> = ({
               </div>
               <div className="mt-2 w-full bg-gray-200 rounded-sm h-2">
                 <div
-                  className="bg-[#fdb813] h-2 rounded-sm transition-all duration-500"
+                  className="bg-accent h-2 rounded-sm transition-all duration-500"
                   style={{ width: `${topPerformer.percentage}%` }}
                 />
               </div>

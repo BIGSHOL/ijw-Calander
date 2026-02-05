@@ -97,29 +97,9 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
         .slice(minIdx, maxIdx + 1)
         .map(d => d.id);
 
-      // Pass array if supported, else fallback? 
-      // We will modify parent to support array.
-      // For backward compatibility (if needed), we can pass selectedDeptIds as extra arg.
-
-      // Note: We need to cast or update interface. 
-      // Assumption: onRangeSelect is updated to: (startDate, endDate, primaryDeptId, allDeptIds?)
-      // Or just cheat and pass it.
-
       if (isSameDay(start, end) && selectedDeptIds.length === 1) {
         onCellClick(format(start, 'yyyy-MM-dd'), selectedDeptIds[0]);
       } else {
-        // Hack: Pass the array as part of the 'deptId' argument wrapper or updated callback?
-        // Let's modify the interface in a separate step or strict type here.
-        // Actually, parent App.tsx expects (s, e, d). 
-        // I should invoke a NEW prop if I can, or Overload.
-        // Let's just pass `selectedDeptIds[0]` as primary and `selectedDeptIds` as 4th arg?
-        // Or better, just fix the interface first.
-        // But I am editing this file.
-        // I will assume `onRangeSelect` can take 4th arg `deptIds?: string[]`.
-
-        // Use the primary (first clicked) as the main one, but pass full list.
-        // Actually, dragStart is the anchor.
-        console.log('DEBUG: WeekBlock handleMouseUp', { startIdx, endIdx, selectedDeptIds });
         onRangeSelect(format(start, 'yyyy-MM-dd'), format(end, 'yyyy-MM-dd'), dragStart.deptId, selectedDeptIds);
       }
     }
@@ -256,7 +236,7 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
       }}
     >
       {/* Date Header Row - Using #373d41 */}
-      <div className={`${gridClass} border-t border-l border-r border-[#373d41] bg-[#f8fafc]`}>
+      <div className={`${gridClass} border-t border-l border-r border-primary-700 bg-[#f8fafc]`}>
         <div className="border-r border-gray-300 p-1 flex items-center justify-center bg-[#f1f5f9] font-bold text-sm">
         </div>
         {weekDays.map((date, idx) => {
@@ -275,8 +255,8 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
               key={date.toISOString()}
               className={`border-r border-gray-300 last:border-r-0 p-0.5 md:p-1 text-center flex flex-col items-center justify-center min-h-[44px] md:min-h-[52px] overflow-hidden
                 ${isOtherMonth(date) ? 'opacity-40 bg-gray-100' : ''}
-                ${isHoliday && !isOtherMonth(date) ? 'text-red-600 bg-gradient-to-b from-red-50 to-red-100/50' : isHoliday ? 'text-red-400' : isSun ? 'text-red-500' : isSat ? 'text-blue-500' : 'text-[#373d41]'}
-                ${isToday(date) && !isOtherMonth(date) ? 'bg-[#fdb813]/20 font-bold' : ''}
+                ${isHoliday && !isOtherMonth(date) ? 'text-red-600 bg-gradient-to-b from-red-50 to-red-100/50' : isHoliday ? 'text-red-400' : isSun ? 'text-red-500' : isSat ? 'text-blue-500' : 'text-primary-700'}
+                ${isToday(date) && !isOtherMonth(date) ? 'bg-accent/20 font-bold' : ''}
               `}
             >
               <>
@@ -301,17 +281,10 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
       {/* Department Rows */}
       {departments.map((dept) => {
         const weekEvents = events.filter(e => {
-          // Compatibility: Match by ID or Name (for cases where old IDs like 'school' exist but new events use '학교일정')
-          // Linked Group Support: STRICTLY match departmentId. 
-          // The departmentIds array is for knowing which other depts share this event, NOT for display in this column.
-          // Exception: If departmentId is missing (legacy data) or it's a legacy multi-dept event without Linked Groups?
-          // We should prioritize departmentId if it exists.
-
           let isMatch = false;
           if (e.departmentId) {
             isMatch = e.departmentId === dept.id || e.departmentId === dept.name;
           } else {
-            // Legacy fallback (shouldn't happen with new events)
             isMatch = (e.departmentIds && e.departmentIds.includes(dept.id)) || false;
           }
 
@@ -331,7 +304,7 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
               className="border-r border-gray-300 p-2 flex flex-col justify-center text-sm relative overflow-hidden"
               style={{
                 borderLeft: dept.color.startsWith('#') ? `6px solid ${dept.color}` : 'none',
-                gridRow: 1, // Ensure it stays in the first row
+                gridRow: 1,
                 gridColumn: 1
               }}
             >
@@ -339,7 +312,7 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
               {!dept.color.startsWith('#') && (
                 <div className={`absolute left-0 top-0 bottom-0 w-[6px] ${dept.color}`} />
               )}
-              <div className="font-bold text-[#081429] text-center text-nano md:text-xs break-keep leading-tight pl-1 truncate">{dept.name}</div>
+              <div className="font-bold text-primary text-center text-nano md:text-xs break-keep leading-tight pl-1 truncate">{dept.name}</div>
             </div>
 
             {/* Grid Cells */}
@@ -358,11 +331,11 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
                   }}
                   className={`border-r border-gray-300 last:border-r-0 cursor-pointer relative transition-colors
                     ${isOtherMonth(date) ? 'bg-gray-100/80' : ''}
-                    ${isDrag ? 'bg-[#fdb813]/30' : !isOtherMonth(date) ? 'hover:bg-gray-50' : 'hover:bg-gray-200/60'}
+                    ${isDrag ? 'bg-accent/30' : !isOtherMonth(date) ? 'hover:bg-gray-50' : 'hover:bg-gray-200/60'}
                     ${!isDrag && isWeekend(date) && !isOtherMonth(date) ? 'bg-gray-[0.01]' : ''}
-                    ${isDropTarget && canDrop ? 'bg-[#fdb813]/40 ring-2 ring-[#fdb813] ring-inset' : ''}
+                    ${isDropTarget && canDrop ? 'bg-accent/40 ring-2 ring-[#fdb813] ring-inset' : ''}
                     ${isDropTarget && !canDrop ? 'bg-red-100 cursor-not-allowed' : ''}
-                    ${draggingEvent && !isDropTarget && canDrop ? 'hover:bg-[#fdb813]/20' : ''}
+                    ${draggingEvent && !isDropTarget && canDrop ? 'hover:bg-accent/20' : ''}
                   `}
                   style={{
                     gridRow: 1,
@@ -383,10 +356,6 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
                 // Clamp to Current Month logic:
                 if (limitToCurrentMonth && currentMonthDate) {
                   const monthStart = startOfDay(new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), 1));
-                  const monthEnd = startOfDay(new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), 0)); // Fixed: day 0 is last day of prev month? No, day 0 of NEXT month is last day of this month. Wrapper usually handles this.
-                  // Actually new Date(y, m+1, 0) is correct for last day. 
-                  // But original code had logic. Let's keep original logic concept. 
-                  // Wait, previous code: new Date(..., currentMonthDate.getMonth() + 1, 0)
                   const monthEndCorrect = startOfDay(new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 0));
 
                   if (startOfDay(effectiveStart) < monthStart) effectiveStart = monthStart;
@@ -397,7 +366,6 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
                 }
 
                 // Pass the CLAMPED event to position calculator
-                // We create a temporary event object just for positioning
                 const displayEvent = { ...event, startDate: format(effectiveStart, 'yyyy-MM-dd'), endDate: format(effectiveEnd, 'yyyy-MM-dd') };
 
                 const pos = getEventPositionInWeek(displayEvent, weekStart, weekEnd);
@@ -413,7 +381,7 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
                 const style = {
                   gridColumnStart: pos.colStart - 1,
                   gridColumnEnd: `span ${pos.colSpan}`,
-                  borderColor: borderColor, // Apply border color to container
+                  borderColor: borderColor,
                 };
 
                 const isDragging = draggingEvent?.id === event.id;
@@ -459,7 +427,6 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
                     {event.recurrenceGroupId && pos.isStart && (
                       <span className="relative z-10 mr-0.5 text-xxs" style={{ color: textColor }}>🔄</span>
                     )}
-                    {/* Inner border div removed, applied to container instead */}
                     <span className="relative z-10 truncate" style={{ color: textColor }}>
                       {event.title}
                     </span>
@@ -471,7 +438,7 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
         );
       })}
 
-      {/* Custom Tooltip Portal/Overlay - Header color #081429 */}
+      {/* Custom Tooltip Portal/Overlay */}
       {hoveredEvent && tooltipPos && (
         <div
           className="fixed z-[110] w-72 bg-white rounded-sm shadow-2xl border border-gray-200 pointer-events-none text-left animate-in fade-in zoom-in-95 duration-100"
@@ -481,17 +448,17 @@ const WeekBlock: React.FC<WeekBlockProps> = ({
           }}
         >
           <div
-            className="h-2 rounded-t-lg w-full bg-[#081429]"
+            className="h-2 rounded-t-lg w-full bg-primary"
           />
           <div className="p-4 space-y-3">
-            <h3 className="text-lg font-bold text-[#081429] leading-tight">
+            <h3 className="text-lg font-bold text-primary leading-tight">
               {hoveredEvent.title}
             </h3>
 
             <div className="flex items-start gap-2 text-sm text-gray-600">
-              <Clock size={16} className="mt-0.5 shrink-0 text-[#fdb813]" />
+              <Clock size={16} className="mt-0.5 shrink-0 text-accent" />
               <div className="flex flex-col">
-                <span className="font-bold text-[#373d41]">
+                <span className="font-bold text-primary-700">
                   {hoveredEvent.startDate} {hoveredEvent.startTime ? hoveredEvent.startTime : ''}
                 </span>
                 {(hoveredEvent.startDate !== hoveredEvent.endDate || hoveredEvent.startTime !== hoveredEvent.endTime) && (

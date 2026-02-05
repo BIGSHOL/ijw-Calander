@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { Users, UserMinus, UserPlus, Settings, Calendar, Image, CalendarOff, RefreshCw, LayoutList, SortAsc } from 'lucide-react';
+import { Users, UserMinus, UserPlus, Settings, Calendar, Image, CalendarOff, RefreshCw, LayoutList, SortAsc, ChevronLeft, ChevronRight } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import { VideoLoading } from '../Common/VideoLoading';
 import { Student, SalaryConfig, SalarySettingItem, MonthlySettlement, AttendanceSubject, AttendanceViewMode, SessionPeriod } from './types';
@@ -243,6 +243,18 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     storage.setString(STORAGE_KEYS.ATTENDANCE_SORT_MODE, mode);
   }, []);
 
+  // 페이지네이션 상태
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(() => {
+    const saved = storage.getString(STORAGE_KEYS.ATTENDANCE_PAGE_SIZE);
+    return saved ? parseInt(saved, 10) : 30;
+  });
+  const handleItemsPerPageChange = useCallback((count: number) => {
+    setItemsPerPage(count);
+    setCurrentPage(1);
+    storage.setString(STORAGE_KEYS.ATTENDANCE_PAGE_SIZE, String(count));
+  }, []);
+
   // 테이블 ref (이미지 내보내기용)
   const tableRef = useRef<HTMLTableElement>(null);
 
@@ -366,6 +378,18 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     });
     return counts;
   }, [visibleStudents]);
+
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(visibleStudents.length / itemsPerPage);
+  const paginatedStudents = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return visibleStudents.slice(start, start + itemsPerPage);
+  }, [visibleStudents, currentPage, itemsPerPage]);
+
+  // 강사/과목 변경 시 페이지 초기화
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStaffId, selectedSubject]);
 
   // 확정된 월은 저장된 설정 사용, 미확정 월은 전역 설정 사용
   const effectiveSalaryConfig = useMemo(() =>
@@ -594,7 +618,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   // This ensures React Hooks rules are followed (same number of hooks on every render)
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-white text-[#373d41]">
+    <div className="flex flex-col h-full min-h-0 bg-white text-primary-700">
       {/* Navigation and View Mode Toggle are now handled in App.tsx header */}
 
       {/* Stats Cards + Settings - Compact single row */}
@@ -603,22 +627,22 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           onClick={() => setSettlementModalOpen(true)}
           className="bg-white px-3 py-1.5 rounded-sm border border-gray-200 shadow-sm flex items-center gap-2 cursor-pointer hover:border-blue-300 transition-colors flex-shrink-0"
         >
-          <div className="w-7 h-7 bg-blue-50 text-[#081429] rounded-sm flex items-center justify-center">
+          <div className="w-7 h-7 bg-blue-50 text-primary rounded-sm flex items-center justify-center">
             <span className="text-sm font-bold leading-none">₩</span>
           </div>
           <div>
             <p className="text-xxs text-gray-600 font-medium">이번 달 급여</p>
-            <p className="text-sm font-bold text-[#373d41]">{formatCurrency(finalSalary)}</p>
+            <p className="text-sm font-bold text-primary-700">{formatCurrency(finalSalary)}</p>
           </div>
         </div>
 
         <div className="bg-white px-3 py-1.5 rounded-sm border border-gray-200 shadow-sm flex items-center gap-2 flex-shrink-0">
-          <div className="p-1.5 bg-gray-50 text-[#081429] rounded-sm">
+          <div className="p-1.5 bg-gray-50 text-primary rounded-sm">
             <Users size={16} />
           </div>
           <div>
             <p className="text-xxs text-gray-600 font-medium">전체 학생</p>
-            <p className="text-sm font-bold text-[#373d41]">{totalStudentRows}명</p>
+            <p className="text-sm font-bold text-primary-700">{totalStudentRows}명</p>
           </div>
         </div>
 
@@ -626,12 +650,12 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           onClick={() => setListModal({ isOpen: true, type: 'new' })}
           className="bg-white px-3 py-1.5 rounded-sm border border-gray-200 shadow-sm flex items-center gap-2 cursor-pointer hover:border-yellow-300 transition-colors flex-shrink-0"
         >
-          <div className="p-1.5 bg-yellow-100 text-[#081429] rounded-sm">
+          <div className="p-1.5 bg-yellow-100 text-primary rounded-sm">
             <UserPlus size={16} />
           </div>
           <div>
             <p className="text-xxs text-gray-600 font-medium">신입생 유입</p>
-            <p className="text-sm font-bold text-[#fdb813]">+{stats.newStudentsCount}명</p>
+            <p className="text-sm font-bold text-accent">+{stats.newStudentsCount}명</p>
           </div>
         </div>
 
@@ -651,7 +675,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         <div className="bg-white px-3 py-1.5 rounded-sm border border-gray-200 shadow-sm flex items-center gap-2 flex-shrink-0">
           <div>
             <p className="text-xxs text-gray-600 font-medium">출석률</p>
-            <p className="text-sm font-bold text-[#373d41]">
+            <p className="text-sm font-bold text-primary-700">
               {stats.totalPresent + stats.totalAbsent === 0 ? '0' : Math.round((stats.totalPresent / (stats.totalPresent + stats.totalAbsent)) * 100)}%
             </p>
           </div>
@@ -680,7 +704,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             onClick={() => handleSortModeChange('class')}
             className={`flex items-center gap-1 px-2 py-1 rounded-sm text-xs font-bold transition-colors ${
               sortMode === 'class'
-                ? 'bg-[#081429] text-white shadow-sm'
+                ? 'bg-primary text-white shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -691,7 +715,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             onClick={() => handleSortModeChange('name')}
             className={`flex items-center gap-1 px-2 py-1 rounded-sm text-xs font-bold transition-colors ${
               sortMode === 'name'
-                ? 'bg-[#081429] text-white shadow-sm'
+                ? 'bg-primary text-white shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -703,11 +727,6 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         {/* 새로고침 버튼 */}
         <button
           onClick={() => {
-            console.log('🔄 새로고침 버튼 클릭:', {
-              staffId: filterStaffId,
-              subject: selectedSubject,
-              yearMonth: currentYearMonth
-            });
             refetch();
           }}
           disabled={isLoadingStudents}
@@ -778,7 +797,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           <Table
             ref={tableRef}
             currentDate={currentDate}
-            students={visibleStudents}
+            students={paginatedStudents}
             salaryConfig={salaryConfig}
             onAttendanceChange={handleAttendanceChange}
             onEditStudent={handleEditStudent}
@@ -805,6 +824,76 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           />
         </div>
 
+        {/* Pagination */}
+        {totalPages > 0 && (
+          <div className="px-4 py-2 flex items-center justify-between border-t border-gray-100 flex-shrink-0 bg-white">
+            {/* 왼쪽: 항목 수 선택 */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-500">페이지당</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+                className="px-2 py-1 text-xs rounded-sm border border-gray-200 text-primary bg-white focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent"
+              >
+                <option value={20}>20개</option>
+                <option value={30}>30개</option>
+                <option value={50}>50개</option>
+                <option value={100}>100개</option>
+              </select>
+              <span className="text-xs text-gray-500 hidden sm:inline">
+                {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, totalStudentRows)} / 총 {totalStudentRows}명
+              </span>
+            </div>
+
+            {/* 오른쪽: 페이지 네비게이션 */}
+            <nav className="flex items-center gap-1" aria-label="Pagination">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-2 py-1 rounded text-xs font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 text-primary"
+              >
+                <ChevronLeft size={14} />
+              </button>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${
+                        currentPage === pageNum
+                          ? 'bg-accent text-primary'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="px-2 py-1 rounded text-xs font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 text-primary"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </nav>
+          </div>
+        )}
       </div>
 
       {/* Modals */}

@@ -215,8 +215,8 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
             >
                 {/* 헤더 */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
-                    <h2 className="text-sm font-bold text-[#081429] flex items-center gap-2">
-                        {isEditing ? <Edit2 className="w-4 h-4 text-[#fdb813]" /> : <MessageSquare className="w-4 h-4 text-[#fdb813]" />}
+                    <h2 className="text-sm font-bold text-primary flex items-center gap-2">
+                        {isEditing ? <Edit2 className="w-4 h-4 text-accent" /> : <MessageSquare className="w-4 h-4 text-accent" />}
                         {isEditing ? '상담 기록 수정' : '새 상담 기록'}
                     </h2>
                     <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
@@ -229,12 +229,12 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                     {/* Section 1: 학생 정보 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <User className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">학생 정보</h3>
+                            <User className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">학생 정보</h3>
                         </div>
                         <div className="divide-y divide-gray-100">
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">학생 <span className="text-red-500">*</span></span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">학생 <span className="text-red-500">*</span></span>
                                 {preSelectedStudentId ? (
                                     <div className="flex-1 bg-gray-50 border border-gray-200 px-2 py-1 text-xs text-gray-700 flex justify-between items-center">
                                         <span>{selectedStudent?.name} {selectedStudent?.grade ? `(${selectedStudent.grade})` : ''}</span>
@@ -254,7 +254,7 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                                                 }}
                                                 onFocus={() => setShowStudentDropdown(true)}
                                                 placeholder="학생 이름 검색..."
-                                                className="w-full pl-7 pr-2 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                                                className="w-full pl-7 pr-2 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                                                 disabled={studentsLoading}
                                             />
                                         </div>
@@ -265,7 +265,7 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                                                         key={student.id}
                                                         type="button"
                                                         onClick={() => handleSelectStudent(student)}
-                                                        className={`w-full px-2 py-1.5 text-left text-xs hover:bg-gray-50 flex items-center justify-between ${studentId === student.id ? 'bg-[#fdb813]/10' : ''}`}
+                                                        className={`w-full px-2 py-1.5 text-left text-xs hover:bg-gray-50 flex items-center justify-between ${studentId === student.id ? 'bg-accent/10' : ''}`}
                                                     >
                                                         <span className="font-medium text-gray-800">{student.name}</span>
                                                         <span className="text-xxs text-gray-500">
@@ -279,13 +279,13 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                                 )}
                             </div>
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">유형</span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">유형</span>
                                 <div className="flex gap-1 flex-1">
                                     <button
                                         type="button"
                                         onClick={() => setType('parent')}
                                         className={`flex-1 py-1 text-xs font-medium flex items-center justify-center gap-1 transition-colors ${type === 'parent'
-                                            ? 'bg-[#081429] text-white'
+                                            ? 'bg-primary text-white'
                                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                             }`}
                                     >
@@ -296,7 +296,7 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                                         type="button"
                                         onClick={() => setType('student')}
                                         className={`flex-1 py-1 text-xs font-medium flex items-center justify-center gap-1 transition-colors ${type === 'student'
-                                            ? 'bg-[#081429] text-white'
+                                            ? 'bg-primary text-white'
                                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                             }`}
                                     >
@@ -306,11 +306,11 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">카테고리</span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">카테고리</span>
                                 <select
                                     value={category}
                                     onChange={(e) => setCategory(e.target.value as ConsultationCategory)}
-                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-accent outline-none"
                                 >
                                     {Object.entries(CATEGORY_CONFIG).map(([key, config]) => (
                                         <option key={key} value={key}>
@@ -320,17 +320,17 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                                 </select>
                             </div>
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">과목</span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">과목</span>
                                 <div className="flex gap-1 flex-1">
                                     {studentSubjects.length === 0 ? (
                                         <span className="text-xxs text-gray-400 py-0.5">등록 과목 없음</span>
                                     ) : (
                                         <>
                                             {studentSubjects.includes('math') && (
-                                                <button type="button" onClick={() => setSubject('math')} className={`px-2 py-0.5 text-xxs font-medium rounded-sm transition-colors ${subject === 'math' ? SUBJECT_COLORS.math.badge : 'bg-[#fef9e7] text-[#081429] hover:bg-[#fdb813]/30'}`}>수학</button>
+                                                <button type="button" onClick={() => setSubject('math')} className={`px-2 py-0.5 text-xxs font-medium rounded-sm transition-colors ${subject === 'math' ? SUBJECT_COLORS.math.badge : 'bg-[#fef9e7] text-primary hover:bg-accent/30'}`}>수학</button>
                                             )}
                                             {studentSubjects.includes('english') && (
-                                                <button type="button" onClick={() => setSubject('english')} className={`px-2 py-0.5 text-xxs font-medium rounded-sm transition-colors ${subject === 'english' ? SUBJECT_COLORS.english.badge : 'bg-[#f0f4f8] text-[#081429] hover:bg-[#081429]/10'}`}>영어</button>
+                                                <button type="button" onClick={() => setSubject('english')} className={`px-2 py-0.5 text-xxs font-medium rounded-sm transition-colors ${subject === 'english' ? SUBJECT_COLORS.english.badge : 'bg-[#f0f4f8] text-primary hover:bg-primary/10'}`}>영어</button>
                                             )}
                                             {studentSubjects.length === 2 && (
                                                 <button type="button" onClick={() => setSubject('other')} className={`px-2 py-0.5 text-xxs font-medium transition-colors ${subject === 'other' ? 'bg-gray-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>전체</button>
@@ -340,11 +340,11 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                                 </div>
                             </div>
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">담당자</span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">담당자</span>
                                 <select
                                     value={consultantId}
                                     onChange={(e) => setConsultantId(e.target.value)}
-                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-accent outline-none"
                                 >
                                     {(() => {
                                         const currentStaff = staff.find(s =>
@@ -383,35 +383,35 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                     {/* Section 2: 일시 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <Clock className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">일시</h3>
+                            <Clock className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">일시</h3>
                         </div>
                         <div className="divide-y divide-gray-100">
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">날짜</span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">날짜</span>
                                 <input
                                     type="date"
                                     value={date}
                                     onChange={(e) => setDate(e.target.value)}
-                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-[#fdb813] outline-none max-w-[150px]"
+                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-accent outline-none max-w-[150px]"
                                 />
                             </div>
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">시간</span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">시간</span>
                                 <input
                                     type="time"
                                     value={time}
                                     onChange={(e) => setTime(e.target.value)}
-                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-[#fdb813] outline-none max-w-[120px]"
+                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-accent outline-none max-w-[120px]"
                                 />
                             </div>
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">소요(분)</span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">소요(분)</span>
                                 <input
                                     type="number"
                                     value={duration}
                                     onChange={(e) => setDuration(e.target.value)}
-                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-[#fdb813] outline-none max-w-[80px]"
+                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-accent outline-none max-w-[80px]"
                                     placeholder="30"
                                 />
                             </div>
@@ -422,26 +422,26 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                     {type === 'parent' && (
                         <div className="bg-white border border-gray-200 overflow-hidden">
                             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                <Users className="w-3 h-3 text-[#081429]" />
-                                <h3 className="text-[#081429] font-bold text-xs">학부모 정보</h3>
+                                <Users className="w-3 h-3 text-primary" />
+                                <h3 className="text-primary font-bold text-xs">학부모 정보</h3>
                             </div>
                             <div className="divide-y divide-gray-100">
                                 <div className="flex items-center gap-2 px-2 py-1.5">
-                                    <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">이름</span>
+                                    <span className="w-14 shrink-0 text-xs font-medium text-primary-700">이름</span>
                                     <input
                                         type="text"
                                         value={parentName}
                                         onChange={(e) => setParentName(e.target.value)}
-                                        className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                        className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-accent outline-none"
                                         placeholder="홍길동"
                                     />
                                 </div>
                                 <div className="flex items-center gap-2 px-2 py-1.5">
-                                    <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">관계</span>
+                                    <span className="w-14 shrink-0 text-xs font-medium text-primary-700">관계</span>
                                     <select
                                         value={parentRelation}
                                         onChange={(e) => setParentRelation(e.target.value)}
-                                        className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-[#fdb813] outline-none max-w-[100px]"
+                                        className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-accent outline-none max-w-[100px]"
                                     >
                                         <option value="">선택</option>
                                         <option value="부">부</option>
@@ -458,8 +458,8 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                     {type === 'student' && (
                         <div className="bg-white border border-gray-200 overflow-hidden">
                             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                <User className="w-3 h-3 text-[#081429]" />
-                                <h3 className="text-[#081429] font-bold text-xs">학생 컨디션</h3>
+                                <User className="w-3 h-3 text-primary" />
+                                <h3 className="text-primary font-bold text-xs">학생 컨디션</h3>
                             </div>
                             <div className="flex gap-1 p-2">
                                 {[
@@ -488,27 +488,27 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                     {/* Section 4: 상담 내용 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <FileText className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">상담 내용</h3>
+                            <FileText className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">상담 내용</h3>
                         </div>
                         <div className="divide-y divide-gray-100">
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">제목 <span className="text-red-500">*</span></span>
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">제목 <span className="text-red-500">*</span></span>
                                 <input
                                     type="text"
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
-                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-accent outline-none"
                                     placeholder="상담 제목을 입력하세요"
                                     required
                                 />
                             </div>
                             <div className="px-2 py-1.5">
-                                <span className="text-xs font-medium text-[#373d41] block mb-1">내용 <span className="text-red-500">*</span></span>
+                                <span className="text-xs font-medium text-primary-700 block mb-1">내용 <span className="text-red-500">*</span></span>
                                 <textarea
                                     value={content}
                                     onChange={(e) => setContent(e.target.value)}
-                                    className="w-full text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-[#fdb813] outline-none resize-none"
+                                    className="w-full text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-accent outline-none resize-none"
                                     rows={4}
                                     placeholder="상담 내용을 입력하세요"
                                     required
@@ -520,8 +520,8 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                     {/* Section 5: 후속 조치 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <AlertCircle className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">후속 조치</h3>
+                            <AlertCircle className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">후속 조치</h3>
                         </div>
                         <div className="flex items-center gap-2 px-2 py-1.5">
                             <label className="flex items-center gap-1.5 cursor-pointer">
@@ -529,16 +529,16 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                                     type="checkbox"
                                     checked={followUpNeeded}
                                     onChange={(e) => setFollowUpNeeded(e.target.checked)}
-                                    className="w-3 h-3 text-[#fdb813] focus:ring-[#fdb813]"
+                                    className="w-3 h-3 text-accent focus:ring-accent"
                                 />
-                                <span className="text-xs font-medium text-[#373d41]">후속 조치 필요</span>
+                                <span className="text-xs font-medium text-primary-700">후속 조치 필요</span>
                             </label>
                             {followUpNeeded && (
                                 <input
                                     type="date"
                                     value={followUpDate}
                                     onChange={(e) => setFollowUpDate(e.target.value)}
-                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-[#fdb813] outline-none max-w-[150px]"
+                                    className="flex-1 text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-accent outline-none max-w-[150px]"
                                     required={followUpNeeded}
                                 />
                             )}
@@ -558,7 +558,7 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                     <button
                         onClick={handleSubmit}
                         disabled={(isEditing ? updateConsultation.isPending : createConsultation.isPending) || !studentId || !title || !content}
-                        className="px-3 py-1.5 text-xs bg-[#fdb813] text-[#081429] font-semibold hover:bg-[#e5a60f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                        className="px-3 py-1.5 text-xs bg-accent text-primary font-semibold hover:bg-[#e5a60f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                     >
                         {(isEditing ? updateConsultation.isPending : createConsultation.isPending) && <Loader2 size={12} className="animate-spin" />}
                         {isEditing ? '수정 저장' : '저장'}

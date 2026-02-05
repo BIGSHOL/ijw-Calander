@@ -76,15 +76,15 @@ export const TabButton = React.forwardRef<HTMLButtonElement, TabButtonProps>(
       ? (active ? 'tab-active' : 'tab-inactive')
       : variant;
 
-    const baseStyles = 'inline-flex items-center justify-center font-bold rounded-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#fdb813]/50 disabled:opacity-50 disabled:cursor-not-allowed';
+    const baseStyles = 'inline-flex items-center justify-center font-bold rounded-sm transition-all focus:outline-none focus:ring-2 focus:ring-accent/50 disabled:opacity-50 disabled:cursor-not-allowed';
 
     const variantStyles: Record<TabButtonVariant, string> = {
-      'tab-active': 'bg-[#fdb813] text-[#081429] shadow-sm hover:bg-[#fdb813]/90',
+      'tab-active': 'bg-accent text-primary shadow-sm hover:bg-accent/90',
       'tab-inactive': 'text-gray-400 hover:text-white hover:bg-white/10',
       'tab-toggle': 'bg-white/10 border border-white/10 text-white hover:bg-white/20',
       'tab-filter': 'bg-[#1e293b] border border-gray-700 text-white hover:border-gray-500',
       'tab-status-active': 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm',
-      'tab-status-pending': 'bg-yellow-500 text-[#081429] hover:bg-yellow-600 shadow-sm',
+      'tab-status-pending': 'bg-yellow-500 text-primary hover:bg-yellow-600 shadow-sm',
       'tab-status-completed': 'bg-green-600 text-white hover:bg-green-700 shadow-sm',
       'tab-status-cancelled': 'bg-gray-500 text-white hover:bg-gray-600 shadow-sm',
     };

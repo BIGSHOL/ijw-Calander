@@ -75,7 +75,7 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
             <div className="bg-white rounded-sm shadow-xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
                 {/* 헤더 */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 sticky top-0 bg-white z-10">
-                    <h2 className="text-sm font-bold text-[#081429]">상담 상세 - {typeLabel}</h2>
+                    <h2 className="text-sm font-bold text-primary">상담 상세 - {typeLabel}</h2>
                     <button
                         onClick={onClose}
                         className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
@@ -89,31 +89,31 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                     {/* Section 1: 상담 기본 정보 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <ClipboardList className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">상담 기본 정보</h3>
+                            <ClipboardList className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">상담 기본 정보</h3>
                         </div>
                         <div className="divide-y divide-gray-100">
                             {/* Type & Category Row */}
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">유형</span>
+                                <span className="w-16 shrink-0 text-xs font-medium text-primary-700">유형</span>
                                 <div className="flex items-center gap-2">
                                     <span className="text-lg">{typeIcon}</span>
-                                    <span className="text-xs font-medium text-[#081429]">{typeLabel}</span>
+                                    <span className="text-xs font-medium text-primary">{typeLabel}</span>
                                 </div>
                             </div>
 
                             {/* Category Row */}
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">카테고리</span>
-                                <span className="text-xs text-[#081429]">
+                                <span className="w-16 shrink-0 text-xs font-medium text-primary-700">카테고리</span>
+                                <span className="text-xs text-primary">
                                     {categoryConfig.icon} {categoryConfig.label}
                                 </span>
                             </div>
 
                             {/* Date Row */}
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">날짜</span>
-                                <span className="text-xs text-[#081429] font-medium">
+                                <span className="w-16 shrink-0 text-xs font-medium text-primary-700">날짜</span>
+                                <span className="text-xs text-primary font-medium">
                                     {consultation.date}
                                     {consultation.time && ` ${consultation.time}`}
                                 </span>
@@ -122,8 +122,8 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                             {/* Duration Row */}
                             {consultation.duration && (
                                 <div className="flex items-center gap-2 px-2 py-1.5">
-                                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">소요 시간</span>
-                                    <span className="text-xs text-[#081429] font-medium">
+                                    <span className="w-16 shrink-0 text-xs font-medium text-primary-700">소요 시간</span>
+                                    <span className="text-xs text-primary font-medium">
                                         {consultation.duration}분
                                     </span>
                                 </div>
@@ -131,14 +131,14 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
 
                             {/* Registrar Row */}
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">상담자</span>
-                                <span className="text-xs text-[#081429] font-medium">{registrar}</span>
+                                <span className="w-16 shrink-0 text-xs font-medium text-primary-700">상담자</span>
+                                <span className="text-xs text-primary font-medium">{registrar}</span>
                             </div>
 
                             {/* Consultant Row */}
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">담임선생님</span>
-                                <span className="text-xs text-[#081429] font-medium">
+                                <span className="w-16 shrink-0 text-xs font-medium text-primary-700">담임선생님</span>
+                                <span className="text-xs text-primary font-medium">
                                     {consultation.consultantName}
                                 </span>
                             </div>
@@ -147,11 +147,11 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                             {consultation.type === 'parent' && consultation.parentName && (
                                 <>
                                     <div className="flex items-center gap-2 px-2 py-1.5">
-                                        <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">학부모</span>
-                                        <span className="text-xs text-[#081429] font-medium">
+                                        <span className="w-16 shrink-0 text-xs font-medium text-primary-700">학부모</span>
+                                        <span className="text-xs text-primary font-medium">
                                             {consultation.parentName}
                                             {consultation.parentRelation && (
-                                                <span className="ml-1 text-[#373d41]">
+                                                <span className="ml-1 text-primary-700">
                                                     ({consultation.parentRelation})
                                                 </span>
                                             )}
@@ -159,8 +159,8 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                                     </div>
                                     {consultation.parentContact && (
                                         <div className="flex items-center gap-2 px-2 py-1.5">
-                                            <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">연락처</span>
-                                            <span className="text-xs text-[#081429] font-medium">
+                                            <span className="w-16 shrink-0 text-xs font-medium text-primary-700">연락처</span>
+                                            <span className="text-xs text-primary font-medium">
                                                 {consultation.parentContact}
                                             </span>
                                         </div>
@@ -171,7 +171,7 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                             {/* 학생 상담 컨디션 */}
                             {consultation.type === 'student' && consultation.studentMood && (
                                 <div className="flex items-center gap-2 px-2 py-1.5">
-                                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">학생 컨디션</span>
+                                    <span className="w-16 shrink-0 text-xs font-medium text-primary-700">학생 컨디션</span>
                                     <span className="text-xs">
                                         {consultation.studentMood === 'positive' && (
                                             <span className="text-green-600 font-medium">😊 긍정적</span>
@@ -191,15 +191,15 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                     {/* Section 2: 상담 내용 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <FileText className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">상담 내용</h3>
+                            <FileText className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">상담 내용</h3>
                         </div>
                         <div className="p-2">
                             <div className="px-2 py-1.5">
-                                <h4 className="text-xs font-semibold text-[#081429] mb-2">
+                                <h4 className="text-xs font-semibold text-primary mb-2">
                                     {consultation.title}
                                 </h4>
-                                <div className="text-xs text-[#373d41] whitespace-pre-wrap">
+                                <div className="text-xs text-primary-700 whitespace-pre-wrap">
                                     {consultation.content}
                                 </div>
                             </div>
@@ -209,29 +209,29 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                     {/* Section 3: 학생 정보 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <Users className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">학생 정보</h3>
+                            <Users className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">학생 정보</h3>
                         </div>
                         <div className="divide-y divide-gray-100">
                             {/* Student Name Row */}
                             <div className="flex items-center gap-2 px-2 py-1.5">
-                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">이름</span>
-                                <span className="text-xs font-semibold text-[#081429]">{consultation.studentName}</span>
+                                <span className="w-16 shrink-0 text-xs font-medium text-primary-700">이름</span>
+                                <span className="text-xs font-semibold text-primary">{consultation.studentName}</span>
                             </div>
 
                             {/* School Row */}
                             {consultation.school && (
                                 <div className="flex items-center gap-2 px-2 py-1.5">
-                                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">학교</span>
-                                    <span className="text-xs text-[#081429]">{consultation.school}</span>
+                                    <span className="w-16 shrink-0 text-xs font-medium text-primary-700">학교</span>
+                                    <span className="text-xs text-primary">{consultation.school}</span>
                                 </div>
                             )}
 
                             {/* Grade Row */}
                             {consultation.grade && (
                                 <div className="flex items-center gap-2 px-2 py-1.5">
-                                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">학년</span>
-                                    <span className="text-xs text-[#081429]">{consultation.grade}</span>
+                                    <span className="w-16 shrink-0 text-xs font-medium text-primary-700">학년</span>
+                                    <span className="text-xs text-primary">{consultation.grade}</span>
                                 </div>
                             )}
                         </div>
@@ -241,13 +241,13 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                     {consultation.followUpNeeded && (
                         <div className="bg-white border border-gray-200 overflow-hidden">
                             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                <Bell className="w-3 h-3 text-[#081429]" />
-                                <h3 className="text-[#081429] font-bold text-xs">후속 조치</h3>
+                                <Bell className="w-3 h-3 text-primary" />
+                                <h3 className="text-primary font-bold text-xs">후속 조치</h3>
                             </div>
                             <div className="divide-y divide-gray-100">
                                 {/* Status Row */}
                                 <div className="flex items-center gap-2 px-2 py-1.5">
-                                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">상태</span>
+                                    <span className="w-16 shrink-0 text-xs font-medium text-primary-700">상태</span>
                                     <div>
                                         {urgency === 'urgent' && consultation.followUpDate && (
                                             <span className="bg-red-600 text-white px-2 py-0.5 rounded text-xs font-semibold">
@@ -255,7 +255,7 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                                             </span>
                                         )}
                                         {urgency === 'pending' && (
-                                            <span className="bg-[#fdb813] text-[#081429] px-2 py-0.5 rounded text-xs font-semibold">
+                                            <span className="bg-accent text-primary px-2 py-0.5 rounded text-xs font-semibold">
                                                 대기 중
                                             </span>
                                         )}
@@ -270,8 +270,8 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                                 {/* Follow-up Date Row */}
                                 {consultation.followUpDate && (
                                     <div className="flex items-center gap-2 px-2 py-1.5">
-                                        <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">예정일</span>
-                                        <span className="text-xs text-[#081429] font-medium">
+                                        <span className="w-16 shrink-0 text-xs font-medium text-primary-700">예정일</span>
+                                        <span className="text-xs text-primary font-medium">
                                             {consultation.followUpDate}
                                         </span>
                                     </div>
@@ -280,8 +280,8 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                                 {/* Completion Notes Row */}
                                 {consultation.followUpDone && consultation.followUpNotes && (
                                     <div className="px-2 py-1.5">
-                                        <span className="text-xs font-medium text-[#373d41] block mb-1">완료 메모</span>
-                                        <p className="text-xs text-[#081429] whitespace-pre-wrap">
+                                        <span className="text-xs font-medium text-primary-700 block mb-1">완료 메모</span>
+                                        <p className="text-xs text-primary whitespace-pre-wrap">
                                             {consultation.followUpNotes}
                                         </p>
                                     </div>
@@ -290,20 +290,20 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                                 {/* Complete Follow-up Form */}
                                 {!consultation.followUpDone && (
                                     <div className="px-2 py-2">
-                                        <label className="block text-xs font-medium text-[#373d41] mb-1.5">
+                                        <label className="block text-xs font-medium text-primary-700 mb-1.5">
                                             완료 메모 (선택)
                                         </label>
                                         <textarea
                                             value={followUpNotes}
                                             onChange={(e) => setFollowUpNotes(e.target.value)}
-                                            className="w-full border border-gray-300 rounded-sm px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813]"
+                                            className="w-full border border-gray-300 rounded-sm px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent"
                                             rows={3}
                                             placeholder="후속 조치 결과를 입력하세요..."
                                         />
                                         <button
                                             onClick={handleCompleteFollowUp}
                                             disabled={completeFollowUp.isPending}
-                                            className="mt-2 bg-[#fdb813] text-[#081429] px-4 py-1.5 rounded-sm text-xs font-semibold hover:bg-[#e5a711] transition-colors disabled:opacity-50"
+                                            className="mt-2 bg-accent text-primary px-4 py-1.5 rounded-sm text-xs font-semibold hover:bg-[#e5a711] transition-colors disabled:opacity-50"
                                         >
                                             {completeFollowUp.isPending ? '처리 중...' : '후속 조치 완료'}
                                         </button>
@@ -316,14 +316,14 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                     {/* Section 5: 작업 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <Settings className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">작업</h3>
+                            <Settings className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">작업</h3>
                         </div>
                         <div className="p-2">
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => setShowEditModal(true)}
-                                    className="bg-[#fdb813] hover:bg-[#e5a711] text-[#081429] px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors"
+                                    className="bg-accent hover:bg-[#e5a711] text-primary px-3 py-1.5 rounded-sm text-xs font-semibold transition-colors"
                                 >
                                     수정
                                 </button>
@@ -343,16 +343,16 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
             {showDeleteConfirm && (
                 <div className="absolute inset-0 bg-black bg-opacity-70 flex items-start justify-center pt-[8vh]" onClick={(e) => e.stopPropagation()}>
                     <div className="bg-white rounded-sm p-6 max-w-md" onClick={(e) => e.stopPropagation()}>
-                        <h3 className="text-lg font-bold text-[#081429] mb-4">
+                        <h3 className="text-lg font-bold text-primary mb-4">
                             정말 삭제하시겠습니까?
                         </h3>
-                        <p className="text-[#373d41] mb-6">
+                        <p className="text-primary-700 mb-6">
                             이 작업은 되돌릴 수 없습니다.
                         </p>
                         <div className="flex gap-3 justify-end">
                             <button
                                 onClick={() => setShowDeleteConfirm(false)}
-                                className="border border-[#081429] text-[#081429] px-4 py-2 rounded-sm hover:bg-gray-50 transition-colors"
+                                className="border border-primary text-primary px-4 py-2 rounded-sm hover:bg-gray-50 transition-colors"
                             >
                                 취소
                             </button>

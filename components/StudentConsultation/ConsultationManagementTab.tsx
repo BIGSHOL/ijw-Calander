@@ -375,7 +375,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                                     ...prev,
                                     category: e.target.value as ConsultationCategory | undefined || undefined
                                 }))}
-                                className="appearance-none bg-[#1e293b] border border-gray-700 rounded-sm px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                className="appearance-none bg-[#1e293b] border border-gray-700 rounded-sm px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-accent focus:ring-1 focus:ring-accent outline-none"
                             >
                                 <option value="">전체 카테고리</option>
                                 {Object.entries(CATEGORY_CONFIG).map(([key, config]) => (
@@ -395,7 +395,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                                     ...prev,
                                     followUpStatus: e.target.value as any
                                 }))}
-                                className="appearance-none bg-[#1e293b] border border-gray-700 rounded-sm px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+                                className="appearance-none bg-[#1e293b] border border-gray-700 rounded-sm px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-accent focus:ring-1 focus:ring-accent outline-none"
                             >
                                 <option value="all">전체</option>
                                 <option value="needed">후속조치 필요</option>
@@ -412,7 +412,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                                     onClick={() => setShowConsultantDropdown(!showConsultantDropdown)}
                                     className={`flex items-center gap-1.5 px-3 py-1 rounded-sm border text-xs font-medium transition-colors ${
                                         filters.consultantId
-                                            ? 'bg-[#fdb813] border-[#fdb813] text-[#081429]'
+                                            ? 'bg-accent border-accent text-primary'
                                             : 'bg-[#1e293b] border-gray-700 text-white hover:border-gray-500'
                                     }`}
                                 >
@@ -431,7 +431,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                                                 }}
                                                 className={`w-full px-3 py-1.5 rounded text-xs font-bold text-left ${
                                                     !filters.consultantId
-                                                        ? 'bg-[#fdb813] text-[#081429]'
+                                                        ? 'bg-accent text-primary'
                                                         : 'text-gray-300 hover:bg-white/10'
                                                 }`}
                                             >
@@ -576,7 +576,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                                     placeholder="학생명, 제목, 내용 검색..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="bg-[#1e293b] border border-gray-700 rounded-sm pl-8 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none w-52"
+                                    className="bg-[#1e293b] border border-gray-700 rounded-sm pl-8 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:border-accent focus:ring-1 focus:ring-accent outline-none w-52"
                                 />
                             </div>
                         </>
@@ -587,7 +587,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                     {/* 결과 카운트 - 목록 모드에서만 */}
                     {viewMode === 'list' && (
                         <span className="text-gray-400 text-xs">
-                            총 <span className="text-[#fdb813] font-bold">{totalCount}</span>개의 상담 기록
+                            총 <span className="text-accent font-bold">{totalCount}</span>개의 상담 기록
                         </span>
                     )}
 
@@ -606,7 +606,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                     {/* 새 상담 기록 버튼 */}
                     <button
                         onClick={() => setShowAddModal(true)}
-                        className="flex items-center gap-1.5 px-3 py-1 rounded-sm bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-sm bg-accent text-primary hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
                     >
                         <Plus size={14} />
                         <span>새 상담</span>
@@ -638,7 +638,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                                 <p className="text-red-800">데이터를 불러오는 중 오류가 발생했습니다.</p>
                                 <button
                                     onClick={() => refetch()}
-                                    className="mt-2 bg-[#fdb813] hover:bg-[#e5a60f] text-[#081429] px-4 py-2 rounded font-semibold text-sm"
+                                    className="mt-2 bg-accent hover:bg-[#e5a60f] text-primary px-4 py-2 rounded font-semibold text-sm"
                                 >
                                     다시 시도
                                 </button>

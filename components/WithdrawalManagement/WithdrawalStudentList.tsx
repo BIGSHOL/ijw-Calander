@@ -36,16 +36,16 @@ const WithdrawalStudentList: React.FC<WithdrawalStudentListProps> = ({
   return (
     <div className="flex flex-col h-full">
       {/* 상단: 총 학생 수 + 페이지 크기 + 페이지네이션 */}
-      <div className="px-2 py-1.5 border-b flex items-center justify-between" style={{ borderColor: '#08142915', backgroundColor: '#fafafa' }}>
+      <div className="px-2 py-1.5 border-b flex items-center justify-between" style={{ borderColor: 'rgba(8, 20, 41, 0.15)', backgroundColor: '#fafafa' }}>
         <div className="flex items-center gap-1">
-          <span className="text-xxs font-bold" style={{ color: '#081429' }}>
+          <span className="text-xxs font-bold" style={{ color: 'rgb(8, 20, 41)' /* primary */ }}>
             <span style={{ color: '#e53e3e' }}>{entries.length}</span>명
           </span>
           <select
             value={pageSize}
             onChange={(e) => handlePageSizeChange(Number(e.target.value))}
             className="text-xxs border rounded-sm px-1 py-0.5 transition-all"
-            style={{ borderColor: '#08142920', color: '#081429', backgroundColor: 'white' }}
+            style={{ borderColor: 'rgba(8, 20, 41, 0.2)', color: 'rgb(8, 20, 41)', backgroundColor: 'white' }}
           >
             <option value={10}>10개</option>
             <option value={20}>20개</option>
@@ -56,19 +56,19 @@ const WithdrawalStudentList: React.FC<WithdrawalStudentListProps> = ({
         {totalPages > 1 && (
           <div className="flex items-center gap-0.5">
             <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="p-0.5 rounded hover:bg-gray-200 disabled:opacity-30 transition-colors">
-              <ChevronsLeft className="w-3 h-3" style={{ color: '#081429' }} />
+              <ChevronsLeft className="w-3 h-3" style={{ color: 'rgb(8, 20, 41)' /* primary */ }} />
             </button>
             <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-0.5 rounded hover:bg-gray-200 disabled:opacity-30 transition-colors">
-              <ChevronLeft className="w-3 h-3" style={{ color: '#081429' }} />
+              <ChevronLeft className="w-3 h-3" style={{ color: 'rgb(8, 20, 41)' /* primary */ }} />
             </button>
-            <span className="text-xxs px-1" style={{ color: '#081429' }}>
+            <span className="text-xxs px-1" style={{ color: 'rgb(8, 20, 41)' /* primary */ }}>
               {currentPage}/{totalPages}
             </span>
             <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-0.5 rounded hover:bg-gray-200 disabled:opacity-30 transition-colors">
-              <ChevronRight className="w-3 h-3" style={{ color: '#081429' }} />
+              <ChevronRight className="w-3 h-3" style={{ color: 'rgb(8, 20, 41)' /* primary */ }} />
             </button>
             <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages} className="p-0.5 rounded hover:bg-gray-200 disabled:opacity-30 transition-colors">
-              <ChevronsRight className="w-3 h-3" style={{ color: '#081429' }} />
+              <ChevronsRight className="w-3 h-3" style={{ color: 'rgb(8, 20, 41)' /* primary */ }} />
             </button>
           </div>
         )}
@@ -99,11 +99,11 @@ const WithdrawalStudentList: React.FC<WithdrawalStudentListProps> = ({
                       : 'bg-amber-50 border-l-2 border-l-amber-500'
                     : 'hover:bg-gray-50 border-l-2 border-l-transparent'
                 }`}
-                style={{ borderBottomColor: '#08142910' }}
+                style={{ borderBottomColor: 'rgba(8, 20, 41, 0.063)' /* primary with opacity */ }}
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-medium" style={{ color: '#081429' }}>
+                    <span className="text-xs font-medium" style={{ color: 'rgb(8, 20, 41)' /* primary */ }}>
                       {student.name}
                     </span>
                     {student.grade && (

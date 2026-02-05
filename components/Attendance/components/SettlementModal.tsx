@@ -98,8 +98,8 @@ const SettlementModal: React.FC<Props> = ({
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-                    <h2 className="text-sm font-bold text-[#081429] flex items-center gap-2">
-                        <DollarSign size={16} className="text-[#fdb813]" />
+                    <h2 className="text-sm font-bold text-primary flex items-center gap-2">
+                        <DollarSign size={16} className="text-accent" />
                         {monthStr} 정산
                     </h2>
                     <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
@@ -112,21 +112,21 @@ const SettlementModal: React.FC<Props> = ({
                     {/* Section 1: 정산 정보 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <Calculator className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">정산 정보</h3>
+                            <Calculator className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">정산 정보</h3>
                         </div>
                         <div className="divide-y divide-gray-100">
                             {/* Period Row */}
                             <div className="flex items-center gap-2 px-2 py-1.5">
                                 <Calendar className="w-3 h-3 text-gray-400 shrink-0" />
-                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">정산 월</span>
+                                <span className="w-16 shrink-0 text-xs font-medium text-primary-700">정산 월</span>
                                 <span className="flex-1 text-xs text-gray-800 font-bold">{monthStr}</span>
                             </div>
 
                             {/* Base Salary Row */}
                             <div className="flex items-center gap-2 px-2 py-1.5">
                                 <DollarSign className="w-3 h-3 text-gray-400 shrink-0" />
-                                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">기본 수업료</span>
+                                <span className="w-16 shrink-0 text-xs font-medium text-primary-700">기본 수업료</span>
                                 <span className="flex-1 text-right text-sm font-bold text-gray-800">{formatCurrency(baseSalary)}</span>
                             </div>
 
@@ -144,8 +144,8 @@ const SettlementModal: React.FC<Props> = ({
                     {/* Section 2: 지급 내역 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <Gift className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">지급 내역</h3>
+                            <Gift className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">지급 내역</h3>
                         </div>
                         <div className="divide-y divide-gray-100">
 
@@ -236,8 +236,8 @@ const SettlementModal: React.FC<Props> = ({
                     {/* Section 3: 이력 (정산 확정 상태 및 적용된 설정) */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <Clock className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">이력</h3>
+                            <Clock className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">이력</h3>
                         </div>
                         <div className="p-2">
                             {isFinalized ? (
@@ -278,8 +278,8 @@ const SettlementModal: React.FC<Props> = ({
                     {/* Section 4: 작업 (확정/해제 버튼) */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
                         <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                            <FileText className="w-3 h-3 text-[#081429]" />
-                            <h3 className="text-[#081429] font-bold text-xs">작업</h3>
+                            <FileText className="w-3 h-3 text-primary" />
+                            <h3 className="text-primary font-bold text-xs">작업</h3>
                         </div>
                         <div className="p-2">
                             {isFinalized ? (

@@ -153,7 +153,7 @@ const WithdrawalStudentDetail: React.FC<WithdrawalStudentDetailProps> = ({
               <User className={`w-5 h-5 ${isWithdrawn ? 'text-red-500' : 'text-amber-500'}`} />
             </div>
             <div>
-              <h2 className="text-sm font-bold" style={{ color: '#081429' }}>{student.name}</h2>
+              <h2 className="text-sm font-bold" style={{ color: 'rgb(8, 20, 41)' /* primary */ }}>{student.name}</h2>
               <div className="flex items-center gap-1.5">
                 {student.grade && <span className="text-xs text-gray-500">{student.grade}</span>}
                 {student.school && <span className="text-xs text-gray-400">{student.school}</span>}
@@ -169,7 +169,7 @@ const WithdrawalStudentDetail: React.FC<WithdrawalStudentDetailProps> = ({
             {canEdit && !isEditing && (
               <button
                 onClick={() => setIsEditing(true)}
-                className="flex items-center gap-1 px-2 py-1 text-micro text-gray-500 hover:text-[#081429] hover:bg-gray-100 rounded-sm transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-micro text-gray-500 hover:text-primary hover:bg-gray-100 rounded-sm transition-colors"
               >
                 <Pencil className="w-3 h-3" />
                 <span>수정</span>
@@ -197,13 +197,13 @@ const WithdrawalStudentDetail: React.FC<WithdrawalStudentDetailProps> = ({
             <div className="divide-y divide-gray-100">
               <div className="flex items-center gap-2 px-3 py-2">
                 <Calendar className="w-3 h-3 text-gray-400 shrink-0" />
-                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">퇴원일</span>
-                <span className="text-xs text-[#081429]">{withdrawalDate}</span>
+                <span className="w-16 shrink-0 text-xs font-medium text-primary-700">퇴원일</span>
+                <span className="text-xs text-primary">{withdrawalDate}</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-2">
                 <Calendar className="w-3 h-3 text-gray-400 shrink-0" />
-                <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">등록일</span>
-                <span className="text-xs text-[#081429]">{student.startDate || '-'}</span>
+                <span className="w-16 shrink-0 text-xs font-medium text-primary-700">등록일</span>
+                <span className="text-xs text-primary">{student.startDate || '-'}</span>
               </div>
             </div>
           </div>
@@ -224,7 +224,7 @@ const WithdrawalStudentDetail: React.FC<WithdrawalStudentDetailProps> = ({
                     <span className={`text-micro px-1 py-0 rounded-sm font-medium ${SUBJECT_COLOR[enrollment.subject] || SUBJECT_COLOR.other}`}>
                       {SUBJECT_LABEL[enrollment.subject] || enrollment.subject}
                     </span>
-                    <span className="text-xs font-medium text-[#081429]">{enrollment.className}</span>
+                    <span className="text-xs font-medium text-primary">{enrollment.className}</span>
                     {enrollment.teacher && (
                       <span className="text-micro text-gray-400 ml-auto">{enrollment.teacher}</span>
                     )}
@@ -247,8 +247,8 @@ const WithdrawalStudentDetail: React.FC<WithdrawalStudentDetailProps> = ({
         {/* 사유 입력 (카테고리 + 상세) — 퇴원/수강종료 공통 */}
         <div className="bg-white border border-gray-200 overflow-hidden">
           <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-            <FileText className="w-3 h-3 text-[#081429]" />
-            <h3 className="text-[#081429] font-bold text-xs">
+            <FileText className="w-3 h-3 text-primary" />
+            <h3 className="text-primary font-bold text-xs">
               {isWithdrawn ? '퇴원 사유' : '수강종료 사유'}
             </h3>
           </div>
@@ -258,8 +258,8 @@ const WithdrawalStudentDetail: React.FC<WithdrawalStudentDetailProps> = ({
                 <select
                   value={editReason}
                   onChange={(e) => setEditReason(e.target.value)}
-                  className="w-full text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#081429] bg-white"
-                  style={{ borderColor: '#08142920' }}
+                  className="w-full text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary bg-white"
+                  style={{ borderColor: 'rgba(8, 20, 41, 0.2)' }}
                 >
                   <option value="">사유 선택...</option>
                   {reasonOptions.map(r => (
@@ -271,14 +271,14 @@ const WithdrawalStudentDetail: React.FC<WithdrawalStudentDetailProps> = ({
                   onChange={(e) => setEditMemo(e.target.value)}
                   placeholder="상세 사유를 입력하세요..."
                   rows={3}
-                  className="w-full text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#081429] resize-none"
-                  style={{ borderColor: '#08142920' }}
+                  className="w-full text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                  style={{ borderColor: 'rgba(8, 20, 41, 0.2)' }}
                 />
                 {reasonChanged && (
                   <button
                     onClick={handleSaveReason}
                     disabled={isSavingReason}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[#081429] text-white rounded-sm hover:bg-[#0a1a35] transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary text-white rounded-sm hover:bg-primary-800 transition-colors disabled:opacity-50"
                   >
                     {isSavingReason ? (
                       <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -291,7 +291,7 @@ const WithdrawalStudentDetail: React.FC<WithdrawalStudentDetailProps> = ({
               </>
             ) : (
               <div className="space-y-1">
-                <p className="text-xs text-[#081429]">{reasonLabel}</p>
+                <p className="text-xs text-primary">{reasonLabel}</p>
                 {student.withdrawalMemo && (
                   <p className="text-xs text-gray-600 whitespace-pre-wrap">{student.withdrawalMemo}</p>
                 )}
@@ -303,8 +303,8 @@ const WithdrawalStudentDetail: React.FC<WithdrawalStudentDetailProps> = ({
         {/* 퇴원 상담 추적 */}
         <div className="bg-white border border-gray-200 overflow-hidden">
           <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-            <Phone className="w-3 h-3 text-[#081429]" />
-            <h3 className="text-[#081429] font-bold text-xs">
+            <Phone className="w-3 h-3 text-primary" />
+            <h3 className="text-primary font-bold text-xs">
               {isWithdrawn ? '퇴원 상담' : '수강종료 상담'}
             </h3>
             {isSavingConsultation && (
@@ -320,7 +320,7 @@ const WithdrawalStudentDetail: React.FC<WithdrawalStudentDetailProps> = ({
               <div key={field} className="flex items-center justify-between px-3 py-2">
                 <div className="flex items-center gap-2">
                   <Icon className="w-3 h-3 text-gray-400" />
-                  <span className="text-xs text-[#373d41]">{label}</span>
+                  <span className="text-xs text-primary-700">{label}</span>
                 </div>
                 {isEditing ? (
                   <button
@@ -363,7 +363,7 @@ const WithdrawalStudentDetail: React.FC<WithdrawalStudentDetailProps> = ({
                     <span className={`text-micro px-1 py-0 rounded-sm font-medium ${SUBJECT_COLOR[enrollment.subject] || SUBJECT_COLOR.other}`}>
                       {SUBJECT_LABEL[enrollment.subject] || enrollment.subject}
                     </span>
-                    <span className="text-xs font-medium text-[#081429]">{enrollment.className}</span>
+                    <span className="text-xs font-medium text-primary">{enrollment.className}</span>
                     {enrollment.teacher && (
                       <span className="text-micro text-gray-400 ml-auto">{enrollment.teacher}</span>
                     )}
@@ -383,8 +383,8 @@ const WithdrawalStudentDetail: React.FC<WithdrawalStudentDetailProps> = ({
         {isWithdrawn && (
           <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-              <BookOpen className="w-3 h-3 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-xs">수강 이력</h3>
+              <BookOpen className="w-3 h-3 text-primary" />
+              <h3 className="text-primary font-bold text-xs">수강 이력</h3>
               <span className="text-micro text-gray-400 ml-auto">{student.enrollments.length}건</span>
             </div>
             <div className="divide-y divide-gray-100">
@@ -397,7 +397,7 @@ const WithdrawalStudentDetail: React.FC<WithdrawalStudentDetailProps> = ({
                       <span className={`text-micro px-1 py-0 rounded-sm font-medium ${SUBJECT_COLOR[enrollment.subject] || SUBJECT_COLOR.other}`}>
                         {SUBJECT_LABEL[enrollment.subject] || enrollment.subject}
                       </span>
-                      <span className="text-xs font-medium text-[#081429]">{enrollment.className}</span>
+                      <span className="text-xs font-medium text-primary">{enrollment.className}</span>
                       {enrollment.teacher && (
                         <span className="text-micro text-gray-400 ml-auto">{enrollment.teacher}</span>
                       )}
@@ -422,22 +422,22 @@ const WithdrawalStudentDetail: React.FC<WithdrawalStudentDetailProps> = ({
         {(student.studentPhone || student.parentPhone) && (
           <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-              <User className="w-3 h-3 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-xs">연락처</h3>
+              <User className="w-3 h-3 text-primary" />
+              <h3 className="text-primary font-bold text-xs">연락처</h3>
             </div>
             <div className="divide-y divide-gray-100">
               {student.studentPhone && (
                 <div className="flex items-center gap-2 px-3 py-2">
-                  <span className="shrink-0 whitespace-nowrap text-xs font-medium text-[#373d41]">학생</span>
-                  <span className="text-xs text-[#081429]">{student.studentPhone}</span>
+                  <span className="shrink-0 whitespace-nowrap text-xs font-medium text-primary-700">학생</span>
+                  <span className="text-xs text-primary">{student.studentPhone}</span>
                 </div>
               )}
               {student.parentPhone && (
                 <div className="flex items-center gap-2 px-3 py-2">
-                  <span className="shrink-0 whitespace-nowrap text-xs font-medium text-[#373d41]">
+                  <span className="shrink-0 whitespace-nowrap text-xs font-medium text-primary-700">
                     보호자{student.parentName ? ` (${student.parentName})` : ''}
                   </span>
-                  <span className="text-xs text-[#081429]">{student.parentPhone}</span>
+                  <span className="text-xs text-primary">{student.parentPhone}</span>
                 </div>
               )}
             </div>

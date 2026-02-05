@@ -49,7 +49,7 @@ const ConsultationCard: React.FC<ConsultationCardProps> = ({
         <>
             <div
                 onClick={() => setShowDetail(true)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-white border-b border-gray-100 hover:bg-[#fdb813]/5 transition-colors cursor-pointer text-xs text-[#373d41]"
+                className="flex items-center gap-2 px-3 py-1.5 bg-white border-b border-gray-100 hover:bg-accent/5 transition-colors cursor-pointer text-xs text-primary-700"
             >
                 {/* No */}
                 <span className="w-10 shrink-0 text-center text-gray-500 font-mono text-xxs">
@@ -94,7 +94,7 @@ const ConsultationCard: React.FC<ConsultationCardProps> = ({
                 </div>
 
                 {/* 이름 */}
-                <span className="w-16 shrink-0 text-center font-medium text-[#081429] text-xs truncate">
+                <span className="w-16 shrink-0 text-center font-medium text-primary text-xs truncate">
                     {consultation.studentName}
                 </span>
 
@@ -141,7 +141,7 @@ const ConsultationCard: React.FC<ConsultationCardProps> = ({
                             {urgency === 'done' && '✓'}
                         </span>
                     )}
-                    <span className="truncate text-[#081429] text-xs">
+                    <span className="truncate text-primary text-xs">
                         {consultation.title}
                     </span>
                 </div>
@@ -152,7 +152,7 @@ const ConsultationCard: React.FC<ConsultationCardProps> = ({
                 </span>
 
                 {/* 담당선생님 */}
-                <span className="w-20 shrink-0 text-center truncate font-medium text-[#081429] text-xs">
+                <span className="w-20 shrink-0 text-center truncate font-medium text-primary text-xs">
                     {consultation.consultantName || '-'}
                 </span>
             </div>

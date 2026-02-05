@@ -113,7 +113,6 @@ export const useAuth = ({ setCurrentUser, systemConfig, onShowLogin }: UseAuthPa
                     approvalStatus: isMasterEmail ? 'approved' : (existingData.approvalStatus || 'pending'),
                     updatedAt: linkNow,
                   });
-                  console.log('✅ Existing staff linked with uid:', existingStaff.id, 'staffIndex created');
                 } else {
                   const newStaff = await createNewStaffMember(user, !!isMasterEmail);
                   const profile = staffToUserProfile(newStaff);

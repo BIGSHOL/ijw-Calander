@@ -22,7 +22,7 @@ const MoveSelectionModal: React.FC<MoveSelectionModalProps> = ({
             <div className="bg-white rounded-sm shadow-2xl w-[350px] max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
 
                 {/* Header */}
-                <div className="bg-[#081429] text-white p-3 font-bold text-sm flex justify-between items-center">
+                <div className="bg-primary text-white p-3 font-bold text-sm flex justify-between items-center">
                     <span>🚚 이동할 수업 선택</span>
                     <button
                         onClick={() => setPendingMove(null)}
@@ -42,7 +42,7 @@ const MoveSelectionModal: React.FC<MoveSelectionModalProps> = ({
                         {/* Main Class Button */}
                         <button
                             onClick={() => performMove(source, target, [-1])}
-                            className="w-full bg-white border border-gray-200 p-3 rounded-sm shadow-sm hover:border-[#081429] hover:bg-gray-50 flex justify-between items-center group transition-all"
+                            className="w-full bg-white border border-gray-200 p-3 rounded-sm shadow-sm hover:border-primary hover:bg-gray-50 flex justify-between items-center group transition-all"
                         >
                             <div className="flex flex-col items-start">
                                 <span className="text-xxs text-gray-400 font-bold mb-0.5">
@@ -52,7 +52,7 @@ const MoveSelectionModal: React.FC<MoveSelectionModalProps> = ({
                                     {sourceData.className || '(비어있음)'}
                                 </span>
                             </div>
-                            <span className="text-xs bg-gray-100 px-2 py-1 rounded-sm text-gray-500 group-hover:bg-gray-200 group-hover:text-[#081429] font-bold">
+                            <span className="text-xs bg-gray-100 px-2 py-1 rounded-sm text-gray-500 group-hover:bg-gray-200 group-hover:text-primary font-bold">
                                 이동
                             </span>
                         </button>
@@ -95,7 +95,7 @@ const MoveSelectionModal: React.FC<MoveSelectionModalProps> = ({
                                 const allIndices = [-1, ...(sourceData.merged?.map((_, i) => i) ?? [])];
                                 performMove(source, target, allIndices);
                             }}
-                            className="px-4 py-1.5 rounded-sm bg-[#081429] text-white text-xs font-bold hover:bg-[#081429]/90 shadow-md transition-colors"
+                            className="px-4 py-1.5 rounded-sm bg-primary text-white text-xs font-bold hover:bg-primary/90 shadow-md transition-colors"
                         >
                             모두 이동
                         </button>

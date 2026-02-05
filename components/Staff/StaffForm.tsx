@@ -151,10 +151,10 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 sticky top-0 bg-white z-10">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-[#081429] rounded-sm flex items-center justify-center">
-              <User className="w-4 h-4 text-[#fdb813]" />
+            <div className="w-7 h-7 bg-primary rounded-sm flex items-center justify-center">
+              <User className="w-4 h-4 text-accent" />
             </div>
-            <h2 className="text-base font-bold text-[#081429]">
+            <h2 className="text-base font-bold text-primary">
               {staff ? '직원 수정' : '직원 등록'}
             </h2>
           </div>
@@ -181,7 +181,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="홍길동"
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent"
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                 required
               />
             </div>
@@ -197,7 +197,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                 value={formData.englishName}
                 onChange={handleChange}
                 placeholder="Jane"
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent"
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
               />
             </div>
 
@@ -213,7 +213,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                 onChange={handleChange}
                 placeholder="example@email.com"
                 disabled={!!staff}
-                className={`w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent ${
+                className={`w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${
                   staff ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
                 }`}
               />
@@ -235,7 +235,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                 value={formData.phone}
                 onChange={handleChange}
                 placeholder="010-1234-5678"
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent"
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
               />
             </div>
 
@@ -248,7 +248,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                 name="role"
                 value={formData.role}
                 onChange={handleChange}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent"
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
               >
                 {Object.entries(STAFF_ROLE_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>{label}</option>
@@ -266,7 +266,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                 name="hireDate"
                 value={formData.hireDate}
                 onChange={handleChange}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent"
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
               />
             </div>
 
@@ -279,7 +279,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                 name="status"
                 value={formData.status}
                 onChange={handleChange}
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent"
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
               >
                 {Object.entries(STAFF_STATUS_LABELS).map(([value, label]) => (
                   <option key={value} value={value}>{label}</option>
@@ -298,7 +298,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                 value={formData.jobTitle}
                 onChange={handleChange}
                 placeholder="예: 대표, 원장, 팀장, 선생님"
-                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent"
+                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
               />
             </div>
 
@@ -314,7 +314,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                   value={formData.defaultRoom}
                   onChange={handleChange}
                   placeholder="예: 301호"
-                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent"
+                  className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                 />
               </div>
             )}
@@ -377,7 +377,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                         value={formData.bgColor}
                         onChange={handleChange}
                         placeholder="#3b82f6"
-                        className="flex-1 px-2 py-1.5 border border-gray-300 rounded-sm text-xs focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent"
+                        className="flex-1 px-2 py-1.5 border border-gray-300 rounded-sm text-xs focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                       />
                     </div>
                   </div>
@@ -399,7 +399,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                         value={formData.textColor}
                         onChange={handleChange}
                         placeholder="#ffffff"
-                        className="flex-1 px-2 py-1.5 border border-gray-300 rounded-sm text-xs focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent"
+                        className="flex-1 px-2 py-1.5 border border-gray-300 rounded-sm text-xs focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                       />
                     </div>
                   </div>
@@ -412,7 +412,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                       type="checkbox"
                       checked={formData.isNative}
                       onChange={(e) => setFormData(prev => ({ ...prev, isNative: e.target.checked }))}
-                      className="w-4 h-4 text-[#081429] border-gray-300 rounded focus:ring-[#fdb813]"
+                      className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-accent"
                     />
                     <span className="text-xs text-gray-700">원어민 강사</span>
                   </label>
@@ -421,7 +421,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                       type="checkbox"
                       checked={formData.isHiddenInTimetable}
                       onChange={(e) => setFormData(prev => ({ ...prev, isHiddenInTimetable: e.target.checked }))}
-                      className="w-4 h-4 text-[#081429] border-gray-300 rounded focus:ring-[#fdb813]"
+                      className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-accent"
                     />
                     <span className="text-xs text-gray-700">시간표에서 숨김</span>
                   </label>
@@ -430,7 +430,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                       type="checkbox"
                       checked={formData.isHiddenInAttendance}
                       onChange={(e) => setFormData(prev => ({ ...prev, isHiddenInAttendance: e.target.checked }))}
-                      className="w-4 h-4 text-[#081429] border-gray-300 rounded focus:ring-[#fdb813]"
+                      className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-accent"
                     />
                     <span className="text-xs text-gray-700">출석부에서 숨김</span>
                   </label>
@@ -511,7 +511,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
               onChange={handleChange}
               rows={2}
               placeholder="추가 정보를 입력하세요..."
-              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:border-transparent resize-none"
+              className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent resize-none"
             />
           </div>
 
@@ -528,7 +528,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-[#081429] text-white rounded-sm hover:bg-[#0a1a35] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary text-white rounded-sm hover:bg-primary-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSubmitting ? (
                 <>

@@ -133,7 +133,7 @@ export const AttendanceNavBar: React.FC<AttendanceNavBarProps> = ({
             <select
               value={attendanceStaffId || ''}
               onChange={(e) => setAttendanceStaffId(e.target.value || undefined)}
-              className="appearance-none bg-[#1e293b] border border-gray-700 rounded-sm px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+              className="appearance-none bg-[#1e293b] border border-gray-700 rounded-sm px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-accent focus:ring-1 focus:ring-accent outline-none"
             >
               {availableTeachers.map(t => (
                 <option key={t.id} value={t.id}>{t.name}</option>

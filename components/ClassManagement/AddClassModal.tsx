@@ -302,7 +302,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
         <div className="flex items-center justify-between px-2 py-1.5 border-b border-gray-200">
           <div className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
-            <h2 className="text-sm font-bold text-[#081429]">새 수업 추가</h2>
+            <h2 className="text-sm font-bold text-primary">새 수업 추가</h2>
           </div>
           <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
             <X size={18} />
@@ -320,32 +320,32 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
           {/* 섹션 1: 기본 정보 */}
           <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
-              <BookOpen className="w-3 h-3 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-xs">기본 정보</h3>
+              <BookOpen className="w-3 h-3 text-primary" />
+              <h3 className="text-primary font-bold text-xs">기본 정보</h3>
             </div>
             <div className="divide-y divide-gray-100">
               {/* 수업명 */}
               <div className="flex items-center gap-2 px-1.5 py-1">
-                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">수업명 <span className="text-red-500">*</span></span>
+                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">수업명 <span className="text-red-500">*</span></span>
                 <input
                   type="text"
                   value={className}
                   onChange={(e) => setClassName(e.target.value)}
                   placeholder="예: LT1a"
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                 />
               </div>
 
               {/* 과목 */}
               <div className="flex items-center gap-2 px-1.5 py-1">
-                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">과목 <span className="text-red-500">*</span></span>
+                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">과목 <span className="text-red-500">*</span></span>
                 <select
                   value={subject}
                   onChange={(e) => {
                     setSubject(e.target.value as SubjectType);
                     setSelectedSlots(new Set());
                   }}
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                 >
                   {AVAILABLE_SUBJECTS.map(key => (
                     <option key={key} value={key}>{SUBJECT_LABELS[key]}</option>
@@ -355,12 +355,12 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
 
               {/* 담임 강사 */}
               <div className="flex items-center gap-2 px-1.5 py-1">
-                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">담임 강사 <span className="text-red-500">*</span></span>
+                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">담임 강사 <span className="text-red-500">*</span></span>
                 <div className="flex-1">
                   <select
                     value={mainTeacher}
                     onChange={(e) => setMainTeacher(e.target.value)}
-                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                    className="w-full px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                   >
                     <option value="">선택해주세요</option>
                     {availableTeachers.map(teacher => {
@@ -383,13 +383,13 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
 
               {/* 강의실 */}
               <div className="flex items-center gap-2 px-1.5 py-1">
-                <span className="w-14 shrink-0 text-xs font-medium text-[#373d41]">강의실</span>
+                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">강의실</span>
                 <input
                   type="text"
                   value={room}
                   onChange={(e) => setRoom(e.target.value)}
                   placeholder="예: 302"
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                 />
               </div>
             </div>
@@ -398,8 +398,8 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
           {/* 섹션 2: 스케줄 */}
           <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
-              <Calendar className="w-3 h-3 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-xs">스케줄</h3>
+              <Calendar className="w-3 h-3 text-primary" />
+              <h3 className="text-primary font-bold text-xs">스케줄</h3>
             </div>
             <div className="p-1.5">
               {/* 스케줄 그리드 */}
@@ -528,7 +528,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                                 <select
                                   value={slotTeachers[key] || ''}
                                   onChange={(e) => setSlotTeacher(key, e.target.value)}
-                                  className="w-full h-full px-1 py-0.5 border border-gray-200 rounded text-xxs focus:ring-1 focus:ring-[#fdb813] outline-none bg-white"
+                                  className="w-full h-full px-1 py-0.5 border border-gray-200 rounded text-xxs focus:ring-1 focus:ring-accent outline-none bg-white"
                                 >
                                   <option value="">
                                     {mainTeacher ? (() => {
@@ -587,7 +587,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                                   value={slotRooms[key] || ''}
                                   onChange={(e) => setSlotRoom(key, e.target.value)}
                                   placeholder={room || '-'}
-                                  className="w-full h-full px-1 py-0.5 border border-gray-200 rounded text-xxs focus:ring-1 focus:ring-[#fdb813] outline-none bg-white"
+                                  className="w-full h-full px-1 py-0.5 border border-gray-200 rounded text-xxs focus:ring-1 focus:ring-accent outline-none bg-white"
                                 />
                               </div>
                             );
@@ -604,9 +604,9 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
           {/* 섹션 3: 학생 선택 */}
           <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
-              <Users className="w-3 h-3 text-[#081429]" />
-              <h3 className="text-[#081429] font-bold text-xs">학생 선택</h3>
-              <span className="text-xs text-[#fdb813] font-semibold ml-1">{selectedStudentIds.length}명</span>
+              <Users className="w-3 h-3 text-primary" />
+              <h3 className="text-primary font-bold text-xs">학생 선택</h3>
+              <span className="text-xs text-accent font-semibold ml-1">{selectedStudentIds.length}명</span>
             </div>
             <div className="divide-y divide-gray-100">
               {/* 검색창 */}
@@ -616,7 +616,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                   value={studentSearch}
                   onChange={(e) => setStudentSearch(e.target.value)}
                   placeholder="학생 검색..."
-                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                  className="w-full px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                 />
               </div>
 
@@ -631,14 +631,14 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                     <label
                       key={student.id}
                       className={`flex items-center gap-2 px-2 py-1.5 cursor-pointer transition-colors border-b border-gray-50 last:border-b-0 ${
-                        selectedStudentIds.includes(student.id) ? 'bg-[#fdb813]/10' : 'hover:bg-gray-50'
+                        selectedStudentIds.includes(student.id) ? 'bg-accent/10' : 'hover:bg-gray-50'
                       }`}
                     >
                       <input
                         type="checkbox"
                         checked={selectedStudentIds.includes(student.id)}
                         onChange={() => toggleStudent(student.id)}
-                        className="w-3 h-3 text-[#fdb813] rounded focus:ring-[#fdb813]"
+                        className="w-3 h-3 text-accent rounded focus:ring-accent"
                       />
                       <span className="text-xs text-gray-800">{student.name}</span>
                       <span className="text-xxs text-gray-400">{student.grade}</span>
@@ -662,7 +662,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
           <button
             onClick={handleSave}
             disabled={createClassMutation.isPending}
-            className="px-3 py-1.5 bg-[#fdb813] text-[#081429] text-xs font-semibold rounded-sm hover:bg-[#e5a60f] transition-colors disabled:opacity-50"
+            className="px-3 py-1.5 bg-accent text-primary text-xs font-semibold rounded-sm hover:bg-[#e5a60f] transition-colors disabled:opacity-50"
           >
             {createClassMutation.isPending ? '저장 중...' : '저장'}
           </button>

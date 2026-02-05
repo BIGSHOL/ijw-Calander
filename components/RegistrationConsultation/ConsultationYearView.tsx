@@ -16,7 +16,7 @@ type DateFilterType = 'createdAt' | 'consultationDate' | 'paymentDate';
 
 const FILTER_OPTIONS: { key: DateFilterType; label: string; color: string }[] = [
     { key: 'createdAt', label: '접수일', color: '#3b82f6' }, // blue
-    { key: 'consultationDate', label: '상담일', color: '#fdb813' }, // yellow
+    { key: 'consultationDate', label: '상담일', color: 'rgb(253, 184, 19)' /* accent */ }, // yellow
     { key: 'paymentDate', label: '결제일', color: '#10b981' }, // emerald
 ];
 
@@ -199,16 +199,16 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
                 <div className="flex items-center gap-1 p-1 bg-[#f8fafc] rounded-sm border border-gray-200 shadow-sm">
                     <button
                         onClick={() => onYearChange(currentYear - 1)}
-                        className="p-1.5 hover:bg-white hover:shadow-md rounded-sm transition-all text-gray-400 hover:text-[#081429]"
+                        className="p-1.5 hover:bg-white hover:shadow-md rounded-sm transition-all text-gray-400 hover:text-primary"
                     >
                         <ChevronLeft size={16} strokeWidth={3} />
                     </button>
-                    <span className="px-3 py-1 text-sm font-bold text-[#081429]">
+                    <span className="px-3 py-1 text-sm font-bold text-primary">
                         {currentYear}년
                     </span>
                     <button
                         onClick={() => onYearChange(currentYear + 1)}
-                        className="p-1.5 hover:bg-white hover:shadow-md rounded-sm transition-all text-gray-400 hover:text-[#081429]"
+                        className="p-1.5 hover:bg-white hover:shadow-md rounded-sm transition-all text-gray-400 hover:text-primary"
                     >
                         <ChevronRight size={16} strokeWidth={3} />
                     </button>
@@ -266,11 +266,11 @@ export const ConsultationYearView: React.FC<ConsultationYearViewProps> = ({
                                 onClick={() => setSelectedMonth(month)}
                                 className={`
                                     bg-white rounded-sm sm:rounded-sm shadow-sm border p-1.5 sm:p-2 transition-all cursor-pointer
-                                    ${isSelected ? 'ring-2 ring-[#fdb813] border-transparent' : 'border-gray-100 hover:border-[#fdb813]/50'}
+                                    ${isSelected ? 'ring-2 ring-[#fdb813] border-transparent' : 'border-gray-100 hover:border-accent/50'}
                                 `}
                             >
                                 <div className="flex justify-between items-center mb-1 sm:mb-1.5">
-                                    <h3 className={`text-xxs sm:text-xs lg:text-sm font-bold ${isSelected ? 'text-[#081429]' : 'text-gray-600'}`}>
+                                    <h3 className={`text-xxs sm:text-xs lg:text-sm font-bold ${isSelected ? 'text-primary' : 'text-gray-600'}`}>
                                         {format(month, 'M월')}
                                     </h3>
                                     <div className="flex gap-1 items-center">

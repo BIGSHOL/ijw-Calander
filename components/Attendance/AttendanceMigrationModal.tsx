@@ -101,7 +101,7 @@ const AttendanceMigrationModal: React.FC<Props> = ({ isOpen, onClose }) => {
             <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-                    <h3 className="text-sm font-bold text-[#081429] flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-primary flex items-center gap-2">
                         <Database className="text-blue-500" size={18} />
                         데이터베이스 최적화
                     </h3>
@@ -115,8 +115,8 @@ const AttendanceMigrationModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     {!isMigrating && progress === 0 && (
                         <div className="bg-white border border-gray-200 overflow-hidden">
                             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                <Database className="w-3 h-3 text-[#081429]" />
-                                <h3 className="text-[#081429] font-bold text-xs">마이그레이션 안내</h3>
+                                <Database className="w-3 h-3 text-primary" />
+                                <h3 className="text-primary font-bold text-xs">마이그레이션 안내</h3>
                             </div>
                             <div className="p-3">
                                 <div className="bg-blue-50 text-blue-800 text-xs p-3 rounded-sm flex gap-2">
@@ -141,8 +141,8 @@ const AttendanceMigrationModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     {!isMigrating && progress === 0 && (
                         <div className="bg-white border border-gray-200 overflow-hidden">
                             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                <Play className="w-3 h-3 text-[#081429]" />
-                                <h3 className="text-[#081429] font-bold text-xs">작업 시작</h3>
+                                <Play className="w-3 h-3 text-primary" />
+                                <h3 className="text-primary font-bold text-xs">작업 시작</h3>
                             </div>
                             <div className="p-3 flex justify-center">
                                 <button
@@ -160,8 +160,8 @@ const AttendanceMigrationModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     {progress > 0 && !isComplete && (
                         <div className="bg-white border border-gray-200 overflow-hidden">
                             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                <TrendingUp className="w-3 h-3 text-[#081429]" />
-                                <h3 className="text-[#081429] font-bold text-xs">진행 상황</h3>
+                                <TrendingUp className="w-3 h-3 text-primary" />
+                                <h3 className="text-primary font-bold text-xs">진행 상황</h3>
                             </div>
                             <div className="p-3 space-y-3">
                                 <div className="flex justify-between text-xs font-bold text-gray-600">
@@ -197,8 +197,8 @@ const AttendanceMigrationModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     {logs.length > 0 && (
                         <div className="bg-white border border-gray-200 overflow-hidden">
                             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                <FileText className="w-3 h-3 text-[#081429]" />
-                                <h3 className="text-[#081429] font-bold text-xs">로그</h3>
+                                <FileText className="w-3 h-3 text-primary" />
+                                <h3 className="text-primary font-bold text-xs">로그</h3>
                             </div>
                             <div className="p-2">
                                 <div className="bg-gray-900 rounded-sm p-3 h-48 overflow-y-auto font-mono text-xs text-green-400 space-y-1 shadow-inner">
@@ -216,8 +216,8 @@ const AttendanceMigrationModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     {isComplete && (
                         <div className="bg-white border border-gray-200 overflow-hidden">
                             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                <Check className="w-3 h-3 text-[#081429]" />
-                                <h3 className="text-[#081429] font-bold text-xs">결과 요약</h3>
+                                <Check className="w-3 h-3 text-primary" />
+                                <h3 className="text-primary font-bold text-xs">결과 요약</h3>
                             </div>
                             <div className="p-3">
                                 <div className="bg-green-50 text-green-800 p-3 rounded-sm space-y-2">

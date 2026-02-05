@@ -64,6 +64,8 @@ exports.syncStudentsOnClassChange = functions
     .document("classes/{classId}")
     .onWrite(async (change, context) => {
         const classId = context.params.classId;
+
+        try {
         const beforeData = change.before.data();
         const afterData = change.after.data();
 
@@ -215,6 +217,10 @@ exports.syncStudentsOnClassChange = functions
         await batch.commit();
         logger.info("[syncStudents] Sync completed.");
         return null;
+        } catch (error) {
+            logger.error("[syncStudents] Error:", error);
+            return null;
+        }
     });
 
 exports.testSync = functions.region("asia-northeast3").https.onRequest((req, res) => {
@@ -247,6 +253,7 @@ exports.onTeacherDeleted = functions
             return null;
         }
 
+        try {
         const teacherName = deletedStaff?.name || staffId;
 
         logger.info(`[onTeacherDeleted] Teacher deleted: ${teacherName}`);
@@ -317,6 +324,10 @@ exports.onTeacherDeleted = functions
         await batch.commit();
         logger.info(`[onTeacherDeleted] Cleanup completed: ${classesUpdated} classes, ${studentsUpdated} students updated.`);
         return null;
+        } catch (error) {
+            logger.error("[onTeacherDeleted] Error:", error);
+            return null;
+        }
     });
 
 /**
@@ -341,6 +352,8 @@ exports.onConsultationWrite = functions
             logger.info(`[onConsultationWrite] Consultation deleted: ${consultationId}`);
             return null;
         }
+
+        try {
 
         const registeredStatuses = ["영수등록", "수학등록", "영어등록"];
         const isNowRegistered = registeredStatuses.includes(afterData.status);
@@ -399,6 +412,10 @@ exports.onConsultationWrite = functions
         }
 
         return null;
+        } catch (error) {
+            logger.error("[onConsultationWrite] Error:", error);
+            return null;
+        }
     });
 
 /**
@@ -644,21 +661,29 @@ exports.encryptPhoneNumbers = functions
         }
 
         // 4. 각 전화번호 암호화
-        const encrypted = {};
-        for (const [key, value] of Object.entries(phones)) {
-            if (value && typeof value === "string") {
-                const cleaned = value.replace(/-/g, "").trim();
-                if (cleaned) {
-                    encrypted[key] = CryptoJS.AES.encrypt(cleaned, ENCRYPTION_KEY).toString();
+        try {
+            const encrypted = {};
+            for (const [key, value] of Object.entries(phones)) {
+                if (value && typeof value === "string") {
+                    const cleaned = value.replace(/-/g, "").trim();
+                    if (cleaned) {
+                        encrypted[key] = CryptoJS.AES.encrypt(cleaned, ENCRYPTION_KEY).toString();
+                    } else {
+                        encrypted[key] = null;
+                    }
                 } else {
                     encrypted[key] = null;
                 }
-            } else {
-                encrypted[key] = null;
             }
-        }
 
-        return { encrypted };
+            return { encrypted };
+        } catch (error) {
+            logger.error("[encryptPhoneNumbers] Error:", error);
+            throw new functions.https.HttpsError(
+                "internal",
+                "전화번호 암호화 중 오류가 발생했습니다."
+            );
+        }
     });
 
 /**

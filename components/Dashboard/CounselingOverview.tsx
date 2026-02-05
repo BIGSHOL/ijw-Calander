@@ -115,7 +115,7 @@ const CounselingOverview: React.FC<CounselingOverviewProps> = ({ data, loading, 
 
   return (
     <div className="bg-white rounded-sm border border-gray-200 p-6">
-      <h3 className="text-lg font-semibold text-[#081429] mb-4">
+      <h3 className="text-lg font-semibold text-primary mb-4">
         일별 상담 현황
       </h3>
       <div className="h-64" style={{ minWidth: 0 }}>

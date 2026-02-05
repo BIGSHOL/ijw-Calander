@@ -529,12 +529,12 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4">
       <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* 헤더 */}
-        <div className="bg-[#081429] text-white px-4 py-3">
+        <div className="bg-primary text-white px-4 py-3">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <Edit className="w-5 h-5 text-[#fdb813]" />
+              <Edit className="w-5 h-5 text-accent" />
               <h2 className="text-base font-bold">수업 편집</h2>
-              <span className="px-2 py-0.5 bg-[#fdb813] text-[#081429] rounded text-xs font-bold">
+              <span className="px-2 py-0.5 bg-accent text-primary rounded text-xs font-bold">
                 {SUBJECT_LABELS[classInfo.subject as SubjectType] || classInfo.subject}
               </span>
             </div>
@@ -542,7 +542,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
               <button
                 onClick={handleSave}
                 disabled={updateClassMutation.isPending || manageStudentsMutation.isPending}
-                className="bg-[#fdb813] hover:bg-[#e5a60f] text-[#081429] px-3 py-1.5 rounded font-semibold text-xs disabled:opacity-50 transition-colors"
+                className="bg-accent hover:bg-[#e5a60f] text-primary px-3 py-1.5 rounded font-semibold text-xs disabled:opacity-50 transition-colors"
               >
                 {(updateClassMutation.isPending || manageStudentsMutation.isPending) ? '저장 중...' : '저장'}
               </button>
@@ -562,7 +562,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
               onClick={() => setActiveTab('info')}
               className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                 activeTab === 'info'
-                  ? 'bg-[#fdb813] text-[#081429]'
+                  ? 'bg-accent text-primary'
                   : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
@@ -573,7 +573,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
               disabled={isSimulationMode}
               className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                 activeTab === 'students'
-                  ? 'bg-[#fdb813] text-[#081429]'
+                  ? 'bg-accent text-primary'
                   : isSimulationMode
                   ? 'bg-white/5 text-white/40 cursor-not-allowed'
                   : 'bg-white/10 text-white hover:bg-white/20'
@@ -585,7 +585,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
               onClick={() => setActiveTab('schedule')}
               className={`flex-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
                 activeTab === 'schedule'
-                  ? 'bg-[#fdb813] text-[#081429]'
+                  ? 'bg-accent text-primary'
                   : 'bg-white/10 text-white hover:bg-white/20'
               }`}
             >
@@ -608,12 +608,12 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
               {/* 기본 정보 섹션 */}
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                  <User className="w-3 h-3 text-[#081429]" />
-                  <h3 className="text-[#081429] font-bold text-xs">기본 정보</h3>
+                  <User className="w-3 h-3 text-primary" />
+                  <h3 className="text-primary font-bold text-xs">기본 정보</h3>
                 </div>
                 <div className="divide-y divide-gray-100">
                   <div className="flex items-center gap-2 px-2 py-1">
-                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">
+                    <span className="w-16 shrink-0 text-xs font-medium text-primary-700">
                       수업명 <span className="text-red-500">*</span>
                     </span>
                     <input
@@ -621,17 +621,17 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                       value={className}
                       onChange={(e) => setClassName(e.target.value)}
                       placeholder="예: LT1a"
-                      className="flex-1 px-2 py-0.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                      className="flex-1 px-2 py-0.5 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                     />
                   </div>
                   <div className="flex items-center gap-2 px-2 py-1">
-                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">
+                    <span className="w-16 shrink-0 text-xs font-medium text-primary-700">
                       담임 <span className="text-red-500">*</span>
                     </span>
                     <select
                       value={teacher}
                       onChange={(e) => setTeacher(e.target.value)}
-                      className="flex-1 px-2 py-0.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                      className="flex-1 px-2 py-0.5 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                     >
                       <option value="">선택해주세요</option>
                       {availableTeachers.map(t => {
@@ -653,13 +653,13 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                     </div>
                   )}
                   <div className="flex items-center gap-2 px-2 py-1">
-                    <span className="w-16 shrink-0 text-xs font-medium text-[#373d41]">강의실</span>
+                    <span className="w-16 shrink-0 text-xs font-medium text-primary-700">강의실</span>
                     <input
                       type="text"
                       value={room}
                       onChange={(e) => setRoom(e.target.value)}
                       placeholder="예: 302"
-                      className="flex-1 px-2 py-0.5 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                      className="flex-1 px-2 py-0.5 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                     />
                   </div>
                 </div>
@@ -668,8 +668,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
               {/* 메모 섹션 */}
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                  <FileText className="w-3 h-3 text-[#081429]" />
-                  <h3 className="text-[#081429] font-bold text-xs">메모</h3>
+                  <FileText className="w-3 h-3 text-primary" />
+                  <h3 className="text-primary font-bold text-xs">메모</h3>
                 </div>
                 <div className="p-2">
                   <textarea
@@ -677,7 +677,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                     onChange={(e) => setMemo(e.target.value)}
                     placeholder="수업에 대한 메모를 입력하세요..."
                     rows={3}
-                    className="w-full px-2 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none resize-none"
+                    className="w-full px-2 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none resize-none"
                   />
                 </div>
               </div>
@@ -690,8 +690,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
               {/* 스케줄 선택 섹션 */}
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                  <Calendar className="w-3 h-3 text-[#081429]" />
-                  <h3 className="text-[#081429] font-bold text-xs">스케줄</h3>
+                  <Calendar className="w-3 h-3 text-primary" />
+                  <h3 className="text-primary font-bold text-xs">스케줄</h3>
                 </div>
                 <div className="max-h-56 overflow-y-auto">
                   {/* 헤더 - Sticky */}
@@ -785,8 +785,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
               {showAdvancedSchedule && selectedSlots.size > 0 && (
                 <div className="bg-white border border-gray-200 overflow-hidden">
                   <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                    <Users className="w-3 h-3 text-[#081429]" />
-                    <h3 className="text-[#081429] font-bold text-xs">교시별 부담임</h3>
+                    <Users className="w-3 h-3 text-primary" />
+                    <h3 className="text-primary font-bold text-xs">교시별 부담임</h3>
                     <span className="text-xxs text-gray-400 ml-1">(비워두면 담임)</span>
                   </div>
                   {(() => {
@@ -817,7 +817,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                               <select
                                 value={slotTeachers[key] || ''}
                                 onChange={(e) => setSlotTeacher(key, e.target.value)}
-                                className="w-full h-full px-1 py-0.5 border border-gray-200 rounded text-[10px] focus:ring-1 focus:ring-[#fdb813] outline-none bg-white"
+                                className="w-full h-full px-1 py-0.5 border border-gray-200 rounded text-[10px] focus:ring-1 focus:ring-accent outline-none bg-white"
                               >
                                 <option value="">
                                   {teacher ? (() => {
@@ -848,8 +848,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
               {showAdvancedSchedule && selectedSlots.size > 0 && (
                 <div className="bg-white border border-gray-200 overflow-hidden">
                   <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                    <BookOpen className="w-3 h-3 text-[#081429]" />
-                    <h3 className="text-[#081429] font-bold text-xs">교시별 강의실</h3>
+                    <BookOpen className="w-3 h-3 text-primary" />
+                    <h3 className="text-primary font-bold text-xs">교시별 강의실</h3>
                     <span className="text-xxs text-gray-400 ml-1">(비워두면 기본)</span>
                   </div>
                   {(() => {
@@ -882,7 +882,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                                 value={slotRooms[key] || ''}
                                 onChange={(e) => setSlotRoom(key, e.target.value)}
                                 placeholder={room || '-'}
-                                className="w-full h-full px-1 py-0.5 border border-gray-200 text-xxs focus:ring-1 focus:ring-[#fdb813] outline-none bg-white"
+                                className="w-full h-full px-1 py-0.5 border border-gray-200 text-xxs focus:ring-1 focus:ring-accent outline-none bg-white"
                               />
                             </div>
                           );
@@ -901,8 +901,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
               {/* 현재 등록된 학생 섹션 */}
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                  <Users className="w-3 h-3 text-[#081429]" />
-                  <h3 className="text-[#081429] font-bold text-xs">현재 등록된 학생</h3>
+                  <Users className="w-3 h-3 text-primary" />
+                  <h3 className="text-primary font-bold text-xs">현재 등록된 학생</h3>
                   <span className="text-xxs text-gray-500 ml-1">({currentStudents.length - studentsToRemove.size}명)</span>
                   {classInfo.subject === 'math' && classDays.length > 1 && (
                     <span className="text-xxs text-blue-500 ml-auto">클릭: 등원요일 · 체크박스: 부담임</span>
@@ -956,7 +956,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                                       }));
                                     }}
                                     onClick={(e) => e.stopPropagation()}
-                                    className="w-3.5 h-3.5 text-[#fdb813] rounded focus:ring-[#fdb813] flex-shrink-0"
+                                    className="w-3.5 h-3.5 text-accent rounded focus:ring-accent flex-shrink-0"
                                     title="부담임으로 지정"
                                   />
                                 )}
@@ -1025,7 +1025,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                                         }}
                                         className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
                                           isAttending
-                                            ? 'bg-[#fdb813] text-[#081429]'
+                                            ? 'bg-accent text-primary'
                                             : 'bg-gray-200 text-gray-400 line-through'
                                         }`}
                                       >
@@ -1048,7 +1048,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                 <div className="bg-white border border-gray-200 overflow-hidden">
                   <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
                     <Users className="w-3 h-3 text-green-600" />
-                    <h3 className="text-[#081429] font-bold text-xs">추가 예정</h3>
+                    <h3 className="text-primary font-bold text-xs">추가 예정</h3>
                     <span className="text-xxs text-green-600 ml-1">({studentsToAdd.size}명)</span>
                     {classInfo.subject === 'math' && classDays.length > 1 && (
                       <span className="text-xxs text-blue-500 ml-auto">클릭: 등원요일 · 체크박스: 부담임</span>
@@ -1100,7 +1100,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                                       }));
                                     }}
                                     onClick={(e) => e.stopPropagation()}
-                                    className="w-3.5 h-3.5 text-[#fdb813] rounded focus:ring-[#fdb813] flex-shrink-0"
+                                    className="w-3.5 h-3.5 text-accent rounded focus:ring-accent flex-shrink-0"
                                     title="부담임으로 지정"
                                   />
                                 )}
@@ -1147,7 +1147,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                                     }));
                                   }}
                                   onClick={(e) => e.stopPropagation()}
-                                  className="px-1 py-0.5 text-[10px] border border-gray-200 rounded focus:ring-1 focus:ring-[#fdb813] outline-none w-[105px]"
+                                  className="px-1 py-0.5 text-[10px] border border-gray-200 rounded focus:ring-1 focus:ring-accent outline-none w-[105px]"
                                 />
                                 <button
                                   type="button"
@@ -1179,7 +1179,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                                         }}
                                         className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${
                                           isAttending
-                                            ? 'bg-[#fdb813] text-[#081429]'
+                                            ? 'bg-accent text-primary'
                                             : 'bg-gray-200 text-gray-400 line-through'
                                         }`}
                                       >
@@ -1200,8 +1200,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
               {/* 학생 추가 섹션 */}
               <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                  <BookOpen className="w-3 h-3 text-[#081429]" />
-                  <h3 className="text-[#081429] font-bold text-xs">학생 추가</h3>
+                  <BookOpen className="w-3 h-3 text-primary" />
+                  <h3 className="text-primary font-bold text-xs">학생 추가</h3>
                 </div>
                 <div className="p-2 border-b border-gray-100">
                   <input
@@ -1209,7 +1209,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                     value={studentSearch}
                     onChange={(e) => setStudentSearch(e.target.value)}
                     placeholder="학생 검색하여 추가..."
-                    className="w-full px-2 py-1 border border-gray-300 text-xs focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813] outline-none"
+                    className="w-full px-2 py-1 border border-gray-300 text-xs focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                   />
                 </div>
                 <div className="max-h-32 overflow-y-auto">
@@ -1229,7 +1229,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                           type="checkbox"
                           checked={studentsToAdd.has(student.id)}
                           onChange={() => toggleAddStudent(student.id)}
-                          className="w-3.5 h-3.5 text-[#fdb813] focus:ring-[#fdb813]"
+                          className="w-3.5 h-3.5 text-accent focus:ring-accent"
                         />
                         <span className="truncate text-gray-800">{student.name}</span>
                         <span className="text-[10px] text-gray-400 flex-shrink-0">{formatSchoolGrade(student.school, student.grade)}</span>

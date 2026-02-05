@@ -31,7 +31,7 @@ const ClassCard: React.FC<ClassCardProps> = ({ classInfo, onClick }) => {
     >
       {/* 제목 및 과목 배지 */}
       <div className="flex items-start justify-between mb-1">
-        <h3 className="text-[#081429] font-bold text-sm flex-1 pr-2 leading-tight">
+        <h3 className="text-primary font-bold text-sm flex-1 pr-2 leading-tight">
           {className}
         </h3>
         <span
@@ -47,14 +47,14 @@ const ClassCard: React.FC<ClassCardProps> = ({ classInfo, onClick }) => {
       </div>
 
       {/* 강사 정보 */}
-      <div className="flex items-center gap-1.5 mb-1 text-[#373d41] text-xs">
+      <div className="flex items-center gap-1.5 mb-1 text-primary-700 text-xs">
         <User className="w-3.5 h-3.5 opacity-60" />
         <span>{teacher || '미정'}</span>
       </div>
 
       {/* 학생 수 */}
       <div className="flex items-center gap-1.5 mb-1">
-        <Users className="w-3.5 h-3.5 text-[#373d41] opacity-60" />
+        <Users className="w-3.5 h-3.5 text-primary-700 opacity-60" />
         <span
           className="font-bold text-xs px-1.5 py-0.5 rounded"
           style={{
@@ -67,7 +67,7 @@ const ClassCard: React.FC<ClassCardProps> = ({ classInfo, onClick }) => {
       </div>
 
       {/* 스케줄 */}
-      <div className="flex items-start gap-1.5 text-[#373d41] text-xs mb-1.5">
+      <div className="flex items-start gap-1.5 text-primary-700 text-xs mb-1.5">
         <Clock className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 opacity-60" />
         <span className="line-clamp-2 text-xxs">{scheduleText}</span>
       </div>
@@ -75,7 +75,7 @@ const ClassCard: React.FC<ClassCardProps> = ({ classInfo, onClick }) => {
       {/* 하단 바 */}
       <div className="pt-1.5 border-t" style={{ borderColor: `${subjectColors.border}40` }}>
         <div className="flex items-center justify-between text-xxs">
-          <span className="flex items-center gap-1 text-[#373d41] opacity-70">
+          <span className="flex items-center gap-1 text-primary-700 opacity-70">
             <BookOpen className="w-3 h-3" />
             {subjectLabel}
           </span>

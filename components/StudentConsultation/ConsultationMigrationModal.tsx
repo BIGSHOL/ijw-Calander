@@ -549,8 +549,8 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
             <div className="bg-white rounded-sm shadow-2xl w-[900px] max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
                 {/* Header */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-                    <h2 className="text-sm font-bold text-[#081429] flex items-center gap-2">
-                        <Database size={18} className="text-[#fdb813]" />
+                    <h2 className="text-sm font-bold text-primary flex items-center gap-2">
+                        <Database size={18} className="text-accent" />
                         MakeEdu 상담 내역 마이그레이션
                     </h2>
                     <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
@@ -572,7 +572,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                                 <Upload className="text-gray-400 mb-4" size={48} />
                                 <h3 className="text-lg font-bold text-gray-900 mb-1">상담 내역 엑셀 업로드</h3>
                                 <p className="text-sm text-gray-500 mb-4">MakeEdu에서 내려받은 엑셀 파일(.xls, .xlsx)을 업로드하세요.</p>
-                                <button className="px-4 py-2 bg-[#081429] text-white rounded-sm text-sm font-medium">
+                                <button className="px-4 py-2 bg-primary text-white rounded-sm text-sm font-medium">
                                     파일 선택하기
                                 </button>
                             </div>
@@ -700,8 +700,8 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                         <div className="flex flex-col items-center justify-center h-full gap-6">
                             <div className="relative w-24 h-24">
                                 <div className="absolute inset-0 rounded-sm border-4 border-gray-100"></div>
-                                <div className="absolute inset-0 rounded-sm border-4 border-[#fdb813] border-t-transparent animate-spin"></div>
-                                <div className="absolute inset-0 flex items-center justify-center font-bold text-xl text-[#081429]">
+                                <div className="absolute inset-0 rounded-sm border-4 border-accent border-t-transparent animate-spin"></div>
+                                <div className="absolute inset-0 flex items-center justify-center font-bold text-xl text-primary">
                                     {progress}%
                                 </div>
                             </div>
@@ -718,7 +718,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                                 <Check size={40} strokeWidth={3} />
                             </div>
                             <div className="text-center space-y-2">
-                                <h3 className="text-2xl font-bold text-[#081429]">마이그레이션 완료!</h3>
+                                <h3 className="text-2xl font-bold text-primary">마이그레이션 완료!</h3>
                                 <p className="text-gray-600">
                                     총 <span className="text-green-600 font-bold">{readyCount - skippedCount}</span>건의 상담 기록이 성공적으로 저장되었습니다.
                                 </p>
@@ -753,7 +753,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                             onClick={handleMigrate}
                             disabled={readyCount === 0}
                             className={`flex items-center gap-2 px-5 py-2 rounded-sm font-bold text-sm shadow-sm transition-all ${readyCount > 0
-                                ? 'bg-[#081429] text-white hover:bg-[#112a55]'
+                                ? 'bg-primary text-white hover:bg-[#112a55]'
                                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                                 }`}
                         >
@@ -765,7 +765,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                     {step === 'done' && (
                         <button
                             onClick={onSuccess}
-                            className="flex items-center gap-2 px-5 py-2 rounded-sm font-bold text-sm shadow-sm bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f]"
+                            className="flex items-center gap-2 px-5 py-2 rounded-sm font-bold text-sm shadow-sm bg-accent text-primary hover:bg-[#e5a60f]"
                         >
                             완료 및 새로고침
                         </button>

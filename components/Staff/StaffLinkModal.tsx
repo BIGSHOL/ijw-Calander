@@ -67,7 +67,7 @@ const StaffLinkModal: React.FC<StaffLinkModalProps> = ({
               <Link2 className="w-4 h-4 text-blue-600" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-[#081429]">시스템 계정 연결</h2>
+              <h2 className="text-sm font-bold text-primary">시스템 계정 연결</h2>
               <p className="text-xs text-gray-500">{staff.name} 직원</p>
             </div>
           </div>
@@ -121,7 +121,7 @@ const StaffLinkModal: React.FC<StaffLinkModalProps> = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm text-[#081429] truncate">
+                      <span className="font-medium text-sm text-primary truncate">
                         {user.jobTitle || '(호칭 없음)'}
                       </span>
                       <span className={`text-xs px-1.5 py-0.5 rounded ${

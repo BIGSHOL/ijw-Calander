@@ -195,7 +195,7 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
             <div className="flex items-center justify-center h-[60vh]">
                 <div className="text-center">
                     <div className="text-6xl mb-4">🔒</div>
-                    <h2 className="text-xl font-bold text-[#081429] mb-2">접근 권한 없음</h2>
+                    <h2 className="text-xl font-bold text-primary mb-2">접근 권한 없음</h2>
                     <p className="text-gray-500">간트 차트 기능에 접근할 권한이 없습니다.</p>
                 </div>
             </div>
@@ -228,7 +228,7 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
                             const template = templates.find(t => t.id === e.target.value);
                             if (template) selectTemplate(template);
                         }}
-                        className="appearance-none bg-[#1e293b] border border-gray-700 rounded-sm px-3 py-1.5 pr-8 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none"
+                        className="appearance-none bg-[#1e293b] border border-gray-700 rounded-sm px-3 py-1.5 pr-8 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-accent focus:ring-1 focus:ring-accent outline-none"
                     >
                         <option value="">프로젝트 선택</option>
                         {projects.length > 0 && (
@@ -310,7 +310,7 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
                     {canCreate && (
                         <button
                             onClick={() => setViewMode('create')}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#fdb813] text-[#081429] rounded-sm text-xs font-bold hover:bg-[#fdb813]/90 transition-colors shadow-sm"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-accent text-primary rounded-sm text-xs font-bold hover:bg-accent/90 transition-colors shadow-sm"
                         >
                             <Plus size={14} />
                             새 프로젝트
@@ -368,7 +368,7 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
                         <h2 className="text-2xl font-bold text-gray-800 mb-2">프로젝트를 선택하세요</h2>
                         <p className="text-gray-500 max-w-md">
                             상단 드롭다운에서 프로젝트를 선택하거나<br />
-                            우측 상단의 <span className="font-semibold text-[#fdb813]">+ 새 프로젝트</span> 버튼으로 시작하세요.
+                            우측 상단의 <span className="font-semibold text-accent">+ 새 프로젝트</span> 버튼으로 시작하세요.
                         </p>
                     </div>
                 )}

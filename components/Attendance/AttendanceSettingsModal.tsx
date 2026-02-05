@@ -29,8 +29,8 @@ const AttendanceSettingsModal: React.FC<AttendanceSettingsModalProps> = ({
       >
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-          <h2 className="text-sm font-bold text-[#081429] flex items-center gap-1.5">
-            <DollarSign size={16} className="text-[#fdb813]" />
+          <h2 className="text-sm font-bold text-primary flex items-center gap-1.5">
+            <DollarSign size={16} className="text-accent" />
             급여 설정
           </h2>
           <button

@@ -190,17 +190,17 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
 
     const ApprovalBox = useMemo(() => (
         <div className="flex justify-end mb-8 print:mb-4">
-            <table className="border-collapse border border-[#373d41] text-center text-xs">
+            <table className="border-collapse border border-primary-700 text-center text-xs">
                 <tbody>
                     <tr>
-                        <td className="border border-[#373d41] bg-gray-100 p-1 w-16">담당</td>
-                        <td className="border border-[#373d41] bg-gray-100 p-1 w-16">원장</td>
-                        <td className="border border-[#373d41] bg-gray-100 p-1 w-16">대표</td>
+                        <td className="border border-primary-700 bg-gray-100 p-1 w-16">담당</td>
+                        <td className="border border-primary-700 bg-gray-100 p-1 w-16">원장</td>
+                        <td className="border border-primary-700 bg-gray-100 p-1 w-16">대표</td>
                     </tr>
                     <tr>
-                        <td className="border border-[#373d41] h-16"></td>
-                        <td className="border border-[#373d41] h-16"></td>
-                        <td className="border border-[#373d41] h-16"></td>
+                        <td className="border border-primary-700 h-16"></td>
+                        <td className="border border-primary-700 h-16"></td>
+                        <td className="border border-primary-700 h-16"></td>
                     </tr>
                 </tbody>
             </table>
@@ -208,13 +208,13 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
     ), []);
 
     return (
-        <div className="min-h-screen bg-gray-50 text-[#373d41] font-sans pb-20 print:bg-white print:pb-0">
+        <div className="min-h-screen bg-gray-50 text-primary-700 font-sans pb-20 print:bg-white print:pb-0">
             {/* Header */}
             <TabSubNavigation variant="compact" className="border-b border-white/10 sticky top-0 z-30 print:hidden">
                 <div className="w-full px-4 sm:px-6 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <div className="bg-[#fdb813] p-1.5 rounded-sm hidden sm:block">
-                            <FileText className="text-[#081429] h-3.5 w-3.5" />
+                        <div className="bg-accent p-1.5 rounded-sm hidden sm:block">
+                            <FileText className="text-primary h-3.5 w-3.5" />
                         </div>
 
                         <div className="flex items-center bg-white/10 rounded-sm p-1">
@@ -260,7 +260,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                         {viewMode === 'dashboard' && (
                             <button
                                 onClick={handleOpenForm}
-                                className="bg-[#fdb813] hover:brightness-110 text-[#081429] px-3 py-1 rounded-sm text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
+                                className="bg-accent hover:brightness-110 text-primary px-3 py-1 rounded-sm text-xs font-bold transition-all flex items-center gap-2 shadow-sm"
                                 aria-label="신규 등록"
                             >
                                 <Plus size={14} />
@@ -277,23 +277,23 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                 {/* Empty State */}
                 {entries.length === 0 && viewMode === 'dashboard' && (
                     <div className="mb-8 p-8 border-2 border-dashed border-gray-300 rounded-sm flex flex-col items-center justify-center text-center bg-white/50">
-                        <h3 className="text-lg font-semibold text-[#081429] mb-2">{currentPeriod} 데이터가 없습니다.</h3>
-                        <p className="text-[#373d41] mb-6 max-w-md">
+                        <h3 className="text-lg font-semibold text-primary mb-2">{currentPeriod} 데이터가 없습니다.</h3>
+                        <p className="text-primary-700 mb-6 max-w-md">
                             새로운 데이터를 직접 등록하거나, 구글 시트에서 가져오거나, 지난달 데이터를 복사하여 시작할 수 있습니다.
                         </p>
                         <div className="flex gap-3 flex-wrap justify-center">
                             <button
                                 onClick={handleCopyPrevious}
-                                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-[#373d41] rounded-sm hover:bg-gray-50 hover:border-[#fdb813] transition-all shadow-sm"
+                                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-primary-700 rounded-sm hover:bg-gray-50 hover:border-accent transition-all shadow-sm"
                                 aria-label="지난달 사업장 목록 가져오기"
                             >
-                                <Copy size={18} className="text-[#fdb813]" />
+                                <Copy size={18} className="text-accent" />
                                 지난달 사업장 목록 가져오기
                             </button>
 
                             <button
                                 onClick={handleOpenForm}
-                                className="flex items-center gap-2 px-4 py-2 bg-[#fdb813] text-[#081429] rounded-sm hover:brightness-110 shadow-sm font-bold"
+                                className="flex items-center gap-2 px-4 py-2 bg-accent text-primary rounded-sm hover:brightness-110 shadow-sm font-bold"
                                 aria-label="직접 등록하기"
                             >
                                 <Plus size={18} />
@@ -307,12 +307,12 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                 {entries.length > 0 && viewMode === 'dashboard' && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 print:hidden">
                         <div className="bg-white p-6 rounded-sm border border-gray-200 shadow-sm">
-                            <p className="text-sm font-medium text-[#373d41] mb-1">{currentPeriod} 총 예상 수강료</p>
-                            <h2 className="text-3xl font-bold text-[#081429]">{formattedTotal}<span className="text-lg font-normal text-gray-400 ml-1">원</span></h2>
+                            <p className="text-sm font-medium text-primary-700 mb-1">{currentPeriod} 총 예상 수강료</p>
+                            <h2 className="text-3xl font-bold text-primary">{formattedTotal}<span className="text-lg font-normal text-gray-400 ml-1">원</span></h2>
                         </div>
                         <div className="bg-white p-6 rounded-sm border border-gray-200 shadow-sm">
-                            <p className="text-sm font-medium text-[#373d41] mb-1">등록 사업장 수</p>
-                            <h2 className="text-3xl font-bold text-[#081429]">{entries.length}<span className="text-lg font-normal text-gray-400 ml-1">개소</span></h2>
+                            <p className="text-sm font-medium text-primary-700 mb-1">등록 사업장 수</p>
+                            <h2 className="text-3xl font-bold text-primary">{entries.length}<span className="text-lg font-normal text-gray-400 ml-1">개소</span></h2>
                         </div>
                         <div
                             className="bg-gradient-to-br from-[#081429] to-[#1e3a5f] p-6 rounded-sm border border-transparent shadow-sm text-white cursor-pointer relative overflow-hidden group"
@@ -321,7 +321,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                             <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
                                 <Sparkles size={64} />
                             </div>
-                            <p className="text-[#fdb813] font-medium mb-1 flex items-center gap-2">
+                            <p className="text-accent font-medium mb-1 flex items-center gap-2">
                                 <Sparkles size={16} /> AI 분석
                             </p>
                             <h2 className="text-xl font-bold leading-tight">
@@ -334,10 +334,10 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
 
                 {/* AI Report Section */}
                 {aiReport && viewMode === 'dashboard' && (
-                    <div className="mb-8 bg-white rounded-sm border border-[#fdb813]/30 shadow-sm overflow-hidden print:hidden">
-                        <div className="bg-[#081429] px-6 py-4 border-b border-white/10 flex justify-between items-center">
+                    <div className="mb-8 bg-white rounded-sm border border-accent/30 shadow-sm overflow-hidden print:hidden">
+                        <div className="bg-primary px-6 py-4 border-b border-white/10 flex justify-between items-center">
                             <h3 className="font-semibold text-white flex items-center gap-2">
-                                <Sparkles className="text-[#fdb813]" size={18} />
+                                <Sparkles className="text-accent" size={18} />
                                 AI 분석 리포트 ({currentPeriod})
                             </h3>
                             <button
@@ -348,7 +348,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                                 닫기
                             </button>
                         </div>
-                        <div className="p-6 prose prose-slate prose-headings:text-[#081429] prose-p:text-[#373d41] max-w-none text-sm">
+                        <div className="p-6 prose prose-slate prose-headings:text-primary prose-p:text-primary-700 max-w-none text-sm">
                             <ReactMarkdown>{aiReport}</ReactMarkdown>
                         </div>
                     </div>
@@ -367,10 +367,10 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
 
                         {viewMode === 'report' && (
                             <div>
-                                <div className="flex justify-between items-end mb-8 border-b border-[#081429] pb-6 print:mb-4 print:pb-4">
+                                <div className="flex justify-between items-end mb-8 border-b border-primary pb-6 print:mb-4 print:pb-4">
                                     <div className="flex-1">
-                                        <h1 className="text-3xl font-bold text-[#081429] mb-2">익월 수강료 발생 현황</h1>
-                                        <p className="text-[#373d41] font-medium text-lg">대상 기간: {currentPeriod}</p>
+                                        <h1 className="text-3xl font-bold text-primary mb-2">익월 수강료 발생 현황</h1>
+                                        <p className="text-primary-700 font-medium text-lg">대상 기간: {currentPeriod}</p>
                                         <p className="text-gray-400 text-sm mt-1">작성일: {new Date().toLocaleDateString()}</p>
                                     </div>
                                     {ApprovalBox}
@@ -381,7 +381,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse border border-gray-200">
                                 <thead>
-                                    <tr className="bg-[#081429] text-white">
+                                    <tr className="bg-primary text-white">
                                         <th className="py-3 px-4 border border-gray-600 text-center font-bold w-[20%]">구분 (사업장)</th>
                                         <th className="py-3 px-4 border border-gray-600 text-center font-bold w-[20%]">예상 수강료</th>
                                         <th className="py-3 px-4 border border-gray-600 text-center font-bold w-[15%]">전월 대비</th>
@@ -403,10 +403,10 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                                             const diff = getDiff(entry.academyName, entry.projectedFee);
                                             return (
                                                 <tr key={entry.id} className="hover:bg-gray-50 transition-colors">
-                                                    <td className="py-3 px-4 border border-gray-200 font-medium text-[#081429] text-center">
+                                                    <td className="py-3 px-4 border border-gray-200 font-medium text-primary text-center">
                                                         {entry.academyName}
                                                     </td>
-                                                    <td className="py-3 px-4 border border-gray-200 font-mono text-[#373d41] text-right">
+                                                    <td className="py-3 px-4 border border-gray-200 font-mono text-primary-700 text-right">
                                                         {entry.projectedFee.toLocaleString()}원
                                                     </td>
                                                     <td className="py-3 px-4 border border-gray-200 font-mono text-right">
@@ -415,7 +415,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                                                             {diff > 0 ? '+' : ''}{diff === 0 ? '-' : diff.toLocaleString()}
                                                         </span>
                                                     </td>
-                                                    <td className="py-3 px-4 border border-gray-200 text-[#373d41] text-sm">
+                                                    <td className="py-3 px-4 border border-gray-200 text-primary-700 text-sm">
                                                         {entry.reason || <span className="text-gray-300 italic">-</span>}
                                                     </td>
                                                     {viewMode === 'dashboard' && (
@@ -423,7 +423,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                                                             <div className="flex items-center justify-center gap-2">
                                                                 <button
                                                                     onClick={() => handleEdit(entry)}
-                                                                    className="p-1.5 rounded text-gray-400 hover:text-[#fdb813] hover:bg-[#fdb813]/10 transition-colors"
+                                                                    className="p-1.5 rounded text-gray-400 hover:text-accent hover:bg-accent/10 transition-colors"
                                                                     aria-label={`${entry.academyName} 수정`}
                                                                 >
                                                                     <Edit2 size={16} />
@@ -446,8 +446,8 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
                                 {entries.length > 0 && (
                                     <tfoot>
                                         <tr className="bg-gray-50">
-                                            <td className="py-3 px-4 border border-gray-200 font-bold text-[#081429] text-center">합계</td>
-                                            <td className="py-3 px-4 border border-gray-200 font-bold text-[#081429] text-right font-mono text-lg text-[#fdb813]">
+                                            <td className="py-3 px-4 border border-gray-200 font-bold text-primary text-center">합계</td>
+                                            <td className="py-3 px-4 border border-gray-200 font-bold text-primary text-right font-mono text-lg text-accent">
                                                 {formattedTotal}원
                                             </td>
                                             <td className="py-3 px-4 border border-gray-200 bg-gray-100"></td>
@@ -463,8 +463,8 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
 
                         {viewMode === 'report' && aiReport && (
                             <div className="mt-8 border-t border-gray-200 pt-8">
-                                <h4 className="text-sm font-bold uppercase text-[#373d41] mb-4">종합 의견 (AI Analysis)</h4>
-                                <div className="prose prose-sm max-w-none text-[#373d41]">
+                                <h4 className="text-sm font-bold uppercase text-primary-700 mb-4">종합 의견 (AI Analysis)</h4>
+                                <div className="prose prose-sm max-w-none text-primary-700">
                                     <ReactMarkdown>{aiReport}</ReactMarkdown>
                                 </div>
                             </div>

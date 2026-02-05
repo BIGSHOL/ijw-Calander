@@ -5,6 +5,7 @@ import { getSubjectTheme } from '../utils/gridUtils';
 import { Clock } from 'lucide-react';
 import { MATH_PERIOD_INFO, MATH_PERIOD_TIMES, WEEKEND_PERIOD_INFO, WEEKEND_PERIOD_TIMES } from '../../constants';
 import { formatSchoolGrade } from '../../../../utils/studentUtils';
+import { formatDateKey } from '../../../../utils/dateUtils';
 import PortalTooltip from '../../../Common/PortalTooltip';
 
 // 학생 항목 컴포넌트 - hover 효과를 위해 분리
@@ -287,7 +288,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
     // 전체 학생 목록 가져오기 (합반수업 시 모든 수업의 학생을 합침)
     const allStudents = useMemo(() => {
-        const today = new Date().toISOString().split('T')[0];
+        const today = formatDateKey(new Date());
         const classesToProcess = isMergedClass ? mergedClasses! : [cls];
 
         const allStudentsList: any[] = [];

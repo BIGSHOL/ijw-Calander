@@ -158,7 +158,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header - Compact */}
-                <div className="px-3 py-2 border-b border-gray-200 flex items-center justify-between bg-[#081429] text-white rounded-t-sm shrink-0">
+                <div className="px-3 py-2 border-b border-gray-200 flex items-center justify-between bg-primary text-white rounded-t-sm shrink-0">
                     <div className="flex items-center gap-1.5">
                         <BookOpen size={16} />
                         <h3 className="font-bold text-sm">수업 배정</h3>
@@ -186,7 +186,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                         <div className="space-y-2.5">
                             {/* Section Header */}
                             <div className="flex items-center gap-1.5 pb-1.5 border-b border-gray-200">
-                                <BookOpen size={14} className="text-[#fdb813]" />
+                                <BookOpen size={14} className="text-accent" />
                                 <h4 className="text-xs font-bold text-gray-900">수업 선택</h4>
                             </div>
 
@@ -232,7 +232,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                                         placeholder="수업명 또는 강사명 검색..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813]"
+                                        className="w-full pl-7 pr-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent"
                                     />
                                 </div>
                             </div>
@@ -262,7 +262,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                                                 <label
                                                     key={cls.id}
                                                     className={`flex items-center gap-2 p-2 border-b last:border-b-0 cursor-pointer transition-colors ${selectedClassName === cls.className
-                                                            ? 'bg-[#fdb813]/10 border-l-2 border-l-[#fdb813]'
+                                                            ? 'bg-accent/10 border-l-2 border-l-[#fdb813]'
                                                             : 'hover:bg-gray-50'
                                                         }`}
                                                 >
@@ -272,10 +272,10 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                                                         value={cls.className}
                                                         checked={selectedClassName === cls.className}
                                                         onChange={(e) => setSelectedClassName(e.target.value)}
-                                                        className="w-3.5 h-3.5 text-[#fdb813] focus:ring-[#fdb813]"
+                                                        className="w-3.5 h-3.5 text-accent focus:ring-accent"
                                                     />
                                                     <div className="flex-1 min-w-0">
-                                                        <div className="font-bold text-xs text-[#081429] truncate">
+                                                        <div className="font-bold text-xs text-primary truncate">
                                                             {cls.className}
                                                         </div>
                                                         <div className="text-xxs text-gray-600 mt-0.5">
@@ -299,7 +299,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                         <div className="space-y-2.5">
                             {/* Section Header */}
                             <div className="flex items-center gap-1.5 pb-1.5 border-b border-gray-200">
-                                <Settings size={14} className="text-[#fdb813]" />
+                                <Settings size={14} className="text-accent" />
                                 <h4 className="text-xs font-bold text-gray-900">배정 설정</h4>
                             </div>
 
@@ -312,7 +312,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                                     type="date"
                                     value={startDate}
                                     onChange={(e) => setStartDate(e.target.value)}
-                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-[#fdb813] focus:border-[#fdb813]"
+                                    className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent"
                                 />
                                 <p className="mt-1 text-xxs text-gray-500">
                                     미래 날짜를 선택하면 해당 날짜부터 수업이 시작됩니다
@@ -327,7 +327,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                                         id="isSlotTeacher"
                                         checked={isSlotTeacher}
                                         onChange={(e) => setIsSlotTeacher(e.target.checked)}
-                                        className="mt-0.5 w-4 h-4 text-[#fdb813] bg-gray-100 border-gray-300 rounded-sm focus:ring-[#fdb813] focus:ring-2"
+                                        className="mt-0.5 w-4 h-4 text-accent bg-gray-100 border-gray-300 rounded-sm focus:ring-accent focus:ring-2"
                                     />
                                     <label htmlFor="isSlotTeacher" className="flex-1 cursor-pointer">
                                         <div className="text-xs font-bold text-gray-700">부담임으로 배정</div>
@@ -344,7 +344,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                             <div className="space-y-2.5">
                                 {/* Section Header */}
                                 <div className="flex items-center gap-1.5 pb-1.5 border-b border-gray-200">
-                                    <CheckCircle size={14} className="text-[#fdb813]" />
+                                    <CheckCircle size={14} className="text-accent" />
                                     <h4 className="text-xs font-bold text-gray-900">현재 배정</h4>
                                 </div>
 
@@ -386,7 +386,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                             <button
                                 type="submit"
                                 disabled={isSubmitting || !selectedClassName}
-                                className="flex-1 px-3 py-2 bg-[#fdb813] text-[#081429] rounded-sm text-xs font-bold hover:bg-[#fdb813]/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                                className="flex-1 px-3 py-2 bg-accent text-primary rounded-sm text-xs font-bold hover:bg-accent/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
                             >
                                 {isSubmitting ? (
                                     <>

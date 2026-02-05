@@ -162,13 +162,13 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
     };
 
     return (
-        <div className="flex-none bg-white border-t border-[#081429] shadow-[0_-5px_20px_rgba(0,0,0,0.15)] px-6 py-3 z-[50] animate-in slide-in-from-bottom duration-200 flex flex-col gap-2">
+        <div className="flex-none bg-white border-t border-primary shadow-[0_-5px_20px_rgba(0,0,0,0.15)] px-6 py-3 z-[50] animate-in slide-in-from-bottom duration-200 flex flex-col gap-2">
 
             {/* Top Status + Actions */}
             <div className="flex items-center justify-between pb-1 border-b border-gray-100 mb-1">
                 {/* Selected Count */}
                 <div className="flex items-center gap-3">
-                    <span className="bg-[#081429] text-white px-3 py-0.5 rounded-sm text-xs font-bold">
+                    <span className="bg-primary text-white px-3 py-0.5 rounded-sm text-xs font-bold">
                         {selectedCells.size}개 선택됨
                     </span>
                     <span className="text-xxs text-gray-400">Ctrl/Cmd+Click for Multi-select</span>
@@ -181,7 +181,7 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
                             type="checkbox"
                             checked={isWarningOff}
                             onChange={(e) => setIsWarningOff(e.target.checked)}
-                            className="w-3.5 h-3.5 rounded-sm border-gray-300 text-[#081429] focus:ring-[#081429]"
+                            className="w-3.5 h-3.5 rounded-sm border-gray-300 text-primary focus:ring-primary"
                         />
                         <span className="text-xs text-gray-500 font-bold">경고 끄기</span>
                     </label>
@@ -196,7 +196,7 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
 
                     <button
                         onClick={handleBatchSave}
-                        className="flex items-center gap-1 px-6 py-1.5 rounded-sm bg-[#081429] text-white text-xs font-bold hover:bg-[#081429]/90 shadow-md transition-colors"
+                        className="flex items-center gap-1 px-6 py-1.5 rounded-sm bg-primary text-white text-xs font-bold hover:bg-primary/90 shadow-md transition-colors"
                     >
                         <Check size={12} />
                         저장
@@ -219,7 +219,7 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
                                 onChange={(e) =>
                                     setInputData({ ...inputData, underline: e.target.checked })
                                 }
-                                className="w-3 h-3 rounded-sm border-yellow-300 text-[#fdb813] focus:ring-[#fdb813] cursor-pointer"
+                                className="w-3 h-3 rounded-sm border-yellow-300 text-accent focus:ring-accent cursor-pointer"
                             />
                         </label>
                     </div>
@@ -240,14 +240,14 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
                         value={inputData.room}
                         onChange={(e) => setInputData({ ...inputData, room: e.target.value })}
                         placeholder="강의실"
-                        className="w-full text-xs border border-yellow-200/50 rounded-sm px-1 py-0.5 bg-white/50 focus:bg-white focus:outline-none focus:border-[#fdb813] text-center"
+                        className="w-full text-xs border border-yellow-200/50 rounded-sm px-1 py-0.5 bg-white/50 focus:bg-white focus:outline-none focus:border-accent text-center"
                     />
                 </div>
 
                 {/* Add Merged Class Button */}
                 <button
                     onClick={addMerged}
-                    className="w-[60px] h-[70px] border-2 border-dashed border-gray-300 text-gray-400 hover:border-[#fdb813] hover:text-[#fdb813] hover:bg-yellow-50 flex flex-col items-center justify-center gap-1 shrink-0 transition-all"
+                    className="w-[60px] h-[70px] border-2 border-dashed border-gray-300 text-gray-400 hover:border-accent hover:text-accent hover:bg-yellow-50 flex flex-col items-center justify-center gap-1 shrink-0 transition-all"
                 >
                     <Plus size={20} />
                     <span className="text-xxs font-bold">합반</span>
@@ -270,7 +270,7 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
                                             type="checkbox"
                                             checked={m.underline || false}
                                             onChange={(e) => updateMerged(idx, "underline", e.target.checked)}
-                                            className="w-3 h-3 rounded-sm border-yellow-300 text-[#fdb813] focus:ring-[#fdb813] cursor-pointer"
+                                            className="w-3 h-3 rounded-sm border-yellow-300 text-accent focus:ring-accent cursor-pointer"
                                         />
                                     </label>
                                     <button
@@ -298,7 +298,7 @@ const BatchInputBar: React.FC<BatchInputBarProps> = ({
                                 value={m.room}
                                 onChange={(e) => updateMerged(idx, "room", e.target.value)}
                                 placeholder="강의실"
-                                className="w-full text-xs border border-yellow-200/50 rounded-sm px-1 py-0.5 bg-white/50 focus:bg-white focus:outline-none focus:border-[#fdb813] text-center"
+                                className="w-full text-xs border border-yellow-200/50 rounded-sm px-1 py-0.5 bg-white/50 focus:bg-white focus:outline-none focus:border-accent text-center"
                             />
                         </div>
                 ))}

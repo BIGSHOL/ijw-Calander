@@ -632,7 +632,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
                                 placeholder="수업명 검색..."
-                                className="pl-7 pr-6 py-1 w-32 text-xs border border-gray-300 rounded-sm bg-white text-gray-700 placeholder-gray-400 outline-none focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813]"
+                                className="pl-7 pr-6 py-1 w-32 text-xs border border-gray-300 rounded-sm bg-white text-gray-700 placeholder-gray-400 outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                             />
                         </div>
 
@@ -846,7 +846,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         <span>
                             {isSimulationMode && currentScenarioName
                                 ? currentScenarioName
-                                : (publishedScenarioName || '인재원 영어 통합 시간표')
+                                : (publishedScenarioName || '인재원 영어 강사 시간표')
                             }
                         </span>
                         {isSimulationMode && <span className="text-xxs bg-orange-500 text-white px-1.5 py-0.5 rounded-sm font-bold animate-pulse">SIMULATION</span>}
@@ -866,38 +866,6 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                         {isSimulationMode ? '시뮬레이션 모드' : '실시간 모드'}
                                     </span>
                                 </div>
-
-                                {/* 시뮬레이션 액션 버튼들 */}
-                                {isSimulationMode && (
-                                    <>
-                                        <button
-                                            onClick={handleCopyLiveToDraft}
-                                            className="flex items-center gap-1 px-2 py-1 bg-white border border-orange-300 text-orange-700 rounded-sm text-xs font-bold hover:bg-orange-50 transition-colors"
-                                            title="현재 실시간 시간표를 복사해옵니다"
-                                        >
-                                            <Copy size={12} />
-                                            가져오기
-                                        </button>
-                                        {canEditEnglish && (
-                                            <button
-                                                onClick={handlePublishDraftToLive}
-                                                className="flex items-center gap-1 px-2 py-1 bg-orange-600 text-white rounded-sm text-xs font-bold hover:bg-orange-700 transition-colors"
-                                                title="시뮬레이션 내용을 실제 시간표에 적용합니다"
-                                            >
-                                                <Upload size={12} />
-                                                반영
-                                            </button>
-                                        )}
-                                        <button
-                                            onClick={() => setIsScenarioModalOpen(true)}
-                                            className="flex items-center gap-1 px-2 py-1 bg-purple-100 border border-purple-300 text-purple-700 rounded-sm text-xs font-bold hover:bg-purple-200 transition-colors"
-                                            title="시나리오 저장/불러오기"
-                                        >
-                                            <Save size={12} />
-                                            시나리오
-                                        </button>
-                                    </>
-                                )}
                                 <div className="w-px h-4 bg-gray-300 mx-1"></div>
                             </>
                         )}
@@ -946,6 +914,38 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                             보기
                         </button>
                     </div>
+                </div>
+            )}
+
+            {/* 강사뷰 시뮬레이션 액션 바 - 별도 행 */}
+            {viewType === 'teacher' && isSimulationMode && canSimulation && (
+                <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-orange-50 border-b border-orange-200 flex-shrink-0">
+                    <button
+                        onClick={handleCopyLiveToDraft}
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-orange-300 text-orange-700 rounded-sm text-xs font-bold hover:bg-orange-50 shadow-sm transition-colors"
+                        title="현재 실시간 시간표를 복사해옵니다"
+                    >
+                        <Copy size={12} />
+                        현재 상태 가져오기
+                    </button>
+                    {canEditEnglish && (
+                        <button
+                            onClick={handlePublishDraftToLive}
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-600 text-white rounded-sm text-xs font-bold hover:bg-orange-700 shadow-sm transition-colors"
+                            title="시뮬레이션 내용을 실제 시간표에 적용합니다"
+                        >
+                            <Upload size={12} />
+                            실제 반영
+                        </button>
+                    )}
+                    <button
+                        onClick={() => setIsScenarioModalOpen(true)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 border border-purple-300 text-purple-700 rounded-sm text-xs font-bold hover:bg-purple-200 shadow-sm transition-colors"
+                        title="시나리오 저장/불러오기"
+                    >
+                        <Save size={12} />
+                        시나리오 관리
+                    </button>
                 </div>
             )}
 
@@ -1063,8 +1063,23 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         {isSimulationMode && <span className="text-xxs bg-orange-500 text-white px-1.5 py-0.5 rounded-sm font-bold animate-pulse">SIMULATION</span>}
                     </h1>
 
-                    {/* Right: 보기 설정 + 읽기 전용 표시 */}
+                    {/* Right: 시뮬레이션, 보기 설정 */}
                     <div className="flex items-center gap-2">
+                        {/* 시뮬레이션 모드 토글 */}
+                        {canSimulation && (
+                            <>
+                                <div
+                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-sm border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-50 border-orange-300 hover:bg-orange-100' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
+                                    onClick={handleToggleSimulationMode}
+                                >
+                                    <ArrowRightLeft size={14} className={isSimulationMode ? 'text-orange-600' : 'text-gray-500'} />
+                                    <span className={`text-xs font-bold ${isSimulationMode ? 'text-orange-700' : 'text-gray-600'}`}>
+                                        {isSimulationMode ? '시뮬레이션 모드' : '실시간 모드'}
+                                    </span>
+                                </div>
+                                <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                            </>
+                        )}
                         {/* 보기 설정 */}
                         <button
                             onClick={() => setIsRoomViewSettingsOpen(true)}
@@ -1074,8 +1089,42 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                             <SlidersHorizontal size={12} />
                             보기
                         </button>
-                        <span className="text-xs text-gray-400 font-medium px-2 py-1 bg-gray-100 border border-gray-200 rounded-sm">읽기 전용</span>
+                        {!isSimulationMode && (
+                            <span className="text-xs text-gray-400 font-medium px-2 py-1 bg-gray-100 border border-gray-200 rounded-sm">읽기 전용</span>
+                        )}
                     </div>
+                </div>
+            )}
+
+            {/* 강의실뷰 시뮬레이션 액션 바 - 별도 행 */}
+            {viewType === 'room' && isSimulationMode && canSimulation && (
+                <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-orange-50 border-b border-orange-200 flex-shrink-0">
+                    <button
+                        onClick={handleCopyLiveToDraft}
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-orange-300 text-orange-700 rounded-sm text-xs font-bold hover:bg-orange-50 shadow-sm transition-colors"
+                        title="현재 실시간 시간표를 복사해옵니다"
+                    >
+                        <Copy size={12} />
+                        현재 상태 가져오기
+                    </button>
+                    {canEditEnglish && (
+                        <button
+                            onClick={handlePublishDraftToLive}
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-600 text-white rounded-sm text-xs font-bold hover:bg-orange-700 shadow-sm transition-colors"
+                            title="시뮬레이션 내용을 실제 시간표에 적용합니다"
+                        >
+                            <Upload size={12} />
+                            실제 반영
+                        </button>
+                    )}
+                    <button
+                        onClick={() => setIsScenarioModalOpen(true)}
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-100 border border-purple-300 text-purple-700 rounded-sm text-xs font-bold hover:bg-purple-200 shadow-sm transition-colors"
+                        title="시나리오 저장/불러오기"
+                    >
+                        <Save size={12} />
+                        시나리오 관리
+                    </button>
                 </div>
             )}
 

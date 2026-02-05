@@ -140,7 +140,6 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
         category: newDepartmentForm.category || undefined,
       };
 
-      console.log('Creating department:', newDept);
       // departments 컬렉션에 영문 필드명으로 저장
       // undefined 필드 제거 (Firestore에서 에러 발생)
       const firestoreData: Record<string, any> = { ...newDept };
@@ -156,7 +155,6 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
 
       setNewDepartmentForm(INITIAL_DEPARTMENT_FORM);
       setDepartmentFilterState({ ...departmentFilterState, isCreating: false });
-      console.log('Department created successfully!');
     } catch (e: any) {
       console.error('부서 추가 에러:', e);
       alert(`부서 추가 실패: ${e?.message || e?.code || '알 수 없는 오류'}`);
@@ -217,15 +215,15 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
       >
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
-          <h2 className="text-sm font-bold text-[#081429] flex items-center gap-1.5">
-            <span className="text-[#fdb813]">📅</span>
+          <h2 className="text-sm font-bold text-primary flex items-center gap-1.5">
+            <span className="text-accent">📅</span>
             연간 일정 설정
           </h2>
           <div className="flex items-center gap-2">
             {hasChanges && (
               <button
                 onClick={handleSaveChanges}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#fdb813] text-[#081429] rounded-sm font-bold text-xs hover:bg-[#e5a610] transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-accent text-primary rounded-sm font-bold text-xs hover:bg-accent-600 transition-colors"
               >
                 저장
               </button>
@@ -245,7 +243,7 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
             onClick={() => setActiveTab('departments')}
             className={`px-4 py-2 font-bold text-xs transition-all border-b-2 ${
               activeTab === 'departments'
-                ? 'border-[#fdb813] text-[#081429]'
+                ? 'border-accent text-primary'
                 : 'border-transparent text-gray-400 hover:text-gray-600'
             }`}
           >
@@ -259,7 +257,7 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
               onClick={() => setActiveTab('permissions')}
               className={`px-4 py-2 font-bold text-xs transition-all border-b-2 ${
                 activeTab === 'permissions'
-                  ? 'border-[#fdb813] text-[#081429]'
+                  ? 'border-accent text-primary'
                   : 'border-transparent text-gray-400 hover:text-gray-600'
               }`}
             >
@@ -273,7 +271,7 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
             onClick={() => setActiveTab('hashtags')}
             className={`px-4 py-2 font-bold text-xs transition-all border-b-2 ${
               activeTab === 'hashtags'
-                ? 'border-[#fdb813] text-[#081429]'
+                ? 'border-accent text-primary'
                 : 'border-transparent text-gray-400 hover:text-gray-600'
             }`}
           >
@@ -289,8 +287,8 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
           {activeTab === 'departments' && (
             <div className="bg-white border border-gray-200 overflow-hidden">
               <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                <Building2 className="w-3 h-3 text-[#081429]" />
-                <h3 className="text-[#081429] font-bold text-xs">부서 관리</h3>
+                <Building2 className="w-3 h-3 text-primary" />
+                <h3 className="text-primary font-bold text-xs">부서 관리</h3>
               </div>
               <div className="p-2">
                 <DepartmentsManagementTab
@@ -323,8 +321,8 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
           {activeTab === 'permissions' && (isMaster || isAdmin) && (
             <div className="bg-white border border-gray-200 overflow-hidden">
               <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                <Shield className="w-3 h-3 text-[#081429]" />
-                <h3 className="text-[#081429] font-bold text-xs">부서 권한</h3>
+                <Shield className="w-3 h-3 text-primary" />
+                <h3 className="text-primary font-bold text-xs">부서 권한</h3>
               </div>
               <div className="p-2">
                 <DepartmentPermissionsTab
@@ -338,8 +336,8 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
           {activeTab === 'hashtags' && (
             <div className="bg-white border border-gray-200 overflow-hidden">
               <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                <Hash className="w-3 h-3 text-[#081429]" />
-                <h3 className="text-[#081429] font-bold text-xs">해시태그 관리</h3>
+                <Hash className="w-3 h-3 text-primary" />
+                <h3 className="text-primary font-bold text-xs">해시태그 관리</h3>
               </div>
               <div className="p-2">
                 <HashtagsTab isMaster={isMaster} />

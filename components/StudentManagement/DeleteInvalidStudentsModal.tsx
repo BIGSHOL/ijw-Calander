@@ -231,8 +231,8 @@ const DeleteInvalidStudentsModal: React.FC<DeleteInvalidStudentsModalProps> = ({
                             {/* Section 1: 통계 요약 */}
                             <div className="bg-white border border-gray-200 overflow-hidden">
                                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                    <BarChart3 className="w-3 h-3 text-[#081429]" />
-                                    <h3 className="text-[#081429] font-bold text-xs">통계 요약</h3>
+                                    <BarChart3 className="w-3 h-3 text-primary" />
+                                    <h3 className="text-primary font-bold text-xs">통계 요약</h3>
                                 </div>
                                 <div className="p-2">
                                     <div className="grid grid-cols-4 gap-2">
@@ -260,8 +260,8 @@ const DeleteInvalidStudentsModal: React.FC<DeleteInvalidStudentsModalProps> = ({
                             {toDelete.length > 0 && (
                                 <div className="bg-white border border-gray-200 overflow-hidden">
                                     <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                        <Trash2 className="w-3 h-3 text-[#081429]" />
-                                        <h3 className="text-[#081429] font-bold text-xs">삭제 대상</h3>
+                                        <Trash2 className="w-3 h-3 text-primary" />
+                                        <h3 className="text-primary font-bold text-xs">삭제 대상</h3>
                                         <span className="text-xxs text-red-600 ml-1">({toDelete.length}개)</span>
                                     </div>
                                     <div className="divide-y divide-gray-100">
@@ -307,8 +307,8 @@ const DeleteInvalidStudentsModal: React.FC<DeleteInvalidStudentsModalProps> = ({
                             {toFix.length > 0 && (
                                 <div className="bg-white border border-gray-200 overflow-hidden">
                                     <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                        <Wrench className="w-3 h-3 text-[#081429]" />
-                                        <h3 className="text-[#081429] font-bold text-xs">수정 대상</h3>
+                                        <Wrench className="w-3 h-3 text-primary" />
+                                        <h3 className="text-primary font-bold text-xs">수정 대상</h3>
                                         <span className="text-xxs text-blue-600 ml-1">({toFix.length}개)</span>
                                     </div>
                                     <div className="px-2 py-1.5">
@@ -335,8 +335,8 @@ const DeleteInvalidStudentsModal: React.FC<DeleteInvalidStudentsModalProps> = ({
                             {validCount > 0 && (
                                 <div className="bg-white border border-gray-200 overflow-hidden">
                                     <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                        <Check className="w-3 h-3 text-[#081429]" />
-                                        <h3 className="text-[#081429] font-bold text-xs">유지 대상</h3>
+                                        <Check className="w-3 h-3 text-primary" />
+                                        <h3 className="text-primary font-bold text-xs">유지 대상</h3>
                                         <span className="text-xxs text-emerald-600 ml-1">({validCount}개)</span>
                                     </div>
                                     <div className="px-2 py-1.5">
@@ -354,8 +354,8 @@ const DeleteInvalidStudentsModal: React.FC<DeleteInvalidStudentsModalProps> = ({
                             {/* Section: 진행 상황 */}
                             <div className="bg-white border border-gray-200 overflow-hidden">
                                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                    <Loader2 className="w-3 h-3 text-[#081429] animate-spin" />
-                                    <h3 className="text-[#081429] font-bold text-xs">진행 상황</h3>
+                                    <Loader2 className="w-3 h-3 text-primary animate-spin" />
+                                    <h3 className="text-primary font-bold text-xs">진행 상황</h3>
                                 </div>
                                 <div className="p-4">
                                     <div className="text-center space-y-4">
@@ -379,8 +379,8 @@ const DeleteInvalidStudentsModal: React.FC<DeleteInvalidStudentsModalProps> = ({
                             {/* Section: 결과 요약 */}
                             <div className="bg-white border border-gray-200 overflow-hidden">
                                 <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                                    <FileText className="w-3 h-3 text-[#081429]" />
-                                    <h3 className="text-[#081429] font-bold text-xs">결과 요약</h3>
+                                    <FileText className="w-3 h-3 text-primary" />
+                                    <h3 className="text-primary font-bold text-xs">결과 요약</h3>
                                 </div>
                                 <div className="p-4">
                                     <div className="text-center space-y-4">

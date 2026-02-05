@@ -103,7 +103,7 @@ export function GridDropdown<T = string>({
         bg-[#1e293b] border border-gray-700 rounded-sm
         text-xs font-medium text-white
         hover:border-gray-500
-        focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813]
+        focus:border-accent focus:ring-1 focus:ring-accent
         transition-colors
         ${className}
       `}
@@ -146,7 +146,7 @@ export function GridDropdown<T = string>({
                   className={`
                     relative p-1.5 rounded border
                     ${option.value === selected
-                      ? 'border-[#fdb813] shadow-md'
+                      ? 'border-accent shadow-md'
                       : 'border-gray-200 shadow-sm hover:shadow-md'
                     }
                     ${option.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
@@ -162,7 +162,7 @@ export function GridDropdown<T = string>({
                     {option.label}
                   </span>
                   {option.value === selected && (
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#fdb813] rounded-sm border border-white" />
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-accent rounded-sm border border-white" />
                   )}
                 </button>
               ))}
@@ -179,7 +179,7 @@ export function GridDropdown<T = string>({
                   className={`
                     text-left px-3 py-1.5 rounded text-xs font-medium
                     ${option.value === selected
-                      ? 'bg-[#081429] text-white'
+                      ? 'bg-primary text-white'
                       : 'text-gray-700 hover:bg-gray-100'
                     }
                     ${option.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}

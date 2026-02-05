@@ -273,7 +273,6 @@ const IntegrationViewSettings: React.FC<IntegrationViewSettingsProps> = ({
                 const groupsData = groupsSnap.data();
                 const groups = groupsData.customGroups || groupsData.groups || [];
                 newSettings.customGroups = groups;
-                console.log("Fetched groups:", groups);
             } else {
                 console.warn("No customGroups document found in old DB");
             }

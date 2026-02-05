@@ -34,22 +34,22 @@ const UsersTab: React.FC<UsersTabProps> = ({
             <div className="flex gap-4 mb-4 border-b border-gray-200">
                 <button
                     onClick={() => setUserTab('approved')}
-                    className={`pb-2 px-1 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${userTab === 'approved' ? 'border-[#081429] text-[#081429]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                    className={`pb-2 px-1 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${userTab === 'approved' ? 'border-primary text-primary' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
                 >
                     정회원 (Members)
-                    <span className={`text-xxs px-1.5 py-0.5 rounded-sm ${userTab === 'approved' ? 'bg-[#081429] text-white' : 'bg-gray-100'}`}>
+                    <span className={`text-xxs px-1.5 py-0.5 rounded-sm ${userTab === 'approved' ? 'bg-primary text-white' : 'bg-gray-100'}`}>
                         {localUsers.filter(u => u.status === 'approved').length}
                     </span>
                 </button>
                 <button
                     onClick={() => setUserTab('pending')}
-                    className={`pb-2 px-1 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${userTab === 'pending' ? 'border-[#fdb813] text-[#081429]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                    className={`pb-2 px-1 text-sm font-bold border-b-2 transition-colors flex items-center gap-2 ${userTab === 'pending' ? 'border-accent text-primary' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
                 >
                     승인 대기 (Requests)
                     {localUsers.filter(u => u.status === 'pending').length > 0 && (
                         <span className="w-2 h-2 rounded-sm bg-red-500 animate-pulse" />
                     )}
-                    <span className={`text-xxs px-1.5 py-0.5 rounded-sm ${userTab === 'pending' ? 'bg-[#fdb813] text-[#081429]' : 'bg-gray-100'}`}>
+                    <span className={`text-xxs px-1.5 py-0.5 rounded-sm ${userTab === 'pending' ? 'bg-accent text-primary' : 'bg-gray-100'}`}>
                         {localUsers.filter(u => u.status === 'pending').length}
                     </span>
                 </button>
@@ -63,7 +63,7 @@ const UsersTab: React.FC<UsersTabProps> = ({
                         placeholder="이름/이메일 검색..."
                         value={userSearchTerm}
                         onChange={(e) => setUserSearchTerm(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-sm text-sm focus:border-[#fdb813] outline-none"
+                        className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-sm text-sm focus:border-accent outline-none"
                     />
                 </div>
                 <div className="text-xs text-gray-500 font-bold">
@@ -97,11 +97,11 @@ const UsersTab: React.FC<UsersTabProps> = ({
                         <div key={user.uid} className={`grid grid-cols-12 gap-4 p-3 border-b border-gray-100 last:border-0 hover:bg-yellow-50/30 items-center transition-colors`}>
                             {/* User Info */}
                             <div className="col-span-4 flex items-center gap-3 pl-2">
-                                <div className={`w-8 h-8 rounded-sm flex items-center justify-center shrink-0 ${user.role === 'master' ? 'bg-[#fdb813] text-[#081429]' : user.role === 'admin' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-400'} `}>
+                                <div className={`w-8 h-8 rounded-sm flex items-center justify-center shrink-0 ${user.role === 'master' ? 'bg-accent text-primary' : user.role === 'admin' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-400'} `}>
                                     {user.role === 'master' ? <ShieldCheck size={14} /> : user.role === 'admin' ? <Shield size={14} /> : <Users size={14} />}
                                 </div>
                                 <div className="min-w-0">
-                                    <div className="font-bold text-[#081429] truncate">{user.email}</div>
+                                    <div className="font-bold text-primary truncate">{user.email}</div>
                                 </div>
                             </div>
 
@@ -153,14 +153,14 @@ const UsersTab: React.FC<UsersTabProps> = ({
                                         setInitialPermissions(JSON.parse(JSON.stringify(user.departmentPermissions || {})));
                                         setSelectedUserForEdit(user.uid);
                                     }}
-                                    className="p-2 text-gray-400 hover:text-[#081429] hover:bg-gray-100 rounded-sm transition-colors flex items-center gap-1 text-xs font-bold"
+                                    className="p-2 text-gray-400 hover:text-primary hover:bg-gray-100 rounded-sm transition-colors flex items-center gap-1 text-xs font-bold"
                                 >
                                     <UserCog size={16} /> <span className="hidden xl:inline">설정</span>
                                 </button>
                                 {(isMaster || isAdmin) && (
                                     <button
                                         onClick={() => setTargetUserForEvents(user)}
-                                        className="p-2 text-gray-400 hover:text-[#081429] hover:bg-gray-100 rounded-sm transition-colors flex items-center gap-1 text-xs font-bold"
+                                        className="p-2 text-gray-400 hover:text-primary hover:bg-gray-100 rounded-sm transition-colors flex items-center gap-1 text-xs font-bold"
                                     >
                                         <Calendar size={16} /> <span className="hidden xl:inline">일정</span>
                                     </button>

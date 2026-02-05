@@ -78,7 +78,7 @@ const AddStudentForm: React.FC<AddStudentFormProps> = ({ onAdd }) => {
                 <button
                     onClick={handleSubmit}
                     disabled={!name.trim()}
-                    className="px-3 py-1.5 bg-[#fdb813] text-[#081429] rounded-sm font-bold text-xs hover:bg-[#e5a712] disabled:opacity-50 h-[34px] self-end"
+                    className="px-3 py-1.5 bg-accent text-primary rounded-sm font-bold text-xs hover:bg-[#e5a712] disabled:opacity-50 h-[34px] self-end"
                 >
                     추가
                 </button>

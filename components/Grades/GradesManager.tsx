@@ -450,7 +450,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-[#fdb813] mx-auto mb-2" />
+          <Loader2 className="w-8 h-8 animate-spin text-accent mx-auto mb-2" />
           <p className="text-gray-600">데이터 로딩 중...</p>
         </div>
       </div>
@@ -500,7 +500,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
                 placeholder="시험명 검색..."
-                className="bg-[#1e293b] border border-gray-700 rounded-sm pl-8 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813] outline-none w-48"
+                className="bg-[#1e293b] border border-gray-700 rounded-sm pl-8 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:border-accent focus:ring-1 focus:ring-accent outline-none w-48"
               />
             </div>
           </div>
@@ -508,7 +508,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
           {/* 우측: 결과 카운트, 버튼들 */}
           <div className="flex items-center gap-2">
             <span className="text-gray-400 text-xs">
-              총 <span className="text-[#fdb813] font-bold">{filteredExams.length}</span>개 시험
+              총 <span className="text-accent font-bold">{filteredExams.length}</span>개 시험
             </span>
 
             {/* 통계 갱신 버튼 */}
@@ -526,7 +526,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
             {canManageExams ? (
               <button
                 onClick={() => setIsCreatingExam(true)}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-sm bg-[#fdb813] text-[#081429] hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
+                className="flex items-center gap-1.5 px-3 py-1 rounded-sm bg-accent text-primary hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
               >
                 <Plus size={14} />
                 <span>시험 등록</span>
@@ -607,7 +607,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
             {/* 패널 헤더 */}
             <div className="sticky top-0 bg-white border-b border-gray-200 px-3 py-2 flex items-center justify-between z-10">
               <div>
-                <h3 className="text-sm font-bold text-[#081429]">{selectedStudentForDetail.name} 성적 프로필</h3>
+                <h3 className="text-sm font-bold text-primary">{selectedStudentForDetail.name} 성적 프로필</h3>
                 <p className="text-xs text-gray-500">조회 전용</p>
               </div>
               <button

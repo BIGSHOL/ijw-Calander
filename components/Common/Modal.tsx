@@ -24,7 +24,7 @@ export interface ModalProps {
  * 기준: StudentDetailModal (컴팩트 모드)
  * - Overlay: bg-black/50 z-[100]
  * - Modal: bg-white rounded-sm shadow-xl (미세 라운드 2px)
- * - Header: px-3 py-2, text-sm font-bold text-[#081429]
+ * - Header: px-3 py-2, text-sm font-bold text-primary
  * - Close: p-1 rounded-sm, X size={18}
  * - Colors: Primary=#fdb813, Dark=#081429
  */
@@ -140,18 +140,18 @@ const Modal: React.FC<ModalProps> = ({
         `}
         tabIndex={-1}
       >
-        {/* Header - StudentDetailModal 기준: px-3 py-2, text-sm font-bold text-[#081429] */}
+        {/* Header - StudentDetailModal 기준: px-3 py-2, text-sm font-bold text-primary */}
         {(title || showCloseButton) && (
           <div className={`flex items-center justify-between ${headerPadding} border-b border-gray-200`}>
             {title && (
-              <h2 id="modal-title" className={`${titleSize} font-bold text-[#081429]`}>
+              <h2 id="modal-title" className={`${titleSize} font-bold text-primary`}>
                 {title}
               </h2>
             )}
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="ml-auto p-1 rounded-sm text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-[#fdb813] focus:ring-offset-2"
+                className="ml-auto p-1 rounded-sm text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
                 aria-label="닫기"
               >
                 <X size={closeIconSize} />

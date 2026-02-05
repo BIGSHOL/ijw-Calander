@@ -3,6 +3,7 @@ import { doc, getDoc, writeBatch } from 'firebase/firestore';
 import { useQueryClient } from '@tanstack/react-query';
 import { db } from '../../../../firebaseConfig';
 import { TimetableClass, TimetableStudent } from '../../../../types';
+import { formatDateKey } from '../../../../utils/dateUtils';
 
 // 'common' = 모든 요일 등원, 특정 요일 문자열(예: '월', '목') = 해당 요일만 등원
 export type DragZone = 'common' | string;
@@ -261,7 +262,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                         const newEnrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${toClass.className}`);
 
                         const existingData = enrollmentDataMap.get(`${studentId}_${move.fromClassId}`);
-                        const today = new Date().toISOString().split('T')[0];
+                        const today = formatDateKey(new Date());
 
                         // 기존 enrollment 종료 처리 (문서가 존재하는 경우에만)
                         if (existingData) {
