@@ -337,7 +337,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="학생 검색..."
+                        placeholder={viewType === 'class' ? '수업명 검색...' : '학생 검색...'}
                         className="pl-7 pr-6 py-1 w-32 text-xs border border-gray-300 rounded-sm bg-white text-gray-700 placeholder-gray-400 outline-none focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813]"
                     />
                     {searchQuery && (

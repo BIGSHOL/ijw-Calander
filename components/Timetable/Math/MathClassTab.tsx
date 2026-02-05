@@ -43,6 +43,8 @@ interface MathClassTabProps {
     // 보기 설정 모달 제어 (TimetableHeader 버튼 연동)
     isViewSettingsOpen?: boolean;
     setIsViewSettingsOpen?: (isOpen: boolean) => void;
+    // 검색어 (TimetableHeader 검색 필드와 통합)
+    searchQuery?: string;
 }
 
 interface GroupedClass {
@@ -79,13 +81,13 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     currentWeekStart,
     isViewSettingsOpen: isViewSettingsOpenProp,
     setIsViewSettingsOpen: setIsViewSettingsOpenProp,
+    searchQuery = '',
 }) => {
     const { hasPermission } = usePermissions(currentUser);
     const isMaster = currentUser?.role === 'master';
     const canEditMath = hasPermission('timetable.math.edit') || isMaster;
     const canManageStudents = isMaster || hasPermission('students.edit');
 
-    const [searchTerm, setSearchTerm] = useState('');
     const [mode, setMode] = useState<'view' | 'edit'>(isSimulationMode ? 'edit' : 'view');
     const [hiddenClasses, setHiddenClasses] = useState<Set<string>>(new Set());
 
@@ -109,12 +111,12 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     const classNames = useMemo(() => mathClasses.map(c => c.name), [mathClasses]);
     const { classDataMap, isLoading: studentsLoading, refetch: refetchClassStudents } = useMathClassStudents(classNames, studentMap);
 
-    // Filter by search term
+    // Filter by search term (통합 검색: TimetableHeader의 searchQuery 사용)
     const filteredClasses = useMemo(() => {
         return mathClasses
-            .filter(c => !searchTerm || (c.name || '').toLowerCase().includes(searchTerm.toLowerCase()))
+            .filter(c => !searchQuery || (c.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
             .sort((a, b) => a.startPeriod - b.startPeriod || (a.name || '').localeCompare(b.name || '', 'ko'));
-    }, [mathClasses, searchTerm]);
+    }, [mathClasses, searchQuery]);
 
     // Group classes by start period OR Custom Groups
     const groupedClasses = useMemo(() => {
@@ -346,18 +348,6 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
 
                 {/* Right: 통합뷰 고유 버튼들 */}
                 <div className="flex items-center gap-2 ml-4">
-                    {/* Search */}
-                    <div className="relative">
-                        <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                            placeholder="수업명 검색..."
-                            className="pl-7 pr-6 py-1 w-32 text-xs border border-gray-300 rounded-sm bg-white text-gray-700 placeholder-gray-400 outline-none focus:border-[#fdb813] focus:ring-1 focus:ring-[#fdb813]"
-                        />
-                    </div>
-
                     {/* Hidden Count */}
                     {hiddenClasses.size > 0 && (
                         <span className="text-xs text-gray-400 font-medium px-2">
@@ -456,6 +446,31 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                 setShowStudents={(show) => updateSettings({
                     ...settings,
                     displayOptions: { ...settings.displayOptions!, showStudents: show }
+                })}
+                showClassName={settings.displayOptions?.showClassName}
+                setShowClassName={(show) => updateSettings({
+                    ...settings,
+                    displayOptions: { ...settings.displayOptions!, showClassName: show }
+                })}
+                showSchool={settings.displayOptions?.showSchool}
+                setShowSchool={(show) => updateSettings({
+                    ...settings,
+                    displayOptions: { ...settings.displayOptions!, showSchool: show }
+                })}
+                showGrade={settings.displayOptions?.showGrade}
+                setShowGrade={(show) => updateSettings({
+                    ...settings,
+                    displayOptions: { ...settings.displayOptions!, showGrade: show }
+                })}
+                showHoldStudents={settings.displayOptions?.showHoldStudents}
+                setShowHoldStudents={(show) => updateSettings({
+                    ...settings,
+                    displayOptions: { ...settings.displayOptions!, showHoldStudents: show }
+                })}
+                showWithdrawnStudents={settings.displayOptions?.showWithdrawnStudents}
+                setShowWithdrawnStudents={(show) => updateSettings({
+                    ...settings,
+                    displayOptions: { ...settings.displayOptions!, showWithdrawnStudents: show }
                 })}
                 showRoom={settings.displayOptions?.showRoom}
                 setShowRoom={(show) => updateSettings({

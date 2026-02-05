@@ -27,13 +27,24 @@ export interface MathDisplayOptions {
     showRoom: boolean;
     showTeacher: boolean;
     showSchedule: boolean;
+    // 공통 표시 옵션 (날짜/강사뷰와 동일)
+    showClassName?: boolean;
+    showSchool?: boolean;
+    showGrade?: boolean;
+    showHoldStudents?: boolean;
+    showWithdrawnStudents?: boolean;
 }
 
 const DEFAULT_DISPLAY_OPTIONS: MathDisplayOptions = {
     showStudents: true,
     showRoom: true,
     showTeacher: true,
-    showSchedule: true
+    showSchedule: true,
+    showClassName: true,
+    showSchool: true,
+    showGrade: true,
+    showHoldStudents: true,
+    showWithdrawnStudents: true
 };
 
 export const useMathSettings = () => {

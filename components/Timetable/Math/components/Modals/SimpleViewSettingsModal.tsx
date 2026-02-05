@@ -153,7 +153,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                         </>
                     )}
 
-                    {/* 표시 옵션 */}
+                    {/* 표시 옵션 - 공통 */}
                     <div className="space-y-3">
                         <div className="text-xs font-bold text-[#fdb813]">표시 옵션</div>
                         <div className="grid grid-cols-2 gap-2">
@@ -171,75 +171,78 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                                 </button>
                             )}
 
-                            {/* 날짜/강사뷰: 수업명, 학교, 학년 */}
-                            {viewType === 'date-teacher' && (
-                                <>
-                                    {showClassName !== undefined && setShowClassName && (
-                                        <button
-                                            onClick={() => setShowClassName(!showClassName)}
-                                            className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
-                                                showClassName
-                                                    ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
-                                                    : 'bg-gray-100 text-gray-400 border-gray-200'
-                                            }`}
-                                        >
-                                            수업명
-                                        </button>
-                                    )}
-                                    {showSchool !== undefined && setShowSchool && (
-                                        <button
-                                            onClick={() => setShowSchool(!showSchool)}
-                                            className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
-                                                showSchool
-                                                    ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
-                                                    : 'bg-gray-100 text-gray-400 border-gray-200'
-                                            }`}
-                                        >
-                                            학교
-                                        </button>
-                                    )}
-                                    {showGrade !== undefined && setShowGrade && (
-                                        <button
-                                            onClick={() => setShowGrade(!showGrade)}
-                                            className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
-                                                showGrade
-                                                    ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
-                                                    : 'bg-gray-100 text-gray-400 border-gray-200'
-                                            }`}
-                                        >
-                                            학년
-                                        </button>
-                                    )}
-                                    {showHoldStudents !== undefined && setShowHoldStudents && (
-                                        <button
-                                            onClick={() => setShowHoldStudents(!showHoldStudents)}
-                                            className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
-                                                showHoldStudents
-                                                    ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
-                                                    : 'bg-gray-100 text-gray-400 border-gray-200'
-                                            }`}
-                                        >
-                                            대기
-                                        </button>
-                                    )}
-                                    {showWithdrawnStudents !== undefined && setShowWithdrawnStudents && (
-                                        <button
-                                            onClick={() => setShowWithdrawnStudents(!showWithdrawnStudents)}
-                                            className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
-                                                showWithdrawnStudents
-                                                    ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
-                                                    : 'bg-gray-100 text-gray-400 border-gray-200'
-                                            }`}
-                                        >
-                                            퇴원
-                                        </button>
-                                    )}
-                                </>
+                            {/* 공통: 수업명, 학교, 학년, 대기, 퇴원 */}
+                            {showClassName !== undefined && setShowClassName && (
+                                <button
+                                    onClick={() => setShowClassName(!showClassName)}
+                                    className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
+                                        showClassName
+                                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                            : 'bg-gray-100 text-gray-400 border-gray-200'
+                                    }`}
+                                >
+                                    수업명
+                                </button>
                             )}
+                            {showSchool !== undefined && setShowSchool && (
+                                <button
+                                    onClick={() => setShowSchool(!showSchool)}
+                                    className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
+                                        showSchool
+                                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                            : 'bg-gray-100 text-gray-400 border-gray-200'
+                                    }`}
+                                >
+                                    학교
+                                </button>
+                            )}
+                            {showGrade !== undefined && setShowGrade && (
+                                <button
+                                    onClick={() => setShowGrade(!showGrade)}
+                                    className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
+                                        showGrade
+                                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                            : 'bg-gray-100 text-gray-400 border-gray-200'
+                                    }`}
+                                >
+                                    학년
+                                </button>
+                            )}
+                            {showHoldStudents !== undefined && setShowHoldStudents && (
+                                <button
+                                    onClick={() => setShowHoldStudents(!showHoldStudents)}
+                                    className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
+                                        showHoldStudents
+                                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                            : 'bg-gray-100 text-gray-400 border-gray-200'
+                                    }`}
+                                >
+                                    대기
+                                </button>
+                            )}
+                            {showWithdrawnStudents !== undefined && setShowWithdrawnStudents && (
+                                <button
+                                    onClick={() => setShowWithdrawnStudents(!showWithdrawnStudents)}
+                                    className={`py-2 px-3 rounded-sm text-xs font-bold transition-all border ${
+                                        showWithdrawnStudents
+                                            ? 'bg-[#fdb813] text-[#081429] border-[#fdb813]'
+                                            : 'bg-gray-100 text-gray-400 border-gray-200'
+                                    }`}
+                                >
+                                    퇴원
+                                </button>
+                            )}
+                        </div>
+                    </div>
 
-                            {/* 통합뷰: 강의실, 담임 정보, 스케줄 */}
-                            {viewType === 'integration' && (
-                                <>
+                    {/* 통합뷰 전용 옵션 */}
+                    {viewType === 'integration' && (
+                        <>
+                            <div className="w-full h-px bg-gray-200"></div>
+
+                            <div className="space-y-3">
+                                <div className="text-xs font-bold text-[#fdb813]">통합뷰 전용 옵션</div>
+                                <div className="grid grid-cols-2 gap-2">
                                     {showRoom !== undefined && setShowRoom && (
                                         <button
                                             onClick={() => setShowRoom(!showRoom)}
@@ -276,10 +279,10 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                                             스케줄
                                         </button>
                                     )}
-                                </>
-                            )}
-                        </div>
-                    </div>
+                                </div>
+                            </div>
+                        </>
+                    )}
 
                     {viewType === 'date-teacher' && <div className="w-full h-px bg-gray-200"></div>}
 
