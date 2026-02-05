@@ -276,6 +276,11 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                                                     <div className="text-xxs text-gray-600 mt-0.5">
                                                         {cls.teacher} · {cls.studentCount || 0}명
                                                     </div>
+                                                    {cls.schedule && cls.schedule.length > 0 && (
+                                                        <div className="text-xxs text-gray-500 mt-0.5 truncate">
+                                                            📅 {cls.schedule.join(', ')}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </label>
                                         ))}
