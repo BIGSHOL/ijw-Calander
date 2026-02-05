@@ -86,9 +86,10 @@ export const useCreateClass = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['students', true] });  // 시간표 studentMap 갱신
       queryClient.invalidateQueries({ queryKey: ['classDetail'] });
       queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 영어 시간표 실시간 반영
-      queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });     // 수학 시간표 실시간 반영
+      // mathClassStudents는 students 쿼리 무효화로 자동 갱신됨 (useMemo 의존성)
     },
   });
 };
@@ -212,9 +213,10 @@ export const useUpdateClass = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['students', true] });  // 시간표 studentMap 갱신
       queryClient.invalidateQueries({ queryKey: ['classDetail'] });
       queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 영어 시간표 실시간 반영
-      queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });     // 수학 시간표 실시간 반영
+      // mathClassStudents는 students 쿼리 무효화로 자동 갱신됨 (useMemo 의존성)
     },
   });
 };
@@ -278,9 +280,10 @@ export const useDeleteClass = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['students', true] });  // 시간표 studentMap 갱신
       queryClient.invalidateQueries({ queryKey: ['classDetail'] });
       queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 영어 시간표 실시간 반영
-      queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });     // 수학 시간표 실시간 반영
+      // mathClassStudents는 students 쿼리 무효화로 자동 갱신됨 (useMemo 의존성)
     },
   });
 };
@@ -374,7 +377,8 @@ export const useManageClassStudents = () => {
             teacher: teacher,  // 호환성을 위해 유지
             subject,
             schedule,
-            startDate,  // 수업 시작일 기록
+            startDate,  // 수업 시작일 기록 (레거시 호환)
+            enrollmentDate: startDate,  // 수업 시작일 (표준 필드)
             createdAt: new Date().toISOString(),
           };
           // 신규 학생에게 attendanceDays가 설정되어 있으면 추가 (수학용)
@@ -538,9 +542,10 @@ export const useManageClassStudents = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
       queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['students', true] });  // 시간표 studentMap 갱신
       queryClient.invalidateQueries({ queryKey: ['classDetail'] });
       queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 영어 시간표 실시간 반영
-      queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });     // 수학 시간표 실시간 반영
+      // mathClassStudents는 students 쿼리 무효화로 자동 갱신됨 (useMemo 의존성)
     },
   });
 };

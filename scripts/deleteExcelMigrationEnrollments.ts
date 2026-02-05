@@ -10,11 +10,11 @@ import * as path from 'path';
 // Firebase Admin 초기화
 const serviceAccountPath = path.resolve(__dirname, '../config/serviceAccountKey.json');
 
-initializeApp({
+const app = initializeApp({
     credential: cert(serviceAccountPath)
 });
 
-const db = getFirestore();
+const db = getFirestore(app, 'restore260202');
 
 async function deleteExcelMigrationEnrollments(dryRun: boolean = true) {
     console.log('='.repeat(60));

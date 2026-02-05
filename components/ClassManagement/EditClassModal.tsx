@@ -169,7 +169,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
         const parts = item.split(' ');
         if (parts.length >= 2) {
           const day = parts[0];
-          const periodId = parts[1];
+          const periodId = convertLegacyPeriodId(parts[1]); // 레거시 ID 변환
           slots.add(`${day}-${periodId}`);
         }
       });

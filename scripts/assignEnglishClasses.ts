@@ -16,10 +16,11 @@ import * as fs from 'fs';
 // Firebase Admin 초기화
 const serviceAccountPath = path.join(__dirname, '..', 'serviceAccountKey.json');
 
+let app;
 if (!getApps().length) {
     if (fs.existsSync(serviceAccountPath)) {
         const serviceAccount = require(serviceAccountPath);
-        initializeApp({
+        app = initializeApp({
             credential: cert(serviceAccount)
         });
     } else {
@@ -27,9 +28,11 @@ if (!getApps().length) {
         console.log('   Firebase Console > 프로젝트 설정 > 서비스 계정 > 비공개 키 생성');
         process.exit(1);
     }
+} else {
+    app = getApps()[0];
 }
 
-const db = getFirestore();
+const db = getFirestore(app, 'restore260202');
 
 // =============== 영어 레벨 매핑 ===============
 

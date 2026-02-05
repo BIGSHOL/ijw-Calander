@@ -6,7 +6,7 @@ import { useDeleteClass, useUpdateClass, UpdateClassData, useManageClassStudents
 import { useStudents } from '../../hooks/useStudents';
 import ClassStudentList from './ClassStudentList';
 import { SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
-import { formatScheduleCompact, SubjectForSchedule, ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS } from '../Timetable/constants';
+import { formatScheduleCompact, SubjectForSchedule, ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS, convertLegacyPeriodId } from '../Timetable/constants';
 import { useTeachers } from '../../hooks/useFirebaseQueries';
 import { useStaff } from '../../hooks/useStaff';
 import { useClassStats } from '../../hooks/useClassStats';
@@ -183,7 +183,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
       const slots = new Set<string>();
       classInfo.schedule.forEach(item => {
         const parts = item.split(' ');
-        if (parts.length >= 2) slots.add(`${parts[0]}-${parts[1]}`);
+        if (parts.length >= 2) slots.add(`${parts[0]}-${convertLegacyPeriodId(parts[1])}`);
       });
       setSelectedSlots(slots);
     }

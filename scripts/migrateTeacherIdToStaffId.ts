@@ -36,7 +36,7 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const db = getFirestore(app, 'restore260202');
 
 interface StaffMember {
   id: string;
