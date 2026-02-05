@@ -78,7 +78,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
             ? new Date(currentWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
             : today;
 
-        // 각 수업의 학생 목록에서 학생 ID 수집 (ClassCard 로직과 동일)
+        // 각 수업의 학생 목록에서 학생 ID 수집 (ClassCard 로직과 완전히 동일)
         filteredClasses.forEach(cls => {
             cls.studentList?.forEach(student => {
                 // 재원생: 퇴원일 없고 대기 아님
