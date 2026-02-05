@@ -7,7 +7,7 @@ import { useStudentFilters } from '../../hooks/useStudentFilters';
 import StudentList from './StudentList';
 import StudentDetail from './StudentDetail';
 import AddStudentModal from './AddStudentModal';
-import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft, Database, GitMerge, Trash2, AlertTriangle, Languages } from 'lucide-react';
+import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft, Database, GitMerge, Trash2, AlertTriangle, Languages, Download } from 'lucide-react';
 
 // Performance: bundle-dynamic-imports - Modal components lazy load (~80-100KB bundle reduction)
 const StudentMigrationModal = lazy(() => import('./StudentMigrationModal'));
@@ -123,6 +123,20 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
   // - 각 필터가 독립적으로 메모이제이션되어 불필요한 재계산 방지
   const filteredStudents = useStudentFilters(students, filters, sortBy, oldWithdrawnStudents);
 
+  // 필터링된 학생 이름 내보내기
+  const handleExportNames = () => {
+    const names = filteredStudents.map(s => s.name).filter(Boolean).join('\n');
+    const blob = new Blob([names], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `학생명단_${filteredStudents.length}명_${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -207,6 +221,13 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
                 <UserPlus className="w-3.5 h-3.5" />
               </button>
             )}
+            <button
+              onClick={handleExportNames}
+              className="p-1.5 text-emerald-400 hover:text-white hover:bg-white/10 rounded-sm transition-colors"
+              title="이름 내보내기"
+            >
+              <Download className="w-3.5 h-3.5" />
+            </button>
             <button
               onClick={async () => {
                 setIsRefreshing(true);
