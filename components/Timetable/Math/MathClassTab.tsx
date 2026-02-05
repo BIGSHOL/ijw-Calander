@@ -98,11 +98,6 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     const setMode = setModeProp ?? setModeLocal;
     const [hiddenClasses, setHiddenClasses] = useState<Set<string>>(new Set());
 
-    // 시뮬레이션 모드에서는 항상 수정모드
-    useEffect(() => {
-        if (isSimulationMode) setMode('edit');
-    }, [isSimulationMode, setMode]);
-
     // UI States
     const [isViewSettingsOpenLocal, setIsViewSettingsOpenLocal] = useState(false);
     const isViewSettingsOpen = isViewSettingsOpenProp ?? isViewSettingsOpenLocal;
@@ -115,7 +110,7 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     // 시뮬레이션 모드에서는 항상 수정모드
     useEffect(() => {
         if (isSimulationMode) setMode('edit');
-    }, [isSimulationMode]);
+    }, [isSimulationMode]); // setMode 제거 - 매 렌더링마다 새로 생성되어 불필요한 재실행 방지
 
     // --- Hook Integration ---
     const { settings, settingsLoading, updateSettings } = useMathSettings();
