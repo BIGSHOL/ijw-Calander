@@ -113,6 +113,60 @@ export interface ConsultationRecord {
 // 과목별 상담 상세 정보
 export interface SubjectConsultationDetail {
   levelTestScore?: string;          // 레벨테스트 점수
+  // 수학 레벨테스트 세분화 점수
+  calculationScore?: string;        // 계산력
+  comprehensionScore?: string;      // 이해력
+  reasoningScore?: string;          // 추론력
+  problemSolvingScore?: string;     // 문제해결력
+  myTotalScore?: string;            // 내 점수
+  averageScore?: string;            // 평균 점수
+  scoreGrade?: string;              // 등급
+
+  // 영어 레벨테스트 공통
+  englishTestType?: 'ai' | 'nelt' | 'eie';  // 시험 종류
+  engLevel?: string;                          // 공통 Lv
+
+  // AI 레벨테스트 종합
+  engAiGradeLevel?: string;         // 학년 수준
+  engAiArIndex?: string;            // AR 지수
+  engAiTopPercent?: string;         // 상위 %
+  // AI 세부 (나의 레벨 / 회원평균)
+  engAiWordMy?: string;
+  engAiWordAvg?: string;
+  engAiListenMy?: string;
+  engAiListenAvg?: string;
+  engAiReadMy?: string;
+  engAiReadAvg?: string;
+  engAiWriteMy?: string;
+  engAiWriteAvg?: string;
+
+  // NELT 종합
+  engNeltOverallLevel?: string;     // 종합 수준
+  engNeltRank?: string;             // 동학년 석차
+  // NELT 세부 (수준)
+  engNeltVocab?: string;            // 어휘
+  engNeltGrammar?: string;          // 문법
+  engNeltListening?: string;        // 듣기
+  engNeltReading?: string;          // 독해
+
+  // EiE 종합
+  engEieGradeLevel?: string;        // 학년 수준
+  engEieVocabLevel?: string;        // 어휘 수준
+  engEieRank?: string;              // 동학년순위
+  // EiE Level Chart
+  engEieCourse?: string;            // 과정
+  engEieChartLevel?: string;        // 레벨
+  engEieTextbook?: string;          // 교재
+  // EiE 세부 (나의 레벨 / 회원평균)
+  engEieVocabMy?: string;
+  engEieVocabAvg?: string;
+  engEieListenMy?: string;
+  engEieListenAvg?: string;
+  engEieReadMy?: string;
+  engEieReadAvg?: string;
+  engEieGrammarMy?: string;
+  engEieGrammarAvg?: string;
+
   academyHistory?: string;           // 학원 히스토리
   learningProgress?: string;         // 학습 진도
   examResults?: string;              // 학생 시험 성적

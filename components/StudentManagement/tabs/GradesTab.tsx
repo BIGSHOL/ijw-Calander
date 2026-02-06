@@ -211,7 +211,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
         // 5. 레벨테스트 기반 인사이트
         if (levelTests.length > 0) {
             const latestTest = levelTests[0];
-            if (latestTest.percentage < 60) {
+            if (latestTest.percentage != null && latestTest.percentage < 60) {
                 result.push({
                     type: 'warning',
                     message: `최근 레벨테스트 점수가 ${latestTest.percentage.toFixed(0)}%입니다. 기초 보강이 필요합니다.`,
@@ -312,45 +312,91 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                             <p className="text-xs text-gray-400 text-center py-2">등록된 레벨테스트가 없습니다</p>
                         ) : (
                             <div className="space-y-1.5">
-                                {levelTests.slice(0, 3).map((test) => (
-                                    <div
-                                        key={test.id}
-                                        className="flex items-center gap-2 p-1.5 bg-gray-50 rounded-sm hover:bg-accent/10 transition-colors group"
-                                    >
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-1.5">
-                                                <span className={`px-1.5 py-0.5 rounded-sm text-micro font-medium ${
-                                                    test.subject === 'math'
-                                                        ? 'bg-blue-100 text-blue-700'
-                                                        : 'bg-purple-100 text-purple-700'
-                                                }`}>
-                                                    {test.subject === 'math' ? '수학' : '영어'}
-                                                </span>
-                                                <span className="text-xxs text-gray-500">{test.testDate}</span>
+                                {levelTests.slice(0, 5).map((test) => {
+                                    const isMath = test.subject === 'math';
+                                    const hasMathDetail = isMath && (test.calculationScore || test.myTotalScore);
+                                    const hasEngDetail = !isMath && test.englishTestType;
+                                    const engTestLabel = test.englishTestType === 'ai' ? 'AI' : test.englishTestType === 'nelt' ? 'NELT' : test.englishTestType === 'eie' ? 'EiE' : '';
+
+                                    return (
+                                        <div key={test.id} className="p-1.5 bg-gray-50 rounded-sm hover:bg-accent/10 transition-colors group">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className={`px-1.5 py-0.5 rounded-sm text-micro font-medium ${isMath ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                        {isMath ? '수학' : '영어'}
+                                                    </span>
+                                                    {hasEngDetail && (
+                                                        <span className="px-1 py-0.5 rounded-sm text-micro font-medium bg-indigo-100 text-indigo-700">{engTestLabel}</span>
+                                                    )}
+                                                    <span className="text-xxs text-gray-500">{test.testDate}</span>
+                                                </div>
+                                                {!readOnly && (
+                                                    <button
+                                                        onClick={() => { if (confirm('이 레벨테스트를 삭제하시겠습니까?')) deleteLevelTest.mutateAsync({ id: test.id, studentId: student.id }); }}
+                                                        className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-all"
+                                                    >
+                                                        <Trash2 size={12} />
+                                                    </button>
+                                                )}
                                             </div>
-                                            <div className="flex items-center gap-2 mt-0.5">
-                                                <span className="text-xs font-bold text-primary">
-                                                    {test.percentage.toFixed(0)}%
-                                                </span>
-                                                <span className="text-xxs text-indigo-600 font-medium">
-                                                    추천: {test.recommendedLevel}
-                                                </span>
-                                            </div>
+                                            {/* 수학 세분화 표시 */}
+                                            {hasMathDetail && (
+                                                <div className="mt-1 border border-emerald-100 rounded overflow-hidden text-xxs">
+                                                    <div className="grid grid-cols-4 bg-emerald-50/50">
+                                                        {[
+                                                            { label: '계산', val: test.calculationScore },
+                                                            { label: '이해', val: test.comprehensionScore },
+                                                            { label: '추론', val: test.reasoningScore },
+                                                            { label: '문제해결', val: test.problemSolvingScore },
+                                                        ].map((item, i) => (
+                                                            <div key={item.label} className={`px-1 py-0.5 text-center ${i < 3 ? 'border-r border-emerald-100' : ''}`}>
+                                                                <div className="text-emerald-600 font-medium">{item.label}</div>
+                                                                <div className="font-bold text-gray-800">{item.val || '-'}</div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="grid grid-cols-3 border-t border-emerald-100">
+                                                        <div className="px-1 py-0.5 text-center"><span className="text-slate-500">내점수</span> <span className="font-bold">{test.myTotalScore || '-'}</span></div>
+                                                        <div className="px-1 py-0.5 text-center border-x border-emerald-100"><span className="text-slate-500">평균</span> <span className="font-bold">{test.averageScore || '-'}</span></div>
+                                                        <div className="px-1 py-0.5 text-center"><span className="text-slate-500">등급</span> <span className="font-bold">{test.scoreGrade || '-'}</span></div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {/* 영어 세분화 표시 */}
+                                            {hasEngDetail && (
+                                                <div className="mt-1 text-xxs">
+                                                    {test.engLevel && <span className="text-xs font-bold text-blue-700 mr-2">Lv {test.engLevel}</span>}
+                                                    {test.englishTestType === 'ai' && (
+                                                        <span className="text-gray-600">
+                                                            {test.engAiGradeLevel && `${test.engAiGradeLevel}수준`}
+                                                            {test.engAiArIndex && ` AR:${test.engAiArIndex}`}
+                                                            {test.engAiTopPercent && ` 상위${test.engAiTopPercent}`}
+                                                        </span>
+                                                    )}
+                                                    {test.englishTestType === 'nelt' && (
+                                                        <span className="text-gray-600">
+                                                            {test.engNeltOverallLevel && `${test.engNeltOverallLevel}`}
+                                                            {test.engNeltRank && ` 석차:${test.engNeltRank}`}
+                                                        </span>
+                                                    )}
+                                                    {test.englishTestType === 'eie' && (
+                                                        <span className="text-gray-600">
+                                                            {test.engEieGradeLevel && `${test.engEieGradeLevel}수준`}
+                                                            {test.engEieRank && ` 순위:${test.engEieRank}`}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
+                                            {/* 기존 호환 (percentage 기반) */}
+                                            {!hasMathDetail && !hasEngDetail && test.percentage != null && (
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <span className="text-xs font-bold text-primary">{test.percentage.toFixed(0)}%</span>
+                                                    {test.recommendedLevel && <span className="text-xxs text-indigo-600 font-medium">추천: {test.recommendedLevel}</span>}
+                                                </div>
+                                            )}
                                         </div>
-                                        {!readOnly && (
-                                            <button
-                                                onClick={() => {
-                                                    if (confirm('이 레벨테스트를 삭제하시겠습니까?')) {
-                                                        deleteLevelTest.mutateAsync({ id: test.id, studentId: student.id });
-                                                    }
-                                                }}
-                                                className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-all"
-                                            >
-                                                <Trash2 size={12} />
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
@@ -948,6 +994,7 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                     studentId={student.id}
                     studentName={student.name}
                     onAdd={async (data: any) => { await addLevelTest.mutateAsync(data); }}
+                    currentUser={currentUser}
                 />
             )}
 

@@ -31,6 +31,33 @@ const COL_GRADE_COMMENTS = 'grade_comments';
 // ============ 레벨테스트 Hooks ============
 
 /**
+ * 전체 레벨테스트 목록 조회 (과목 필터 지원)
+ */
+export function useAllLevelTests(subjectFilter?: 'all' | 'math' | 'english') {
+  return useQuery({
+    queryKey: ['level_tests', 'all', subjectFilter],
+    queryFn: async () => {
+      let q;
+      if (subjectFilter && subjectFilter !== 'all') {
+        q = query(
+          collection(db, COL_LEVEL_TESTS),
+          where('subject', '==', subjectFilter),
+          orderBy('testDate', 'desc')
+        );
+      } else {
+        q = query(
+          collection(db, COL_LEVEL_TESTS),
+          orderBy('testDate', 'desc')
+        );
+      }
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as Omit<LevelTest, 'id'>) })) as LevelTest[];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+/**
  * 학생의 레벨테스트 목록 조회
  */
 export function useLevelTests(studentId: string | undefined) {

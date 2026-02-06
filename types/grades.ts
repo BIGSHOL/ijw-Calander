@@ -188,24 +188,74 @@ export interface LevelTest {
   subject: 'math' | 'english';
   testType: LevelTestType;       // 배치/승급/진단
 
-  score: number;
-  maxScore: number;
-  percentage: number;
+  score?: number;                // 기존 호환 (선택)
+  maxScore?: number;
+  percentage?: number;
 
-  // 영역별 세부 점수 (선택)
+  // 영역별 세부 점수 (기존 호환)
   sections?: {
-    name: string;                // '어휘', '문법', '독해', '연산' 등
+    name: string;
     score: number;
     maxScore: number;
   }[];
 
   // 레벨 판정
-  recommendedLevel: string;      // 'LE', 'RTT', '최상급', '중급' 등
-  recommendedClass?: string;     // 추천 반
+  recommendedLevel?: string;
+  recommendedClass?: string;
+
+  // === 수학 레벨테스트 세분화 ===
+  calculationScore?: string;     // 계산력
+  comprehensionScore?: string;   // 이해력
+  reasoningScore?: string;       // 추론력
+  problemSolvingScore?: string;  // 문제해결력
+  myTotalScore?: string;         // 내 점수
+  averageScore?: string;         // 평균 점수
+  scoreGrade?: string;           // 등급
+
+  // === 영어 레벨테스트 ===
+  englishTestType?: 'ai' | 'nelt' | 'eie';
+  engLevel?: string;
+
+  // AI 레벨테스트
+  engAiGradeLevel?: string;
+  engAiArIndex?: string;
+  engAiTopPercent?: string;
+  engAiWordMy?: string;
+  engAiWordAvg?: string;
+  engAiListenMy?: string;
+  engAiListenAvg?: string;
+  engAiReadMy?: string;
+  engAiReadAvg?: string;
+  engAiWriteMy?: string;
+  engAiWriteAvg?: string;
+
+  // NELT Report
+  engNeltOverallLevel?: string;
+  engNeltRank?: string;
+  engNeltVocab?: string;
+  engNeltGrammar?: string;
+  engNeltListening?: string;
+  engNeltReading?: string;
+
+  // EiE PTR
+  engEieGradeLevel?: string;
+  engEieVocabLevel?: string;
+  engEieRank?: string;
+  engEieCourse?: string;
+  engEieChartLevel?: string;
+  engEieTextbook?: string;
+  engEieVocabMy?: string;
+  engEieVocabAvg?: string;
+  engEieListenMy?: string;
+  engEieListenAvg?: string;
+  engEieReadMy?: string;
+  engEieReadAvg?: string;
+  engEieGrammarMy?: string;
+  engEieGrammarAvg?: string;
 
   // 강사 평가
-  strengths?: string;            // 강점
-  weaknesses?: string;           // 보완점
+  strengths?: string;
+  weaknesses?: string;
 
   // 메타데이터
   evaluatorId: string;

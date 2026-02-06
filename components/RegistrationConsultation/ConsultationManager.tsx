@@ -269,62 +269,92 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
             // 2-1. 레벨테스트 자동 생성 (있는 경우)
             const levelTestPromises: Promise<any>[] = [];
 
-            // 수학 레벨테스트 생성
-            if (consultation.mathConsultation?.levelTestScore) {
-                const score = parseLevelTestScore(consultation.mathConsultation.levelTestScore);
-                if (score !== null) {
-                    const maxScore = 100; // 기본 만점
-                    const percentage = (score / maxScore) * 100;
-                    const recommendedLevel = determineLevel('math', percentage);
-
-                    const mathLevelTest: Omit<LevelTest, 'id'> = {
-                        studentId,
-                        studentName: consultation.studentName,
-                        testDate: consultation.consultationDate,
-                        subject: 'math',
-                        testType: 'placement', // 배치 테스트
-                        score,
-                        maxScore,
-                        percentage,
-                        recommendedLevel,
-                        recommendedClass: consultation.mathConsultation.recommendedClass,
-                        evaluatorId: userProfile?.uid || '',
-                        evaluatorName: userProfile?.name || consultation.counselor || '상담자',
-                        createdAt: Date.now(),
-                        updatedAt: Date.now(),
-                    };
-
-                    levelTestPromises.push(addLevelTest.mutateAsync(mathLevelTest));
+            // 수학 레벨테스트 생성 (세분화 필드 또는 기존 levelTestScore)
+            const mc = consultation.mathConsultation;
+            const hasMathDetail = mc && (mc.calculationScore || mc.myTotalScore || mc.scoreGrade);
+            const hasMathLegacy = mc?.levelTestScore;
+            if (hasMathDetail || hasMathLegacy) {
+                const mathLevelTest: any = {
+                    studentId,
+                    studentName: consultation.studentName,
+                    testDate: consultation.consultationDate,
+                    subject: 'math',
+                    testType: 'placement',
+                    recommendedClass: mc?.recommendedClass,
+                    evaluatorId: userProfile?.uid || '',
+                    evaluatorName: userProfile?.name || consultation.counselor || '상담자',
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                };
+                if (hasMathDetail) {
+                    // 새 세분화 필드
+                    Object.assign(mathLevelTest, {
+                        calculationScore: mc?.calculationScore,
+                        comprehensionScore: mc?.comprehensionScore,
+                        reasoningScore: mc?.reasoningScore,
+                        problemSolvingScore: mc?.problemSolvingScore,
+                        myTotalScore: mc?.myTotalScore,
+                        averageScore: mc?.averageScore,
+                        scoreGrade: mc?.scoreGrade,
+                    });
+                } else {
+                    // 기존 호환
+                    const score = parseLevelTestScore(mc!.levelTestScore);
+                    if (score !== null) {
+                        mathLevelTest.score = score;
+                        mathLevelTest.maxScore = 100;
+                        mathLevelTest.percentage = score;
+                        mathLevelTest.recommendedLevel = determineLevel('math', score);
+                    }
                 }
+                // undefined 제거
+                const cleaned = Object.fromEntries(Object.entries(mathLevelTest).filter(([, v]) => v != null));
+                levelTestPromises.push(addLevelTest.mutateAsync(cleaned as any));
             }
 
-            // 영어 레벨테스트 생성
-            if (consultation.englishConsultation?.levelTestScore) {
-                const score = parseLevelTestScore(consultation.englishConsultation.levelTestScore);
-                if (score !== null) {
-                    const maxScore = 100;
-                    const percentage = (score / maxScore) * 100;
-                    const recommendedLevel = determineLevel('english', percentage);
-
-                    const englishLevelTest: Omit<LevelTest, 'id'> = {
-                        studentId,
-                        studentName: consultation.studentName,
-                        testDate: consultation.consultationDate,
-                        subject: 'english',
-                        testType: 'placement',
-                        score,
-                        maxScore,
-                        percentage,
-                        recommendedLevel,
-                        recommendedClass: consultation.englishConsultation.recommendedClass,
-                        evaluatorId: userProfile?.uid || '',
-                        evaluatorName: userProfile?.name || consultation.counselor || '상담자',
-                        createdAt: Date.now(),
-                        updatedAt: Date.now(),
-                    };
-
-                    levelTestPromises.push(addLevelTest.mutateAsync(englishLevelTest));
+            // 영어 레벨테스트 생성 (세분화 필드 또는 기존 levelTestScore)
+            const ec = consultation.englishConsultation;
+            const hasEngDetail = ec && ec.englishTestType;
+            const hasEngLegacy = ec?.levelTestScore;
+            if (hasEngDetail || hasEngLegacy) {
+                const englishLevelTest: any = {
+                    studentId,
+                    studentName: consultation.studentName,
+                    testDate: consultation.consultationDate,
+                    subject: 'english',
+                    testType: 'placement',
+                    recommendedClass: ec?.recommendedClass,
+                    evaluatorId: userProfile?.uid || '',
+                    evaluatorName: userProfile?.name || consultation.counselor || '상담자',
+                    createdAt: Date.now(),
+                    updatedAt: Date.now(),
+                };
+                if (hasEngDetail) {
+                    // 새 세분화 필드 전체 복사
+                    const engFields = ['englishTestType', 'engLevel',
+                        'engAiGradeLevel', 'engAiArIndex', 'engAiTopPercent',
+                        'engAiWordMy', 'engAiWordAvg', 'engAiListenMy', 'engAiListenAvg',
+                        'engAiReadMy', 'engAiReadAvg', 'engAiWriteMy', 'engAiWriteAvg',
+                        'engNeltOverallLevel', 'engNeltRank', 'engNeltVocab', 'engNeltGrammar', 'engNeltListening', 'engNeltReading',
+                        'engEieGradeLevel', 'engEieVocabLevel', 'engEieRank',
+                        'engEieCourse', 'engEieChartLevel', 'engEieTextbook',
+                        'engEieVocabMy', 'engEieVocabAvg', 'engEieListenMy', 'engEieListenAvg',
+                        'engEieReadMy', 'engEieReadAvg', 'engEieGrammarMy', 'engEieGrammarAvg',
+                    ] as const;
+                    for (const key of engFields) {
+                        if ((ec as any)[key]) englishLevelTest[key] = (ec as any)[key];
+                    }
+                } else {
+                    const score = parseLevelTestScore(ec!.levelTestScore);
+                    if (score !== null) {
+                        englishLevelTest.score = score;
+                        englishLevelTest.maxScore = 100;
+                        englishLevelTest.percentage = score;
+                        englishLevelTest.recommendedLevel = determineLevel('english', score);
+                    }
                 }
+                const cleaned = Object.fromEntries(Object.entries(englishLevelTest).filter(([, v]) => v != null));
+                levelTestPromises.push(addLevelTest.mutateAsync(cleaned as any));
             }
 
             // 레벨테스트 저장 (비동기 병렬 처리)
@@ -352,8 +382,8 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
             // 레벨테스트 자동 생성 안내
             if (levelTestPromises.length > 0) {
                 const subjects: string[] = [];
-                if (consultation.mathConsultation?.levelTestScore) subjects.push('수학');
-                if (consultation.englishConsultation?.levelTestScore) subjects.push('영어');
+                if (hasMathDetail || hasMathLegacy) subjects.push('수학');
+                if (hasEngDetail || hasEngLegacy) subjects.push('영어');
                 successMsg += `\n\n[레벨테스트 자동 생성]\n과목: ${subjects.join(', ')}\n→ 성적 탭에서 확인 가능`;
             }
 
