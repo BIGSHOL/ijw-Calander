@@ -1,0 +1,1613 @@
+{
+  "version": "2.7",
+  "children": [
+    {
+      "type": "frame",
+      "id": "fpcdg",
+      "x": 0,
+      "y": 0,
+      "name": "입학상담카드 - 모바일",
+      "clip": true,
+      "width": 390,
+      "fill": "$white",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "OBG5Y",
+          "name": "Header",
+          "width": "fill_container",
+          "fill": "$navy",
+          "layout": "vertical",
+          "gap": 8,
+          "padding": [
+            32,
+            24,
+            24,
+            24
+          ],
+          "children": [
+            {
+              "type": "text",
+              "id": "7zQP2",
+              "name": "logo",
+              "fill": "$yellow",
+              "content": "IJW 인재원",
+              "fontFamily": "Pretendard",
+              "fontSize": 13,
+              "fontWeight": "600"
+            },
+            {
+              "type": "text",
+              "id": "zkHai",
+              "name": "title",
+              "fill": "$white",
+              "content": "입학상담카드",
+              "fontFamily": "Pretendard",
+              "fontSize": 28,
+              "fontWeight": "800"
+            },
+            {
+              "type": "text",
+              "id": "q7Nh1",
+              "name": "subtitle",
+              "fill": "#9CA3AF",
+              "content": "상담 전 아래 정보를 입력해 주세요",
+              "fontFamily": "Pretendard",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "kEdPG",
+          "name": "학생 정보 섹션",
+          "width": "fill_container",
+          "layout": "vertical",
+          "children": [
+            {
+              "id": "dZb3V",
+              "type": "ref",
+              "ref": "HdJEC",
+              "name": "sec1Header",
+              "descendants": {
+                "TiYj2": {
+                  "content": "학생 정보"
+                }
+              }
+            },
+            {
+              "type": "frame",
+              "id": "kD2el",
+              "name": "학생정보 본문",
+              "width": "fill_container",
+              "fill": "$white",
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "4X1Fe",
+                  "name": "이름+성별+혈액형",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "id": "MLaNJ",
+                      "type": "ref",
+                      "ref": "LlFEz",
+                      "name": "nameField",
+                      "descendants": {
+                        "DVHW1": {
+                          "content": "학생이름 *"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "FwiEV",
+                      "name": "성별",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "65vyF",
+                          "name": "genderLabel",
+                          "fill": "$text-primary",
+                          "content": "성별 *",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "e7u3x",
+                          "name": "genderDrop",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "$white",
+                          "cornerRadius": 8,
+                          "stroke": {
+                            "align": "inside",
+                            "thickness": 1,
+                            "fill": "$gray-border"
+                          },
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "s8kGg",
+                              "name": "genderDropText",
+                              "fill": "#9CA3AF",
+                              "content": "성별 선택",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "KWBLx",
+                              "name": "genderDropIcon",
+                              "fill": "#9CA3AF",
+                              "content": "▼",
+                              "fontFamily": "Inter",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "qNlAu",
+                      "name": "혈액형",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Wa5hK",
+                          "name": "bloodLabel",
+                          "fill": "$text-primary",
+                          "content": "혈액형 *",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "NLCEC",
+                          "name": "bloodBox",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "$white",
+                          "cornerRadius": 8,
+                          "stroke": {
+                            "align": "inside",
+                            "thickness": 1,
+                            "fill": "$gray-border"
+                          },
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "C8pbs",
+                              "name": "bloodPlaceholder",
+                              "fill": "#9CA3AF",
+                              "content": "선택",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "63T8m",
+                              "name": "bloodChevron",
+                              "fill": "#9CA3AF",
+                              "content": "▼",
+                              "fontFamily": "Inter",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "oBnpg",
+                  "name": "연락처+희망진로",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "id": "m7MW7",
+                      "type": "ref",
+                      "ref": "LlFEz",
+                      "name": "phoneField",
+                      "descendants": {
+                        "DVHW1": {
+                          "content": "학생 연락처"
+                        },
+                        "RLZtD": {
+                          "content": "010-0000-0000"
+                        }
+                      }
+                    },
+                    {
+                      "id": "11ego",
+                      "type": "ref",
+                      "ref": "LlFEz",
+                      "name": "careerField",
+                      "descendants": {
+                        "DVHW1": {
+                          "content": "희망진로"
+                        },
+                        "RLZtD": {
+                          "content": "의사, 교사 등"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "wK3c5",
+                  "name": "학교구분+학년",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "WGXwK",
+                      "name": "schoolCol",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "v0in1",
+                          "name": "schoolLabel",
+                          "fill": "$text-primary",
+                          "content": "학교 구분 *",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "CkFMp",
+                          "name": "schoolDrop",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "$white",
+                          "cornerRadius": 8,
+                          "stroke": {
+                            "align": "inside",
+                            "thickness": 1,
+                            "fill": "$gray-border"
+                          },
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "y4brI",
+                              "name": "schoolDropT",
+                              "fill": "#9CA3AF",
+                              "content": "선택",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "uEBTc",
+                              "name": "schoolDropI",
+                              "fill": "#9CA3AF",
+                              "content": "▼",
+                              "fontFamily": "Inter",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "rFMnE",
+                      "name": "gradeCol",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "AcxbE",
+                          "name": "gradeLabel",
+                          "fill": "$text-primary",
+                          "content": "학년 *",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "aB3SN",
+                          "name": "gradeDrop",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "$white",
+                          "cornerRadius": 8,
+                          "stroke": {
+                            "align": "inside",
+                            "thickness": 1,
+                            "fill": "$gray-border"
+                          },
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "6I6at",
+                              "name": "gradeDropT",
+                              "fill": "#9CA3AF",
+                              "content": "선택",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "bJpwj",
+                              "name": "gradeDropI",
+                              "fill": "#9CA3AF",
+                              "content": "▼",
+                              "fontFamily": "Inter",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "CKps7",
+                  "type": "ref",
+                  "ref": "LlFEz",
+                  "name": "schoolNameField",
+                  "descendants": {
+                    "DVHW1": {
+                      "content": "학교 이름 (ex. 경명여고, 칠성고) *"
+                    },
+                    "RLZtD": {
+                      "content": "학교 이름 입력"
+                    }
+                  }
+                },
+                {
+                  "type": "text",
+                  "id": "V2GRy",
+                  "name": "subjectLabel",
+                  "fill": "$text-primary",
+                  "content": "상담 희망 과목 *",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "cdbcg",
+                  "name": "과목 옵션",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "id": "9HSW6",
+                      "type": "ref",
+                      "ref": "lsZhD",
+                      "name": "subA",
+                      "descendants": {
+                        "GNayL": {
+                          "content": "A"
+                        },
+                        "kzeEv": {
+                          "content": "수학"
+                        }
+                      }
+                    },
+                    {
+                      "id": "ro7Qp",
+                      "type": "ref",
+                      "ref": "lsZhD",
+                      "name": "subB",
+                      "descendants": {
+                        "GNayL": {
+                          "content": "B"
+                        },
+                        "kzeEv": {
+                          "content": "영어"
+                        }
+                      }
+                    },
+                    {
+                      "id": "ptjuA",
+                      "type": "ref",
+                      "ref": "lsZhD",
+                      "name": "subC",
+                      "descendants": {
+                        "GNayL": {
+                          "content": "C"
+                        },
+                        "kzeEv": {
+                          "content": "국어"
+                        }
+                      }
+                    },
+                    {
+                      "id": "BxLw6",
+                      "type": "ref",
+                      "ref": "lsZhD",
+                      "name": "subD",
+                      "descendants": {
+                        "GNayL": {
+                          "content": "D"
+                        },
+                        "kzeEv": {
+                          "content": "과학"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "id": "9Zm6Y",
+                  "name": "siblingLabel",
+                  "fill": "$text-primary",
+                  "content": "형제자매 *",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "alK7H",
+                  "name": "형제자매 옵션",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "UlAOi",
+                      "name": "sibYes",
+                      "width": "fill_container",
+                      "height": 44,
+                      "gap": 10,
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "t4UON",
+                          "name": "sibYesCheck",
+                          "width": 20,
+                          "height": 20,
+                          "cornerRadius": 4,
+                          "stroke": {
+                            "align": "inside",
+                            "thickness": 2,
+                            "fill": "$gray-border"
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "1t0WF",
+                          "name": "sibYesText",
+                          "fill": "$text-primary",
+                          "content": "있음",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "7kzNz",
+                      "name": "sibNo",
+                      "width": "fill_container",
+                      "height": 44,
+                      "gap": 10,
+                      "padding": [
+                        0,
+                        12
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "Ah5wG",
+                          "name": "sibNoCheck",
+                          "width": 20,
+                          "height": 20,
+                          "cornerRadius": 4,
+                          "stroke": {
+                            "align": "inside",
+                            "thickness": 2,
+                            "fill": "$gray-border"
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "sleJT",
+                          "name": "sibNoText",
+                          "fill": "$text-primary",
+                          "content": "없음(외동)",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "qUXCc",
+          "name": "학부모 정보 섹션",
+          "width": "fill_container",
+          "layout": "vertical",
+          "children": [
+            {
+              "id": "QnuoF",
+              "type": "ref",
+              "ref": "HdJEC",
+              "fill": "$orange",
+              "name": "sec2Header",
+              "descendants": {
+                "TiYj2": {
+                  "content": "학부모님 정보"
+                }
+              }
+            },
+            {
+              "type": "frame",
+              "id": "VUqCF",
+              "name": "학부모정보 본문",
+              "width": "fill_container",
+              "fill": "$white",
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "ai1CV",
+                  "name": "성함+관계",
+                  "width": "fill_container",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "id": "jA8wv",
+                      "type": "ref",
+                      "ref": "LlFEz",
+                      "name": "parentNameField",
+                      "descendants": {
+                        "DVHW1": {
+                          "content": "부모님 성함 *"
+                        },
+                        "RLZtD": {
+                          "content": "이름 입력"
+                        }
+                      }
+                    },
+                    {
+                      "type": "frame",
+                      "id": "sgDGT",
+                      "name": "관계",
+                      "width": "fill_container",
+                      "layout": "vertical",
+                      "gap": 6,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "NU7NW",
+                          "name": "relationLabel",
+                          "fill": "$text-primary",
+                          "content": "학생과의 관계 *",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "QetAD",
+                          "name": "relDrop",
+                          "width": "fill_container",
+                          "height": 44,
+                          "fill": "$white",
+                          "cornerRadius": 8,
+                          "stroke": {
+                            "align": "inside",
+                            "thickness": 1,
+                            "fill": "$gray-border"
+                          },
+                          "padding": [
+                            0,
+                            12
+                          ],
+                          "justifyContent": "space_between",
+                          "alignItems": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "gsaJm",
+                              "name": "relDropText",
+                              "fill": "#9CA3AF",
+                              "content": "관계 선택",
+                              "fontFamily": "Inter",
+                              "fontSize": 14,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "text",
+                              "id": "cGxV0",
+                              "name": "relDropIcon",
+                              "fill": "#9CA3AF",
+                              "content": "▼",
+                              "fontFamily": "Inter",
+                              "fontSize": 10,
+                              "fontWeight": "normal"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "epmxx",
+                  "type": "ref",
+                  "ref": "LlFEz",
+                  "name": "parentPhoneField",
+                  "descendants": {
+                    "DVHW1": {
+                      "content": "부모님 연락처 *"
+                    },
+                    "RLZtD": {
+                      "content": "010-0000-0000"
+                    }
+                  }
+                },
+                {
+                  "type": "text",
+                  "id": "UPQUD",
+                  "name": "consultPathLabel",
+                  "fill": "$text-primary",
+                  "content": "상담경로 *",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "frame",
+                  "id": "fHXlg",
+                  "name": "pathDrop",
+                  "width": "fill_container",
+                  "height": 44,
+                  "fill": "$white",
+                  "cornerRadius": 8,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1,
+                    "fill": "$gray-border"
+                  },
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "gR6Ef",
+                      "name": "pathDropText",
+                      "fill": "#9CA3AF",
+                      "content": "상담경로 선택",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "CVFsO",
+                      "name": "pathDropIcon",
+                      "fill": "#9CA3AF",
+                      "content": "▼",
+                      "fontFamily": "Inter",
+                      "fontSize": 10,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "id": "o5DIm",
+                  "type": "ref",
+                  "ref": "LlFEz",
+                  "name": "addressField",
+                  "descendants": {
+                    "DVHW1": {
+                      "content": "집주소 (동 또는 아파트 이름) *"
+                    },
+                    "RLZtD": {
+                      "content": "ex. 침산동, 센트럴자이"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Arikf",
+          "name": "셔틀버스 섹션",
+          "width": "fill_container",
+          "layout": "vertical",
+          "children": [
+            {
+              "id": "V0ykW",
+              "type": "ref",
+              "ref": "HdJEC",
+              "fill": "$red",
+              "name": "sec3Header",
+              "descendants": {
+                "TiYj2": {
+                  "content": "셔틀버스 신청",
+                  "fill": "$white"
+                }
+              }
+            },
+            {
+              "type": "frame",
+              "id": "KA3I7",
+              "name": "셔틀버스 본문",
+              "width": "fill_container",
+              "fill": "$white",
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "2kd50",
+                  "name": "shuttleDesc",
+                  "fill": "$text-primary",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "셔틀버스 서비스가 있다면 신청 의향이 있으신가요? (*월 20,000원) *",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "QDkbG",
+                  "name": "shuttleOpts",
+                  "width": "fill_container",
+                  "gap": 8,
+                  "children": [
+                    {
+                      "id": "vRfIv",
+                      "type": "ref",
+                      "ref": "lsZhD",
+                      "name": "shA",
+                      "descendants": {
+                        "0jxsT": {
+                          "fill": "$red"
+                        },
+                        "GNayL": {
+                          "content": "A"
+                        },
+                        "kzeEv": {
+                          "content": "신청"
+                        }
+                      }
+                    },
+                    {
+                      "id": "qUyuF",
+                      "type": "ref",
+                      "ref": "lsZhD",
+                      "name": "shB",
+                      "descendants": {
+                        "0jxsT": {
+                          "fill": "$red"
+                        },
+                        "GNayL": {
+                          "content": "B"
+                        },
+                        "kzeEv": {
+                          "content": "미신청"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "JuHOY",
+                  "name": "노선 안내",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "6j783",
+                      "name": "route1",
+                      "width": "fill_container",
+                      "fill": "$red-light",
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "oa7bP",
+                          "name": "route1Title",
+                          "fill": "$red",
+                          "content": "1호차 주요 노선",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "X3h0B",
+                          "name": "route1Stops",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "1. 서대구 센트럴자이 112동 상가\n2. 힐스테이트 대구역 오페라 동상 앞\n3. 오페라W 태평부동산 앞\n4. 오페라위첸 봄날부동산 앞",
+                          "lineHeight": 1.6,
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "U1fVa",
+                      "name": "route2",
+                      "width": "fill_container",
+                      "fill": "$red-light",
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "JxiMG",
+                          "name": "route2Title",
+                          "fill": "$red",
+                          "content": "2호차 주요 노선",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "04hJt",
+                          "name": "route2Stops",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "1. 침산 푸르지오 1차 203동 앞\n2. (달성초 입구) 유진식당 앞\n3. 달성파크 푸르지오 힐스테이트 203동 앞\n4. 대구역 센트럴자이 파리바게트 앞\n5. 힐스테이트 대구역 앞",
+                          "lineHeight": 1.6,
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "0ziEW",
+                      "name": "route3",
+                      "width": "fill_container",
+                      "fill": "$red-light",
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "XBh2f",
+                          "name": "route3Title",
+                          "fill": "$red",
+                          "content": "3호차 주요 노선",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "b0FA0",
+                          "name": "route3Stops",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "1. 대구역 서희스타힐즈\n2. 침산 오페라 코오롱하늘채 빽다방 앞",
+                          "lineHeight": 1.6,
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "6nV7L",
+          "name": "동의서 섹션",
+          "width": "fill_container",
+          "layout": "vertical",
+          "children": [
+            {
+              "id": "CPN4J",
+              "type": "ref",
+              "ref": "HdJEC",
+              "fill": "$navy",
+              "name": "sec4Header",
+              "descendants": {
+                "TiYj2": {
+                  "content": "동의서 & 학칙 안내",
+                  "fill": "$white"
+                }
+              }
+            },
+            {
+              "type": "frame",
+              "id": "v2IeQ",
+              "name": "동의서 본문",
+              "width": "fill_container",
+              "fill": "$white",
+              "layout": "vertical",
+              "gap": 20,
+              "padding": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "IbD4G",
+                  "name": "개인정보 동의",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "kP1CE",
+                      "name": "privacyTitle",
+                      "fill": "$text-primary",
+                      "content": "개인정보 활용 동의서 *",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "CjDY0",
+                      "name": "privacyContent",
+                      "width": "fill_container",
+                      "fill": "$navy-light",
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 8,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "RuP6o",
+                          "name": "privacyContentTitle",
+                          "fill": "$navy",
+                          "content": "개인정보 수집 및 이용 동의서",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "22KCT",
+                          "name": "privacyContentBody",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "1. 수집하는 개인정보의 항목 : 성명, 학년, 학교, 학생 연락처, 학부모 연락처, 제출한 과제의 동영상 및 음원\n\n2. 인재원 원생들의 동기부여를 위해 원내 게시물, 가정통신문, 블로그 등 SNS에 학습성과를 홍보할 때 이용합니다.\n\n3. 단, 온라인이나 배포용 홍보물에는 전체 이름을 노출하지 않고 '*'기호 등을 사용해서 개인정보 유출을 막습니다.\n\n4. 동의를 거부할 권리 : 귀하는 위와 같이 개인정보를 수집·이용하는 데 대한 동의를 거부할 권리가 있습니다. 다만, 동의하지 않으실 경우 상담 제공 및 셔틀버스 운영 등 일부 서비스에 제한이 있을 수 있습니다.",
+                          "lineHeight": 1.6,
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "80xPc",
+                      "name": "privacyCheck",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "xXPj5",
+                          "name": "privacyCheckbox",
+                          "width": 20,
+                          "height": 20,
+                          "cornerRadius": 4,
+                          "stroke": {
+                            "align": "inside",
+                            "thickness": 2,
+                            "fill": "$gray-border"
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "FtkDb",
+                          "name": "privacyCheckText",
+                          "fill": "$text-primary",
+                          "content": "위 내용을 확인하였으며, 이에 동의합니다.",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "GwwhJ",
+                  "name": "환불 규정 동의",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "oNPDS",
+                      "name": "refundTitle",
+                      "fill": "$text-primary",
+                      "content": "환불 규정 안내 동의서 *",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "700"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "t10y8",
+                      "name": "refundContent",
+                      "width": "fill_container",
+                      "fill": "$navy-light",
+                      "cornerRadius": 8,
+                      "layout": "vertical",
+                      "gap": 12,
+                      "padding": 16,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "i9lLt",
+                          "name": "refundSec1Title",
+                          "fill": "$navy",
+                          "content": "수강 등록 및 환불 안내",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "JsIoo",
+                          "name": "refundSec1Body",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "1. 매월 25일~28일까지 수강료납부기간이며, 25일에 등록안내 및 학사일정이 모바일로 발송됩니다.\n\n2. 수강료는 선불이며, 매월 1일부터 말일까지 수업횟수 기준으로 산정됩니다.\n\n3. 원활한 학습관리를 위해 월 12회, 월 8회 수업이 최소 단위입니다. (단, 특강반 단과반 제외)\n\n4. 등록기간 내에 미등록시, 대기생으로 자동 편성 되어 기존 수강반 등록이 어려울 수 있습니다.",
+                          "lineHeight": 1.6,
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "kZGnB",
+                          "name": "refundSec2Title",
+                          "fill": "$navy",
+                          "content": "수강료 납부 방법",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "WyFXV",
+                          "name": "refundSec2Body",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "1. 카드결제\n데스크 또는 키오스크 결제\n방문이 어려운 경우 전화 결제 가능\n\n2. 계좌이체\n수강료 안내 문자 확인 후 입금\n학원 지정 계좌로 입금\n\n3. 모바일결제\n카카오톡으로 결제 링크 안내\n수강 세부사항 확인 후 결제",
+                          "lineHeight": 1.6,
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "ARfaW",
+                          "name": "refundSec3Title",
+                          "fill": "$navy",
+                          "content": "환불 규정 (공정거래위원회 표준약관 제00032호 기준)",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "nYlSu",
+                          "name": "refundSec3Body",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "교습 시작 전 → 전액 환불\n총 수업의 1/3 경과 전 → 2/3 환불\n총 수업의 1/2 경과 전 → 1/2 환불\n총 수업의 1/2 경과 후 → 환불 불가",
+                          "lineHeight": 1.6,
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "text",
+                          "id": "UgJuy",
+                          "name": "ruleTitle",
+                          "fill": "$navy",
+                          "content": "보강 및 퇴원 규정",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "700"
+                        },
+                        {
+                          "type": "text",
+                          "id": "uNPf5",
+                          "name": "ruleBody",
+                          "fill": "$text-secondary",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "1. 규칙적인 학습을 위해 지각 결석을 허용하지 않으며, 별도의 보강이 없습니다.\n(단, 건강상의 문제나 증명 가능한 공식사유는 예외로 인정하며 1회 이내 허용)\n\n2. 선생님 지시 혹은 규정에 따르지 않는 경우, 선생님께 예의를 지키지 않았을 경우, 수업 분위기를 해칠 경우 경고를 받으며, 2회 경고 시 퇴원 조치 됩니다.\n\n3. 인재원은 학생들의 책임 학습을 위해 수업 최소단위를 적용하며, 이를 위해 시험기간 중에는 학원 일정에 따라 선 수업으로 진행될 수도 있습니다.",
+                          "lineHeight": 1.6,
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "c6MFY",
+                      "name": "refundCheck",
+                      "width": "fill_container",
+                      "gap": 10,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "rVVXf",
+                          "name": "refundCheckbox",
+                          "width": 20,
+                          "height": 20,
+                          "cornerRadius": 4,
+                          "stroke": {
+                            "align": "inside",
+                            "thickness": 2,
+                            "fill": "$gray-border"
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "id": "AzDpB",
+                          "name": "refundCheckText",
+                          "fill": "$text-primary",
+                          "content": "위 내용을 확인하였으며, 이에 동의합니다.",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "WXJLk",
+          "name": "Footer",
+          "width": "fill_container",
+          "fill": "$white",
+          "layout": "vertical",
+          "gap": 12,
+          "padding": [
+            24,
+            20,
+            40,
+            20
+          ],
+          "children": [
+            {
+              "type": "frame",
+              "id": "bsk84",
+              "name": "Submit Button",
+              "width": "fill_container",
+              "height": 52,
+              "fill": "$red",
+              "cornerRadius": 12,
+              "gap": 8,
+              "justifyContent": "center",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "cBgfC",
+                  "name": "submitText",
+                  "fill": "$white",
+                  "content": "상담 신청하기",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "700"
+                },
+                {
+                  "type": "text",
+                  "id": "00EoM",
+                  "name": "submitArrow",
+                  "fill": "$white",
+                  "content": "→",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "700"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "fLSeR",
+              "name": "footerNote",
+              "fill": "$text-secondary",
+              "textGrowth": "fixed-width",
+              "width": "fill_container",
+              "content": "제출하신 정보는 상담 목적으로만 사용됩니다.",
+              "textAlign": "center",
+              "fontFamily": "Inter",
+              "fontSize": 12,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "LlFEz",
+      "x": 440,
+      "y": 0,
+      "name": "Component/InputField",
+      "reusable": true,
+      "width": "fill_container(0)",
+      "layout": "vertical",
+      "gap": 6,
+      "children": [
+        {
+          "type": "text",
+          "id": "DVHW1",
+          "name": "inputLabel",
+          "fill": "$text-primary",
+          "content": "라벨 *",
+          "fontFamily": "Inter",
+          "fontSize": 14,
+          "fontWeight": "700"
+        },
+        {
+          "type": "frame",
+          "id": "YqArX",
+          "name": "inputBox",
+          "width": "fill_container",
+          "height": 44,
+          "fill": "$white",
+          "cornerRadius": 8,
+          "stroke": {
+            "align": "inside",
+            "thickness": 1,
+            "fill": "$gray-border"
+          },
+          "padding": [
+            0,
+            12
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "RLZtD",
+              "name": "inputPlaceholder",
+              "fill": "#9CA3AF",
+              "content": "입력해 주세요",
+              "fontFamily": "Inter",
+              "fontSize": 14,
+              "fontWeight": "normal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "lsZhD",
+      "x": 440,
+      "y": 120,
+      "name": "Component/OptionButton",
+      "reusable": true,
+      "width": "fill_container(0)",
+      "height": 44,
+      "fill": "$white",
+      "cornerRadius": 8,
+      "stroke": {
+        "align": "inside",
+        "thickness": 1,
+        "fill": "$gray-border"
+      },
+      "gap": 10,
+      "padding": [
+        0,
+        12
+      ],
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "0jxsT",
+          "name": "optBadge",
+          "width": 28,
+          "height": 28,
+          "fill": "$yellow",
+          "cornerRadius": 6,
+          "layout": "vertical",
+          "justifyContent": "center",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "GNayL",
+              "name": "optBadgeText",
+              "fill": "$white",
+              "content": "A",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "700"
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "kzeEv",
+          "name": "optText",
+          "fill": "$text-primary",
+          "content": "옵션 텍스트",
+          "fontFamily": "Inter",
+          "fontSize": 14,
+          "fontWeight": "500"
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "HdJEC",
+      "x": 440,
+      "y": 240,
+      "name": "Component/SectionHeader",
+      "reusable": true,
+      "width": "fill_container(0)",
+      "fill": "$yellow",
+      "padding": [
+        12,
+        16
+      ],
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "text",
+          "id": "TiYj2",
+          "name": "sectionTitle",
+          "fill": "$text-primary",
+          "content": "섹션 제목",
+          "fontFamily": "Inter",
+          "fontSize": 18,
+          "fontWeight": "800"
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "gray": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#373d41"
+        },
+        {
+          "value": "#373d41"
+        }
+      ]
+    },
+    "gray-border": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#E5E7EB"
+        },
+        {
+          "value": "#E5E7EB"
+        }
+      ]
+    },
+    "gray-light": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#F6F7F8"
+        },
+        {
+          "value": "#F6F7F8"
+        }
+      ]
+    },
+    "navy": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#081429"
+        },
+        {
+          "value": "#081429"
+        }
+      ]
+    },
+    "orange": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#F97316"
+        },
+        {
+          "value": "#F97316"
+        }
+      ]
+    },
+    "red": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#EF4444"
+        },
+        {
+          "value": "#EF4444"
+        }
+      ]
+    },
+    "text-primary": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#1A1A1A"
+        },
+        {
+          "value": "#1A1A1A"
+        }
+      ]
+    },
+    "text-secondary": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#6B7280"
+        },
+        {
+          "value": "#6B7280"
+        }
+      ]
+    },
+    "white": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#FFFFFF"
+        },
+        {
+          "value": "#FFFFFF"
+        }
+      ]
+    },
+    "yellow": {
+      "type": "color",
+      "value": [
+        {
+          "value": "#fdb813"
+        },
+        {
+          "value": "#fdb813"
+        }
+      ]
+    },
+    "navy-light": {
+      "type": "color",
+      "value": "#EEF2FF"
+    },
+    "orange-light": {
+      "type": "color",
+      "value": "#FFF7ED"
+    },
+    "red-light": {
+      "type": "color",
+      "value": "#FEF2F2"
+    },
+    "yellow-light": {
+      "type": "color",
+      "value": "#FEF9E7"
+    }
+  }
+}

@@ -1,12 +1,13 @@
 // Embed Router Component
 // URL 파라미터 기반 임베드 페이지 라우팅
 
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { getEmbedParams, useValidateEmbedToken } from '../../hooks/useEmbedTokens';
 import { AlertTriangle, Lock, Clock, ExternalLink } from 'lucide-react';
 
 // Lazy load embed components
 const MathTimetableEmbed = lazy(() => import('./MathTimetableEmbed'));
+const ConsultationFormEmbed = lazy(() => import('./ConsultationFormEmbed'));
 
 interface EmbedRouterProps {
   // 외부에서 주입받을 수도 있음
@@ -29,7 +30,37 @@ const EmbedRouter: React.FC<EmbedRouterProps> = ({ embedType, tokenValue }) => {
   const embed = embedType || params.embed;
   const token = tokenValue || params.token;
 
-  // 토큰 검증
+  // 임베드 모드 viewport 수정 (index.html의 width=1280을 iframe에 맞게 변경)
+  useEffect(() => {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+      viewport.setAttribute('content', 'width=device-width, initial-scale=1');
+    }
+  }, []);
+
+  // consultation-form은 자체적으로 Cloud Function 기반 토큰 검증을 수행
+  // (비인증 사용자가 Firestore에 직접 접근할 수 없으므로)
+  if (embed === 'consultation-form') {
+    if (!token) {
+      return <EmbedErrorPage error="NOT_FOUND" />;
+    }
+    return (
+      <Suspense
+        fallback={
+          <div className="flex items-center justify-center h-screen bg-gray-50">
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-12 h-12 border-4 border-yellow-200 border-t-yellow-500 rounded-full animate-spin" />
+              <span className="text-gray-500 font-medium">로딩 중...</span>
+            </div>
+          </div>
+        }
+      >
+        <ConsultationFormEmbed tokenValue={token} />
+      </Suspense>
+    );
+  }
+
+  // 기존 임베드 타입: Firestore 기반 토큰 검증
   const { isValid, token: validatedToken, error, loading } = useValidateEmbedToken(token);
 
   // 로딩 상태

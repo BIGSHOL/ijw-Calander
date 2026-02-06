@@ -9,6 +9,7 @@ export * from './timetable';
 export * from './gantt';
 export * from './grades';
 export * from './consultation';
+export * from './consultationDraft';
 export * from './staff';
 export * from './system';
 export * from './attendance';

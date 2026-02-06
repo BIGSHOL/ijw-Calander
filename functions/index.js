@@ -4,11 +4,12 @@
 
 const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
+const { getFirestore } = require("firebase-admin/firestore");
 const CryptoJS = require("crypto-js");
 const logger = functions.logger;
 
 admin.initializeApp();
-const db = admin.firestore();
+const db = getFirestore("restore260202");
 
 // Helper: Normalize teacher name
 function normalizeTeacherName(name) {
@@ -1034,4 +1035,178 @@ function sanitizeObject(obj) {
     }
     return result;
 }
+
+// =========================================================
+// Cloud Function: Validate Consultation Form Token
+// =========================================================
+/**
+ * 학부모 QR 폼용 토큰 검증 (비인증 호출 허용)
+ * embed_tokens 컬렉션에서 토큰 유효성 확인
+ *
+ * @param {string} token - 임베드 토큰 값
+ * @returns {{ valid: boolean, error?: string }}
+ */
+exports.validateConsultationToken = functions
+    .region("asia-northeast3")
+    .https.onCall(async (data) => {
+        const tokenValue = data?.token;
+
+        if (!tokenValue || typeof tokenValue !== "string") {
+            return { valid: false, error: "INVALID_INPUT" };
+        }
+
+        try {
+            const snapshot = await db.collection("embed_tokens")
+                .where("token", "==", tokenValue)
+                .where("type", "==", "consultation-form")
+                .limit(1)
+                .get();
+
+            if (snapshot.empty) {
+                return { valid: false, error: "NOT_FOUND" };
+            }
+
+            const tokenDoc = snapshot.docs[0];
+            const tokenData = tokenDoc.data();
+
+            if (!tokenData.isActive) {
+                return { valid: false, error: "INACTIVE" };
+            }
+
+            if (tokenData.expiresAt && tokenData.expiresAt.toDate() < new Date()) {
+                return { valid: false, error: "EXPIRED" };
+            }
+
+            // 사용 기록 업데이트
+            await tokenDoc.ref.update({
+                lastUsedAt: admin.firestore.FieldValue.serverTimestamp(),
+                usageCount: (tokenData.usageCount || 0) + 1,
+            });
+
+            return { valid: true };
+        } catch (error) {
+            logger.error("[validateConsultationToken] Error:", error);
+            return { valid: false, error: "INTERNAL_ERROR" };
+        }
+    });
+
+// =========================================================
+// Cloud Function: Submit Consultation Draft
+// =========================================================
+/**
+ * 학부모 QR 폼 제출 (비인증 호출 허용)
+ * 토큰 검증 후 consultation_drafts 컬렉션에 저장
+ *
+ * @param {string} token - 임베드 토큰 값
+ * @param {object} formData - 폼 데이터
+ * @returns {{ success: boolean, draftId?: string, error?: string }}
+ */
+exports.submitConsultationDraft = functions
+    .region("asia-northeast3")
+    .https.onCall(async (data) => {
+        const tokenValue = data?.token;
+        const formData = data?.formData;
+
+        // 1. 입력 검증
+        if (!tokenValue || typeof tokenValue !== "string") {
+            throw new functions.https.HttpsError("invalid-argument", "토큰이 필요합니다.");
+        }
+        if (!formData || typeof formData !== "object") {
+            throw new functions.https.HttpsError("invalid-argument", "폼 데이터가 필요합니다.");
+        }
+
+        // 필수 필드 검증
+        const required = ["studentName", "parentName", "parentPhone", "schoolName", "grade"];
+        for (const field of required) {
+            if (!formData[field] || String(formData[field]).trim() === "") {
+                throw new functions.https.HttpsError("invalid-argument", `${field} 필드가 필요합니다.`);
+            }
+        }
+
+        if (!formData.privacyAgreement) {
+            throw new functions.https.HttpsError("invalid-argument", "개인정보 수집 동의가 필요합니다.");
+        }
+
+        try {
+            // 2. 토큰 검증
+            const snapshot = await db.collection("embed_tokens")
+                .where("token", "==", tokenValue)
+                .where("type", "==", "consultation-form")
+                .limit(1)
+                .get();
+
+            if (snapshot.empty) {
+                throw new functions.https.HttpsError("not-found", "유효하지 않은 토큰입니다.");
+            }
+
+            const tokenDoc = snapshot.docs[0];
+            const tokenData = tokenDoc.data();
+
+            if (!tokenData.isActive) {
+                throw new functions.https.HttpsError("permission-denied", "비활성화된 토큰입니다.");
+            }
+
+            if (tokenData.expiresAt && tokenData.expiresAt.toDate() < new Date()) {
+                throw new functions.https.HttpsError("permission-denied", "만료된 토큰입니다.");
+            }
+
+            // 3. Rate limiting: 토큰당 시간당 10건
+            const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+            const recentDrafts = await db.collection("consultation_drafts")
+                .where("tokenId", "==", tokenDoc.id)
+                .where("submittedAt", ">=", oneHourAgo.toISOString())
+                .get();
+
+            if (recentDrafts.size >= 10) {
+                throw new functions.https.HttpsError(
+                    "resource-exhausted",
+                    "제출 횟수를 초과했습니다. 잠시 후 다시 시도해주세요."
+                );
+            }
+
+            // 4. Draft 저장
+            const draft = {
+                tokenId: tokenDoc.id,
+                status: "pending",
+                // 학생 정보
+                studentName: String(formData.studentName).trim(),
+                gender: formData.gender || null,
+                bloodType: formData.bloodType || null,
+                studentPhone: formData.studentPhone || null,
+                careerGoal: formData.careerGoal || null,
+                schoolName: String(formData.schoolName).trim(),
+                grade: String(formData.grade),
+                subjects: Array.isArray(formData.subjects) ? formData.subjects : [],
+                siblings: formData.siblings || null,
+                // 학부모 정보
+                parentName: String(formData.parentName).trim(),
+                parentRelation: formData.parentRelation || null,
+                parentPhone: String(formData.parentPhone).trim(),
+                consultationPath: formData.consultationPath || null,
+                address: formData.address || null,
+                // 기타
+                shuttleBusRequest: !!formData.shuttleBusRequest,
+                privacyAgreement: !!formData.privacyAgreement,
+                installmentAgreement: !!formData.installmentAgreement,
+                // 시스템
+                submittedAt: new Date().toISOString(),
+            };
+
+            const docRef = await db.collection("consultation_drafts").add(draft);
+
+            // 5. 토큰 사용 기록 업데이트
+            await tokenDoc.ref.update({
+                lastUsedAt: admin.firestore.FieldValue.serverTimestamp(),
+                usageCount: (tokenData.usageCount || 0) + 1,
+            });
+
+            logger.info(`[submitConsultationDraft] Draft created: ${docRef.id} for student: ${draft.studentName}`);
+
+            return { success: true, draftId: docRef.id };
+        } catch (error) {
+            if (error.code) throw error; // re-throw HttpsError
+            logger.error("[submitConsultationDraft] Error:", error);
+            throw new functions.https.HttpsError("internal", "서버 오류가 발생했습니다.");
+        }
+    });
 

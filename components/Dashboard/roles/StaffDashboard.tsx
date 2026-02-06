@@ -13,8 +13,8 @@ interface StaffDashboardProps {
  */
 const StaffDashboard: React.FC<StaffDashboardProps> = ({ userProfile, staffMember }) => {
   return (
-    <div className="w-full p-6 bg-gray-50">
-      <div className="max-w-7xl mx-auto">
+    <div className="w-full p-6 bg-gray-50 overflow-x-auto">
+      <div className="max-w-7xl mx-auto min-w-[768px]">
         <DashboardHeader userProfile={userProfile} staffMember={staffMember} />
 
         <div className="bg-white rounded-sm p-12 shadow-sm border border-gray-100 text-center">

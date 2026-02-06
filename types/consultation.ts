@@ -15,6 +15,7 @@ export enum ConsultationSubject {
   EiE = 'EiE',
   Math = '수학',
   Korean = '국어',
+  Science = '과학',
   Other = '기타',
 }
 
@@ -43,6 +44,7 @@ export interface ConsultationRecord {
   studentName: string;
   englishName?: string;            // 영어 이름 (추가)
   gender?: 'male' | 'female';      // 성별 (추가)
+  bloodType?: string;              // 혈액형 (추가)
   schoolName: string;
   grade: SchoolGrade;
   graduationYear?: string;         // 졸업 연도 (추가)

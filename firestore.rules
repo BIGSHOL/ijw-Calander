@@ -48,8 +48,8 @@ service cloud.firestore {
 
     // === Staff Management (New User System) ===
     match /staff/{staffId} {
-      // Read: All authenticated users can read staff list
-      allow read: if isAuthenticated();
+      // Read: 공개 (임베드 시간표에서 강사 데이터 필요)
+      allow read: if true;
 
       // Create: Authenticated users can create their own profile during registration
       allow create: if isAuthenticated() &&
@@ -203,8 +203,8 @@ service cloud.firestore {
     }
 
     match /students/{studentId} {
-      // Read: master/admin 또는 students.view 권한
-      allow read: if hasRole(['master', 'admin']) || hasPermission('students.view');
+      // Read: 공개 (임베드 시간표에서 학생 데이터 필요)
+      allow read: if true;
 
       // Create/Update: master/admin 또는 students.edit 권한
       allow create, update: if isAuthenticated() &&
@@ -217,8 +217,8 @@ service cloud.firestore {
 
     // Student Enrollments Subcollection (수강 이력)
     match /students/{studentId}/enrollments/{enrollmentId} {
-      // Read: master/admin 또는 students.view 권한
-      allow read: if hasRole(['master', 'admin']) || hasPermission('students.view');
+      // Read: 공개 (임베드 시간표에서 수강 정보 필요 - collectionGroup 쿼리)
+      allow read: if true;
 
       // Write: master/admin 또는 students.enrollment.manage 권한
       allow create, update, delete: if hasRole(['master', 'admin']) ||
@@ -357,16 +357,30 @@ service cloud.firestore {
       allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('departments.manage');
     }
 
+    // === Embed Tokens (임베드 토큰 - 공개 접근 허용) ===
+    // 토큰은 UUID 형태의 비밀값이므로, 토큰을 모르면 접근 불가
+    match /embed_tokens/{tokenId} {
+      // 토큰 검증을 위한 공개 읽기
+      allow read: if true;
+      // 사용 기록 업데이트 (비인증 임베드) 또는 관리자 전체 수정
+      allow update: if hasRole(['master', 'admin']) ||
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['lastUsedAt', 'usageCount']);
+      // 토큰 생성/삭제는 관리자만
+      allow create, delete: if hasRole(['master', 'admin']);
+    }
+
     // === Class Keywords ===
     match /classKeywords/{keywordId} {
-      allow read: if isAuthenticated();
+      // 임베드 시간표에서도 키워드 색상 필요 → 공개 읽기
+      allow read: if true;
       allow write: if hasRole(['master', 'admin']) || hasPermission('system.classes.edit');
     }
 
     // === Classes Collection (수업 관리) ===
     match /classes/{classId} {
-      // Read: master/admin 또는 classes.view 권한
-      allow read: if hasRole(['master', 'admin']) || hasPermission('classes.view');
+      // Read: 공개 (임베드 시간표에서 수업 데이터 필요)
+      allow read: if true;
 
       // Create: master/admin 또는 classes.create 권한
       allow create: if hasRole(['master', 'admin']) || hasPermission('classes.create');
@@ -480,6 +494,17 @@ service cloud.firestore {
     match /grade_comments/{commentId} {
       allow read: if hasRole(['master', 'admin']) || hasPermission('grades.view');
       allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('grades.edit');
+    }
+
+    // === Consultation Drafts (학부모 QR 폼 제출) ===
+    // Cloud Function이 Admin SDK로 쓰기 (비인증 학부모 → Cloud Function → Firestore)
+    // 직원은 인증 후 읽기/수정 가능
+    match /consultation_drafts/{draftId} {
+      allow read: if isAuthenticated();
+      allow create, update: if hasRole(['master', 'admin']) ||
+                              hasPermission('consultation.manage') ||
+                              hasPermission('consultation.create');
+      allow delete: if hasRole(['master']);
     }
 
     // === Default: Role-Based Access for All Collections ===

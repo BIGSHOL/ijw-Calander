@@ -1,7 +1,7 @@
 // Embed Token Types
 // 임베드 공유 링크용 토큰 시스템
 
-export type EmbedType = 'math-timetable' | 'english-timetable';
+export type EmbedType = 'math-timetable' | 'english-timetable' | 'consultation-form';
 
 export interface EmbedToken {
   id: string;
