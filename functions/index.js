@@ -1198,6 +1198,7 @@ exports.submitConsultationDraft = functions
             await tokenDoc.ref.update({
                 lastUsedAt: admin.firestore.FieldValue.serverTimestamp(),
                 usageCount: (tokenData.usageCount || 0) + 1,
+                submissionCount: (tokenData.submissionCount || 0) + 1,
             });
 
             logger.info(`[submitConsultationDraft] Draft created: ${docRef.id} for student: ${draft.studentName}`);

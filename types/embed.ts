@@ -14,6 +14,7 @@ export interface EmbedToken {
   isActive: boolean;
   lastUsedAt?: string;    // 마지막 접근 시간
   usageCount: number;     // 접근 횟수
+  submissionCount?: number; // 폼 제출 횟수 (consultation-form 전용)
   settings?: EmbedSettings;
 }
 

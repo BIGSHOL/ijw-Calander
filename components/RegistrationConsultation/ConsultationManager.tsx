@@ -1,7 +1,7 @@
-import React, { useState, useCallback, Suspense, lazy } from 'react';
+import React, { useState, useCallback, useMemo, Suspense, lazy } from 'react';
 import { ConsultationRecord, UserProfile, UnifiedStudent, SchoolGrade, ConsultationSubject, ConsultationStatus, LevelTest } from '../../types';
 import { ConsultationDraft } from '../../types/consultationDraft';
-import { useConsultations, useCreateConsultation, useUpdateConsultation, useDeleteConsultation } from '../../hooks/useConsultations';
+import { useConsultations, useCreateConsultation, useUpdateConsultation, useDeleteConsultation, isRegisteredStatus } from '../../hooks/useConsultations';
 import { usePendingDraftCount, useConsultationDrafts, useConvertDraft, useDeleteDraft } from '../../hooks/useConsultationDrafts';
 import { useStudents } from '../../hooks/useStudents';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -10,7 +10,7 @@ import { ConsultationDashboard } from './ConsultationDashboard';
 import { ConsultationTable } from './ConsultationTable';
 import { ConsultationYearView } from './ConsultationYearView';
 import { ConsultationForm } from './ConsultationForm';
-import { LayoutDashboard, List, Calendar, Plus, ChevronLeft, ChevronRight, Upload, Loader2, Search, Settings2, Inbox, X, Trash2, Link2 } from 'lucide-react';
+import { LayoutDashboard, List, Calendar, Plus, ChevronLeft, ChevronRight, Upload, Loader2, Search, Settings2, Filter, Inbox, X, Trash2, Link2 } from 'lucide-react';
 import { TabSubNavigation } from '../Common/TabSubNavigation';
 import { TabButton } from '../Common/TabButton';
 import { VideoLoading } from '../Common/VideoLoading';
@@ -55,9 +55,10 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
     const [selectedMonth, setSelectedMonth] = useState<string>('all');
     const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
 
-    // Search & Settings State (lifted from ConsultationTable)
+    // Search, Settings & Filter State (lifted from ConsultationTable)
     const [searchTerm, setSearchTerm] = useState('');
     const [showSettings, setShowSettings] = useState(false);
+    const [showFilters, setShowFilters] = useState(false);
 
     // Modal State
     const [isFormOpen, setIsFormOpen] = useState(false);
@@ -146,10 +147,19 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
         });
     }, [deleteConsultation]);
 
+    // 학교 이름 별칭 (축약 → 정식 이름)
+    const SCHOOL_ALIASES: Record<string, string> = {
+        '일중': '대구일중학교',
+    };
+
     // 학교 이름 정규화 함수 (축약형 → 전체 이름)
     const normalizeSchoolName = (schoolName: string | undefined): string => {
         if (!schoolName) return '';
         const name = schoolName.trim();
+
+        // 별칭 매핑 우선 적용
+        if (SCHOOL_ALIASES[name]) return SCHOOL_ALIASES[name];
+
         // 이미 전체 이름이면 그대로 반환
         if (name.includes('초등학교') || name.includes('중학교') || name.includes('고등학교')) {
             return name;
@@ -160,6 +170,76 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
         if (name.includes('고')) return name.replace('고', '고등학교');
         return name;
     };
+
+    // 학생 이름 정규화 (동명이인 접미사 제거: A/B, 1/2, (재) 등)
+    const normalizeStudentName = (name: string): string => {
+        if (!name) return '';
+        return name.trim()
+            .replace(/[A-Za-z\d]+$/, '')  // 끝의 영문/숫자 제거 (주상모A → 주상모)
+            .replace(/\([^)]*\)$/, '')     // 끝의 괄호 제거 (김경진(재) → 김경진)
+            .trim();
+    };
+
+    // 전환 상태 자동 매칭 (display-time, Firestore 쓰기 없음)
+    type ConversionInfo = {
+        status: 'converted' | 'matched' | 'pending' | 'ambiguous';
+        studentId?: string;
+        candidates?: { id: string; name: string }[];
+    };
+    const conversionStatusMap = useMemo(() => {
+        const map = new Map<string, ConversionInfo>();
+        const activeStudents = existingStudents.filter(s => s.status !== 'withdrawn');
+
+        // 정확한 이름+학교 매칭 (O(1))
+        const exactLookup = new Map(
+            activeStudents.map(s => [`${s.name}_${normalizeSchoolName(s.school)}`, s.id])
+        );
+        // 기본이름+학교 → 후보 목록 (동명이인 처리)
+        const baseLookup = new Map<string, { id: string; name: string }[]>();
+        for (const s of activeStudents) {
+            const baseKey = `${normalizeStudentName(s.name)}_${normalizeSchoolName(s.school)}`;
+            if (!baseLookup.has(baseKey)) baseLookup.set(baseKey, []);
+            baseLookup.get(baseKey)!.push({ id: s.id, name: s.name });
+        }
+
+        for (const c of consultations) {
+            if (c.registeredStudentId) {
+                map.set(c.id, { status: 'converted', studentId: c.registeredStudentId });
+            } else if (isRegisteredStatus(c.status)) {
+                const school = normalizeSchoolName(c.schoolName);
+                // 1) 정확한 매칭 시도
+                const exactId = exactLookup.get(`${c.studentName}_${school}`);
+                if (exactId) {
+                    map.set(c.id, { status: 'matched', studentId: exactId });
+                    continue;
+                }
+                // 2) 기본이름으로 퍼지 매칭
+                const baseKey = `${normalizeStudentName(c.studentName)}_${school}`;
+                const candidates = baseLookup.get(baseKey);
+                if (candidates && candidates.length === 1) {
+                    map.set(c.id, { status: 'matched', studentId: candidates[0].id });
+                } else if (candidates && candidates.length > 1) {
+                    map.set(c.id, { status: 'ambiguous', candidates });
+                } else {
+                    map.set(c.id, { status: 'pending' });
+                }
+            }
+        }
+        return map;
+    }, [consultations, existingStudents]);
+
+    // 상담-학생 수동 연결 핸들러 (동명이인 선택 시)
+    const handleLinkStudent = useCallback(async (consultationId: string, studentId: string) => {
+        try {
+            await updateConsultation.mutateAsync({
+                id: consultationId,
+                updates: { registeredStudentId: studentId }
+            });
+        } catch (error) {
+            console.error('학생 연결 실패:', error);
+            alert('학생 연결에 실패했습니다.');
+        }
+    }, [updateConsultation]);
 
     // 원생 전환 핸들러
     const handleConvertToStudent = useCallback(async (consultation: ConsultationRecord) => {
@@ -628,6 +708,17 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                                 />
                             </div>
                             <button
+                                onClick={() => setShowFilters(!showFilters)}
+                                className={`p-1.5 rounded-sm border transition-all relative ${
+                                    showFilters
+                                        ? 'bg-indigo-100 border-indigo-400 text-indigo-600'
+                                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-100'
+                                }`}
+                                title="필터"
+                            >
+                                <Filter size={14} />
+                            </button>
+                            <button
                                 onClick={() => setShowSettings(!showSettings)}
                                 className={`p-1.5 rounded-sm border transition-all ${
                                     showSettings
@@ -789,6 +880,10 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                             searchTerm={searchTerm}
                             showSettings={showSettings}
                             onShowSettingsChange={setShowSettings}
+                            showFilters={showFilters}
+                            onShowFiltersChange={setShowFilters}
+                            conversionStatusMap={conversionStatusMap}
+                            onLinkStudent={handleLinkStudent}
                         />
                     )}
 

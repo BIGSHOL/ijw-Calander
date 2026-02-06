@@ -47,6 +47,7 @@ const docToToken = (doc: any): EmbedToken => {
     isActive: data.isActive ?? true,
     lastUsedAt: data.lastUsedAt?.toDate?.()?.toISOString() || data.lastUsedAt,
     usageCount: data.usageCount || 0,
+    submissionCount: data.submissionCount || 0,
     settings: data.settings || DEFAULT_EMBED_SETTINGS,
   };
 };

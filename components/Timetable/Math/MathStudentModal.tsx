@@ -1,6 +1,6 @@
 // MathStudentModal.tsx - 수학 시간표 학생 관리 모달 (EventFormFields 스타일 적용)
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Trash2, Check, Underline, Settings, UserPlus, Users, Calculator, ChevronRight } from 'lucide-react';
+import { X, Trash2, Check, Underline, Settings, UserPlus, Users, Calculator } from 'lucide-react';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { listenerRegistry } from '../../../utils/firebaseCleanup';
@@ -166,23 +166,6 @@ const MathStudentModal: React.FC<MathStudentModalProps> = ({
         setShowBatchMenu(false);
     };
 
-    const handleBatchGradePromotion = () => {
-        if (!confirm('모든 학생의 학년을 1씩 올리시겠습니까?')) return;
-
-        const updated = students.map(s => {
-            if (!s.grade) return s;
-            const match = s.grade.match(/(\d+)/);
-            if (!match) return s;
-            const num = parseInt(match[1], 10);
-            const promoted = s.grade.replace(/\d+/, String(num + 1));
-            return { ...s, grade: promoted };
-        });
-
-        setStudents(updated);
-        setHasChanges(true);
-        setShowBatchMenu(false);
-    };
-
     // Sorted students (active first, then withdrawn)
     const sortedStudents = useMemo(() => {
         const active = students.filter(s => !s.withdrawalDate);
@@ -232,13 +215,6 @@ const MathStudentModal: React.FC<MathStudentModalProps> = ({
                     {/* Batch Menu Dropdown */}
                     {showBatchMenu && canEdit && (
                         <div className="absolute top-14 right-4 bg-white rounded-sm shadow-lg border border-gray-200 py-1 z-10 min-w-[140px]">
-                            <button
-                                onClick={handleBatchGradePromotion}
-                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
-                            >
-                                <ChevronRight className="inline-block w-4 h-4 mr-1" />
-                                학년 진급
-                            </button>
                             <button
                                 onClick={handleDeleteAll}
                                 className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
@@ -468,7 +444,7 @@ const MathStudentModal: React.FC<MathStudentModalProps> = ({
                                 <h3 className="text-primary font-bold text-xs">일괄 작업</h3>
                             </div>
                             <div className="px-2 py-2 text-xxs text-gray-500">
-                                <p>우측 상단의 설정 아이콘을 클릭하여 학년 진급, 전체 삭제 등의 일괄 작업을 수행할 수 있습니다.</p>
+                                <p>우측 상단의 설정 아이콘을 클릭하여 전체 삭제 등의 일괄 작업을 수행할 수 있습니다.</p>
                             </div>
                         </div>
                     )}

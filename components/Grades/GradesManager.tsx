@@ -15,8 +15,9 @@ import GradesTab from '../StudentManagement/tabs/GradesTab';
 import { TabSubNavigation } from '../Common/TabSubNavigation';
 import { TabButton } from '../Common/TabButton';
 import { useExamScores } from './hooks/useExamScores';
-import { useAllLevelTests } from '../../hooks/useGradeProfile';
+import { useConsultationLevelTests, ConsultationLevelTest } from '../../hooks/useGradeProfile';
 import { LevelTest } from '../../types';
+import ConsultationLevelTestDetail from './ConsultationLevelTestDetail';
 import ExamCreateModal from './ExamCreateModal';
 import ScoreInputView from './ScoreInputView';
 import ExamListView from './ExamListView';
@@ -48,12 +49,13 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
   const [isCreatingExam, setIsCreatingExam] = useState(false);
   const [expandedExamId, setExpandedExamId] = useState<string | null>(null);
   const [selectedStudentForDetail, setSelectedStudentForDetail] = useState<UnifiedStudent | null>(null);
+  const [selectedLevelTestDetail, setSelectedLevelTestDetail] = useState<ConsultationLevelTest | null>(null);
 
   // Data
   const { students } = useStudents();
   const { data: exams = [], isLoading: loadingExams, refetch: refetchExams } = useExams();
   const { data: examScores = [], isLoading: loadingScores } = useExamScores(selectedExam?.id || expandedExamId || '');
-  const { data: allLevelTests = [], isLoading: loadingLevelTests } = useAllLevelTests(subjectFilter);
+  const { data: allLevelTests = [], isLoading: loadingLevelTests } = useConsultationLevelTests(subjectFilter);
 
   // Mutations
   const createExam = useCreateExam();
@@ -594,7 +596,12 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
             levelTests={filteredLevelTests}
             loading={loadingLevelTests}
             students={students}
-            onViewStudentDetail={setSelectedStudentForDetail}
+            onRowClick={(test) => {
+              const clt = test as ConsultationLevelTest;
+              if (clt._sourceDetail) {
+                setSelectedLevelTestDetail(clt);
+              }
+            }}
           />
         ) : viewMode === 'input' && selectedExam ? (
           <ScoreInputView
@@ -678,6 +685,14 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
           </div>
         </div>
       )}
+
+      {/* 레벨테스트 상세 슬라이드 패널 */}
+      {selectedLevelTestDetail && (
+        <ConsultationLevelTestDetail
+          test={selectedLevelTestDetail}
+          onClose={() => setSelectedLevelTestDetail(null)}
+        />
+      )}
     </div>
   );
 };
@@ -688,10 +703,10 @@ interface LevelTestListViewProps {
   levelTests: LevelTest[];
   loading: boolean;
   students: UnifiedStudent[];
-  onViewStudentDetail: (student: UnifiedStudent) => void;
+  onRowClick: (test: LevelTest) => void;
 }
 
-const LevelTestListView: React.FC<LevelTestListViewProps> = ({ levelTests, loading, students, onViewStudentDetail }) => {
+const LevelTestListView: React.FC<LevelTestListViewProps> = ({ levelTests, loading, students, onRowClick }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -706,7 +721,7 @@ const LevelTestListView: React.FC<LevelTestListViewProps> = ({ levelTests, loadi
       <div className="flex flex-col items-center justify-center py-16 text-gray-400">
         <Zap size={40} className="mb-3 opacity-30" />
         <p className="text-sm font-medium">등록된 레벨테스트가 없습니다</p>
-        <p className="text-xs mt-1">학생관리 &gt; 성적탭에서 레벨테스트를 추가할 수 있습니다</p>
+        <p className="text-xs mt-1">등록 상담에서 레벨테스트 데이터가 있는 항목만 표시됩니다</p>
       </div>
     );
   }
@@ -719,9 +734,8 @@ const LevelTestListView: React.FC<LevelTestListViewProps> = ({ levelTests, loadi
     return acc;
   }, {});
 
-  const handleClickStudent = (test: LevelTest) => {
-    const student = students.find(s => s.id === test.studentId);
-    if (student) onViewStudentDetail(student);
+  const handleClickRow = (test: LevelTest) => {
+    onRowClick(test);
   };
 
   return (
@@ -761,7 +775,7 @@ const LevelTestListView: React.FC<LevelTestListViewProps> = ({ levelTests, loadi
                     <tr
                       key={test.id}
                       className="border-b border-gray-50 hover:bg-accent/5 transition-colors cursor-pointer"
-                      onClick={() => handleClickStudent(test)}
+                      onClick={() => handleClickRow(test)}
                     >
                       {/* 학생명 */}
                       <td className="px-3 py-2">

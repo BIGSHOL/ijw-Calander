@@ -106,6 +106,9 @@ export const useTabPermissions = (userProfile: UserProfile | null) => {
                 }
             }
 
+            // 도움말은 모든 사용자에게 항상 접근 가능
+            if (tab === 'help') return true;
+
             return effectiveTabs.includes(tab);
         };
 

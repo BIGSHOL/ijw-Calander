@@ -18,6 +18,7 @@ import {
   Check,
   QrCode,
   Download,
+  UserCheck,
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { useEmbedTokens, generateEmbedUrl } from '../../hooks/useEmbedTokens';
@@ -416,6 +417,12 @@ const EmbedTokenManager: React.FC<EmbedTokenManagerProps> = ({
                       <Eye className="w-3 h-3" />
                       조회: {token.usageCount}회
                     </span>
+                    {token.type === 'consultation-form' && (
+                      <span className="flex items-center gap-1 text-emerald-600 font-medium">
+                        <UserCheck className="w-3 h-3" />
+                        제출: {token.submissionCount || 0}건
+                      </span>
+                    )}
                   </div>
 
                   {/* 하단: URL + 복사/QR 버튼 */}

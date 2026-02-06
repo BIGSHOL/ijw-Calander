@@ -119,9 +119,14 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
       const d = new Date(s.withdrawalDate);
       return d >= currentMonthStart && d <= currentMonthEnd;
     });
+    const WITHDRAWAL_REASON_LABELS: Record<string, string> = {
+      graduation: '졸업', relocation: '이사', competitor: '경쟁 학원 이동',
+      financial: '경제적 사유', schedule: '시간 조절 어려움', dissatisfied: '불만족', other: '기타',
+    };
     const reasons: Record<string, number> = {};
     withdrawn.forEach(s => {
-      const reason = s.withdrawalReason || '사유 미기재';
+      const raw = s.withdrawalReason || '사유 미기재';
+      const reason = WITHDRAWAL_REASON_LABELS[raw] || raw;
       reasons[reason] = (reasons[reason] || 0) + 1;
     });
     return {

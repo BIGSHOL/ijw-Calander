@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { X, Building2, Tag } from 'lucide-react';
 import { UserProfile } from '../../types';
-import DepartmentsTab from '../Settings/DepartmentsTab';
-import GanttCategoriesTab from '../Settings/GanttCategoriesTab';
+import DepartmentsTab from '../settings/DepartmentsTab';
+import GanttCategoriesTab from '../settings/GanttCategoriesTab';
 
 interface GanttSettingsModalProps {
   isOpen: boolean;

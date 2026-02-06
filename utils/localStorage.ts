@@ -23,6 +23,7 @@ export const STORAGE_KEYS = {
   CONSULTATION_PAGE_SIZE: 'ijw_consultation_page_size',
   CONSULTATION_DATE_PRESET: 'ijw_consultation_date_preset',
   CONSULTATION_TABLE_COLUMNS: 'ijw_consultation_table_columns',
+  CONSULTATION_TABLE_FILTERS: 'ijw_consultation_table_filters',
 
   // Role Management
   ROLE_MANAGEMENT_EXPANDED: 'ijw_role_management_expanded',

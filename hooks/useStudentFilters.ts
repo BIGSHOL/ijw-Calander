@@ -329,6 +329,41 @@ const filterByEnrollment = (students: UnifiedStudent[], excludeNoEnrollment: boo
 };
 
 /**
+ * 학교명에서 학제(초/중/고) 추출
+ */
+function getSchoolLevel(school: string): '초' | '중' | '고' | null {
+    if (/초등학교|초$/.test(school)) return '초';
+    if (/중학교|중$/.test(school)) return '중';
+    if (/고등학교|고교|고$/.test(school)) return '고';
+    return null;
+}
+
+/**
+ * 학년에서 학제(초/중/고) 추출
+ */
+function getGradeLevel(grade: string): '초' | '중' | '고' | null {
+    if (grade?.startsWith('초')) return '초';
+    if (grade?.startsWith('중')) return '중';
+    if (grade?.startsWith('고')) return '고';
+    return null;
+}
+
+/**
+ * Filter students by grade-school level mismatch
+ * 학교명의 학제(초등학교/중학교/고등학교)와 학년의 학제(초/중/고)가 불일치하는 학생만 표시
+ */
+const filterByGradeMismatch = (students: UnifiedStudent[], gradeMismatch: boolean): UnifiedStudent[] => {
+    if (!gradeMismatch) return students;
+    return students.filter(s => {
+        if (!s.school || !s.grade) return false;
+        const schoolLevel = getSchoolLevel(s.school);
+        const gradeLevel = getGradeLevel(s.grade);
+        if (!schoolLevel || !gradeLevel) return false;
+        return schoolLevel !== gradeLevel;
+    });
+};
+
+/**
  * Sort students by specified field
  */
 const sortStudents = (students: UnifiedStudent[], sortBy: 'name' | 'grade' | 'startDate'): UnifiedStudent[] => {
@@ -399,9 +434,14 @@ export const useStudentFilters = (
         [teacherFiltered, filters.excludeNoEnrollment]
     );
 
+    const mismatchFiltered = useMemo(
+        () => filterByGradeMismatch(enrollmentFiltered, filters.gradeMismatch),
+        [enrollmentFiltered, filters.gradeMismatch]
+    );
+
     const sorted = useMemo(
-        () => sortStudents(enrollmentFiltered, sortBy),
-        [enrollmentFiltered, sortBy]
+        () => sortStudents(mismatchFiltered, sortBy),
+        [mismatchFiltered, sortBy]
     );
 
     return sorted;

@@ -9,6 +9,7 @@ import {
     addDoc,
     updateDoc,
     deleteDoc,
+    deleteField,
     query,
     where,
 } from 'firebase/firestore';
@@ -166,10 +167,15 @@ export function useStudents(includeWithdrawn = false, enabled = true) {
             const docRef = doc(db, COL_STUDENTS, id);
             const now = new Date().toISOString();
 
-            // Remove undefined values to prevent Firestore errors
-            const cleanUpdates = Object.entries({ ...updates, updatedAt: now })
-                .filter(([_, value]) => value !== undefined)
-                .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
+            // undefined 값은 Firestore deleteField()로 변환하여 필드를 실제 삭제
+            const cleanUpdates: Record<string, any> = { updatedAt: now };
+            for (const [key, value] of Object.entries(updates)) {
+                if (value === undefined) {
+                    cleanUpdates[key] = deleteField();
+                } else {
+                    cleanUpdates[key] = value;
+                }
+            }
 
             await updateDoc(docRef, cleanUpdates);
             return { id, updates };

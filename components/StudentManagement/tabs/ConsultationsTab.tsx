@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { UnifiedStudent, Consultation, CATEGORY_CONFIG, UserProfile, ConsultationRecord } from '../../../types';
 import { MessageSquare, Plus, ClipboardList, ChevronDown } from 'lucide-react';
 import { useStudentConsultations, getFollowUpUrgency, getFollowUpDaysLeft } from '../../../hooks/useStudentConsultations';
 import { useStaff } from '../../../hooks/useStaff';
-import { useConsultations } from '../../../hooks/useConsultations';
+import { useConsultations, useUpdateConsultation } from '../../../hooks/useConsultations';
 import { ConsultationDetailModal } from '../../StudentConsultation';
-import RegistrationConsultationDetailModal from '../../RegistrationConsultation/RegistrationConsultationDetailModal';
+import { ConsultationForm } from '../../RegistrationConsultation/ConsultationForm';
 // Lazy load for better code splitting
 const AddConsultationModal = React.lazy(() => import('../../StudentConsultation/AddConsultationModal'));
 
@@ -28,6 +28,7 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
 
   // 전체 등록 상담 기록 조회
   const { data: allConsultations = [], isLoading: regLoading } = useConsultations({});
+  const updateConsultation = useUpdateConsultation();
 
   // 재원생 상담 기록 정렬
   const sortedConsultations = useMemo(() =>
@@ -35,10 +36,17 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
     [consultations]
   );
 
+  // 학교 이름 별칭 매핑
+  const SCHOOL_ALIASES: Record<string, string> = {
+    '일중': '대구일중학교',
+  };
+
   // 학교 이름 정규화 함수 (축약형 → 전체 이름)
   const normalizeSchoolName = (schoolName: string | undefined): string => {
     if (!schoolName) return '';
     const name = schoolName.trim();
+    // 별칭 매핑 확인
+    if (SCHOOL_ALIASES[name]) return SCHOOL_ALIASES[name];
     // 이미 전체 이름이면 그대로 반환
     if (name.includes('초등학교') || name.includes('중학교') || name.includes('고등학교')) {
       return name;
@@ -71,6 +79,25 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
   const handleAddSuccess = async () => {
     setShowAddModal(false);
   };
+
+  // 등록 상담 수정 핸들러
+  const handleUpdateRegistrationRecord = useCallback((data: Omit<ConsultationRecord, 'id'>) => {
+    if (!selectedRegistrationRecord?.id) return;
+
+    updateConsultation.mutate({
+      id: selectedRegistrationRecord.id,
+      updates: data,
+    }, {
+      onSuccess: () => {
+        setSelectedRegistrationRecord({ ...data, id: selectedRegistrationRecord.id } as ConsultationRecord);
+        alert('수정이 완료되었습니다.');
+      },
+      onError: (error) => {
+        console.error('상담 수정 오류:', error);
+        alert('상담 수정에 실패했습니다.');
+      }
+    });
+  }, [selectedRegistrationRecord, updateConsultation]);
 
   // 카테고리 라벨 축약
   const getCategoryShortLabel = (category: string) => {
@@ -242,115 +269,36 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="bg-white border border-gray-200 overflow-hidden rounded-sm">
+            {/* 테이블 헤더 */}
+            <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-primary-700">
+              <span className="w-16 shrink-0">날짜</span>
+              <span className="w-10 shrink-0">과목</span>
+              <span className="w-14 shrink-0">상태</span>
+              <span className="flex-1">내용</span>
+              <span className="w-12 shrink-0 text-right">상담자</span>
+            </div>
             {filteredRegistrationConsultations.map(record => (
               <div
                 key={record.id}
                 onClick={() => setSelectedRegistrationRecord(record)}
-                className="bg-white border border-gray-200 rounded-sm p-3 hover:border-gray-300 hover:bg-accent/5 transition-colors cursor-pointer"
+                className="flex items-center gap-2 px-2 py-1 border-b border-gray-100 hover:bg-accent/5 transition-colors cursor-pointer"
               >
-                {/* 상단: 날짜, 과목, 상태 */}
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-semibold text-primary">
-                      {record.consultationDate?.slice(0, 10) || '-'}
-                    </span>
-                    <span className="text-xs px-1.5 py-0.5 rounded-sm bg-gray-100 text-gray-700">
-                      {record.subject}
-                    </span>
-                    <span className="text-xs px-1.5 py-0.5 rounded-sm bg-green-100 text-green-700">
-                      {record.status}
-                    </span>
-                  </div>
-                  <span className="text-xs text-gray-500">{record.counselor || '-'}</span>
-                </div>
-
-                {/* 상담 내용 */}
-                <div className="text-xs text-gray-700 mb-2 line-clamp-3">
+                <span className="w-16 shrink-0 text-xxs text-gray-500">
+                  {record.consultationDate?.slice(0, 10) || '-'}
+                </span>
+                <span className="w-10 shrink-0 px-1 py-0.5 rounded-sm text-micro font-medium text-center bg-gray-100 text-gray-700">
+                  {record.subject}
+                </span>
+                <span className="w-14 shrink-0 px-1 py-0.5 rounded-sm text-micro font-medium text-center bg-green-100 text-green-700 whitespace-nowrap truncate">
+                  {record.status}
+                </span>
+                <span className="flex-1 text-xs text-primary truncate">
                   {record.notes || '내용 없음'}
-                </div>
-
-                {/* 하단: 추가 정보 */}
-                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xxs text-gray-500">
-                  {record.consultationPath && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-gray-400">경로:</span>
-                      <span>{record.consultationPath}</span>
-                    </div>
-                  )}
-                  {record.receiver && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-gray-400">수신자:</span>
-                      <span>{record.receiver}</span>
-                    </div>
-                  )}
-                  {record.paymentAmount && record.paymentAmount !== '0' && (
-                    <div className="flex items-center gap-1">
-                      <span className="text-gray-400">납부금액:</span>
-                      <span>{record.paymentAmount}원</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* 과목별 상담 정보 표시 */}
-                {(record.mathConsultation || record.englishConsultation || record.koreanConsultation || record.etcConsultation) && (
-                  <div className="mt-2 pt-2 border-t border-gray-100">
-                    <div className="grid grid-cols-2 gap-2 text-xxs">
-                      {record.mathConsultation && (
-                        <div className="bg-teal-50 rounded-sm p-1.5">
-                          <div className="font-semibold text-teal-900 mb-0.5">수학</div>
-                          {record.mathConsultation.recommendedClass && (
-                            <div className="text-teal-700">추천반: {record.mathConsultation.recommendedClass}</div>
-                          )}
-                          {(record.mathConsultation.calculationScore || record.mathConsultation.myTotalScore) ? (
-                            <div className="text-teal-700">
-                              {record.mathConsultation.myTotalScore && `점수: ${record.mathConsultation.myTotalScore}`}
-                              {record.mathConsultation.scoreGrade && ` (${record.mathConsultation.scoreGrade})`}
-                            </div>
-                          ) : record.mathConsultation.levelTestScore ? (
-                            <div className="text-teal-700">레벨: {record.mathConsultation.levelTestScore}</div>
-                          ) : null}
-                        </div>
-                      )}
-                      {record.englishConsultation && (
-                        <div className="bg-cyan-50 rounded-sm p-1.5">
-                          <div className="font-semibold text-cyan-900 mb-0.5">
-                            영어
-                            {record.englishConsultation.englishTestType && (
-                              <span className="ml-1 text-micro font-normal">
-                                ({record.englishConsultation.englishTestType === 'ai' ? 'AI' : record.englishConsultation.englishTestType === 'nelt' ? 'NELT' : 'EiE'})
-                              </span>
-                            )}
-                          </div>
-                          {record.englishConsultation.recommendedClass && (
-                            <div className="text-cyan-700">추천반: {record.englishConsultation.recommendedClass}</div>
-                          )}
-                          {record.englishConsultation.engLevel ? (
-                            <div className="text-cyan-700">Lv: {record.englishConsultation.engLevel}</div>
-                          ) : record.englishConsultation.levelTestScore ? (
-                            <div className="text-cyan-700">레벨: {record.englishConsultation.levelTestScore}</div>
-                          ) : null}
-                        </div>
-                      )}
-                      {record.koreanConsultation && (
-                        <div className="bg-purple-50 rounded-sm p-1.5">
-                          <div className="font-semibold text-purple-900 mb-0.5">국어</div>
-                          {record.koreanConsultation.recommendedClass && (
-                            <div className="text-purple-700">추천반: {record.koreanConsultation.recommendedClass}</div>
-                          )}
-                        </div>
-                      )}
-                      {record.etcConsultation && (
-                        <div className="bg-gray-50 rounded-sm p-1.5">
-                          <div className="font-semibold text-gray-900 mb-0.5">기타</div>
-                          {record.etcConsultation.notes && (
-                            <div className="text-gray-700 line-clamp-2">{record.etcConsultation.notes}</div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+                </span>
+                <span className="w-12 shrink-0 text-xs text-primary-700 text-right truncate">
+                  {record.counselor || '-'}
+                </span>
               </div>
             ))}
           </div>
@@ -378,12 +326,12 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
       )}
 
       {/* 등록 상담 상세 모달 */}
-      {selectedRegistrationRecord && (
-        <RegistrationConsultationDetailModal
-          record={selectedRegistrationRecord}
-          onClose={() => setSelectedRegistrationRecord(null)}
-        />
-      )}
+      <ConsultationForm
+        isOpen={!!selectedRegistrationRecord}
+        onClose={() => setSelectedRegistrationRecord(null)}
+        onSubmit={handleUpdateRegistrationRecord}
+        initialData={selectedRegistrationRecord}
+      />
     </div>
   );
 };
