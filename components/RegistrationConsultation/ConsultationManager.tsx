@@ -91,12 +91,13 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
             ...record,
             authorId: userProfile?.uid
         } as Omit<ConsultationRecord, 'id'>, {
-            onSuccess: (consultationId) => {
+            onSuccess: (result) => {
                 // draft에서 생성된 경우 draft 상태를 converted로 변경
                 if (activeDraftId && userProfile?.uid) {
+                    const newId = (result as any)?.id || '';
                     convertDraft.mutate({
                         draftId: activeDraftId,
-                        consultationId: consultationId as string || '',
+                        consultationId: newId,
                         reviewerUid: userProfile.uid,
                     });
                     setActiveDraftId(null);
@@ -811,7 +812,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
             <ConsultationForm
                 isOpen={isFormOpen}
                 onClose={() => { setIsFormOpen(false); setActiveDraftId(null); }}
-                onSubmit={editingRecord ? handleUpdateRecord : handleAddRecord}
+                onSubmit={(editingRecord?.id) ? handleUpdateRecord : handleAddRecord}
                 initialData={editingRecord}
                 onDelete={handleDeleteRecord}
                 onConvertToStudent={handleConvertToStudent}
