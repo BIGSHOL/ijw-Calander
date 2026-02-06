@@ -341,8 +341,8 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
     ];
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]" onClick={onClose}>
-            <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-sm shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[84vh]">
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[3vh] z-[100]" onClick={onClose}>
+            <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-sm shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[94vh]">
                 {/* 헤더 */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
                     <div className="flex items-center gap-2">

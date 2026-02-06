@@ -55,8 +55,8 @@ export const useConsultations = (options: UseConsultationsOptions = {}) => {
             const snapshot = await getDocs(q);
 
             const records = snapshot.docs.map(doc => ({
-                id: doc.id,
                 ...(doc.data() as Record<string, any>),
+                id: doc.id, // Must come AFTER spread to prevent data's empty id from overwriting
             })) as ConsultationRecord[];
 
             // Helper to get valid date object
@@ -166,6 +166,7 @@ export const useDeleteConsultation = () => {
 
     return useMutation({
         mutationFn: async (id: string) => {
+            if (!id) throw new Error('삭제할 상담 ID가 없습니다.');
             const docRef = doc(db, 'consultations', id);
             await deleteDoc(docRef);
             return id;
