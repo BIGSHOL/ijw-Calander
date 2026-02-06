@@ -1150,14 +1150,14 @@ exports.submitConsultationDraft = functions
                 throw new functions.https.HttpsError("permission-denied", "만료된 토큰입니다.");
             }
 
-            // 3. Rate limiting: 토큰당 시간당 10건
-            const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-            const recentDrafts = await db.collection("consultation_drafts")
+            // 3. Rate limiting: 토큰당 시간당 10건 (단일 필드 쿼리 → 복합 인덱스 불필요)
+            const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+            const tokenDrafts = await db.collection("consultation_drafts")
                 .where("tokenId", "==", tokenDoc.id)
-                .where("submittedAt", ">=", oneHourAgo.toISOString())
                 .get();
 
-            if (recentDrafts.size >= 10) {
+            const recentCount = tokenDrafts.docs.filter(d => (d.data().submittedAt || "") >= oneHourAgo).length;
+            if (recentCount >= 10) {
                 throw new functions.https.HttpsError(
                     "resource-exhausted",
                     "제출 횟수를 초과했습니다. 잠시 후 다시 시도해주세요."
