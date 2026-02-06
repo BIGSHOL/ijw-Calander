@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ConsultationRecord, CONSULTATION_STATUS_COLORS } from '../../types';
-import { Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, X, ClipboardList, UserPlus, UserCheck, ExternalLink } from 'lucide-react';
+import { Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, X, ClipboardList, UserPlus, UserCheck, ExternalLink, Filter, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
@@ -18,7 +18,52 @@ interface ConsultationTableProps {
     searchTerm?: string; // 검색어 (부모에서 전달)
     showSettings?: boolean; // 보기설정 패널 표시 여부
     onShowSettingsChange?: (show: boolean) => void; // 보기설정 토글 콜백
+    showFilters?: boolean; // 필터 패널 표시 여부
+    onShowFiltersChange?: (show: boolean) => void; // 필터 패널 토글 콜백
+    conversionStatusMap?: Map<string, { status: 'converted' | 'matched' | 'pending' | 'ambiguous'; studentId?: string; candidates?: { id: string; name: string }[] }>; // 전환 상태 맵
+    onLinkStudent?: (consultationId: string, studentId: string) => void; // 동명이인 선택 시 연결
 }
+
+// 필터 상태 타입
+interface FilterState {
+    status: string[];    // 등록여부
+    subject: string[];   // 상담과목
+    grade: string[];     // 학년
+    counselor: string[]; // 상담자
+    consultationPath: string[]; // 상담경로
+    conversion: string[]; // 전환여부
+}
+
+const EMPTY_FILTERS: FilterState = {
+    status: [],
+    subject: [],
+    grade: [],
+    counselor: [],
+    consultationPath: [],
+    conversion: [],
+};
+
+const CONVERSION_LABELS: Record<string, string> = {
+    converted: '전환완료',
+    matched: '자동매칭',
+    ambiguous: '동명이인',
+    pending: '전환대기',
+    none: '미해당',
+};
+
+// localStorage에서 저장된 필터 설정 로드
+const loadSavedFilters = (): FilterState => {
+    try {
+        const saved = storage.getString(STORAGE_KEYS.CONSULTATION_TABLE_FILTERS);
+        if (saved) {
+            const parsed = JSON.parse(saved) as FilterState;
+            return { ...EMPTY_FILTERS, ...parsed };
+        }
+    } catch (e) {
+        console.warn('Failed to load filter settings:', e);
+    }
+    return EMPTY_FILTERS;
+};
 
 // 색상 테마
 const COLORS = {
@@ -99,16 +144,28 @@ const loadSavedColumns = (): Set<ColumnKey> => {
 export const ConsultationTable: React.FC<ConsultationTableProps> = ({
     data, onEdit, onDelete, onConvertToStudent, onNavigateToStudent,
     currentUserId, canEdit = false, canManage = false, canConvert = false,
-    searchTerm = '', showSettings = false, onShowSettingsChange
+    searchTerm = '', showSettings = false, onShowSettingsChange,
+    showFilters = false, onShowFiltersChange,
+    conversionStatusMap, onLinkStudent
 }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(loadSavedColumns);
     const [itemsPerPage, setItemsPerPage] = useState<number>(20);
+    const [filters, setFilters] = useState<FilterState>(loadSavedFilters);
+    const [candidatePopover, setCandidatePopover] = useState<{ consultationId: string; candidates: { id: string; name: string }[] } | null>(null);
 
-    // 검색어 변경 시 페이지 초기화
+    // 검색어/필터 변경 시 페이지 초기화
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm]);
+    }, [searchTerm, filters]);
+
+    // 팝오버 외부 클릭 시 닫기
+    useEffect(() => {
+        if (!candidatePopover) return;
+        const handleClick = () => setCandidatePopover(null);
+        document.addEventListener('click', handleClick);
+        return () => document.removeEventListener('click', handleClick);
+    }, [candidatePopover]);
 
     // 특정 상담에 대한 수정/삭제 권한 확인
     // canManage=true면 모든 상담 수정/삭제 가능
@@ -125,15 +182,80 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
         storage.setJSON(STORAGE_KEYS.CONSULTATION_TABLE_COLUMNS, [...newColumns]);
     };
 
+    // 필터 변경 시 localStorage에 저장
+    const updateFilters = (newFilters: FilterState) => {
+        setFilters(newFilters);
+        storage.setString(STORAGE_KEYS.CONSULTATION_TABLE_FILTERS, JSON.stringify(newFilters));
+    };
+
+    const toggleFilter = (key: keyof FilterState, value: string) => {
+        const current = filters[key];
+        const newValues = current.includes(value)
+            ? current.filter(v => v !== value)
+            : [...current, value];
+        updateFilters({ ...filters, [key]: newValues });
+    };
+
+    const clearAllFilters = () => {
+        updateFilters(EMPTY_FILTERS);
+    };
+
+    const activeFilterCount = Object.values(filters).reduce((sum, arr) => sum + arr.length, 0);
+
+    // 데이터에서 동적 필터 옵션 추출
+    const filterOptions = useMemo(() => {
+        const statuses = new Set<string>();
+        const subjects = new Set<string>();
+        const grades = new Set<string>();
+        const counselors = new Set<string>();
+        const paths = new Set<string>();
+
+        for (const r of data) {
+            if (r.status) statuses.add(String(r.status));
+            if (r.subject) subjects.add(r.subject);
+            if (r.grade) grades.add(r.grade);
+            if (r.counselor) counselors.add(r.counselor);
+            if (r.consultationPath) paths.add(r.consultationPath);
+        }
+
+        return {
+            status: [...statuses].sort(),
+            subject: [...subjects].sort(),
+            grade: [...grades].sort((a, b) => {
+                const order = ['초1','초2','초3','초4','초5','초6','중1','중2','중3','고1','고2','고3'];
+                return (order.indexOf(a) === -1 ? 99 : order.indexOf(a)) - (order.indexOf(b) === -1 ? 99 : order.indexOf(b));
+            }),
+            counselor: [...counselors].filter(Boolean).sort(),
+            consultationPath: [...paths].filter(Boolean).sort(),
+        };
+    }, [data]);
+
     const filteredData = useMemo(() => {
-        return data.filter(r =>
-            r.studentName.includes(searchTerm) ||
-            r.parentPhone.includes(searchTerm) ||
-            r.schoolName.includes(searchTerm) ||
-            r.counselor.includes(searchTerm) ||
-            r.registrar.includes(searchTerm)
-        );
-    }, [data, searchTerm]);
+        return data.filter(r => {
+            // 텍스트 검색
+            if (searchTerm) {
+                const match = r.studentName.includes(searchTerm) ||
+                    r.parentPhone.includes(searchTerm) ||
+                    r.schoolName.includes(searchTerm) ||
+                    r.counselor.includes(searchTerm) ||
+                    r.registrar.includes(searchTerm);
+                if (!match) return false;
+            }
+            // 필터 적용
+            if (filters.status.length > 0 && !filters.status.includes(String(r.status))) return false;
+            if (filters.subject.length > 0 && !filters.subject.includes(r.subject)) return false;
+            if (filters.grade.length > 0 && !filters.grade.includes(r.grade)) return false;
+            if (filters.counselor.length > 0 && !filters.counselor.includes(r.counselor)) return false;
+            if (filters.consultationPath.length > 0 && !filters.consultationPath.includes(r.consultationPath)) return false;
+            // 전환여부 필터
+            if (filters.conversion.length > 0) {
+                const info = conversionStatusMap?.get(r.id);
+                const conversionKey = info?.status || 'none';
+                if (!filters.conversion.includes(conversionKey)) return false;
+            }
+            return true;
+        });
+    }, [data, searchTerm, filters, conversionStatusMap]);
 
     const totalPages = Math.ceil(filteredData.length / itemsPerPage);
     const currentData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -327,10 +449,228 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                 </div>
             )}
 
+            {/* Filter Panel */}
+            {showFilters && (
+                <div className="p-4 rounded-sm shadow-sm border" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
+                    <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-bold flex items-center gap-2" style={{ color: COLORS.navy }}>
+                            <Filter className="w-4 h-4" />
+                            필터
+                            {activeFilterCount > 0 && (
+                                <span className="text-xs px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold">
+                                    {activeFilterCount}
+                                </span>
+                            )}
+                        </h4>
+                        <div className="flex gap-2">
+                            {activeFilterCount > 0 && (
+                                <button
+                                    onClick={clearAllFilters}
+                                    className="text-xs px-2 py-1 rounded-sm text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                    초기화
+                                </button>
+                            )}
+                            <button onClick={() => onShowFiltersChange?.(false)} style={{ color: COLORS.gray }}>
+                                <X size={16} />
+                            </button>
+                        </div>
+                    </div>
+                    <div className="space-y-3">
+                        {/* 등록여부 */}
+                        {filterOptions.status.length > 0 && (
+                            <div>
+                                <span className="text-xs font-semibold text-gray-500 mb-1.5 block">등록여부</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {filterOptions.status.map(s => {
+                                        const label = s === 'registered' ? '등록완료' : s;
+                                        const active = filters.status.includes(s);
+                                        const statusColor = active ? (CONSULTATION_STATUS_COLORS[s] || 'bg-gray-200 text-gray-700') : '';
+                                        return (
+                                            <button
+                                                key={s}
+                                                onClick={() => toggleFilter('status', s)}
+                                                className={`px-2.5 py-1 rounded-sm text-xs font-medium border transition-all ${
+                                                    active
+                                                        ? `${statusColor} border-transparent`
+                                                        : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'
+                                                }`}
+                                            >
+                                                {label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                        {/* 상담과목 */}
+                        {filterOptions.subject.length > 0 && (
+                            <div>
+                                <span className="text-xs font-semibold text-gray-500 mb-1.5 block">상담과목</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {filterOptions.subject.map(s => (
+                                        <button
+                                            key={s}
+                                            onClick={() => toggleFilter('subject', s)}
+                                            className={`px-2.5 py-1 rounded-sm text-xs font-medium border transition-all ${
+                                                filters.subject.includes(s)
+                                                    ? 'bg-indigo-100 text-indigo-700 border-indigo-200'
+                                                    : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'
+                                            }`}
+                                        >
+                                            {s}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {/* 학년 */}
+                        {filterOptions.grade.length > 0 && (
+                            <div>
+                                <span className="text-xs font-semibold text-gray-500 mb-1.5 block">학년</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {filterOptions.grade.map(g => (
+                                        <button
+                                            key={g}
+                                            onClick={() => toggleFilter('grade', g)}
+                                            className={`px-2.5 py-1 rounded-sm text-xs font-medium border transition-all ${
+                                                filters.grade.includes(g)
+                                                    ? 'bg-amber-100 text-amber-700 border-amber-200'
+                                                    : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'
+                                            }`}
+                                        >
+                                            {g}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {/* 상담자 */}
+                        {filterOptions.counselor.length > 0 && (
+                            <div>
+                                <span className="text-xs font-semibold text-gray-500 mb-1.5 block">상담자</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {filterOptions.counselor.map(c => (
+                                        <button
+                                            key={c}
+                                            onClick={() => toggleFilter('counselor', c)}
+                                            className={`px-2.5 py-1 rounded-sm text-xs font-medium border transition-all ${
+                                                filters.counselor.includes(c)
+                                                    ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                                                    : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'
+                                            }`}
+                                        >
+                                            {c}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {/* 상담경로 */}
+                        {filterOptions.consultationPath.length > 0 && (
+                            <div>
+                                <span className="text-xs font-semibold text-gray-500 mb-1.5 block">상담경로</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {filterOptions.consultationPath.map(p => (
+                                        <button
+                                            key={p}
+                                            onClick={() => toggleFilter('consultationPath', p)}
+                                            className={`px-2.5 py-1 rounded-sm text-xs font-medium border transition-all ${
+                                                filters.consultationPath.includes(p)
+                                                    ? 'bg-purple-100 text-purple-700 border-purple-200'
+                                                    : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'
+                                            }`}
+                                        >
+                                            {p}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {/* 전환여부 */}
+                        {conversionStatusMap && conversionStatusMap.size > 0 && (
+                            <div>
+                                <span className="text-xs font-semibold text-gray-500 mb-1.5 block">전환여부</span>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {Object.entries(CONVERSION_LABELS).map(([key, label]) => {
+                                        const colorMap: Record<string, string> = {
+                                            converted: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                                            matched: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+                                            ambiguous: 'bg-violet-100 text-violet-700 border-violet-200',
+                                            pending: 'bg-amber-100 text-amber-700 border-amber-200',
+                                            none: 'bg-gray-200 text-gray-700 border-gray-300',
+                                        };
+                                        return (
+                                            <button
+                                                key={key}
+                                                onClick={() => toggleFilter('conversion', key)}
+                                                className={`px-2.5 py-1 rounded-sm text-xs font-medium border transition-all ${
+                                                    filters.conversion.includes(key)
+                                                        ? colorMap[key]
+                                                        : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'
+                                                }`}
+                                            >
+                                                {label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Active Filter Summary (when filter panel is closed) */}
+            {!showFilters && activeFilterCount > 0 && (
+                <div className="flex items-center gap-2 flex-wrap px-1">
+                    <span className="text-xs text-gray-400 shrink-0">필터:</span>
+                    {filters.status.map(s => (
+                        <span key={`s-${s}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                            {s === 'registered' ? '등록완료' : s}
+                            <button onClick={() => toggleFilter('status', s)} className="hover:text-blue-900"><X size={10} /></button>
+                        </span>
+                    ))}
+                    {filters.subject.map(s => (
+                        <span key={`sub-${s}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            {s}
+                            <button onClick={() => toggleFilter('subject', s)} className="hover:text-indigo-900"><X size={10} /></button>
+                        </span>
+                    ))}
+                    {filters.grade.map(g => (
+                        <span key={`g-${g}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                            {g}
+                            <button onClick={() => toggleFilter('grade', g)} className="hover:text-amber-900"><X size={10} /></button>
+                        </span>
+                    ))}
+                    {filters.counselor.map(c => (
+                        <span key={`c-${c}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            {c}
+                            <button onClick={() => toggleFilter('counselor', c)} className="hover:text-emerald-900"><X size={10} /></button>
+                        </span>
+                    ))}
+                    {filters.consultationPath.map(p => (
+                        <span key={`p-${p}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                            {p}
+                            <button onClick={() => toggleFilter('consultationPath', p)} className="hover:text-purple-900"><X size={10} /></button>
+                        </span>
+                    ))}
+                    {filters.conversion.map(c => (
+                        <span key={`conv-${c}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200">
+                            {CONVERSION_LABELS[c] || c}
+                            <button onClick={() => toggleFilter('conversion', c)} className="hover:text-teal-900"><X size={10} /></button>
+                        </span>
+                    ))}
+                    <button onClick={clearAllFilters} className="text-xs text-red-500 hover:text-red-700 shrink-0">
+                        전체 해제
+                    </button>
+                </div>
+            )}
+
             {/* Desktop Table View - Full Width with Horizontal Scroll */}
             <div className="hidden md:block rounded-sm shadow-sm border overflow-hidden flex-1" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
                 <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)]">
-                    <table className="w-full" style={{ minWidth: visibleColumnsList.length * 100 + 80 }}>
+                    <table className="w-full" style={{ minWidth: visibleColumnsList.reduce((sum, col) => sum + parseInt(col.minWidth || '80', 10), 50) }}>
                         <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
                             <tr>
                                 {/* 전환 열 (항상 첫번째) */}
@@ -363,22 +703,75 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                         style={{ backgroundColor: idx % 2 === 0 ? 'white' : '#fafafa' }}
                                     >
                                         {/* 전환 열 (항상 첫번째) */}
-                                        <td className="px-2 py-1.5 whitespace-nowrap text-xs text-center" style={{ minWidth: '50px', width: '50px' }}>
-                                            {record.registeredStudentId ? (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation(); // 행 클릭 이벤트 방지
-                                                        onNavigateToStudent?.(record.registeredStudentId!);
-                                                    }}
-                                                    className="inline-flex items-center justify-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded-sm bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors"
-                                                    title="학생 프로필로 이동"
-                                                >
-                                                    <UserCheck size={12} />
-                                                    <ExternalLink size={10} />
-                                                </button>
-                                            ) : (
-                                                <span className="text-gray-300">-</span>
-                                            )}
+                                        <td className="px-2 py-1.5 whitespace-nowrap text-xs text-center relative" style={{ minWidth: '50px', width: '50px' }}>
+                                            {(() => {
+                                                const info = conversionStatusMap?.get(record.id);
+                                                if (info?.status === 'converted' || info?.status === 'matched') {
+                                                    return (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (info.studentId) onNavigateToStudent?.(info.studentId);
+                                                            }}
+                                                            className="inline-flex items-center justify-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded-sm bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors"
+                                                            title={info.status === 'converted' ? '전환 완료 (연동됨)' : '전환 완료 (자동 매칭)'}
+                                                        >
+                                                            <UserCheck size={12} />
+                                                            <ExternalLink size={10} />
+                                                        </button>
+                                                    );
+                                                } else if (info?.status === 'ambiguous' && info.candidates) {
+                                                    return (
+                                                        <>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setCandidatePopover(
+                                                                        candidatePopover?.consultationId === record.id
+                                                                            ? null
+                                                                            : { consultationId: record.id, candidates: info.candidates! }
+                                                                    );
+                                                                }}
+                                                                className="inline-flex items-center justify-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded-sm bg-violet-100 text-violet-700 hover:bg-violet-200 border border-violet-200 transition-colors"
+                                                                title={`동명이인 ${info.candidates.length}명 - 클릭하여 선택`}
+                                                            >
+                                                                <Users size={12} />
+                                                                {info.candidates.length}
+                                                            </button>
+                                                            {candidatePopover?.consultationId === record.id && (
+                                                                <div className="absolute top-full left-0 mt-1 bg-white rounded-sm shadow-lg border border-gray-200 z-20 min-w-[120px]">
+                                                                    <div className="px-2 py-1 text-[10px] text-gray-400 border-b">학생 선택</div>
+                                                                    {candidatePopover.candidates.map(c => (
+                                                                        <button
+                                                                            key={c.id}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                onLinkStudent?.(record.id, c.id);
+                                                                                setCandidatePopover(null);
+                                                                            }}
+                                                                            className="w-full px-3 py-1.5 text-left text-xs hover:bg-violet-50 transition-colors flex items-center gap-1.5"
+                                                                        >
+                                                                            <User size={11} className="text-violet-500 shrink-0" />
+                                                                            <span className="font-medium text-gray-800">{c.name}</span>
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </>
+                                                    );
+                                                } else if (info?.status === 'pending') {
+                                                    return (
+                                                        <span
+                                                            className="inline-flex items-center justify-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded-sm bg-amber-100 text-amber-700 border border-amber-200"
+                                                            title="등록 상태이나 매칭 학생 없음"
+                                                        >
+                                                            <UserPlus size={12} />
+                                                            대기
+                                                        </span>
+                                                    );
+                                                }
+                                                return <span className="text-gray-300">-</span>;
+                                            })()}
                                         </td>
                                         {visibleColumnsList.map(col => (
                                             <td key={col.key} className="px-2 py-1.5 whitespace-nowrap text-xs" style={{ minWidth: col.minWidth }}>
@@ -415,18 +808,38 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                         <span className="text-lg font-bold" style={{ color: COLORS.navy }}>{record.studentName}</span>
                                         <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: `${COLORS.navy}10`, color: COLORS.navy }}>{record.grade}</span>
                                         {/* 원생 전환 배지 */}
-                                        {record.registeredStudentId && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onNavigateToStudent?.(record.registeredStudentId!);
-                                                }}
-                                                className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded-sm bg-emerald-100 text-emerald-700"
-                                            >
-                                                <UserCheck size={12} />
-                                                전환완료
-                                            </button>
-                                        )}
+                                        {(() => {
+                                            const info = conversionStatusMap?.get(record.id);
+                                            if (info?.status === 'converted' || info?.status === 'matched') {
+                                                return (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (info.studentId) onNavigateToStudent?.(info.studentId);
+                                                        }}
+                                                        className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded-sm bg-emerald-100 text-emerald-700"
+                                                    >
+                                                        <UserCheck size={12} />
+                                                        전환완료
+                                                    </button>
+                                                );
+                                            } else if (info?.status === 'ambiguous' && info.candidates) {
+                                                return (
+                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded-sm bg-violet-100 text-violet-700 border border-violet-200">
+                                                        <Users size={12} />
+                                                        동명이인 {info.candidates.length}
+                                                    </span>
+                                                );
+                                            } else if (info?.status === 'pending') {
+                                                return (
+                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded-sm bg-amber-100 text-amber-700">
+                                                        <UserPlus size={12} />
+                                                        전환대기
+                                                    </span>
+                                                );
+                                            }
+                                            return null;
+                                        })()}
                                     </div>
                                     <span className="text-sm" style={{ color: COLORS.gray }}>
                                         {(record.schoolName || '').replace('초등학교', '초').replace('중학교', '중').replace('고등학교', '고')}

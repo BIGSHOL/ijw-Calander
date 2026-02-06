@@ -1,18 +1,41 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Search, Printer, ChevronRight, BookOpen, X } from 'lucide-react';
-import { TAB_GROUPS } from '../../types';
-import { HELP_ENTRIES, searchHelp, HelpEntry } from './helpContent';
+import { Search, Printer, ChevronRight, ChevronDown, BookOpen, X } from 'lucide-react';
+import { TAB_GROUPS, UserProfile } from '../../types';
+import { useTabPermissions } from '../../hooks/useTabPermissions';
+import { usePermissions } from '../../hooks/usePermissions';
+import { HELP_ENTRIES, searchHelp, HelpEntry, HelpSubSection } from './helpContent';
 
 interface HelpTabProps {
-  currentUser?: { role?: string } | null;
+  currentUser?: UserProfile | null;
 }
 
-const HelpTab: React.FC<HelpTabProps> = () => {
+const HelpTab: React.FC<HelpTabProps> = ({ currentUser }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const filtered = useMemo(() => searchHelp(HELP_ENTRIES, searchQuery), [searchQuery]);
+  // 사용자 탭 권한에 따른 도움말 필터링
+  const { accessibleTabs } = useTabPermissions(currentUser || null);
+  const { hasPermission } = usePermissions(currentUser || null);
+
+  // 세부 권한 기반 섹션 필터링
+  const filterSections = (sections: HelpSubSection[]): HelpSubSection[] => {
+    return sections.filter(section => {
+      if (!section.requiredPermissions || section.requiredPermissions.length === 0) return true;
+      return section.requiredPermissions.some(p => hasPermission(p));
+    });
+  };
+
+  // 접근 가능한 탭의 도움말만 필터링
+  const accessibleEntries = useMemo(() => {
+    return HELP_ENTRIES.filter(entry => {
+      if (entry.tab === 'overview') return true; // 시스템 개요는 항상 표시
+      return accessibleTabs.includes(entry.tab as any);
+    });
+  }, [accessibleTabs]);
+
+  const filtered = useMemo(() => searchHelp(accessibleEntries, searchQuery), [accessibleEntries, searchQuery]);
   const selectedEntry = filtered[selectedIndex] || filtered[0];
 
   const handleSelect = (idx: number) => {
@@ -22,6 +45,18 @@ const HelpTab: React.FC<HelpTabProps> = () => {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const toggleGroup = (label: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(label)) {
+        next.delete(label);
+      } else {
+        next.add(label);
+      }
+      return next;
+    });
   };
 
   // 그룹별로 항목 묶기
@@ -80,27 +115,45 @@ const HelpTab: React.FC<HelpTabProps> = () => {
 
         {/* 목차 */}
         <nav className="flex-1 overflow-y-auto py-2">
-          {groupedEntries.map((group) => (
-            <div key={group.label} className="mb-1">
-              <div className="px-3 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                {group.icon} {group.label}
-              </div>
-              {group.entries.map(({ entry, globalIndex }) => (
+          {groupedEntries.map((group) => {
+            const isCollapsed = collapsedGroups.has(group.label);
+            const hasSelectedEntry = group.entries.some(({ entry }) => selectedEntry?.tab === entry.tab);
+
+            return (
+              <div key={group.label} className="mb-1">
                 <button
-                  key={entry.tab}
-                  onClick={() => handleSelect(globalIndex)}
-                  className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 transition-colors ${
-                    selectedEntry?.tab === entry.tab
-                      ? 'bg-blue-50 text-blue-700 font-medium border-r-2 border-blue-600'
-                      : 'text-gray-700 hover:bg-gray-100'
+                  onClick={() => toggleGroup(group.label)}
+                  className={`w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors hover:bg-gray-200 rounded-sm ${
+                    hasSelectedEntry && isCollapsed ? 'text-blue-600' : 'text-gray-500'
                   }`}
                 >
-                  <span className="text-base leading-none">{entry.icon}</span>
-                  <span className="truncate">{entry.title}</span>
+                  <span className="flex items-center gap-1">
+                    {group.icon} {group.label}
+                    <span className="text-gray-400 font-normal normal-case tracking-normal">({group.entries.length})</span>
+                  </span>
+                  {isCollapsed ? (
+                    <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+                  ) : (
+                    <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+                  )}
                 </button>
-              ))}
-            </div>
-          ))}
+                {!isCollapsed && group.entries.map(({ entry, globalIndex }) => (
+                  <button
+                    key={entry.tab}
+                    onClick={() => handleSelect(globalIndex)}
+                    className={`w-full text-left px-3 py-1.5 text-sm flex items-center gap-2 transition-colors ${
+                      selectedEntry?.tab === entry.tab
+                        ? 'bg-blue-50 text-blue-700 font-medium border-r-2 border-blue-600'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span className="text-base leading-none">{entry.icon}</span>
+                    <span className="truncate">{entry.title}</span>
+                  </button>
+                ))}
+              </div>
+            );
+          })}
           {filtered.length === 0 && (
             <div className="px-4 py-8 text-center text-sm text-gray-400">
               검색 결과가 없습니다.
@@ -148,8 +201,8 @@ const HelpTab: React.FC<HelpTabProps> = () => {
               <p className="text-sm text-blue-800 print:text-gray-700">{selectedEntry.overview}</p>
             </div>
 
-            {/* 섹션들 */}
-            {selectedEntry.sections.map((section, sIdx) => (
+            {/* 섹션들 (권한 기반 필터링) */}
+            {filterSections(selectedEntry.sections).map((section, sIdx) => (
               <div key={sIdx} className="mb-6 print:mb-4">
                 <h3 className="text-base font-semibold text-gray-800 mb-2 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
@@ -180,9 +233,9 @@ const HelpTab: React.FC<HelpTabProps> = () => {
               </div>
             ))}
 
-            {/* 전체 인쇄 모드: 모든 항목 출력 */}
+            {/* 전체 인쇄 모드: 접근 가능한 항목만 출력 */}
             <div className="hidden print:block">
-              {HELP_ENTRIES.filter((e) => e.tab !== selectedEntry.tab).map((entry) => (
+              {accessibleEntries.filter((e) => e.tab !== selectedEntry.tab).map((entry) => (
                 <div key={entry.tab} className="mt-8 break-before-page">
                   <div className="flex items-center gap-3 mb-4">
                     <span className="text-2xl">{entry.icon}</span>
@@ -194,7 +247,7 @@ const HelpTab: React.FC<HelpTabProps> = () => {
                     </div>
                   </div>
                   <p className="text-sm text-gray-600 mb-3">{entry.overview}</p>
-                  {entry.sections.map((section, sIdx) => (
+                  {filterSections(entry.sections).map((section, sIdx) => (
                     <div key={sIdx} className="mb-4">
                       <h3 className="text-sm font-semibold text-gray-800 mb-1">{section.title}</h3>
                       <ul className="space-y-1 ml-4">

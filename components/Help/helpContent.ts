@@ -1,8 +1,10 @@
-import { AppTab, TAB_META, TAB_GROUPS } from '../../types';
+import { AppTab, TAB_META, TAB_GROUPS, PermissionId } from '../../types';
 
 export interface HelpSubSection {
   title: string;
   items: string[];
+  /** 이 섹션을 보려면 필요한 권한 (하나라도 있으면 표시, 미지정 시 항상 표시) */
+  requiredPermissions?: PermissionId[];
 }
 
 export interface HelpEntry {
@@ -94,6 +96,7 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
       },
       {
         title: '일정 관리',
+        requiredPermissions: ['events.create', 'events.manage_own'],
         items: [
           '일정 추가 — 상단 "일정 추가" 버튼 또는 캘린더 빈 영역 클릭',
           '빠른 추가 — 날짜 클릭 후 간편 입력',
@@ -111,6 +114,7 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
       },
       {
         title: '기타 기능',
+        requiredPermissions: ['events.create', 'events.bucket'],
         items: [
           '해시태그 — 일정에 해시태그 추가/필터링 (#회의, #시험, #행사 등)',
           '버킷 리스트 — 날짜 미정 일정 임시 보관 후 캘린더로 드래그 배정',
@@ -127,6 +131,7 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
     sections: [
       {
         title: '주요 기능',
+        requiredPermissions: ['gantt.create', 'gantt.edit'],
         items: [
           '프로젝트 관리 — 프로젝트 생성/수정/삭제',
           '태스크 관리 — 프로젝트 내 세부 작업, 시작일/종료일 설정',
@@ -154,6 +159,7 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
       },
       {
         title: '수업 관리',
+        requiredPermissions: ['timetable.math.edit', 'timetable.english.edit', 'timetable.science.edit', 'timetable.korean.edit'],
         items: [
           '수업 추가 — "수업 추가" 버튼으로 새 수업 생성',
           '수업 수정 — 수업 카드 클릭 후 편집',
@@ -162,6 +168,7 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
       },
       {
         title: '기타 기능',
+        requiredPermissions: ['timetable.math.edit', 'timetable.english.edit', 'timetable.english.simulation', 'timetable.math.simulation'],
         items: [
           '시뮬레이션 모드 — 변경사항을 실제 저장하지 않고 미리보기',
           '백업 (영어) — 현재 시간표를 백업 저장, 필요시 복원',
@@ -193,13 +200,19 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
         ],
       },
       {
-        title: '주요 기능',
+        title: '출결 관리',
+        requiredPermissions: ['attendance.manage_own', 'attendance.edit_all'],
         items: [
           '학생 이름 클릭으로 출결 상태 순환 변경',
-          '정렬 — 수업별 / 이름순',
           '학생 추가/제거',
-          '월급 계산 (강사용)',
           '세션 설정 — 세션 시간대 관리',
+        ],
+      },
+      {
+        title: '기타 기능',
+        items: [
+          '정렬 — 수업별 / 이름순',
+          '월급 계산 (강사용)',
           '이미지 내보내기',
         ],
       },
@@ -232,15 +245,21 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
     overview: '수업(반)을 생성하고 관리합니다.',
     sections: [
       {
-        title: '주요 기능',
+        title: '조회 기능',
         items: [
-          '수업 생성 — 수업명, 과목, 담당 강사, 수업 시간, 교실 설정',
-          '수업 수정/삭제 — 기존 수업 정보 변경',
-          '학생 배정 — 수업에 학생 등록/해제',
           '과목별 필터 — 전체/수학/영어/과학/국어',
           '담임/부담임 필터 — 강사별 담당 수업 필터',
           '요일별 필터 — 특정 요일의 수업만 표시',
           '수업 상세 — 수업 카드 클릭 시 강사, 교실, 학생 목록 확인',
+        ],
+      },
+      {
+        title: '수업 관리',
+        requiredPermissions: ['classes.create', 'classes.edit', 'classes.delete'],
+        items: [
+          '수업 생성 — 수업명, 과목, 담당 강사, 수업 시간, 교실 설정',
+          '수업 수정/삭제 — 기존 수업 정보 변경',
+          '학생 배정 — 수업에 학생 등록/해제',
         ],
       },
     ],
@@ -303,6 +322,7 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
       },
       {
         title: '관리 도구',
+        requiredPermissions: ['students.edit', 'students.delete'],
         items: [
           '중복 학생 병합 — 같은 이름의 중복 데이터 통합',
           '데이터 정리 — 비활성 데이터 정리',
@@ -326,6 +346,7 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
       },
       {
         title: '상담 등록',
+        requiredPermissions: ['consultation.create'],
         items: [
           '"상담 등록" 버튼 클릭',
           '학생/보호자 정보, 상담 내용, 관심 과목, 레벨테스트 결과 입력',
@@ -334,6 +355,7 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
       },
       {
         title: '주요 기능',
+        requiredPermissions: ['consultation.convert', 'consultation.manage'],
         items: [
           '원생 전환 — 상담 학생을 정식 재원생으로 전환 (레벨테스트 데이터 자동 복사)',
           'QR 토큰 생성 — 상담 접수용 QR 코드 생성',
@@ -383,6 +405,7 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
       },
       {
         title: '시험 관리',
+        requiredPermissions: ['grades.edit', 'grades.manage_exams'],
         items: [
           '시험 등록 — 시험명, 날짜, 유형(일일/주간/월말/중간/기말/모의 등), 과목, 만점, 범위 설정',
           '성적 입력 — 시험 선택 후 학생별 점수 일괄 입력',
@@ -422,10 +445,19 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
         ],
       },
       {
-        title: '주요 기능',
+        title: '퇴원 정보 수정',
+        requiredPermissions: ['withdrawal.edit'],
+        items: [
+          '퇴원 사유 변경 — 퇴원 카테고리 및 상세 사유 수정',
+          '상담 추적 — 관리자/담임 통화, 학생 상담 완료 체크',
+        ],
+      },
+      {
+        title: '재원 복구',
+        requiredPermissions: ['withdrawal.reactivate'],
         items: [
           '재원 복구 — 퇴원 학생을 다시 재원 상태로 복구',
-          '퇴원 상세 — 퇴원 사유, 퇴원일, 마지막 수강 이력 확인',
+          '퇴원 정보(퇴원일, 사유, 메모, 상담기록) 초기화',
         ],
       },
     ],
@@ -460,9 +492,8 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
       {
         title: '뷰 모드',
         items: [
-          '직원 목록 — 직원 정보 조회/수정',
-          '근무 일정 — 직원별 근무 스케줄 관리',
-          '휴가 관리 — 휴가 신청/승인 관리',
+          '직원 목록 — 직원 정보 조회',
+          '근무 일정 — 직원별 근무 스케줄 확인',
         ],
       },
       {
@@ -474,12 +505,13 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
         ],
       },
       {
-        title: '주요 기능',
+        title: '관리 기능',
+        requiredPermissions: ['users.approve', 'users.change_role', 'users.change_permissions'],
         items: [
           '직원 추가 — 새 직원 등록',
-          '역할/상태 필터 — 역할별, 재직 상태별 필터링',
           '권한 관리 — 직원별 시스템 접근 권한 설정',
           '승인 관리 — 신규 가입자 승인/차단',
+          '휴가 관리 — 휴가 신청/승인 관리',
         ],
       },
     ],
@@ -489,15 +521,21 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
     overview: '학생별 수납(수강료) 기록을 관리합니다.',
     sections: [
       {
-        title: '주요 기능',
+        title: '조회 기능',
         items: [
-          '수납 추가 — 새 수납 기록 등록',
           '상태 필터 — 전체 / 미납 / 완납',
           '월별 조회 — 청구 기간별 수납 현황',
-          'Excel 가져오기 — xlsx 파일에서 수납 데이터 일괄 등록',
-          'Excel 내보내기 — 수납 데이터를 엑셀로 다운로드',
           '통계 — 수납률, 미납 현황 요약',
           '페이지네이션 — 페이지 크기 조절 가능',
+        ],
+      },
+      {
+        title: '수납 관리',
+        requiredPermissions: ['billing.edit'],
+        items: [
+          '수납 추가 — 새 수납 기록 등록',
+          'Excel 가져오기 — xlsx 파일에서 수납 데이터 일괄 등록',
+          'Excel 내보내기 — 수납 데이터를 엑셀로 다운로드',
         ],
       },
     ],
@@ -547,6 +585,7 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
     sections: [
       {
         title: '섹션',
+        requiredPermissions: ['settings.role_permissions'],
         items: [
           '권한 설정 — 12개 카테고리별 세부 권한 ON/OFF',
           '탭 접근 관리 — 역할별로 접근 가능한 탭 설정',
@@ -554,6 +593,7 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
       },
       {
         title: '권한 카테고리',
+        requiredPermissions: ['settings.role_permissions'],
         items: [
           '학생 관리 — 학생 조회/수정/등록/삭제',
           '출석부 — 출석 조회/수정',
@@ -571,6 +611,7 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
       },
       {
         title: '주요 기능',
+        requiredPermissions: ['settings.role_permissions'],
         items: [
           '역할 선택 후 카테고리별 접기/펼치기로 세부 권한 설정',
           '연동 권한 자동 처리 (예: "수정" 활성화 시 "조회" 자동 활성화)',

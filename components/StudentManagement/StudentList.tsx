@@ -35,19 +35,22 @@ const StudentList: React.FC<StudentListProps> = ({
   }, []);
 
   // 학생 섹션 분류 (ClassCard 로직과 동일)
-  const { activeStudents, onHoldStudents, withdrawingThisWeekStudents } = useMemo(() => {
+  const { activeStudents, onHoldStudents, withdrawingThisWeekStudents, withdrawnStudents } = useMemo(() => {
     const active: UnifiedStudent[] = [];
     const onHold: UnifiedStudent[] = [];
     const withdrawing: UnifiedStudent[] = [];
+    const withdrawn: UnifiedStudent[] = [];
 
     students.forEach(student => {
       // 퇴원생: withdrawalDate가 있는 경우
       if (student.withdrawalDate) {
-        // 이번 주에 퇴원하는 학생인지 확인
-        if (student.withdrawalDate >= today && student.withdrawalDate <= weekEnd) {
+        if (student.status === 'withdrawn') {
+          // 이미 퇴원 완료된 학생 → 퇴원 섹션
+          withdrawn.push(student);
+        } else if (student.withdrawalDate >= today && student.withdrawalDate <= weekEnd) {
+          // 이번 주 퇴원 예정
           withdrawing.push(student);
         }
-        // 이미 퇴원한 학생은 표시하지 않음
         return;
       }
 
@@ -84,7 +87,8 @@ const StudentList: React.FC<StudentListProps> = ({
     return {
       activeStudents: active,
       onHoldStudents: onHold,
-      withdrawingThisWeekStudents: withdrawing
+      withdrawingThisWeekStudents: withdrawing,
+      withdrawnStudents: withdrawn,
     };
   }, [students, today, weekEnd]);
 
@@ -99,7 +103,8 @@ const StudentList: React.FC<StudentListProps> = ({
     const result = {
       active: [] as UnifiedStudent[],
       onHold: [] as UnifiedStudent[],
-      withdrawing: [] as UnifiedStudent[]
+      withdrawing: [] as UnifiedStudent[],
+      withdrawn: [] as UnifiedStudent[],
     };
 
     // 재원생 섹션
@@ -129,8 +134,17 @@ const StudentList: React.FC<StudentListProps> = ({
       if (currentIndex >= endIndex) return result;
     }
 
+    // 퇴원 완료 섹션
+    for (let i = 0; i < withdrawnStudents.length; i++) {
+      if (currentIndex >= startIndex && currentIndex < endIndex) {
+        result.withdrawn.push(withdrawnStudents[i]);
+      }
+      currentIndex++;
+      if (currentIndex >= endIndex) return result;
+    }
+
     return result;
-  }, [activeStudents, onHoldStudents, withdrawingThisWeekStudents, startIndex, endIndex]);
+  }, [activeStudents, onHoldStudents, withdrawingThisWeekStudents, withdrawnStudents, startIndex, endIndex]);
 
   // 페이지 크기 변경 시 첫 페이지로 이동
   const handlePageSizeChange = (newSize: number) => {
@@ -431,6 +445,62 @@ const StudentList: React.FC<StudentListProps> = ({
                             </span>
                           )}
                         </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {/* 퇴원 완료 섹션 */}
+            {paginatedSections.withdrawn.length > 0 && (
+              <section aria-labelledby="withdrawn-students-heading">
+                <div className="sticky top-0 px-2 py-1 bg-gray-100 border-b border-gray-300 z-10">
+                  <h3 id="withdrawn-students-heading" className="text-xxs font-bold text-gray-600">
+                    퇴원 ({withdrawnStudents.length}명)
+                  </h3>
+                </div>
+                <ul className="divide-y divide-gray-100">
+                  {paginatedSections.withdrawn.map((student) => (
+                    <li
+                      key={student.id}
+                      onClick={() => onSelectStudent(student)}
+                      className={`px-2 py-1 cursor-pointer transition-colors ${selectedStudent?.id === student.id
+                        ? 'bg-accent/10 border-l-2 border-accent'
+                        : 'hover:bg-primary/5'
+                        }`}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${student.name} 학생 선택`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onSelectStudent(student);
+                        }
+                      }}
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-1">
+                          {getStatusBadge(student.status)}
+                          <span className="text-xs font-bold text-primary">{student.name}</span>
+                          {student.englishName && (
+                            <span className="text-xxs text-gray-500 max-w-[60px] truncate" title={student.englishName}>({student.englishName})</span>
+                          )}
+                          {student.withdrawalDate && (
+                            <span className="text-micro text-gray-400 ml-auto">
+                              {student.withdrawalDate}
+                            </span>
+                          )}
+                        </div>
+                        {(student.school || student.grade) && (
+                          <div className="flex items-center gap-1 pl-0.5">
+                            <span className="text-xxs text-gray-400">
+                              {student.school && <span className="truncate max-w-[80px]" title={student.school}>{student.school}</span>}
+                              {student.school && student.grade && ' '}
+                              {student.grade}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </li>
                   ))}

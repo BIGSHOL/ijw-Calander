@@ -22,6 +22,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { LevelTest, GoalSetting, GradeComment, GradeCommentCategory, StudentScore } from '../types';
+import { ConsultationRecord, SubjectConsultationDetail } from '../types';
 
 // ============ 컬렉션 상수 ============
 const COL_LEVEL_TESTS = 'level_tests';
@@ -53,6 +54,189 @@ export function useAllLevelTests(subjectFilter?: 'all' | 'math' | 'english') {
       const snapshot = await getDocs(q);
       return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as Omit<LevelTest, 'id'>) })) as LevelTest[];
     },
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+// ============ 상담 기반 레벨테스트 Hooks ============
+
+export interface ConsultationLevelTest extends LevelTest {
+  _sourceConsultationId: string;
+  _sourceDetail: SubjectConsultationDetail;
+}
+
+function hasMathLevelTestData(detail?: SubjectConsultationDetail): boolean {
+  if (!detail) return false;
+  return !!(
+    detail.calculationScore || detail.comprehensionScore ||
+    detail.reasoningScore || detail.problemSolvingScore ||
+    detail.myTotalScore || detail.levelTestScore
+  );
+}
+
+function hasEnglishLevelTestData(detail?: SubjectConsultationDetail): boolean {
+  if (!detail) return false;
+  return !!(detail.englishTestType || detail.engLevel || detail.levelTestScore);
+}
+
+/** Firestore Timestamp 또는 문자열을 안전하게 문자열로 변환 */
+function toSafeString(val: any): string {
+  if (!val) return '';
+  if (typeof val === 'string') return val;
+  if (typeof val.toDate === 'function') {
+    // Firestore Timestamp
+    const d = val.toDate();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  return String(val);
+}
+
+/** Firestore Timestamp 또는 문자열을 안전하게 숫자(ms)로 변환 */
+function toSafeTimestamp(val: any): number {
+  if (!val) return Date.now();
+  if (typeof val === 'number') return val;
+  if (typeof val.toDate === 'function') return val.toDate().getTime();
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? Date.now() : d.getTime();
+}
+
+function consultationToLevelTests(record: ConsultationRecord): ConsultationLevelTest[] {
+  const results: ConsultationLevelTest[] = [];
+  const baseFields = {
+    studentId: record.registeredStudentId || record.id,
+    studentName: record.studentName || '',
+    testDate: toSafeString(record.consultationDate),
+    testType: 'placement' as const,
+    evaluatorId: record.authorId || '',
+    evaluatorName: record.counselor || '',
+    createdAt: toSafeTimestamp(record.createdAt),
+    updatedAt: toSafeTimestamp(record.updatedAt),
+    _sourceConsultationId: record.id,
+  };
+
+  if (hasMathLevelTestData(record.mathConsultation)) {
+    const m = record.mathConsultation!;
+    results.push({
+      ...baseFields,
+      id: record.id + '_math',
+      subject: 'math',
+      calculationScore: m.calculationScore,
+      comprehensionScore: m.comprehensionScore,
+      reasoningScore: m.reasoningScore,
+      problemSolvingScore: m.problemSolvingScore,
+      myTotalScore: m.myTotalScore,
+      averageScore: m.averageScore,
+      scoreGrade: m.scoreGrade,
+      percentage: m.levelTestScore ? parseFloat(m.levelTestScore) : undefined,
+      _sourceDetail: m,
+    });
+  }
+
+  if (hasEnglishLevelTestData(record.englishConsultation)) {
+    const e = record.englishConsultation!;
+    results.push({
+      ...baseFields,
+      id: record.id + '_english',
+      subject: 'english',
+      englishTestType: e.englishTestType,
+      engLevel: e.engLevel,
+      engAiGradeLevel: e.engAiGradeLevel,
+      engAiArIndex: e.engAiArIndex,
+      engAiTopPercent: e.engAiTopPercent,
+      engAiWordMy: e.engAiWordMy,
+      engAiWordAvg: e.engAiWordAvg,
+      engAiListenMy: e.engAiListenMy,
+      engAiListenAvg: e.engAiListenAvg,
+      engAiReadMy: e.engAiReadMy,
+      engAiReadAvg: e.engAiReadAvg,
+      engAiWriteMy: e.engAiWriteMy,
+      engAiWriteAvg: e.engAiWriteAvg,
+      engNeltOverallLevel: e.engNeltOverallLevel,
+      engNeltRank: e.engNeltRank,
+      engNeltVocab: e.engNeltVocab,
+      engNeltGrammar: e.engNeltGrammar,
+      engNeltListening: e.engNeltListening,
+      engNeltReading: e.engNeltReading,
+      engEieGradeLevel: e.engEieGradeLevel,
+      engEieVocabLevel: e.engEieVocabLevel,
+      engEieRank: e.engEieRank,
+      engEieCourse: e.engEieCourse,
+      engEieChartLevel: e.engEieChartLevel,
+      engEieTextbook: e.engEieTextbook,
+      engEieVocabMy: e.engEieVocabMy,
+      engEieVocabAvg: e.engEieVocabAvg,
+      engEieListenMy: e.engEieListenMy,
+      engEieListenAvg: e.engEieListenAvg,
+      engEieReadMy: e.engEieReadMy,
+      engEieReadAvg: e.engEieReadAvg,
+      engEieGrammarMy: e.engEieGrammarMy,
+      engEieGrammarAvg: e.engEieGrammarAvg,
+      percentage: e.levelTestScore ? parseFloat(e.levelTestScore) : undefined,
+      _sourceDetail: e,
+    });
+  }
+
+  return results;
+}
+
+/**
+ * 전체 상담에서 레벨테스트 데이터 추출 (모아보기용)
+ */
+export function useConsultationLevelTests(subjectFilter?: 'all' | 'math' | 'english') {
+  return useQuery({
+    queryKey: ['consultation_level_tests', 'all', subjectFilter],
+    queryFn: async () => {
+      const q = query(
+        collection(db, 'consultations'),
+        orderBy('consultationDate', 'desc')
+      );
+      const snapshot = await getDocs(q);
+      const records = snapshot.docs.map(d => ({
+        ...(d.data() as Record<string, any>),
+        id: d.id,
+      })) as ConsultationRecord[];
+
+      let levelTests: ConsultationLevelTest[] = [];
+      for (const record of records) {
+        levelTests.push(...consultationToLevelTests(record));
+      }
+
+      if (subjectFilter && subjectFilter !== 'all') {
+        levelTests = levelTests.filter(t => t.subject === subjectFilter);
+      }
+
+      return levelTests;
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+/**
+ * 특정 학생의 상담 레벨테스트 조회 (성적탭용)
+ */
+export function useStudentConsultationLevelTests(studentId: string | undefined) {
+  return useQuery({
+    queryKey: ['consultation_level_tests', studentId],
+    queryFn: async () => {
+      if (!studentId) return [];
+      const q = query(
+        collection(db, 'consultations'),
+        where('registeredStudentId', '==', studentId),
+        orderBy('consultationDate', 'desc')
+      );
+      const snapshot = await getDocs(q);
+      const records = snapshot.docs.map(d => ({
+        ...(d.data() as Record<string, any>),
+        id: d.id,
+      })) as ConsultationRecord[];
+
+      const levelTests: ConsultationLevelTest[] = [];
+      for (const record of records) {
+        levelTests.push(...consultationToLevelTests(record));
+      }
+      return levelTests;
+    },
+    enabled: !!studentId,
     staleTime: 1000 * 60 * 5,
   });
 }

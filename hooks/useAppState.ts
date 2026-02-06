@@ -313,6 +313,7 @@ export interface StudentFilters {
   subjectFilterMode: 'OR' | 'AND';  // 과목 필터 모드 (OR: 하나라도 수강, AND: 모두 수강)
   teacher: string;  // 'all' 또는 선생님 이름
   excludeNoEnrollment: boolean;  // 미수강 학생 제외
+  gradeMismatch: boolean;  // 학제/학년 불일치 필터
 }
 
 export function useStudentFilterState() {
@@ -325,6 +326,7 @@ export function useStudentFilterState() {
     subjectFilterMode: 'OR',  // 기본값: OR (하나라도 수강)
     teacher: 'all',
     excludeNoEnrollment: false,
+    gradeMismatch: false,
   });
   const [studentSortBy, setStudentSortBy] = useState<'name' | 'grade' | 'startDate'>('name');
 
@@ -346,6 +348,7 @@ export function useStudentFilterState() {
       subjectFilterMode: 'OR',
       teacher: 'all',
       excludeNoEnrollment: false,
+      gradeMismatch: false,
     });
   }, []);
 

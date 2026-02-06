@@ -11,6 +11,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import AddScoreModal from '../../Grades/AddScoreModal';
 import {
     useLevelTests, useAddLevelTest, useDeleteLevelTest,
+    useStudentConsultationLevelTests,
     useGoalSettings, useAddGoalSetting, useUpdateGoalAchievement, useDeleteGoalSetting,
     useLatestComments, useAddGradeComment, useUpdateGradeComment, useDeleteGradeComment
 } from '../../../hooks/useGradeProfile';
@@ -41,7 +42,14 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
     // Data fetching - 전체 성적을 가져온 후 클라이언트에서 필터링
     const { data: allScores = [], isLoading: loadingScores } = useStudentScores(student.id);
     const { data: exams = [] } = useExams();
-    const { data: levelTests = [] } = useLevelTests(student.id);
+    const { data: directLevelTests = [] } = useLevelTests(student.id);
+    const { data: consultationLevelTests = [] } = useStudentConsultationLevelTests(student.id);
+
+    // 상담 레벨테스트와 직접 등록 레벨테스트 합치기 (상담 것 먼저)
+    const levelTests = useMemo(() => {
+        return [...consultationLevelTests, ...directLevelTests];
+    }, [consultationLevelTests, directLevelTests]);
+
     const { data: goalSettings = [] } = useGoalSettings(student.id);
     const latestCommentsObj = useLatestComments(student.id);
 
@@ -312,11 +320,12 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                             <p className="text-xs text-gray-400 text-center py-2">등록된 레벨테스트가 없습니다</p>
                         ) : (
                             <div className="space-y-1.5">
-                                {levelTests.slice(0, 5).map((test) => {
+                                {levelTests.slice(0, 10).map((test) => {
                                     const isMath = test.subject === 'math';
                                     const hasMathDetail = isMath && (test.calculationScore || test.myTotalScore);
                                     const hasEngDetail = !isMath && test.englishTestType;
                                     const engTestLabel = test.englishTestType === 'ai' ? 'AI' : test.englishTestType === 'nelt' ? 'NELT' : test.englishTestType === 'eie' ? 'EiE' : '';
+                                    const isFromConsultation = '_sourceConsultationId' in test;
 
                                     return (
                                         <div key={test.id} className="p-1.5 bg-gray-50 rounded-sm hover:bg-accent/10 transition-colors group">
@@ -328,9 +337,12 @@ const GradesTab: React.FC<GradesTabProps> = ({ student, readOnly = false, curren
                                                     {hasEngDetail && (
                                                         <span className="px-1 py-0.5 rounded-sm text-micro font-medium bg-indigo-100 text-indigo-700">{engTestLabel}</span>
                                                     )}
+                                                    {isFromConsultation && (
+                                                        <span className="px-1 py-0.5 rounded-sm text-micro font-medium bg-amber-100 text-amber-700">상담</span>
+                                                    )}
                                                     <span className="text-xxs text-gray-500">{test.testDate}</span>
                                                 </div>
-                                                {!readOnly && (
+                                                {!readOnly && !isFromConsultation && (
                                                     <button
                                                         onClick={() => { if (confirm('이 레벨테스트를 삭제하시겠습니까?')) deleteLevelTest.mutateAsync({ id: test.id, studentId: student.id }); }}
                                                         className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-all"

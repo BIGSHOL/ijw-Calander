@@ -624,16 +624,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
     refreshStudents();
   };
 
-  if (loadingTeachers) {
-    return (
-      <div className="text-center py-6">
-        <div className="animate-spin w-5 h-5 border-2 border-accent border-t-transparent rounded-sm mx-auto mb-2"></div>
-        <p className="text-gray-500 text-xs">수업 정보 불러오는 중...</p>
-      </div>
-    );
-  }
-
   // 종료된 수업 목록 (enrollments에서 endDate가 있는 항목)
+  // NOTE: 모든 useMemo/useEffect 훅은 early return 전에 호출되어야 함 (React 훅 규칙)
   const completedClasses = useMemo(() => {
     const groups = new Map<string, GroupedEnrollment>();
 
@@ -676,6 +668,16 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
 
     return Array.from(groups.values());
   }, [student.enrollments]);
+
+  // 로딩 중 early return (모든 훅 호출 이후)
+  if (loadingTeachers) {
+    return (
+      <div className="text-center py-6">
+        <div className="animate-spin w-5 h-5 border-2 border-accent border-t-transparent rounded-sm mx-auto mb-2"></div>
+        <p className="text-gray-500 text-xs">수업 정보 불러오는 중...</p>
+      </div>
+    );
+  }
 
   // 과목별 분류
   const mathClasses = groupedEnrollments.filter(g => g.subject === 'math');

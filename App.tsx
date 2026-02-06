@@ -8,6 +8,7 @@ import { useGanttProjects } from './hooks/useGanttProjects';
 import { useSessionPeriods } from './hooks/useSessionPeriods';
 import { convertGanttProjectsToCalendarEvents } from './utils/ganttToCalendar';
 import { useTabPermissions } from './hooks/useTabPermissions';
+import { useTabHistory } from './hooks/useTabHistory';
 import { useEventCrud } from './hooks/useEventCrud';
 import { useBucketItems } from './hooks/useBucketItems';
 import { useTaskMemos } from './hooks/useTaskMemos';
@@ -17,6 +18,7 @@ import { formatUserDisplay, staffToUserLike } from './utils/staffHelpers';
 import { storage, STORAGE_KEYS } from './utils/localStorage';
 import { useStudents } from './hooks/useStudents';
 import { useClasses } from './hooks/useClasses';
+import { useGradePromotion } from './hooks/useGradePromotion';
 
 // State management hooks
 import {
@@ -69,6 +71,7 @@ const App: React.FC = () => {
   const modalState = useModalState();
   const timetableState = useTimetableState();
   const studentFilterState = useStudentFilterState();
+  const { promoteGrades, isPromoting } = useGradePromotion();
   const gradesFilterState = useGradesFilterState();
   const darkModeState = useDarkMode();
   const pendingMovesState = usePendingEventMoves();
@@ -302,12 +305,21 @@ const App: React.FC = () => {
   // Tab Permissions
   const { canAccessTab, accessibleTabs, isLoading: isTabPermissionLoading } = useTabPermissions(effectiveProfile);
 
+  // 브라우저 히스토리 연동 (뒤로/앞으로 버튼, 백스페이스 방지, URL 해시)
+  const { getTabFromHash } = useTabHistory(appMode, setAppMode);
+
   useEffect(() => {
     if (isTabPermissionLoading || !effectiveProfile) return;
 
     const priority: AppTab[] = ['dashboard', 'calendar', 'timetable', 'attendance', 'payment', 'gantt', 'consultation', 'students'];
 
     if (appMode === null) {
+      // URL 해시에서 탭 복원 시도
+      const hashTab = getTabFromHash();
+      if (hashTab && canAccessTab(hashTab)) {
+        setAppMode(hashTab);
+        return;
+      }
       const firstAccessibleTab = priority.find(tab => canAccessTab(tab));
       if (firstAccessibleTab) {
         setAppMode(firstAccessibleTab);
@@ -713,6 +725,8 @@ const App: React.FC = () => {
               teachersBySubject,
               studentSortBy,
               setStudentSortBy: setStudentSortBy as any,
+              onGradePromotion: promoteGrades,
+              isPromoting,
             } : undefined}
             timetableProps={appMode === 'timetable' ? {
               timetableSubject: timetableSubject as any,

@@ -183,7 +183,7 @@ export const useDeleteConsultation = () => {
  * 등록 상태 여부 확인
  */
 export const isRegisteredStatus = (status: string): boolean => {
-    return ['영수등록', '수학등록', '영어등록'].includes(status);
+    return ['영수등록', '수학등록', '영어등록', '국어등록', '과학등록', '등록완료'].includes(status);
 };
 
 /**

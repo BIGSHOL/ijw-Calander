@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { XCircle, ChevronDown, Search, X } from 'lucide-react';
+import { XCircle, ChevronDown, Search, X, ChevronsUp, AlertTriangle } from 'lucide-react';
 import { TabSubNavigation } from '../Common/TabSubNavigation';
 import { TabButton } from '../Common/TabButton';
 import { TabFilterGroup } from '../Common/TabFilterGroup';
@@ -25,6 +25,8 @@ interface StudentsNavBarProps {
   teachersBySubject: TeachersBySubject;
   studentSortBy: 'name' | 'grade' | 'startDate';
   setStudentSortBy: (value: 'name' | 'grade' | 'startDate') => void;
+  onGradePromotion?: () => void;
+  isPromoting?: boolean;
 }
 
 export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
@@ -35,6 +37,8 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
   teachersBySubject,
   studentSortBy,
   setStudentSortBy,
+  onGradePromotion,
+  isPromoting,
 }) => {
   // 활성 필터 개수 계산
   const [activeFilterCount, setActiveFilterCount] = useState(0);
@@ -45,6 +49,7 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
     if (studentFilters.searchField !== 'all') count++;
     if (studentFilters.grade !== 'all') count++;
     if (studentFilters.teacher !== 'all') count++;
+    if (studentFilters.gradeMismatch) count++;
     if (studentSortBy !== 'name') count++;
     setActiveFilterCount(count);
   }, [studentFilters, studentSortBy]);
@@ -226,6 +231,22 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
             >
               <XCircle size={14} />
               <span className="text-xs">{studentFilters.excludeNoEnrollment ? '제외 중' : '포함'}</span>
+            </button>
+          </div>
+
+          {/* Grade-School Mismatch Filter */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-300">학제/학년 불일치</span>
+            <button
+              onClick={() => setStudentFilters(prev => ({ ...prev, gradeMismatch: !prev.gradeMismatch }))}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm border transition-all ${
+                studentFilters.gradeMismatch
+                  ? 'bg-orange-500 border-orange-500 text-white font-medium'
+                  : 'bg-white/10 border-white/10 text-white hover:border-white/30'
+              }`}
+            >
+              <AlertTriangle size={14} />
+              <span className="text-xs">{studentFilters.gradeMismatch ? '필터 중' : '전체'}</span>
             </button>
           </div>
 
@@ -476,11 +497,11 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
           </div>
 
           {/* Reset Filters */}
-          {(studentFilters.searchQuery || studentFilters.grade !== 'all' || studentFilters.status !== 'all' || studentFilters.subjects.length > 0 || studentFilters.teacher !== 'all' || studentFilters.excludeNoEnrollment || studentSortBy !== 'name') && (
+          {(studentFilters.searchQuery || studentFilters.grade !== 'all' || studentFilters.status !== 'all' || studentFilters.subjects.length > 0 || studentFilters.teacher !== 'all' || studentFilters.excludeNoEnrollment || studentFilters.gradeMismatch || studentSortBy !== 'name') && (
             <div className="pt-2 border-t border-white/10 mt-2">
               <button
                 onClick={() => {
-                  setStudentFilters({ searchQuery: '', searchField: 'all', grade: 'all', status: 'all', subjects: [], subjectFilterMode: 'OR', teacher: 'all', excludeNoEnrollment: false });
+                  setStudentFilters({ searchQuery: '', searchField: 'all', grade: 'all', status: 'all', subjects: [], subjectFilterMode: 'OR', teacher: 'all', excludeNoEnrollment: false, gradeMismatch: false });
                   setStudentSortBy('name');
                 }}
                 className="w-full px-3 py-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors text-xs font-bold"
@@ -491,6 +512,19 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
           )}
         </TabFilterGroup.Advanced>
       </TabFilterGroup>
+
+      {/* 학년 진급 버튼 - 2행 가장 우측 */}
+      {onGradePromotion && (
+        <button
+          onClick={onGradePromotion}
+          disabled={isPromoting}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 border border-white/10 text-white hover:bg-white/20 rounded-sm text-xs font-bold transition-all shrink-0 disabled:opacity-50"
+          title="전체 재원 학생 학년 +1 진급"
+        >
+          <ChevronsUp size={14} />
+          <span>{isPromoting ? '진급 중...' : '학년 진급'}</span>
+        </button>
+      )}
     </TabSubNavigation>
   );
 };

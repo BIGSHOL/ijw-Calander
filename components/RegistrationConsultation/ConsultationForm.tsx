@@ -404,6 +404,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                     onChange={e => setFormData({ ...formData, receiver: e.target.value })}
                                     className={inputClass}
                                     placeholder="받은 사람"
+                                    {...viewProps}
                                 />
                             </div>
                             <div>
@@ -413,6 +414,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                     value={formData.createdAt}
                                     onChange={e => setFormData({ ...formData, createdAt: e.target.value })}
                                     className={inputClass}
+                                    {...viewProps}
                                 />
                             </div>
                             <div>
@@ -423,6 +425,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                     onChange={e => setFormData({ ...formData, counselor: e.target.value })}
                                     className={inputClass}
                                     placeholder="상담 선생님"
+                                    {...viewProps}
                                 />
                             </div>
                             <div>
@@ -433,6 +436,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                     onChange={e => setFormData({ ...formData, consultationPath: e.target.value })}
                                     className={inputClass}
                                     placeholder="지인소개"
+                                    {...viewProps}
                                 />
                             </div>
                         </div>
@@ -456,6 +460,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                         value={formData.studentName}
                                         onChange={e => setFormData({ ...formData, studentName: e.target.value })}
                                         className={inputClass}
+                                        {...viewProps}
                                     />
                                 </div>
                                 <div>
@@ -465,6 +470,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                         value={formData.parentPhone}
                                         onChange={e => setFormData({ ...formData, parentPhone: e.target.value })}
                                         className={inputClass}
+                                        {...viewProps}
                                     />
                                 </div>
                             </div>
@@ -477,6 +483,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                         value={formData.schoolName}
                                         onChange={e => setFormData({ ...formData, schoolName: e.target.value })}
                                         className={inputClass}
+                                        {...viewProps}
                                     />
                                 </div>
                                 <div>
@@ -486,6 +493,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                         value={formData.grade}
                                         onChange={e => setFormData({ ...formData, grade: e.target.value as SchoolGrade })}
                                         className={inputClass}
+                                        disabled={isViewMode}
                                     >
                                         {GRADE_OPTIONS.map(g => (
                                             <option key={g} value={g}>{g}</option>
@@ -501,6 +509,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                     onChange={e => setFormData({ ...formData, address: e.target.value })}
                                     className={inputClass}
                                     placeholder="상세 주소"
+                                    {...viewProps}
                                 />
                             </div>
                             </div>
@@ -520,6 +529,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                         value={formData.consultationDate}
                                         onChange={e => setFormData({ ...formData, consultationDate: e.target.value })}
                                         className={inputClass}
+                                        {...viewProps}
                                     />
                                 </div>
                                 <div>
@@ -529,6 +539,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                         value={formData.subject}
                                         onChange={e => setFormData({ ...formData, subject: e.target.value as ConsultationSubject })}
                                         className={inputClass}
+                                        disabled={isViewMode}
                                     >
                                         {SUBJECT_OPTIONS.map(s => (
                                             <option key={s} value={s}>{s}</option>
@@ -544,6 +555,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                     value={formData.notes}
                                     onChange={e => setFormData({ ...formData, notes: e.target.value })}
                                     className={`${inputClass} resize-none`}
+                                    {...viewProps}
                                 />
                             </div>
                             </div>
@@ -578,6 +590,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                                 onChange={e => setFormData({ ...formData, englishName: e.target.value })}
                                                 className={inputClass}
                                                 placeholder="James"
+                                                {...viewProps}
                                             />
                                         </div>
                                         <div>
@@ -586,6 +599,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                                 value={formData.gender || ''}
                                                 onChange={e => setFormData({ ...formData, gender: e.target.value as 'male' | 'female' | undefined })}
                                                 className={inputClass}
+                                                disabled={isViewMode}
                                             >
                                                 <option value="">선택 안함</option>
                                                 <option value="male">남</option>
@@ -598,6 +612,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                                 value={formData.bloodType || ''}
                                                 onChange={e => setFormData({ ...formData, bloodType: e.target.value })}
                                                 className={inputClass}
+                                                disabled={isViewMode}
                                             >
                                                 <option value="">선택 안함</option>
                                                 <option value="A">A형</option>
@@ -614,6 +629,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                                 onChange={e => setFormData({ ...formData, graduationYear: e.target.value })}
                                                 className={inputClass}
                                                 placeholder="2025"
+                                                {...viewProps}
                                             />
                                         </div>
                                     </div>
@@ -631,6 +647,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                                 onChange={e => setFormData({ ...formData, studentPhone: e.target.value })}
                                                 className={inputClass}
                                                 placeholder="010-0000-0000"
+                                                {...viewProps}
                                             />
                                         </div>
                                         <div>
@@ -641,6 +658,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                                 onChange={e => setFormData({ ...formData, homePhone: e.target.value })}
                                                 className={inputClass}
                                                 placeholder="02-000-0000"
+                                                {...viewProps}
                                             />
                                         </div>
                                         <div>
@@ -651,6 +669,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                                 onChange={e => setFormData({ ...formData, parentName: e.target.value })}
                                                 className={inputClass}
                                                 placeholder="김영희"
+                                                {...viewProps}
                                             />
                                         </div>
                                         <div>
@@ -659,6 +678,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                                 value={formData.parentRelation || '모'}
                                                 onChange={e => setFormData({ ...formData, parentRelation: e.target.value })}
                                                 className={inputClass}
+                                                disabled={isViewMode}
                                             >
                                                 {RELATION_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
                                             </select>
@@ -678,6 +698,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                                 onChange={e => setFormData({ ...formData, zipCode: e.target.value })}
                                                 className={inputClass}
                                                 placeholder="06234"
+                                                {...viewProps}
                                             />
                                         </div>
                                         <div className="col-span-2">
@@ -688,6 +709,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                                 onChange={e => setFormData({ ...formData, addressDetail: e.target.value })}
                                                 className={inputClass}
                                                 placeholder="101동 202호"
+                                                {...viewProps}
                                             />
                                         </div>
                                     </div>
@@ -704,6 +726,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                                 value={formData.birthDate || ''}
                                                 onChange={e => setFormData({ ...formData, birthDate: e.target.value })}
                                                 className={inputClass}
+                                                {...viewProps}
                                             />
                                         </div>
                                         <div>
@@ -714,6 +737,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                                 onChange={e => setFormData({ ...formData, nickname: e.target.value })}
                                                 className={inputClass}
                                                 placeholder="별명"
+                                                {...viewProps}
                                             />
                                         </div>
                                         <div>
@@ -724,6 +748,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                                 onChange={e => setFormData({ ...formData, enrollmentReason: e.target.value })}
                                                 className={inputClass}
                                                 placeholder="지인 소개"
+                                                {...viewProps}
                                             />
                                         </div>
                                     </div>
@@ -756,6 +781,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                         onChange={e => setFormData({ ...formData, safetyNotes: e.target.value })}
                                         className={`${inputClass} resize-none`}
                                         placeholder="알레르기, 주의사항 등"
+                                        {...viewProps}
                                     />
                                 </div>
                                 <div className="grid grid-cols-2 gap-2">
@@ -767,6 +793,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                             onChange={e => setFormData({ ...formData, careerGoal: e.target.value })}
                                             className={inputClass}
                                             placeholder="의사, 교사 등"
+                                            {...viewProps}
                                         />
                                     </div>
                                     <div>
@@ -777,6 +804,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                             onChange={e => setFormData({ ...formData, studentType: e.target.value })}
                                             className={inputClass}
                                             placeholder="예비/재원"
+                                            {...viewProps}
                                         />
                                     </div>
                                 </div>
@@ -789,6 +817,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                             onChange={e => setFormData({ ...formData, siblings: e.target.value })}
                                             className={inputClass}
                                             placeholder="외동, 형제 2명 등"
+                                            {...viewProps}
                                         />
                                     </div>
                                     <div>
@@ -799,6 +828,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                             onChange={e => setFormData({ ...formData, siblingsDetails: e.target.value })}
                                             className={inputClass}
                                             placeholder="재원생 여부 등"
+                                            {...viewProps}
                                         />
                                     </div>
                                 </div>
@@ -809,6 +839,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                             checked={formData.shuttleBusRequest || false}
                                             onChange={e => setFormData({ ...formData, shuttleBusRequest: e.target.checked })}
                                             className="rounded"
+                                            disabled={isViewMode}
                                         />
                                         <span className="text-slate-600"><Bus size={12} className="inline mr-1" />셔틀버스 신청</span>
                                     </label>
@@ -841,6 +872,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                             value={formData.followUpDate}
                                             onChange={e => setFormData({ ...formData, followUpDate: e.target.value })}
                                             className={inputClass}
+                                            {...viewProps}
                                         />
                                     </div>
                                     <div>
@@ -850,6 +882,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                             value={formData.followUpContent}
                                             onChange={e => setFormData({ ...formData, followUpContent: e.target.value })}
                                             className={inputClass}
+                                            {...viewProps}
                                         />
                                     </div>
                                 </div>
@@ -861,6 +894,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                         onChange={e => setFormData({ ...formData, nonRegistrationReason: e.target.value })}
                                         className={inputClass}
                                         placeholder="등록 안한 이유"
+                                        {...viewProps}
                                     />
                                 </div>
                             </div>
@@ -879,6 +913,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                     value={formData.status}
                                     onChange={e => setFormData({ ...formData, status: e.target.value as ConsultationStatus })}
                                     className={`${inputClass} bg-white`}
+                                    disabled={isViewMode}
                                 >
                                     {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
                                 </select>
@@ -892,6 +927,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                         onChange={e => setFormData({ ...formData, paymentAmount: e.target.value })}
                                         className={inputClass}
                                         placeholder="150,000"
+                                        {...viewProps}
                                     />
                                 </div>
                                 <div>
@@ -901,6 +937,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                         value={formData.paymentDate}
                                         onChange={e => setFormData({ ...formData, paymentDate: e.target.value })}
                                         className={inputClass}
+                                        {...viewProps}
                                     />
                                 </div>
                             </div>
@@ -912,6 +949,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                     onChange={e => setFormData({ ...formData, registrar: e.target.value })}
                                     className={inputClass}
                                     placeholder="등록 처리자"
+                                    {...viewProps}
                                 />
                             </div>
                             <div className="mt-3 pt-3 border-t border-slate-200 space-y-2">
@@ -921,6 +959,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                         checked={formData.installmentAgreement || false}
                                         onChange={e => setFormData({ ...formData, installmentAgreement: e.target.checked })}
                                         className="rounded"
+                                        disabled={isViewMode}
                                     />
                                     <span className="text-slate-600"><Shield size={12} className="inline mr-1" />할부 규정 안내 동의서</span>
                                 </label>
@@ -930,6 +969,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                         checked={formData.privacyAgreement || false}
                                         onChange={e => setFormData({ ...formData, privacyAgreement: e.target.checked })}
                                         className="rounded"
+                                        disabled={isViewMode}
                                     />
                                     <span className="text-slate-600"><Shield size={12} className="inline mr-1" />개인정보 활용 동의서</span>
                                 </label>

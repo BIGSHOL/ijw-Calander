@@ -353,6 +353,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
       {showCleanupModal && (
         <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-white" /></div>}>
           <StudentDataCleanupModal
+            students={students}
             onClose={() => {
               refreshStudents();
               setShowCleanupModal(false);

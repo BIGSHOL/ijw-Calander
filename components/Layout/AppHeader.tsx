@@ -92,6 +92,8 @@ interface AppHeaderProps {
     teachersBySubject: any;
     studentSortBy: string;
     setStudentSortBy: (sort: string) => void;
+    onGradePromotion?: () => void;
+    isPromoting?: boolean;
   };
 
   // Timetable props
@@ -309,6 +311,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           teachersBySubject={studentsProps.teachersBySubject}
           studentSortBy={studentsProps.studentSortBy as any}
           setStudentSortBy={studentsProps.setStudentSortBy}
+          onGradePromotion={studentsProps.onGradePromotion}
+          isPromoting={studentsProps.isPromoting}
         />
       )}
 
