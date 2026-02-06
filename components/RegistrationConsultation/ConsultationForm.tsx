@@ -4,7 +4,7 @@ import {
     X, ChevronDown, ChevronRight, User, Phone, Calendar, MapPin, School, BookOpen,
     FileText, Globe, Users, Cake, Home, Smile, AlertTriangle, Target, Tag, Bus,
     XCircle, CheckCircle, Banknote, Shield, UserCheck, GraduationCap, MessageSquare, ClipboardList, Droplet, Inbox,
-    Pencil, Eye, FlaskConical, Star
+    Pencil, Eye, FlaskConical
 } from 'lucide-react';
 
 interface ConsultationFormProps {
@@ -66,9 +66,6 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
     const [showExtendedInfo, setShowExtendedInfo] = useState(false);
     const [showAcademyInfo, setShowAcademyInfo] = useState(false);
     const [showFollowUp, setShowFollowUp] = useState(false);
-
-    // 메인 상담 과목
-    const [mainSubject, setMainSubject] = useState<'math' | 'english' | 'korean' | 'science' | 'etc' | undefined>(undefined);
 
     // 과목별 상담 정보 상태
     const [mathConsult, setMathConsult] = useState<SubjectConsultationDetail>({});
@@ -164,7 +161,6 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
             setShowAcademyInfo(false);
             setShowFollowUp(false);
             // 과목별 상담 정보 로드
-            setMainSubject(initialData.mainSubject);
             setMathConsult(initialData.mathConsultation || {});
             setEnglishConsult(initialData.englishConsultation || {});
             setKoreanConsult(initialData.koreanConsultation || {});
@@ -225,7 +221,6 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
             setShowAcademyInfo(false);
             setShowFollowUp(false);
             // 과목별 상담 정보 초기화
-            setMainSubject(undefined);
             setMathConsult({});
             setEnglishConsult({});
             setKoreanConsult({});
@@ -289,7 +284,6 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                 paymentDate: paymentDateISO,
                 followUpDate: followUpDateISO,
                 createdAt: createdAtISO,
-                mainSubject: mainSubject,
                 mathConsultation: mathConsult,
                 englishConsultation: englishConsult,
                 koreanConsultation: koreanConsult,
@@ -307,20 +301,6 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
         } catch (error) {
             console.error('❌ Form submit error:', error);
             alert(`폼 제출 중 오류가 발생했습니다:\n\n${error instanceof Error ? error.message : '알 수 없는 오류'}`);
-        }
-    };
-
-    // 메인상담 변경 핸들러
-    const handleMainSubjectChange = (subject: 'math' | 'english' | 'korean' | 'science' | 'etc') => {
-        if (mainSubject === subject) {
-            setMainSubject(undefined); // 토글 해제
-        } else if (mainSubject) {
-            const subjectNames: Record<string, string> = { math: '수학', english: '영어', korean: '국어', science: '과학', etc: '기타' };
-            if (confirm(`현재 메인상담이 "${subjectNames[mainSubject]}"로 설정되어 있습니다.\n"${subjectNames[subject]}"로 변경하시겠습니까?`)) {
-                setMainSubject(subject);
-            }
-        } else {
-            setMainSubject(subject);
         }
     };
 
@@ -399,9 +379,6 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                 color: tab.color
                             } : {}}
                         >
-                            {tab.subjectKey && mainSubject === tab.subjectKey && (
-                                <Star size={10} className="fill-current text-amber-500" />
-                            )}
                             {tab.label}
                         </button>
                     ))}
@@ -983,27 +960,11 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                         const [consult, setConsult] = consultMap[subjectKey];
                         return (
                             <div key={subjectKey} className="bg-white border border-gray-200 overflow-hidden">
-                                <div className={`px-2 py-1.5 ${c.bg} ${c.border} border-b flex items-center justify-between`}>
+                                <div className={`px-2 py-1.5 ${c.bg} ${c.border} border-b`}>
                                     <h3 className={`${c.text} font-bold text-xs flex items-center gap-1`}>
                                         {c.icon}
                                         {c.title}
                                     </h3>
-                                    {/* 메인상담 체크박스 */}
-                                    <label className={`flex items-center gap-1.5 text-xs cursor-pointer px-2 py-0.5 rounded transition-colors ${
-                                        mainSubject === subjectKey
-                                            ? 'bg-amber-100 text-amber-800 font-bold border border-amber-300'
-                                            : 'text-gray-500 hover:text-gray-700'
-                                    }`}>
-                                        <input
-                                            type="checkbox"
-                                            checked={mainSubject === subjectKey}
-                                            onChange={() => !isViewMode && handleMainSubjectChange(subjectKey)}
-                                            disabled={isViewMode}
-                                            className="rounded text-amber-500"
-                                        />
-                                        <Star size={10} className={mainSubject === subjectKey ? 'fill-amber-500 text-amber-500' : ''} />
-                                        메인상담
-                                    </label>
                                 </div>
                                 <div className="p-3 space-y-3">
                                     <div>
