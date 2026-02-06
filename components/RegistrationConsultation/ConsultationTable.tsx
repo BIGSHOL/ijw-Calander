@@ -669,7 +669,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
 
             {/* Desktop Table View - Full Width with Horizontal Scroll */}
             <div className="hidden md:block rounded-sm shadow-sm border overflow-hidden flex-1" style={{ backgroundColor: 'white', borderColor: `${COLORS.navy}15` }}>
-                <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-320px)]">
+                <div className="overflow-x-auto overflow-y-auto h-full">
                     <table className="w-full" style={{ minWidth: visibleColumnsList.reduce((sum, col) => sum + parseInt(col.minWidth || '80', 10), 50) }}>
                         <thead className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
                             <tr>

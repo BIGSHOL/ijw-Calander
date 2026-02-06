@@ -298,36 +298,28 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
         }
 
         try {
-            // 1. 학생 데이터 생성
+            // 1. 학생 데이터 생성 (undefined 필드는 Firestore 에러 방지를 위해 제외)
             const newStudentData: Omit<UnifiedStudent, 'id' | 'createdAt' | 'updatedAt'> = {
                 // 기본 정보
                 name: consultation.studentName,
-                englishName: consultation.englishName || undefined,
                 gender: consultation.gender,
                 school: consultation.schoolName,
-                grade: consultation.grade, // SchoolGrade enum → string으로 자동 변환
-                graduationYear: consultation.graduationYear || undefined,
-
+                grade: consultation.grade,
                 // 연락처
-                studentPhone: consultation.studentPhone || undefined,
-                homePhone: consultation.homePhone || undefined,
+                ...(consultation.studentPhone ? { studentPhone: consultation.studentPhone } : {}),
                 parentPhone: consultation.parentPhone,
-                parentName: consultation.parentName || undefined,
-                parentRelation: consultation.parentRelation || undefined,
+                ...(consultation.parentName ? { parentName: consultation.parentName } : {}),
+                ...(consultation.parentRelation ? { parentRelation: consultation.parentRelation } : {}),
 
                 // 주소
-                zipCode: consultation.zipCode || undefined,
-                address: consultation.address || undefined,
-                addressDetail: consultation.addressDetail || undefined,
+                ...(consultation.address ? { address: consultation.address } : {}),
 
                 // 추가 정보
-                birthDate: consultation.birthDate || undefined,
-                nickname: consultation.nickname || undefined,
-                enrollmentReason: consultation.enrollmentReason || undefined,
+                ...(consultation.birthDate ? { birthDate: consultation.birthDate } : {}),
 
                 // 상태 및 날짜
                 status: 'active',
-                startDate: consultation.consultationDate, // 상담일을 입학일로 사용
+                startDate: consultation.consultationDate?.slice(0, 10) || new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10), // KST yyyy-mm-dd
 
                 // 수강 정보 - 상담 과목으로 기본 enrollment 생성
                 enrollments: [{
@@ -503,14 +495,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
             installmentAgreement: draft.installmentAgreement,
             consultationPath: draft.consultationPath || '',
             // 직원이 채울 필드 (기본값)
-            englishName: '',
-            graduationYear: '',
-            homePhone: '',
-            zipCode: '',
-            addressDetail: '',
             birthDate: '',
-            nickname: '',
-            enrollmentReason: '',
             safetyNotes: '',
             siblingsDetails: '',
             studentType: '',

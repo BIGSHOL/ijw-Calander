@@ -255,7 +255,7 @@ export const TabContent: React.FC<TabContentProps> = ({
         </Suspense>
       ) : appMode === 'consultation' && consultationProps ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto">
+          <div className="w-full flex-1 flex flex-col overflow-hidden">
             <ConsultationManager
               userProfile={effectiveProfile}
               onNavigateToStudent={consultationProps.onNavigateToStudent}

@@ -200,11 +200,11 @@ const WithdrawalDashboard: React.FC<WithdrawalDashboardProps> = ({
               </div>
             </div>
           </div>
-          <div className="h-[260px]">
+          <div className="h-[260px]" style={{ minWidth: 0 }}>
             {loading ? (
               <div className="w-full h-full bg-primary/5 animate-pulse rounded-sm" />
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <ComposedChart data={stats.monthlyStats} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis
@@ -252,8 +252,8 @@ const WithdrawalDashboard: React.FC<WithdrawalDashboardProps> = ({
               </div>
             ) : (
               <>
-                <div className="flex-1 min-h-0">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="flex-1 min-h-0" style={{ minWidth: 0 }}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <PieChart>
                       <Pie
                         data={stats.subjectStats.map(s => ({ name: s.label, value: s.count, subject: s.subject }))}
