@@ -2,6 +2,44 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global Styles (moved from index.html inline) */
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  background-color: #f8fafc;
+}
+
+/* Custom Colors */
+.bg-primary { background-color: #081429; }
+.text-primary { color: #081429; }
+.border-primary { border-color: #081429; }
+
+.bg-accent { background-color: #fdb813; }
+.text-accent { color: #fdb813; }
+.border-accent { border-color: #fdb813; }
+
+.bg-neutral-dark { background-color: #373d41; }
+.text-neutral-dark { color: #373d41; }
+
+/* Print Styles */
+@media print {
+  @page {
+    size: landscape;
+    margin: 5mm;
+  }
+  body {
+    background-color: white;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .no-print {
+    display: none !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
 /* 반응형 비활성화 - 고정 레이아웃 테스트 */
 html, body {
   min-width: 1280px;
