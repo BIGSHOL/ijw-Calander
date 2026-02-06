@@ -109,6 +109,14 @@ const ConsultationFormEmbed: React.FC<ConsultationFormEmbedProps> = ({ tokenValu
         setSubjects(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
     };
 
+    // 전화번호 자동 포맷: 01012345678 → 010-1234-5678
+    const formatPhone = (raw: string): string => {
+        const digits = raw.replace(/[^0-9]/g, '');
+        if (digits.length === 11) return `${digits.slice(0,3)}-${digits.slice(3,7)}-${digits.slice(7)}`;
+        if (digits.length === 10) return `${digits.slice(0,3)}-${digits.slice(3,6)}-${digits.slice(6)}`;
+        return raw; // 포맷 불가능하면 원본 반환
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -129,7 +137,7 @@ const ConsultationFormEmbed: React.FC<ConsultationFormEmbedProps> = ({ tokenValu
                 studentName: studentName.trim(),
                 gender: gender as 'male' | 'female' | undefined || undefined,
                 bloodType: bloodType || undefined,
-                studentPhone: studentPhone || undefined,
+                studentPhone: studentPhone ? formatPhone(studentPhone) : undefined,
                 careerGoal: careerGoal || undefined,
                 schoolName: schoolName.trim(),
                 grade,
@@ -137,7 +145,7 @@ const ConsultationFormEmbed: React.FC<ConsultationFormEmbedProps> = ({ tokenValu
                 siblings: siblings || undefined,
                 parentName: parentName.trim(),
                 parentRelation: parentRelation || '',
-                parentPhone: parentPhone.trim(),
+                parentPhone: formatPhone(parentPhone.trim()),
                 consultationPath: consultationPath || undefined,
                 address: address || undefined,
                 shuttleBusRequest,
@@ -146,6 +154,7 @@ const ConsultationFormEmbed: React.FC<ConsultationFormEmbedProps> = ({ tokenValu
             };
 
             await submitDraft({ token: tokenValue, formData });
+            alert('제출 완료! 감사합니다.');
             setFormState('success');
         } catch (err: any) {
             setFormState('form');
@@ -260,7 +269,8 @@ const ConsultationFormEmbed: React.FC<ConsultationFormEmbedProps> = ({ tokenValu
                     <div>
                         <label className={labelStyle} style={{ color: COLORS.TEXT_PRIMARY }}>학생 연락처</label>
                         <input type="tel" value={studentPhone} onChange={e => setStudentPhone(e.target.value)}
-                            className={inputStyle} placeholder="010-0000-0000" style={{ borderColor: COLORS.GRAY_BORDER }} />
+                            className={inputStyle} placeholder="- 없이 숫자만 입력" style={{ borderColor: COLORS.GRAY_BORDER }} />
+                        <p className="text-xs mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>예: 01012345678 (저장 시 자동으로 010-1234-5678 형식으로 변환됩니다)</p>
                     </div>
 
                     {/* 희망진로 */}
@@ -371,7 +381,8 @@ const ConsultationFormEmbed: React.FC<ConsultationFormEmbedProps> = ({ tokenValu
                     <div>
                         <label className={labelStyle} style={{ color: COLORS.TEXT_PRIMARY }}>부모님 연락처 <span className="text-red-500">*</span></label>
                         <input type="tel" value={parentPhone} onChange={e => setParentPhone(e.target.value)}
-                            className={inputStyle} placeholder="010-0000-0000" style={{ borderColor: COLORS.GRAY_BORDER }} />
+                            className={inputStyle} placeholder="- 없이 숫자만 입력" style={{ borderColor: COLORS.GRAY_BORDER }} />
+                        <p className="text-xs mt-1" style={{ color: COLORS.TEXT_SECONDARY }}>예: 01012345678</p>
                     </div>
 
                     {/* 상담경로 */}
@@ -443,7 +454,7 @@ const ConsultationFormEmbed: React.FC<ConsultationFormEmbedProps> = ({ tokenValu
                     {/* 개인정보 활용 동의서 */}
                     <div className="space-y-3">
                         <h4 className="text-sm font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>개인정보 활용 동의서 <span className="text-red-500">*</span></h4>
-                        <div className="p-4 text-[13px] leading-relaxed max-h-48 overflow-y-auto" style={{ backgroundColor: COLORS.NAVY_LIGHT }}>
+                        <div className="p-4 text-[13px] leading-relaxed" style={{ backgroundColor: COLORS.NAVY_LIGHT }}>
                             <p className="font-bold mb-2" style={{ color: COLORS.NAVY }}>개인정보 수집 및 이용 동의서</p>
                             <p className="whitespace-pre-line" style={{ color: COLORS.TEXT_SECONDARY }}>
 {`1. 수집하는 개인정보의 항목 : 성명, 학년, 학교, 학생 연락처, 학부모 연락처, 제출한 과제의 동영상 및 음원
@@ -465,7 +476,7 @@ const ConsultationFormEmbed: React.FC<ConsultationFormEmbedProps> = ({ tokenValu
                     {/* 환불 규정 안내 동의서 */}
                     <div className="space-y-3 pt-2">
                         <h4 className="text-sm font-bold" style={{ color: COLORS.TEXT_PRIMARY }}>환불 규정 안내 동의서 <span className="text-red-500">*</span></h4>
-                        <div className="p-4 text-[13px] leading-relaxed max-h-60 overflow-y-auto space-y-3" style={{ backgroundColor: COLORS.NAVY_LIGHT }}>
+                        <div className="p-4 text-[13px] leading-relaxed space-y-3" style={{ backgroundColor: COLORS.NAVY_LIGHT }}>
                             <div>
                                 <p className="font-bold mb-1" style={{ color: COLORS.NAVY }}>수강 등록 및 환불 안내</p>
                                 <p className="whitespace-pre-line" style={{ color: COLORS.TEXT_SECONDARY }}>
@@ -552,7 +563,7 @@ const ConsultationFormEmbed: React.FC<ConsultationFormEmbedProps> = ({ tokenValu
 // Section Header component (Pencil design)
 const SectionHeader: React.FC<{ title: string; color: string; textColor?: string }> = ({ title, color, textColor }) => (
     <div className="flex items-center gap-2 mx-3 mt-5 px-5 py-3" style={{ backgroundColor: color }}>
-        <span className="text-sm font-bold" style={{ color: textColor || color === '#fdb813' ? COLORS.NAVY : 'white' }}>
+        <span className="text-sm font-bold" style={{ color: textColor ? textColor : (color === '#fdb813' ? COLORS.NAVY : 'white') }}>
             {title}
         </span>
     </div>
