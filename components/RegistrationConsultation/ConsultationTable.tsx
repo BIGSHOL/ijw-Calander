@@ -203,8 +203,33 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                 return <span className="text-slate-500 text-xs truncate max-w-[140px] block">{record.address || '-'}</span>;
             case 'consultationDate':
                 return <span style={{ color: COLORS.navy }}>{formatDateWithDay(record.consultationDate)}</span>;
-            case 'subject':
-                return <span className="font-semibold" style={{ color: COLORS.gray }}>{record.subject}</span>;
+            case 'subject': {
+                const subjectNames: Record<string, string> = { math: '수학', english: '영어', korean: '국어', science: '과학', etc: '기타' };
+                const hasData = (detail: any) => detail && Object.values(detail).some((v: any) => v && String(v).trim() !== '');
+                const extraSubjects: string[] = [];
+                if (hasData(record.mathConsultation)) extraSubjects.push(subjectNames.math);
+                if (hasData(record.englishConsultation)) extraSubjects.push(subjectNames.english);
+                if (hasData(record.koreanConsultation)) extraSubjects.push(subjectNames.korean);
+                if (hasData(record.scienceConsultation)) extraSubjects.push(subjectNames.science);
+                if (hasData(record.etcConsultation)) extraSubjects.push(subjectNames.etc);
+                // 메인 과목(드롭다운)과 동일한 건 제외
+                const others = extraSubjects.filter(s => s !== record.subject);
+                return (
+                    <span className="font-semibold flex items-center gap-1" style={{ color: COLORS.gray }}>
+                        {record.subject}
+                        {others.length > 0 && (
+                            <span
+                                className="relative group inline-flex items-center text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded px-1 py-0 leading-tight cursor-default"
+                            >
+                                +{others.length}
+                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block bg-gray-800 text-white text-[10px] rounded px-2 py-1 whitespace-nowrap z-10">
+                                    {others.join(', ')}
+                                </span>
+                            </span>
+                        )}
+                    </span>
+                );
+            }
             case 'counselor':
                 return <span className="text-slate-600">{record.counselor || '-'}</span>;
             case 'status': {
