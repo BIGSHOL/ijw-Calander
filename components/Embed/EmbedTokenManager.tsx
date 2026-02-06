@@ -1,7 +1,7 @@
 // Embed Token Manager Modal
 // 관리자용 임베드 토큰 생성/관리 모달
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   X,
   Plus,
@@ -16,7 +16,10 @@ import {
   Link2,
   Settings,
   Check,
+  QrCode,
+  Download,
 } from 'lucide-react';
+import { QRCodeCanvas } from 'qrcode.react';
 import { useEmbedTokens, generateEmbedUrl } from '../../hooks/useEmbedTokens';
 import {
   EmbedType,
@@ -30,25 +33,35 @@ interface EmbedTokenManagerProps {
   isOpen: boolean;
   onClose: () => void;
   staffId: string;
+  filterType?: EmbedType | EmbedType[];  // 특정 유형만 표시/생성 (등록상담: 'consultation-form', 시간표: ['math-timetable', 'english-timetable'])
 }
 
 const EMBED_TYPE_LABELS: Record<EmbedType, string> = {
   'math-timetable': '수학 시간표',
   'english-timetable': '영어 시간표',
+  'consultation-form': '입학상담카드',
 };
 
 const EmbedTokenManager: React.FC<EmbedTokenManagerProps> = ({
   isOpen,
   onClose,
   staffId,
+  filterType,
 }) => {
-  const { tokens, loading, createToken, toggleToken, deleteToken } = useEmbedTokens();
+  const { tokens: allTokens, loading, createToken, toggleToken, deleteToken } = useEmbedTokens();
   const [isCreating, setIsCreating] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [qrTokenId, setQrTokenId] = useState<string | null>(null);  // QR코드 표시 중인 토큰 ID
+
+  // filterType이 있으면 해당 유형만 표시
+  const filterTypes = filterType ? (Array.isArray(filterType) ? filterType : [filterType]) : null;
+  const tokens = filterTypes ? allTokens.filter(t => filterTypes.includes(t.type)) : allTokens;
+  const isSingleFilter = filterTypes?.length === 1;
+  const isConsultationOnly = isSingleFilter && filterTypes[0] === 'consultation-form';
 
   // 생성 폼 상태
   const [newToken, setNewToken] = useState<CreateEmbedTokenInput>({
-    type: 'math-timetable',
+    type: (isSingleFilter ? filterTypes[0] : filterTypes?.[0]) || 'math-timetable',
     name: '',
     expiresAt: undefined,
     settings: DEFAULT_EMBED_SETTINGS,
@@ -66,7 +79,7 @@ const EmbedTokenManager: React.FC<EmbedTokenManagerProps> = ({
       await createToken(newToken, staffId);
       setIsCreating(false);
       setNewToken({
-        type: 'math-timetable',
+        type: (isSingleFilter ? filterTypes[0] : filterTypes?.[0]) || 'math-timetable',
         name: '',
         expiresAt: undefined,
         settings: DEFAULT_EMBED_SETTINGS,
@@ -96,12 +109,14 @@ const EmbedTokenManager: React.FC<EmbedTokenManagerProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden mx-4" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <div className="flex items-center gap-3">
             <Link2 className="w-5 h-5 text-indigo-600" />
-            <h2 className="text-lg font-bold text-gray-800">임베드 공유 링크 관리</h2>
+            <h2 className="text-lg font-bold text-gray-800">
+              {isConsultationOnly ? 'QR 입학상담 토큰 관리' : '임베드 공유 링크 관리'}
+            </h2>
           </div>
           <button
             onClick={onClose}
@@ -116,9 +131,11 @@ const EmbedTokenManager: React.FC<EmbedTokenManagerProps> = ({
           {/* 설명 */}
           <div className="bg-indigo-50 rounded-lg p-4 mb-6">
             <p className="text-sm text-indigo-800">
-              공유 링크를 생성하면 로그인 없이 시간표를 볼 수 있는 URL이 만들어집니다.
-              <br />
-              이 URL을 구글 스프레드시트, Notion, 웹페이지 등에 iframe으로 임베드할 수 있습니다.
+              {isConsultationOnly ? (
+                <>토큰을 생성하면 학부모가 QR코드로 접속하여 상담 정보를 입력할 수 있는 URL이 만들어집니다.<br />URL을 QR코드로 변환하여 학원 데스크에 비치하세요.</>
+              ) : (
+                <>공유 링크를 생성하면 로그인 없이 시간표를 볼 수 있는 URL이 만들어집니다.<br />이 URL을 구글 스프레드시트, Notion, 웹페이지 등에 iframe으로 임베드할 수 있습니다.</>
+              )}
             </p>
           </div>
 
@@ -149,23 +166,28 @@ const EmbedTokenManager: React.FC<EmbedTokenManagerProps> = ({
                 />
               </div>
 
-              {/* 유형 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  시간표 유형
-                </label>
-                <select
-                  value={newToken.type}
-                  onChange={(e) => setNewToken({ ...newToken, type: e.target.value as EmbedType })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none"
-                >
-                  <option value="math-timetable">수학 시간표</option>
-                  <option value="english-timetable" disabled>영어 시간표 (준비중)</option>
-                </select>
-              </div>
+              {/* 유형 - 단일 필터일 때 숨김, 복수 필터일 때 해당 옵션만, 필터 없으면 전체 */}
+              {!isSingleFilter && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    임베드 유형
+                  </label>
+                  <select
+                    value={newToken.type}
+                    onChange={(e) => setNewToken({ ...newToken, type: e.target.value as EmbedType })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none"
+                  >
+                    {(filterTypes || (['math-timetable', 'english-timetable', 'consultation-form'] as EmbedType[])).map(type => (
+                      <option key={type} value={type} disabled={type === 'english-timetable'}>
+                        {EMBED_TYPE_LABELS[type]}{type === 'english-timetable' ? ' (준비중)' : type === 'consultation-form' ? ' (학부모 QR 폼)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-              {/* 뷰 타입 */}
-              <div>
+              {/* 뷰 타입 (시간표 전용) */}
+              {newToken.type !== 'consultation-form' && <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   표시 형식
                 </label>
@@ -205,7 +227,7 @@ const EmbedTokenManager: React.FC<EmbedTokenManagerProps> = ({
                     </label>
                   ))}
                 </div>
-              </div>
+              </div>}
 
               {/* 만료일 */}
               <div>
@@ -221,8 +243,8 @@ const EmbedTokenManager: React.FC<EmbedTokenManagerProps> = ({
                 <p className="text-xs text-gray-500 mt-1">비워두면 무기한 유효</p>
               </div>
 
-              {/* 표시 옵션 */}
-              <div>
+              {/* 표시 옵션 (시간표 전용) */}
+              {newToken.type !== 'consultation-form' && <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   표시 옵션
                 </label>
@@ -255,10 +277,10 @@ const EmbedTokenManager: React.FC<EmbedTokenManagerProps> = ({
                     </label>
                   ))}
                 </div>
-              </div>
+              </div>}
 
-              {/* 학생 상태 표시 옵션 */}
-              <div>
+              {/* 학생 상태 표시 옵션 (시간표 전용) */}
+              {newToken.type !== 'consultation-form' && <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   학생 상태 표시
                 </label>
@@ -292,7 +314,7 @@ const EmbedTokenManager: React.FC<EmbedTokenManagerProps> = ({
                     </label>
                   ))}
                 </div>
-              </div>
+              </div>}
 
               {/* 버튼 */}
               <div className="flex justify-end gap-2 pt-2">
@@ -327,84 +349,39 @@ const EmbedTokenManager: React.FC<EmbedTokenManagerProps> = ({
               {tokens.map((token) => (
                 <div
                   key={token.id}
-                  className={`border rounded-lg p-4 transition-colors ${
+                  className={`border rounded-lg p-4 transition-colors overflow-hidden ${
                     token.isActive ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-300'
                   }`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-gray-800">{token.name}</span>
-                        <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded">
-                          {EMBED_TYPE_LABELS[token.type]}
-                        </span>
-                        <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded">
+                  {/* 상단: 이름 + 배지 + 액션 */}
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="font-semibold text-gray-800 truncate">{token.name}</span>
+                      <span className="text-xs px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded shrink-0">
+                        {EMBED_TYPE_LABELS[token.type]}
+                      </span>
+                      {token.type !== 'consultation-form' && (
+                        <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded shrink-0">
                           {token.settings?.viewType === 'teacher' ? '강사뷰' : '통합뷰'}
                         </span>
-                        {!token.isActive && (
-                          <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded">
-                            비활성
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-4 text-xs text-gray-500 mb-2">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
-                          생성: {formatDate(token.createdAt)}
+                      )}
+                      {!token.isActive && (
+                        <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded shrink-0">
+                          비활성
                         </span>
-                        {token.expiresAt && (
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            만료: {formatDate(token.expiresAt)}
-                          </span>
-                        )}
-                        <span className="flex items-center gap-1">
-                          <Eye className="w-3 h-3" />
-                          조회: {token.usageCount}회
-                        </span>
-                      </div>
-
-                      {/* URL 복사 영역 */}
-                      <div className="flex items-center gap-2">
-                        <code className="flex-1 px-3 py-1.5 bg-gray-100 rounded text-xs text-gray-600 truncate">
-                          {generateEmbedUrl(token.type, token.token)}
-                        </code>
-                        <button
-                          onClick={() => handleCopyUrl(token)}
-                          className={`flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
-                            copiedId === token.id
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          }`}
-                        >
-                          {copiedId === token.id ? (
-                            <>
-                              <Check className="w-3 h-3" />
-                              복사됨
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3 h-3" />
-                              복사
-                            </>
-                          )}
-                        </button>
-                      </div>
+                      )}
                     </div>
-
-                    {/* 액션 버튼 */}
-                    <div className="flex items-center gap-1 ml-4">
+                    <div className="flex items-center gap-0.5 shrink-0">
                       <button
                         onClick={() => window.open(generateEmbedUrl(token.type, token.token), '_blank')}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-1.5 hover:bg-gray-100 rounded transition-colors"
                         title="새 탭에서 열기"
                       >
                         <ExternalLink className="w-4 h-4 text-gray-500" />
                       </button>
                       <button
                         onClick={() => toggleToken(token.id, !token.isActive)}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        className="p-1.5 hover:bg-gray-100 rounded transition-colors"
                         title={token.isActive ? '비활성화' : '활성화'}
                       >
                         {token.isActive ? (
@@ -415,42 +392,145 @@ const EmbedTokenManager: React.FC<EmbedTokenManagerProps> = ({
                       </button>
                       <button
                         onClick={() => handleDelete(token)}
-                        className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-1.5 hover:bg-red-50 rounded transition-colors"
                         title="삭제"
                       >
                         <Trash2 className="w-4 h-4 text-red-500" />
                       </button>
                     </div>
                   </div>
+
+                  {/* 중간: 메타 정보 */}
+                  <div className="flex items-center gap-3 text-xs text-gray-500 mb-2">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      생성: {formatDate(token.createdAt)}
+                    </span>
+                    {token.expiresAt && (
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        만료: {formatDate(token.expiresAt)}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1">
+                      <Eye className="w-3 h-3" />
+                      조회: {token.usageCount}회
+                    </span>
+                  </div>
+
+                  {/* 하단: URL + 복사/QR 버튼 */}
+                  <div className="flex items-center gap-2">
+                    <code className="min-w-0 flex-1 px-3 py-1.5 bg-gray-100 rounded text-xs text-gray-600 truncate">
+                      {generateEmbedUrl(token.type, token.token)}
+                    </code>
+                    <button
+                      onClick={() => handleCopyUrl(token)}
+                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-medium transition-colors shrink-0 ${
+                        copiedId === token.id
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      {copiedId === token.id ? (
+                        <><Check className="w-3 h-3" /> 복사됨</>
+                      ) : (
+                        <><Copy className="w-3 h-3" /> 복사</>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setQrTokenId(qrTokenId === token.id ? null : token.id)}
+                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-medium transition-colors shrink-0 ${
+                        qrTokenId === token.id
+                          ? 'bg-indigo-100 text-indigo-700'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                      title="QR코드"
+                    >
+                      <QrCode className="w-3 h-3" />
+                      QR
+                    </button>
+                  </div>
+
+                  {/* QR코드 표시 */}
+                  {qrTokenId === token.id && (
+                    <QrCodePanel url={generateEmbedUrl(token.type, token.token)} tokenName={token.name} />
+                  )}
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Footer - iframe 사용 가이드 */}
-        <div className="px-6 py-4 border-t bg-gray-50">
+        {/* Footer - iframe 사용 가이드 (시간표 전용) */}
+        {!isConsultationOnly && <div className="px-6 py-4 border-t bg-gray-50">
           <details className="text-sm">
             <summary className="cursor-pointer font-medium text-gray-700 hover:text-indigo-600">
               📖 임베드 사용 방법
             </summary>
-            <div className="mt-3 space-y-2 text-gray-600">
+            <div className="mt-3 space-y-3 text-gray-600">
               <p><strong>Google Apps Script (스프레드시트):</strong></p>
-              <code className="block p-2 bg-gray-100 rounded text-xs overflow-x-auto">
+              <code className="block p-2 bg-gray-100 rounded text-xs overflow-x-auto whitespace-pre">
 {`function openTimetable() {
-  const html = HtmlService.createHtmlOutput(
-    '<iframe src="복사한_URL" width="100%" height="600" frameborder="0"></iframe>'
-  ).setWidth(900).setHeight(650);
+  // 아래 URL을 위에서 복사한 공유 링크로 교체하세요
+  var url = '여기에_복사한_URL_붙여넣기';
+
+  var html = HtmlService.createHtmlOutput(
+    '<style>*{margin:0;padding:0}iframe{width:100%;height:100%;border:none}</style>' +
+    '<iframe src="' + url + '" sandbox="allow-scripts allow-same-origin allow-popups allow-forms"></iframe>'
+  )
+  .setWidth(1000)
+  .setHeight(700)
+  .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+
   SpreadsheetApp.getUi().showModalDialog(html, '수학 시간표');
 }`}
               </code>
-              <p className="text-xs text-gray-500 mt-2">
+              <div className="bg-amber-50 border border-amber-200 rounded p-2 text-xs text-amber-800">
+                <strong>주의:</strong> URL은 반드시 <code className="bg-amber-100 px-1 rounded">https://</code>로 시작하는 배포된 주소여야 합니다.
+                localhost 주소는 Google Sheets에서 접근할 수 없습니다.
+              </div>
+              <p className="text-xs text-gray-500">
                 스프레드시트 → 확장 프로그램 → Apps Script에 위 코드를 붙여넣고 실행하세요.
               </p>
             </div>
           </details>
-        </div>
+        </div>}
       </div>
+    </div>
+  );
+};
+
+// QR코드 표시 패널
+const QrCodePanel: React.FC<{ url: string; tokenName: string }> = ({ url, tokenName }) => {
+  const qrRef = useRef<HTMLDivElement>(null);
+
+  const handleDownload = useCallback(() => {
+    const canvas = qrRef.current?.querySelector('canvas');
+    if (!canvas) return;
+    const link = document.createElement('a');
+    link.download = `QR_${tokenName}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }, [tokenName]);
+
+  return (
+    <div className="mt-3 p-4 bg-gray-50 rounded-lg border border-gray-200 flex flex-col items-center gap-3">
+      <div ref={qrRef} className="bg-white p-3 rounded-lg">
+        <QRCodeCanvas
+          value={url}
+          size={200}
+          level="H"
+          marginSize={2}
+        />
+      </div>
+      <p className="text-xs text-gray-500 text-center break-all max-w-[240px]">{url}</p>
+      <button
+        onClick={handleDownload}
+        className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
+      >
+        <Download className="w-4 h-4" />
+        QR코드 다운로드
+      </button>
     </div>
   );
 };

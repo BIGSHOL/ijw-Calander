@@ -31,6 +31,8 @@ import {
   ResponsiveContainer,
   Cell,
   BarChart,
+  PieChart,
+  Pie,
 } from 'recharts';
 import { WITHDRAWAL_REASON_LABEL, SUBJECT_LABEL, SUBJECT_COLOR } from '../../constants/withdrawal';
 
@@ -43,7 +45,6 @@ const WithdrawalDashboard: React.FC<WithdrawalDashboardProps> = ({
 }) => {
   const [showIncompleteModal, setShowIncompleteModal] = useState(false);
   const [showStaffModal, setShowStaffModal] = useState(false);
-  const [chartTab, setChartTab] = useState<'subject' | 'staff'>('subject');
 
   const { hasPermission } = usePermissions(currentUser || null);
   const isMasterOrAdmin = currentUser?.role === 'master' || currentUser?.role === 'admin';
@@ -74,6 +75,15 @@ const WithdrawalDashboard: React.FC<WithdrawalDashboardProps> = ({
     '#ec4899', // pink-500
     '#6b7280', // gray-500
   ];
+
+  // 과목별 차트 색상
+  const SUBJECT_CHART_COLORS: Record<string, string> = {
+    math: '#3b82f6',
+    english: '#10b981',
+    korean: '#8b5cf6',
+    science: '#f97316',
+    other: '#6b7280',
+  };
 
   return (
     <div className="space-y-3 w-full p-4">
@@ -176,7 +186,7 @@ const WithdrawalDashboard: React.FC<WithdrawalDashboardProps> = ({
       {/* 하단: 차트 영역 */}
       <div className="grid grid-cols-12 gap-3">
         {/* 월별 추이 차트 */}
-        <div className="col-span-6 bg-white rounded-sm border border-primary/10 p-4">
+        <div className="col-span-5 bg-white rounded-sm border border-primary/10 p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-primary">월별 퇴원 추이</h3>
             <div className="flex items-center gap-3 text-xs">
@@ -230,26 +240,91 @@ const WithdrawalDashboard: React.FC<WithdrawalDashboardProps> = ({
           </div>
         </div>
 
-        {/* 사유별 분포 */}
+        {/* 과목별 퇴원 분포 - Donut Chart */}
         <div className="col-span-3 bg-white rounded-sm border border-primary/10 p-4">
-          <h3 className="text-sm font-semibold text-primary mb-3">퇴원 사유별 분포</h3>
-          <div className="h-[260px]">
+          <h3 className="text-sm font-semibold text-primary mb-3">과목별 퇴원 분포</h3>
+          <div className="h-[260px] flex flex-col">
             {loading ? (
               <div className="w-full h-full bg-primary/5 animate-pulse rounded-sm" />
-            ) : stats.reasonStats.length === 0 ? (
+            ) : stats.subjectStats.length === 0 ? (
               <div className="flex items-center justify-center h-full text-sm text-primary-700">
                 데이터 없음
               </div>
             ) : (
-              <div className="space-y-2">
+              <>
+                <div className="flex-1 min-h-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={stats.subjectStats.map(s => ({ name: s.label, value: s.count, subject: s.subject }))}
+                        cx="50%"
+                        cy="45%"
+                        innerRadius={45}
+                        outerRadius={75}
+                        paddingAngle={3}
+                        dataKey="value"
+                        nameKey="name"
+                      >
+                        {stats.subjectStats.map((entry, index) => (
+                          <Cell
+                            key={`subject-${index}`}
+                            fill={SUBJECT_CHART_COLORS[entry.subject] || '#6b7280'}
+                            stroke="none"
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: '#fff',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                        }}
+                        formatter={(value: number, name: string) => [`${value}명`, name]}
+                        itemStyle={{ color: '#374151' }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex flex-wrap justify-center gap-x-3 gap-y-1">
+                  {stats.subjectStats.map((entry) => (
+                    <div key={entry.subject} className="flex items-center gap-1.5 text-xs">
+                      <div
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: SUBJECT_CHART_COLORS[entry.subject] || '#6b7280' }}
+                      />
+                      <span className="text-primary-700">
+                        {entry.label} {entry.count}명 ({entry.percentage}%)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* 우측 컬럼: 사유별 + 강사별 */}
+        <div className="col-span-4 flex flex-col gap-3">
+          {/* 사유별 분포 */}
+          <div className="bg-white rounded-sm border border-primary/10 p-4 flex-1">
+            <h3 className="text-sm font-semibold text-primary mb-2">퇴원 사유별 분포</h3>
+            {loading ? (
+              <div className="w-full h-20 bg-primary/5 animate-pulse rounded-sm" />
+            ) : stats.reasonStats.length === 0 ? (
+              <div className="flex items-center justify-center h-20 text-sm text-primary-700">
+                데이터 없음
+              </div>
+            ) : (
+              <div className="space-y-1.5">
                 {stats.reasonStats.map((item, idx) => (
                   <div key={item.reason} className="flex items-center gap-2">
                     <div
-                      className="w-3 h-3 rounded-sm shrink-0"
+                      className="w-2.5 h-2.5 rounded-sm shrink-0"
                       style={{ backgroundColor: REASON_COLORS[idx % REASON_COLORS.length] }}
                     />
                     <span className="text-xs text-primary-700 w-20 truncate">{item.label}</span>
-                    <div className="flex-1 h-4 bg-gray-100 rounded-sm overflow-hidden">
+                    <div className="flex-1 h-3.5 bg-gray-100 rounded-sm overflow-hidden">
                       <div
                         className="h-full rounded-sm transition-all"
                         style={{
@@ -266,129 +341,57 @@ const WithdrawalDashboard: React.FC<WithdrawalDashboardProps> = ({
               </div>
             )}
           </div>
-        </div>
 
-        {/* 과목/강사별 */}
-        <div
-          className="col-span-3 bg-white rounded-sm border border-primary/10 p-4 cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => chartTab === 'staff' && setShowStaffModal(true)}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              {/* 탭 버튼 */}
-              <button
-                onClick={(e) => { e.stopPropagation(); setChartTab('subject'); }}
-                className={`px-2 py-1 text-xs rounded-sm transition-colors ${
-                  chartTab === 'subject'
-                    ? 'bg-primary text-white'
-                    : 'bg-gray-100 text-primary-700 hover:bg-gray-200'
-                }`}
-              >
-                과목별
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); setChartTab('staff'); }}
-                className={`px-2 py-1 text-xs rounded-sm transition-colors ${
-                  chartTab === 'staff'
-                    ? 'bg-primary text-white'
-                    : 'bg-gray-100 text-primary-700 hover:bg-gray-200'
-                }`}
-              >
-                강사별
-              </button>
-            </div>
-            {chartTab === 'staff' && (
+          {/* 강사별 퇴원 통계 */}
+          <div
+            className="bg-white rounded-sm border border-primary/10 p-4 flex-1 cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => setShowStaffModal(true)}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-primary flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                강사별 퇴원 통계
+              </h3>
               <ChevronRight className="w-4 h-4 text-primary-700" />
-            )}
-          </div>
-
-          <div className="h-[260px]">
+            </div>
             {loading ? (
-              <div className="w-full h-full bg-primary/5 animate-pulse rounded-sm" />
-            ) : chartTab === 'subject' ? (
-              // 과목별 차트
-              stats.subjectStats.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-sm text-primary-700">
-                  데이터 없음
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={stats.subjectStats} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} allowDecimals={false} />
-                    <YAxis
-                      type="category"
-                      dataKey="label"
-                      tick={{ fontSize: 11, fill: '#6b7280' }}
-                      width={50}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#fff',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '4px',
-                        fontSize: '12px',
-                      }}
-                      formatter={(value: number) => [`${value}명`, '퇴원/종료']}
-                    />
-                    <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                      {stats.subjectStats.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={
-                            entry.subject === 'math' ? '#3b82f6' :
-                            entry.subject === 'english' ? '#10b981' :
-                            entry.subject === 'korean' ? '#8b5cf6' :
-                            entry.subject === 'science' ? '#f97316' :
-                            '#6b7280'
-                          }
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )
+              <div className="w-full h-20 bg-primary/5 animate-pulse rounded-sm" />
+            ) : stats.staffStats.length === 0 ? (
+              <div className="text-sm text-primary-700 py-2">데이터 없음</div>
             ) : (
-              // 강사별 순위 (Top 5)
-              stats.staffStats.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-sm text-primary-700">
-                  데이터 없음
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {stats.staffStats.slice(0, 5).map((staff, idx) => (
-                    <div
-                      key={staff.staffId}
-                      className={`flex items-center gap-3 p-2 rounded-sm ${
-                        idx === 0 ? 'bg-red-50' : 'bg-gray-50'
-                      }`}
-                    >
-                      <div className={`w-6 h-6 rounded-sm flex items-center justify-center text-xs font-bold ${
-                        idx === 0 ? 'bg-red-100 text-red-600' :
-                        idx === 1 ? 'bg-orange-100 text-orange-600' :
-                        idx === 2 ? 'bg-amber-100 text-amber-600' :
-                        'bg-gray-200 text-gray-600'
-                      }`}>
-                        {idx + 1}
-                      </div>
-                      <span className="text-sm font-medium text-primary flex-1">{staff.staffName}</span>
-                      <div className="flex items-center gap-2 text-xs">
-                        {staff.mathCount > 0 && (
-                          <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded">
-                            수학 {staff.mathCount}
-                          </span>
-                        )}
-                        {staff.englishCount > 0 && (
-                          <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded">
-                            영어 {staff.englishCount}
-                          </span>
-                        )}
-                        <span className="font-bold text-primary">{staff.totalCount}명</span>
-                      </div>
+              <div className="space-y-1.5">
+                {stats.staffStats.slice(0, 5).map((staff, idx) => (
+                  <div
+                    key={staff.staffId}
+                    className={`flex items-center gap-2 p-1.5 rounded-sm ${
+                      idx === 0 ? 'bg-red-50' : 'bg-gray-50'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                      idx === 0 ? 'bg-red-100 text-red-600' :
+                      idx === 1 ? 'bg-orange-100 text-orange-600' :
+                      idx === 2 ? 'bg-amber-100 text-amber-600' :
+                      'bg-gray-200 text-gray-600'
+                    }`}>
+                      {idx + 1}
                     </div>
-                  ))}
-                </div>
-              )
+                    <span className="text-xs font-medium text-primary flex-1 truncate">{staff.staffName}</span>
+                    <div className="flex items-center gap-1">
+                      {staff.mathCount > 0 && (
+                        <span className="px-1 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px]">
+                          수 {staff.mathCount}
+                        </span>
+                      )}
+                      {staff.englishCount > 0 && (
+                        <span className="px-1 py-0.5 bg-green-100 text-green-700 rounded text-[10px]">
+                          영 {staff.englishCount}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs font-bold text-primary shrink-0">{staff.totalCount}명</span>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>

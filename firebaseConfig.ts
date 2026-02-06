@@ -39,14 +39,22 @@ const app = initializeApp(firebaseConfig);
 // Handle case where Firestore is already initialized (e.g. in browser console re-runs)
 import { getFirestore } from "firebase/firestore";
 
+// 임베드 모드 감지 (iframe 내 cross-origin 환경에서 IndexedDB 접근 차단 방지)
+const isEmbedContext = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('embed');
+
 let dbInstance;
 const DATABASE_ID = 'restore260202';  // 복원된 데이터베이스 사용
 try {
-    dbInstance = initializeFirestore(app, {
-        localCache: persistentLocalCache({
-            tabManager: persistentMultipleTabManager()
-        })
-    }, DATABASE_ID);
+    if (isEmbedContext) {
+        // 임베드 모드: persistentLocalCache 비활성화 (iframe에서 IndexedDB 차단 이슈 방지)
+        dbInstance = initializeFirestore(app, {}, DATABASE_ID);
+    } else {
+        dbInstance = initializeFirestore(app, {
+            localCache: persistentLocalCache({
+                tabManager: persistentMultipleTabManager()
+            })
+        }, DATABASE_ID);
+    }
 } catch {
     dbInstance = getFirestore(app, DATABASE_ID);
 }

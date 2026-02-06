@@ -526,8 +526,8 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
   }
 
   return (
-    <div className="w-full p-3 bg-gray-50">
-      <div className="max-w-[2000px] mx-auto space-y-3">
+    <div className="w-full p-3 bg-gray-50 overflow-x-auto">
+      <div className="max-w-[2000px] mx-auto min-w-[768px] space-y-3">
         <DashboardHeader userProfile={userProfile} staffMember={staffMember} />
 
         {/* 통계 카드 */}

@@ -3,7 +3,7 @@ import { ConsultationRecord, ConsultationStatus, SchoolGrade, ConsultationSubjec
 import {
     X, ChevronDown, ChevronRight, User, Phone, Calendar, MapPin, School, BookOpen,
     FileText, Globe, Users, Cake, Home, Smile, AlertTriangle, Target, Tag, Bus,
-    XCircle, CheckCircle, Banknote, Shield, UserCheck, GraduationCap, MessageSquare, ClipboardList
+    XCircle, CheckCircle, Banknote, Shield, UserCheck, GraduationCap, MessageSquare, ClipboardList, Droplet, Inbox
 } from 'lucide-react';
 
 interface ConsultationFormProps {
@@ -15,6 +15,7 @@ interface ConsultationFormProps {
     onConvertToStudent?: (record: ConsultationRecord) => void;
     canDelete?: boolean;
     canConvert?: boolean;
+    draftId?: string | null;
 }
 
 // Grade options - exclude legacy
@@ -50,7 +51,8 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
     onDelete,
     onConvertToStudent,
     canDelete = false,
-    canConvert = false
+    canConvert = false,
+    draftId
 }) => {
     // 탭 상태 관리
     type TabType = 'basic' | 'math' | 'english' | 'korean' | 'etc';
@@ -72,6 +74,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
         studentName: '',
         englishName: '',
         gender: undefined,
+        bloodType: '',
         schoolName: '',
         grade: SchoolGrade.Middle1,
         graduationYear: '',
@@ -126,6 +129,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                 // 새 필드 기본값 처리
                 englishName: initialData.englishName || '',
                 gender: initialData.gender,
+                bloodType: initialData.bloodType || '',
                 graduationYear: initialData.graduationYear || '',
                 studentPhone: initialData.studentPhone || '',
                 homePhone: initialData.homePhone || '',
@@ -162,6 +166,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                 studentName: '',
                 englishName: '',
                 gender: undefined,
+                bloodType: '',
                 schoolName: '',
                 grade: SchoolGrade.Middle1,
                 graduationYear: '',
@@ -308,7 +313,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                 {/* 헤더 */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
                     <h2 className="text-sm font-bold text-primary">
-                        {initialData ? '상담 기록 수정' : '새 상담 등록'}
+                        {draftId ? 'QR 접수 → 상담 등록' : initialData ? '상담 기록 수정' : '새 상담 등록'}
                     </h2>
                     <button
                         onClick={onClose}
@@ -318,6 +323,16 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                         <X size={18} />
                     </button>
                 </div>
+
+                {/* QR 접수 안내 배너 */}
+                {draftId && (
+                    <div className="mx-3 mt-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-sm flex items-center gap-2 shrink-0">
+                        <Inbox size={14} className="text-amber-600 shrink-0" />
+                        <span className="text-xs text-amber-800">
+                            학부모 QR 폼에서 접수된 데이터입니다. 내용을 확인/수정 후 등록하세요.
+                        </span>
+                    </div>
+                )}
 
                 {/* 탭 네비게이션 */}
                 <div className="flex border-b border-gray-200 px-3 shrink-0">
@@ -526,7 +541,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                 {/* 추가 기본 정보 */}
                                 <div className="mb-3">
                                     <div className="text-xs font-semibold text-slate-600 mb-2">추가 기본 정보</div>
-                                    <div className="grid grid-cols-3 gap-2">
+                                    <div className="grid grid-cols-4 gap-2">
                                         <div>
                                             <label className={labelClass}><Globe size={12} className="inline mr-1" />영어 이름</label>
                                             <input
@@ -547,6 +562,20 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                                 <option value="">선택 안함</option>
                                                 <option value="male">남</option>
                                                 <option value="female">여</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className={labelClass}><Droplet size={12} className="inline mr-1" />혈액형</label>
+                                            <select
+                                                value={formData.bloodType || ''}
+                                                onChange={e => setFormData({ ...formData, bloodType: e.target.value })}
+                                                className={inputClass}
+                                            >
+                                                <option value="">선택 안함</option>
+                                                <option value="A">A형</option>
+                                                <option value="B">B형</option>
+                                                <option value="O">O형</option>
+                                                <option value="AB">AB형</option>
                                             </select>
                                         </div>
                                         <div>

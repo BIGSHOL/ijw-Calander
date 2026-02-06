@@ -1,6 +1,8 @@
 import React, { useState, useCallback, Suspense, lazy } from 'react';
 import { ConsultationRecord, UserProfile, UnifiedStudent, SchoolGrade, ConsultationSubject, ConsultationStatus, LevelTest } from '../../types';
+import { ConsultationDraft } from '../../types/consultationDraft';
 import { useConsultations, useCreateConsultation, useUpdateConsultation, useDeleteConsultation } from '../../hooks/useConsultations';
+import { usePendingDraftCount, useConsultationDrafts, useConvertDraft, useDeleteDraft } from '../../hooks/useConsultationDrafts';
 import { useStudents } from '../../hooks/useStudents';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAddLevelTest, determineLevel } from '../../hooks/useGradeProfile';
@@ -8,12 +10,13 @@ import { ConsultationDashboard } from './ConsultationDashboard';
 import { ConsultationTable } from './ConsultationTable';
 import { ConsultationYearView } from './ConsultationYearView';
 import { ConsultationForm } from './ConsultationForm';
-import { LayoutDashboard, List, Calendar, Plus, ChevronLeft, ChevronRight, Upload, Loader2, Search, Settings2 } from 'lucide-react';
+import { LayoutDashboard, List, Calendar, Plus, ChevronLeft, ChevronRight, Upload, Loader2, Search, Settings2, Inbox, X, Trash2, Link2 } from 'lucide-react';
 import { TabSubNavigation } from '../Common/TabSubNavigation';
 import { TabButton } from '../Common/TabButton';
 import { VideoLoading } from '../Common/VideoLoading';
 
 const RegistrationMigrationModal = lazy(() => import('./RegistrationMigrationModal'));
+const EmbedTokenManager = lazy(() => import('../Embed/EmbedTokenManager'));
 
 /**
  * 레벨테스트 점수 문자열 파싱
@@ -60,6 +63,9 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingRecord, setEditingRecord] = useState<ConsultationRecord | null>(null);
     const [showMigrationModal, setShowMigrationModal] = useState(false);
+    const [showDraftPanel, setShowDraftPanel] = useState(false);
+    const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
+    const [showEmbedManager, setShowEmbedManager] = useState(false);
 
     // Firestore hooks - pass year as number or undefined for 'all'
     // 대시보드(통계 비교), 연간뷰(전체 흐름)에서는 전체 데이터를 불러와야 함
@@ -74,12 +80,27 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
     const { students: existingStudents, addStudent } = useStudents();
     const addLevelTest = useAddLevelTest();
 
+    // Draft hooks (학부모 QR 폼 접수)
+    const { data: pendingCount = 0 } = usePendingDraftCount();
+    const { data: drafts = [] } = useConsultationDrafts();
+    const convertDraft = useConvertDraft();
+    const deleteDraft = useDeleteDraft();
+
     const handleAddRecord = useCallback((record: Omit<ConsultationRecord, 'id' | 'createdAt'>) => {
         createConsultation.mutate({
             ...record,
             authorId: userProfile?.uid
         } as Omit<ConsultationRecord, 'id'>, {
-            onSuccess: () => {
+            onSuccess: (consultationId) => {
+                // draft에서 생성된 경우 draft 상태를 converted로 변경
+                if (activeDraftId && userProfile?.uid) {
+                    convertDraft.mutate({
+                        draftId: activeDraftId,
+                        consultationId: consultationId as string || '',
+                        reviewerUid: userProfile.uid,
+                    });
+                    setActiveDraftId(null);
+                }
                 setIsFormOpen(false);
             },
             onError: (error) => {
@@ -87,7 +108,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                 alert('상담 등록에 실패했습니다.');
             }
         });
-    }, [createConsultation, userProfile?.uid]);
+    }, [createConsultation, userProfile?.uid, activeDraftId, convertDraft]);
 
     const handleUpdateRecord = useCallback((record: Omit<ConsultationRecord, 'id' | 'createdAt'>) => {
         if (!editingRecord) return;
@@ -338,7 +359,65 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
 
     const openAddModal = () => {
         setEditingRecord(null);
+        setActiveDraftId(null);
         setIsFormOpen(true);
+    };
+
+    // Draft → ConsultationForm 사전입력으로 열기
+    const openDraftAsForm = (draft: ConsultationDraft) => {
+        const prefilled: ConsultationRecord = {
+            id: '',
+            studentName: draft.studentName,
+            gender: draft.gender,
+            bloodType: draft.bloodType || '',
+            schoolName: draft.schoolName,
+            grade: (draft.grade as SchoolGrade) || SchoolGrade.Middle1,
+            studentPhone: draft.studentPhone || '',
+            parentName: draft.parentName,
+            parentRelation: draft.parentRelation || '모',
+            parentPhone: draft.parentPhone,
+            address: draft.address || '',
+            careerGoal: draft.careerGoal || '',
+            siblings: draft.siblings || '',
+            shuttleBusRequest: draft.shuttleBusRequest,
+            privacyAgreement: draft.privacyAgreement,
+            installmentAgreement: draft.installmentAgreement,
+            consultationPath: draft.consultationPath || '',
+            // 직원이 채울 필드 (기본값)
+            englishName: '',
+            graduationYear: '',
+            homePhone: '',
+            zipCode: '',
+            addressDetail: '',
+            birthDate: '',
+            nickname: '',
+            enrollmentReason: '',
+            safetyNotes: '',
+            siblingsDetails: '',
+            studentType: '',
+            consultationDate: new Date().toISOString().slice(0, 10),
+            subject: draft.subjects?.[0] as ConsultationSubject || ConsultationSubject.Math,
+            status: ConsultationStatus.PendingThisMonth,
+            counselor: '',
+            receiver: '',
+            registrar: '',
+            paymentAmount: '',
+            paymentDate: '',
+            notes: '',
+            nonRegistrationReason: '',
+            followUpDate: '',
+            followUpContent: '',
+            createdAt: new Date().toISOString(),
+        };
+        setEditingRecord(prefilled);
+        setActiveDraftId(draft.id);
+        setShowDraftPanel(false);
+        setIsFormOpen(true);
+    };
+
+    const handleDeleteDraft = async (draftId: string) => {
+        if (!confirm('이 접수 건을 삭제하시겠습니까?')) return;
+        deleteDraft.mutate(draftId);
     };
 
     const openEditModal = (record: ConsultationRecord) => {
@@ -554,6 +633,31 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                         </button>
                     )}
 
+                    {/* QR 토큰 관리: 마스터 전용 */}
+                    {isMaster && (
+                        <button
+                            onClick={() => setShowEmbedManager(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded-sm text-xs font-bold transition-colors"
+                        >
+                            <Link2 size={14} />
+                            QR 토큰
+                        </button>
+                    )}
+
+                    {/* QR 접수 확인: 접수 건이 있을 때 표시 */}
+                    {canCreate && pendingCount > 0 && (
+                        <button
+                            onClick={() => setShowDraftPanel(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-sm text-xs font-bold transition-colors relative"
+                        >
+                            <Inbox size={14} />
+                            QR 접수
+                            <span className="ml-1 bg-white text-amber-600 rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none">
+                                {pendingCount}
+                            </span>
+                        </button>
+                    )}
+
                     {/* 상담 등록: 생성 권한 필요 */}
                     {canCreate && (
                         <button
@@ -706,13 +810,14 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
             {/* Modal */}
             <ConsultationForm
                 isOpen={isFormOpen}
-                onClose={() => setIsFormOpen(false)}
+                onClose={() => { setIsFormOpen(false); setActiveDraftId(null); }}
                 onSubmit={editingRecord ? handleUpdateRecord : handleAddRecord}
                 initialData={editingRecord}
                 onDelete={handleDeleteRecord}
                 onConvertToStudent={handleConvertToStudent}
                 canDelete={canManage || (canEdit && editingRecord?.authorId === userProfile?.uid)}
                 canConvert={canConvert}
+                draftId={activeDraftId}
             />
 
             {/* Migration Modal */}
@@ -724,10 +829,85 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                         onClose={() => setShowMigrationModal(false)}
                         onSuccess={() => {
                             setShowMigrationModal(false);
-                            // 마이그레이션 성공 시 데이터 새로고침은 react-query가 자동으로 처리
                         }}
                     />
                 </Suspense>
+            )}
+
+            {/* Embed Token Manager (QR 토큰 관리) */}
+            {showEmbedManager && (
+                <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                    <Loader2 className="w-8 h-8 animate-spin text-white" />
+                </div>}>
+                    <EmbedTokenManager
+                        isOpen={showEmbedManager}
+                        onClose={() => setShowEmbedManager(false)}
+                        staffId={userProfile?.staffId || userProfile?.uid || ''}
+                        filterType="consultation-form"
+                    />
+                </Suspense>
+            )}
+
+            {/* Draft Panel (QR 접수 목록) */}
+            {showDraftPanel && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowDraftPanel(false)}>
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between px-5 py-3 border-b">
+                            <div className="flex items-center gap-2">
+                                <Inbox className="w-5 h-5 text-amber-500" />
+                                <h3 className="font-bold text-gray-800">QR 접수 목록</h3>
+                                {pendingCount > 0 && (
+                                    <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                                        {pendingCount}건
+                                    </span>
+                                )}
+                            </div>
+                            <button onClick={() => setShowDraftPanel(false)} className="p-1 hover:bg-gray-100 rounded">
+                                <X size={18} className="text-gray-500" />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                            {drafts.filter(d => d.status === 'pending').length === 0 ? (
+                                <p className="text-center text-gray-400 py-8 text-sm">대기 중인 접수가 없습니다</p>
+                            ) : (
+                                drafts.filter(d => d.status === 'pending').map(draft => (
+                                    <div key={draft.id} className="border rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-bold text-sm text-gray-800">{draft.studentName}</span>
+                                                    <span className="text-xs text-gray-400">{draft.grade}</span>
+                                                    <span className="text-xs text-gray-400">{draft.schoolName}</span>
+                                                </div>
+                                                <div className="text-xs text-gray-500 mt-0.5">
+                                                    보호자: {draft.parentName} ({draft.parentPhone})
+                                                    {draft.subjects?.length > 0 && ` · ${draft.subjects.join(', ')}`}
+                                                </div>
+                                                <div className="text-[10px] text-gray-400 mt-0.5">
+                                                    {new Date(draft.submittedAt).toLocaleString('ko-KR')}
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                                                <button
+                                                    onClick={() => openDraftAsForm(draft)}
+                                                    className="px-2.5 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded hover:bg-indigo-700 transition-colors"
+                                                >
+                                                    등록
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteDraft(draft.id)}
+                                                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

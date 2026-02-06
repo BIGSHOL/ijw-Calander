@@ -193,13 +193,18 @@ export function useValidateEmbedToken(tokenValue: string | null) {
           return;
         }
 
-        // 사용 기록 업데이트
-        await updateDoc(doc(db, COLLECTION_NAME, token.id), {
-          lastUsedAt: serverTimestamp(),
-          usageCount: (token.usageCount || 0) + 1,
-        });
-
+        // 검증 성공 먼저 설정 (사용 기록 업데이트 실패해도 검증은 유효)
         setValidation({ isValid: true, token });
+
+        // 사용 기록 업데이트 (실패해도 무시)
+        try {
+          await updateDoc(doc(db, COLLECTION_NAME, token.id), {
+            lastUsedAt: serverTimestamp(),
+            usageCount: (token.usageCount || 0) + 1,
+          });
+        } catch {
+          // 비인증 환경에서 업데이트 실패 가능 → 무시
+        }
       } catch (err) {
         console.error('Token validation error:', err);
         setValidation({ isValid: false, error: 'NOT_FOUND' });

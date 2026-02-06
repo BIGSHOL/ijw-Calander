@@ -518,6 +518,7 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                 isOpen={isEmbedManagerOpen}
                 onClose={() => setIsEmbedManagerOpen(false)}
                 staffId={currentUser?.staffId || currentUser?.uid || ''}
+                filterType={['math-timetable', 'english-timetable']}
             />
         </div>
     );

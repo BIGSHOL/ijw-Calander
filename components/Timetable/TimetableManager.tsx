@@ -609,6 +609,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     isOpen={isEmbedManagerOpen}
                     onClose={() => setIsEmbedManagerOpen(false)}
                     staffId={currentUser?.staffId || currentUser?.uid || ''}
+                    filterType={['math-timetable', 'english-timetable']}
                 />
 
                 {/* 이미지 저장 모달 */}
