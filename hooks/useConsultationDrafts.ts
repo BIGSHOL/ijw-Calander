@@ -1,13 +1,14 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import {
     collection,
-    getDocs,
     updateDoc,
     deleteDoc,
     doc,
     query,
     where,
     orderBy,
+    onSnapshot,
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { ConsultationDraft } from '../types/consultationDraft';
@@ -15,48 +16,57 @@ import { ConsultationDraft } from '../types/consultationDraft';
 const COLLECTION_NAME = 'consultation_drafts';
 
 /**
- * 상담 접수 draft 조회 (직원용)
- * consultation_drafts 컬렉션에서 pending 상태 우선 조회
+ * 상담 접수 draft 실시간 구독 (직원용)
  */
 export const useConsultationDrafts = () => {
-    return useQuery<ConsultationDraft[]>({
-        queryKey: ['consultation-drafts'],
-        queryFn: async () => {
-            const ref = collection(db, COLLECTION_NAME);
-            const q = query(ref, orderBy('submittedAt', 'desc'));
-            const snapshot = await getDocs(q);
+    const [drafts, setDrafts] = useState<ConsultationDraft[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-            return snapshot.docs.map(d => ({
+    useEffect(() => {
+        const ref = collection(db, COLLECTION_NAME);
+        const q = query(ref, orderBy('submittedAt', 'desc'));
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const data = snapshot.docs.map(d => ({
                 id: d.id,
                 ...d.data(),
             })) as ConsultationDraft[];
-        },
-        staleTime: 30_000, // 30초
-    });
+            setDrafts(data);
+            setIsLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    return { data: drafts, isLoading };
 };
 
 /**
- * pending 상태 draft 개수
+ * pending 상태 draft 개수 (실시간)
  */
 export const usePendingDraftCount = () => {
-    return useQuery<number>({
-        queryKey: ['consultation-drafts', 'pending-count'],
-        queryFn: async () => {
-            const ref = collection(db, COLLECTION_NAME);
-            const q = query(ref, where('status', '==', 'pending'));
-            const snapshot = await getDocs(q);
-            return snapshot.size;
-        },
-        staleTime: 30_000,
-    });
+    const [count, setCount] = useState(0);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const ref = collection(db, COLLECTION_NAME);
+        const q = query(ref, where('status', '==', 'pending'));
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setCount(snapshot.size);
+            setIsLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    return { data: count, isLoading };
 };
 
 /**
  * draft 상태를 'converted'로 변경하고 consultation ID 연결
  */
 export const useConvertDraft = () => {
-    const queryClient = useQueryClient();
-
     return useMutation({
         mutationFn: async ({ draftId, consultationId, reviewerUid }: {
             draftId: string;
@@ -71,9 +81,6 @@ export const useConvertDraft = () => {
                 reviewedBy: reviewerUid,
             });
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['consultation-drafts'] });
-        },
     });
 };
 
@@ -81,14 +88,9 @@ export const useConvertDraft = () => {
  * draft 삭제
  */
 export const useDeleteDraft = () => {
-    const queryClient = useQueryClient();
-
     return useMutation({
         mutationFn: async (draftId: string) => {
             await deleteDoc(doc(db, COLLECTION_NAME, draftId));
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['consultation-drafts'] });
         },
     });
 };
