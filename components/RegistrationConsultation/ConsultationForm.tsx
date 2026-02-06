@@ -3,7 +3,8 @@ import { ConsultationRecord, ConsultationStatus, SchoolGrade, ConsultationSubjec
 import {
     X, ChevronDown, ChevronRight, User, Phone, Calendar, MapPin, School, BookOpen,
     FileText, Globe, Users, Cake, Home, Smile, AlertTriangle, Target, Tag, Bus,
-    XCircle, CheckCircle, Banknote, Shield, UserCheck, GraduationCap, MessageSquare, ClipboardList, Droplet, Inbox
+    XCircle, CheckCircle, Banknote, Shield, UserCheck, GraduationCap, MessageSquare, ClipboardList, Droplet, Inbox,
+    Pencil, Eye, FlaskConical, Star
 } from 'lucide-react';
 
 interface ConsultationFormProps {
@@ -55,18 +56,25 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
     draftId
 }) => {
     // 탭 상태 관리
-    type TabType = 'basic' | 'math' | 'english' | 'korean' | 'etc';
+    type TabType = 'basic' | 'math' | 'english' | 'korean' | 'science' | 'etc';
     const [activeTab, setActiveTab] = useState<TabType>('basic');
+
+    // 조회/편집 모드 (initialData가 있으면 기본 조회모드)
+    const [isViewMode, setIsViewMode] = useState(false);
 
     // 확장 섹션 펼침 상태
     const [showExtendedInfo, setShowExtendedInfo] = useState(false);
     const [showAcademyInfo, setShowAcademyInfo] = useState(false);
     const [showFollowUp, setShowFollowUp] = useState(false);
 
+    // 메인 상담 과목
+    const [mainSubject, setMainSubject] = useState<'math' | 'english' | 'korean' | 'science' | 'etc' | undefined>(undefined);
+
     // 과목별 상담 정보 상태
     const [mathConsult, setMathConsult] = useState<SubjectConsultationDetail>({});
     const [englishConsult, setEnglishConsult] = useState<SubjectConsultationDetail>({});
     const [koreanConsult, setKoreanConsult] = useState<SubjectConsultationDetail>({});
+    const [scienceConsult, setScienceConsult] = useState<SubjectConsultationDetail>({});
     const [etcConsult, setEtcConsult] = useState<SubjectConsultationDetail>({});
 
     const [formData, setFormData] = useState<Omit<ConsultationRecord, 'id'>>({
@@ -156,10 +164,14 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
             setShowAcademyInfo(false);
             setShowFollowUp(false);
             // 과목별 상담 정보 로드
+            setMainSubject(initialData.mainSubject);
             setMathConsult(initialData.mathConsultation || {});
             setEnglishConsult(initialData.englishConsultation || {});
             setKoreanConsult(initialData.koreanConsultation || {});
+            setScienceConsult(initialData.scienceConsultation || {});
             setEtcConsult(initialData.etcConsultation || {});
+            // 기존 레코드 열 때 조회 모드, draft에서 열 때 편집 모드
+            setIsViewMode(!!initialData.id && !draftId);
         } else {
             setFormData({
                 // 학생 기본 정보
@@ -213,12 +225,15 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
             setShowAcademyInfo(false);
             setShowFollowUp(false);
             // 과목별 상담 정보 초기화
+            setMainSubject(undefined);
             setMathConsult({});
             setEnglishConsult({});
             setKoreanConsult({});
+            setScienceConsult({});
             setEtcConsult({});
+            setIsViewMode(false);
         }
-    }, [initialData, isOpen]);
+    }, [initialData, isOpen, draftId]);
 
     // Performance: rerender-functional-setstate - 안정적인 핸들러
     const handleChange = useCallback((field: keyof typeof formData, value: any) => {
@@ -274,9 +289,11 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                 paymentDate: paymentDateISO,
                 followUpDate: followUpDateISO,
                 createdAt: createdAtISO,
+                mainSubject: mainSubject,
                 mathConsultation: mathConsult,
                 englishConsultation: englishConsult,
                 koreanConsultation: koreanConsult,
+                scienceConsultation: scienceConsult,
                 etcConsultation: etcConsult
             };
 
@@ -286,25 +303,41 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
             ) as Omit<ConsultationRecord, 'id'>;
 
             onSubmit(cleanedData);
-            onClose();
+            // onClose()를 여기서 호출하지 않음 - 부모가 모달 상태를 관리
         } catch (error) {
             console.error('❌ Form submit error:', error);
             alert(`폼 제출 중 오류가 발생했습니다:\n\n${error instanceof Error ? error.message : '알 수 없는 오류'}`);
         }
     };
 
-    const inputClass = "w-full px-2.5 py-1.5 text-sm border border-slate-300 rounded-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500";
+    // 메인상담 변경 핸들러
+    const handleMainSubjectChange = (subject: 'math' | 'english' | 'korean' | 'science' | 'etc') => {
+        if (mainSubject === subject) {
+            setMainSubject(undefined); // 토글 해제
+        } else if (mainSubject) {
+            const subjectNames: Record<string, string> = { math: '수학', english: '영어', korean: '국어', science: '과학', etc: '기타' };
+            if (confirm(`현재 메인상담이 "${subjectNames[mainSubject]}"로 설정되어 있습니다.\n"${subjectNames[subject]}"로 변경하시겠습니까?`)) {
+                setMainSubject(subject);
+            }
+        } else {
+            setMainSubject(subject);
+        }
+    };
+
+    const inputClass = `w-full px-2.5 py-1.5 text-sm border border-slate-300 rounded-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-default' : ''}`;
     const labelClass = "block text-xs font-medium text-slate-600 mb-0.5";
+    const viewProps = isViewMode ? { readOnly: true, tabIndex: -1 } : {};
 
     if (!isOpen) return null;
 
     // 탭 설정
-    const tabs: { id: TabType; label: string; color: string }[] = [
+    const tabs: { id: TabType; label: string; color: string; subjectKey?: 'math' | 'english' | 'korean' | 'science' | 'etc' }[] = [
         { id: 'basic', label: '기본 정보', color: CUSTOM_COLORS.NAVY },
-        { id: 'math', label: '수학 상담', color: '#10b981' },
-        { id: 'english', label: '영어 상담', color: '#3b82f6' },
-        { id: 'korean', label: '국어 상담', color: '#f59e0b' },
-        { id: 'etc', label: '기타 상담', color: '#8b5cf6' },
+        { id: 'math', label: '수학 상담', color: '#10b981', subjectKey: 'math' },
+        { id: 'english', label: '영어 상담', color: '#3b82f6', subjectKey: 'english' },
+        { id: 'korean', label: '국어 상담', color: '#f59e0b', subjectKey: 'korean' },
+        { id: 'science', label: '과학 상담', color: '#ec4899', subjectKey: 'science' },
+        { id: 'etc', label: '기타 상담', color: '#8b5cf6', subjectKey: 'etc' },
     ];
 
     return (
@@ -312,9 +345,24 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
             <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-sm shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[84vh]">
                 {/* 헤더 */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
-                    <h2 className="text-sm font-bold text-primary">
-                        {draftId ? 'QR 접수 → 상담 등록' : initialData ? '상담 기록 수정' : '새 상담 등록'}
-                    </h2>
+                    <div className="flex items-center gap-2">
+                        <h2 className="text-sm font-bold text-primary">
+                            {draftId ? 'QR 접수 → 상담 등록' : initialData?.id ? (isViewMode ? '상담 기록 조회' : '상담 기록 수정') : '새 상담 등록'}
+                        </h2>
+                        {initialData?.id && (
+                            <button
+                                type="button"
+                                onClick={() => setIsViewMode(!isViewMode)}
+                                className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${
+                                    isViewMode
+                                        ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                                        : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                                }`}
+                            >
+                                {isViewMode ? <><Pencil size={11} /> 수정</> : <><Eye size={11} /> 조회</>}
+                            </button>
+                        )}
+                    </div>
                     <button
                         onClick={onClose}
                         type="button"
@@ -335,13 +383,13 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                 )}
 
                 {/* 탭 네비게이션 */}
-                <div className="flex border-b border-gray-200 px-3 shrink-0">
+                <div className="flex border-b border-gray-200 px-3 shrink-0 overflow-x-auto">
                     {tabs.map(tab => (
                         <button
                             key={tab.id}
                             type="button"
                             onClick={() => setActiveTab(tab.id)}
-                            className={`px-4 py-2 text-xs font-medium transition-colors relative ${
+                            className={`px-3 py-2 text-xs font-medium transition-colors relative whitespace-nowrap flex items-center gap-1 ${
                                 activeTab === tab.id
                                     ? 'text-primary'
                                     : 'text-gray-500 hover:text-gray-700'
@@ -351,6 +399,9 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                 color: tab.color
                             } : {}}
                         >
+                            {tab.subjectKey && mainSubject === tab.subjectKey && (
+                                <Star size={10} className="fill-current text-amber-500" />
+                            )}
                             {tab.label}
                         </button>
                     ))}
@@ -911,270 +962,162 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                     </>
                     )}
 
-                    {/* 수학 상담 탭 */}
-                    {activeTab === 'math' && (
-                        <div className="bg-white border border-gray-200 overflow-hidden">
-                            <div className="px-2 py-1.5 bg-green-50 border-b border-green-200">
-                                <h3 className="text-green-900 font-bold text-xs flex items-center gap-1">
-                                    <BookOpen size={14} />
-                                    MATH
-                                </h3>
-                            </div>
-                            <div className="p-3 space-y-3">
-                                <div>
-                                    <label className={labelClass}><ClipboardList size={12} className="inline mr-1" />레벨테스트 점수 (수학)</label>
-                                    <input
-                                        type="text"
-                                        value={mathConsult.levelTestScore || ''}
-                                        onChange={e => setMathConsult({ ...mathConsult, levelTestScore: e.target.value })}
-                                        className={inputClass}
-                                        placeholder="수학 레벨 미실시"
-                                    />
-                                </div>
-                                <div>
-                                    <label className={labelClass}><FileText size={12} className="inline mr-1" />학원 히스토리 (수학)</label>
-                                    <textarea
-                                        rows={2}
-                                        value={mathConsult.academyHistory || ''}
-                                        onChange={e => setMathConsult({ ...mathConsult, academyHistory: e.target.value })}
-                                        className={`${inputClass} resize-none`}
-                                        placeholder="비어 있음"
-                                    />
-                                </div>
-                                <div>
-                                    <label className={labelClass}><BookOpen size={12} className="inline mr-1" />학습 진도 (수학)</label>
-                                    <textarea
-                                        rows={2}
-                                        value={mathConsult.learningProgress || ''}
-                                        onChange={e => setMathConsult({ ...mathConsult, learningProgress: e.target.value })}
-                                        className={`${inputClass} resize-none`}
-                                        placeholder="비어 있음"
-                                    />
-                                </div>
-                                <div>
-                                    <label className={labelClass}><CheckCircle size={12} className="inline mr-1" />학생 시험 성적 (수학)</label>
-                                    <textarea
-                                        rows={2}
-                                        value={mathConsult.examResults || ''}
-                                        onChange={e => setMathConsult({ ...mathConsult, examResults: e.target.value })}
-                                        className={`${inputClass} resize-none`}
-                                        placeholder="비어 있음"
-                                    />
-                                </div>
-                                <div>
-                                    <label className={labelClass}><MessageSquare size={12} className="inline mr-1" />학생 상담 내역 (수학)</label>
-                                    <textarea
-                                        rows={2}
-                                        value={mathConsult.consultationHistory || ''}
-                                        onChange={e => setMathConsult({ ...mathConsult, consultationHistory: e.target.value })}
-                                        className={`${inputClass} resize-none`}
-                                        placeholder="비어 있음"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label className={labelClass}><Tag size={12} className="inline mr-1" />추천반 (수학)</label>
+                    {/* 과목별 상담 탭 공통 렌더러 */}
+                    {(['math', 'english', 'korean', 'science', 'etc'] as const).map(subjectKey => {
+                        if (activeTab !== subjectKey) return null;
+                        const config: Record<string, { bg: string; border: string; text: string; icon: React.ReactNode; title: string; label: string }> = {
+                            math: { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-900', icon: <BookOpen size={14} />, title: 'MATH', label: '수학' },
+                            english: { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-900', icon: <Globe size={14} />, title: 'ENGLISH', label: '영어' },
+                            korean: { bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-900', icon: <FileText size={14} />, title: 'KOREAN', label: '국어' },
+                            science: { bg: 'bg-pink-50', border: 'border-pink-200', text: 'text-pink-900', icon: <FlaskConical size={14} />, title: 'SCIENCE', label: '과학' },
+                            etc: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-900', icon: <MessageSquare size={14} />, title: 'ETC', label: '기타' },
+                        };
+                        const c = config[subjectKey];
+                        const consultMap: Record<string, [SubjectConsultationDetail, (v: SubjectConsultationDetail) => void]> = {
+                            math: [mathConsult, setMathConsult],
+                            english: [englishConsult, setEnglishConsult],
+                            korean: [koreanConsult, setKoreanConsult],
+                            science: [scienceConsult, setScienceConsult],
+                            etc: [etcConsult, setEtcConsult],
+                        };
+                        const [consult, setConsult] = consultMap[subjectKey];
+                        return (
+                            <div key={subjectKey} className="bg-white border border-gray-200 overflow-hidden">
+                                <div className={`px-2 py-1.5 ${c.bg} ${c.border} border-b flex items-center justify-between`}>
+                                    <h3 className={`${c.text} font-bold text-xs flex items-center gap-1`}>
+                                        {c.icon}
+                                        {c.title}
+                                    </h3>
+                                    {/* 메인상담 체크박스 */}
+                                    <label className={`flex items-center gap-1.5 text-xs cursor-pointer px-2 py-0.5 rounded transition-colors ${
+                                        mainSubject === subjectKey
+                                            ? 'bg-amber-100 text-amber-800 font-bold border border-amber-300'
+                                            : 'text-gray-500 hover:text-gray-700'
+                                    }`}>
                                         <input
-                                            type="text"
-                                            value={mathConsult.recommendedClass || ''}
-                                            onChange={e => setMathConsult({ ...mathConsult, recommendedClass: e.target.value })}
-                                            className={inputClass}
-                                            placeholder="비어 있음"
+                                            type="checkbox"
+                                            checked={mainSubject === subjectKey}
+                                            onChange={() => !isViewMode && handleMainSubjectChange(subjectKey)}
+                                            disabled={isViewMode}
+                                            className="rounded text-amber-500"
                                         />
+                                        <Star size={10} className={mainSubject === subjectKey ? 'fill-amber-500 text-amber-500' : ''} />
+                                        메인상담
+                                    </label>
+                                </div>
+                                <div className="p-3 space-y-3">
+                                    <div>
+                                        <label className={labelClass}><ClipboardList size={12} className="inline mr-1" />레벨테스트 점수 ({c.label})</label>
+                                        <input type="text" value={consult.levelTestScore || ''} onChange={e => setConsult({ ...consult, levelTestScore: e.target.value })} className={inputClass} placeholder={`${c.label} 레벨 미실시`} {...viewProps} />
                                     </div>
                                     <div>
-                                        <label className={labelClass}><User size={12} className="inline mr-1" />담임 (수학)</label>
-                                        <input
-                                            type="text"
-                                            value={mathConsult.homeRoomTeacher || ''}
-                                            onChange={e => setMathConsult({ ...mathConsult, homeRoomTeacher: e.target.value })}
-                                            className={inputClass}
-                                            placeholder="비어 있음"
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className={labelClass}><Calendar size={12} className="inline mr-1" />첫 수업일 (수학)</label>
-                                    <input
-                                        type="date"
-                                        value={mathConsult.firstClassDate || ''}
-                                        onChange={e => setMathConsult({ ...mathConsult, firstClassDate: e.target.value })}
-                                        className={inputClass}
-                                    />
-                                </div>
-                                <div>
-                                    <label className={labelClass}><FileText size={12} className="inline mr-1" />기타</label>
-                                    <textarea
-                                        rows={2}
-                                        value={mathConsult.notes || ''}
-                                        onChange={e => setMathConsult({ ...mathConsult, notes: e.target.value })}
-                                        className={`${inputClass} resize-none`}
-                                        placeholder="비어 있음"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 영어 상담 탭 */}
-                    {activeTab === 'english' && (
-                        <div className="bg-white border border-gray-200 overflow-hidden">
-                            <div className="px-2 py-1.5 bg-blue-50 border-b border-blue-200">
-                                <h3 className="text-blue-900 font-bold text-xs flex items-center gap-1">
-                                    <Globe size={14} />
-                                    ENGLISH
-                                </h3>
-                            </div>
-                            <div className="p-3 space-y-3">
-                                <div>
-                                    <label className={labelClass}><ClipboardList size={12} className="inline mr-1" />레벨테스트 점수 (영어)</label>
-                                    <input
-                                        type="text"
-                                        value={englishConsult.levelTestScore || ''}
-                                        onChange={e => setEnglishConsult({ ...englishConsult, levelTestScore: e.target.value })}
-                                        className={inputClass}
-                                        placeholder="영어 레벨 미실시"
-                                    />
-                                </div>
-                                <div>
-                                    <label className={labelClass}><FileText size={12} className="inline mr-1" />학원 히스토리 (영어)</label>
-                                    <textarea rows={2} value={englishConsult.academyHistory || ''} onChange={e => setEnglishConsult({ ...englishConsult, academyHistory: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
-                                </div>
-                                <div>
-                                    <label className={labelClass}><BookOpen size={12} className="inline mr-1" />학습 진도 (영어)</label>
-                                    <textarea rows={2} value={englishConsult.learningProgress || ''} onChange={e => setEnglishConsult({ ...englishConsult, learningProgress: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
-                                </div>
-                                <div>
-                                    <label className={labelClass}><CheckCircle size={12} className="inline mr-1" />학생 시험 성적 (영어)</label>
-                                    <textarea rows={2} value={englishConsult.examResults || ''} onChange={e => setEnglishConsult({ ...englishConsult, examResults: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
-                                </div>
-                                <div>
-                                    <label className={labelClass}><MessageSquare size={12} className="inline mr-1" />학생 상담 내역 (영어)</label>
-                                    <textarea rows={2} value={englishConsult.consultationHistory || ''} onChange={e => setEnglishConsult({ ...englishConsult, consultationHistory: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label className={labelClass}><Tag size={12} className="inline mr-1" />추천반 (영어)</label>
-                                        <input type="text" value={englishConsult.recommendedClass || ''} onChange={e => setEnglishConsult({ ...englishConsult, recommendedClass: e.target.value })} className={inputClass} placeholder="비어 있음" />
+                                        <label className={labelClass}><FileText size={12} className="inline mr-1" />학원 히스토리 ({c.label})</label>
+                                        <textarea rows={2} value={consult.academyHistory || ''} onChange={e => setConsult({ ...consult, academyHistory: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" {...viewProps} />
                                     </div>
                                     <div>
-                                        <label className={labelClass}><User size={12} className="inline mr-1" />담임 (영어)</label>
-                                        <input type="text" value={englishConsult.homeRoomTeacher || ''} onChange={e => setEnglishConsult({ ...englishConsult, homeRoomTeacher: e.target.value })} className={inputClass} placeholder="비어 있음" />
+                                        <label className={labelClass}><BookOpen size={12} className="inline mr-1" />학습 진도 ({c.label})</label>
+                                        <textarea rows={2} value={consult.learningProgress || ''} onChange={e => setConsult({ ...consult, learningProgress: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" {...viewProps} />
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}><CheckCircle size={12} className="inline mr-1" />학생 시험 성적 ({c.label})</label>
+                                        <textarea rows={2} value={consult.examResults || ''} onChange={e => setConsult({ ...consult, examResults: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" {...viewProps} />
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}><MessageSquare size={12} className="inline mr-1" />학생 상담 내역 ({c.label})</label>
+                                        <textarea rows={2} value={consult.consultationHistory || ''} onChange={e => setConsult({ ...consult, consultationHistory: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" {...viewProps} />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label className={labelClass}><Tag size={12} className="inline mr-1" />추천반 ({c.label})</label>
+                                            <input type="text" value={consult.recommendedClass || ''} onChange={e => setConsult({ ...consult, recommendedClass: e.target.value })} className={inputClass} placeholder="비어 있음" {...viewProps} />
+                                        </div>
+                                        <div>
+                                            <label className={labelClass}><User size={12} className="inline mr-1" />담임 ({c.label})</label>
+                                            <input type="text" value={consult.homeRoomTeacher || ''} onChange={e => setConsult({ ...consult, homeRoomTeacher: e.target.value })} className={inputClass} placeholder="비어 있음" {...viewProps} />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}><Calendar size={12} className="inline mr-1" />첫 수업일 ({c.label})</label>
+                                        <input type="date" value={consult.firstClassDate || ''} onChange={e => setConsult({ ...consult, firstClassDate: e.target.value })} className={inputClass} {...viewProps} />
+                                    </div>
+                                    <div>
+                                        <label className={labelClass}><FileText size={12} className="inline mr-1" />기타</label>
+                                        <textarea rows={2} value={consult.notes || ''} onChange={e => setConsult({ ...consult, notes: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" {...viewProps} />
                                     </div>
                                 </div>
-                                <div>
-                                    <label className={labelClass}><Calendar size={12} className="inline mr-1" />첫 수업일 (영어)</label>
-                                    <input type="date" value={englishConsult.firstClassDate || ''} onChange={e => setEnglishConsult({ ...englishConsult, firstClassDate: e.target.value })} className={inputClass} />
-                                </div>
-                                <div>
-                                    <label className={labelClass}><FileText size={12} className="inline mr-1" />기타</label>
-                                    <textarea rows={2} value={englishConsult.notes || ''} onChange={e => setEnglishConsult({ ...englishConsult, notes: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
-                                </div>
                             </div>
-                        </div>
-                    )}
-
-                    {/* 국어 상담 탭 */}
-                    {activeTab === 'korean' && (
-                        <div className="bg-white border border-gray-200 overflow-hidden">
-                            <div className="px-2 py-1.5 bg-orange-50 border-b border-orange-200">
-                                <h3 className="text-orange-900 font-bold text-xs flex items-center gap-1">
-                                    <FileText size={14} />
-                                    KOREAN
-                                </h3>
-                            </div>
-                            <div className="p-3 space-y-3">
-                                <div>
-                                    <label className={labelClass}><FileText size={12} className="inline mr-1" />학원 히스토리 (국어)</label>
-                                    <textarea rows={2} value={koreanConsult.academyHistory || ''} onChange={e => setKoreanConsult({ ...koreanConsult, academyHistory: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
-                                </div>
-                                <div>
-                                    <label className={labelClass}><BookOpen size={12} className="inline mr-1" />학습 진도 (국어)</label>
-                                    <textarea rows={2} value={koreanConsult.learningProgress || ''} onChange={e => setKoreanConsult({ ...koreanConsult, learningProgress: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
-                                </div>
-                                <div>
-                                    <label className={labelClass}><CheckCircle size={12} className="inline mr-1" />학생 시험 성적 (국어)</label>
-                                    <textarea rows={2} value={koreanConsult.examResults || ''} onChange={e => setKoreanConsult({ ...koreanConsult, examResults: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
-                                </div>
-                                <div>
-                                    <label className={labelClass}><MessageSquare size={12} className="inline mr-1" />학생 상담 내역 (국어)</label>
-                                    <textarea rows={2} value={koreanConsult.consultationHistory || ''} onChange={e => setKoreanConsult({ ...koreanConsult, consultationHistory: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 기타 상담 탭 */}
-                    {activeTab === 'etc' && (
-                        <div className="bg-white border border-gray-200 overflow-hidden">
-                            <div className="px-2 py-1.5 bg-purple-50 border-b border-purple-200">
-                                <h3 className="text-purple-900 font-bold text-xs flex items-center gap-1">
-                                    <MessageSquare size={14} />
-                                    ETC
-                                </h3>
-                            </div>
-                            <div className="p-3 space-y-3">
-                                <div>
-                                    <label className={labelClass}><FileText size={12} className="inline mr-1" />학원 히스토리 (기타)</label>
-                                    <textarea rows={2} value={etcConsult.academyHistory || ''} onChange={e => setEtcConsult({ ...etcConsult, academyHistory: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
-                                </div>
-                                <div>
-                                    <label className={labelClass}><BookOpen size={12} className="inline mr-1" />학습 진도 (기타)</label>
-                                    <textarea rows={2} value={etcConsult.learningProgress || ''} onChange={e => setEtcConsult({ ...etcConsult, learningProgress: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
-                                </div>
-                                <div>
-                                    <label className={labelClass}><CheckCircle size={12} className="inline mr-1" />학생 시험 성적 (기타)</label>
-                                    <textarea rows={2} value={etcConsult.examResults || ''} onChange={e => setEtcConsult({ ...etcConsult, examResults: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
-                                </div>
-                                <div>
-                                    <label className={labelClass}><MessageSquare size={12} className="inline mr-1" />학생 상담 내역 (기타)</label>
-                                    <textarea rows={2} value={etcConsult.consultationHistory || ''} onChange={e => setEtcConsult({ ...etcConsult, consultationHistory: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
-                                </div>
-                                <div>
-                                    <label className={labelClass}><FileText size={12} className="inline mr-1" />기타</label>
-                                    <textarea rows={2} value={etcConsult.notes || ''} onChange={e => setEtcConsult({ ...etcConsult, notes: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" />
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                        );
+                    })}
 
                     {/* 버튼 */}
                     <div className="mt-4 flex justify-between items-center pt-3 border-t">
                         <div className="flex gap-2">
-                            {/* 삭제 버튼 - 수정 모드일 때만 표시 */}
-                            {initialData && canDelete && onDelete && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        if (window.confirm('정말로 삭제하시겠습니까?')) {
-                                            onDelete(initialData.id);
-                                            onClose();
-                                        }
-                                    }}
-                                    className="px-4 py-2 text-sm rounded-sm border border-red-300 text-red-600 font-medium hover:bg-red-50 transition-colors"
-                                >
-                                    삭제
-                                </button>
-                            )}
-                            {/* 원생 전환 버튼 - 전환 권한 + 미전환 상태일 때만 */}
-                            {initialData && canConvert && onConvertToStudent && !initialData.registeredStudentId && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        onConvertToStudent(initialData);
-                                        onClose();
-                                    }}
-                                    className="px-4 py-2 text-sm rounded-sm border border-green-300 text-green-600 font-medium hover:bg-green-50 transition-colors flex items-center gap-1"
-                                >
-                                    <User size={14} />
-                                    원생 전환
-                                </button>
-                            )}
-                            {/* 전환 완료 표시 */}
-                            {initialData && initialData.registeredStudentId && (
-                                <span className="px-4 py-2 text-xs bg-green-100 text-green-800 rounded-sm font-medium">
-                                    ✓ 원생 전환 완료
-                                </span>
+                            {/* 조회 모드: 원생 전환, 삭제 등 액션 */}
+                            {isViewMode ? (
+                                <>
+                                    {initialData && canConvert && onConvertToStudent && !initialData.registeredStudentId && (
+                                        <button
+                                            type="button"
+                                            onClick={() => onConvertToStudent(initialData)}
+                                            className="px-4 py-2 text-sm rounded-sm border border-green-300 text-green-600 font-medium hover:bg-green-50 transition-colors flex items-center gap-1"
+                                        >
+                                            <User size={14} />
+                                            원생 전환
+                                        </button>
+                                    )}
+                                    {initialData && initialData.registeredStudentId && (
+                                        <span className="px-4 py-2 text-xs bg-green-100 text-green-800 rounded-sm font-medium">
+                                            ✓ 원생 전환 완료
+                                        </span>
+                                    )}
+                                    {initialData && canDelete && onDelete && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (window.confirm('정말로 삭제하시겠습니까?')) {
+                                                    onDelete(initialData.id);
+                                                    onClose();
+                                                }
+                                            }}
+                                            className="px-4 py-2 text-sm rounded-sm border border-red-300 text-red-600 font-medium hover:bg-red-50 transition-colors"
+                                        >
+                                            삭제
+                                        </button>
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    {/* 편집 모드: 삭제 + 원생 전환 */}
+                                    {initialData && canDelete && onDelete && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (window.confirm('정말로 삭제하시겠습니까?')) {
+                                                    onDelete(initialData.id);
+                                                    onClose();
+                                                }
+                                            }}
+                                            className="px-4 py-2 text-sm rounded-sm border border-red-300 text-red-600 font-medium hover:bg-red-50 transition-colors"
+                                        >
+                                            삭제
+                                        </button>
+                                    )}
+                                    {initialData && canConvert && onConvertToStudent && !initialData.registeredStudentId && (
+                                        <button
+                                            type="button"
+                                            onClick={() => onConvertToStudent(initialData)}
+                                            className="px-4 py-2 text-sm rounded-sm border border-green-300 text-green-600 font-medium hover:bg-green-50 transition-colors flex items-center gap-1"
+                                        >
+                                            <User size={14} />
+                                            원생 전환
+                                        </button>
+                                    )}
+                                    {initialData && initialData.registeredStudentId && (
+                                        <span className="px-4 py-2 text-xs bg-green-100 text-green-800 rounded-sm font-medium">
+                                            ✓ 원생 전환 완료
+                                        </span>
+                                    )}
+                                </>
                             )}
                         </div>
                         <div className="flex gap-2">
@@ -1183,15 +1126,17 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                 onClick={onClose}
                                 className="px-4 py-2 text-sm rounded-sm border border-slate-300 text-slate-600 font-medium hover:bg-slate-50 transition-colors"
                             >
-                                취소
+                                {isViewMode ? '닫기' : '취소'}
                             </button>
-                            <button
-                                type="submit"
-                                style={{ backgroundColor: CUSTOM_COLORS.NAVY }}
-                                className="px-4 py-2 text-sm rounded-sm text-white font-medium hover:opacity-90 shadow-sm transition-all"
-                            >
-                                {initialData ? '수정 완료' : '등록'}
-                            </button>
+                            {!isViewMode && (
+                                <button
+                                    type="submit"
+                                    style={{ backgroundColor: CUSTOM_COLORS.NAVY }}
+                                    className="px-4 py-2 text-sm rounded-sm text-white font-medium hover:opacity-90 shadow-sm transition-all"
+                                >
+                                    {initialData?.id ? '수정 완료' : '등록'}
+                                </button>
+                            )}
                         </div>
                     </div>
                 </form>

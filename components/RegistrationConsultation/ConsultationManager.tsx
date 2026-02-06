@@ -102,7 +102,14 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                     });
                     setActiveDraftId(null);
                 }
-                setIsFormOpen(false);
+                // 새로 생성된 레코드를 editingRecord에 반영 (ID 포함)
+                const newId = (result as any)?.id || '';
+                if (newId) {
+                    setEditingRecord({ ...record, id: newId, createdAt: new Date().toISOString() } as ConsultationRecord);
+                } else {
+                    setIsFormOpen(false);
+                }
+                alert('상담이 등록되었습니다.');
             },
             onError: (error) => {
                 console.error('상담 등록 오류:', error);
@@ -119,8 +126,9 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
             updates: record,
         }, {
             onSuccess: () => {
-                setEditingRecord(null);
-                setIsFormOpen(false);
+                // 수정 후 editingRecord를 업데이트하여 조회 모드로 전환
+                setEditingRecord({ ...record, id: editingRecord.id, createdAt: editingRecord.createdAt } as ConsultationRecord);
+                alert('수정이 완료되었습니다.');
             },
             onError: (error) => {
                 console.error('상담 수정 오류:', error);

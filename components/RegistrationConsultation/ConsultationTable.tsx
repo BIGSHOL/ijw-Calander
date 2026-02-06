@@ -207,12 +207,16 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                 return <span className="font-semibold" style={{ color: COLORS.gray }}>{record.subject}</span>;
             case 'counselor':
                 return <span className="text-slate-600">{record.counselor || '-'}</span>;
-            case 'status':
+            case 'status': {
+                const statusStr = String(record.status);
+                const statusLabel = statusStr === 'registered' ? '등록완료' : statusStr;
+                const statusColor = CONSULTATION_STATUS_COLORS[statusStr] || 'bg-gray-100 text-gray-800 border-gray-200';
                 return (
-                    <span className={`px-2 py-0.5 text-xs font-semibold rounded-sm border ${CONSULTATION_STATUS_COLORS[record.status]}`}>
-                        {record.status}
+                    <span className={`px-2 py-0.5 text-xs font-semibold rounded-sm border ${statusColor}`}>
+                        {statusLabel}
                     </span>
                 );
+            }
             case 'registrar':
                 return <span className="text-slate-600">{record.registrar || '-'}</span>;
             case 'paymentAmount':
@@ -403,8 +407,8 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                         {(record.schoolName || '').replace('초등학교', '초').replace('중학교', '중').replace('고등학교', '고')}
                                     </span>
                                 </div>
-                                <span className={`px-2.5 py-1 text-xs font-bold rounded-sm border ${CONSULTATION_STATUS_COLORS[record.status]}`}>
-                                    {record.status}
+                                <span className={`px-2.5 py-1 text-xs font-bold rounded-sm border ${CONSULTATION_STATUS_COLORS[String(record.status)] || 'bg-gray-100 text-gray-800 border-gray-200'}`}>
+                                    {String(record.status) === 'registered' ? '등록완료' : record.status}
                                 </span>
                             </div>
 
