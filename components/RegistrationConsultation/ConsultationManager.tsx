@@ -642,8 +642,8 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                         </button>
                     )}
 
-                    {/* QR 토큰 관리: 마스터 전용 */}
-                    {isMaster && (
+                    {/* QR 토큰 관리: 생성 권한 이상 */}
+                    {canCreate && (
                         <button
                             onClick={() => setShowEmbedManager(true)}
                             className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded-sm text-xs font-bold transition-colors"
