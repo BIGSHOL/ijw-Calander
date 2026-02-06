@@ -109,7 +109,11 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
     const registeredStatuses = useMemo(() => [
         ConsultationStatus.EngMathRegistered,
         ConsultationStatus.MathRegistered,
-        ConsultationStatus.EngRegistered
+        ConsultationStatus.EngRegistered,
+        ConsultationStatus.KoreanRegistered,
+        ConsultationStatus.ScienceRegistered,
+        ConsultationStatus.Registered,
+        'registered' as ConsultationStatus, // 레거시 데이터 호환
     ], []);
 
     const pendingStatuses = useMemo(() => [

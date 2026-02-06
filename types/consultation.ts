@@ -4,10 +4,12 @@ export enum ConsultationStatus {
   EngMathRegistered = '영수등록',
   MathRegistered = '수학등록',
   EngRegistered = '영어등록',
+  KoreanRegistered = '국어등록',
+  ScienceRegistered = '과학등록',
   PendingThisMonth = '이번달 등록예정',
   PendingFuture = '추후 등록예정',
   NotRegistered = '미등록',
-  Registered = 'registered',
+  Registered = '등록완료',
 }
 
 export enum ConsultationSubject {
@@ -100,9 +102,11 @@ export interface ConsultationRecord {
   registeredStudentId?: string;  // 전환된 학생 ID (students 컬렉션)
 
   // === 과목별 상담 정보 ===
+  mainSubject?: 'math' | 'english' | 'korean' | 'science' | 'etc';  // 메인 상담 과목
   mathConsultation?: SubjectConsultationDetail;
   englishConsultation?: SubjectConsultationDetail;
   koreanConsultation?: SubjectConsultationDetail;
+  scienceConsultation?: SubjectConsultationDetail;
   etcConsultation?: SubjectConsultationDetail;
 }
 
@@ -127,14 +131,18 @@ export interface ConsultationStats {
 }
 
 // Consultation Status Colors for UI
-export const CONSULTATION_STATUS_COLORS: Record<ConsultationStatus, string> = {
+export const CONSULTATION_STATUS_COLORS: Record<string, string> = {
   [ConsultationStatus.EngMathRegistered]: 'bg-emerald-100 text-emerald-800 border-emerald-200',
   [ConsultationStatus.MathRegistered]: 'bg-teal-100 text-teal-800 border-teal-200',
   [ConsultationStatus.EngRegistered]: 'bg-cyan-100 text-cyan-800 border-cyan-200',
+  [ConsultationStatus.KoreanRegistered]: 'bg-orange-100 text-orange-800 border-orange-200',
+  [ConsultationStatus.ScienceRegistered]: 'bg-pink-100 text-pink-800 border-pink-200',
   [ConsultationStatus.PendingThisMonth]: 'bg-amber-100 text-amber-800 border-amber-200',
   [ConsultationStatus.PendingFuture]: 'bg-yellow-100 text-yellow-800 border-yellow-200',
   [ConsultationStatus.NotRegistered]: 'bg-slate-100 text-slate-800 border-slate-200',
   [ConsultationStatus.Registered]: 'bg-blue-100 text-blue-800 border-blue-200',
+  // 레거시 값 호환
+  'registered': 'bg-blue-100 text-blue-800 border-blue-200',
 };
 
 export const CONSULTATION_CHART_COLORS = ['#059669', '#0d9488', '#0891b2', '#f59e0b', '#fbbf24', '#94a3b8'];
