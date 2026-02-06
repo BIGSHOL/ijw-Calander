@@ -441,10 +441,6 @@ const ConsultationFormEmbed: React.FC<ConsultationFormEmbedProps> = ({ tokenValu
                             '대구역 센트럴자이 파리바게트 앞',
                             '힐스테이트 대구역 앞',
                         ]} />
-                        <RouteInfo title="3호차 주요 노선" stops={[
-                            '대구역 서희스타힐즈',
-                            '침산 오페라 코오롱하늘채 빽다방 앞',
-                        ]} />
                     </div>
                 </div>
 
