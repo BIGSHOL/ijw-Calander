@@ -32,6 +32,8 @@ import EmbedTokenManager from '../Embed/EmbedTokenManager';
 import { useMathSettings } from './Math/hooks/useMathSettings';
 import ExportImageModal, { ExportGroup } from '../Common/ExportImageModal';
 import type { ExportGroupInfo } from './Math/MathClassTab';
+import WithdrawalStudentDetail from '../WithdrawalManagement/WithdrawalStudentDetail';
+import { WithdrawalEntry } from '../../hooks/useWithdrawalFilters';
 
 // Performance Note (bundle-dynamic-imports): Lazy load Generic Timetable
 const GenericTimetable = lazy(() => import('./Generic/GenericTimetable'));
@@ -111,6 +113,12 @@ interface MathTimetableContentProps {
     setIsEmbedManagerOpen: (open: boolean) => void;
     // 클래스 상세 정보
     classesData: ClassInfo[];
+    // 퇴원 관리 권한
+    canEditWithdrawal: boolean;
+    canReactivateWithdrawal: boolean;
+    // 퇴원생 모달
+    selectedWithdrawalEntry: WithdrawalEntry | null;
+    setSelectedWithdrawalEntry: (entry: WithdrawalEntry | null) => void;
 }
 
 const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
@@ -185,6 +193,10 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     isEmbedManagerOpen,
     setIsEmbedManagerOpen,
     classesData,
+    canEditWithdrawal,
+    canReactivateWithdrawal,
+    selectedWithdrawalEntry,
+    setSelectedWithdrawalEntry,
 }) => {
     const simulation = useMathSimulation();
     const { isScenarioMode, currentScenarioName, enterScenarioMode, exitScenarioMode, loadFromLive, publishToLive } = simulation;
@@ -297,10 +309,23 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
 
     const handleStudentClick = useCallback((studentId: string) => {
         const student = studentMap[studentId];
-        if (student) {
+        if (!student) return;
+
+        // 퇴원생인 경우 퇴원 모달 열기 (status가 withdrawn이거나 withdrawalDate가 있는 경우)
+        if (student.status === 'withdrawn' || student.withdrawalDate) {
+            const entry: WithdrawalEntry = {
+                student,
+                type: 'withdrawn',
+                endedSubjects: [...new Set((student.enrollments || []).map(e => e.subject))],
+                endedEnrollments: student.enrollments || [],
+                effectiveDate: student.withdrawalDate || student.endDate || '',
+            };
+            setSelectedWithdrawalEntry(entry);
+        } else {
+            // 일반 학생 모달 열기
             setSelectedStudentForModal(student);
         }
-    }, [studentMap, setSelectedStudentForModal]);
+    }, [studentMap, setSelectedStudentForModal, setSelectedWithdrawalEntry]);
 
     const handleGridDragStart = useCallback((e: React.DragEvent, sId: string, cId: string, zone?: string) => {
         if (isScenarioMode) {
@@ -413,6 +438,9 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     // 통합뷰 전용 props
                     integrationDisplayOptions={viewType === 'class' ? mathIntegrationSettings.displayOptions : undefined}
                     onIntegrationDisplayOptionsChange={viewType === 'class' ? handleIntegrationDisplayOptionChange : undefined}
+                    // 퇴원 관리 권한
+                    canEditWithdrawal={canEditWithdrawal}
+                    canReactivateWithdrawal={canReactivateWithdrawal}
                 />
 
                 {/* Timetable Content - viewType에 따라 분기 */}
@@ -503,6 +531,39 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         readOnly={!canManageStudents}
                         currentUser={currentUser}
                     />
+                )}
+
+                {/* Withdrawal Student Detail Modal - 퇴원생 클릭 시 */}
+                {selectedWithdrawalEntry && (
+                    <div
+                        className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]"
+                        onClick={() => setSelectedWithdrawalEntry(null)}
+                    >
+                        <div
+                            className="bg-white w-[400px] max-w-[90vw] max-h-[80vh] rounded-sm shadow-xl overflow-hidden flex flex-col"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* 모달 헤더 */}
+                            <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
+                                <h3 className="text-sm font-bold text-primary">퇴원 정보</h3>
+                                <button
+                                    onClick={() => setSelectedWithdrawalEntry(null)}
+                                    className="p-1 hover:bg-gray-200 rounded-sm transition-colors text-gray-500"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                            {/* 모달 콘텐츠 */}
+                            <div className="flex-1 overflow-y-auto">
+                                <WithdrawalStudentDetail
+                                    entry={selectedWithdrawalEntry}
+                                    canEdit={canEditWithdrawal}
+                                    canReactivate={canReactivateWithdrawal}
+                                    onReactivated={() => setSelectedWithdrawalEntry(null)}
+                                />
+                            </div>
+                        </div>
+                    </div>
                 )}
 
                 {/* Teacher Order Modal (Math) */}
@@ -625,6 +686,9 @@ const TimetableManager = ({
     const canViewScience = isMaster || hasPermission('timetable.science.view') || canEditScience;
     const canViewKorean = isMaster || hasPermission('timetable.korean.view') || canEditKorean;
     const canManageStudents = isMaster || hasPermission('students.edit');
+    // 퇴원 관리 권한 (퇴원생 클릭 시 상세 모달용)
+    const canEditWithdrawal = isMaster || hasPermission('withdrawal.edit');
+    const canReactivateWithdrawal = isMaster || hasPermission('withdrawal.reactivate');
 
     // Subject Tab (use external if provided)
     const [internalSubjectTab, setInternalSubjectTab] = useState<SubjectType>('math');
@@ -752,6 +816,7 @@ const TimetableManager = ({
     const [selectedClass, setSelectedClass] = useState<TimetableClass | null>(null);
     const [selectedClassInfo, setSelectedClassInfo] = useState<ClassInfo | null>(null);
     const [selectedStudentForModal, setSelectedStudentForModal] = useState<UnifiedStudent | null>(null);
+    const [selectedWithdrawalEntry, setSelectedWithdrawalEntry] = useState<WithdrawalEntry | null>(null);
 
     const [internalShowStudents, setInternalShowStudents] = useState(
         viewSettings.showStudents ?? true
@@ -1102,6 +1167,10 @@ const TimetableManager = ({
                 isEmbedManagerOpen={isEmbedManagerOpen}
                 setIsEmbedManagerOpen={setIsEmbedManagerOpen}
                 classesData={classesData}
+                canEditWithdrawal={canEditWithdrawal}
+                canReactivateWithdrawal={canReactivateWithdrawal}
+                selectedWithdrawalEntry={selectedWithdrawalEntry}
+                setSelectedWithdrawalEntry={setSelectedWithdrawalEntry}
             />
         </MathSimulationProvider>
     );

@@ -7,6 +7,7 @@ interface PortalTooltipProps {
     position?: 'top' | 'bottom';
     offset?: number;
     triggerClassName?: string; // Classes for the trigger wrapper
+    interactive?: boolean; // Allow clicking on tooltip content
 }
 
 const PortalTooltip: React.FC<PortalTooltipProps> = ({
@@ -14,12 +15,32 @@ const PortalTooltip: React.FC<PortalTooltipProps> = ({
     content,
     position = 'bottom',
     offset = 8,
-    triggerClassName = ''
+    triggerClassName = '',
+    interactive = false
 }) => {
     const [isVisible, setIsVisible] = useState(false);
     const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
     const triggerRef = useRef<HTMLDivElement>(null);
     const tooltipRef = useRef<HTMLDivElement>(null);
+    const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const clearHideTimeout = () => {
+        if (hideTimeoutRef.current) {
+            clearTimeout(hideTimeoutRef.current);
+            hideTimeoutRef.current = null;
+        }
+    };
+
+    const scheduleHide = () => {
+        if (interactive) {
+            // Give time to move to tooltip (increased to 300ms)
+            hideTimeoutRef.current = setTimeout(() => {
+                setIsVisible(false);
+            }, 300);
+        } else {
+            setIsVisible(false);
+        }
+    };
 
     const updatePosition = () => {
         if (!triggerRef.current || !isVisible) return;
@@ -29,18 +50,20 @@ const PortalTooltip: React.FC<PortalTooltipProps> = ({
         let left = 0;
 
         const centerX = triggerRect.left + triggerRect.width / 2;
+        // For interactive mode, reduce offset to minimize gap
+        const effectiveOffset = interactive ? 2 : offset;
 
         switch (position) {
             case 'top':
-                top = triggerRect.top - offset;
+                top = triggerRect.top - effectiveOffset;
                 left = centerX;
                 break;
             case 'bottom':
-                top = triggerRect.bottom + offset;
+                top = triggerRect.bottom + effectiveOffset;
                 left = centerX;
                 break;
             default:
-                top = triggerRect.bottom + offset;
+                top = triggerRect.bottom + effectiveOffset;
                 left = centerX;
         }
 
@@ -56,10 +79,19 @@ const PortalTooltip: React.FC<PortalTooltipProps> = ({
         return () => {
             window.removeEventListener('scroll', updatePosition, true);
             window.removeEventListener('resize', updatePosition);
-            // Also update on scroll of any parent if possible (not easy efficiently), 
+            // Also update on scroll of any parent if possible (not easy efficiently),
             // but global scroll capture with 'true' (capture) on window usually helps.
         };
     }, [isVisible]);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (hideTimeoutRef.current) {
+                clearTimeout(hideTimeoutRef.current);
+            }
+        };
+    }, []);
 
     return (
         <>
@@ -67,10 +99,11 @@ const PortalTooltip: React.FC<PortalTooltipProps> = ({
                 ref={triggerRef}
                 className={triggerClassName} // Applied here (e.g. absolute positioning)
                 onMouseEnter={() => {
+                    clearHideTimeout();
                     updatePosition();
                     setIsVisible(true);
                 }}
-                onMouseLeave={() => setIsVisible(false)}
+                onMouseLeave={scheduleHide}
             >
                 {children}
             </div>
@@ -82,9 +115,14 @@ const PortalTooltip: React.FC<PortalTooltipProps> = ({
                         top: coords.top,
                         left: coords.left,
                         zIndex: 9999,
-                        pointerEvents: 'none'
+                        pointerEvents: interactive ? 'auto' : 'none',
+                        // Add padding to create a "bridge" hover zone for interactive tooltips
+                        ...(interactive && position === 'bottom' ? { paddingTop: 8 } : {}),
+                        ...(interactive && position === 'top' ? { paddingBottom: 8 } : {})
                     }}
                     className={`transform -translate-x-1/2 ${position === 'top' ? '-translate-y-full' : ''}`}
+                    onMouseEnter={interactive ? clearHideTimeout : undefined}
+                    onMouseLeave={interactive ? () => setIsVisible(false) : undefined}
                 >
                     <div>
                         {content}

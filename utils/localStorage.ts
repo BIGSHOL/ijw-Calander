@@ -47,6 +47,9 @@ export const STORAGE_KEYS = {
   ATTENDANCE_SORT_MODE: 'ijw_attendance_sort_mode',
   ATTENDANCE_PAGE_SIZE: 'ijw_attendance_page_size',
 
+  // Daily Attendance (출결 관리)
+  DAILY_ATTENDANCE_PAGE_SIZE: 'ijw_daily_attendance_page_size',
+
   // Dynamic keys (functions)
   resourceSubCategoryOrder: (mainCategory: string) =>
     `ijw_resource_sub_category_order_${mainCategory}`,

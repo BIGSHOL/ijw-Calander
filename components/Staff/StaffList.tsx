@@ -104,6 +104,9 @@ const StaffList: React.FC<StaffListProps> = ({
                   직책
                 </th>
                 <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
+                  호칭
+                </th>
+                <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
                   전화번호
                 </th>
                 <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
@@ -157,6 +160,13 @@ const StaffList: React.FC<StaffListProps> = ({
                   </td>
                   <td className="px-2 py-1.5 whitespace-nowrap text-xs">
                     {getRoleBadge(member.role)}
+                  </td>
+                  <td className="px-2 py-1.5 whitespace-nowrap text-xs">
+                    {member.jobTitle ? (
+                      <span className="text-[11px] text-gray-700">{member.jobTitle}</span>
+                    ) : (
+                      <span className="text-xxs text-gray-400">-</span>
+                    )}
                   </td>
                   <td className="px-2 py-1.5 whitespace-nowrap text-xs">
                     {member.phone ? (

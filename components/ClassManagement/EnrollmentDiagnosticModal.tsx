@@ -370,8 +370,8 @@ const EnrollmentDiagnosticModal: React.FC<EnrollmentDiagnosticModalProps> = ({
     }, []);
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] bg-black/50">
-            <div className="bg-white rounded-sm shadow-2xl w-[95%] max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] bg-black/50" onClick={onClose}>
+            <div className="bg-white rounded-sm shadow-2xl w-[95%] max-w-6xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
                 {/* 헤더 */}
                 <div className="bg-primary px-6 py-4 flex items-center justify-between">
                     <h2 className="text-lg font-bold text-white flex items-center gap-2">

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { WithdrawalEntry } from '../../hooks/useWithdrawalFilters';
-import { WITHDRAWAL_REASON_LABEL, SUBJECT_LABEL, SUBJECT_COLOR } from '../../constants/withdrawal';
+import { WITHDRAWAL_REASON_LABEL, WITHDRAWAL_REASON_COLOR, SUBJECT_LABEL, SUBJECT_COLOR } from '../../constants/withdrawal';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 interface WithdrawalStudentListProps {
@@ -136,7 +136,9 @@ const WithdrawalStudentList: React.FC<WithdrawalStudentListProps> = ({
                     </span>
                   ))}
                   {type === 'withdrawn' && reasonLabel && (
-                    <span className="text-micro text-gray-400 ml-auto">
+                    <span className={`text-micro px-1.5 py-0 rounded-sm font-medium ml-auto ${
+                      WITHDRAWAL_REASON_COLOR[student.withdrawalReason || ''] || WITHDRAWAL_REASON_COLOR.other
+                    }`}>
                       {reasonLabel}
                     </span>
                   )}

@@ -98,6 +98,40 @@ const StudentItem: React.FC<StudentItemProps> = ({
         return studentDays;
     }, [classDays, student.attendanceDays]);
 
+    // 신입생 판별 (60일 이내)
+    const isNewStudent = useMemo(() => {
+        if (student.isTransferredIn) return false; // 반이동은 별도 처리
+        if (student.enrollmentDate) {
+            const days = Math.ceil((Date.now() - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
+            return days <= 60;
+        }
+        return false;
+    }, [student.enrollmentDate, student.isTransferredIn]);
+
+    // 툴팁 메시지 (수학 시간표와 통일)
+    const tooltipMessage = useMemo(() => {
+        const parts: string[] = [];
+
+        // 반이동/신입생 정보
+        if (student.isTransferredIn) {
+            parts.push('반이동 학생');
+        } else if (isNewStudent && student.enrollmentDate) {
+            parts.push(`입학일: ${student.enrollmentDate}`);
+        }
+
+        // 영어이름 (화면에서 잘릴 수 있으므로 항상 표시)
+        if (student.englishName) {
+            parts.push(student.englishName);
+        }
+
+        // 클릭 안내 메시지 (클릭 가능할 때만)
+        if (isClickable) {
+            parts.push('(클릭하여 상세정보 보기)');
+        }
+
+        return parts.length > 0 ? parts.join('\n') : undefined;
+    }, [student.isTransferredIn, isNewStudent, student.enrollmentDate, student.englishName, isClickable]);
+
     return (
         <div
             draggable={isDraggable}
@@ -112,13 +146,13 @@ const StudentItem: React.FC<StudentItemProps> = ({
             onMouseLeave={() => setIsHovered(false)}
             className={`flex items-center justify-between text-[12px] py-0.5 px-1 transition-all duration-200 animate-in fade-in ${style.className} ${isClickable ? 'cursor-pointer' : ''}`}
             style={hoverStyle}
+            title={tooltipMessage}
         >
             <span className={`font-medium truncate flex items-center gap-0.5 ${isHovered && isClickable ? '' : style.textClass}`}>
                 <span className="shrink-0">{student.name}</span>
                 {showEnglishName && student.englishName && (
                     <span
                         className={`font-normal truncate max-w-[60px] ${isHovered && isClickable ? '' : (style.englishTextClass || 'text-gray-500')}`}
-                        title={student.englishName}
                     >
                         ({student.englishName})
                     </span>

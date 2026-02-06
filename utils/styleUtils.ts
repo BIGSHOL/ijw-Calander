@@ -82,13 +82,14 @@ export const getSubjectLightBg = (subject: SubjectType): string => {
   return SUBJECT_COLORS[subject]?.light || SUBJECT_COLORS.math.light;
 };
 
-// Job Title Style Mapping
+// Job Title Style Mapping (역할 뱃지와 동일한 디자인)
 export const getJobTitleStyle = (title: string = '') => {
-    if (title.includes('원장') || title.includes('대표')) return 'bg-amber-100 text-amber-700 border border-amber-200';
-    if (title.includes('이사')) return 'bg-purple-100 text-purple-700 border border-purple-200';
-    if (title.includes('부장')) return 'bg-indigo-100 text-indigo-700 border border-indigo-200';
-    if (title.includes('실장') || title.includes('팀장')) return 'bg-blue-100 text-blue-700 border border-blue-200';
-    if (title.includes('대리')) return 'bg-green-100 text-green-700 border border-green-200';
-    if (title.includes('강사')) return 'bg-pink-100 text-pink-700 border border-pink-200';
-    return 'bg-gray-100 text-gray-600 border border-gray-200';
+    if (title.includes('원장') || title.includes('대표')) return 'bg-amber-600 text-white';
+    if (title.includes('이사')) return 'bg-purple-600 text-white';
+    if (title.includes('부장')) return 'bg-indigo-600 text-white';
+    if (title.includes('실장') || title.includes('팀장')) return 'bg-blue-600 text-white';
+    if (title.includes('대리')) return 'bg-green-600 text-white';
+    if (title.includes('강사') || title.includes('선생')) return 'bg-pink-600 text-white';
+    if (title.includes('PD')) return 'bg-teal-600 text-white';
+    return 'bg-gray-500 text-white';
 };

@@ -1,11 +1,12 @@
 // components/DailyAttendance/ClassAttendanceCards.tsx
 // 수업별 출결 현황 카드 컴포넌트
-import React, { useState, useMemo } from 'react';
-import { ChevronDown, ChevronUp, Users, BookOpen } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Users, BookOpen } from 'lucide-react';
 import { DailyAttendanceRecord, UserProfile, UnifiedStudent } from '../../types';
 import { useClasses } from '../../hooks/useClasses';
 import { useStudents } from '../../hooks/useStudents';
 import { getWeekdayFromDate, isDateInRange } from '../../utils/dateUtils';
+import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import ClassAttendanceList from './ClassAttendanceList';
 
 interface ClassAttendanceCardsProps {
@@ -40,6 +41,18 @@ const ClassAttendanceCards: React.FC<ClassAttendanceCardsProps> = ({
   selectedSubject = 'all',
 }) => {
   const [expandedClassId, setExpandedClassId] = useState<string | null>(null);
+
+  // 페이지네이션 상태
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(() => {
+    const saved = storage.getString(STORAGE_KEYS.DAILY_ATTENDANCE_PAGE_SIZE);
+    return saved ? parseInt(saved, 10) : 10;
+  });
+
+  // 과목 필터 변경 시 페이지 리셋
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedSubject, selectedDate]);
 
   // 모든 수업 목록 조회
   const { data: allClasses = [] } = useClasses();
@@ -152,6 +165,19 @@ const ClassAttendanceCards: React.FC<ClassAttendanceCardsProps> = ({
     });
   }, [allClasses, records, allStudents, selectedDate, selectedSubject]);
 
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(classSummaries.length / itemsPerPage);
+  const paginatedSummaries = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return classSummaries.slice(start, start + itemsPerPage);
+  }, [classSummaries, currentPage, itemsPerPage]);
+
+  const handleItemsPerPageChange = (count: number) => {
+    setItemsPerPage(count);
+    setCurrentPage(1);
+    storage.setString(STORAGE_KEYS.DAILY_ATTENDANCE_PAGE_SIZE, String(count));
+  };
+
   const handleToggle = (classId: string) => {
     setExpandedClassId(prev => prev === classId ? null : classId);
   };
@@ -197,8 +223,10 @@ const ClassAttendanceCards: React.FC<ClassAttendanceCardsProps> = ({
   }
 
   return (
-    <div className="space-y-2">
-      {classSummaries.map((summary) => {
+    <div className="flex flex-col h-full">
+      {/* 수업 카드 목록 */}
+      <div className="flex-1 overflow-auto space-y-2">
+      {paginatedSummaries.map((summary) => {
         const isExpanded = expandedClassId === summary.classId;
         const classRecords = records.filter(r => r.classId === summary.classId);
         const completionRate = summary.totalStudents > 0
@@ -315,6 +343,78 @@ const ClassAttendanceCards: React.FC<ClassAttendanceCardsProps> = ({
           </div>
         );
       })}
+      </div>
+
+      {/* 페이지네이션 */}
+      {totalPages > 0 && (
+        <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between">
+          {/* 왼쪽: 항목 수 선택 */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">페이지당</span>
+            <select
+              value={itemsPerPage}
+              onChange={(e) => handleItemsPerPageChange(Number(e.target.value))}
+              className="px-2 py-1 text-xs rounded-sm border border-gray-200 text-gray-700 bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+            >
+              <option value={10}>10개</option>
+              <option value={20}>20개</option>
+              <option value={30}>30개</option>
+              <option value={50}>50개</option>
+            </select>
+            <span className="text-xs text-gray-500">
+              {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, classSummaries.length)} / 총 {classSummaries.length}개 수업
+            </span>
+          </div>
+
+          {/* 오른쪽: 페이지 네비게이션 */}
+          <nav className="flex items-center gap-1" aria-label="Pagination">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-2 py-1 rounded text-xs font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 text-gray-700"
+            >
+              <ChevronLeft size={14} />
+            </button>
+
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum: number;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`w-6 h-6 rounded-full text-xs font-bold transition-colors ${
+                      currentPage === pageNum
+                        ? 'bg-emerald-500 text-white'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages || totalPages === 0}
+              className="px-2 py-1 rounded text-xs font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed hover:bg-gray-100 text-gray-700"
+            >
+              <ChevronRight size={14} />
+            </button>
+          </nav>
+        </div>
+      )}
     </div>
   );
 };

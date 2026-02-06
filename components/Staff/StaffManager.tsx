@@ -96,6 +96,13 @@ const StaffManager: React.FC<StaffManagerProps> = ({
     setSelectedStaff(staffMember);
   };
 
+  // 권한 인덱스 가져오기 (hierarchy에 없는 레거시 역할은 가장 낮은 권한으로 처리)
+  const getRoleIndex = (role: string): number => {
+    const index = ROLE_HIERARCHY.indexOf(role as any);
+    // hierarchy에 없는 역할(editor, staff, senior_staff, viewer 등)은 user보다 낮은 권한으로 처리
+    return index === -1 ? ROLE_HIERARCHY.length : index;
+  };
+
   // 권한 체크: 대상 직원을 수정할 수 있는지 확인
   const canEditStaff = (targetStaff: StaffMember): boolean => {
     if (!currentUserProfile) return false;
@@ -107,8 +114,8 @@ const StaffManager: React.FC<StaffManagerProps> = ({
     if (currentUserProfile.uid === targetStaff.uid) return true;
 
     // ROLE_HIERARCHY에서 인덱스 확인 (낮은 인덱스 = 높은 권한)
-    const currentIndex = ROLE_HIERARCHY.indexOf(currentRole);
-    const targetIndex = ROLE_HIERARCHY.indexOf(targetRole);
+    const currentIndex = getRoleIndex(currentRole);
+    const targetIndex = getRoleIndex(targetRole);
 
     // 자신보다 낮은 권한만 수정 가능 (같은 권한도 불가)
     return currentIndex < targetIndex;
@@ -125,8 +132,8 @@ const StaffManager: React.FC<StaffManagerProps> = ({
     if (currentUserProfile.uid === targetStaff.uid) return false;
 
     // ROLE_HIERARCHY에서 인덱스 확인 (낮은 인덱스 = 높은 권한)
-    const currentIndex = ROLE_HIERARCHY.indexOf(currentRole);
-    const targetIndex = ROLE_HIERARCHY.indexOf(targetRole);
+    const currentIndex = getRoleIndex(currentRole);
+    const targetIndex = getRoleIndex(targetRole);
 
     // 자신보다 낮은 권한만 삭제 가능 (같은 권한도 불가)
     return currentIndex < targetIndex;

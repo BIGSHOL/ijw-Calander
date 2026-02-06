@@ -145,8 +145,8 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
-      <div className="bg-white rounded-sm w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]" onClick={onClose}>
+      <div className="bg-white rounded-sm w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
           <h2 className="text-sm font-bold text-primary flex items-center gap-2">
