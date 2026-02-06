@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import { UserProfile } from '../../types';
 import { useStudents } from '../../hooks/useStudents';
 import { useStaff } from '../../hooks/useStaff';
@@ -7,7 +7,14 @@ import { useWithdrawalFilters, WithdrawalEntry } from '../../hooks/useWithdrawal
 import { WITHDRAWAL_REASONS, SUBJECT_OPTIONS, SORT_OPTIONS, ENTRY_TYPE_OPTIONS } from '../../constants/withdrawal';
 import WithdrawalStudentList from './WithdrawalStudentList';
 import WithdrawalStudentDetail from './WithdrawalStudentDetail';
-import { Search, X, Filter, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Search, X, RefreshCw, ArrowLeft, List, BarChart3, SlidersHorizontal } from 'lucide-react';
+import { TabSubNavigation } from '../Common/TabSubNavigation';
+import { TabButton } from '../Common/TabButton';
+
+// Lazy load Dashboard
+const WithdrawalDashboard = lazy(() => import('../Dashboard/WithdrawalDashboard'));
+
+type SubTab = 'list' | 'stats';
 
 interface WithdrawalManagementTabProps {
   currentUser?: UserProfile | null;
@@ -31,7 +38,20 @@ const WithdrawalManagementTab: React.FC<WithdrawalManagementTabProps> = ({ curre
 
   const [selectedEntry, setSelectedEntry] = useState<WithdrawalEntry | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [subTab, setSubTab] = useState<SubTab>('stats'); // 기본값: 통계
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
+
+  // 드롭다운 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(e.target as Node)) {
+        setShowFilterDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // 선택된 항목 자동 업데이트
   useEffect(() => {
@@ -91,160 +111,234 @@ const WithdrawalManagementTab: React.FC<WithdrawalManagementTabProps> = ({ curre
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      {/* 상단 필터 바 */}
-      <div className="bg-white border-b px-3 py-2 space-y-2" style={{ borderColor: 'rgba(8, 20, 41, 0.15)' }}>
-        {/* 검색 + 필터 토글 + 새로고침 */}
-        <div className="flex items-center gap-2">
-          <div className="flex-1 relative">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-            <input
-              type="text"
-              value={filters.search}
-              onChange={(e) => updateFilter('search', e.target.value)}
-              placeholder="이름 검색..."
-              className="w-full pl-7 pr-7 py-1.5 text-xs border rounded-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
-              style={{ borderColor: 'rgba(8, 20, 41, 0.2)' }}
-            />
-            {filters.search && (
-              <button
-                onClick={() => updateFilter('search', '')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+      {/* 통합 헤더 - Light Theme (수학 시간표 스타일) */}
+      <TabSubNavigation
+        variant="compact"
+        theme="light"
+        showBorder={true}
+        className="justify-between px-4 relative"
+      >
+        {/* Left: Sub Tabs */}
+        <div className="flex items-center gap-3">
+          <div className="flex bg-gray-200 rounded-sm p-0.5">
+            <TabButton
+              active={subTab === 'stats'}
+              onClick={() => setSubTab('stats')}
+              theme="light"
+              icon={<BarChart3 size={12} />}
+            >
+              통계
+            </TabButton>
+            <TabButton
+              active={subTab === 'list'}
+              onClick={() => setSubTab('list')}
+              theme="light"
+              icon={<List size={12} />}
+            >
+              목록
+            </TabButton>
           </div>
-          <button
-            onClick={() => setShowFilters(v => !v)}
-            className={`flex items-center gap-1 px-2 py-1.5 text-xs rounded-sm border transition-colors ${
-              showFilters || activeFilterCount > 0
-                ? 'bg-primary text-white border-primary'
-                : 'bg-white text-primary border-gray-300 hover:bg-gray-50'
-            }`}
-          >
-            <Filter className="w-3.5 h-3.5" />
-            <span>필터</span>
-            {activeFilterCount > 0 && (
-              <span className="bg-red-500 text-white text-micro w-4 h-4 rounded-full flex items-center justify-center">
-                {activeFilterCount}
+
+          {/* 목록 탭일 때만 통계 표시 */}
+          {subTab === 'list' && (
+            <>
+              <div className="w-px h-4 bg-gray-300"></div>
+              <span className="text-xs text-gray-500">
+                전체 <span className="font-bold text-gray-700">{counts.total}</span>명
+                <span className="text-red-500 ml-1">(퇴원 {counts.withdrawn}명</span>
+                <span className="text-amber-600"> / 수강종료 {counts.subjectEnded}명)</span>
               </span>
-            )}
-          </button>
-          <button
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-sm transition-colors disabled:opacity-50"
-            title="새로고침"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </button>
+            </>
+          )}
         </div>
 
-        {/* 확장 필터 영역 */}
-        {showFilters && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-1">
-            {/* 유형 */}
-            <select
-              value={filters.entryType}
-              onChange={(e) => updateFilter('entryType', e.target.value)}
-              className="text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
-              style={{ borderColor: 'rgba(8, 20, 41, 0.2)' }}
-            >
-              {ENTRY_TYPE_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+        {/* Center: Title */}
+        <h1 className="absolute left-1/2 -translate-x-1/2 text-sm font-black text-gray-800 tracking-tight">
+          퇴원 관리
+        </h1>
 
-            {/* 과목 */}
-            <select
-              value={filters.subject}
-              onChange={(e) => updateFilter('subject', e.target.value)}
-              className="text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
-              style={{ borderColor: 'rgba(8, 20, 41, 0.2)' }}
-            >
-              {SUBJECT_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-
-            {/* 강사 */}
-            <select
-              value={filters.staffId}
-              onChange={(e) => updateFilter('staffId', e.target.value)}
-              className="text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
-              style={{ borderColor: 'rgba(8, 20, 41, 0.2)' }}
-            >
-              <option value="">전체 강사</option>
-              {teacherOptions.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-
-            {/* 퇴원 사유 */}
-            <select
-              value={filters.reason}
-              onChange={(e) => updateFilter('reason', e.target.value)}
-              className="text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
-              style={{ borderColor: 'rgba(8, 20, 41, 0.2)' }}
-            >
-              {WITHDRAWAL_REASONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-
-            {/* 기간 필터 */}
-            <div className="col-span-2 flex items-center gap-1">
+        {/* Right: Search + Filter (목록 탭만) */}
+        {subTab === 'list' && (
+          <div className="flex items-center gap-2">
+            {/* 검색 */}
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
               <input
-                type="date"
-                value={filters.dateFrom}
-                onChange={(e) => updateFilter('dateFrom', e.target.value)}
-                className="flex-1 text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
-                style={{ borderColor: 'rgba(8, 20, 41, 0.2)' }}
+                type="text"
+                value={filters.search}
+                onChange={(e) => updateFilter('search', e.target.value)}
+                placeholder="이름 검색..."
+                className="w-32 pl-7 pr-6 py-1 text-xs bg-white border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent"
               />
-              <span className="text-xs text-gray-400">~</span>
-              <input
-                type="date"
-                value={filters.dateTo}
-                onChange={(e) => updateFilter('dateTo', e.target.value)}
-                className="flex-1 text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
-                style={{ borderColor: 'rgba(8, 20, 41, 0.2)' }}
-              />
+              {filters.search && (
+                <button
+                  onClick={() => updateFilter('search', '')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </div>
 
-            {/* 정렬 */}
-            <select
-              value={filters.sortBy}
-              onChange={(e) => updateFilter('sortBy', e.target.value as 'withdrawalDate' | 'name')}
-              className="text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
-              style={{ borderColor: 'rgba(8, 20, 41, 0.2)' }}
-            >
-              {SORT_OPTIONS.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+            <div className="w-px h-4 bg-gray-300"></div>
 
-            {/* 필터 초기화 */}
-            {activeFilterCount > 0 && (
+            {/* 통합 필터 드롭다운 */}
+            <div className="relative" ref={filterDropdownRef}>
               <button
-                onClick={resetFilters}
-                className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 py-1 rounded-sm transition-colors"
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-sm border text-xs font-medium transition-colors ${
+                  activeFilterCount > 0
+                    ? 'bg-accent border-accent text-primary'
+                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-100'
+                }`}
               >
-                필터 초기화
+                <SlidersHorizontal size={12} />
+                <span>필터</span>
+                {activeFilterCount > 0 && (
+                  <span className="bg-primary text-white text-micro w-4 h-4 rounded-full flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
               </button>
-            )}
+
+              {showFilterDropdown && (
+                <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-sm shadow-lg z-50 w-[300px] max-h-[450px] overflow-y-auto">
+                  {/* 유형 */}
+                  <div className="px-3 py-2 border-b border-gray-100">
+                    <div className="text-xxs font-bold text-gray-600 mb-2">유형</div>
+                    <select
+                      value={filters.entryType}
+                      onChange={(e) => updateFilter('entryType', e.target.value)}
+                      className="w-full bg-white border border-gray-300 rounded-sm px-2 py-1.5 text-xs text-gray-700 focus:border-accent focus:ring-1 focus:ring-accent outline-none"
+                    >
+                      {ENTRY_TYPE_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 과목 */}
+                  <div className="px-3 py-2 border-b border-gray-100">
+                    <div className="text-xxs font-bold text-gray-600 mb-2">과목</div>
+                    <select
+                      value={filters.subject}
+                      onChange={(e) => updateFilter('subject', e.target.value)}
+                      className="w-full bg-white border border-gray-300 rounded-sm px-2 py-1.5 text-xs text-gray-700 focus:border-accent focus:ring-1 focus:ring-accent outline-none"
+                    >
+                      {SUBJECT_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 강사 */}
+                  <div className="px-3 py-2 border-b border-gray-100">
+                    <div className="text-xxs font-bold text-gray-600 mb-2">강사</div>
+                    <select
+                      value={filters.staffId}
+                      onChange={(e) => updateFilter('staffId', e.target.value)}
+                      className="w-full bg-white border border-gray-300 rounded-sm px-2 py-1.5 text-xs text-gray-700 focus:border-accent focus:ring-1 focus:ring-accent outline-none"
+                    >
+                      <option value="">전체 강사</option>
+                      {teacherOptions.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 퇴원 사유 */}
+                  <div className="px-3 py-2 border-b border-gray-100">
+                    <div className="text-xxs font-bold text-gray-600 mb-2">퇴원 사유</div>
+                    <select
+                      value={filters.reason}
+                      onChange={(e) => updateFilter('reason', e.target.value)}
+                      className="w-full bg-white border border-gray-300 rounded-sm px-2 py-1.5 text-xs text-gray-700 focus:border-accent focus:ring-1 focus:ring-accent outline-none"
+                    >
+                      {WITHDRAWAL_REASONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 기간 */}
+                  <div className="px-3 py-2 border-b border-gray-100">
+                    <div className="text-xxs font-bold text-gray-600 mb-2">기간</div>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="date"
+                        value={filters.dateFrom}
+                        onChange={(e) => updateFilter('dateFrom', e.target.value)}
+                        className="flex-1 bg-white border border-gray-300 rounded-sm px-2 py-1.5 text-xs text-gray-700 focus:border-accent focus:ring-1 focus:ring-accent outline-none"
+                      />
+                      <span className="text-xs text-gray-400">~</span>
+                      <input
+                        type="date"
+                        value={filters.dateTo}
+                        onChange={(e) => updateFilter('dateTo', e.target.value)}
+                        className="flex-1 bg-white border border-gray-300 rounded-sm px-2 py-1.5 text-xs text-gray-700 focus:border-accent focus:ring-1 focus:ring-accent outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 정렬 */}
+                  <div className="px-3 py-2 border-b border-gray-100">
+                    <div className="text-xxs font-bold text-gray-600 mb-2">정렬</div>
+                    <select
+                      value={filters.sortBy}
+                      onChange={(e) => updateFilter('sortBy', e.target.value as 'withdrawalDate' | 'name')}
+                      className="w-full bg-white border border-gray-300 rounded-sm px-2 py-1.5 text-xs text-gray-700 focus:border-accent focus:ring-1 focus:ring-accent outline-none"
+                    >
+                      {SORT_OPTIONS.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 초기화 버튼 */}
+                  {activeFilterCount > 0 && (
+                    <div className="px-3 py-2">
+                      <button
+                        onClick={resetFilters}
+                        className="w-full px-3 py-1.5 rounded-sm text-xs text-red-500 hover:bg-red-50 flex items-center justify-center gap-1 border border-red-200"
+                      >
+                        <X size={12} />
+                        필터 초기화
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* 새로고침 */}
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-sm transition-colors disabled:opacity-50 border border-gray-300"
+              title="새로고침"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
           </div>
         )}
 
-        {/* 요약 정보 */}
-        <div className="flex items-center gap-2 text-micro text-gray-400">
-          <span>전체: {counts.total}명</span>
-          <span className="text-red-400">(퇴원 {counts.withdrawn}명</span>
-          <span className="text-amber-500">/ 수강종료 {counts.subjectEnded}명)</span>
-          {filteredEntries.length !== counts.total && (
-            <span>| 필터 적용: {filteredEntries.length}명</span>
-          )}
-        </div>
-      </div>
+        {/* 통계 탭일 때는 우측 비움 */}
+        {subTab === 'stats' && <div />}
+      </TabSubNavigation>
+
+      {/* 통계 탭 */}
+      {subTab === 'stats' ? (
+        <Suspense fallback={
+          <div className="flex-1 flex items-center justify-center">
+            <div className="w-6 h-6 border-2 border-gray-300 border-t-primary rounded-full animate-spin" />
+          </div>
+        }>
+          <div className="flex-1 overflow-auto">
+            <WithdrawalDashboard currentUser={currentUser} />
+          </div>
+        </Suspense>
+      ) : (
+      <>
 
       {/* 메인 콘텐츠: 좌측 목록 + 우측 상세 */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
@@ -288,6 +382,8 @@ const WithdrawalManagementTab: React.FC<WithdrawalManagementTabProps> = ({ curre
           )}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };

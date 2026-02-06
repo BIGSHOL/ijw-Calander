@@ -8,7 +8,11 @@ export type TabButtonVariant =
   | 'tab-status-active'
   | 'tab-status-pending'
   | 'tab-status-completed'
-  | 'tab-status-cancelled';
+  | 'tab-status-cancelled'
+  // 라이트 테마용 (수학 시간표 스타일)
+  | 'tab-light-active'
+  | 'tab-light-inactive'
+  | 'tab-light-toggle';
 
 export type TabButtonSize = 'xs' | 'sm';
 
@@ -16,6 +20,7 @@ export interface TabButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEle
   variant?: TabButtonVariant;
   size?: TabButtonSize;
   active?: boolean;
+  theme?: 'dark' | 'light'; // 다크(기본) vs 라이트(수학시간표 스타일)
   icon?: React.ReactNode;
   iconPosition?: 'left' | 'right';
   children?: React.ReactNode;
@@ -62,6 +67,7 @@ export const TabButton = React.forwardRef<HTMLButtonElement, TabButtonProps>(
       variant = 'tab-inactive',
       size = 'xs',
       active,
+      theme = 'dark',
       icon,
       iconPosition = 'left',
       disabled,
@@ -71,9 +77,11 @@ export const TabButton = React.forwardRef<HTMLButtonElement, TabButtonProps>(
     },
     ref
   ) => {
-    // active prop이 있으면 variant 자동 결정
+    // active prop이 있으면 variant 자동 결정 (테마에 따라 다른 스타일)
     const effectiveVariant = active !== undefined
-      ? (active ? 'tab-active' : 'tab-inactive')
+      ? theme === 'light'
+        ? (active ? 'tab-light-active' : 'tab-light-inactive')
+        : (active ? 'tab-active' : 'tab-inactive')
       : variant;
 
     const baseStyles = 'inline-flex items-center justify-center font-bold rounded-sm transition-all focus:outline-none focus:ring-2 focus:ring-accent/50 disabled:opacity-50 disabled:cursor-not-allowed';
@@ -87,6 +95,10 @@ export const TabButton = React.forwardRef<HTMLButtonElement, TabButtonProps>(
       'tab-status-pending': 'bg-yellow-500 text-primary hover:bg-yellow-600 shadow-sm',
       'tab-status-completed': 'bg-green-600 text-white hover:bg-green-700 shadow-sm',
       'tab-status-cancelled': 'bg-gray-500 text-white hover:bg-gray-600 shadow-sm',
+      // 라이트 테마용 (수학 시간표 스타일)
+      'tab-light-active': 'bg-white text-gray-800 shadow-sm border border-gray-300',
+      'tab-light-inactive': 'text-gray-500 hover:text-gray-700 hover:bg-gray-100',
+      'tab-light-toggle': 'bg-gray-100 border border-gray-300 text-gray-600 hover:bg-gray-200',
     };
 
     const sizeStyles: Record<TabButtonSize, string> = {

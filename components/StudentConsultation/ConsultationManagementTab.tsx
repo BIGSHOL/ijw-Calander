@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, Suspense } from 'react';
-import { Plus, Search, GraduationCap, Upload, LayoutDashboard, List, ChevronDown, X, Loader2 } from 'lucide-react';
+import { Plus, Search, GraduationCap, Upload, LayoutDashboard, List, ChevronDown, X, Loader2, Filter, SlidersHorizontal } from 'lucide-react';
 import { usePaginatedConsultations, StudentConsultationFilters } from '../../hooks/useStudentConsultations';
 import { ConsultationCategory, CATEGORY_CONFIG } from '../../types';
 import ConsultationList from './ConsultationList';
@@ -39,7 +39,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
             localStorage.removeItem('consultation_viewMode');
             return old as ViewMode;
         }
-        return 'list';
+        return 'dashboard'; // 기본값: 통계(dashboard)
     });
     const [filters, setFilters] = useState<StudentConsultationFilters>({});
     const [showAddModal, setShowAddModal] = useState(false);
@@ -76,15 +76,15 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
     const { students } = useStudents();
     const { staff } = useStaff();
 
-    // 상담자 드롭다운 상태
-    const [showConsultantDropdown, setShowConsultantDropdown] = useState(false);
-    const consultantDropdownRef = useRef<HTMLDivElement>(null);
+    // 통합 필터 드롭다운 상태
+    const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+    const filterDropdownRef = useRef<HTMLDivElement>(null);
 
     // 드롭다운 외부 클릭 시 닫기
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
-            if (consultantDropdownRef.current && !consultantDropdownRef.current.contains(e.target as Node)) {
-                setShowConsultantDropdown(false);
+            if (filterDropdownRef.current && !filterDropdownRef.current.contains(e.target as Node)) {
+                setShowFilterDropdown(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -150,6 +150,16 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
         const consultant = staff.find(s => s.id === filters.consultantId);
         return consultant?.name || null;
     }, [filters.consultantId, staff]);
+
+    // 활성 필터 개수 계산
+    const activeFilterCount = useMemo(() => {
+        let count = 0;
+        if (filters.type) count++;
+        if (filters.category) count++;
+        if (filters.followUpStatus && filters.followUpStatus !== 'all') count++;
+        if (filters.consultantId) count++;
+        return count;
+    }, [filters.type, filters.category, filters.followUpStatus, filters.consultantId]);
 
     // 필터 변경 시 첫 페이지로 리셋
     useEffect(() => {
@@ -251,365 +261,286 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
 
     return (
         <div className="h-full flex flex-col overflow-hidden">
-            {/* 상단 네비게이션 바 (다른 탭과 동일한 스타일) - 모바일 대응을 위해 h-auto 및 flex-wrap 적용 */}
+            {/* 상단 네비게이션 바 - Light Theme (수학 시간표 스타일) */}
             <TabSubNavigation
                 variant="compact"
-                showBorder={false}
-                className="min-h-10 h-auto flex-wrap justify-between px-6 py-2 border-b border-white/10 z-30"
+                theme="light"
+                showBorder={true}
+                className="justify-between px-4 relative z-30"
             >
-                <div className="flex flex-wrap items-center gap-3">
+                {/* Left: View Toggle + Date Presets + Filter Dropdown */}
+                <div className="flex items-center gap-3">
                     {/* 뷰 모드 토글 */}
-                    <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10">
-                        <TabButton
-                            active={viewMode === 'list'}
-                            onClick={() => handleViewModeChange('list')}
-                            title="목록 보기"
-                            className="p-1.5"
-                        >
-                            <List size={14} />
-                        </TabButton>
+                    <div className="flex bg-gray-200 rounded-sm p-0.5">
                         <TabButton
                             active={viewMode === 'dashboard'}
                             onClick={() => handleViewModeChange('dashboard')}
-                            title="대시보드 보기"
-                            className="p-1.5"
+                            icon={<LayoutDashboard size={12} />}
+                            theme="light"
                         >
-                            <LayoutDashboard size={14} />
+                            통계
+                        </TabButton>
+                        <TabButton
+                            active={viewMode === 'list'}
+                            onClick={() => handleViewModeChange('list')}
+                            icon={<List size={12} />}
+                            theme="light"
+                        >
+                            목록
                         </TabButton>
                     </div>
 
-                    {/* 공통 필터들 (목록/대시보드 모두에 표시) */}
-                    <>
-                        {/* 구분선 */}
-                        <div className="w-px h-4 bg-white/20 mx-1"></div>
+                    <div className="w-px h-4 bg-gray-300"></div>
 
-                        {/* 날짜 범위 버튼 */}
-                        <div className="flex gap-1">
-                            <TabButton
-                                active={activeDatePreset === 'today'}
-                                onClick={() => applyDatePreset('today')}
-                                className="px-2 py-1"
-                            >
-                                오늘
-                            </TabButton>
-                            <TabButton
-                                active={activeDatePreset === 'week'}
-                                onClick={() => applyDatePreset('week')}
-                                className="px-2 py-1"
-                            >
-                                최근 7일
-                            </TabButton>
-                            <TabButton
-                                active={activeDatePreset === 'thisMonth'}
-                                onClick={() => applyDatePreset('thisMonth')}
-                                className="px-2 py-1"
-                            >
-                                이번 달
-                            </TabButton>
-                            <TabButton
-                                active={activeDatePreset === 'lastMonth'}
-                                onClick={() => applyDatePreset('lastMonth')}
-                                className="px-2 py-1"
-                            >
-                                지난 달
-                            </TabButton>
-                            <TabButton
-                                active={activeDatePreset === 'last3Months'}
-                                onClick={() => applyDatePreset('last3Months')}
-                                className="px-2 py-1"
-                            >
-                                3개월
-                            </TabButton>
-                            {/* 전체 버튼은 목록뷰에서만 표시 */}
-                            {viewMode === 'list' && (
-                                <TabButton
-                                    active={activeDatePreset === 'all'}
-                                    onClick={() => applyDatePreset('all')}
-                                    className="px-2 py-1"
-                                >
-                                    전체
-                                </TabButton>
-                            )}
-                        </div>
-                    </>
+                    {/* 날짜 범위 버튼 */}
+                    <div className="flex gap-0.5">
+                        <TabButton active={activeDatePreset === 'today'} onClick={() => applyDatePreset('today')} theme="light" className="px-2 py-1">오늘</TabButton>
+                        <TabButton active={activeDatePreset === 'week'} onClick={() => applyDatePreset('week')} theme="light" className="px-2 py-1">최근 7일</TabButton>
+                        <TabButton active={activeDatePreset === 'thisMonth'} onClick={() => applyDatePreset('thisMonth')} theme="light" className="px-2 py-1">이번 달</TabButton>
+                        <TabButton active={activeDatePreset === 'lastMonth'} onClick={() => applyDatePreset('lastMonth')} theme="light" className="px-2 py-1">지난 달</TabButton>
+                        <TabButton active={activeDatePreset === 'last3Months'} onClick={() => applyDatePreset('last3Months')} theme="light" className="px-2 py-1">3개월</TabButton>
+                        {viewMode === 'list' && (
+                            <TabButton active={activeDatePreset === 'all'} onClick={() => applyDatePreset('all')} theme="light" className="px-2 py-1">전체</TabButton>
+                        )}
+                    </div>
 
-                    {/* 목록 모드 전용 필터들 */}
+                    {/* 목록 모드: 통합 필터 드롭다운 */}
                     {viewMode === 'list' && (
                         <>
-                            {/* 구분선 */}
-                            <div className="w-px h-4 bg-white/20 mx-1"></div>
-
-                            {/* 상담 유형 토글 */}
-                            <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm">
-                                <TabButton
-                                    active={!filters.type}
-                                    onClick={() => setFilters(prev => ({ ...prev, type: undefined }))}
-                                    className="px-3 py-1"
-                                >
-                                    💬 전체
-                                </TabButton>
-                                <TabButton
-                                    active={filters.type === 'parent'}
-                                    onClick={() => setFilters(prev => ({ ...prev, type: 'parent' }))}
-                                    className="px-3 py-1"
-                                >
-                                    👨‍👩‍👧 학부모
-                                </TabButton>
-                                <TabButton
-                                    active={filters.type === 'student'}
-                                    onClick={() => setFilters(prev => ({ ...prev, type: 'student' }))}
-                                    className="px-3 py-1"
-                                >
-                                    <GraduationCap className="inline-block w-4 h-4 mr-1" />
-                                    학생
-                                </TabButton>
-                            </div>
-
-                            {/* 구분선 */}
-                            <div className="w-px h-4 bg-white/20 mx-1"></div>
-
-                            {/* 카테고리 필터 */}
-                            <select
-                                value={filters.category || ''}
-                                onChange={(e) => setFilters(prev => ({
-                                    ...prev,
-                                    category: e.target.value as ConsultationCategory | undefined || undefined
-                                }))}
-                                className="appearance-none bg-[#1e293b] border border-gray-700 rounded-sm px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-accent focus:ring-1 focus:ring-accent outline-none"
-                            >
-                                <option value="">전체 카테고리</option>
-                                {Object.entries(CATEGORY_CONFIG).map(([key, config]) => (
-                                    <option key={key} value={key}>
-                                        {config.icon} {config.label}
-                                    </option>
-                                ))}
-                            </select>
-
-                            {/* 구분선 */}
-                            <div className="w-px h-4 bg-white/20 mx-1"></div>
-
-                            {/* 후속조치 필터 */}
-                            <select
-                                value={filters.followUpStatus || 'all'}
-                                onChange={(e) => setFilters(prev => ({
-                                    ...prev,
-                                    followUpStatus: e.target.value as any
-                                }))}
-                                className="appearance-none bg-[#1e293b] border border-gray-700 rounded-sm px-3 py-1 pr-7 text-xs font-medium text-white cursor-pointer hover:border-gray-500 focus:border-accent focus:ring-1 focus:ring-accent outline-none"
-                            >
-                                <option value="all">전체</option>
-                                <option value="needed">후속조치 필요</option>
-                                <option value="done">후속조치 완료</option>
-                                <option value="pending">미완료</option>
-                            </select>
-
-                            {/* 구분선 */}
-                            <div className="w-px h-4 bg-white/20 mx-1"></div>
-
-                            {/* 상담자(직원) 필터 - 그리드 드롭다운 */}
-                            <div className="relative" ref={consultantDropdownRef}>
+                            <div className="w-px h-4 bg-gray-300"></div>
+                            <div className="relative" ref={filterDropdownRef}>
                                 <button
-                                    onClick={() => setShowConsultantDropdown(!showConsultantDropdown)}
-                                    className={`flex items-center gap-1.5 px-3 py-1 rounded-sm border text-xs font-medium transition-colors ${
-                                        filters.consultantId
+                                    onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-sm border text-xs font-medium transition-colors ${
+                                        activeFilterCount > 0
                                             ? 'bg-accent border-accent text-primary'
-                                            : 'bg-[#1e293b] border-gray-700 text-white hover:border-gray-500'
+                                            : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-100'
                                     }`}
                                 >
-                                    <span>{selectedConsultantName || '상담자'}</span>
-                                    <ChevronDown size={12} className={`transition-transform ${showConsultantDropdown ? 'rotate-180' : ''}`} />
+                                    <SlidersHorizontal size={12} />
+                                    <span>필터</span>
+                                    {activeFilterCount > 0 && (
+                                        <span className="bg-primary text-white text-micro w-4 h-4 rounded-full flex items-center justify-center">
+                                            {activeFilterCount}
+                                        </span>
+                                    )}
                                 </button>
 
-                                {showConsultantDropdown && (
-                                    <div className="absolute top-full left-0 mt-1 bg-[#1e293b] border border-gray-700 rounded-sm shadow-xl z-50 min-w-[320px] max-h-[500px] overflow-y-auto">
-                                        {/* 전체 선택 */}
-                                        <div className="p-2 border-b border-white/10">
-                                            <button
-                                                onClick={() => {
-                                                    setFilters(prev => ({ ...prev, consultantId: undefined }));
-                                                    setShowConsultantDropdown(false);
-                                                }}
-                                                className={`w-full px-3 py-1.5 rounded text-xs font-bold text-left ${
-                                                    !filters.consultantId
-                                                        ? 'bg-accent text-primary'
-                                                        : 'text-gray-300 hover:bg-white/10'
-                                                }`}
-                                            >
-                                                전체
-                                            </button>
+                                {showFilterDropdown && (
+                                    <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-sm shadow-lg z-50 min-w-[320px] max-h-[500px] overflow-y-auto">
+                                        {/* 상담 유형 */}
+                                        <div className="px-3 py-2 border-b border-gray-100">
+                                            <div className="text-xxs font-bold text-gray-600 mb-2">상담 유형</div>
+                                            <div className="flex gap-1">
+                                                <button
+                                                    onClick={() => setFilters(prev => ({ ...prev, type: undefined }))}
+                                                    className={`flex-1 px-2 py-1.5 rounded-sm text-xs font-medium border ${!filters.type ? 'bg-accent border-accent text-primary' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'}`}
+                                                >
+                                                    전체
+                                                </button>
+                                                <button
+                                                    onClick={() => setFilters(prev => ({ ...prev, type: 'parent' }))}
+                                                    className={`flex-1 px-2 py-1.5 rounded-sm text-xs font-medium border ${filters.type === 'parent' ? 'bg-accent border-accent text-primary' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'}`}
+                                                >
+                                                    학부모
+                                                </button>
+                                                <button
+                                                    onClick={() => setFilters(prev => ({ ...prev, type: 'student' }))}
+                                                    className={`flex-1 px-2 py-1.5 rounded-sm text-xs font-medium border ${filters.type === 'student' ? 'bg-accent border-accent text-primary' : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'}`}
+                                                >
+                                                    학생
+                                                </button>
+                                            </div>
                                         </div>
 
-                                        <div className="p-2">
-                                            {/* 수학 */}
-                                            {consultantsBySubject.math.length > 0 && (
-                                                <div className="mb-2">
-                                                    <div className="text-xxs text-blue-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">수학</div>
-                                                    <div className="grid grid-cols-3 gap-0.5">
-                                                        {consultantsBySubject.math.map(consultant => (
-                                                            <button
-                                                                key={`math-${consultant.id}`}
-                                                                onClick={() => {
-                                                                    setFilters(prev => ({ ...prev, consultantId: consultant.id }));
-                                                                    setShowConsultantDropdown(false);
-                                                                }}
-                                                                className={`px-2 py-1 rounded text-xs ${filters.consultantId === consultant.id ? 'bg-blue-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
-                                                            >
-                                                                {consultant.name}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
+                                        {/* 카테고리 */}
+                                        <div className="px-3 py-2 border-b border-gray-100">
+                                            <div className="text-xxs font-bold text-gray-600 mb-2">카테고리</div>
+                                            <select
+                                                value={filters.category || ''}
+                                                onChange={(e) => setFilters(prev => ({
+                                                    ...prev,
+                                                    category: e.target.value as ConsultationCategory | undefined || undefined
+                                                }))}
+                                                className="w-full bg-white border border-gray-300 rounded-sm px-2 py-1.5 text-xs text-gray-700 focus:border-accent focus:ring-1 focus:ring-accent outline-none"
+                                            >
+                                                <option value="">전체 카테고리</option>
+                                                {Object.entries(CATEGORY_CONFIG).map(([key, config]) => (
+                                                    <option key={key} value={key}>{config.icon} {config.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
 
-                                            {/* 영어 */}
-                                            {consultantsBySubject.english.length > 0 && (
-                                                <div className="mb-2">
-                                                    <div className="text-xxs text-purple-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">영어</div>
-                                                    <div className="grid grid-cols-3 gap-0.5">
-                                                        {consultantsBySubject.english.map(consultant => (
-                                                            <button
-                                                                key={`english-${consultant.id}`}
-                                                                onClick={() => {
-                                                                    setFilters(prev => ({ ...prev, consultantId: consultant.id }));
-                                                                    setShowConsultantDropdown(false);
-                                                                }}
-                                                                className={`px-2 py-1 rounded text-xs ${filters.consultantId === consultant.id ? 'bg-purple-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
-                                                            >
-                                                                {consultant.name}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
+                                        {/* 후속조치 */}
+                                        <div className="px-3 py-2 border-b border-gray-100">
+                                            <div className="text-xxs font-bold text-gray-600 mb-2">후속조치</div>
+                                            <select
+                                                value={filters.followUpStatus || 'all'}
+                                                onChange={(e) => setFilters(prev => ({ ...prev, followUpStatus: e.target.value as any }))}
+                                                className="w-full bg-white border border-gray-300 rounded-sm px-2 py-1.5 text-xs text-gray-700 focus:border-accent focus:ring-1 focus:ring-accent outline-none"
+                                            >
+                                                <option value="all">전체</option>
+                                                <option value="needed">후속조치 필요</option>
+                                                <option value="done">후속조치 완료</option>
+                                                <option value="pending">미완료</option>
+                                            </select>
+                                        </div>
 
-                                            {/* 과학 */}
-                                            {consultantsBySubject.science.length > 0 && (
-                                                <div className="mb-2">
-                                                    <div className="text-xxs text-green-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">과학</div>
-                                                    <div className="grid grid-cols-3 gap-0.5">
-                                                        {consultantsBySubject.science.map(consultant => (
-                                                            <button
-                                                                key={`science-${consultant.id}`}
-                                                                onClick={() => {
-                                                                    setFilters(prev => ({ ...prev, consultantId: consultant.id }));
-                                                                    setShowConsultantDropdown(false);
-                                                                }}
-                                                                className={`px-2 py-1 rounded text-xs ${filters.consultantId === consultant.id ? 'bg-green-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
-                                                            >
-                                                                {consultant.name}
-                                                            </button>
-                                                        ))}
+                                        {/* 상담자 */}
+                                        <div className="px-3 py-2 border-b border-gray-100">
+                                            <div className="text-xxs font-bold text-gray-600 mb-2">상담자</div>
+                                            <div className="space-y-1.5">
+                                                <button
+                                                    onClick={() => setFilters(prev => ({ ...prev, consultantId: undefined }))}
+                                                    className={`w-full px-2 py-1 rounded-sm text-xs font-medium text-left ${!filters.consultantId ? 'bg-accent text-primary' : 'text-gray-600 hover:bg-gray-100'}`}
+                                                >
+                                                    전체
+                                                </button>
+                                                {/* 수학 */}
+                                                {consultantsBySubject.math.length > 0 && (
+                                                    <div>
+                                                        <div className="text-micro text-blue-600 font-bold px-1 mb-0.5">수학</div>
+                                                        <div className="grid grid-cols-3 gap-0.5">
+                                                            {consultantsBySubject.math.map(c => (
+                                                                <button key={`m-${c.id}`} onClick={() => setFilters(prev => ({ ...prev, consultantId: c.id }))}
+                                                                    className={`px-1.5 py-1 rounded-sm text-xs ${filters.consultantId === c.id ? 'bg-blue-500 text-white font-bold' : 'text-gray-600 hover:bg-gray-100'}`}>
+                                                                    {c.name}
+                                                                </button>
+                                                            ))}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )}
-
-                                            {/* 국어 */}
-                                            {consultantsBySubject.korean.length > 0 && (
-                                                <div className="mb-2">
-                                                    <div className="text-xxs text-orange-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">국어</div>
-                                                    <div className="grid grid-cols-3 gap-0.5">
-                                                        {consultantsBySubject.korean.map(consultant => (
-                                                            <button
-                                                                key={`korean-${consultant.id}`}
-                                                                onClick={() => {
-                                                                    setFilters(prev => ({ ...prev, consultantId: consultant.id }));
-                                                                    setShowConsultantDropdown(false);
-                                                                }}
-                                                                className={`px-2 py-1 rounded text-xs ${filters.consultantId === consultant.id ? 'bg-orange-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
-                                                            >
-                                                                {consultant.name}
-                                                            </button>
-                                                        ))}
+                                                )}
+                                                {/* 영어 */}
+                                                {consultantsBySubject.english.length > 0 && (
+                                                    <div>
+                                                        <div className="text-micro text-purple-600 font-bold px-1 mb-0.5">영어</div>
+                                                        <div className="grid grid-cols-3 gap-0.5">
+                                                            {consultantsBySubject.english.map(c => (
+                                                                <button key={`e-${c.id}`} onClick={() => setFilters(prev => ({ ...prev, consultantId: c.id }))}
+                                                                    className={`px-1.5 py-1 rounded-sm text-xs ${filters.consultantId === c.id ? 'bg-purple-500 text-white font-bold' : 'text-gray-600 hover:bg-gray-100'}`}>
+                                                                    {c.name}
+                                                                </button>
+                                                            ))}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )}
-
-                                            {/* 기타 */}
-                                            {consultantsBySubject.other.length > 0 && (
-                                                <div className="mb-2">
-                                                    <div className="text-xxs text-gray-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">기타</div>
-                                                    <div className="grid grid-cols-3 gap-0.5">
-                                                        {consultantsBySubject.other.map(consultant => (
-                                                            <button
-                                                                key={`other-${consultant.id}`}
-                                                                onClick={() => {
-                                                                    setFilters(prev => ({ ...prev, consultantId: consultant.id }));
-                                                                    setShowConsultantDropdown(false);
-                                                                }}
-                                                                className={`px-2 py-1 rounded text-xs ${filters.consultantId === consultant.id ? 'bg-gray-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
-                                                            >
-                                                                {consultant.name}
-                                                            </button>
-                                                        ))}
+                                                )}
+                                                {/* 과학 */}
+                                                {consultantsBySubject.science.length > 0 && (
+                                                    <div>
+                                                        <div className="text-micro text-green-600 font-bold px-1 mb-0.5">과학</div>
+                                                        <div className="grid grid-cols-3 gap-0.5">
+                                                            {consultantsBySubject.science.map(c => (
+                                                                <button key={`s-${c.id}`} onClick={() => setFilters(prev => ({ ...prev, consultantId: c.id }))}
+                                                                    className={`px-1.5 py-1 rounded-sm text-xs ${filters.consultantId === c.id ? 'bg-green-500 text-white font-bold' : 'text-gray-600 hover:bg-gray-100'}`}>
+                                                                    {c.name}
+                                                                </button>
+                                                            ))}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )}
+                                                )}
+                                                {/* 국어 */}
+                                                {consultantsBySubject.korean.length > 0 && (
+                                                    <div>
+                                                        <div className="text-micro text-orange-600 font-bold px-1 mb-0.5">국어</div>
+                                                        <div className="grid grid-cols-3 gap-0.5">
+                                                            {consultantsBySubject.korean.map(c => (
+                                                                <button key={`k-${c.id}`} onClick={() => setFilters(prev => ({ ...prev, consultantId: c.id }))}
+                                                                    className={`px-1.5 py-1 rounded-sm text-xs ${filters.consultantId === c.id ? 'bg-orange-500 text-white font-bold' : 'text-gray-600 hover:bg-gray-100'}`}>
+                                                                    {c.name}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {/* 기타 */}
+                                                {consultantsBySubject.other.length > 0 && (
+                                                    <div>
+                                                        <div className="text-micro text-gray-500 font-bold px-1 mb-0.5">기타</div>
+                                                        <div className="grid grid-cols-3 gap-0.5">
+                                                            {consultantsBySubject.other.map(c => (
+                                                                <button key={`o-${c.id}`} onClick={() => setFilters(prev => ({ ...prev, consultantId: c.id }))}
+                                                                    className={`px-1.5 py-1 rounded-sm text-xs ${filters.consultantId === c.id ? 'bg-gray-500 text-white font-bold' : 'text-gray-600 hover:bg-gray-100'}`}>
+                                                                    {c.name}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
 
                                         {/* 초기화 버튼 */}
-                                        {filters.consultantId && (
-                                            <div className="p-2 border-t border-white/10">
+                                        {activeFilterCount > 0 && (
+                                            <div className="px-3 py-2">
                                                 <button
                                                     onClick={() => {
-                                                        setFilters(prev => ({ ...prev, consultantId: undefined }));
-                                                        setShowConsultantDropdown(false);
+                                                        setFilters(prev => ({ ...prev, type: undefined, category: undefined, followUpStatus: undefined, consultantId: undefined }));
                                                     }}
-                                                    className="w-full px-3 py-1.5 rounded text-xs text-red-400 hover:bg-red-400/10 flex items-center justify-center gap-1"
+                                                    className="w-full px-3 py-1.5 rounded-sm text-xs text-red-500 hover:bg-red-50 flex items-center justify-center gap-1 border border-red-200"
                                                 >
                                                     <X size={12} />
-                                                    초기화
+                                                    필터 초기화
                                                 </button>
                                             </div>
                                         )}
                                     </div>
                                 )}
                             </div>
-
-                            {/* 구분선 */}
-                            <div className="w-px h-4 bg-white/20 mx-1"></div>
-
-                            {/* 검색 */}
-                            <div className="relative">
-                                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="학생명, 제목, 내용 검색..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="bg-[#1e293b] border border-gray-700 rounded-sm pl-8 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:border-accent focus:ring-1 focus:ring-accent outline-none w-52"
-                                />
-                            </div>
                         </>
                     )}
                 </div>
 
+                {/* Center: Title */}
+                <h1 className="absolute left-1/2 -translate-x-1/2 text-sm font-black text-gray-800 tracking-tight">
+                    학생 상담
+                </h1>
+
+                {/* Right: Count + Search + Actions */}
                 <div className="flex items-center gap-2">
-                    {/* 결과 카운트 - 목록 모드에서만 */}
+                    {/* 결과 카운트 */}
                     {viewMode === 'list' && (
-                        <span className="text-gray-400 text-xs">
-                            총 <span className="text-accent font-bold">{totalCount}</span>개의 상담 기록
+                        <span className="text-gray-500 text-xs">
+                            총 <span className="text-primary font-bold">{totalCount}</span>개
                         </span>
                     )}
 
-                    {/* 데이터 가져오기 버튼 (마이그레이션) - 목록 모드에서만 */}
+                    {/* 검색 - 목록 모드만 */}
+                    {viewMode === 'list' && (
+                        <>
+                            <div className="w-px h-4 bg-gray-300"></div>
+                            <div className="relative">
+                                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="학생명, 제목 검색..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-36 pl-7 pr-2 py-1 bg-white border border-gray-300 rounded-sm text-xs text-gray-700 placeholder-gray-400 focus:border-accent focus:ring-1 focus:ring-accent outline-none"
+                                />
+                            </div>
+                            <div className="w-px h-4 bg-gray-300"></div>
+                        </>
+                    )}
+
+                    {/* DB이전 버튼 - 목록 모드만 */}
                     {viewMode === 'list' && (
                         <button
                             onClick={() => setShowMigrationModal(true)}
-                            className="flex items-center gap-1.5 px-3 py-1 rounded-sm bg-white/10 text-white hover:bg-white/20 transition-colors shadow-sm font-bold border border-white/20"
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-success hover:bg-[#059669] text-white text-xs font-bold transition-colors"
                             title="MakeEdu 데이터 가져오기"
                         >
                             <Upload size={14} />
-                            <span>DB이전(J)</span>
+                            <span>DB 이전</span>
                         </button>
                     )}
 
-                    {/* 새 상담 기록 버튼 */}
+                    {/* 상담 등록 버튼 */}
                     <button
                         onClick={() => setShowAddModal(true)}
-                        className="flex items-center gap-1.5 px-3 py-1 rounded-sm bg-accent text-primary hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-info hover:bg-[#2563eb] text-white text-xs font-bold transition-colors"
                     >
                         <Plus size={14} />
-                        <span>새 상담</span>
+                        <span>상담 등록</span>
                     </button>
                 </div>
             </TabSubNavigation>

@@ -66,3 +66,14 @@ export const SUBJECT_COLOR: Record<string, string> = {
   science: 'bg-orange-100 text-orange-700',
   other: 'bg-gray-100 text-gray-600',
 };
+
+// 퇴원 사유별 뱃지 컬러
+export const WITHDRAWAL_REASON_COLOR: Record<string, string> = {
+  graduation: 'bg-teal-100 text-teal-700 border border-teal-200',      // 졸업 - 긍정적
+  relocation: 'bg-violet-100 text-violet-700 border border-violet-200', // 이사 - 중립
+  competitor: 'bg-rose-100 text-rose-700 border border-rose-200',       // 경쟁 학원 - 주의
+  financial: 'bg-slate-100 text-slate-600 border border-slate-200',     // 경제적 - 중립
+  schedule: 'bg-amber-100 text-amber-700 border border-amber-200',      // 시간 조절 - 중립
+  dissatisfied: 'bg-red-100 text-red-700 border border-red-200',        // 불만족 - 경고
+  other: 'bg-gray-100 text-gray-600 border border-gray-200',            // 기타 - 중립
+};

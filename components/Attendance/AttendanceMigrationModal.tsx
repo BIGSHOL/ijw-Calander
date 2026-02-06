@@ -97,8 +97,8 @@ const AttendanceMigrationModal: React.FC<Props> = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh]">
-            <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh]" onClick={onClose}>
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
                     <h3 className="text-sm font-bold text-primary flex items-center gap-2">

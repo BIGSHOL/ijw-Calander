@@ -45,8 +45,8 @@ export const EntryForm: React.FC<EntryFormProps> = ({ initialData, existingAcade
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
-            <div className="bg-white rounded-sm shadow-xl w-full max-w-md overflow-hidden">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4" onClick={onCancel}>
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-md overflow-hidden" onClick={(e) => e.stopPropagation()}>
                 <div className="px-6 py-4 border-b border-primary-700/10 flex justify-between items-center bg-primary">
                     <h3 className="text-lg font-semibold text-white">
                         {initialData ? '수강료 정보 수정' : '수강료 등록'}

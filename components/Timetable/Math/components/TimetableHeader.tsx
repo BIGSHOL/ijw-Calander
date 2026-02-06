@@ -7,8 +7,9 @@ import {
 import { UnifiedStudent, TimetableClass } from '../../../../types';
 import { formatSchoolGrade } from '../../../../utils/studentUtils';
 import { formatDateKey } from '../../../../utils/dateUtils';
-import PortalTooltip from '../../../Common/PortalTooltip';
 import { useMathConfig } from '../hooks/useMathConfig';
+import WithdrawalStudentDetail from '../../../WithdrawalManagement/WithdrawalStudentDetail';
+import { WithdrawalEntry } from '../../../../hooks/useWithdrawalFilters';
 
 interface TimetableHeaderProps {
     weekLabel: string;
@@ -77,6 +78,9 @@ interface TimetableHeaderProps {
         showWithdrawnStudents?: boolean;
     };
     onIntegrationDisplayOptionsChange?: (key: string, value: boolean) => void;
+    // 퇴원 관리 권한 (퇴원생 클릭 시 상세 모달용)
+    canEditWithdrawal?: boolean;
+    canReactivateWithdrawal?: boolean;
 }
 
 const TimetableHeader: React.FC<TimetableHeaderProps> = ({
@@ -131,13 +135,91 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     // 통합뷰 전용
     onExportImage,
     integrationDisplayOptions,
-    onIntegrationDisplayOptionsChange
+    onIntegrationDisplayOptionsChange,
+    // 퇴원 관리 권한
+    canEditWithdrawal = false,
+    canReactivateWithdrawal = false
 }) => {
     // 드롭다운 상태
     const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
     const viewDropdownRef = useRef<HTMLDivElement>(null);
     const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false);
     const moreDropdownRef = useRef<HTMLDivElement>(null);
+
+    // 퇴원생 드롭다운 상태 (클릭 기반)
+    const [isWithdrawnDropdownOpen, setIsWithdrawnDropdownOpen] = useState(false);
+    const withdrawnDropdownRef = useRef<HTMLDivElement>(null);
+    // 예정 드롭다운 상태 (클릭 기반)
+    const [isPendingDropdownOpen, setIsPendingDropdownOpen] = useState(false);
+    const pendingDropdownRef = useRef<HTMLDivElement>(null);
+
+    // 퇴원생 상세 모달 상태
+    const [selectedWithdrawalEntry, setSelectedWithdrawalEntry] = useState<WithdrawalEntry | null>(null);
+
+    // 퇴원생 클릭 시 WithdrawalEntry 생성
+    const handleWithdrawnStudentClick = (studentId: string, isFuture: boolean = false) => {
+        console.log('[WithdrawalClick] studentId:', studentId, 'studentMap keys:', Object.keys(studentMap).slice(0, 5));
+        const student = studentMap[studentId];
+        if (!student) {
+            console.warn('[WithdrawalClick] Student not found in studentMap:', studentId);
+            return;
+        }
+        console.log('[WithdrawalClick] Found student:', student.name);
+
+        // 과목별 수강종료 여부 판정
+        const getEndedSubjects = (s: UnifiedStudent): { subjects: string[]; enrollments: typeof s.enrollments } => {
+            const bySubject = new Map<string, typeof s.enrollments>();
+            for (const e of s.enrollments || []) {
+                const list = bySubject.get(e.subject) || [];
+                list.push(e);
+                bySubject.set(e.subject, list);
+            }
+
+            const endedSubjects: string[] = [];
+            const endedEnrollments: typeof s.enrollments = [];
+
+            for (const [subject, enrollments] of bySubject) {
+                const hasActive = enrollments.some(e => !e.withdrawalDate && !e.endDate);
+                if (!hasActive && enrollments.length > 0) {
+                    endedSubjects.push(subject);
+                    endedEnrollments.push(...enrollments);
+                }
+            }
+
+            return { subjects: endedSubjects, enrollments: endedEnrollments };
+        };
+
+        // 학생 상태에 따라 type 결정
+        const isWithdrawn = student.status === 'withdrawn' || student.status === 'inactive';
+        let entry: WithdrawalEntry;
+
+        if (isWithdrawn) {
+            entry = {
+                student,
+                type: 'withdrawn',
+                endedSubjects: [...new Set((student.enrollments || []).map(e => e.subject))],
+                endedEnrollments: student.enrollments || [],
+                effectiveDate: student.withdrawalDate || student.endDate || '',
+            };
+        } else {
+            const { subjects, enrollments } = getEndedSubjects(student);
+            const latestDate = enrollments
+                .map(e => e.withdrawalDate || e.endDate || '')
+                .filter(Boolean)
+                .sort()
+                .pop() || '';
+
+            entry = {
+                student,
+                type: 'subject-ended',
+                endedSubjects: subjects.length > 0 ? subjects : [...new Set((student.enrollments || []).map(e => e.subject))],
+                endedEnrollments: enrollments.length > 0 ? enrollments : student.enrollments || [],
+                effectiveDate: latestDate || student.withdrawalDate || student.endDate || '',
+            };
+        }
+
+        setSelectedWithdrawalEntry(entry);
+    };
 
     // 강사 순서 관리 훅
     const { mathConfig, handleSaveTeacherOrder } = useMathConfig();
@@ -154,7 +236,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
 
     // 드롭다운 외부 클릭 시 닫기
     useEffect(() => {
-        if (!isViewDropdownOpen && !isMoreDropdownOpen) return;
+        if (!isViewDropdownOpen && !isMoreDropdownOpen && !isWithdrawnDropdownOpen && !isPendingDropdownOpen) return;
         const handleClickOutside = (event: MouseEvent) => {
             if (viewDropdownRef.current && !viewDropdownRef.current.contains(event.target as Node)) {
                 setIsViewDropdownOpen(false);
@@ -162,19 +244,27 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
             if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target as Node)) {
                 setIsMoreDropdownOpen(false);
             }
+            if (withdrawnDropdownRef.current && !withdrawnDropdownRef.current.contains(event.target as Node)) {
+                setIsWithdrawnDropdownOpen(false);
+            }
+            if (pendingDropdownRef.current && !pendingDropdownRef.current.contains(event.target as Node)) {
+                setIsPendingDropdownOpen(false);
+            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isViewDropdownOpen, isMoreDropdownOpen]);
+    }, [isViewDropdownOpen, isMoreDropdownOpen, isWithdrawnDropdownOpen, isPendingDropdownOpen]);
 
     // 학생 수 카운트 계산 (현재 시간표에 등록된 학생만, 중복 제거)
     const studentCounts = useMemo(() => {
         // 시간표에 등록된 학생 ID 수집 (중복 제거를 위해 Set 사용)
         const activeStudentIds = new Set<string>();
+        const newStudentIds = new Set<string>();  // 신입 (30일 이내)
         const onHoldStudentIds = new Set<string>();
         const withdrawnStudentIds = new Set<string>();
 
-        const today = formatDateKey(new Date());
+        const now = new Date();
+        const today = formatDateKey(now);
         const weekEnd = currentWeekStart
             ? formatDateKey(addDays(currentWeekStart, 6))
             : today;
@@ -182,16 +272,26 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
         // 각 수업의 학생 목록에서 학생 ID 수집 (ClassCard 로직과 완전히 동일)
         filteredClasses.forEach(cls => {
             cls.studentList?.forEach(student => {
-                // 재원생: 퇴원일 없고 대기 아님
-                if (!student.withdrawalDate && !student.onHold) {
+                // 재원생: 퇴원일/종료일 없고 대기 아님
+                if (!student.withdrawalDate && !student.endDate && !student.onHold) {
                     activeStudentIds.add(student.id);
+
+                    // 신입 체크 (30일 이내 등록)
+                    const enrollDate = student.enrollmentDate || student.startDate;
+                    if (enrollDate) {
+                        const enrollDateObj = new Date(enrollDate);
+                        const daysSinceEnroll = Math.floor((now.getTime() - enrollDateObj.getTime()) / (1000 * 60 * 60 * 24));
+                        if (daysSinceEnroll >= 0 && daysSinceEnroll <= 30) {
+                            newStudentIds.add(student.id);
+                        }
+                    }
                 }
-                // 대기생: 대기 상태이고 퇴원일 없음
-                else if (student.onHold && !student.withdrawalDate) {
+                // 대기생: 대기 상태이고 퇴원일/종료일 없음
+                else if (student.onHold && !student.withdrawalDate && !student.endDate) {
                     onHoldStudentIds.add(student.id);
                 }
-                // 퇴원생: 퇴원일 있음
-                else if (student.withdrawalDate) {
+                // 퇴원생: 퇴원일 또는 종료일 있음
+                else if (student.withdrawalDate || student.endDate) {
                     withdrawnStudentIds.add(student.id);
                 }
             });
@@ -212,27 +312,28 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
             }
         });
 
-        // 퇴원 학생 목록 (퇴원일이 오늘이거나 과거)
+        // 퇴원 학생 목록 (퇴원일/종료일이 오늘이거나 과거)
         const withdrawnStudents: Array<{ id: string; name: string; school: string; grade: string; withdrawalDate?: string }> = [];
-        // 퇴원 예정 학생 목록 (퇴원일이 미래)
+        // 퇴원 예정 학생 목록 (퇴원일/종료일이 미래)
         const withdrawnFutureStudents: Array<{ id: string; name: string; school: string; grade: string; withdrawalDate?: string }> = [];
 
         withdrawnStudentIds.forEach(studentId => {
             const student = studentMap[studentId];
-            if (student?.withdrawalDate) {
+            const effectiveDate = student?.withdrawalDate || student?.endDate;
+            if (student && effectiveDate) {
                 const studentInfo = {
                     id: student.id,
                     name: student.name,
                     school: student.school || '',
                     grade: student.grade || '',
-                    withdrawalDate: student.withdrawalDate
+                    withdrawalDate: effectiveDate
                 };
 
-                if (student.withdrawalDate <= today) {
-                    // 오늘이거나 과거 퇴원
+                if (effectiveDate <= today) {
+                    // 오늘이거나 과거 퇴원/종료
                     withdrawnStudents.push(studentInfo);
                 } else {
-                    // 미래 퇴원 예정
+                    // 미래 퇴원/종료 예정
                     withdrawnFutureStudents.push(studentInfo);
                 }
             }
@@ -240,6 +341,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
 
         return {
             activeCount: activeStudentIds.size,          // 재원생 (중복 제거됨)
+            newCount: newStudentIds.size,                // 신입 (30일 이내)
             onHoldCount: onHoldStudentIds.size,          // 대기 (중복 제거됨)
             withdrawnCount: withdrawnStudents.length,    // 퇴원 (과거/오늘)
             withdrawnFutureCount: withdrawnFutureStudents.length,  // 퇴원 예정 (미래)
@@ -277,25 +379,39 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                     </button>
                 </div>
 
-                {/* 학생 통계 배지 (통일: 재원/예정/퇴원) */}
+                {/* 학생 통계 배지 (통일: 재원/신입/예정/퇴원) */}
                 <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-300">
                     {/* 재원 */}
                     <div className="flex items-center gap-1 px-2 py-0.5 bg-green-50 border border-green-200 rounded-sm">
                         <span className="text-xxs text-green-700 font-medium">재원</span>
                         <span className="text-xs font-bold text-green-800">{studentCounts.activeCount}</span>
                     </div>
-                    {/* 예정 (대기 + 퇴원예정) */}
+                    {/* 신입 (30일 이내) */}
+                    {studentCounts.newCount > 0 && (
+                        <div className="flex items-center gap-1 px-2 py-0.5 bg-pink-50 border border-pink-200 rounded-sm">
+                            <span className="text-xxs text-pink-700 font-medium">신입</span>
+                            <span className="text-xs font-bold text-pink-800">{studentCounts.newCount}</span>
+                        </div>
+                    )}
+                    {/* 예정 (대기 + 퇴원예정) - 클릭 기반 드롭다운 */}
                     {(studentCounts.onHoldCount > 0 || studentCounts.withdrawnFutureCount > 0) && (
-                        <PortalTooltip
-                            content={
-                                <div className="bg-gray-800 text-white text-xs px-3 py-2 rounded shadow-lg space-y-2">
+                        <div className="relative" ref={pendingDropdownRef}>
+                            <div
+                                className="flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-sm cursor-pointer hover:bg-amber-100 transition-colors"
+                                onClick={() => setIsPendingDropdownOpen(!isPendingDropdownOpen)}
+                            >
+                                <span className="text-xxs text-amber-700 font-medium">예정</span>
+                                <span className="text-xs font-bold text-amber-800">{studentCounts.onHoldCount + studentCounts.withdrawnFutureCount}</span>
+                            </div>
+                            {isPendingDropdownOpen && (
+                                <div className="absolute top-full left-0 mt-1 bg-gray-800 text-white text-xs px-3 py-2 rounded shadow-lg space-y-2 z-50 min-w-max">
                                     {studentCounts.onHoldStudents.length > 0 && (
                                         <div>
                                             <div className="font-bold text-amber-300 mb-1">대기 ({studentCounts.onHoldCount}명)</div>
                                             {studentCounts.onHoldStudents.map(s => {
                                                 const schoolGrade = formatSchoolGrade(s.school, s.grade);
                                                 return (
-                                                    <div key={s.id} className="whitespace-nowrap">
+                                                    <div key={s.id} className="whitespace-nowrap py-0.5">
                                                         {s.name}/{schoolGrade !== '-' ? schoolGrade : '미입력'}
                                                         {s.enrollmentDate && ` (예정: ${s.enrollmentDate})`}
                                                     </div>
@@ -309,7 +425,14 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                             {studentCounts.withdrawnFutureStudents.map(s => {
                                                 const schoolGrade = formatSchoolGrade(s.school, s.grade);
                                                 return (
-                                                    <div key={s.id} className="whitespace-nowrap">
+                                                    <div
+                                                        key={s.id}
+                                                        className="whitespace-nowrap hover:bg-gray-700 px-1 -mx-1 rounded cursor-pointer transition-colors py-0.5"
+                                                        onClick={() => {
+                                                            setIsPendingDropdownOpen(false);
+                                                            handleWithdrawnStudentClick(s.id, true);
+                                                        }}
+                                                    >
                                                         {s.name}/{schoolGrade !== '-' ? schoolGrade : '미입력'}
                                                         {s.withdrawalDate && ` (퇴원: ${s.withdrawalDate})`}
                                                     </div>
@@ -318,36 +441,40 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                         </div>
                                     )}
                                 </div>
-                            }
-                        >
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-sm cursor-pointer">
-                                <span className="text-xxs text-amber-700 font-medium">예정</span>
-                                <span className="text-xs font-bold text-amber-800">{studentCounts.onHoldCount + studentCounts.withdrawnFutureCount}</span>
-                            </div>
-                        </PortalTooltip>
+                            )}
+                        </div>
                     )}
-                    {/* 퇴원 */}
+                    {/* 퇴원 - 클릭 기반 드롭다운 */}
                     {studentCounts.withdrawnCount > 0 && (
-                        <PortalTooltip
-                            content={
-                                <div className="bg-gray-800 text-white text-xs px-3 py-2 rounded shadow-lg space-y-1">
+                        <div className="relative" ref={withdrawnDropdownRef}>
+                            <div
+                                className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 border border-gray-300 rounded-sm cursor-pointer hover:bg-gray-200 transition-colors"
+                                onClick={() => setIsWithdrawnDropdownOpen(!isWithdrawnDropdownOpen)}
+                            >
+                                <span className="text-xxs text-gray-700 font-medium">퇴원</span>
+                                <span className="text-xs font-bold text-gray-800">{studentCounts.withdrawnCount}</span>
+                            </div>
+                            {isWithdrawnDropdownOpen && (
+                                <div className="absolute top-full left-0 mt-1 bg-gray-800 text-white text-xs px-3 py-2 rounded shadow-lg space-y-1 z-50 min-w-max">
                                     {studentCounts.withdrawnStudents.map(s => {
                                         const schoolGrade = formatSchoolGrade(s.school, s.grade);
                                         return (
-                                            <div key={s.id} className="whitespace-nowrap">
+                                            <div
+                                                key={s.id}
+                                                className="whitespace-nowrap hover:bg-gray-700 px-1 -mx-1 rounded cursor-pointer transition-colors py-0.5"
+                                                onClick={() => {
+                                                    setIsWithdrawnDropdownOpen(false);
+                                                    handleWithdrawnStudentClick(s.id);
+                                                }}
+                                            >
                                                 {s.name}/{schoolGrade !== '-' ? schoolGrade : '미입력'}
                                                 {s.withdrawalDate && ` (퇴원: ${s.withdrawalDate})`}
                                             </div>
                                         );
                                     })}
                                 </div>
-                            }
-                        >
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 border border-gray-300 rounded-sm cursor-pointer">
-                                <span className="text-xxs text-gray-700 font-medium">퇴원</span>
-                                <span className="text-xs font-bold text-gray-800">{studentCounts.withdrawnCount}</span>
-                            </div>
-                        </PortalTooltip>
+                            )}
+                        </div>
                     )}
                 </div>
             </div>
@@ -855,6 +982,40 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                         <Save size={12} />
                         시나리오 관리
                     </button>
+                </div>
+            )}
+
+            {/* 퇴원생 상세 모달 */}
+            {selectedWithdrawalEntry && (
+                <div
+                    className="fixed inset-0 bg-black/50 flex items-center justify-center"
+                    style={{ zIndex: 10000 }}
+                    onClick={() => setSelectedWithdrawalEntry(null)}
+                >
+                    <div
+                        className="bg-white w-[400px] max-w-[90vw] max-h-[80vh] rounded-sm shadow-xl overflow-hidden flex flex-col"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* 모달 헤더 */}
+                        <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
+                            <h3 className="text-sm font-bold text-primary">퇴원 정보</h3>
+                            <button
+                                onClick={() => setSelectedWithdrawalEntry(null)}
+                                className="p-1 hover:bg-gray-200 rounded-sm transition-colors"
+                            >
+                                <X size={16} className="text-gray-500" />
+                            </button>
+                        </div>
+                        {/* 모달 콘텐츠 */}
+                        <div className="flex-1 overflow-y-auto">
+                            <WithdrawalStudentDetail
+                                entry={selectedWithdrawalEntry}
+                                canEdit={canEditWithdrawal}
+                                canReactivate={canReactivateWithdrawal}
+                                onReactivated={() => setSelectedWithdrawalEntry(null)}
+                            />
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

@@ -176,8 +176,8 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4">
-      <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4" onClick={onClose}>
+      <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
           <div className="flex items-center gap-3">
@@ -494,8 +494,8 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
 
       {/* 삭제 확인 모달 */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/60 flex items-start justify-center pt-[8vh] z-[60]">
-          <div className="bg-white rounded-sm shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-black/60 flex items-start justify-center pt-[8vh] z-[60]" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="bg-white rounded-sm shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start gap-4">
               <div className="w-12 h-12 rounded-sm bg-red-100 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-6 h-6 text-red-600" />
@@ -547,8 +547,8 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
 
       {/* 비밀번호 재설정 모달 */}
       {showPasswordResetModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-start justify-center pt-[8vh] z-[60]">
-          <div className="bg-white rounded-sm shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-black/60 flex items-start justify-center pt-[8vh] z-[60]" onClick={() => setShowPasswordResetModal(false)}>
+          <div className="bg-white rounded-sm shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             {/* 헤더 */}
             <div className="bg-gradient-to-r from-amber-500 to-amber-600 px-5 py-4">
               <div className="flex items-center justify-between">

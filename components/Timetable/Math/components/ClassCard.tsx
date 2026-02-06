@@ -67,7 +67,13 @@ const StudentItem: React.FC<StudentItemProps> = ({
             ${canEdit ? 'cursor-grab' : ''} ${isClickable ? 'cursor-pointer' : ''}
             ${isPendingMoved ? 'bg-purple-400 text-white font-bold' : isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText}`}
             style={hoverStyle}
-            title={student.enrollmentDate ? `입학일: ${student.enrollmentDate}\n(클릭하여 상세정보 보기)` : '클릭하여 상세정보 보기'}
+            title={
+                student.isTransferredIn
+                    ? (isClickable ? '반이동 학생\n(클릭하여 상세정보 보기)' : '반이동 학생')
+                    : enrollmentStyle && student.enrollmentDate
+                        ? (isClickable ? `입학일: ${student.enrollmentDate}\n(클릭하여 상세정보 보기)` : `입학일: ${student.enrollmentDate}`)
+                        : (isClickable ? '클릭하여 상세정보 보기' : undefined)
+            }
         >
             {classLabel && (
                 <span className="inline-block text-[8px] leading-none bg-gray-500 text-white rounded px-0.5 mr-0.5 align-middle font-normal">
@@ -748,7 +754,21 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                         if (sg && sg !== '-') text += `/${sg}`;
                                                     }
                                                     const tooltipText = s.withdrawalDate ? `퇴원일: ${s.withdrawalDate}` : undefined;
-                                                    return <li key={s.id} className="text-xxs leading-tight bg-black text-white px-1 py-0.5 truncate cursor-pointer" title={tooltipText}>{text}</li>;
+                                                    return (
+                                                        <li
+                                                            key={s.id}
+                                                            className="text-xxs leading-tight bg-black text-white px-1 py-0.5 truncate cursor-pointer hover:bg-gray-700 transition-colors"
+                                                            title={tooltipText}
+                                                            onClick={(e) => {
+                                                                if (onStudentClick) {
+                                                                    e.stopPropagation();
+                                                                    onStudentClick(s.id);
+                                                                }
+                                                            }}
+                                                        >
+                                                            {text}
+                                                        </li>
+                                                    );
                                                 })}
                                             </ul>
                                         ) : (
@@ -842,8 +862,14 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     return (
                                                         <li
                                                             key={s.id}
-                                                            className="text-xxs leading-tight bg-black text-white px-1 py-0.5 truncate"
+                                                            className="text-xxs leading-tight bg-black text-white px-1 py-0.5 truncate cursor-pointer hover:bg-gray-700 transition-colors"
                                                             title={s.withdrawalDate ? `${text} (퇴원: ${s.withdrawalDate})` : text}
+                                                            onClick={(e) => {
+                                                                if (onStudentClick) {
+                                                                    e.stopPropagation();
+                                                                    onStudentClick(s.id);
+                                                                }
+                                                            }}
                                                         >
                                                             {text}
                                                         </li>

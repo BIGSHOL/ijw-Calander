@@ -526,8 +526,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
   const finalStudentCount = currentStudents.length - studentsToRemove.size + studentsToAdd.size;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4">
-      <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4" onClick={() => onClose()}>
+      <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
         {/* 헤더 */}
         <div className="bg-primary text-white px-4 py-3">
           <div className="flex items-center justify-between mb-2">

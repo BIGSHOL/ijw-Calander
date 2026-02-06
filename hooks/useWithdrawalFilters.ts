@@ -73,8 +73,8 @@ export function useWithdrawalFilters(students: UnifiedStudent[]) {
     const entries: WithdrawalEntry[] = [];
 
     for (const student of students) {
-      if (student.status === 'withdrawn') {
-        // 완전 퇴원
+      if (student.status === 'withdrawn' || student.status === 'inactive') {
+        // 완전 퇴원 (withdrawn 또는 inactive)
         entries.push({
           student,
           type: 'withdrawn',

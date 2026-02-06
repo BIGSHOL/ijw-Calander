@@ -2,7 +2,42 @@ import React, { useState, useEffect } from 'react';
 import { useStudents } from '../../hooks/useStudents';
 import { WithdrawalEntry } from '../../hooks/useWithdrawalFilters';
 import { WITHDRAWAL_REASONS, WITHDRAWAL_REASON_LABEL, SUBJECT_LABEL, SUBJECT_COLOR } from '../../constants/withdrawal';
-import { UserCheck, Calendar, FileText, BookOpen, AlertTriangle, Info, User, Clock, Phone, Save, MessageCircle, Pencil, X, Check } from 'lucide-react';
+import { UserCheck, Calendar, FileText, BookOpen, AlertTriangle, Info, User, Clock, Phone, Save, MessageCircle, Pencil, X, Check, Timer } from 'lucide-react';
+
+// 등록기간 계산 (년, 월, 일)
+const calculateDuration = (startDate: string | undefined, endDate: string | undefined): string | null => {
+  if (!startDate || !endDate) return null;
+
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return null;
+  if (end < start) return null;
+
+  let years = end.getFullYear() - start.getFullYear();
+  let months = end.getMonth() - start.getMonth();
+  let days = end.getDate() - start.getDate();
+
+  // 일수가 음수면 전 달에서 빌려옴
+  if (days < 0) {
+    months--;
+    const prevMonth = new Date(end.getFullYear(), end.getMonth(), 0);
+    days += prevMonth.getDate();
+  }
+
+  // 월수가 음수면 전 년에서 빌려옴
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  const parts: string[] = [];
+  if (years > 0) parts.push(`${years}년`);
+  if (months > 0) parts.push(`${months}개월`);
+  if (days > 0 || parts.length === 0) parts.push(`${days}일`);
+
+  return parts.join(' ');
+};
 
 interface WithdrawalStudentDetailProps {
   entry: WithdrawalEntry;
@@ -188,26 +223,36 @@ const WithdrawalStudentDetail: React.FC<WithdrawalStudentDetailProps> = ({
         </div>
 
         {/* 퇴원 정보 (퇴원 유형 - 읽기 전용) */}
-        {isWithdrawn && (
-          <div className="bg-white border border-gray-200 overflow-hidden">
-            <div className="flex items-center gap-1 px-2 py-1.5 bg-red-50 border-b border-red-200">
-              <Info className="w-3 h-3 text-red-600" />
-              <h3 className="text-red-800 font-bold text-xs">퇴원 정보</h3>
-            </div>
-            <div className="divide-y divide-gray-100">
-              <div className="flex items-center gap-2 px-3 py-2">
-                <Calendar className="w-3 h-3 text-gray-400 shrink-0" />
-                <span className="w-16 shrink-0 text-xs font-medium text-primary-700">퇴원일</span>
-                <span className="text-xs text-primary">{withdrawalDate}</span>
+        {isWithdrawn && (() => {
+          const duration = calculateDuration(student.startDate, student.withdrawalDate || student.endDate);
+          return (
+            <div className="bg-white border border-gray-200 overflow-hidden">
+              <div className="flex items-center gap-1 px-2 py-1.5 bg-red-50 border-b border-red-200">
+                <Info className="w-3 h-3 text-red-600" />
+                <h3 className="text-red-800 font-bold text-xs">퇴원 정보</h3>
               </div>
-              <div className="flex items-center gap-2 px-3 py-2">
-                <Calendar className="w-3 h-3 text-gray-400 shrink-0" />
-                <span className="w-16 shrink-0 text-xs font-medium text-primary-700">등록일</span>
-                <span className="text-xs text-primary">{student.startDate || '-'}</span>
+              <div className="divide-y divide-gray-100">
+                <div className="flex items-center gap-2 px-3 py-2">
+                  <Calendar className="w-3 h-3 text-gray-400 shrink-0" />
+                  <span className="w-16 shrink-0 text-xs font-medium text-primary-700">퇴원일</span>
+                  <span className="text-xs text-primary">{withdrawalDate}</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2">
+                  <Calendar className="w-3 h-3 text-gray-400 shrink-0" />
+                  <span className="w-16 shrink-0 text-xs font-medium text-primary-700">등록일</span>
+                  <span className="text-xs text-primary">{student.startDate || '-'}</span>
+                </div>
+                {duration && (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-gray-50">
+                    <Timer className="w-3 h-3 text-gray-400 shrink-0" />
+                    <span className="w-16 shrink-0 text-xs font-medium text-primary-700">등록기간</span>
+                    <span className="text-xs font-bold text-primary">{duration}</span>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* 종료된 수강 이력 (수강종료 유형 - 중복 라벨 제거) */}
         {!isWithdrawn && (
@@ -218,28 +263,33 @@ const WithdrawalStudentDetail: React.FC<WithdrawalStudentDetailProps> = ({
               <span className="text-micro text-amber-500 ml-auto">{endedEnrollments.length}건</span>
             </div>
             <div className="divide-y divide-gray-100">
-              {endedEnrollments.map((enrollment, idx) => (
-                <div key={idx} className="px-3 py-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className={`text-micro px-1 py-0 rounded-sm font-medium ${SUBJECT_COLOR[enrollment.subject] || SUBJECT_COLOR.other}`}>
-                      {SUBJECT_LABEL[enrollment.subject] || enrollment.subject}
-                    </span>
-                    <span className="text-xs font-medium text-primary">{enrollment.className}</span>
-                    {enrollment.teacher && (
-                      <span className="text-micro text-gray-400 ml-auto">{enrollment.teacher}</span>
-                    )}
+              {endedEnrollments.map((enrollment, idx) => {
+                const endDate = enrollment.withdrawalDate || enrollment.endDate;
+                const duration = calculateDuration(enrollment.startDate, endDate);
+                return (
+                  <div key={idx} className="px-3 py-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-micro px-1 py-0 rounded-sm font-medium ${SUBJECT_COLOR[enrollment.subject] || SUBJECT_COLOR.other}`}>
+                        {SUBJECT_LABEL[enrollment.subject] || enrollment.subject}
+                      </span>
+                      <span className="text-xs font-medium text-primary">{enrollment.className}</span>
+                      {enrollment.teacher && (
+                        <span className="text-micro text-gray-400 ml-auto">{enrollment.teacher}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 text-micro text-gray-400">
+                      {enrollment.startDate && <span>시작: {enrollment.startDate}</span>}
+                      {endDate && <span>종료: {endDate}</span>}
+                      {duration && (
+                        <span className="font-medium text-primary">({duration})</span>
+                      )}
+                      {enrollment.days?.length > 0 && (
+                        <span className="ml-auto">{enrollment.days.join(', ')}</span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 mt-1 text-micro text-gray-400">
-                    {enrollment.startDate && <span>시작: {enrollment.startDate}</span>}
-                    {(enrollment.withdrawalDate || enrollment.endDate) && (
-                      <span>종료: {enrollment.withdrawalDate || enrollment.endDate}</span>
-                    )}
-                    {enrollment.days?.length > 0 && (
-                      <span className="ml-auto">{enrollment.days.join(', ')}</span>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

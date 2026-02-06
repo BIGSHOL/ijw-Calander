@@ -5,6 +5,7 @@ interface TabSubNavigationProps {
   children: React.ReactNode;
   className?: string;
   variant?: 'compact' | 'normal';
+  theme?: 'dark' | 'light'; // 다크(기본) vs 라이트(수학시간표 스타일)
   showBorder?: boolean;
   ignoreCollapse?: boolean; // 접기 무시 옵션 (특정 네비게이션에만 적용)
 }
@@ -38,6 +39,7 @@ export const TabSubNavigation: React.FC<TabSubNavigationProps> = ({
   children,
   className = '',
   variant = 'compact',
+  theme = 'dark',
   showBorder = true,
   ignoreCollapse = false
 }) => {
@@ -53,17 +55,33 @@ export const TabSubNavigation: React.FC<TabSubNavigationProps> = ({
     normal: 'h-12 px-6 gap-3'
   };
 
+  // 테마별 스타일
+  const themeClasses = {
+    dark: {
+      bg: 'bg-primary',
+      border: showBorder ? 'border-t border-white/10' : '',
+      shadow: 'shadow-md'
+    },
+    light: {
+      bg: 'bg-gray-50',
+      border: 'border-b border-gray-200',
+      shadow: ''
+    }
+  };
+
+  const currentTheme = themeClasses[theme];
+
   return (
     <nav
       role="navigation"
       aria-label="필터 및 보기 옵션"
       className={`
-        bg-primary
-        ${showBorder ? 'border-t border-white/10' : ''}
+        ${currentTheme.bg}
+        ${currentTheme.border}
+        ${currentTheme.shadow}
         ${variantClasses[variant]}
         flex items-center
         text-xs
-        shadow-md
         z-20
         ${className}
       `}

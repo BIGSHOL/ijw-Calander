@@ -156,7 +156,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               {/* Role Badge */}
               {userProfile?.role && (
                 <span
-                  className={`text-white text-micro px-1 py-0.5 rounded font-black tracking-tighter shadow-sm ${
+                  className={`text-white text-micro px-1 py-0.5 font-black tracking-tighter shadow-sm ${
                     userProfile.role === 'master'
                       ? 'bg-red-600'
                       : userProfile.role === 'admin'
@@ -187,7 +187,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               </span>
               {/* Job Title Badge */}
               <span
-                className={`text-xxs px-1.5 py-0.5 rounded flex items-center justify-center font-bold tracking-tight whitespace-nowrap ${getJobTitleStyle(
+                className={`text-xxs px-1.5 py-0.5 flex items-center justify-center font-bold tracking-tight whitespace-nowrap ${getJobTitleStyle(
                   userProfile?.jobTitle
                 )}`}
               >
