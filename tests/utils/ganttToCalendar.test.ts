@@ -1,6 +1,21 @@
-import { describe, it, expect } from 'vitest';
 import { convertGanttProjectsToCalendarEvents } from '../../utils/ganttToCalendar';
 import { GanttProject } from '../../types';
+
+// 테스트용 헬퍼: 날짜 문자열을 타임스탬프로 변환
+const toTimestamp = (dateStr: string) => new Date(dateStr).getTime();
+
+// 테스트용 기본 프로젝트 필드
+const baseProject = {
+  templateId: 'template1',
+  progress: 0,
+  lastUpdated: Date.now(),
+};
+
+// 테스트용 기본 태스크 필드
+const baseTask = {
+  description: '',
+  completed: false,
+};
 
 describe('ganttToCalendar', () => {
   describe('convertGanttProjectsToCalendarEvents', () => {
@@ -12,12 +27,14 @@ describe('ganttToCalendar', () => {
     it('간트 프로젝트를 캘린더 이벤트로 변환해야 함', () => {
       const projects: GanttProject[] = [
         {
+          ...baseProject,
           id: 'project1',
           title: '테스트 프로젝트',
-          startedAt: '2026-01-01',
+          startedAt: toTimestamp('2026-01-01'),
           ownerId: 'user1',
           tasks: [
             {
+              ...baseTask,
               id: 'task1',
               title: '작업 1',
               description: '작업 설명',
@@ -53,12 +70,14 @@ describe('ganttToCalendar', () => {
     it('startOffset을 올바르게 계산해야 함', () => {
       const projects: GanttProject[] = [
         {
+          ...baseProject,
           id: 'project2',
           title: '프로젝트',
-          startedAt: '2026-01-01',
+          startedAt: toTimestamp('2026-01-01'),
           ownerId: 'user1',
           tasks: [
             {
+              ...baseTask,
               id: 'task1',
               title: '작업',
               startOffset: 10,
@@ -78,12 +97,14 @@ describe('ganttToCalendar', () => {
     it('duration을 올바르게 계산해야 함 (inclusive)', () => {
       const projects: GanttProject[] = [
         {
+          ...baseProject,
           id: 'project3',
           title: '프로젝트',
-          startedAt: '2026-01-01',
+          startedAt: toTimestamp('2026-01-01'),
           ownerId: 'user1',
           tasks: [
             {
+              ...baseTask,
               id: 'task1',
               title: '작업',
               startOffset: 0,
@@ -104,12 +125,14 @@ describe('ganttToCalendar', () => {
     it('여러 작업을 가진 프로젝트를 처리해야 함', () => {
       const projects: GanttProject[] = [
         {
+          ...baseProject,
           id: 'project4',
           title: '프로젝트',
-          startedAt: '2026-01-01',
+          startedAt: toTimestamp('2026-01-01'),
           ownerId: 'user1',
           tasks: [
             {
+              ...baseTask,
               id: 'task1',
               title: '작업 1',
               startOffset: 0,
@@ -117,6 +140,7 @@ describe('ganttToCalendar', () => {
               departmentIds: ['dept1'],
             },
             {
+              ...baseTask,
               id: 'task2',
               title: '작업 2',
               startOffset: 3,
@@ -139,12 +163,14 @@ describe('ganttToCalendar', () => {
     it('여러 프로젝트를 처리해야 함', () => {
       const projects: GanttProject[] = [
         {
+          ...baseProject,
           id: 'project1',
           title: '프로젝트 1',
-          startedAt: '2026-01-01',
+          startedAt: toTimestamp('2026-01-01'),
           ownerId: 'user1',
           tasks: [
             {
+              ...baseTask,
               id: 'task1',
               title: '작업 1',
               startOffset: 0,
@@ -154,12 +180,14 @@ describe('ganttToCalendar', () => {
           ],
         },
         {
+          ...baseProject,
           id: 'project2',
           title: '프로젝트 2',
-          startedAt: '2026-02-01',
+          startedAt: toTimestamp('2026-02-01'),
           ownerId: 'user2',
           tasks: [
             {
+              ...baseTask,
               id: 'task2',
               title: '작업 2',
               startOffset: 0,
@@ -182,12 +210,14 @@ describe('ganttToCalendar', () => {
     it('departmentIds가 없으면 general을 사용해야 함', () => {
       const projects: GanttProject[] = [
         {
+          ...baseProject,
           id: 'project5',
           title: '프로젝트',
-          startedAt: '2026-01-01',
+          startedAt: toTimestamp('2026-01-01'),
           ownerId: 'user1',
           tasks: [
             {
+              ...baseTask,
               id: 'task1',
               title: '작업',
               startOffset: 0,
@@ -205,12 +235,14 @@ describe('ganttToCalendar', () => {
     it('assigneeName이 없으면 participants가 undefined여야 함', () => {
       const projects: GanttProject[] = [
         {
+          ...baseProject,
           id: 'project6',
           title: '프로젝트',
-          startedAt: '2026-01-01',
+          startedAt: toTimestamp('2026-01-01'),
           ownerId: 'user1',
           tasks: [
             {
+              ...baseTask,
               id: 'task1',
               title: '작업',
               startOffset: 0,
@@ -229,12 +261,14 @@ describe('ganttToCalendar', () => {
     it('description이 없으면 기본 설명을 사용해야 함', () => {
       const projects: GanttProject[] = [
         {
+          ...baseProject,
           id: 'project7',
           title: '프로젝트 제목',
-          startedAt: '2026-01-01',
+          startedAt: toTimestamp('2026-01-01'),
           ownerId: 'user1',
           tasks: [
             {
+              ...baseTask,
               id: 'task1',
               title: '작업',
               startOffset: 0,
@@ -253,12 +287,14 @@ describe('ganttToCalendar', () => {
     it('날짜 경계를 올바르게 처리해야 함 (월 넘어가는 경우)', () => {
       const projects: GanttProject[] = [
         {
+          ...baseProject,
           id: 'project8',
           title: '프로젝트',
-          startedAt: '2026-01-30',
+          startedAt: toTimestamp('2026-01-30'),
           ownerId: 'user1',
           tasks: [
             {
+              ...baseTask,
               id: 'task1',
               title: '작업',
               startOffset: 0,

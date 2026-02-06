@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest';
 import { departmentConverter, eventConverter } from '../../converters';
 import { Department, CalendarEvent } from '../../types';
 

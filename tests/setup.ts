@@ -50,10 +50,10 @@ global.IntersectionObserver = class IntersectionObserver {
 
 // Mock localStorage
 const localStorageMock = (() => {
-  let store: Record<string, string> = {};
+  const store: Record<string, string> = {};
 
-  return {
-    getItem: (key: string) => store[key] || null,
+  const mock = {
+    getItem: (key: string) => store[key] ?? null,
     setItem: (key: string, value: string) => {
       store[key] = value.toString();
     },
@@ -61,9 +61,22 @@ const localStorageMock = (() => {
       delete store[key];
     },
     clear: () => {
-      store = {};
+      Object.keys(store).forEach(key => delete store[key]);
     },
   };
+
+  // Object.keys(localStorage)가 저장된 키를 반환하도록 Proxy 사용
+  return new Proxy(mock, {
+    ownKeys() {
+      return Object.keys(store);
+    },
+    getOwnPropertyDescriptor(_, prop) {
+      if (prop in store) {
+        return { configurable: true, enumerable: true, value: store[prop as string] };
+      }
+      return undefined;
+    },
+  });
 })();
 
 Object.defineProperty(window, 'localStorage', {

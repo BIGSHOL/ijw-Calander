@@ -674,7 +674,7 @@ const App: React.FC = () => {
               viewMode,
               setViewMode,
               viewColumns,
-              setViewColumns,
+              setViewColumns: setViewColumns as any,
               setIsCalendarSettingsOpen,
               departments,
               effectiveProfile,
@@ -712,15 +712,15 @@ const App: React.FC = () => {
               setIsSearchFieldDropdownOpen,
               teachersBySubject,
               studentSortBy,
-              setStudentSortBy,
+              setStudentSortBy: setStudentSortBy as any,
             } : undefined}
             timetableProps={appMode === 'timetable' ? {
-              timetableSubject,
-              setTimetableSubject,
+              timetableSubject: timetableSubject as any,
+              setTimetableSubject: setTimetableSubject as any,
               timetableViewType,
-              setTimetableViewType,
+              setTimetableViewType: setTimetableViewType as any,
               mathViewMode,
-              setMathViewMode,
+              setMathViewMode: setMathViewMode as any,
               hasPermission,
               setIsTimetableSettingsOpen,
             } : undefined}
@@ -760,14 +760,14 @@ const App: React.FC = () => {
                   viewColumns,
                 } : undefined}
                 timetableProps={appMode === 'timetable' ? {
-                  timetableSubject,
-                  setTimetableSubject,
+                  timetableSubject: timetableSubject as any,
+                  setTimetableSubject: setTimetableSubject as any,
                   timetableViewType,
-                  setTimetableViewType,
+                  setTimetableViewType: setTimetableViewType as any,
                   teachers,
                   classKeywords,
                   mathViewMode,
-                  setMathViewMode,
+                  setMathViewMode: setMathViewMode as any,
                 } : undefined}
                 ganttProps={appMode === 'gantt' ? {
                   usersFromStaff,
@@ -798,7 +798,7 @@ const App: React.FC = () => {
                   gradesSubjectFilter,
                   gradesSearchQuery,
                   setGradesSearchQuery,
-                  setGradesSubjectFilter,
+                  setGradesSubjectFilter: setGradesSubjectFilter as any,
                 } : undefined}
               />
 
@@ -827,7 +827,7 @@ const App: React.FC = () => {
         <ModalManager
           isGlobalSearchOpen={isGlobalSearchOpen}
           setIsGlobalSearchOpen={setIsGlobalSearchOpen}
-          handleGlobalSearch={handleGlobalSearch}
+          handleGlobalSearch={handleGlobalSearch as any}
           handleSearchSelect={handleSearchSelect}
           isLoginModalOpen={isLoginModalOpen}
           setIsLoginModalOpen={setIsLoginModalOpen}
@@ -884,7 +884,7 @@ const App: React.FC = () => {
           memoMessage={memoMessage}
           setMemoMessage={setMemoMessage}
           handleSendMemo={handleSendMemo}
-          formatUserDisplay={formatUserDisplay}
+          formatUserDisplay={formatUserDisplay as any}
           selectedMemo={selectedMemo}
           setSelectedMemo={setSelectedMemo}
           handleMarkMemoRead={handleMarkMemoRead}

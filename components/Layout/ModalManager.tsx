@@ -11,7 +11,7 @@ import { PendingApprovalOverlay } from '../Auth/PendingApprovalOverlay';
 
 // Lazy loaded modals
 const EventModal = React.lazy(() => import('../Calendar/EventModal'));
-const SettingsModal = React.lazy(() => import('../settings/SettingsModal'));
+const SettingsModal = React.lazy(() => import('../Settings/SettingsModal'));
 const TimetableSettingsModal = React.lazy(() => import('../Timetable/TimetableSettingsModal'));
 const CalendarSettingsModal = React.lazy(() => import('../Calendar/CalendarSettingsModal'));
 
@@ -19,7 +19,7 @@ interface ModalManagerProps {
   // Global Search
   isGlobalSearchOpen: boolean;
   setIsGlobalSearchOpen: (open: boolean) => void;
-  handleGlobalSearch: (query: string) => any[];
+  handleGlobalSearch: (query: string) => any;
   handleSearchSelect: (result: any) => void;
 
   // Login
@@ -94,7 +94,7 @@ interface ModalManagerProps {
   memoMessage: string;
   setMemoMessage: (message: string) => void;
   handleSendMemo: () => void;
-  formatUserDisplay: (uid: string) => string;
+  formatUserDisplay: (u: any) => string;
 
   // Memo Detail
   selectedMemo: any;
