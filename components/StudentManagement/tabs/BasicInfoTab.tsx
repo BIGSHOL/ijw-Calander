@@ -75,7 +75,7 @@ const InputField = ({
         className="flex-1 px-2 py-0.5 text-xs border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent"
       />
     ) : (
-      <span className="flex-1 text-xs text-primary">{value || '-'}</span>
+      <span className="flex-1 text-xs text-primary">{type === 'date' && typeof value === 'string' && value.length > 10 ? value.slice(0, 10) : (value || '-')}</span>
     )}
   </div>
 );

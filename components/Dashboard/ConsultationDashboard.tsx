@@ -243,7 +243,7 @@ const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
               </div>
             </div>
           </div>
-          <div className="h-[260px]">
+          <div className="h-[260px]" style={{ minWidth: 0 }}>
             <CounselingOverview data={stats.dailyStats} loading={loading} minimal />
           </div>
         </div>

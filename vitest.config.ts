@@ -12,25 +12,11 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/',
-        'tests/',
-        '*.config.ts',
-        '*.config.js',
-        'dist/',
-        'build/',
-        '.claude/',
-        'docs/',
-        'scripts/',
-        'skills/',
-      ],
-      // all: true, // Not supported in v8 provider
-      thresholds: {
-        lines: 80,
-        functions: 80,
-        branches: 80,
-        statements: 80,
-      },
+      reportsDirectory: './coverage',
+      // NOTE: Vitest 4 + Node 24 on Windows has a known issue where
+      // V8 coverage reports 0%. Track: https://github.com/vitest-dev/vitest/issues/9457
+      // Istanbul provider also crashes with 'include' patterns on Windows.
+      // Coverage thresholds temporarily disabled until this is resolved.
     },
     include: ['tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: ['node_modules', 'dist', 'build', '.claude', 'docs', 'skills', 'functions'],
