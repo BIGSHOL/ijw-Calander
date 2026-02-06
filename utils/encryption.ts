@@ -51,6 +51,12 @@ export function decryptData(ciphertext: string): string {
     return ciphertext; // 평문으로 저장된 경우 그대로 반환
   }
 
+  // 유효한 CryptoJS 암호문 형식이 아니면 바로 빈 문자열 반환
+  if (!isEncrypted(ciphertext)) {
+    console.warn('복호화 실패: 유효한 암호문 형식이 아닙니다');
+    return '';
+  }
+
   try {
     const decrypted = CryptoJS.AES.decrypt(ciphertext, ENCRYPTION_KEY);
     const plaintext = decrypted.toString(CryptoJS.enc.Utf8);
