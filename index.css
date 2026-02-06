@@ -452,3 +452,49 @@ tbody tr {
 .heavy-component {
   contain: strict;
 }
+
+/* ==================== PRINT STYLES ==================== */
+/* 도움말 탭 인쇄/PDF 출력용 */
+@media print {
+  html, body {
+    min-width: auto !important;
+    overflow: visible !important;
+    height: auto !important;
+    font-size: 12pt;
+  }
+
+  #root {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* 사이드바, 네비게이션 숨김 */
+  nav, header, .sidebar,
+  [class*="print:hidden"] {
+    display: none !important;
+  }
+
+  /* 콘텐츠 영역 전체 폭 */
+  main, .print-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 16px !important;
+    overflow: visible !important;
+  }
+
+  /* 페이지 나누기 */
+  .break-before-page {
+    page-break-before: always;
+  }
+
+  /* 링크 URL 표시 안 함 (깔끔한 출력) */
+  a[href]::after {
+    content: none !important;
+  }
+
+  /* 배경색/그림자 제거 */
+  * {
+    box-shadow: none !important;
+  }
+}

@@ -18,7 +18,7 @@ export interface ReportSummary {
 // ============ SYSTEM TAB PERMISSIONS ============
 
 // Top-level Application Tabs
-export type AppTab = 'dashboard' | 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'classroom' | 'classroom-assignment' | 'student-consultations' | 'staff' | 'daily-attendance' | 'billing' | 'role-management' | 'resources' | 'withdrawal';
+export type AppTab = 'dashboard' | 'calendar' | 'timetable' | 'payment' | 'gantt' | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes' | 'classroom' | 'classroom-assignment' | 'student-consultations' | 'staff' | 'daily-attendance' | 'billing' | 'role-management' | 'resources' | 'withdrawal' | 'help';
 
 // Tab Metadata - 각 탭의 메타정보 (확장 가능)
 export interface TabMetadata {
@@ -47,6 +47,7 @@ export const TAB_META: Record<AppTab, Omit<TabMetadata, 'id'>> = {
   'role-management': { label: '역할 관리', icon: '🔐' },
   resources: { label: '자료실', icon: '📁' },
   withdrawal: { label: '퇴원 관리', icon: '🚪' },
+  help: { label: '도움말', icon: '❓' },
 };
 
 // Tab Group 구조 - 무한 확장 가능
@@ -102,6 +103,13 @@ export const TAB_GROUPS: TabGroup[] = [
     tabs: ['role-management'],
     order: 5,
   },
+  {
+    id: 'support',
+    label: '지원',
+    icon: '❓',
+    tabs: ['help'],
+    order: 6,
+  },
 ];
 
 // Legacy support - 기존 코드 호환성
@@ -119,14 +127,14 @@ export type TabPermissionConfig = {
 // Default Tab Permissions (Fallback)
 // Note: master always has access to all tabs (handled in code)
 export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
-  master: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations', 'staff', 'billing', 'role-management', 'resources', 'withdrawal'],
-  admin: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations', 'staff', 'billing', 'role-management', 'resources', 'withdrawal'],
-  manager: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations', 'staff', 'billing', 'resources', 'withdrawal'],
-  math_lead: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations', 'withdrawal'],
-  english_lead: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations', 'withdrawal'],
-  math_teacher: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades'],
-  english_teacher: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades'],
-  user: ['dashboard', 'calendar', 'attendance', 'daily-attendance'],
+  master: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations', 'staff', 'billing', 'role-management', 'resources', 'withdrawal', 'help'],
+  admin: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations', 'staff', 'billing', 'role-management', 'resources', 'withdrawal', 'help'],
+  manager: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations', 'staff', 'billing', 'resources', 'withdrawal', 'help'],
+  math_lead: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations', 'withdrawal', 'help'],
+  english_lead: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment', 'student-consultations', 'withdrawal', 'help'],
+  math_teacher: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'help'],
+  english_teacher: ['dashboard', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'consultation', 'students', 'grades', 'help'],
+  user: ['dashboard', 'calendar', 'attendance', 'daily-attendance', 'help'],
 };
 
 export interface SystemConfig {

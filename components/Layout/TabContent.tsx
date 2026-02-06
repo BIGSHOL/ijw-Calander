@@ -24,6 +24,7 @@ const StaffManager = React.lazy(() => import('../Staff').then(m => ({ default: m
 const RoleManagementPage = React.lazy(() => import('../RoleManagement/RoleManagementPage'));
 const ResourceDashboard = React.lazy(() => import('../Resources').then(m => ({ default: m.ResourceDashboard })));
 const WithdrawalManagementTab = React.lazy(() => import('../WithdrawalManagement/WithdrawalManagementTab'));
+const HelpTab = React.lazy(() => import('../Help/HelpTab'));
 
 // Loading fallback
 const TabLoadingFallback = () => <VideoLoading className="flex-1 h-full" />;
@@ -359,6 +360,12 @@ export const TabContent: React.FC<TabContentProps> = ({
         <Suspense fallback={<TabLoadingFallback />}>
           <div className="w-full flex-1 overflow-auto">
             <WithdrawalManagementTab currentUser={effectiveProfile} />
+          </div>
+        </Suspense>
+      ) : appMode === 'help' ? (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <div className="w-full flex-1 overflow-hidden">
+            <HelpTab currentUser={effectiveProfile} />
           </div>
         </Suspense>
       ) : null}
