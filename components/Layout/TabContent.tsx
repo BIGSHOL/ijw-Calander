@@ -158,7 +158,7 @@ export const TabContent: React.FC<TabContentProps> = ({
                 onTimeSlotClick={calendarProps.handleTimeSlotClick}
                 onEventClick={calendarProps.handleEventClick}
                 holidays={calendarProps.holidays}
-                viewMode={calendarProps.viewMode}
+                viewMode={calendarProps.viewMode as any}
                 currentUser={effectiveProfile}
                 onEventMove={calendarProps.handleEventMove}
                 canEditDepartment={calendarProps.canEditDepartment}
@@ -187,7 +187,7 @@ export const TabContent: React.FC<TabContentProps> = ({
                 onTimeSlotClick={calendarProps.handleTimeSlotClick}
                 onEventClick={calendarProps.handleEventClick}
                 holidays={calendarProps.holidays}
-                viewMode={calendarProps.viewMode}
+                viewMode={calendarProps.viewMode as any}
                 onEventMove={calendarProps.handleEventMove}
                 canEditDepartment={calendarProps.canEditDepartment}
                 pendingEventIds={calendarProps.pendingEventIds}
@@ -211,7 +211,7 @@ export const TabContent: React.FC<TabContentProps> = ({
                 onTimeSlotClick={calendarProps.handleTimeSlotClick}
                 onEventClick={calendarProps.handleEventClick}
                 holidays={calendarProps.holidays}
-                viewMode={calendarProps.viewMode}
+                viewMode={calendarProps.viewMode as any}
                 onEventMove={calendarProps.handleEventMove}
                 canEditDepartment={calendarProps.canEditDepartment}
                 pendingEventIds={calendarProps.pendingEventIds}
@@ -230,12 +230,12 @@ export const TabContent: React.FC<TabContentProps> = ({
             <TimetableManager
               subjectTab={timetableProps.timetableSubject}
               onSubjectChange={timetableProps.setTimetableSubject}
-              viewType={timetableProps.timetableViewType}
+              viewType={timetableProps.timetableViewType as any}
               onViewTypeChange={timetableProps.setTimetableViewType}
               currentUser={effectiveProfile}
               teachers={timetableProps.teachers}
               classKeywords={timetableProps.classKeywords}
-              mathViewMode={timetableProps.mathViewMode}
+              mathViewMode={timetableProps.mathViewMode as any}
               onMathViewModeChange={timetableProps.setMathViewMode}
             />
           </div>
@@ -282,7 +282,7 @@ export const TabContent: React.FC<TabContentProps> = ({
           <div className="w-full flex-1 min-h-0 overflow-hidden">
             <StudentManagementTab
               filters={studentsProps.studentFilters}
-              sortBy={studentsProps.studentSortBy}
+              sortBy={studentsProps.studentSortBy as any}
               currentUser={effectiveProfile}
               initialSelectedStudentId={studentsProps.consultationToStudentId}
               onStudentSelected={() => studentsProps.setConsultationToStudentId(undefined)}
@@ -293,7 +293,7 @@ export const TabContent: React.FC<TabContentProps> = ({
         <Suspense fallback={<TabLoadingFallback />}>
           <div className="w-full flex-1 overflow-auto">
             <GradesManager
-              subjectFilter={gradesProps.gradesSubjectFilter}
+              subjectFilter={gradesProps.gradesSubjectFilter as any}
               searchQuery={gradesProps.gradesSearchQuery}
               onSearchChange={gradesProps.setGradesSearchQuery}
               onSubjectFilterChange={gradesProps.setGradesSubjectFilter}

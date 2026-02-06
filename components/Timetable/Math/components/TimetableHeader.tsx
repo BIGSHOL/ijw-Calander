@@ -190,7 +190,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
         };
 
         // 학생 상태에 따라 type 결정
-        const isWithdrawn = student.status === 'withdrawn' || student.status === 'inactive';
+        const isWithdrawn = student.status === 'withdrawn';
         let entry: WithdrawalEntry;
 
         if (isWithdrawn) {

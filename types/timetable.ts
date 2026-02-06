@@ -44,8 +44,10 @@ export interface TimetableStudent {
   grade?: string;       // 학년
   school?: string;      // 학교
   underline?: boolean;  // 밑줄 표시 여부
+  startDate?: string; // 시작일 (YYYY-MM-DD)
   enrollmentDate?: string; // 신입생 등록일 (YYYY-MM-DD)
   withdrawalDate?: string; // 퇴원일 (YYYY-MM-DD)
+  endDate?: string; // 종료일 (YYYY-MM-DD)
   onHold?: boolean; // 대기생 여부
   isMoved?: boolean; // 반이동 학생 여부
   isScheduled?: boolean; // 배정 예정 (미래 시작일)

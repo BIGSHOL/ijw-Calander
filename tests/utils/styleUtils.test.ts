@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest';
 import {
   SUBJECT_COLORS,
   SUBJECT_LABELS,
@@ -80,49 +79,49 @@ describe('styleUtils', () => {
 
   describe('getJobTitleStyle', () => {
     it('원장/대표는 앰버 스타일을 반환해야 함', () => {
-      expect(getJobTitleStyle('원장')).toContain('bg-amber-100');
-      expect(getJobTitleStyle('대표')).toContain('bg-amber-100');
-      expect(getJobTitleStyle('원장님')).toContain('text-amber-700');
+      expect(getJobTitleStyle('원장')).toBe('bg-amber-600 text-white');
+      expect(getJobTitleStyle('대표')).toBe('bg-amber-600 text-white');
+      expect(getJobTitleStyle('원장님')).toBe('bg-amber-600 text-white');
     });
 
     it('이사는 보라색 스타일을 반환해야 함', () => {
-      expect(getJobTitleStyle('이사')).toContain('bg-purple-100');
-      expect(getJobTitleStyle('이사님')).toContain('text-purple-700');
+      expect(getJobTitleStyle('이사')).toBe('bg-purple-600 text-white');
+      expect(getJobTitleStyle('이사님')).toBe('bg-purple-600 text-white');
     });
 
     it('부장은 인디고 스타일을 반환해야 함', () => {
-      expect(getJobTitleStyle('부장')).toContain('bg-indigo-100');
-      expect(getJobTitleStyle('영어부장')).toContain('text-indigo-700');
+      expect(getJobTitleStyle('부장')).toBe('bg-indigo-600 text-white');
+      expect(getJobTitleStyle('영어부장')).toBe('bg-indigo-600 text-white');
     });
 
     it('실장/팀장은 파란색 스타일을 반환해야 함', () => {
-      expect(getJobTitleStyle('실장')).toContain('bg-blue-100');
-      expect(getJobTitleStyle('팀장')).toContain('bg-blue-100');
-      expect(getJobTitleStyle('관리팀장')).toContain('text-blue-700');
+      expect(getJobTitleStyle('실장')).toBe('bg-blue-600 text-white');
+      expect(getJobTitleStyle('팀장')).toBe('bg-blue-600 text-white');
+      expect(getJobTitleStyle('관리팀장')).toBe('bg-blue-600 text-white');
     });
 
     it('대리는 녹색 스타일을 반환해야 함', () => {
-      expect(getJobTitleStyle('대리')).toContain('bg-green-100');
-      expect(getJobTitleStyle('영업대리')).toContain('text-green-700');
+      expect(getJobTitleStyle('대리')).toBe('bg-green-600 text-white');
+      expect(getJobTitleStyle('영업대리')).toBe('bg-green-600 text-white');
     });
 
     it('강사는 핑크 스타일을 반환해야 함', () => {
-      expect(getJobTitleStyle('강사')).toContain('bg-pink-100');
-      expect(getJobTitleStyle('수학강사')).toContain('text-pink-700');
+      expect(getJobTitleStyle('강사')).toBe('bg-pink-600 text-white');
+      expect(getJobTitleStyle('수학강사')).toBe('bg-pink-600 text-white');
     });
 
     it('기타 직책은 회색 스타일을 반환해야 함', () => {
-      expect(getJobTitleStyle('사원')).toContain('bg-gray-100');
-      expect(getJobTitleStyle('인턴')).toContain('text-gray-600');
-      expect(getJobTitleStyle('')).toContain('bg-gray-100');
-      expect(getJobTitleStyle()).toContain('bg-gray-100');
+      expect(getJobTitleStyle('사원')).toBe('bg-gray-500 text-white');
+      expect(getJobTitleStyle('인턴')).toBe('bg-gray-500 text-white');
+      expect(getJobTitleStyle('')).toBe('bg-gray-500 text-white');
+      expect(getJobTitleStyle()).toBe('bg-gray-500 text-white');
     });
 
     it('여러 키워드가 포함된 경우 우선순위가 적용되어야 함', () => {
       // 원장 > 부장
-      expect(getJobTitleStyle('원장부장')).toContain('bg-amber-100');
+      expect(getJobTitleStyle('원장부장')).toBe('bg-amber-600 text-white');
       // 이사 > 대리
-      expect(getJobTitleStyle('이사대리')).toContain('bg-purple-100');
+      expect(getJobTitleStyle('이사대리')).toBe('bg-purple-600 text-white');
     });
   });
 });

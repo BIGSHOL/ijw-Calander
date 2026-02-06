@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest';
 import { normalizeGanttSubTask, normalizeGanttTasks } from '../../utils/ganttHelpers';
 
 describe('ganttHelpers', () => {
@@ -123,12 +122,9 @@ describe('ganttHelpers', () => {
     });
 
     it('배열이 아닌 입력은 빈 배열을 반환해야 함', () => {
-      // @ts-expect-error - 테스트를 위한 잘못된 타입
-      expect(normalizeGanttTasks(null)).toEqual([]);
-      // @ts-expect-error - 테스트를 위한 잘못된 타입
-      expect(normalizeGanttTasks(undefined)).toEqual([]);
-      // @ts-expect-error - 테스트를 위한 잘못된 타입
-      expect(normalizeGanttTasks('not an array')).toEqual([]);
+      expect(normalizeGanttTasks(null as any)).toEqual([]);
+      expect(normalizeGanttTasks(undefined as any)).toEqual([]);
+      expect(normalizeGanttTasks('not an array' as any)).toEqual([]);
     });
 
     it('각 작업을 개별적으로 정규화해야 함', () => {

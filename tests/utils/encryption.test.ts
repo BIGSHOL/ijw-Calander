@@ -1,4 +1,3 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   encryptData,
   decryptData,
@@ -38,10 +37,8 @@ describe('encryption', () => {
     });
 
     it('null이나 undefined 유형은 false를 반환해야 함', () => {
-      // @ts-expect-error - 테스트를 위한 잘못된 타입
-      expect(isEncrypted(null)).toBe(false);
-      // @ts-expect-error - 테스트를 위한 잘못된 타입
-      expect(isEncrypted(undefined)).toBe(false);
+      expect(isEncrypted(null as any)).toBe(false);
+      expect(isEncrypted(undefined as any)).toBe(false);
     });
   });
 
@@ -103,8 +100,7 @@ describe('encryption', () => {
     it('빈 전화번호는 null을 반환해야 함', () => {
       expect(encryptPhone('')).toBeNull();
       expect(encryptPhone('   ')).toBeNull();
-      // @ts-expect-error - 테스트를 위한 잘못된 타입
-      expect(encryptPhone(null)).toBeNull();
+      expect(encryptPhone(null as any)).toBeNull();
     });
 
     it('하이픈을 제거하고 암호화해야 함', () => {

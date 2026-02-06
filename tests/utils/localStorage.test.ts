@@ -1,4 +1,3 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { STORAGE_KEYS, storage } from '../../utils/localStorage';
 
 describe('localStorage', () => {

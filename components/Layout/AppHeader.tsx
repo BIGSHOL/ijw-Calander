@@ -272,7 +272,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           visibleDepartments={calendarFilterProps.visibleDepartments}
           viewMode={calendarFilterProps.viewMode}
           setViewMode={calendarFilterProps.setViewMode}
-          viewColumns={calendarFilterProps.viewColumns}
+          viewColumns={calendarFilterProps.viewColumns as 1 | 2 | 3}
           setViewColumns={calendarFilterProps.setViewColumns}
           setIsCalendarSettingsOpen={calendarFilterProps.setIsCalendarSettingsOpen}
         />
@@ -307,7 +307,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           isSearchFieldDropdownOpen={studentsProps.isSearchFieldDropdownOpen}
           setIsSearchFieldDropdownOpen={studentsProps.setIsSearchFieldDropdownOpen}
           teachersBySubject={studentsProps.teachersBySubject}
-          studentSortBy={studentsProps.studentSortBy}
+          studentSortBy={studentsProps.studentSortBy as any}
           setStudentSortBy={studentsProps.setStudentSortBy}
         />
       )}
@@ -337,9 +337,9 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         <TimetableNavBar
           timetableSubject={timetableProps.timetableSubject}
           setTimetableSubject={timetableProps.setTimetableSubject}
-          timetableViewType={timetableProps.timetableViewType}
-          setTimetableViewType={timetableProps.setTimetableViewType}
-          mathViewMode={timetableProps.mathViewMode}
+          timetableViewType={timetableProps.timetableViewType as any}
+          setTimetableViewType={timetableProps.setTimetableViewType as any}
+          mathViewMode={timetableProps.mathViewMode as any}
           setMathViewMode={timetableProps.setMathViewMode}
           hasPermission={timetableProps.hasPermission}
           setIsTimetableSettingsOpen={timetableProps.setIsTimetableSettingsOpen}
