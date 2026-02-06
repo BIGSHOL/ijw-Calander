@@ -9,18 +9,20 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, query, where, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import {
-  Plus, Trash2, X, BookOpen, BarChart3, Search, Loader2, Lock
+  Plus, Trash2, X, BookOpen, BarChart3, Search, Loader2, Lock, Zap, ClipboardList
 } from 'lucide-react';
 import GradesTab from '../StudentManagement/tabs/GradesTab';
 import { TabSubNavigation } from '../Common/TabSubNavigation';
 import { TabButton } from '../Common/TabButton';
 import { useExamScores } from './hooks/useExamScores';
+import { useAllLevelTests } from '../../hooks/useGradeProfile';
+import { LevelTest } from '../../types';
 import ExamCreateModal from './ExamCreateModal';
 import ScoreInputView from './ScoreInputView';
 import ExamListView from './ExamListView';
 import { calculateGrade } from '../../types';
 
-type ViewMode = 'exams' | 'students' | 'input';
+type ViewMode = 'exams' | 'students' | 'input' | 'levelTests';
 
 interface GradesManagerProps {
   subjectFilter: 'all' | 'math' | 'english';
@@ -51,6 +53,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
   const { students } = useStudents();
   const { data: exams = [], isLoading: loadingExams, refetch: refetchExams } = useExams();
   const { data: examScores = [], isLoading: loadingScores } = useExamScores(selectedExam?.id || expandedExamId || '');
+  const { data: allLevelTests = [], isLoading: loadingLevelTests } = useAllLevelTests(subjectFilter);
 
   // Mutations
   const createExam = useCreateExam();
@@ -127,6 +130,15 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
 
     return result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [exams, subjectFilter, searchQuery]);
+
+  // 레벨테스트 검색 필터
+  const filteredLevelTests = useMemo(() => {
+    if (!searchQuery) return allLevelTests;
+    const q = searchQuery.toLowerCase();
+    return allLevelTests.filter(t =>
+      (t.studentName || '').toLowerCase().includes(q)
+    );
+  }, [allLevelTests, searchQuery]);
 
   // 새 시험 생성 핸들러
   const [newExam, setNewExam] = useState({
@@ -463,6 +475,29 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
       <TabSubNavigation variant="compact" className="px-6 py-2 border-b border-white/10">
         <div className="flex flex-wrap items-center justify-between gap-3 w-full">
           <div className="flex flex-wrap items-center gap-3">
+            {/* 뷰 토글: 시험 / 레벨테스트 */}
+            <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm">
+              <TabButton
+                active={viewMode !== 'levelTests'}
+                onClick={() => setViewMode('exams')}
+                icon={<ClipboardList className="w-4 h-4" />}
+                className="px-3 py-1"
+              >
+                시험
+              </TabButton>
+              <TabButton
+                active={viewMode === 'levelTests'}
+                onClick={() => setViewMode('levelTests')}
+                icon={<Zap className="w-4 h-4" />}
+                className="px-3 py-1"
+              >
+                레벨테스트
+              </TabButton>
+            </div>
+
+            {/* 구분선 */}
+            <div className="w-px h-4 bg-white/20"></div>
+
             {/* 과목 토글 */}
             <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm">
               <TabButton
@@ -499,7 +534,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
                 type="text"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="시험명 검색..."
+                placeholder={viewMode === 'levelTests' ? '학생명 검색...' : '시험명 검색...'}
                 className="bg-[#1e293b] border border-gray-700 rounded-sm pl-8 pr-3 py-1 text-xs text-white placeholder-gray-500 focus:border-accent focus:ring-1 focus:ring-accent outline-none w-48"
               />
             </div>
@@ -507,35 +542,45 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
 
           {/* 우측: 결과 카운트, 버튼들 */}
           <div className="flex items-center gap-2">
-            <span className="text-gray-400 text-xs">
-              총 <span className="text-accent font-bold">{filteredExams.length}</span>개 시험
-            </span>
-
-            {/* 통계 갱신 버튼 */}
-            <button
-              onClick={handleMigrateStats}
-              disabled={isMigrating}
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-white/10 text-gray-300 rounded hover:bg-white/20 transition-colors border border-white/20 font-bold"
-              title="DB 최적화: 통계 재계산"
-            >
-              {isMigrating ? <Loader2 className="w-3 h-3 animate-spin" /> : <BarChart3 className="w-3 h-3" />}
-              <span>통계 갱신</span>
-            </button>
-
-            {/* 새 시험 등록 버튼 */}
-            {canManageExams ? (
-              <button
-                onClick={() => setIsCreatingExam(true)}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-sm bg-accent text-primary hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
-              >
-                <Plus size={14} />
-                <span>시험 등록</span>
-              </button>
-            ) : (
-              <span className="flex items-center gap-1 px-3 py-1 text-xs text-gray-400" title="시험 관리 권한이 필요합니다">
-                <Lock size={12} />
-                시험 등록
+            {viewMode === 'levelTests' ? (
+              <span className="text-gray-400 text-xs">
+                총 <span className="text-accent font-bold">{filteredLevelTests.length}</span>개 레벨테스트
               </span>
+            ) : (
+              <span className="text-gray-400 text-xs">
+                총 <span className="text-accent font-bold">{filteredExams.length}</span>개 시험
+              </span>
+            )}
+
+            {viewMode !== 'levelTests' && (
+              <>
+                {/* 통계 갱신 버튼 */}
+                <button
+                  onClick={handleMigrateStats}
+                  disabled={isMigrating}
+                  className="flex items-center gap-1 px-2 py-1 text-xs bg-white/10 text-gray-300 rounded hover:bg-white/20 transition-colors border border-white/20 font-bold"
+                  title="DB 최적화: 통계 재계산"
+                >
+                  {isMigrating ? <Loader2 className="w-3 h-3 animate-spin" /> : <BarChart3 className="w-3 h-3" />}
+                  <span>통계 갱신</span>
+                </button>
+
+                {/* 새 시험 등록 버튼 */}
+                {canManageExams ? (
+                  <button
+                    onClick={() => setIsCreatingExam(true)}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-sm bg-accent text-primary hover:bg-[#e5a60f] transition-colors shadow-sm font-bold"
+                  >
+                    <Plus size={14} />
+                    <span>시험 등록</span>
+                  </button>
+                ) : (
+                  <span className="flex items-center gap-1 px-3 py-1 text-xs text-gray-400" title="시험 관리 권한이 필요합니다">
+                    <Lock size={12} />
+                    시험 등록
+                  </span>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -543,7 +588,15 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto p-4">
-        {viewMode === 'input' && selectedExam ? (
+        {viewMode === 'levelTests' ? (
+          /* 레벨테스트 모아보기 */
+          <LevelTestListView
+            levelTests={filteredLevelTests}
+            loading={loadingLevelTests}
+            students={students}
+            onViewStudentDetail={setSelectedStudentForDetail}
+          />
+        ) : viewMode === 'input' && selectedExam ? (
           <ScoreInputView
             selectedExam={selectedExam}
             onCancel={() => { setViewMode('exams'); setSelectedExam(null); }}
@@ -625,6 +678,195 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+// ============ 레벨테스트 모아보기 컴포넌트 ============
+
+interface LevelTestListViewProps {
+  levelTests: LevelTest[];
+  loading: boolean;
+  students: UnifiedStudent[];
+  onViewStudentDetail: (student: UnifiedStudent) => void;
+}
+
+const LevelTestListView: React.FC<LevelTestListViewProps> = ({ levelTests, loading, students, onViewStudentDetail }) => {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-accent mr-2" />
+        <span className="text-gray-500 text-sm">레벨테스트 로딩 중...</span>
+      </div>
+    );
+  }
+
+  if (levelTests.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+        <Zap size={40} className="mb-3 opacity-30" />
+        <p className="text-sm font-medium">등록된 레벨테스트가 없습니다</p>
+        <p className="text-xs mt-1">학생관리 &gt; 성적탭에서 레벨테스트를 추가할 수 있습니다</p>
+      </div>
+    );
+  }
+
+  // 날짜별 그룹핑
+  const groupedByDate = levelTests.reduce<Record<string, LevelTest[]>>((acc, test) => {
+    const date = test.testDate || '날짜 없음';
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(test);
+    return acc;
+  }, {});
+
+  const handleClickStudent = (test: LevelTest) => {
+    const student = students.find(s => s.id === test.studentId);
+    if (student) onViewStudentDetail(student);
+  };
+
+  return (
+    <div className="space-y-4">
+      {Object.entries(groupedByDate).map(([date, tests]) => (
+        <div key={date} className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+          {/* 날짜 헤더 */}
+          <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-primary">{date}</span>
+              <span className="text-xs text-gray-400">({tests.length}건)</span>
+            </div>
+          </div>
+
+          {/* 테이블 */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/50">
+                  <th className="text-left px-3 py-2 font-medium text-gray-500 w-24">학생</th>
+                  <th className="text-center px-2 py-2 font-medium text-gray-500 w-16">과목</th>
+                  <th className="text-center px-2 py-2 font-medium text-gray-500 w-16">유형</th>
+                  <th className="text-left px-2 py-2 font-medium text-gray-500">세부 결과</th>
+                  <th className="text-center px-2 py-2 font-medium text-gray-500 w-20">레벨</th>
+                  <th className="text-center px-2 py-2 font-medium text-gray-500 w-16">평가자</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tests.map((test) => {
+                  const isMath = test.subject === 'math';
+                  const hasMathDetail = isMath && (test.calculationScore || test.myTotalScore);
+                  const hasEngDetail = !isMath && test.englishTestType;
+                  const engTestLabel = test.englishTestType === 'ai' ? 'AI' : test.englishTestType === 'nelt' ? 'NELT' : test.englishTestType === 'eie' ? 'EiE' : '';
+                  const testTypeLabel = test.testType === 'placement' ? '배치' : test.testType === 'promotion' ? '승급' : '진단';
+
+                  return (
+                    <tr
+                      key={test.id}
+                      className="border-b border-gray-50 hover:bg-accent/5 transition-colors cursor-pointer"
+                      onClick={() => handleClickStudent(test)}
+                    >
+                      {/* 학생명 */}
+                      <td className="px-3 py-2">
+                        <span className="font-medium text-primary hover:text-accent transition-colors">
+                          {test.studentName}
+                        </span>
+                      </td>
+
+                      {/* 과목 */}
+                      <td className="px-2 py-2 text-center">
+                        <span className={`inline-block px-1.5 py-0.5 rounded-sm text-micro font-medium ${isMath ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {isMath ? '수학' : '영어'}
+                        </span>
+                        {hasEngDetail && (
+                          <span className="ml-1 inline-block px-1 py-0.5 rounded-sm text-micro font-medium bg-indigo-100 text-indigo-700">
+                            {engTestLabel}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* 유형 */}
+                      <td className="px-2 py-2 text-center">
+                        <span className="text-gray-600">{testTypeLabel}</span>
+                      </td>
+
+                      {/* 세부 결과 */}
+                      <td className="px-2 py-2">
+                        {hasMathDetail ? (
+                          <div className="flex items-center gap-2">
+                            <div className="flex gap-1">
+                              {[
+                                { label: '계산', val: test.calculationScore },
+                                { label: '이해', val: test.comprehensionScore },
+                                { label: '추론', val: test.reasoningScore },
+                                { label: '문해', val: test.problemSolvingScore },
+                              ].filter(i => i.val).map(item => (
+                                <span key={item.label} className="px-1 py-0.5 bg-emerald-50 text-emerald-700 rounded text-micro">
+                                  {item.label}:{item.val}
+                                </span>
+                              ))}
+                            </div>
+                            {test.myTotalScore && (
+                              <span className="text-gray-600">
+                                내점수:<b>{test.myTotalScore}</b>
+                                {test.averageScore && <> 평균:{test.averageScore}</>}
+                                {test.scoreGrade && <> 등급:{test.scoreGrade}</>}
+                              </span>
+                            )}
+                          </div>
+                        ) : hasEngDetail ? (
+                          <div className="flex items-center gap-2">
+                            {test.englishTestType === 'ai' && (
+                              <span className="text-gray-600">
+                                {test.engAiGradeLevel && `${test.engAiGradeLevel}수준`}
+                                {test.engAiArIndex && ` AR:${test.engAiArIndex}`}
+                                {test.engAiTopPercent && ` 상위${test.engAiTopPercent}`}
+                              </span>
+                            )}
+                            {test.englishTestType === 'nelt' && (
+                              <span className="text-gray-600">
+                                {test.engNeltOverallLevel && `레벨:${test.engNeltOverallLevel}`}
+                                {test.engNeltRank && ` 석차:${test.engNeltRank}`}
+                                {test.engNeltVocab && ` 어휘:${test.engNeltVocab}`}
+                              </span>
+                            )}
+                            {test.englishTestType === 'eie' && (
+                              <span className="text-gray-600">
+                                {test.engEieGradeLevel && `${test.engEieGradeLevel}수준`}
+                                {test.engEieRank && ` 순위:${test.engEieRank}`}
+                                {test.engEieCourse && ` 과정:${test.engEieCourse}`}
+                              </span>
+                            )}
+                          </div>
+                        ) : test.percentage != null ? (
+                          <span className="font-bold text-primary">{test.percentage.toFixed(0)}%</span>
+                        ) : (
+                          <span className="text-gray-300">-</span>
+                        )}
+                      </td>
+
+                      {/* 레벨 */}
+                      <td className="px-2 py-2 text-center">
+                        {test.engLevel ? (
+                          <span className="font-bold text-blue-700">Lv {test.engLevel}</span>
+                        ) : test.recommendedLevel ? (
+                          <span className="font-bold text-indigo-600">{test.recommendedLevel}</span>
+                        ) : test.scoreGrade ? (
+                          <span className="font-bold text-emerald-700">{test.scoreGrade}</span>
+                        ) : (
+                          <span className="text-gray-300">-</span>
+                        )}
+                      </td>
+
+                      {/* 평가자 */}
+                      <td className="px-2 py-2 text-center text-gray-500">
+                        {test.evaluatorName || '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
     </div>
   );
 };

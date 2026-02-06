@@ -967,10 +967,188 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                     </h3>
                                 </div>
                                 <div className="p-3 space-y-3">
-                                    <div>
-                                        <label className={labelClass}><ClipboardList size={12} className="inline mr-1" />레벨테스트 점수 ({c.label})</label>
-                                        <input type="text" value={consult.levelTestScore || ''} onChange={e => setConsult({ ...consult, levelTestScore: e.target.value })} className={inputClass} placeholder={`${c.label} 레벨 미실시`} {...viewProps} />
-                                    </div>
+                                    {subjectKey === 'math' ? (
+                                        <div>
+                                            <label className={labelClass}><ClipboardList size={12} className="inline mr-1" />레벨테스트 점수 (수학)</label>
+                                            <div className="border border-emerald-200 rounded overflow-hidden">
+                                                {/* 영역별 점수 행 */}
+                                                <div className="grid grid-cols-4 bg-emerald-50/70">
+                                                    {[
+                                                        { key: 'calculationScore' as const, label: '계산력' },
+                                                        { key: 'comprehensionScore' as const, label: '이해력' },
+                                                        { key: 'reasoningScore' as const, label: '추론력' },
+                                                        { key: 'problemSolvingScore' as const, label: '문제해결력' },
+                                                    ].map((item, i) => (
+                                                        <div key={item.key} className={`px-1.5 py-1.5 ${i < 3 ? 'border-r border-emerald-200' : ''}`}>
+                                                            <div className="text-[10px] font-semibold text-emerald-700 text-center mb-1">{item.label}</div>
+                                                            <input type="text" value={consult[item.key] || ''} onChange={e => setConsult({ ...consult, [item.key]: e.target.value })} className={`w-full px-1 py-1 text-sm text-center border border-emerald-200 rounded-sm bg-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-default' : ''}`} placeholder="-" {...viewProps} />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                {/* 종합 점수 행 */}
+                                                <div className="grid grid-cols-3 border-t border-emerald-200 bg-white">
+                                                    {[
+                                                        { key: 'myTotalScore' as const, label: '내 점수' },
+                                                        { key: 'averageScore' as const, label: '평균 점수' },
+                                                        { key: 'scoreGrade' as const, label: '등급' },
+                                                    ].map((item, i) => (
+                                                        <div key={item.key} className={`px-1.5 py-1.5 ${i < 2 ? 'border-r border-emerald-200' : ''}`}>
+                                                            <div className="text-[10px] font-medium text-slate-500 text-center mb-1">{item.label}</div>
+                                                            <input type="text" value={consult[item.key] || ''} onChange={e => setConsult({ ...consult, [item.key]: e.target.value })} className={`w-full px-1 py-1 text-sm text-center border border-slate-200 rounded-sm bg-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-default' : ''}`} placeholder="-" {...viewProps} />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : subjectKey === 'english' ? (
+                                        <div>
+                                            <label className={labelClass}><ClipboardList size={12} className="inline mr-1" />레벨테스트 (영어)</label>
+                                            {/* 시험 종류 선택 */}
+                                            <select
+                                                value={consult.englishTestType || ''}
+                                                onChange={e => setConsult({ ...consult, englishTestType: (e.target.value || undefined) as any })}
+                                                className={`${inputClass} mb-2`}
+                                                disabled={isViewMode}
+                                            >
+                                                <option value="">시험 종류 선택</option>
+                                                <option value="ai">AI 레벨테스트</option>
+                                                <option value="nelt">NELT Report</option>
+                                                <option value="eie">EiE PTR</option>
+                                            </select>
+
+                                            {/* AI 레벨테스트 */}
+                                            {consult.englishTestType === 'ai' && (
+                                                <div className="border border-blue-200 rounded overflow-hidden">
+                                                    <div className="grid grid-cols-4 bg-blue-50/70">
+                                                        {[
+                                                            { key: 'engLevel' as const, label: 'Lv' },
+                                                            { key: 'engAiGradeLevel' as const, label: '학년 수준' },
+                                                            { key: 'engAiArIndex' as const, label: 'AR 지수' },
+                                                            { key: 'engAiTopPercent' as const, label: '상위 %' },
+                                                        ].map((item, i) => (
+                                                            <div key={item.key} className={`px-1.5 py-1.5 ${i < 3 ? 'border-r border-blue-200' : ''}`}>
+                                                                <div className="text-[10px] font-semibold text-blue-700 text-center mb-1">{item.label}</div>
+                                                                <input type="text" value={consult[item.key] || ''} onChange={e => setConsult({ ...consult, [item.key]: e.target.value })} className={`w-full px-1 py-1 text-sm text-center border border-blue-200 rounded-sm bg-white outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-default' : ''}`} placeholder="-" {...viewProps} />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="border-t border-blue-200">
+                                                        <div className="grid grid-cols-[auto_1fr_1fr] text-[10px] font-semibold text-blue-700 bg-blue-50/50 border-b border-blue-100">
+                                                            <div className="px-2 py-1 w-14 text-center">영역</div>
+                                                            <div className="px-2 py-1 text-center border-l border-blue-100">나의 레벨</div>
+                                                            <div className="px-2 py-1 text-center border-l border-blue-100">회원평균</div>
+                                                        </div>
+                                                        {[
+                                                            { label: '단어', myKey: 'engAiWordMy' as const, avgKey: 'engAiWordAvg' as const },
+                                                            { label: '듣기', myKey: 'engAiListenMy' as const, avgKey: 'engAiListenAvg' as const },
+                                                            { label: '읽기', myKey: 'engAiReadMy' as const, avgKey: 'engAiReadAvg' as const },
+                                                            { label: '쓰기', myKey: 'engAiWriteMy' as const, avgKey: 'engAiWriteAvg' as const },
+                                                        ].map((row, i) => (
+                                                            <div key={row.label} className={`grid grid-cols-[auto_1fr_1fr] ${i < 3 ? 'border-b border-blue-100' : ''}`}>
+                                                                <div className="px-2 py-1.5 w-14 text-[11px] font-medium text-slate-600 text-center bg-blue-50/30">{row.label}</div>
+                                                                <div className="px-1 py-1 border-l border-blue-100">
+                                                                    <input type="text" value={consult[row.myKey] || ''} onChange={e => setConsult({ ...consult, [row.myKey]: e.target.value })} className={`w-full px-1 py-0.5 text-sm text-center border border-slate-200 rounded-sm outline-none focus:border-blue-500 ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-default' : ''}`} placeholder="-" {...viewProps} />
+                                                                </div>
+                                                                <div className="px-1 py-1 border-l border-blue-100">
+                                                                    <input type="text" value={consult[row.avgKey] || ''} onChange={e => setConsult({ ...consult, [row.avgKey]: e.target.value })} className={`w-full px-1 py-0.5 text-sm text-center border border-slate-200 rounded-sm outline-none focus:border-blue-500 ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-default' : ''}`} placeholder="-" {...viewProps} />
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* NELT Report */}
+                                            {consult.englishTestType === 'nelt' && (
+                                                <div className="border border-violet-200 rounded overflow-hidden">
+                                                    <div className="grid grid-cols-3 bg-violet-50/70">
+                                                        {[
+                                                            { key: 'engLevel' as const, label: 'Lv' },
+                                                            { key: 'engNeltOverallLevel' as const, label: '종합 수준' },
+                                                            { key: 'engNeltRank' as const, label: '동학년 석차' },
+                                                        ].map((item, i) => (
+                                                            <div key={item.key} className={`px-1.5 py-1.5 ${i < 2 ? 'border-r border-violet-200' : ''}`}>
+                                                                <div className="text-[10px] font-semibold text-violet-700 text-center mb-1">{item.label}</div>
+                                                                <input type="text" value={consult[item.key] || ''} onChange={e => setConsult({ ...consult, [item.key]: e.target.value })} className={`w-full px-1 py-1 text-sm text-center border border-violet-200 rounded-sm bg-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-default' : ''}`} placeholder="-" {...viewProps} />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="grid grid-cols-4 border-t border-violet-200 bg-white">
+                                                        {[
+                                                            { key: 'engNeltVocab' as const, label: '어휘' },
+                                                            { key: 'engNeltGrammar' as const, label: '문법' },
+                                                            { key: 'engNeltListening' as const, label: '듣기' },
+                                                            { key: 'engNeltReading' as const, label: '독해' },
+                                                        ].map((item, i) => (
+                                                            <div key={item.key} className={`px-1.5 py-1.5 ${i < 3 ? 'border-r border-violet-200' : ''}`}>
+                                                                <div className="text-[10px] font-medium text-slate-500 text-center mb-1">{item.label}</div>
+                                                                <input type="text" value={consult[item.key] || ''} onChange={e => setConsult({ ...consult, [item.key]: e.target.value })} className={`w-full px-1 py-1 text-sm text-center border border-slate-200 rounded-sm bg-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-default' : ''}`} placeholder="수준" {...viewProps} />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* EiE PTR */}
+                                            {consult.englishTestType === 'eie' && (
+                                                <div className="border border-sky-200 rounded overflow-hidden">
+                                                    <div className="grid grid-cols-4 bg-sky-50/70">
+                                                        {[
+                                                            { key: 'engLevel' as const, label: 'Lv' },
+                                                            { key: 'engEieGradeLevel' as const, label: '학년 수준' },
+                                                            { key: 'engEieVocabLevel' as const, label: '어휘 수준' },
+                                                            { key: 'engEieRank' as const, label: '동학년순위' },
+                                                        ].map((item, i) => (
+                                                            <div key={item.key} className={`px-1.5 py-1.5 ${i < 3 ? 'border-r border-sky-200' : ''}`}>
+                                                                <div className="text-[10px] font-semibold text-sky-700 text-center mb-1">{item.label}</div>
+                                                                <input type="text" value={consult[item.key] || ''} onChange={e => setConsult({ ...consult, [item.key]: e.target.value })} className={`w-full px-1 py-1 text-sm text-center border border-sky-200 rounded-sm bg-white outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-default' : ''}`} placeholder="-" {...viewProps} />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="grid grid-cols-3 border-t border-sky-200 bg-sky-50/40">
+                                                        {[
+                                                            { key: 'engEieCourse' as const, label: '과정' },
+                                                            { key: 'engEieChartLevel' as const, label: '레벨' },
+                                                            { key: 'engEieTextbook' as const, label: '교재' },
+                                                        ].map((item, i) => (
+                                                            <div key={item.key} className={`px-1.5 py-1.5 ${i < 2 ? 'border-r border-sky-200' : ''}`}>
+                                                                <div className="text-[10px] font-medium text-sky-600 text-center mb-1">{item.label}</div>
+                                                                <input type="text" value={consult[item.key] || ''} onChange={e => setConsult({ ...consult, [item.key]: e.target.value })} className={`w-full px-1 py-1 text-sm text-center border border-sky-200 rounded-sm bg-white outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-default' : ''}`} placeholder="-" {...viewProps} />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <div className="border-t border-sky-200">
+                                                        <div className="grid grid-cols-[auto_1fr_1fr] text-[10px] font-semibold text-sky-700 bg-sky-50/50 border-b border-sky-100">
+                                                            <div className="px-2 py-1 w-20 text-center">영역</div>
+                                                            <div className="px-2 py-1 text-center border-l border-sky-100">나의 레벨</div>
+                                                            <div className="px-2 py-1 text-center border-l border-sky-100">회원평균</div>
+                                                        </div>
+                                                        {[
+                                                            { label: 'Vocabulary', myKey: 'engEieVocabMy' as const, avgKey: 'engEieVocabAvg' as const },
+                                                            { label: 'Listening', myKey: 'engEieListenMy' as const, avgKey: 'engEieListenAvg' as const },
+                                                            { label: 'Reading', myKey: 'engEieReadMy' as const, avgKey: 'engEieReadAvg' as const },
+                                                            { label: 'Grammar', myKey: 'engEieGrammarMy' as const, avgKey: 'engEieGrammarAvg' as const },
+                                                        ].map((row, i) => (
+                                                            <div key={row.label} className={`grid grid-cols-[auto_1fr_1fr] ${i < 3 ? 'border-b border-sky-100' : ''}`}>
+                                                                <div className="px-2 py-1.5 w-20 text-[11px] font-medium text-slate-600 text-center bg-sky-50/30">{row.label}</div>
+                                                                <div className="px-1 py-1 border-l border-sky-100">
+                                                                    <input type="text" value={consult[row.myKey] || ''} onChange={e => setConsult({ ...consult, [row.myKey]: e.target.value })} className={`w-full px-1 py-0.5 text-sm text-center border border-slate-200 rounded-sm outline-none focus:border-sky-500 ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-default' : ''}`} placeholder="-" {...viewProps} />
+                                                                </div>
+                                                                <div className="px-1 py-1 border-l border-sky-100">
+                                                                    <input type="text" value={consult[row.avgKey] || ''} onChange={e => setConsult({ ...consult, [row.avgKey]: e.target.value })} className={`w-full px-1 py-0.5 text-sm text-center border border-slate-200 rounded-sm outline-none focus:border-sky-500 ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-default' : ''}`} placeholder="-" {...viewProps} />
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <label className={labelClass}><ClipboardList size={12} className="inline mr-1" />레벨테스트 점수 ({c.label})</label>
+                                            <input type="text" value={consult.levelTestScore || ''} onChange={e => setConsult({ ...consult, levelTestScore: e.target.value })} className={inputClass} placeholder={`${c.label} 레벨 미실시`} {...viewProps} />
+                                        </div>
+                                    )}
                                     <div>
                                         <label className={labelClass}><FileText size={12} className="inline mr-1" />학원 히스토리 ({c.label})</label>
                                         <textarea rows={2} value={consult.academyHistory || ''} onChange={e => setConsult({ ...consult, academyHistory: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" {...viewProps} />

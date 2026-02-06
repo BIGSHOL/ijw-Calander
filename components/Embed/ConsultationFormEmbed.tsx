@@ -117,6 +117,12 @@ const ConsultationFormEmbed: React.FC<ConsultationFormEmbedProps> = ({ tokenValu
         return raw; // 포맷 불가능하면 원본 반환
     };
 
+    // 전화번호 유효성 검사
+    const isValidPhone = (raw: string): boolean => {
+        const digits = raw.replace(/[^0-9]/g, '');
+        return digits.length === 10 || digits.length === 11;
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -125,6 +131,8 @@ const ConsultationFormEmbed: React.FC<ConsultationFormEmbedProps> = ({ tokenValu
         if (!grade) return alert('학년을 선택해주세요.');
         if (!parentName.trim()) return alert('부모님 성함을 입력해주세요.');
         if (!parentPhone.trim()) return alert('부모님 연락처를 입력해주세요.');
+        if (!isValidPhone(parentPhone)) return alert('부모님 연락처 형식이 올바르지 않습니다.\n예: 01012345678 (10~11자리 숫자)');
+        if (studentPhone && !isValidPhone(studentPhone)) return alert('학생 연락처 형식이 올바르지 않습니다.\n예: 01012345678 (10~11자리 숫자)');
         if (!privacyAgreement) return alert('개인정보 활용 동의에 체크해주세요.');
 
         setFormState('submitting');

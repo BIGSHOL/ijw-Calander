@@ -302,20 +302,34 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
                           {record.mathConsultation.recommendedClass && (
                             <div className="text-teal-700">추천반: {record.mathConsultation.recommendedClass}</div>
                           )}
-                          {record.mathConsultation.levelTestScore && (
+                          {(record.mathConsultation.calculationScore || record.mathConsultation.myTotalScore) ? (
+                            <div className="text-teal-700">
+                              {record.mathConsultation.myTotalScore && `점수: ${record.mathConsultation.myTotalScore}`}
+                              {record.mathConsultation.scoreGrade && ` (${record.mathConsultation.scoreGrade})`}
+                            </div>
+                          ) : record.mathConsultation.levelTestScore ? (
                             <div className="text-teal-700">레벨: {record.mathConsultation.levelTestScore}</div>
-                          )}
+                          ) : null}
                         </div>
                       )}
                       {record.englishConsultation && (
                         <div className="bg-cyan-50 rounded-sm p-1.5">
-                          <div className="font-semibold text-cyan-900 mb-0.5">영어</div>
+                          <div className="font-semibold text-cyan-900 mb-0.5">
+                            영어
+                            {record.englishConsultation.englishTestType && (
+                              <span className="ml-1 text-micro font-normal">
+                                ({record.englishConsultation.englishTestType === 'ai' ? 'AI' : record.englishConsultation.englishTestType === 'nelt' ? 'NELT' : 'EiE'})
+                              </span>
+                            )}
+                          </div>
                           {record.englishConsultation.recommendedClass && (
                             <div className="text-cyan-700">추천반: {record.englishConsultation.recommendedClass}</div>
                           )}
-                          {record.englishConsultation.levelTestScore && (
+                          {record.englishConsultation.engLevel ? (
+                            <div className="text-cyan-700">Lv: {record.englishConsultation.engLevel}</div>
+                          ) : record.englishConsultation.levelTestScore ? (
                             <div className="text-cyan-700">레벨: {record.englishConsultation.levelTestScore}</div>
-                          )}
+                          ) : null}
                         </div>
                       )}
                       {record.koreanConsultation && (
