@@ -175,6 +175,15 @@ const PERMISSION_CATEGORIES = [
       { id: 'withdrawal.reactivate' as PermissionId, label: '재원복구' },
     ]
   },
+  {
+    id: 'roles',
+    label: '역할 관리',
+    icon: '🔐',
+    permissions: [
+      { id: 'roles.view' as PermissionId, label: '조회' },
+      { id: 'roles.manage' as PermissionId, label: '관리' },
+    ]
+  },
 ];
 
 const ROLES_TO_SHOW = ROLE_HIERARCHY.filter(r => r !== 'master') as UserRole[];
@@ -184,8 +193,8 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
 }) => {
   // Permissions
   const { hasPermission } = usePermissions(currentUser);
-  const canView = hasPermission('settings.access');
-  const canEdit = hasPermission('settings.role_permissions');
+  const canView = hasPermission('roles.view');
+  const canEdit = hasPermission('roles.manage');
 
   // State
   const [activeSection, setActiveSection] = useState<'permissions' | 'tabs'>('permissions');
@@ -520,7 +529,7 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
           {/* Tabs Section */}
           {activeSection === 'tabs' && (
             <div className="divide-y divide-gray-100">
-              {APP_TABS.filter(tab => tab.id !== 'role-management').map(tab => (
+              {APP_TABS.map(tab => (
                 <div key={tab.id} className="flex hover:bg-gray-50/30">
                   <div className="w-48 shrink-0 px-3 py-2 border-r">
                     <span className="text-xs font-medium text-gray-700">{tab.label}</span>
