@@ -64,7 +64,9 @@ export type PermissionId =
   // Billing (NEW)
   | 'billing.view' | 'billing.edit'
   // Withdrawal (퇴원 관리)
-  | 'withdrawal.view' | 'withdrawal.edit' | 'withdrawal.reactivate';
+  | 'withdrawal.view' | 'withdrawal.edit' | 'withdrawal.reactivate'
+  // Resources (리소스 관리)
+  | 'resources.edit';
 
 // Role-based permission configuration (stored in Firestore)
 export type RolePermissions = {
@@ -113,6 +115,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'billing.view': true, 'billing.edit': true,
     // Withdrawal
     'withdrawal.view': true, 'withdrawal.edit': true, 'withdrawal.reactivate': true,
+    // Resources
+    'resources.edit': true,
   },
   manager: {
     // Events
@@ -150,6 +154,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'billing.view': true, 'billing.edit': true,
     // Withdrawal
     'withdrawal.view': true, 'withdrawal.edit': true, 'withdrawal.reactivate': true,
+    // Resources
+    'resources.edit': true,
   },
   math_lead: {
     // Events

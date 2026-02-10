@@ -47,8 +47,7 @@ const WithdrawalDashboard: React.FC<WithdrawalDashboardProps> = ({
   const [showStaffModal, setShowStaffModal] = useState(false);
 
   const { hasPermission } = usePermissions(currentUser || null);
-  const isMasterOrAdmin = currentUser?.role === 'master' || currentUser?.role === 'admin';
-  const canManage = isMasterOrAdmin || hasPermission('withdrawal.edit');
+  const canManage = hasPermission('withdrawal.edit');
 
   const { staff } = useStaff();
   const { stats, loading, refetch } = useWithdrawalStats(undefined, staff);

@@ -60,8 +60,7 @@ type ViewSize = 'small' | 'medium' | 'large';
 
 const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teachersData, scheduleData, onUpdateLocal, classKeywords = [], currentUser, isSimulationMode = false, labRooms = [], studentMap = {}, currentWeekStart, headerMode = 'view', viewSize: propViewSize, setViewSize: propSetViewSize, visibleWeekdays: propVisibleWeekdays, setVisibleWeekdays: propSetVisibleWeekdays, isExportModalOpen: propIsExportModalOpen, setExportModalOpen: propSetExportModalOpen }) => {
     const { hasPermission } = usePermissions(currentUser);
-    const isMaster = currentUser?.role === 'master';
-    const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
+    const canEditEnglish = hasPermission('timetable.english.edit');
     // 조회 권한이 있으면 이미지 저장 가능 (편집 권한 포함)
     const canViewEnglish = hasPermission('timetable.english.view') || canEditEnglish;
     const queryClient = useQueryClient();

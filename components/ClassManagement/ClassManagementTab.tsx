@@ -28,11 +28,10 @@ interface ClassManagementTabProps {
 const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) => {
   // 권한 체크
   const { hasPermission } = usePermissions(currentUser || null);
-  const isMaster = currentUser?.role === 'master';
-  const canViewClasses = isMaster || hasPermission('classes.view');
-  const canCreateClass = isMaster || hasPermission('classes.create');
-  const canEditClass = isMaster || hasPermission('classes.edit');
-  const canDeleteClass = isMaster || hasPermission('classes.delete');
+  const canViewClasses = hasPermission('classes.view');
+  const canCreateClass = hasPermission('classes.create');
+  const canEditClass = hasPermission('classes.edit');
+  const canDeleteClass = hasPermission('classes.delete');
   // 필터 상태
   const [filters, setFilters] = useState<ClassFilters>({
     subject: 'all',

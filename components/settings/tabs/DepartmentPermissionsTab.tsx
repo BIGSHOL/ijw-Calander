@@ -34,11 +34,10 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
 
   // Permission checks
   const { hasPermission } = usePermissions(currentUser);
-  const isMaster = currentUser?.role === 'master';
-  const isAdmin = currentUser?.role === 'admin';
+  const canManageDepts = hasPermission('departments.manage');
 
   // staff 컬렉션에서 계정 연동된 직원 가져오기
-  const { data: staffWithAccounts = [] } = useStaffWithAccounts(isMaster || isAdmin);
+  const { data: staffWithAccounts = [] } = useStaffWithAccounts(canManageDepts);
 
   // uid → staffId 매핑 생성
   const uidToStaffId = useMemo(() => {
@@ -244,7 +243,7 @@ const DepartmentPermissionsTab: React.FC<DepartmentPermissionsTabProps> = ({
     }
   };
 
-  const canEdit = isMaster || hasPermission('departments.manage');
+  const canEdit = canManageDepts;
 
   return (
     <div className="space-y-3">

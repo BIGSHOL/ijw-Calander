@@ -19,8 +19,7 @@ interface DepartmentsManagementTabProps {
   canCreateDept: boolean;
   canEditDept: boolean;
   canDeleteDept: boolean;
-  isMaster: boolean;
-  isAdmin: boolean;
+  canManageAllDepts: boolean;
 
   // Grouped state setters
   setNewDepartmentForm: (value: NewDepartmentForm | ((prev: NewDepartmentForm) => NewDepartmentForm)) => void;
@@ -48,8 +47,7 @@ const DepartmentsManagementTab: React.FC<DepartmentsManagementTabProps> = ({
   canCreateDept,
   canEditDept,
   canDeleteDept,
-  isMaster,
-  isAdmin,
+  canManageAllDepts,
   setNewDepartmentForm,
   setCategoryManagement,
   setDepartmentFilterState,
@@ -178,7 +176,7 @@ const DepartmentsManagementTab: React.FC<DepartmentsManagementTabProps> = ({
         <div className="bg-white border-x border-b border-gray-200 text-sm rounded-b-xl divide-y divide-gray-100 shadow-sm border-t-0">
           {localDepartments
             .filter(d => d.name.includes(departmentFilterState.searchTerm))
-            .filter(d => isMaster || isAdmin || currentUserProfile?.departmentPermissions?.[d.id] === 'edit')
+            .filter(d => canManageAllDepts || currentUserProfile?.departmentPermissions?.[d.id] === 'edit')
             .map((dept, index) => (
               <div
                 key={dept.id}

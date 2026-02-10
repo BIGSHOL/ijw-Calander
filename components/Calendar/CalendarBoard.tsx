@@ -2,7 +2,8 @@ import React, { useMemo, useEffect } from 'react';
 import { format, setMonth, setYear, isToday, isPast, isFuture, parseISO, startOfDay, endOfDay, isSameDay, addDays, subDays, differenceInMinutes, setHours, setMinutes, getHours, getMinutes, getDaysInMonth, getDate, setDate, addWeeks, subWeeks, addMonths, subMonths, addYears, subYears } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { Department, CalendarEvent, UserProfile, DEFAULT_ROLE_PERMISSIONS, DEFAULT_EVENT_TAGS } from '../../types';
+import { Department, CalendarEvent, UserProfile, DEFAULT_EVENT_TAGS } from '../../types';
+import { usePermissions } from '../../hooks/usePermissions';
 import { getMonthWeeks } from '../../utils/dateUtils';
 import WeekBlock from './WeekBlock';
 import MyEventsModal from './MyEventsModal'; // Import
@@ -328,15 +329,12 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
 
 
 
+  const { hasPermission } = usePermissions(currentUser);
+
   // Filter visible departments based on permissions
   const visibleDepartments = useMemo(() => {
     if (!currentUser) return [];
-    if (currentUser.role === 'master' || currentUser.role === 'admin') return departments;
-
-    const rolePerms = DEFAULT_ROLE_PERMISSIONS[currentUser.role as keyof typeof DEFAULT_ROLE_PERMISSIONS];
-    const canViewAll = rolePerms?.['departments.view_all'];
-
-    if (canViewAll) return departments;
+    if (hasPermission('departments.view_all')) return departments;
 
     return departments.filter(d => {
       const perm = currentUser.departmentPermissions?.[d.id];

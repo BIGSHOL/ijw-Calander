@@ -285,13 +285,12 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!effectiveProfile) return;
 
-    const isMasterOrAdmin = effectiveProfile.role === 'master' || effectiveProfile.role === 'admin';
     const canManageMath = hasPermission('attendance.manage_math');
     const canManageEnglish = hasPermission('attendance.manage_english');
 
     let initialSubject: 'math' | 'english' = 'math';
 
-    if (isMasterOrAdmin) {
+    if (canManageMath) {
       initialSubject = 'math';
     } else if (canManageMath && !canManageEnglish) {
       initialSubject = 'math';
@@ -351,15 +350,13 @@ const App: React.FC = () => {
   });
 
   // Permissions
-  const isMaster = effectiveProfile?.role === 'master';
-  const isAdmin = effectiveProfile?.role === 'admin';
-  const canGlobalEdit = isMaster || isAdmin;
+  const canViewAllDepts = hasPermission('departments.view_all');
 
   // Filter Departments
   const visibleDepartments = departments.filter(d => {
     let hasAccess = false;
 
-    if (isMaster || isAdmin) {
+    if (canViewAllDepts) {
       hasAccess = true;
     } else if (effectiveProfile?.departmentPermissions?.[d.id] || effectiveProfile?.departmentPermissions?.[d.name]) {
       hasAccess = true;
@@ -690,7 +687,7 @@ const App: React.FC = () => {
               setIsCalendarSettingsOpen,
               departments,
               effectiveProfile,
-              isMaster,
+              canViewAllDepts,
               selectedCategory,
               setSelectedCategory,
               uniqueCategories,

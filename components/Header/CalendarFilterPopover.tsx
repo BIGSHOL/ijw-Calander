@@ -13,7 +13,7 @@ interface CalendarFilterPopoverProps {
   departments: Department[];
   hiddenDeptIds: string[];
   effectiveProfile: UserProfile | undefined;
-  isMaster: boolean;
+  canViewAllDepts: boolean;
   selectedCategory: string | null;
   setSelectedCategory: React.Dispatch<React.SetStateAction<string | null>>;
   uniqueCategories: string[];
@@ -30,7 +30,7 @@ export const CalendarFilterPopover: React.FC<CalendarFilterPopoverProps> = ({
   departments,
   hiddenDeptIds,
   effectiveProfile,
-  isMaster,
+  canViewAllDepts,
   selectedCategory,
   setSelectedCategory,
   uniqueCategories,
@@ -105,7 +105,7 @@ export const CalendarFilterPopover: React.FC<CalendarFilterPopoverProps> = ({
             .filter(d => !selectedCategory || d.category === selectedCategory)
             .map(dept => {
               const isHidden = hiddenDeptIds.includes(dept.id);
-              const isAllowed = effectiveProfile?.departmentPermissions?.[dept.id] || effectiveProfile?.allowedDepartments?.includes(dept.id) || isMaster;
+              const isAllowed = effectiveProfile?.departmentPermissions?.[dept.id] || effectiveProfile?.allowedDepartments?.includes(dept.id) || canViewAllDepts;
               const isFavorite = effectiveProfile?.favoriteDepartments?.includes(dept.id);
 
               if (!isAllowed) return null;

@@ -101,9 +101,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     setIsExportModalOpen: setIsExportModalOpenProp,
 }) => {
     const { hasPermission } = usePermissions(currentUser);
-    const isMaster = currentUser?.role === 'master';
-    const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
-    const canManageStudents = isMaster || hasPermission('students.edit');
+    const canEditEnglish = hasPermission('timetable.english.edit');
+    const canManageStudents = hasPermission('students.edit');
 
     // Fallback 패턴: props 또는 local state 사용
     const [searchTermLocal, setSearchTermLocal] = useState('');

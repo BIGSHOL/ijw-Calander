@@ -11,8 +11,7 @@ interface ParticipantSelectorProps {
   currentUser: UserProfile | null;
   isViewMode: boolean;
   canEditCurrent: boolean;
-  isMaster: boolean;
-  isAdmin: boolean;
+  canManageAllDepts: boolean;
   canManageAttendance: boolean;
   existingEvent?: CalendarEvent | null;
   onBatchUpdateAttendance?: (groupId: string, uid: string, status: 'pending' | 'joined' | 'declined') => void;
@@ -29,8 +28,7 @@ const ParticipantSelector: React.FC<ParticipantSelectorProps> = ({
   currentUser,
   isViewMode,
   canEditCurrent,
-  isMaster,
-  isAdmin,
+  canManageAllDepts,
   canManageAttendance,
   existingEvent,
   onBatchUpdateAttendance,
@@ -80,7 +78,7 @@ const ParticipantSelector: React.FC<ParticipantSelectorProps> = ({
                 const displayName = u.jobTitle ? `${name} (${u.jobTitle})` : name;
                 const isSelected = participants.includes(displayName);
                 const currentStatus = attendance[u.uid] || 'pending';
-                const canEditStatus = currentUser?.uid === u.uid || isMaster || isAdmin || canManageAttendance;
+                const canEditStatus = currentUser?.uid === u.uid || canManageAllDepts || canManageAttendance;
                 const cycleStatus = () => {
                   const next: Record<string, 'pending' | 'joined' | 'declined'> = {
                     'pending': 'joined',

@@ -37,10 +37,9 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
 
   // 권한 체크
   const { hasPermission } = usePermissions(currentUser || null);
-  const isMaster = currentUser?.role === 'master';
-  const canEditStudent = isMaster || hasPermission('students.edit');
-  const canDeleteStudent = isMaster || hasPermission('students.delete');
-  const canManageEnrollment = isMaster || hasPermission('classes.edit');  // 수강배정은 수업 관리 권한 필요
+  const canEditStudent = hasPermission('students.edit');
+  const canDeleteStudent = hasPermission('students.delete');
+  const canManageEnrollment = hasPermission('classes.edit');  // 수강배정은 수업 관리 권한 필요
 
   const tabs: { id: TabType; label: string; icon: React.ReactNode }[] = [
     { id: 'basic', label: '기본정보', icon: <User className="w-3 h-3" /> },

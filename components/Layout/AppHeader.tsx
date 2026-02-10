@@ -53,7 +53,7 @@ interface AppHeaderProps {
     setIsCalendarSettingsOpen: (open: boolean) => void;
     departments: any[];
     effectiveProfile: UserProfile | null;
-    isMaster: boolean;
+    canViewAllDepts: boolean;
     selectedCategory: string;
     setSelectedCategory: (category: string) => void;
     uniqueCategories: string[];
@@ -324,7 +324,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           departments={calendarFilterProps.departments}
           hiddenDeptIds={calendarFilterProps.hiddenDeptIds}
           effectiveProfile={calendarFilterProps.effectiveProfile}
-          isMaster={calendarFilterProps.isMaster}
+          canViewAllDepts={calendarFilterProps.canViewAllDepts}
           selectedCategory={calendarFilterProps.selectedCategory}
           setSelectedCategory={calendarFilterProps.setSelectedCategory}
           uniqueCategories={calendarFilterProps.uniqueCategories}

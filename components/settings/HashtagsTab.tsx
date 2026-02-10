@@ -5,17 +5,13 @@ import { db } from '../../firebaseConfig';
 import { doc, setDoc, getDoc, onSnapshot } from 'firebase/firestore';
 import { listenerRegistry } from '../../utils/firebaseCleanup';
 
-interface HashtagsTabProps {
-  isMaster: boolean;
-}
-
 interface HashtagConfig {
   tags: EventTag[];
   seminarTags: string[]; // 참가자 관리 UI를 표시할 태그 ID 목록
   updatedAt?: string;
 }
 
-const HashtagsTab: React.FC<HashtagsTabProps> = ({ isMaster }) => {
+const HashtagsTab: React.FC = () => {
   const [config, setConfig] = useState<HashtagConfig>({
     tags: DEFAULT_EVENT_TAGS,
     seminarTags: ['seminar', 'workshop', 'meeting'] // ID 기반으로 설정

@@ -46,8 +46,7 @@ const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
 
   // 권한 체크
   const { hasPermission } = usePermissions(currentUser || null);
-  const isMasterOrAdmin = currentUser?.role === 'master' || currentUser?.role === 'admin';
-  const canManageAll = isMasterOrAdmin || hasPermission('consultation.manage');
+  const canManageAll = hasPermission('consultation.manage');
   const currentStaffId = currentUser?.staffId;
 
   // 외부 dateRange가 있으면 사용, 없으면 내부 preset 사용

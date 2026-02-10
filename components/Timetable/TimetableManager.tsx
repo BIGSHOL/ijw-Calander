@@ -108,7 +108,6 @@ interface MathTimetableContentProps {
     currentMonday: Date;
     currentUser: any;
     // 공유 링크
-    isMaster: boolean;
     isEmbedManagerOpen: boolean;
     setIsEmbedManagerOpen: (open: boolean) => void;
     // 클래스 상세 정보
@@ -189,7 +188,6 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     setSelectedDays,
     currentMonday,
     currentUser,
-    isMaster,
     isEmbedManagerOpen,
     setIsEmbedManagerOpen,
     classesData,
@@ -407,7 +405,6 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     onCopyLiveToDraft={handleCopyLiveToDraft}
                     onPublishDraftToLive={handlePublishDraftToLive}
                     onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
-                    isMaster={isMaster}
                     onOpenEmbedManager={() => setIsEmbedManagerOpen(true)}
                     studentMap={studentMap}
                     currentWeekStart={currentMonday}
@@ -677,19 +674,18 @@ const TimetableManager = ({
     onMathViewModeChange,
 }: TimetableManagerProps) => {
     const { hasPermission } = usePermissions(currentUser);
-    const isMaster = currentUser?.role === 'master';
-    const canEditMath = isMaster || hasPermission('timetable.math.edit');
-    const canEditEnglish = isMaster || hasPermission('timetable.english.edit');
-    const canEditScience = isMaster || hasPermission('timetable.science.edit');
-    const canEditKorean = isMaster || hasPermission('timetable.korean.edit');
-    const canViewMath = isMaster || hasPermission('timetable.math.view') || canEditMath;
-    const canViewEnglish = isMaster || hasPermission('timetable.english.view') || canEditEnglish;
-    const canViewScience = isMaster || hasPermission('timetable.science.view') || canEditScience;
-    const canViewKorean = isMaster || hasPermission('timetable.korean.view') || canEditKorean;
-    const canManageStudents = isMaster || hasPermission('students.edit');
+    const canEditMath = hasPermission('timetable.math.edit');
+    const canEditEnglish = hasPermission('timetable.english.edit');
+    const canEditScience = hasPermission('timetable.science.edit');
+    const canEditKorean = hasPermission('timetable.korean.edit');
+    const canViewMath = hasPermission('timetable.math.view') || canEditMath;
+    const canViewEnglish = hasPermission('timetable.english.view') || canEditEnglish;
+    const canViewScience = hasPermission('timetable.science.view') || canEditScience;
+    const canViewKorean = hasPermission('timetable.korean.view') || canEditKorean;
+    const canManageStudents = hasPermission('students.edit');
     // 퇴원 관리 권한 (퇴원생 클릭 시 상세 모달용)
-    const canEditWithdrawal = isMaster || hasPermission('withdrawal.edit');
-    const canReactivateWithdrawal = isMaster || hasPermission('withdrawal.reactivate');
+    const canEditWithdrawal = hasPermission('withdrawal.edit');
+    const canReactivateWithdrawal = hasPermission('withdrawal.reactivate');
 
     // Subject Tab (use external if provided)
     const [internalSubjectTab, setInternalSubjectTab] = useState<SubjectType>('math');
@@ -1164,7 +1160,6 @@ const TimetableManager = ({
                 setSelectedDays={setSelectedDays}
                 currentMonday={currentMonday}
                 currentUser={currentUser}
-                isMaster={isMaster}
                 isEmbedManagerOpen={isEmbedManagerOpen}
                 setIsEmbedManagerOpen={setIsEmbedManagerOpen}
                 classesData={classesData}

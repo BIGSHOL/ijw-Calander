@@ -184,11 +184,8 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
 }) => {
   // Permissions
   const { hasPermission } = usePermissions(currentUser);
-  const isMaster = currentUser?.role === 'master';
-
-  // 권한 체크: settings.role_permissions 권한이 있거나 MASTER인 경우
-  const canView = isMaster || hasPermission('settings.access');
-  const canEdit = isMaster || hasPermission('settings.role_permissions');
+  const canView = hasPermission('settings.access');
+  const canEdit = hasPermission('settings.role_permissions');
 
   // State
   const [activeSection, setActiveSection] = useState<'permissions' | 'tabs'>('permissions');

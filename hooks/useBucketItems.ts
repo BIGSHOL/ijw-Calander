@@ -63,7 +63,6 @@ export const useBucketItems = ({
   // Helper: Check if current user can edit/delete a bucket (시뮬레이션 적용)
   const canModifyBucket = (bucket: BucketItem, action: 'edit' | 'delete'): boolean => {
     if (!effectiveProfile) return false;
-    if (effectiveProfile.role === 'master') return true;
     if (bucket.authorId === effectiveProfile.uid) return true;
     if (hasPermission('events.bucket') && isHigherRole(bucket.authorId)) return true;
     return false;

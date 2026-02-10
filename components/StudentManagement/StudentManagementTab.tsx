@@ -37,10 +37,9 @@ interface StudentManagementTabProps {
 
 const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, sortBy, currentUser, initialSelectedStudentId, onStudentSelected }) => {
   const { hasPermission } = usePermissions(currentUser);
-  const isMaster = currentUser?.role === 'master';
-  const canView = isMaster || hasPermission('students.view');
-  const canEdit = isMaster || hasPermission('students.edit');
-  const canManageEnrollment = isMaster || hasPermission('classes.edit');  // 수강배정은 수업 관리 권한 필요
+  const canView = hasPermission('students.view');
+  const canEdit = hasPermission('students.edit');
+  const canManageEnrollment = hasPermission('classes.edit');  // 수강배정은 수업 관리 권한 필요
 
   const { students, loading, error, refreshStudents } = useStudents(true); // includeWithdrawn: true
   const [selectedStudent, setSelectedStudent] = useState<UnifiedStudent | null>(null);
@@ -186,7 +185,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
             <span className="text-sm font-bold text-white">학생 목록</span>
           </div>
           <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
-            {isMaster && (
+            {currentUser?.role === 'master' && (
               <>
                 <button
                   onClick={() => setShowMigrationModal(true)}
