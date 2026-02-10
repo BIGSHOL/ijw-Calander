@@ -633,15 +633,22 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         {/* 부분 등원 학생 (월만, 목만 등) */}
                         {/* 수정 모드: 항상 표시 (드롭 영역으로 활용), 조회 모드: 부분등원 학생 있을 때만 표시 */}
                         {isMergedCell && (canEdit || hasPartialStudents) && (() => {
+                            // 조회 모드: 학생이 있는 요일만 표시, 수정 모드: 전체 표시 (드롭 영역)
+                            const visibleDays = canEdit
+                                ? mergedDays
+                                : mergedDays.filter(day => (partialStudentsByDay?.[day]?.active.length || 0) > 0);
+
+                            if (visibleDays.length === 0) return null;
+
                             const maxStudentCount = Math.max(
                                 0,
-                                ...mergedDays.map(day => partialStudentsByDay?.[day]?.active.length || 0)
+                                ...visibleDays.map(day => partialStudentsByDay?.[day]?.active.length || 0)
                             );
 
                             return (
                                 <div className="flex-shrink-0 flex border-t-2 border-amber-300 bg-white">
-                                    {mergedDays.map((day, idx) => {
-                                        const isLastDay = idx === mergedDays.length - 1;
+                                    {visibleDays.map((day, idx) => {
+                                        const isLastDay = idx === visibleDays.length - 1;
                                         const dayStudents = partialStudentsByDay?.[day];
                                         const dayActiveStudents = dayStudents?.active || [];
                                         const emptySlots = Math.max(0, maxStudentCount - dayActiveStudents.length);
