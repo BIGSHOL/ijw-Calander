@@ -63,16 +63,16 @@ const StudentItem: React.FC<StudentItemProps> = ({
             }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
-            className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] truncate font-medium transition-all duration-150
+            className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] truncate min-w-0 font-medium transition-all duration-150
             ${canEdit ? 'cursor-grab' : ''} ${isClickable ? 'cursor-pointer' : ''}
             ${isPendingMoved ? 'bg-purple-400 text-white font-bold' : isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText}`}
             style={hoverStyle}
             title={
                 student.isTransferredIn
-                    ? (isClickable ? '반이동 학생\n(클릭하여 상세정보 보기)' : '반이동 학생')
+                    ? `${displayText}\n반이동 학생`
                     : enrollmentStyle && student.enrollmentDate
-                        ? (isClickable ? `입학일: ${student.enrollmentDate}\n(클릭하여 상세정보 보기)` : `입학일: ${student.enrollmentDate}`)
-                        : (isClickable ? '클릭하여 상세정보 보기' : undefined)
+                        ? `${displayText}\n입학일: ${student.enrollmentDate}`
+                        : displayText
             }
         >
             {classLabel && (
@@ -146,9 +146,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
     // 글자 크기 CSS 클래스 매핑
     const fontSizeClass = {
         'small': 'text-nano',
-        'normal': 'text-micro',
-        'large': 'text-xs',
-        'very-large': 'text-sm'
+        'normal': 'text-xs',
+        'large': 'text-sm',
+        'very-large': 'text-base'
     }[fontSize];
 
     const titleFontSizeClass = {
@@ -485,8 +485,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     onMouseEnter={() => !canEdit && setShowScheduleTooltip(true)}
                     onMouseLeave={() => setShowScheduleTooltip(false)}
                 >
-                    <div className="relative">
-                        {cls.className}
+                    <div className="relative min-w-0">
+                        <span className="block truncate" title={cls.className}>{cls.className}</span>
                         {isMergedClass && (
                             <PortalTooltip
                                 triggerClassName="absolute -top-0.5 -right-0.5 z-10"
@@ -509,7 +509,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     </div>
                     {/* 강의실 + 재원생 수 (학생 목록 숨김 시) */}
                     {(cls.room || !showStudents) && (
-                        <div className={`${fontSizeClass} font-normal text-gray-500 mt-0.5`}>
+                        <div className={`${fontSizeClass} font-normal text-gray-500 mt-0.5 truncate`}>
                             {cls.room}
                             {!showStudents && (
                                 <>
@@ -570,9 +570,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
             {/* Student List */}
             {showStudents && (
                 isMergedCell ? (
-                    <div className="flex-1 flex flex-col overflow-hidden">
+                    <div className="flex-1 flex flex-col overflow-hidden min-w-0">
                         <div
-                            className={`px-1 py-0 transition-colors ${dragOverZone === 'common' ? 'bg-indigo-50' : ''}`}
+                            className={`px-1 py-0 transition-colors min-w-0 overflow-hidden ${dragOverZone === 'common' ? 'bg-indigo-50' : ''}`}
                             onDragOver={(e) => {
                                 if (!canEdit) return;
                                 e.preventDefault();
@@ -592,8 +592,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 onDrop(e, cls.id, 'common');
                             }}
                         >
-                            <div className={`${fontSizeClass} font-bold text-indigo-600 mb-0`}>({commonStudents.active.length})</div>
-                            <ul className="flex flex-col gap-0">
+                            <div className={`${fontSizeClass} font-bold text-indigo-600 mb-0 truncate`}>({commonStudents.active.length})</div>
+                            <ul className="flex flex-col gap-0 min-w-0">
                                 {commonStudents.active.map(s => {
                                     const isHighlighted = !!(searchQuery && s.name.includes(searchQuery));
                                     const enrollmentStyle = getEnrollmentStyle(s);
@@ -679,8 +679,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                 <div className="text-center text-[11px] font-bold bg-amber-100 text-amber-800 py-0.5 border-b-2 border-amber-300">
                                                     {day}만 ({dayActiveStudents.length})
                                                 </div>
-                                                <div className="px-0.5 py-0 bg-amber-50 flex-1" style={{ minHeight: '20px' }}>
-                                                    <ul className="flex flex-col gap-0">
+                                                <div className="px-0.5 py-0 bg-amber-50 flex-1 min-w-0 overflow-hidden" style={{ minHeight: '20px' }}>
+                                                    <ul className="flex flex-col gap-0 min-w-0">
                                                         {dayActiveStudents.map(s => {
                                                             const isHighlighted = !!(searchQuery && s.name.includes(searchQuery));
                                                             const enrollmentStyle = getEnrollmentStyle(s);
@@ -787,10 +787,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         )}
                     </div>
                 ) : (
-                    <div className="flex-1 flex flex-col overflow-hidden">
-                        <div className="px-0.5 py-0.5">
-                            <div className="text-xxs font-bold text-indigo-600 mb-0.5">재원생 ({activeStudents.length}명)</div>
-                            <ul className="flex flex-col">
+                    <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+                        <div className="px-0.5 py-0.5 min-w-0 overflow-hidden">
+                            <div className="text-xxs font-bold text-indigo-600 mb-0.5 truncate">재원생 ({activeStudents.length}명)</div>
+                            <ul className="flex flex-col min-w-0">
                                 {activeStudents.map(s => {
                                     const isHighlighted = !!(searchQuery && s.name.includes(searchQuery));
                                     const enrollmentStyle = getEnrollmentStyle(s);
