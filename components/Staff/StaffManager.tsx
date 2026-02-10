@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Plus, Search, Filter, RefreshCw, Calendar, Briefcase, AlertCircle, Database } from 'lucide-react';
 import { useStaff } from '../../hooks/useStaff';
 import { useStaffLeaves } from '../../hooks/useStaffLeaves';
+import { usePermissions } from '../../hooks/usePermissions';
 import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS, UserProfile, ROLE_HIERARCHY } from '../../types';
 import StaffList from './StaffList';
 import StaffForm from './StaffForm';
@@ -39,7 +40,9 @@ const StaffManager: React.FC<StaffManagerProps> = ({
   const { leaves, pendingCount } = useStaffLeaves();
 
   const isMaster = currentUserProfile?.role === 'master';
-  const isAdmin = currentUserProfile?.role === 'admin';
+  const { hasPermission } = usePermissions(currentUserProfile ?? null);
+  const canChangeRole = hasPermission('users.change_role');
+  const canChangePermissions = hasPermission('users.change_permissions');
 
   // Search handling (support both internal and external)
   const searchQuery = externalSearchQuery ?? internalSearchQuery;
@@ -393,7 +396,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
           staff={editingStaff}
           onClose={handleFormClose}
           onSubmit={handleFormSubmit}
-          showSystemFields={isMaster || isAdmin}
+          showSystemFields={canChangeRole || canChangePermissions}
           currentUserRole={currentUserProfile?.role}
         />
       )}
