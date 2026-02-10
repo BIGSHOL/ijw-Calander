@@ -375,14 +375,19 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
             </div>
             <div className="divide-y divide-gray-100">
               {/* 설명 */}
-              <div className="flex items-start gap-2 px-2 py-1.5">
-                <span className="w-14 shrink-0 text-xs font-medium text-primary-700 pt-1">설명</span>
+              <div className="flex flex-col gap-1 px-2 py-1.5">
+                <span className="text-xs font-medium text-primary-700">설명</span>
                 <textarea
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="리소스에 대한 간단한 설명"
-                  rows={2}
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none resize-none"
+                  onChange={(e) => {
+                    setDescription(e.target.value);
+                    // 자동 높이 조절
+                    e.target.style.height = 'auto';
+                    e.target.style.height = e.target.scrollHeight + 'px';
+                  }}
+                  placeholder="리소스에 대한 설명을 자유롭게 작성하세요..."
+                  rows={4}
+                  className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none resize-y min-h-[80px] max-h-[300px] leading-relaxed"
                 />
               </div>
               {/* 타입 */}

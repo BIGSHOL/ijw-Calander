@@ -719,25 +719,28 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
 
         {/* 최근 추가 리소스 (홈일 때만) */}
         {!currentMain && recentResources.length > 0 && (
-          <div className="p-4 border-b border-gray-200 bg-white">
-            <div className="flex items-center gap-2 mb-3">
-              <Clock size={14} className="text-accent" />
-              <h3 className="text-xs font-bold text-primary">최근 추가</h3>
-            </div>
-            <div className="bg-white rounded-sm border border-gray-200 overflow-hidden">
-              <div className="divide-y divide-gray-100">
+          <div className="px-4 py-2 border-b border-gray-200 bg-white">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Clock size={12} className="text-accent" />
+                <span className="text-xxs font-bold text-gray-400">최근</span>
+              </div>
+              <div className="flex items-center gap-3 overflow-x-auto">
                 {recentResources.map(resource => (
-                  <ResourceCard
+                  <button
                     key={resource.id}
-                    resource={resource}
-                    isSelected={selectedResource?.id === resource.id}
-                    onClick={() => setSelectedResource(resource)}
-                    onTogglePin={canEdit ? handleTogglePin : undefined}
-                    onEdit={canEdit ? handleEdit : undefined}
-                    onDelete={canEdit ? handleDelete : undefined}
-                    isFavorite={favorites.has(resource.id)}
-                    onToggleFavorite={handleToggleFavorite}
-                  />
+                    onClick={() => {
+                      const parts = resource.category.split(CATEGORY_SEPARATOR);
+                      if (parts[0]) setCurrentMain(parts[0]);
+                      if (parts[1]) setCurrentSub(parts[1]);
+                      setSelectedResource(resource);
+                    }}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded-sm hover:bg-gray-100 transition-colors shrink-0 group"
+                  >
+                    <span className="text-xs">{resource.icon || '📄'}</span>
+                    <span className="text-xxs font-medium text-primary group-hover:text-accent truncate max-w-[120px]">{resource.title}</span>
+                    <span className="text-xxs text-gray-300">{resource.createdAt?.slice(2, 10).replace(/-/g, '.')}</span>
+                  </button>
                 ))}
               </div>
             </div>
