@@ -66,7 +66,9 @@ export type PermissionId =
   // Withdrawal (퇴원 관리)
   | 'withdrawal.view' | 'withdrawal.edit' | 'withdrawal.reactivate'
   // Resources (리소스 관리)
-  | 'resources.edit';
+  | 'resources.edit'
+  // Role Management (역할 관리)
+  | 'roles.view' | 'roles.manage';
 
 // Role-based permission configuration (stored in Firestore)
 export type RolePermissions = {
@@ -117,6 +119,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'withdrawal.view': true, 'withdrawal.edit': true, 'withdrawal.reactivate': true,
     // Resources
     'resources.edit': true,
+    // Role Management
+    'roles.view': true, 'roles.manage': false,
   },
   manager: {
     // Events
@@ -156,6 +160,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'withdrawal.view': true, 'withdrawal.edit': true, 'withdrawal.reactivate': true,
     // Resources
     'resources.edit': true,
+    // Role Management
+    'roles.view': false, 'roles.manage': false,
   },
   math_lead: {
     // Events
@@ -192,6 +198,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'billing.view': true, 'billing.edit': false,
     // Withdrawal
     'withdrawal.view': true, 'withdrawal.edit': true, 'withdrawal.reactivate': false,
+    // Role Management
+    'roles.view': false, 'roles.manage': false,
   },
   english_lead: {
     // Events
@@ -230,6 +238,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'billing.view': true, 'billing.edit': false,
     // Withdrawal
     'withdrawal.view': true, 'withdrawal.edit': true, 'withdrawal.reactivate': false,
+    // Role Management
+    'roles.view': false, 'roles.manage': false,
   },
   math_teacher: {
     // Events
@@ -265,6 +275,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'billing.view': false, 'billing.edit': false,
     // Withdrawal
     'withdrawal.view': true, 'withdrawal.edit': false, 'withdrawal.reactivate': false,
+    // Role Management
+    'roles.view': false, 'roles.manage': false,
   },
   english_teacher: {
     // Events
@@ -300,6 +312,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'billing.view': false, 'billing.edit': false,
     // Withdrawal
     'withdrawal.view': true, 'withdrawal.edit': false, 'withdrawal.reactivate': false,
+    // Role Management
+    'roles.view': false, 'roles.manage': false,
   },
   user: {
     // Events (basic)
@@ -320,6 +334,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'grades.view': true, 'grades.edit': false, 'grades.manage_exams': false,
     // Withdrawal
     'withdrawal.view': false, 'withdrawal.edit': false, 'withdrawal.reactivate': false,
+    // Role Management
+    'roles.view': false, 'roles.manage': false,
   },
 };
 
