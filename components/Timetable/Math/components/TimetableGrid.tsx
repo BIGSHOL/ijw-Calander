@@ -134,15 +134,15 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     }, [columnWidth, widthFactor]);
 
     const mergedCellWidthCache = useMemo(() => {
-        const cache: Record<number, { width: string; minWidth: string }> = {};
+        const cache: Record<number, { width: string }> = {};
         for (let i = 1; i <= 7; i++) {
-            cache[i] = { width: `${i * perDayWidth}px`, minWidth: `${i * perDayWidth}px` };
+            cache[i] = { width: `${i * perDayWidth}px` };
         }
         return cache;
     }, [perDayWidth]);
 
     const getMergedCellWidthStyle = (colspan: number) => {
-        return mergedCellWidthCache[colspan] || { width: `${colspan * perDayWidth}px`, minWidth: `${colspan * perDayWidth}px` };
+        return mergedCellWidthCache[colspan] || { width: `${colspan * perDayWidth}px` };
     };
 
     const singleCellWidthStyle = useMemo(() => {
@@ -151,7 +151,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                 columnWidth === 'wide' ? 150 :
                     columnWidth === 'x-wide' ? 200 : 110;
         const baseWidth = Math.round(base * widthFactor);
-        return { width: `${baseWidth}px`, minWidth: `${baseWidth}px` };
+        return { width: `${baseWidth}px` };
     }, [columnWidth, widthFactor]);
 
     // 교시당 높이 (memoized)
