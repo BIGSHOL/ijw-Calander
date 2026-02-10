@@ -17,6 +17,7 @@ import { setDoc, doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { listenerRegistry } from '../../utils/firebaseCleanup';
 import { RotateCcw, Save, Shield, Layout, ChevronDown, ChevronRight, Check, X } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
+import { useQueryClient } from '@tanstack/react-query';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 
 interface RoleManagementPageProps {
@@ -193,6 +194,7 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
 }) => {
   // Permissions
   const { hasPermission } = usePermissions(currentUser);
+  const queryClient = useQueryClient();
   const canView = hasPermission('roles.view');
   const canEdit = hasPermission('roles.manage');
 
@@ -328,6 +330,9 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
         setDoc(doc(db, 'settings', 'rolePermissions'), rolePermissions, { merge: true }),
         setDoc(doc(db, 'system', 'config'), { tabPermissions }, { merge: true })
       ]);
+      // 캐시 무효화하여 즉시 반영 (usePermissions 30분, useSystemConfig 1시간 캐시)
+      queryClient.invalidateQueries({ queryKey: ['rolePermissions'] });
+      queryClient.invalidateQueries({ queryKey: ['systemConfig'] });
       setHasChanges(false);
       alert('저장되었습니다.');
     } catch (e) {
