@@ -126,10 +126,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
     // Memoized style calculations (매 렌더마다 새 객체 생성 방지)
     const perDayWidth = useMemo(() => {
-        const base = columnWidth === 'compact' ? 35 :
-            columnWidth === 'narrow' ? 50 :
-                columnWidth === 'wide' ? 90 :
-                    columnWidth === 'x-wide' ? 125 : 70;
+        const base = columnWidth === 'compact' ? 20 :
+            columnWidth === 'narrow' ? 30 :
+                columnWidth === 'wide' ? 70 :
+                    columnWidth === 'x-wide' ? 100 : 50;
         return Math.round(base * widthFactor);
     }, [columnWidth, widthFactor]);
 
@@ -148,10 +148,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     };
 
     const singleCellWidthStyle = useMemo(() => {
-        const base = columnWidth === 'compact' ? 70 :
-            columnWidth === 'narrow' ? 90 :
-                columnWidth === 'wide' ? 150 :
-                    columnWidth === 'x-wide' ? 200 : 110;
+        const base = columnWidth === 'compact' ? 40 :
+            columnWidth === 'narrow' ? 55 :
+                columnWidth === 'wide' ? 120 :
+                    columnWidth === 'x-wide' ? 160 : 80;
         const baseWidth = Math.round(base * widthFactor);
         const minBase = Math.round(baseWidth * 0.5);
         return { width: `${baseWidth}px`, minWidth: `${minBase}px` };
