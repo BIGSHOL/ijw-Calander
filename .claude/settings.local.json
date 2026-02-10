@@ -58,8 +58,9 @@
       "Bash(npm audit:*)",
       "Bash(npm update:*)",
       "Bash(npm run test:coverage:*)",
-      "Bash(for f in hooks/useEnrollments.ts hooks/useStaff.ts hooks/useDailyAttendance.ts hooks/useEmbedData.ts hooks/useClassDetail.ts hooks/useVisibleAttendanceStudents.ts hooks/useGanttTemplates.ts hooks/useEmbedTokens.ts hooks/useStudentGrades.ts hooks/useClassStats.ts hooks/useConsultationMutations.ts hooks/useBilling.ts hooks/useStudentBilling.ts hooks/useExams.ts hooks/useExamSeries.ts hooks/useExamsByDate.ts hooks/useTaskMemos.ts hooks/useBucketItems.ts hooks/useResources.ts hooks/useSessionPeriods.ts hooks/useRoleHelpers.ts hooks/useGanttCategories.ts hooks/useGanttProjects.ts hooks/useGanttDepartments.ts hooks/useArchivedEvents.ts hooks/useStaffLeaves.ts hooks/useBatchAttendanceUpdate.ts hooks/useConsultationDrafts.ts hooks/useWithdrawalFilters.ts hooks/useTabHistory.ts hooks/useFirebaseQueries.ts)",
-      "Bash(do wc -l \"$f\")"
+      "WebSearch",
+      "Bash(claude:*)",
+      "Bash(npm view:*)"
     ],
     "additionalDirectories": [
       "d:\\ijw-calander\\components\\Timetable\\English",
@@ -67,7 +68,9 @@
       "f:\\ijw-calander\\.claude\\agents",
       "f:\\ijw-calander",
       "f:\\ijw-calander\\my-video",
-      "d:\\ijw-calander\\designs"
+      "d:\\ijw-calander\\designs",
+      "d:\\ijw-calander\\reports",
+      "d:\\ijw-calander\\docs\\reports\\done"
     ]
   },
   "enableAllProjectMcpServers": true,

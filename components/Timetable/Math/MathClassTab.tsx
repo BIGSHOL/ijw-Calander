@@ -89,9 +89,8 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     exportVisibleGroups,
 }) => {
     const { hasPermission } = usePermissions(currentUser);
-    const isMaster = currentUser?.role === 'master';
-    const canEditMath = hasPermission('timetable.math.edit') || isMaster;
-    const canManageStudents = isMaster || hasPermission('students.edit');
+    const canEditMath = hasPermission('timetable.math.edit');
+    const canManageStudents = hasPermission('students.edit');
 
     const [modeLocal, setModeLocal] = useState<'view' | 'edit'>(isSimulationMode ? 'edit' : 'view');
     const mode = modeProp ?? modeLocal;

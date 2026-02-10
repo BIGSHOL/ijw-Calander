@@ -7,10 +7,10 @@ import { STANDARD_HOLIDAYS } from '../../constants_holidays';
 
 interface HolidaysTabProps {
     holidays: Holiday[];
-    isMaster: boolean;
+    canEditHolidays: boolean;
 }
 
-const HolidaysTab: React.FC<HolidaysTabProps> = ({ holidays, isMaster }) => {
+const HolidaysTab: React.FC<HolidaysTabProps> = ({ holidays, canEditHolidays }) => {
     // --- Local State ---
     const [localHolidays, setLocalHolidays] = useState<Holiday[]>(holidays);
     const [expandedYear, setExpandedYear] = useState<string>(new Date().getFullYear().toString());
@@ -88,7 +88,7 @@ const HolidaysTab: React.FC<HolidaysTabProps> = ({ holidays, isMaster }) => {
     return (
         <div className="space-y-2">
             {/* Section 1: 기본 공휴일 (Standard Holidays Import) */}
-            {isMaster && (
+            {canEditHolidays && (
                 <div className="bg-white border border-gray-200 overflow-hidden">
                     <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
                         <Download className="w-3 h-3 text-primary" />

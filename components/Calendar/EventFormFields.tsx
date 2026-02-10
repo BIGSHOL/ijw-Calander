@@ -56,8 +56,7 @@ interface EventFormFieldsProps {
 
   // Computed
   canEditCurrent: boolean;
-  isMaster: boolean;
-  isAdmin: boolean;
+  canManageAllDepts: boolean;
   currentUser: UserProfile | null;
 }
 
@@ -106,8 +105,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
   users,
   allEvents,
   canEditCurrent,
-  isMaster,
-  isAdmin,
+  canManageAllDepts,
   currentUser,
 }) => {
   return (
@@ -194,7 +192,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
                   <div className="absolute top-full left-0 right-0 mt-1 p-2 bg-white border border-gray-200 shadow-xl z-50 max-h-40 overflow-y-auto">
                     {departments.map((dept) => {
                       const isSelected = departmentIds.includes(dept.id);
-                      const hasEditAccess = isMaster || isAdmin || currentUser?.departmentPermissions?.[dept.id] === 'edit';
+                      const hasEditAccess = canManageAllDepts || currentUser?.departmentPermissions?.[dept.id] === 'edit';
                       const hasViewAccess = currentUser?.departmentPermissions?.[dept.id] === 'view';
 
                       return (

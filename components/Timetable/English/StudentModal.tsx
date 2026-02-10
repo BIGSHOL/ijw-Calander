@@ -167,8 +167,7 @@ const StudentModal: React.FC<StudentModalProps> = ({
     }, [isOpen, className, isSimulationMode, useEnrollmentsMode, initialStudents]);
 
     const { hasPermission } = usePermissions(currentUser);
-    const isMaster = currentUser?.role === 'master';
-    const canEditEnglish = (hasPermission('timetable.english.edit') || isMaster) && !readOnly;
+    const canEditEnglish = hasPermission('timetable.english.edit') && !readOnly;
 
     // Ref to track isDirty without causing re-subscription
     const isDirtyRef = useRef(isDirty);

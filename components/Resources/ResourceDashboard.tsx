@@ -6,6 +6,7 @@ import ResourceCard, { ResourceTableHeader, SortField, SortDirection } from './R
 import ResourceAddModal from './ResourceAddModal';
 import { FolderOpen, Folder, Plus, Loader2, RefreshCw, Home, ChevronRight, Search, X, Clock, Trash2, CheckSquare, Star, RotateCcw, GripVertical } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
+import { usePermissions } from '../../hooks/usePermissions';
 
 interface ResourceDashboardProps {
   userProfile: UserProfile | null;
@@ -65,8 +66,9 @@ const ResourceDashboard: React.FC<ResourceDashboardProps> = ({ userProfile }) =>
     }
   }, [currentMain]);
 
-  // 관리자 여부 체크
-  const canEdit = userProfile?.role === 'master' || userProfile?.role === 'admin';
+  // 리소스 편집 권한
+  const { hasPermission } = usePermissions(userProfile ?? null);
+  const canEdit = hasPermission('resources.edit');
 
   // 기존 카테고리 추출 (모달에 전달용)
   const existingCategories = useMemo(() => {

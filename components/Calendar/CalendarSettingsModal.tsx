@@ -47,13 +47,12 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
   const canEditDept = canManageDept;
   const canDeleteDept = canManageDept;
   const canManageCategories = hasPermission('settings.manage_categories');
-  const isMaster = currentUser?.role === 'master';
-  const isAdmin = currentUser?.role === 'admin';
+  const canManageAllDepts = canManageDept;
 
   // Firebase Data
   const { data: departments = [] } = useDepartments(!!currentUser);
   const { data: systemConfig } = useSystemConfig(!!currentUser);
-  const { data: staffWithAccounts = [] } = useStaffWithAccounts(isMaster || isAdmin);
+  const { data: staffWithAccounts = [] } = useStaffWithAccounts(canManageAllDepts);
   const sysCategories = systemConfig?.categories || [];
 
   // staff 데이터를 UserProfile 형태로 변환
@@ -252,7 +251,7 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
               부서 관리
             </div>
           </button>
-          {(isMaster || isAdmin) && (
+          {canManageAllDepts && (
             <button
               onClick={() => setActiveTab('permissions')}
               className={`px-4 py-2 font-bold text-xs transition-all border-b-2 ${
@@ -302,8 +301,7 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
                   canCreateDept={canCreateDept}
                   canEditDept={canEditDept}
                   canDeleteDept={canDeleteDept}
-                  isMaster={isMaster}
-                  isAdmin={isAdmin}
+                  canManageAllDepts={canManageAllDepts}
                   setNewDepartmentForm={setNewDepartmentForm}
                   setCategoryManagement={setCategoryManagement}
                   setDepartmentFilterState={setDepartmentFilterState}
@@ -318,7 +316,7 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
               </div>
             </div>
           )}
-          {activeTab === 'permissions' && (isMaster || isAdmin) && (
+          {activeTab === 'permissions' && canManageAllDepts && (
             <div className="bg-white border border-gray-200 overflow-hidden">
               <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
                 <Shield className="w-3 h-3 text-primary" />
@@ -340,7 +338,7 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
                 <h3 className="text-primary font-bold text-xs">해시태그 관리</h3>
               </div>
               <div className="p-2">
-                <HashtagsTab isMaster={isMaster} />
+                <HashtagsTab />
               </div>
             </div>
           )}

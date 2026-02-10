@@ -86,8 +86,7 @@ export interface UseEventModalStateReturn {
   canEditCurrent: boolean;
   canDeleteEvent: boolean | undefined;
   canManageAttendance: boolean;
-  isMaster: boolean;
-  isAdmin: boolean;
+  canManageAllDepts: boolean;
 
   // Handlers
   handleSubmit: (e: React.FormEvent) => void;
@@ -151,9 +150,8 @@ export const useEventModalState = (props: UseEventModalStateProps): UseEventModa
   const canDelete = hasPermission(isAuthor ? 'events.manage_own' : 'events.manage_others');
   const canManageAttendance = hasPermission('events.attendance');
 
-  const isMaster = currentUser?.role === 'master';
-  const isAdmin = currentUser?.role === 'admin';
-  const hasDeptAccess = isMaster || isAdmin || departmentIds.some(dId => currentUser?.departmentPermissions?.[dId] === 'edit');
+  const canManageAllDepts = hasPermission('departments.manage');
+  const hasDeptAccess = canManageAllDepts || departmentIds.some(dId => currentUser?.departmentPermissions?.[dId] === 'edit');
 
   const canSaveEvent = hasDeptAccess && (!existingEvent ? canCreate : canEdit);
   const canDeleteEvent = existingEvent && hasDeptAccess && canDelete;
@@ -445,8 +443,7 @@ export const useEventModalState = (props: UseEventModalStateProps): UseEventModa
     canEditCurrent,
     canDeleteEvent,
     canManageAttendance,
-    isMaster,
-    isAdmin,
+    canManageAllDepts,
     handleSubmit,
   };
 };

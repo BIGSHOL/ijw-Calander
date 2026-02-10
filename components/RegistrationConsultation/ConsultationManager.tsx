@@ -41,14 +41,12 @@ interface ConsultationManagerProps {
 
 const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, onNavigateToStudent }) => {
     const { hasPermission } = usePermissions(userProfile);
-    const isMaster = userProfile?.role === 'master';
-
     // 권한 체크
-    const canView = isMaster || hasPermission('consultation.view') || hasPermission('consultation.manage');
-    const canCreate = isMaster || hasPermission('consultation.create');
-    const canEdit = isMaster || hasPermission('consultation.edit') || hasPermission('consultation.manage');
-    const canManage = isMaster || hasPermission('consultation.manage'); // 모든 상담 관리 가능
-    const canConvert = isMaster || hasPermission('consultation.convert');
+    const canView = hasPermission('consultation.view') || hasPermission('consultation.manage');
+    const canCreate = hasPermission('consultation.create');
+    const canEdit = hasPermission('consultation.edit') || hasPermission('consultation.manage');
+    const canManage = hasPermission('consultation.manage');
+    const canConvert = hasPermission('consultation.convert');
 
     const [view, setView] = useState<'dashboard' | 'table' | 'yearly'>('dashboard'); // 기본값: 통계(dashboard)
     const [viewColumns, setViewColumns] = useState<1 | 2>(1); // 1단/2단 보기 상태

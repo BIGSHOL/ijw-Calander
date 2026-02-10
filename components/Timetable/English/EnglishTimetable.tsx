@@ -149,11 +149,10 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     }, [isDisplayOptionsOpen]);
 
     const { hasPermission } = usePermissions(currentUser);
-    const isMaster = currentUser?.role === 'master';
-    const canEditEnglish = hasPermission('timetable.english.edit') || isMaster;
+    const canEditEnglish = hasPermission('timetable.english.edit');
     const canViewEnglish = hasPermission('timetable.english.view') || canEditEnglish;
-    const canSimulation = hasPermission('timetable.english.simulation') || isMaster;
-    const canViewBackup = hasPermission('timetable.english.backup.view') || isMaster;
+    const canSimulation = hasPermission('timetable.english.simulation');
+    const canViewBackup = hasPermission('timetable.english.backup.view');
 
     // Fetch classes data for mainTeacher (담임) information
     const { data: classesData } = useClasses('english');
@@ -1249,7 +1248,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 onCopyLiveToDraft={handleCopyLiveToDraft}
                                 onPublishToLive={handlePublishDraftToLive}
                                 onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
-                                canPublish={isMaster || hasPermission('timetable.english.simulation')}
+                                canPublish={canSimulation}
                                 onSimulationLevelUp={isSimulationMode ? handleSimulationLevelUp : undefined}
                                 currentWeekStart={currentWeekStart}
                                 mode={mode}

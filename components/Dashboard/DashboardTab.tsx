@@ -6,6 +6,7 @@ import StaffDashboard from './roles/StaffDashboard';
 import ManagerDashboard from './roles/ManagerDashboard';
 import StaffSelector from './StaffSelector';
 import { useStaff } from '../../hooks/useStaff';
+import { usePermissions } from '../../hooks/usePermissions';
 
 interface DashboardTabProps {
   userProfile: UserProfile;
@@ -37,10 +38,9 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ userProfile, staffMember })
     );
   }
 
-  // 다른 직원 대시보드 보기 권한 확인 (MASTER, Admin만)
-  const canViewOtherDashboards = useMemo(() => {
-    return userProfile.role === 'master' || userProfile.role === 'admin';
-  }, [userProfile.role]);
+  // 다른 직원 대시보드 보기 권한 확인
+  const { hasPermission } = usePermissions(userProfile);
+  const canViewOtherDashboards = hasPermission('users.view');
 
   // 선택된 직원 정보 가져오기
   const selectedStaff = useMemo(() => {

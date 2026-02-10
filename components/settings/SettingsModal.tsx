@@ -70,8 +70,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const canViewClasses = hasPermission('system.classes.view');
   const canEditClasses = hasPermission('system.classes.edit');
 
-  const isMaster = currentUserProfile?.role === 'master';
-  const isAdmin = currentUserProfile?.role === 'admin';
+  const canAccessSettings = hasPermission('settings.access');
+  const canEditHolidays = hasPermission('settings.holidays');
   // Legacy helpers mapped to permissions
   const canManageMenus = canViewDepartments;
 
@@ -287,7 +287,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   // System Config logic...
   useEffect(() => {
-    if (isMaster) {
+    if (canAccessSettings) {
       const unsubscribe = onSnapshot(doc(db, 'system', 'config'), (doc) => {
         if (doc.exists()) {
           setLookbackYears(doc.data().eventLookbackYears || 2);
@@ -295,7 +295,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       });
       return () => unsubscribe();
     }
-  }, [isMaster]);
+  }, [canAccessSettings]);
 
   // Class Keywords subscription 제거됨 - 시간표 페이지(ClassSettingsModal)에서 관리
 
@@ -479,11 +479,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* Content Area */}
           <div className="p-6 overflow-y-auto flex-1 bg-gray-50 pb-20">
-            {(isMaster || isAdmin || currentUserProfile?.role === 'manager' || hasPermission('settings.access')) && (
+            {canAccessSettings && (
               <div className="max-w-2xl mx-auto space-y-8 pb-20">
                 {/* Holidays Tab Component */}
-                {(isMaster || hasPermission('settings.holidays')) && (
-                  <HolidaysTab holidays={localHolidays} isMaster={isMaster} />
+                {canEditHolidays && (
+                  <HolidaysTab holidays={localHolidays} canEditHolidays={canEditHolidays} />
                 )}
 
                 {/* 1.5 Display Settings */}
@@ -518,7 +518,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
 
                 {/* 2. System Config (Data Retention) */}
-                {isMaster && (
+                {canAccessSettings && (
                   <div className="bg-white p-6 rounded-sm shadow-sm border border-gray-200">
                     <h3 className="font-bold mb-4 flex gap-2"><Database size={18} /> 데이터 보존 및 아카이브</h3>
                     <div className="space-y-4">

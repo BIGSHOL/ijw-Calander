@@ -105,7 +105,6 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const canManageMath = hasPermission('attendance.manage_math');
   const canManageEnglish = hasPermission('attendance.manage_english');
   const canManageSessions = hasPermission('attendance.manage_sessions');  // 세션 설정 권한
-  const isMasterOrAdmin = userProfile?.role === 'master' || userProfile?.role === 'admin';
 
   // Determine user's staffId for filtering (if they are a teacher)
   // Uses explicit User-Teacher linking from user profile (set in System Settings -> Users)
@@ -117,22 +116,20 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
 
   // Determine if user can manage the current subject (for teacher dropdown access)
   const canManageCurrentSubject = useMemo(() => {
-    if (isMasterOrAdmin) return true;
+    if (canManageMath && canManageEnglish) return true;
     if (selectedSubject === 'math' && canManageMath) return true;
     if (selectedSubject === 'english' && canManageEnglish) return true;
     return false;
-  }, [selectedSubject, canManageMath, canManageEnglish, isMasterOrAdmin]);
+  }, [selectedSubject, canManageMath, canManageEnglish]);
 
   // 이미지 저장 가능 여부 (조회 권한이 있으면 저장 가능)
   const canExportImage = useMemo(() => {
-    // 마스터/관리자는 항상 가능
-    if (isMasterOrAdmin) return true;
     // 해당 과목 관리 권한이 있으면 가능
     if (canManageCurrentSubject) return true;
     // 본인 출석부 관리 권한 + 연결된 강사가 있으면 본인 출석부만 저장 가능
     if (canManageOwn && currentStaffId) return true;
     return false;
-  }, [isMasterOrAdmin, canManageCurrentSubject, canManageOwn, currentStaffId]);
+  }, [canManageCurrentSubject, canManageOwn, currentStaffId]);
 
   // Available teachers for filter dropdown (based on manage permission for current subject)
   const availableTeachers = useMemo(() => {
@@ -721,7 +718,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         <div className="flex-1"></div>
 
         {/* 세션 설정 버튼 - 관리자 전용 */}
-        {(canManageSessions || isMasterOrAdmin) && (
+        {canManageSessions && (
           <button
             onClick={() => setSessionSettingsModalOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-sm font-bold text-xs hover:bg-amber-600 transition-colors shadow-sm flex-shrink-0"

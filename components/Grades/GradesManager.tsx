@@ -38,10 +38,9 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
 
   // 권한 체크
   const { hasPermission } = usePermissions(currentUser || null);
-  const isMaster = currentUser?.role === 'master';
-  const canViewGrades = isMaster || hasPermission('grades.view');
-  const canEditGrades = isMaster || hasPermission('grades.edit');
-  const canManageExams = isMaster || hasPermission('grades.manage_exams');
+  const canViewGrades = hasPermission('grades.view');
+  const canEditGrades = hasPermission('grades.edit');
+  const canManageExams = hasPermission('grades.manage_exams');
 
   // State
   const [viewMode, setViewMode] = useState<ViewMode>('exams');

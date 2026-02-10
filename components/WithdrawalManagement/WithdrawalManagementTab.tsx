@@ -22,9 +22,8 @@ interface WithdrawalManagementTabProps {
 
 const WithdrawalManagementTab: React.FC<WithdrawalManagementTabProps> = ({ currentUser }) => {
   const { hasPermission } = usePermissions(currentUser);
-  const isMaster = currentUser?.role === 'master';
-  const canEdit = isMaster || hasPermission('withdrawal.edit');
-  const canReactivate = isMaster || hasPermission('withdrawal.reactivate');
+  const canEdit = hasPermission('withdrawal.edit');
+  const canReactivate = hasPermission('withdrawal.reactivate');
 
   const { students, loading, refreshStudents } = useStudents(true);
   const { staff } = useStaff();

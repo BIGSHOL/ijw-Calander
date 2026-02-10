@@ -134,8 +134,7 @@ const EventModal: React.FC<EventModalProps> = ({
             users={users}
             allEvents={allEvents}
             canEditCurrent={state.canEditCurrent}
-            isMaster={state.isMaster}
-            isAdmin={state.isAdmin}
+            canManageAllDepts={state.canManageAllDepts}
             currentUser={currentUser}
           />
 
@@ -148,8 +147,7 @@ const EventModal: React.FC<EventModalProps> = ({
             currentUser={currentUser}
             isViewMode={state.isViewMode}
             canEditCurrent={state.canEditCurrent}
-            isMaster={state.isMaster}
-            isAdmin={state.isAdmin}
+            canManageAllDepts={state.canManageAllDepts}
             canManageAttendance={state.canManageAttendance}
             existingEvent={existingEvent}
             onBatchUpdateAttendance={onBatchUpdateAttendance}
