@@ -145,14 +145,14 @@ const ClassCard: React.FC<ClassCardProps> = ({
     const isCompact = rowHeight === 'compact';
     // 글자 크기 CSS 클래스 매핑
     const fontSizeClass = {
-        'small': 'text-micro',
-        'normal': 'text-xxs',
-        'large': 'text-[11px]',
-        'very-large': 'text-xs'
+        'small': 'text-nano',
+        'normal': 'text-micro',
+        'large': 'text-xs',
+        'very-large': 'text-sm'
     }[fontSize];
 
     const titleFontSizeClass = {
-        'small': 'text-xxs',
+        'small': 'text-micro',
         'normal': 'text-xs',
         'large': 'text-sm',
         'very-large': 'text-base'
