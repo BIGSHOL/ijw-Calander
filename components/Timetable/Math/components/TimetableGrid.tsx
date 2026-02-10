@@ -134,15 +134,17 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     }, [columnWidth, widthFactor]);
 
     const mergedCellWidthCache = useMemo(() => {
-        const cache: Record<number, { width: string }> = {};
+        const cache: Record<number, { width: string; minWidth: string }> = {};
+        const minPerDay = Math.round(perDayWidth * 0.5);
         for (let i = 1; i <= 7; i++) {
-            cache[i] = { width: `${i * perDayWidth}px` };
+            cache[i] = { width: `${i * perDayWidth}px`, minWidth: `${i * minPerDay}px` };
         }
         return cache;
     }, [perDayWidth]);
 
     const getMergedCellWidthStyle = (colspan: number) => {
-        return mergedCellWidthCache[colspan] || { width: `${colspan * perDayWidth}px` };
+        const minPerDay = Math.round(perDayWidth * 0.5);
+        return mergedCellWidthCache[colspan] || { width: `${colspan * perDayWidth}px`, minWidth: `${colspan * minPerDay}px` };
     };
 
     const singleCellWidthStyle = useMemo(() => {
@@ -151,7 +153,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                 columnWidth === 'wide' ? 150 :
                     columnWidth === 'x-wide' ? 200 : 110;
         const baseWidth = Math.round(base * widthFactor);
-        return { width: `${baseWidth}px` };
+        const minBase = Math.round(baseWidth * 0.5);
+        return { width: `${baseWidth}px`, minWidth: `${minBase}px` };
     }, [columnWidth, widthFactor]);
 
     // 교시당 높이 (memoized)
