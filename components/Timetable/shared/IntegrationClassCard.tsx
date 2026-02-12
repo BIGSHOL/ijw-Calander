@@ -593,15 +593,15 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                     {(() => {
                         if (isTimeColumnOnly) {
                             return (
-                                <div className="text-center font-bold text-sm border-b border-orange-300 flex items-center justify-center w-[72px] h-[72px] mx-auto bg-orange-200 text-orange-900 select-none shrink-0 overflow-hidden">
-                                    수업
+                                <div className="text-center font-bold text-xs border-b border-orange-300 flex items-center justify-center h-[32px] bg-orange-100 text-orange-800 select-none shrink-0 overflow-hidden">
+                                    수업명
                                 </div>
                             );
                         }
 
                         return (
                             <div
-                                className={`text-center font-bold text-xs border-b border-gray-300 flex items-center justify-center w-[72px] h-[72px] mx-auto leading-tight relative group shrink-0 overflow-hidden ${mode === 'view' ? 'cursor-help' : ''}`}
+                                className={`text-center font-bold text-xs border-b border-gray-300 flex items-center justify-center h-[32px] leading-tight relative group shrink-0 overflow-hidden ${mode === 'view' ? 'cursor-help' : ''}`}
                                 title={classInfo.name}
                                 style={keywordColor ? { backgroundColor: keywordColor.bgColor, color: keywordColor.textColor } : { backgroundColor: '#EFF6FF', color: '#111827' }}
                                 onMouseEnter={() => isEnglish && mode !== 'edit' && setShowScheduleTooltip(true)}
