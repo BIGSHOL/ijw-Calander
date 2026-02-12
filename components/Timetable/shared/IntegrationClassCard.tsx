@@ -1,7 +1,8 @@
 // Shared Integration Class Card
 // 영어/수학 통합뷰 공용 수업 카드
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Eye, EyeOff, Users, MoreVertical, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, Clock, Settings } from 'lucide-react';
 import { Teacher, TimetableStudent, ClassKeywordColor, EnglishLevel } from '../../../types';
 import IntegrationMiniGridRow, { PeriodInfo, ScheduleCell } from './IntegrationMiniGridRow';
@@ -249,6 +250,27 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [levelUpModal, setLevelUpModal] = useState<{ isOpen: boolean; type: 'number' | 'class'; newName: string; direction: 'up' | 'down' }>({ isOpen: false, type: 'number', newName: '', direction: 'up' });
     const [showScheduleTooltip, setShowScheduleTooltip] = useState(false);
+    const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+    const headerRef = useRef<HTMLDivElement>(null);
+
+    // 툴팁 위치 업데이트
+    useEffect(() => {
+        if (showScheduleTooltip && headerRef.current) {
+            const rect = headerRef.current.getBoundingClientRect();
+            const tooltipWidth = 160;
+            const viewportWidth = window.innerWidth;
+
+            let x = rect.left + rect.width / 2 - tooltipWidth / 2;
+            const y = rect.bottom + 4;
+
+            if (x < 8) x = 8;
+            if (x + tooltipWidth > viewportWidth - 8) {
+                x = viewportWidth - tooltipWidth - 8;
+            }
+
+            setTooltipPosition({ x, y });
+        }
+    }, [showScheduleTooltip]);
 
     // 레벨업/다운 실행 함수 (충돌 체크 후 바로 실행 또는 경고)
     const handleLevelChange = async (oldClassName: string, newClassName: string, type: 'number' | 'class', direction: 'up' | 'down') => {
@@ -601,6 +623,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
 
                         return (
                             <div
+                                ref={headerRef}
                                 className={`text-center font-bold text-xs border-b border-gray-300 flex items-center justify-center h-[32px] leading-tight relative group shrink-0 overflow-hidden ${mode === 'view' ? 'cursor-help' : ''}`}
                                 title={classInfo.name}
                                 style={keywordColor ? { backgroundColor: keywordColor.bgColor, color: keywordColor.textColor } : { backgroundColor: '#EFF6FF', color: '#111827' }}
@@ -609,9 +632,16 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                             >
                                 {classInfo.name}
 
-                                {/* Schedule Tooltip (영어 조회 모드에서만 마우스 오버 시 실제 스케줄 표시) */}
-                                {isEnglish && mode !== 'edit' && showScheduleTooltip && scheduleInfo.length > 0 && (
-                                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 bg-gray-900 text-white text-xs rounded-sm shadow-xl z-50 p-2 min-w-[140px] whitespace-nowrap animate-in fade-in zoom-in-95 duration-150">
+                                {/* Schedule Tooltip - Portal로 DOM 최상위에 렌더링 (overflow-hidden 회피) */}
+                                {isEnglish && mode !== 'edit' && showScheduleTooltip && scheduleInfo.length > 0 && createPortal(
+                                    <div
+                                        className="fixed bg-gray-900 text-white text-xs rounded-sm shadow-xl p-2 min-w-[140px] whitespace-nowrap pointer-events-none"
+                                        style={{
+                                            left: tooltipPosition.x,
+                                            top: tooltipPosition.y,
+                                            zIndex: 9999
+                                        }}
+                                    >
                                         <div className="flex items-center gap-1.5 mb-1.5 pb-1.5 border-b border-gray-700">
                                             <Clock size={12} className="text-yellow-400" />
                                             <span className="font-bold">수업 시간</span>
@@ -626,8 +656,8 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                 </div>
                                             ))}
                                         </div>
-                                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45"></div>
-                                    </div>
+                                    </div>,
+                                    document.body
                                 )}
 
                                 {/* Edit Controls */}
