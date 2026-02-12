@@ -421,6 +421,15 @@ service cloud.firestore {
       allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('billing.edit');
     }
 
+    // === Enrollment Terms (등록차수 관리) ===
+    match /enrollment_terms/{termId} {
+      allow read: if isAuthenticated();
+      allow create, update: if hasRole(['master', 'admin']) ||
+                               hasPermission('billing.edit') ||
+                               hasPermission('attendance.edit_all');
+      allow delete: if hasRole(['master', 'admin']);
+    }
+
     // === Attendance Collection (출석 관리) ===
     match /attendance/{attendanceId} {
       allow read: if hasRole(['master', 'admin']) ||

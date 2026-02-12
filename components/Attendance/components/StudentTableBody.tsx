@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Student, SalaryConfig } from '../types';
 import { Exam, StudentScore } from '../../../types';
+import { StudentTermSummary } from '../../../types/enrollmentTerm';
 import { ChevronUp, ChevronDown, ChevronRight, Folder, FolderOpen } from 'lucide-react';
 import StudentRow from './StudentRow';
 
@@ -28,6 +29,8 @@ export interface StudentTableBodyProps {
   sortMode?: 'class' | 'name';
   hasHiddenDates?: boolean;
   totalGroupCounts?: Map<string, number>;
+  enrollmentTerms?: Map<string, StudentTermSummary>;
+  onEnrollmentTermClick?: (studentId: string, studentName: string, rect: { top: number; left: number }) => void;
 }
 
 const StudentTableBody = React.memo(({
@@ -53,7 +56,9 @@ const StudentTableBody = React.memo(({
   holidayDateSet = new Set(),
   holidayNameMap = new Map(),
   sortMode = 'class',
-  totalGroupCounts
+  totalGroupCounts,
+  enrollmentTerms,
+  onEnrollmentTermClick
 }: StudentTableBodyProps) => {
   // 그룹 접기/펼치기 상태 관리 (외부에서 전달받거나 내부 state 사용)
   const [internalCollapsedGroups, setInternalCollapsedGroups] = useState<Set<string>>(new Set());
@@ -190,7 +195,7 @@ const StudentTableBody = React.memo(({
 
       rows.push(
         <tr key={`group-${currentGroup}`} className="bg-slate-100 border-y border-slate-200">
-          <td colSpan={days.length + 5 + (hasHiddenDates ? 1 : 0)} className="py-2 px-4 text-xs font-bold text-slate-600 uppercase tracking-wider">
+          <td colSpan={days.length + 6 + (hasHiddenDates ? 1 : 0)} className="py-2 px-4 text-xs font-bold text-slate-600 uppercase tracking-wider">
             <div className="flex items-center gap-2">
               {/* 접기/펼치기 버튼 */}
               <button
@@ -256,7 +261,7 @@ const StudentTableBody = React.memo(({
 
       rows.push(
         <tr key="group-none" className="bg-slate-100 border-y border-slate-200">
-          <td colSpan={days.length + 5 + (hasHiddenDates ? 1 : 0)} className="py-2 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+          <td colSpan={days.length + 6 + (hasHiddenDates ? 1 : 0)} className="py-2 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => toggleGroupCollapse('그룹 없음')}
@@ -312,6 +317,8 @@ const StudentTableBody = React.memo(({
         holidayDateSet={holidayDateSet}
         holidayNameMap={holidayNameMap}
         hasHiddenDates={hasHiddenDates}
+        enrollmentTerm={enrollmentTerms?.get(student.id)}
+        onEnrollmentTermClick={onEnrollmentTermClick}
       />
     );
   });

@@ -835,7 +835,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
               onTimeSlotClick={onTimeSlotClick}
             />
           ) : (
-            <div className="flex-1 overflow-y-auto min-h-0 space-y-4">
+            <div className="flex-1 overflow-y-auto no-scrollbar overscroll-contain min-h-0 space-y-4">
               {viewMode === 'weekly' ? (
                 <div className="border-t-2 border-primary pt-4">
                   <WeekBlock

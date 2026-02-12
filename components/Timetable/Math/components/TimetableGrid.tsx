@@ -126,38 +126,45 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
     // Memoized style calculations (매 렌더마다 새 객체 생성 방지)
     const perDayWidth = useMemo(() => {
-        const base = columnWidth === 'compact' ? 20 :
-            columnWidth === 'narrow' ? 30 :
-                columnWidth === 'wide' ? 70 :
-                    columnWidth === 'x-wide' ? 100 : 50;
+        // 병합 셀에서 요일당 폭 = cellSize / 2 (대략)
+        const base = columnWidth === 'compact' ? 36 :
+            columnWidth === 'narrow' ? 45 :
+                columnWidth === 'wide' ? 63 :
+                    columnWidth === 'x-wide' ? 72 : 54;
         return Math.round(base * widthFactor);
     }, [columnWidth, widthFactor]);
 
     const mergedCellWidthCache = useMemo(() => {
-        const cache: Record<number, { width: string; minWidth: string }> = {};
+        const cache: Record<number, { width: string; minWidth: string; maxWidth: string; overflow: 'hidden' }> = {};
         const minPerDay = Math.round(perDayWidth * 0.5);
         for (let i = 1; i <= 7; i++) {
-            cache[i] = { width: `${i * perDayWidth}px`, minWidth: `${i * minPerDay}px` };
+            const w = `${i * perDayWidth}px`;
+            cache[i] = { width: w, minWidth: `${i * minPerDay}px`, maxWidth: w, overflow: 'hidden' };
         }
         return cache;
     }, [perDayWidth]);
 
     const getMergedCellWidthStyle = (colspan: number) => {
         const minPerDay = Math.round(perDayWidth * 0.5);
-        return mergedCellWidthCache[colspan] || { width: `${colspan * perDayWidth}px`, minWidth: `${colspan * minPerDay}px` };
+        const w = `${colspan * perDayWidth}px`;
+        return mergedCellWidthCache[colspan] || { width: w, minWidth: `${colspan * minPerDay}px`, maxWidth: w, overflow: 'hidden' as const };
     };
 
-    const singleCellWidthStyle = useMemo(() => {
-        const base = columnWidth === 'compact' ? 40 :
-            columnWidth === 'narrow' ? 55 :
-                columnWidth === 'wide' ? 120 :
-                    columnWidth === 'x-wide' ? 160 : 80;
-        const baseWidth = Math.round(base * widthFactor);
-        const minBase = Math.round(baseWidth * 0.5);
-        return { width: `${baseWidth}px`, minWidth: `${minBase}px` };
-    }, [columnWidth, widthFactor]);
+    // cellSize 픽셀 매핑: xs=72, sm=90, md=108, lg=126, xl=144
+    const cellSizePx = useMemo(() => {
+        return columnWidth === 'compact' ? 72 :
+            columnWidth === 'narrow' ? 90 :
+                columnWidth === 'wide' ? 126 :
+                    columnWidth === 'x-wide' ? 144 : 108;
+    }, [columnWidth]);
 
-    // 교시당 높이 (memoized)
+    const singleCellWidthStyle = useMemo(() => {
+        const baseWidth = Math.round(cellSizePx * widthFactor);
+        const minBase = Math.round(baseWidth * 0.5);
+        return { width: `${baseWidth}px`, minWidth: `${minBase}px`, maxWidth: `${baseWidth}px`, overflow: 'hidden' as const };
+    }, [cellSizePx, widthFactor]);
+
+    // 교시당 높이 (memoized) - cellSize 기반
     const rowHeightValue = useMemo((): number | 'auto' => {
         if (!showStudents) return 'auto';
         if (rowHeight === 'compact') return 'auto';
@@ -295,10 +302,29 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         };
         const groupColors = getGroupColors();
 
+        // 테이블 총 폭 계산 (colgroup과 일치시켜 확장 방지)
+        const totalTableWidth = 90 + resources.reduce((acc, resource) => {
+            const daysForRes = isWednesdayTable ? ['수'] : (daysMap.get(resource) || []);
+            const isMerged = daysForRes.length > 1;
+            const colW = isMerged ? perDayWidth : parseInt(singleCellWidthStyle.width);
+            return acc + daysForRes.length * colW;
+        }, 0);
+
         return (
             <div className="flex-shrink-0">
                 <div className="relative">
-                    <table className="border-collapse bg-gray-300" style={{ tableLayout: 'fixed' }}>
+                    <table className="border-collapse bg-gray-300" style={{ tableLayout: 'fixed', width: `${totalTableWidth}px` }}>
+                        {/* colgroup으로 각 컬럼 너비 강제 */}
+                        <colgroup>
+                            <col style={{ width: '90px' }} />
+                            {resources.map(resource => {
+                                const daysForRes = isWednesdayTable ? ['수'] : (daysMap.get(resource) || []);
+                                return daysForRes.map((day) => {
+                                    const colW = daysForRes.length > 1 ? `${perDayWidth}px` : singleCellWidthStyle.width;
+                                    return <col key={`col-${resource}-${day}`} style={{ width: colW }} />;
+                                });
+                            })}
+                        </colgroup>
                         <thead className="sticky top-0 z-20">
                             {/* Group Title Row */}
                             {title && (
@@ -394,7 +420,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                 })}
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="timetable-body">
                             {(() => {
                                 // 주말 테이블은 그룹화하지 않고 시간만 표시
                                 const isWeekendTable = title === '토/일';
@@ -537,7 +563,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                             cells.push(
                                                                 <td
                                                                     key={`${resource}-${day}-${firstPeriod}`}
-                                                                    className={`p-0 border-b-2 border-b-gray-400 ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
+                                                                    className={`p-0 border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
                                                                     style={cellStyle}
                                                                     rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                                     colSpan={colSpan > 1 ? colSpan : undefined}
@@ -571,6 +597,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
                                                                                 fontSize={fontSize}
                                                                                 rowHeight={rowHeight}
+                                                                                cellSizePx={cellSizePx}
                                                                                 showHoldStudents={showHoldStudents}
                                                                                 showWithdrawnStudents={showWithdrawnStudents}
                                                                                 pendingMovedStudentIds={pendingMovedStudentIds}
@@ -601,6 +628,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                     mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
                                                                                     fontSize={fontSize}
                                                                                     rowHeight={rowHeight}
+                                                                                cellSizePx={cellSizePx}
                                                                                     showHoldStudents={showHoldStudents}
                                                                                     showWithdrawnStudents={showWithdrawnStudents}
                                                                                     pendingMovedStudentIds={pendingMovedStudentIds}
@@ -710,7 +738,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                             cells.push(
                                                                 <td
                                                                     key={`${resource}-${day}-${secondPeriod}`}
-                                                                    className={`p-0 border-b-2 border-b-gray-400 ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
+                                                                    className={`p-0 border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
                                                                     style={cellStyle}
                                                                     rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                                     colSpan={colSpan > 1 ? colSpan : undefined}
@@ -744,6 +772,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
                                                                                 fontSize={fontSize}
                                                                                 rowHeight={rowHeight}
+                                                                                cellSizePx={cellSizePx}
                                                                                 showHoldStudents={showHoldStudents}
                                                                                 showWithdrawnStudents={showWithdrawnStudents}
                                                                                 pendingMovedStudentIds={pendingMovedStudentIds}
@@ -774,6 +803,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                     mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
                                                                                     fontSize={fontSize}
                                                                                     rowHeight={rowHeight}
+                                                                                cellSizePx={cellSizePx}
                                                                                     showHoldStudents={showHoldStudents}
                                                                                     showWithdrawnStudents={showWithdrawnStudents}
                                                                                     pendingMovedStudentIds={pendingMovedStudentIds}
@@ -900,7 +930,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 cells.push(
                                                                     <td
                                                                         key={`${resource}-${day}-${period}`}
-                                                                        className={`p-0 border-b-2 border-b-gray-400 ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
+                                                                        className={`p-0 border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
                                                                         style={cellStyle}
                                                                         rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                                         colSpan={colSpan > 1 ? colSpan : undefined}
@@ -934,6 +964,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                     mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
                                                                                     fontSize={fontSize}
                                                                                     rowHeight={rowHeight}
+                                                                                cellSizePx={cellSizePx}
                                                                                     showHoldStudents={showHoldStudents}
                                                                                     showWithdrawnStudents={showWithdrawnStudents}
                                                                                     pendingMovedStudentIds={pendingMovedStudentIds}
@@ -964,6 +995,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                         mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
                                                                                         fontSize={fontSize}
                                                                                         rowHeight={rowHeight}
+                                                                                cellSizePx={cellSizePx}
                                                                                         showHoldStudents={showHoldStudents}
                                                                                         showWithdrawnStudents={showWithdrawnStudents}
                                                                                         pendingMovedStudentIds={pendingMovedStudentIds}
@@ -1077,7 +1109,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                         cells.push(
                                                             <td
                                                                 key={`${resource}-${day}-${period}`}
-                                                                className={`p-0 border-b-2 border-b-gray-400 ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
+                                                                className={`p-0 border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
                                                                 style={cellStyle}
                                                                 rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                                 colSpan={colSpan > 1 ? colSpan : undefined}
@@ -1111,6 +1143,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
                                                                             fontSize={fontSize}
                                                                             rowHeight={rowHeight}
+                                                                                cellSizePx={cellSizePx}
                                                                             showHoldStudents={showHoldStudents}
                                                                             showWithdrawnStudents={showWithdrawnStudents}
                                                                             pendingMovedStudentIds={pendingMovedStudentIds}
@@ -1141,6 +1174,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
                                                                                 fontSize={fontSize}
                                                                                 rowHeight={rowHeight}
+                                                                                cellSizePx={cellSizePx}
                                                                                 showHoldStudents={showHoldStudents}
                                                                                 showWithdrawnStudents={showWithdrawnStudents}
                                                                                 pendingMovedStudentIds={pendingMovedStudentIds}
@@ -1209,10 +1243,20 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         };
         const dayColors = getDayColors();
 
+        // 테이블 총 폭 계산
+        const totalDayTableWidth = 90 + resources.length * parseInt(singleCellWidthStyle.width);
+
         return (
             <div key={day} className="flex-shrink-0">
                 <div className="relative">
-                    <table className="border-collapse bg-gray-300" style={{ tableLayout: 'fixed' }}>
+                    <table className="border-collapse bg-gray-300" style={{ tableLayout: 'fixed', width: `${totalDayTableWidth}px` }}>
+                        {/* colgroup으로 각 컬럼 너비 강제 */}
+                        <colgroup>
+                            <col style={{ width: '90px' }} />
+                            {resources.map(resource => (
+                                <col key={`col-${resource}`} style={{ width: singleCellWidthStyle.width }} />
+                            ))}
+                        </colgroup>
                         <thead className="sticky top-0 z-20">
                             {/* Day Header Row */}
                             <tr>
@@ -1270,7 +1314,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                 })}
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="timetable-body">
                             {(() => {
                                 // 주말: 시간만 표시 (교시 라벨 제거)
                                 // 평일: 교시 그룹화 (1-1+1-2 → 1교시, ...)
@@ -1355,7 +1399,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                         return (
                                                             <td
                                                                 key={`${resource}-${firstPeriod}`}
-                                                                className={`p-0 border-b-2 border-b-gray-400 ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
+                                                                className={`p-0 border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
                                                                 style={cellStyle}
                                                                 rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                             >
@@ -1387,6 +1431,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             currentDay={day}
                                                                             fontSize={fontSize}
                                                                             rowHeight={rowHeight}
+                                                                                cellSizePx={cellSizePx}
                                                                             showHoldStudents={showHoldStudents}
                                                                             showWithdrawnStudents={showWithdrawnStudents}
                                                                             pendingMovedStudentIds={pendingMovedStudentIds}
@@ -1434,7 +1479,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                         return (
                                                             <td
                                                                 key={`${resource}-${secondPeriod}`}
-                                                                className={`p-0 border-b-2 border-b-gray-400 ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
+                                                                className={`p-0 border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
                                                                 style={cellStyle}
                                                                 rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                             >
@@ -1466,6 +1511,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             currentDay={day}
                                                                             fontSize={fontSize}
                                                                             rowHeight={rowHeight}
+                                                                                cellSizePx={cellSizePx}
                                                                             showHoldStudents={showHoldStudents}
                                                                             showWithdrawnStudents={showWithdrawnStudents}
                                                                             pendingMovedStudentIds={pendingMovedStudentIds}
@@ -1530,7 +1576,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                             return (
                                                                 <td
                                                                     key={`${resource}-${period}`}
-                                                                    className={`p-0 border-b-2 border-b-gray-400 ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
+                                                                    className={`p-0 border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
                                                                     style={cellStyle}
                                                                     rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                                 >
@@ -1562,6 +1608,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 currentDay={day}
                                                                                 fontSize={fontSize}
                                                                                 rowHeight={rowHeight}
+                                                                                cellSizePx={cellSizePx}
                                                                                 showHoldStudents={showHoldStudents}
                                                                                 showWithdrawnStudents={showWithdrawnStudents}
                                                                                 pendingMovedStudentIds={pendingMovedStudentIds}
@@ -1636,7 +1683,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                     return (
                                                         <td
                                                             key={`${resource}-${period}`}
-                                                            className={`p-0 border-b-2 border-b-gray-400 ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
+                                                            className={`p-0 border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
                                                             style={cellStyle}
                                                             rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                         >
@@ -1668,6 +1715,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         currentDay={day}
                                                                         fontSize={fontSize}
                                                                         rowHeight={rowHeight}
+                                                                                cellSizePx={cellSizePx}
                                                                         showHoldStudents={showHoldStudents}
                                                                         showWithdrawnStudents={showWithdrawnStudents}
                                                                         pendingMovedStudentIds={pendingMovedStudentIds}

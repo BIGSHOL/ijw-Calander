@@ -292,6 +292,22 @@ export const calculateStats = (
   };
 };
 
+/**
+ * 등록차수 계산용 유효 단가 결정
+ * 우선순위: unitPrice > baseTuition (비율제) > 0 (고정급에서 unitPrice 미설정 시)
+ */
+export const getEffectiveUnitPrice = (item: SalarySettingItem | undefined): number => {
+  if (!item) return 0;
+
+  // unitPrice가 명시적으로 설정되어 있으면 그것을 사용
+  if (item.unitPrice && item.unitPrice > 0) return item.unitPrice;
+
+  // 비율제인 경우 baseTuition을 fallback으로 사용
+  if (item.type === 'percentage' && item.baseTuition > 0) return item.baseTuition;
+
+  return 0;
+};
+
 // Legacy color mapping for migration
 const COLOR_MAP: Record<string, string> = {
   yellow: '#EAB308', // yellow-500

@@ -2,6 +2,7 @@ import React, { useMemo, useState, useEffect, useRef, forwardRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Student, SalaryConfig, AttendanceViewMode, SessionPeriod } from '../types';
 import { Exam, StudentScore, Holiday } from '../../../types';
+import { StudentTermSummary } from '../../../types/enrollmentTerm';
 import { getDaysInMonth, formatDateDisplay, formatDateKey, getDaysInSessionRanges } from '../utils';
 import { StickyNote, Save, Palette, RotateCcw, Eye, EyeOff } from 'lucide-react';
 import { PREDEFINED_CELL_COLORS } from './cellColors';
@@ -42,6 +43,9 @@ interface Props {
   onHiddenDatesChange?: (newHidden: Set<string>) => void;
   // 전체 페이지 기준 그룹별 학생 수
   totalGroupCounts?: Map<string, number>;
+  // 등록차수
+  enrollmentTerms?: Map<string, StudentTermSummary>;
+  onEnrollmentTermClick?: (studentId: string, studentName: string, rect: { top: number; left: number }) => void;
 }
 
 interface ContextMenuState {
@@ -80,7 +84,9 @@ const Table = forwardRef<HTMLTableElement, Props>(({
   sortMode = 'class',
   hiddenDates = new Set<string>(),
   onHiddenDatesChange,
-  totalGroupCounts
+  totalGroupCounts,
+  enrollmentTerms,
+  onEnrollmentTermClick
 }, ref) => {
   // 세션 모드에 따라 표시할 날짜 결정
   const days = useMemo(() => {
@@ -210,6 +216,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
             {/* Stat Columns - Compact */}
             <th className="p-2 sticky left-[182px] top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[70px] text-center bg-primary align-middle text-xs">요일</th>
             <th className="p-2 sticky left-[252px] top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[36px] text-center bg-primary align-middle text-xs">출석</th>
+            <th className="p-2 sticky left-[288px] top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[36px] text-center bg-primary align-middle text-xs">등록</th>
 
             {/* 숨긴 열 표시 바 */}
             {hiddenDates.size > 0 && onHiddenDatesChange && (
@@ -292,10 +299,12 @@ const Table = forwardRef<HTMLTableElement, Props>(({
               holidayNameMap={holidayNameMap}
               sortMode={sortMode}
               totalGroupCounts={totalGroupCounts}
+              enrollmentTerms={enrollmentTerms}
+              onEnrollmentTermClick={onEnrollmentTermClick}
             />
           ) : (
             <tr>
-              <td colSpan={days.length + 5 + (hasHiddenDates ? 1 : 0)} className="p-12 text-center text-gray-400">
+              <td colSpan={days.length + 6 + (hasHiddenDates ? 1 : 0)} className="p-12 text-center text-gray-400">
                 등록된 학생이 없습니다. 상단의 '학생 추가' 버튼을 눌러 시작하세요.
               </td>
             </tr>

@@ -6,10 +6,8 @@ interface SimpleViewSettingsModalProps {
     onClose: () => void;
     viewType?: 'date-teacher' | 'integration'; // 뷰 타입 구분
     // 크기 설정 (날짜/강사뷰만)
-    columnWidth?: 'compact' | 'narrow' | 'normal' | 'wide' | 'x-wide';
-    setColumnWidth?: (width: 'compact' | 'narrow' | 'normal' | 'wide' | 'x-wide') => void;
-    rowHeight?: 'compact' | 'short' | 'normal' | 'tall' | 'very-tall';
-    setRowHeight?: (height: 'compact' | 'short' | 'normal' | 'tall' | 'very-tall') => void;
+    cellSize?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+    setCellSize?: (size: 'xs' | 'sm' | 'md' | 'lg' | 'xl') => void;
     fontSize?: 'small' | 'normal' | 'large';
     setFontSize?: (size: 'small' | 'normal' | 'large') => void;
     // 요일 표시 (날짜/강사뷰만)
@@ -42,10 +40,8 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
     isOpen,
     onClose,
     viewType = 'date-teacher',
-    columnWidth,
-    setColumnWidth,
-    rowHeight,
-    setRowHeight,
+    cellSize,
+    setCellSize,
     fontSize,
     setFontSize,
     selectedDays,
@@ -287,45 +283,25 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                     {viewType === 'date-teacher' && <div className="w-full h-px bg-gray-200"></div>}
 
                     {/* 크기 설정 섹션 - 날짜/강사뷰만 */}
-                    {viewType === 'date-teacher' && columnWidth && setColumnWidth && rowHeight && setRowHeight && fontSize && setFontSize && (
+                    {viewType === 'date-teacher' && cellSize && setCellSize && fontSize && setFontSize && (
                         <div className="space-y-3">
                             <div className="text-xs font-bold text-accent">크기 설정</div>
 
-                            {/* 가로 폭 */}
+                            {/* 사이즈 */}
                             <div>
-                                <div className="text-xs font-bold text-gray-500 mb-2">가로 폭</div>
+                                <div className="text-xs font-bold text-gray-500 mb-2">사이즈</div>
                                 <div className="flex gap-1">
-                                    {(['compact', 'narrow', 'normal', 'wide', 'x-wide'] as const).map(w => (
+                                    {(['xs', 'sm', 'md', 'lg', 'xl'] as const).map(s => (
                                         <button
-                                            key={w}
-                                            onClick={() => setColumnWidth(w)}
+                                            key={s}
+                                            onClick={() => setCellSize(s)}
                                             className={`flex-1 py-1.5 text-xxs rounded-sm border ${
-                                                columnWidth === w
+                                                cellSize === s
                                                     ? 'bg-accent text-primary border-accent font-bold'
                                                     : 'border-gray-300 text-gray-500 hover:bg-gray-50'
                                             }`}
                                         >
-                                            {w === 'compact' ? '매우좁게' : w === 'narrow' ? '좁게' : w === 'normal' ? '보통' : w === 'wide' ? '넓게' : '매우넓게'}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* 세로 높이 */}
-                            <div>
-                                <div className="text-xs font-bold text-gray-500 mb-2">세로 높이</div>
-                                <div className="flex gap-1">
-                                    {(['compact', 'short', 'normal', 'tall', 'very-tall'] as const).map(h => (
-                                        <button
-                                            key={h}
-                                            onClick={() => setRowHeight(h)}
-                                            className={`flex-1 py-1.5 text-xxs rounded-sm border ${
-                                                rowHeight === h
-                                                    ? 'bg-accent text-primary border-accent font-bold'
-                                                    : 'border-gray-300 text-gray-500 hover:bg-gray-50'
-                                            }`}
-                                        >
-                                            {h === 'compact' ? '매우낮게' : h === 'short' ? '낮게' : h === 'normal' ? '보통' : h === 'tall' ? '높게' : '매우높게'}
+                                            {s === 'xs' ? '가장작음' : s === 'sm' ? '작음' : s === 'md' ? '보통' : s === 'lg' ? '큼' : '매우큼'}
                                         </button>
                                     ))}
                                 </div>

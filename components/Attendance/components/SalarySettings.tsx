@@ -316,7 +316,8 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50/50 p-4 rounded-sm">
                                         {item.type === 'fixed' ? (
-                                            <div className="md:col-span-2">
+                                            <>
+                                            <div>
                                                 <label className="block text-xs font-medium text-gray-500 mb-1">1회 지급액 (선생님 수령)</label>
                                                 <div className="relative">
                                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">₩</span>
@@ -329,6 +330,22 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                                                     />
                                                 </div>
                                             </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-gray-500 mb-1">1회 수강료 (등록차수용)</label>
+                                                <div className="relative">
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">₩</span>
+                                                    <input
+                                                        type="text"
+                                                        value={(item.unitPrice || 0).toLocaleString()}
+                                                        onChange={(e) => handleItemChange(item.id, 'unitPrice', parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
+                                                        disabled={readOnly}
+                                                        className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-100 disabled:text-gray-500"
+                                                        placeholder="수납액 / 단가 = 등록 횟수"
+                                                    />
+                                                </div>
+                                                <p className="text-xxs text-gray-400 mt-1">수납액 / 단가 = 등록 횟수 계산에 사용</p>
+                                            </div>
+                                            </>
                                         ) : (
                                             <>
                                                 <div>
@@ -343,6 +360,7 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                                                             className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-100 disabled:text-gray-500"
                                                         />
                                                     </div>
+                                                    <p className="text-xxs text-gray-400 mt-1">등록차수 계산 단가로도 사용됩니다</p>
                                                 </div>
                                                 <div>
                                                     <label className="block text-xs font-medium text-gray-500 mb-1">선생님 정산 비율 (%)</label>

@@ -56,6 +56,9 @@ function docToBillingRecord(id: string, data: DocumentData): BillingRecord {
     memo: data.memo ?? '',
     createdAt: data.createdAt ?? '',
     updatedAt: data.updatedAt ?? '',
+    // 등록차수 연동
+    studentId: data.studentId,
+    studentMatchStatus: data.studentMatchStatus,
   };
 }
 
@@ -121,8 +124,12 @@ export function useBilling(month?: string) {
       });
       return { id, updates };
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['billing'] });
+      // 수납 완료(paid) 전환 시 등록차수 캐시도 무효화
+      if (variables.updates.status === 'paid') {
+        queryClient.invalidateQueries({ queryKey: ['enrollment_terms'] });
+      }
     },
   });
 
@@ -138,44 +145,44 @@ export function useBilling(month?: string) {
     },
   });
 
-  // 월 단위 삭제 (import 전 기존 데이터 제거용)
-  const deleteByMonth = useMutation({
-    mutationFn: async (targetMonth: string) => {
+  // xlsx 일괄 import (중복 제외, 신규만 추가)
+  const importRecords = useMutation({
+    mutationFn: async ({
+      records: billingRecords,
+      month,
+    }: {
+      records: Omit<BillingRecord, 'id'>[];
+      month: string;
+    }) => {
+      // 1) 해당 월 기존 데이터 조회
       const q = query(
         collection(db, COL_BILLING),
-        where('month', '==', targetMonth)
+        where('month', '==', month)
       );
       const snapshot = await getDocs(q);
-      if (snapshot.empty) return 0;
 
-      // Firestore batch는 500개 제한
-      let count = 0;
-      let batch = writeBatch(db);
-      for (const docSnap of snapshot.docs) {
-        batch.delete(docSnap.ref);
-        count++;
-        if (count % 450 === 0) {
-          await batch.commit();
-          batch = writeBatch(db);
-        }
-      }
-      if (count % 450 !== 0) {
-        await batch.commit();
-      }
-      return count;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['billing'] });
-    },
-  });
+      // 2) 중복 판별 키셋 생성 (학생ID + 청구월 + 수납명)
+      const existingKeys = new Set(
+        snapshot.docs.map((d) => {
+          const data = d.data();
+          return `${data.externalStudentId}__${data.month}__${data.billingName}`;
+        })
+      );
 
-  // xlsx 일괄 import
-  const importRecords = useMutation({
-    mutationFn: async (billingRecords: Omit<BillingRecord, 'id'>[]) => {
+      // 3) 신규 레코드만 필터링
+      const newRecords = billingRecords.filter(
+        (r) => !existingKeys.has(`${r.externalStudentId}__${r.month}__${r.billingName}`)
+      );
+
+      if (newRecords.length === 0) {
+        return { added: 0, skipped: billingRecords.length };
+      }
+
+      // 4) 신규 레코드만 batch insert
       const now = new Date().toISOString();
       let count = 0;
       let batch = writeBatch(db);
-      for (const record of billingRecords) {
+      for (const record of newRecords) {
         const docRef = doc(collection(db, COL_BILLING));
         batch.set(docRef, { ...record, createdAt: now, updatedAt: now });
         count++;
@@ -187,7 +194,7 @@ export function useBilling(month?: string) {
       if (count % 450 !== 0) {
         await batch.commit();
       }
-      return count;
+      return { added: count, skipped: billingRecords.length - count };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['billing'] });
@@ -202,7 +209,6 @@ export function useBilling(month?: string) {
     createRecord,
     updateRecord,
     deleteRecord,
-    deleteByMonth,
     importRecords,
   };
 }

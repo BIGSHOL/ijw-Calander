@@ -33,7 +33,8 @@ export const getGradeLevel = (grade: string | undefined | null): string => {
  * - school: "경북중", grade: "중2" -> "경북중2"
  * - school: "대구고", grade: "고1" -> "대구고1"
  * - school: "", grade: "초3" -> "초3"
- * - school: "대명", grade: "초3" -> "대명 초3"
+ * - school: "칠성초", grade: "초5" -> "5칠성초"
+ * - school: "대명", grade: "초3" -> "초3대명"
  */
 export const formatSchoolGrade = (
   school: string | undefined | null,
@@ -56,20 +57,19 @@ export const formatSchoolGrade = (
     schoolStr.endsWith('고');
 
   if (schoolEndsWithLevel) {
-    // 학교명이 레벨로 끝나면 숫자만 붙임
-    // "대명초" + "초3" -> "대명초3"
-    return `${schoolStr}${gradeNum}`;
+    // 학년숫자 + 학교명: "칠성초" + "초5" -> "5칠성초"
+    return `${gradeNum}${schoolStr}`;
   }
 
-  // 학교명이 레벨로 끝나지 않으면 전체 학년 표시
-  // "대명" + "초3" -> "대명 초3"
+  // 학교명이 레벨로 끝나지 않으면 학년 + 학교명
+  // "대명" + "초3" -> "초3대명"
   if (gradeLevel) {
-    return `${schoolStr} ${gradeStr}`;
+    return `${gradeStr}${schoolStr}`;
   }
 
-  // 학년에 레벨이 없으면 그냥 숫자만 붙임
-  // "대명초등학교" + "3" -> "대명초등학교 3"
-  return `${schoolStr} ${gradeNum}`;
+  // 학년에 레벨이 없으면 숫자 + 학교명
+  // "대명초등학교" + "3" -> "3대명초등학교"
+  return `${gradeNum}${schoolStr}`;
 };
 
 /**

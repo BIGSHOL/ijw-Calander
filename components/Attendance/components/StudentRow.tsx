@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Student, SalaryConfig } from '../types';
 import { Exam, StudentScore, GRADE_COLORS } from '../../../types';
+import { StudentTermSummary } from '../../../types/enrollmentTerm';
 import { formatDateDisplay, formatDateKey, getBadgeStyle, getStudentStatus, isDateValidForStudent, getSchoolLevelSalarySetting, getLocalYearMonth } from '../utils';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
 import { LogOut, Check } from 'lucide-react';
@@ -26,6 +27,8 @@ export interface StudentRowProps {
   holidayDateSet?: Set<string>;
   holidayNameMap?: Map<string, string>;
   hasHiddenDates?: boolean;
+  enrollmentTerm?: StudentTermSummary;
+  onEnrollmentTermClick?: (studentId: string, studentName: string, rect: { top: number; left: number }) => void;
 }
 
 const StudentRow = React.memo(({
@@ -46,7 +49,9 @@ const StudentRow = React.memo(({
   highlightWeekends = false,
   holidayDateSet = new Set(),
   holidayNameMap = new Map(),
-  hasHiddenDates = false
+  hasHiddenDates = false,
+  enrollmentTerm,
+  onEnrollmentTermClick
 }: StudentRowProps) => {
   const [showSalaryDropdown, setShowSalaryDropdown] = useState(false);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
@@ -217,6 +222,35 @@ const StudentRow = React.memo(({
       </td>
       <td className="p-1 sticky left-[252px] z-[90] border-r border-b border-gray-200 text-center font-bold text-primary bg-[#f0f4f8] align-middle w-[36px] text-xs">
         {attendedUnits}
+      </td>
+
+      {/* 등록차수 셀 */}
+      <td className="p-1 sticky left-[288px] z-[90] border-r border-b border-gray-200 text-center bg-white group-hover:bg-gray-50 align-middle w-[36px]">
+        {enrollmentTerm && enrollmentTerm.currentTermNumber > 0 ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              const rect = (e.target as HTMLElement).getBoundingClientRect();
+              onEnrollmentTermClick?.(student.id, student.name, { top: rect.bottom + 4, left: rect.left });
+            }}
+            className="text-xxs font-bold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 px-1 py-0.5 rounded transition-colors"
+            title={`${enrollmentTerm.currentTermNumber}차 등록 (클릭하여 상세보기)`}
+          >
+            {enrollmentTerm.currentTermNumber}차
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={(e) => {
+              const rect = (e.target as HTMLElement).getBoundingClientRect();
+              onEnrollmentTermClick?.(student.id, student.name, { top: rect.bottom + 4, left: rect.left });
+            }}
+            className="text-xxs text-gray-300 hover:text-gray-500 hover:bg-gray-50 px-1 py-0.5 rounded transition-colors"
+            title="등록차수 없음 (클릭하여 추가)"
+          >
+            -
+          </button>
+        )}
       </td>
 
       {/* 숨긴 열 표시 칸 (헤더의 Eye 아이콘 열과 정렬) */}

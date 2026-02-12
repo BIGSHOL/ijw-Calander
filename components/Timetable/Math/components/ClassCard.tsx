@@ -63,9 +63,10 @@ const StudentItem: React.FC<StudentItemProps> = ({
             }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
-            className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] truncate min-w-0 font-medium transition-all duration-150
+            className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap min-w-0 font-normal transition-all duration-150
             ${canEdit ? 'cursor-grab' : ''} ${isClickable ? 'cursor-pointer' : ''}
-            ${isPendingMoved ? 'bg-purple-400 text-white font-bold' : isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText}`}
+            ${isPendingMoved ? 'bg-purple-400 text-white font-bold' : isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText}
+            ${!isPendingMoved && !isHighlighted && !enrollmentStyle ? 'opacity-80' : ''}`}
             style={hoverStyle}
             title={
                 student.isTransferredIn
@@ -108,6 +109,7 @@ interface ClassCardProps {
     teachers?: Teacher[];
     fontSize?: 'small' | 'normal' | 'large' | 'very-large';  // 글자 크기 설정
     rowHeight?: 'compact' | 'short' | 'normal' | 'tall' | 'very-tall';  // 세로 높이 설정
+    cellSizePx?: number;  // 셀 사이즈 (수업명 정사각형 크기)
     showHoldStudents?: boolean;  // 대기 학생 표시 여부
     showWithdrawnStudents?: boolean;  // 퇴원 학생 표시 여부
     pendingMovedStudentIds?: Set<string>;  // 드래그 이동 대기 중인 학생 ID
@@ -139,10 +141,26 @@ const ClassCard: React.FC<ClassCardProps> = ({
     showHoldStudents = true,
     showWithdrawnStudents = true,
     pendingMovedStudentIds,
-    mergedClasses
+    mergedClasses,
+    cellSizePx = 72
 }) => {
     // 컴팩트 모드 여부
     const isCompact = rowHeight === 'compact';
+
+    // 셀 높이를 픽셀 단위로 고정 (테이블 td의 height는 최소값이므로 ClassCard에서 직접 제한)
+    const fixedCardHeight = useMemo((): number | undefined => {
+        if (!showStudents || rowHeight === 'compact') return undefined;
+        const baseH = rowHeight === 'short' ? 100 : rowHeight === 'tall' ? 320 : rowHeight === 'very-tall' ? 450 : 180;
+        return baseH * span;
+    }, [showStudents, rowHeight, span]);
+
+    // compact 모드: maxHeight로 행 높이 팽창 방지 (height 고정 없이 내용에 따라 자연스럽게 축소)
+    // 학생이 많은 셀이 전체 행 높이를 팽창시켜 빈 셀에 큰 빈공간이 생기는 문제 해결
+    const compactMaxHeight = useMemo((): number | undefined => {
+        if (!showStudents || rowHeight !== 'compact') return undefined;
+        return 150 * span;
+    }, [showStudents, rowHeight, span]);
+
     // 글자 크기 CSS 클래스 매핑
     const fontSizeClass = {
         'small': 'text-nano',
@@ -152,12 +170,19 @@ const ClassCard: React.FC<ClassCardProps> = ({
     }[fontSize];
 
     const titleFontSizeClass = {
-        'small': 'text-micro',
-        'normal': 'text-xs',
-        'large': 'text-sm',
-        'very-large': 'text-base'
+        'small': 'text-xs',
+        'normal': 'text-sm',
+        'large': 'text-base',
+        'very-large': 'text-lg'
     }[fontSize];
     const theme = getSubjectTheme(cls.subject);
+
+    // 섹션별 기본 인원: 병합셀 10명, 단일셀 6명, 대기 2명, 퇴원 3명
+    const MERGED_BASE = 10;
+    const SINGLE_BASE = 6;
+    const HOLD_BASE = 2;
+    const WITHDRAWN_BASE = 3;
+    const activeItemH = fontSize === 'small' ? 13 : fontSize === 'large' ? 18 : fontSize === 'very-large' ? 21 : 16;
     const [showScheduleTooltip, setShowScheduleTooltip] = useState(false);
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
     const headerRef = useRef<HTMLDivElement>(null);
@@ -469,24 +494,31 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 }
             }}
             onDrop={(e) => canEdit && onDrop(e, cls.id, 'common')}
-            className={`flex flex-col h-full overflow-hidden transition-all ${isDragOver ? 'ring-2 ring-indigo-400 scale-[1.02]' : ''} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''}`}
-            style={cardBgStyle}
+            className={`flex flex-col ${fixedCardHeight ? '' : 'h-full '}overflow-hidden transition-all w-full max-w-full ${isDragOver ? 'ring-2 ring-indigo-400 scale-[1.02]' : ''} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''}`}
+            style={{
+                ...cardBgStyle,
+                ...(fixedCardHeight ? { height: `${fixedCardHeight}px`, maxHeight: `${fixedCardHeight}px` } : {}),
+                ...(compactMaxHeight ? { maxHeight: `${compactMaxHeight}px` } : {})
+            }}
         >
             {/* Class Name Header - 수정 모드에서 클릭 시 수업 상세 모달, 조회 모드에서 마우스 오버시 스케줄 툴팁 */}
             {showClassName && (
                 <div
                     ref={headerRef}
                     onClick={handleClassHeaderClick}
-                    className={`text-center font-bold py-1 px-1 ${titleFontSizeClass} ${canEdit ? 'cursor-pointer hover:brightness-95' : 'cursor-pointer'} ${showStudents ? 'border-b border-gray-300' : 'flex-1 flex flex-col justify-center'}`}
-                    style={matchedKeyword
-                        ? { color: matchedKeyword.textColor }
-                        : { color: '#1f2937' }
-                    }
+                    className={`text-center font-bold px-0.5 mx-auto ${canEdit ? 'cursor-pointer hover:brightness-95' : 'cursor-pointer'} ${showStudents ? 'border-b border-gray-300' : ''} flex flex-col items-center justify-center shrink-0 overflow-hidden`}
+                    style={{
+                        width: `${cellSizePx}px`,
+                        maxWidth: `${cellSizePx}px`,
+                        height: `${cellSizePx}px`,
+                        color: matchedKeyword ? matchedKeyword.textColor : '#111827'
+                    }}
+                    title={`${cls.className}${cls.room ? `\n${cls.room}` : ''}`}
                     onMouseEnter={() => !canEdit && setShowScheduleTooltip(true)}
                     onMouseLeave={() => setShowScheduleTooltip(false)}
                 >
-                    <div className="relative min-w-0">
-                        <span className="block truncate" title={cls.className}>{cls.className}</span>
+                    <div className="relative min-w-0 w-full">
+                        <span className={`block leading-tight text-xs`}>{cls.className}</span>
                         {isMergedClass && (
                             <PortalTooltip
                                 triggerClassName="absolute -top-0.5 -right-0.5 z-10"
@@ -507,9 +539,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
                             </PortalTooltip>
                         )}
                     </div>
-                    {/* 강의실 + 재원생 수 (학생 목록 숨김 시) */}
+                    {/* 강의실 (2행) + 재원생 수 (학생 목록 숨김 시) */}
                     {(cls.room || !showStudents) && (
-                        <div className={`${fontSizeClass} font-normal text-gray-500 mt-0.5 truncate`}>
+                        <div className={`text-[10px] font-normal text-gray-600 leading-tight`}>
                             {cls.room}
                             {!showStudents && (
                                 <>
@@ -570,9 +602,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
             {/* Student List */}
             {showStudents && (
                 isMergedCell ? (
-                    <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+                    <div className="flex-1 flex flex-col overflow-hidden min-w-0 min-h-0">
                         <div
-                            className={`px-1 py-0 transition-colors min-w-0 overflow-hidden ${dragOverZone === 'common' ? 'bg-indigo-50' : ''}`}
+                            className={`flex-1 px-1 py-0 transition-colors min-w-0 min-h-0 overflow-y-auto no-scrollbar fade-bottom overscroll-contain ${dragOverZone === 'common' ? 'bg-indigo-50' : ''}`}
                             onDragOver={(e) => {
                                 if (!canEdit) return;
                                 e.preventDefault();
@@ -592,7 +624,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 onDrop(e, cls.id, 'common');
                             }}
                         >
-                            <div className={`${fontSizeClass} font-bold text-indigo-600 mb-0 truncate`}>({commonStudents.active.length})</div>
+                            <div className={`${fontSizeClass} font-bold text-indigo-600 mb-0 overflow-hidden whitespace-nowrap`}>({commonStudents.active.length})</div>
                             <ul className="flex flex-col gap-0 min-w-0">
                                 {commonStudents.active.map(s => {
                                     const isHighlighted = !!(searchQuery && s.name.includes(searchQuery));
@@ -624,104 +656,77 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         />
                                     );
                                 })}
+                                {/* 병합셀: 10명 기본 높이 - 빈 슬롯으로 공간 확보 */}
+                                {Array.from({ length: Math.max(0, MERGED_BASE - commonStudents.active.length) }).map((_, i) => (
+                                    <li key={`pad-${i}`} className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] invisible select-none`}>&nbsp;</li>
+                                ))}
                             </ul>
                         </div>
 
-                        {/* Spacer - 대기/퇴원을 하단으로 밀기 */}
-                        <div className="flex-1"></div>
-
-                        {/* 부분 등원 학생 (월만, 목만 등) */}
-                        {/* 수정 모드: 항상 표시 (드롭 영역으로 활용), 조회 모드: 부분등원 학생 있을 때만 표시 */}
-                        {isMergedCell && (canEdit || hasPartialStudents) && (() => {
-                            // 조회 모드: 학생이 있는 요일만 표시, 수정 모드: 전체 표시 (드롭 영역)
-                            const visibleDays = canEdit
-                                ? mergedDays
-                                : mergedDays.filter(day => (partialStudentsByDay?.[day]?.active.length || 0) > 0);
-
-                            if (visibleDays.length === 0) return null;
-
-                            const maxStudentCount = Math.max(
-                                0,
-                                ...visibleDays.map(day => partialStudentsByDay?.[day]?.active.length || 0)
-                            );
+                        {/* 부분 등원 학생 (행 단위 좌우 분할: 학생 쪽만 표시, 반대쪽 회색) */}
+                        {isMergedCell && (canEdit || hasPartialStudents) && mergedDays.length > 0 && (() => {
+                            const partialRows: { student: typeof commonStudents.active[0]; day: string }[] = [];
+                            mergedDays.forEach(day => {
+                                (partialStudentsByDay?.[day]?.active || []).forEach(s => partialRows.push({ student: s, day }));
+                            });
+                            if (!canEdit && partialRows.length === 0) return null;
 
                             return (
-                                <div className="flex-shrink-0 flex border-t-2 border-amber-300 bg-white">
-                                    {visibleDays.map((day, idx) => {
-                                        const isLastDay = idx === visibleDays.length - 1;
-                                        const dayStudents = partialStudentsByDay?.[day];
-                                        const dayActiveStudents = dayStudents?.active || [];
-                                        const emptySlots = Math.max(0, maxStudentCount - dayActiveStudents.length);
-                                        const isZoneDragOver = dragOverZone === day;
-
+                                <div className="flex-shrink-0 border-t border-dashed border-gray-400 overflow-hidden min-w-0">
+                                    {partialRows.map(({ student: s, day }) => {
+                                        const isHighlighted = !!(searchQuery && s.name.includes(searchQuery));
+                                        const enrollmentStyle = getEnrollmentStyle(s);
+                                        let displayText = s.name;
+                                        if (showSchool || showGrade) {
+                                            const schoolGrade = formatSchoolGrade(
+                                                showSchool ? s.school : null,
+                                                showGrade ? s.grade : null
+                                            );
+                                            if (schoolGrade && schoolGrade !== '-') displayText += `/${schoolGrade}`;
+                                        }
                                         return (
-                                            <div
-                                                key={day}
-                                                className={`flex-1 flex flex-col ${!isLastDay ? 'border-r-2 border-amber-300' : ''} transition-colors ${isZoneDragOver ? 'bg-amber-200' : ''}`}
-                                                onDragOver={(e) => {
-                                                    if (!canEdit) return;
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    setDragOverZone(day);
-                                                }}
-                                                onDragLeave={(e) => {
-                                                    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
-                                                    setDragOverZone(null);
-                                                }}
-                                                onDrop={(e) => {
-                                                    if (!canEdit) return;
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    setDragOverZone(null);
-                                                    onDrop(e, cls.id, day);
-                                                }}
-                                            >
-                                                <div className="text-center text-[11px] font-bold bg-amber-100 text-amber-800 py-0.5 border-b-2 border-amber-300">
-                                                    {day}만 ({dayActiveStudents.length})
-                                                </div>
-                                                <div className="px-0.5 py-0 bg-amber-50 flex-1 min-w-0 overflow-hidden" style={{ minHeight: '20px' }}>
-                                                    <ul className="flex flex-col gap-0 min-w-0">
-                                                        {dayActiveStudents.map(s => {
-                                                            const isHighlighted = !!(searchQuery && s.name.includes(searchQuery));
-                                                            const enrollmentStyle = getEnrollmentStyle(s);
-                                                            let displayText = s.name;
-                                                            if (showSchool || showGrade) {
-                                                                const schoolGrade = formatSchoolGrade(
-                                                                    showSchool ? s.school : null,
-                                                                    showGrade ? s.grade : null
-                                                                );
-                                                                if (schoolGrade && schoolGrade !== '-') displayText += `/${schoolGrade}`;
-                                                            }
-                                                            return (
-                                                                <StudentItem
-                                                                    key={s.id}
-                                                                    student={s}
-                                                                    displayText={displayText}
-                                                                    canEdit={canEdit}
-                                                                    onStudentClick={onStudentClick}
-                                                                    onDragStart={onDragStart}
-                                                                    classId={cls.id}
-                                                                    zone={day}
-                                                                    fontSizeClass={fontSizeClass}
-                                                                    isHighlighted={isHighlighted}
-                                                                    enrollmentStyle={enrollmentStyle}
-                                                                    themeText="text-amber-900 font-medium"
-                                                                    isPendingMoved={pendingMovedStudentIds?.has(s.id)}
-                                                                    classLabel={isMergedClass ? s._classLabel : undefined}
-                                                                />
-                                                            );
-                                                        })}
-                                                        {/* 빈 슬롯 추가 - 다른 요일과 높이 맞춤 */}
-                                                        {Array.from({ length: emptySlots }).map((_, i) => (
-                                                            <li key={`empty-${i}`} className="py-0 px-1 text-sm leading-[1.3] text-transparent select-none">
-                                                                &nbsp;
-                                                            </li>
-                                                        ))}
-                                                    </ul>
-                                                </div>
+                                            <div key={s.id} className="flex min-w-0">
+                                                {mergedDays.map((d, dIdx) => (
+                                                    <div
+                                                        key={d}
+                                                        className={`flex-1 min-w-0 overflow-hidden ${dIdx < mergedDays.length - 1 ? 'border-r border-dashed border-gray-300' : ''} ${d !== day ? 'bg-gray-200' : ''}`}
+                                                    >
+                                                        {d === day && (
+                                                            <StudentItem
+                                                                student={s}
+                                                                displayText={displayText}
+                                                                canEdit={canEdit}
+                                                                onStudentClick={onStudentClick}
+                                                                onDragStart={onDragStart}
+                                                                classId={cls.id}
+                                                                zone={day}
+                                                                fontSizeClass={fontSizeClass}
+                                                                isHighlighted={isHighlighted}
+                                                                enrollmentStyle={enrollmentStyle}
+                                                                themeText={theme.text}
+                                                                isPendingMoved={pendingMovedStudentIds?.has(s.id)}
+                                                                classLabel={isMergedClass ? s._classLabel : undefined}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                ))}
                                             </div>
                                         );
                                     })}
+                                    {canEdit && partialRows.length === 0 && (
+                                        <div className="flex min-w-0">
+                                            {mergedDays.map((d, dIdx) => (
+                                                <div
+                                                    key={d}
+                                                    className={`flex-1 min-w-0 bg-gray-200 ${dIdx < mergedDays.length - 1 ? 'border-r border-dashed border-gray-300' : ''} ${dragOverZone === d ? 'bg-blue-50' : ''}`}
+                                                    style={{ height: `${activeItemH}px` }}
+                                                    onDragOver={(e) => { if (!canEdit) return; e.preventDefault(); e.stopPropagation(); setDragOverZone(d); }}
+                                                    onDragLeave={(e) => { if (e.currentTarget.contains(e.relatedTarget as Node)) return; setDragOverZone(null); }}
+                                                    onDrop={(e) => { if (!canEdit) return; e.preventDefault(); e.stopPropagation(); setDragOverZone(null); onDrop(e, cls.id, d); }}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })()}
@@ -730,66 +735,64 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         {(showHoldStudents || showWithdrawnStudents) && (
                             <div className="flex-shrink-0">
                                 {showHoldStudents && (
-                                    <div className="px-1 py-0.5 bg-pink-50 border-b border-pink-200 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
+                                    <div className="px-1 py-0.5 bg-pink-50 border-b border-pink-200 overflow-y-auto no-scrollbar">
                                         <div className="text-xxs font-bold text-pink-600">대기 ({commonStudents.hold.length}명)</div>
-                                        {commonStudents.hold.length > 0 ? (
-                                            <ul className="flex flex-col gap-0.5">
-                                                {commonStudents.hold.map(s => {
-                                                    let text = s.name;
-                                                    if (showSchool || showGrade) {
-                                                        const sg = formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null);
-                                                        if (sg && sg !== '-') text += `/${sg}`;
-                                                    }
-                                                    const tooltipText = s.enrollmentDate ? `예정일: ${s.enrollmentDate}` : undefined;
-                                                    return <li key={s.id} className="text-xxs leading-tight bg-amber-50 text-amber-800 px-1 py-0.5 truncate cursor-pointer" title={tooltipText}>{text}</li>;
-                                                })}
-                                            </ul>
-                                        ) : (
-                                            <span className="text-xxs text-pink-300">-</span>
-                                        )}
+                                        <ul className="flex flex-col gap-0.5">
+                                            {commonStudents.hold.map(s => {
+                                                let text = s.name;
+                                                if (showSchool || showGrade) {
+                                                    const sg = formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null);
+                                                    if (sg && sg !== '-') text += `/${sg}`;
+                                                }
+                                                const tooltipText = s.enrollmentDate ? `예정일: ${s.enrollmentDate}` : undefined;
+                                                return <li key={s.id} className="text-xxs leading-tight bg-amber-50 text-amber-800 px-1 py-0.5 overflow-hidden whitespace-nowrap cursor-pointer" title={tooltipText}>{text}</li>;
+                                            })}
+                                            {Array.from({ length: Math.max(0, HOLD_BASE - commonStudents.hold.length) }).map((_, i) => (
+                                                <li key={`hpad-${i}`} className="text-xxs leading-tight px-1 py-0.5 invisible select-none">&nbsp;</li>
+                                            ))}
+                                        </ul>
                                     </div>
                                 )}
                                 {showWithdrawnStudents && (
-                                    <div className="px-1 py-0.5 bg-gray-100 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
+                                    <div className="px-1 py-0.5 bg-gray-100 overflow-y-auto no-scrollbar">
                                         <div className="text-xxs font-bold text-gray-600">퇴원 ({commonStudents.withdrawn.length}명)</div>
-                                        {commonStudents.withdrawn.length > 0 ? (
-                                            <ul className="flex flex-col gap-0.5">
-                                                {commonStudents.withdrawn.map(s => {
-                                                    let text = s.name;
-                                                    if (showSchool || showGrade) {
-                                                        const sg = formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null);
-                                                        if (sg && sg !== '-') text += `/${sg}`;
-                                                    }
-                                                    const tooltipText = s.withdrawalDate ? `퇴원일: ${s.withdrawalDate}` : undefined;
-                                                    return (
-                                                        <li
-                                                            key={s.id}
-                                                            className="text-xxs leading-tight bg-black text-white px-1 py-0.5 truncate cursor-pointer hover:bg-gray-700 transition-colors"
-                                                            title={tooltipText}
-                                                            onClick={(e) => {
-                                                                if (onStudentClick) {
-                                                                    e.stopPropagation();
-                                                                    onStudentClick(s.id);
-                                                                }
-                                                            }}
-                                                        >
-                                                            {text}
-                                                        </li>
-                                                    );
-                                                })}
-                                            </ul>
-                                        ) : (
-                                            <span className="text-xxs text-gray-400">-</span>
-                                        )}
+                                        <ul className="flex flex-col gap-0.5">
+                                            {commonStudents.withdrawn.map(s => {
+                                                let text = s.name;
+                                                if (showSchool || showGrade) {
+                                                    const sg = formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null);
+                                                    if (sg && sg !== '-') text += `/${sg}`;
+                                                }
+                                                const tooltipText = s.withdrawalDate ? `퇴원일: ${s.withdrawalDate}` : undefined;
+                                                return (
+                                                    <li
+                                                        key={s.id}
+                                                        className="text-xxs leading-tight bg-black text-white px-1 py-0.5 overflow-hidden whitespace-nowrap cursor-pointer hover:bg-gray-700 transition-colors"
+                                                        title={tooltipText}
+                                                        onClick={(e) => {
+                                                            if (onStudentClick) {
+                                                                e.stopPropagation();
+                                                                onStudentClick(s.id);
+                                                            }
+                                                        }}
+                                                    >
+                                                        {text}
+                                                    </li>
+                                                );
+                                            })}
+                                            {Array.from({ length: Math.max(0, WITHDRAWN_BASE - commonStudents.withdrawn.length) }).map((_, i) => (
+                                                <li key={`wpad-${i}`} className="text-xxs leading-tight px-1 py-0.5 invisible select-none">&nbsp;</li>
+                                            ))}
+                                        </ul>
                                     </div>
                                 )}
                             </div>
                         )}
                     </div>
                 ) : (
-                    <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-                        <div className="px-0.5 py-0.5 min-w-0 overflow-hidden">
-                            <div className="text-xxs font-bold text-indigo-600 mb-0.5 truncate">재원생 ({activeStudents.length}명)</div>
+                    <div className="flex-1 flex flex-col overflow-hidden min-w-0 min-h-0">
+                        <div className="flex-1 px-0.5 py-0.5 min-w-0 min-h-0 overflow-y-auto no-scrollbar fade-bottom overscroll-contain">
+                            <div className="text-xxs font-bold text-indigo-600 mb-0.5 overflow-hidden whitespace-nowrap">재원생 ({activeStudents.length}명)</div>
                             <ul className="flex flex-col min-w-0">
                                 {activeStudents.map(s => {
                                     const isHighlighted = !!(searchQuery && s.name.includes(searchQuery));
@@ -820,72 +823,71 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         />
                                     );
                                 })}
+                                {/* 단일셀: 6명 기본 높이 - 빈 슬롯으로 공간 확보 */}
+                                {Array.from({ length: Math.max(0, SINGLE_BASE - activeStudents.length) }).map((_, i) => (
+                                    <li key={`pad-${i}`} className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] invisible select-none`}>&nbsp;</li>
+                                ))}
                             </ul>
                         </div>
-
-                        {/* Spacer: 대기/퇴원을 하단으로 밀기 */}
-                        <div className="flex-1"></div>
 
                         {/* 하단 고정 영역: 대기 + 퇴원 (토글에 따라 조건부 렌더링) */}
                         {(showHoldStudents || showWithdrawnStudents) && (
                             <div className="flex-shrink-0">
                                 {/* 대기생 Section */}
                                 {showHoldStudents && (
-                                    <div className="px-1 py-0.5 bg-pink-50 border-b border-pink-200 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
+                                    <div className="px-1 py-0.5 bg-pink-50 border-b border-pink-200 overflow-y-auto no-scrollbar">
                                         <div className="text-xxs font-bold text-pink-600">대기 ({holdStudents.length}명)</div>
-                                        {holdStudents.length > 0 ? (
-                                            <ul className="flex flex-col gap-0.5">
-                                                {holdStudents.map(s => {
-                                                    let text = s.name;
-                                                    if (showSchool || showGrade) {
-                                                        const sg = formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null);
-                                                        if (sg && sg !== '-') text += `/${sg}`;
-                                                    }
-                                                    return (
-                                                        <li key={s.id} className="text-xxs leading-tight bg-amber-50 text-amber-800 px-1 py-0.5 truncate" title={text}>
-                                                            {text}
-                                                        </li>
-                                                    );
-                                                })}
-                                            </ul>
-                                        ) : (
-                                            <span className="text-xxs text-pink-300">-</span>
-                                        )}
+                                        <ul className="flex flex-col gap-0.5">
+                                            {holdStudents.map(s => {
+                                                let text = s.name;
+                                                if (showSchool || showGrade) {
+                                                    const sg = formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null);
+                                                    if (sg && sg !== '-') text += `/${sg}`;
+                                                }
+                                                return (
+                                                    <li key={s.id} className="text-xxs leading-tight bg-amber-50 text-amber-800 px-1 py-0.5 overflow-hidden whitespace-nowrap" title={text}>
+                                                        {text}
+                                                    </li>
+                                                );
+                                            })}
+                                            {Array.from({ length: Math.max(0, HOLD_BASE - holdStudents.length) }).map((_, i) => (
+                                                <li key={`hpad-${i}`} className="text-xxs leading-tight px-1 py-0.5 invisible select-none">&nbsp;</li>
+                                            ))}
+                                        </ul>
                                     </div>
                                 )}
 
                                 {/* 퇴원생 Section */}
                                 {showWithdrawnStudents && (
-                                    <div className="px-1 py-0.5 bg-gray-100 overflow-y-auto" style={{ minHeight: '40px', maxHeight: '48px' }}>
+                                    <div className="px-1 py-0.5 bg-gray-100 overflow-y-auto no-scrollbar">
                                         <div className="text-xxs font-bold text-gray-600">퇴원 ({withdrawnStudents.length}명)</div>
-                                        {withdrawnStudents.length > 0 ? (
-                                            <ul className="flex flex-col gap-0.5">
-                                                {withdrawnStudents.map(s => {
-                                                    let text = s.name;
-                                                    if (showSchool || showGrade) {
-                                                        const sg = formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null);
-                                                        if (sg && sg !== '-') text += `/${sg}`;
-                                                    }
-                                                    return (
-                                                        <li
-                                                            key={s.id}
-                                                            className="text-xxs leading-tight bg-black text-white px-1 py-0.5 truncate cursor-pointer hover:bg-gray-700 transition-colors"
-                                                            title={s.withdrawalDate ? `${text} (퇴원: ${s.withdrawalDate})` : text}
-                                                            onClick={(e) => {
-                                                                if (onStudentClick) {
-                                                                    e.stopPropagation();
-                                                                    onStudentClick(s.id);
-                                                                }
-                                                            }}
-                                                        >
-                                                            {text}
-                                                        </li>
-                                                    );
-                                                })}
-                                            </ul>
-                                        ) : (
-                                            <span className="text-xxs text-gray-400">-</span>
-                                        )}
+                                        <ul className="flex flex-col gap-0.5">
+                                            {withdrawnStudents.map(s => {
+                                                let text = s.name;
+                                                if (showSchool || showGrade) {
+                                                    const sg = formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null);
+                                                    if (sg && sg !== '-') text += `/${sg}`;
+                                                }
+                                                return (
+                                                    <li
+                                                        key={s.id}
+                                                        className="text-xxs leading-tight bg-black text-white px-1 py-0.5 overflow-hidden whitespace-nowrap cursor-pointer hover:bg-gray-700 transition-colors"
+                                                        title={s.withdrawalDate ? `${text} (퇴원: ${s.withdrawalDate})` : text}
+                                                        onClick={(e) => {
+                                                            if (onStudentClick) {
+                                                                e.stopPropagation();
+                                                                onStudentClick(s.id);
+                                                            }
+                                                        }}
+                                                    >
+                                                        {text}
+                                                    </li>
+                                                );
+                                            })}
+                                            {Array.from({ length: Math.max(0, WITHDRAWN_BASE - withdrawnStudents.length) }).map((_, i) => (
+                                                <li key={`wpad-${i}`} className="text-xxs leading-tight px-1 py-0.5 invisible select-none">&nbsp;</li>
+                                            ))}
+                                        </ul>
                                     </div>
                                 )}
                             </div>
@@ -916,6 +918,7 @@ export default React.memo(ClassCard, (prevProps, nextProps) => {
         prevProps.currentDay === nextProps.currentDay &&
         prevProps.fontSize === nextProps.fontSize &&
         prevProps.rowHeight === nextProps.rowHeight &&
+        prevProps.cellSizePx === nextProps.cellSizePx &&
         prevProps.showHoldStudents === nextProps.showHoldStudents &&
         prevProps.showWithdrawnStudents === nextProps.showWithdrawnStudents &&
         prevProps.mergedClasses === nextProps.mergedClasses

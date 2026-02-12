@@ -43,6 +43,9 @@ export interface BillingRecord {
   updatedAt: string; // 수정일시
   createdBy?: string; // 등록자
   updatedBy?: string; // 수정자
+  // 등록차수 연동
+  studentId?: string; // Firestore student doc ID (매칭된 학생)
+  studentMatchStatus?: 'matched' | 'unmatched' | 'manual'; // 학생 매칭 상태
 }
 
 /**

@@ -8,6 +8,7 @@ export interface SalarySettingItem {
   fixedRate: number;      // Used when type is 'fixed'
   baseTuition: number;    // Used when type is 'percentage'
   ratio: number;          // Used when type is 'percentage'
+  unitPrice?: number;     // 등록차수 계산용 1회 단가 (고정급: 별도 입력, 비율제: baseTuition fallback)
 }
 
 export type IncentiveType = 'fixed' | 'percentage';
