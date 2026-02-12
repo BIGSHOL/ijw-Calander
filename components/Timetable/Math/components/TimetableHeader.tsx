@@ -58,10 +58,8 @@ interface TimetableHeaderProps {
     setShowHoldStudents?: (show: boolean) => void;
     showWithdrawnStudents?: boolean;
     setShowWithdrawnStudents?: (show: boolean) => void;
-    columnWidth?: 'compact' | 'narrow' | 'normal' | 'wide' | 'x-wide';
-    setColumnWidth?: (width: 'compact' | 'narrow' | 'normal' | 'wide' | 'x-wide') => void;
-    rowHeight?: 'compact' | 'short' | 'normal' | 'tall' | 'very-tall';
-    setRowHeight?: (height: 'compact' | 'short' | 'normal' | 'tall' | 'very-tall') => void;
+    cellSize?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+    setCellSize?: (size: 'xs' | 'sm' | 'md' | 'lg' | 'xl') => void;
     fontSize?: 'small' | 'normal' | 'large';
     setFontSize?: (size: 'small' | 'normal' | 'large') => void;
     // 통합뷰 전용 props
@@ -126,10 +124,8 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     setShowHoldStudents,
     showWithdrawnStudents,
     setShowWithdrawnStudents,
-    columnWidth,
-    setColumnWidth,
-    rowHeight,
-    setRowHeight,
+    cellSize,
+    setCellSize,
     fontSize,
     setFontSize,
     // 통합뷰 전용
@@ -826,43 +822,24 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                 </div>
                             </div>
                             {/* 크기 설정 */}
-                            {columnWidth && setColumnWidth && rowHeight && setRowHeight && fontSize && setFontSize && (
+                            {cellSize && setCellSize && fontSize && setFontSize && (
                                 <div className="px-3 py-2">
                                     <div className="text-xxs font-bold text-gray-600 mb-2">크기 설정</div>
-                                    {/* 가로 폭 */}
+                                    {/* 사이즈 */}
                                     <div className="mb-2">
-                                        <div className="text-xxs text-gray-500 mb-1">가로 폭</div>
+                                        <div className="text-xxs text-gray-500 mb-1">사이즈</div>
                                         <div className="flex gap-0.5">
-                                            {(['compact', 'narrow', 'normal', 'wide', 'x-wide'] as const).map(w => (
+                                            {(['xs', 'sm', 'md', 'lg', 'xl'] as const).map(s => (
                                                 <button
-                                                    key={w}
-                                                    onClick={() => setColumnWidth(w)}
+                                                    key={s}
+                                                    onClick={() => setCellSize(s)}
                                                     className={`flex-1 py-1 text-micro rounded-sm border ${
-                                                        columnWidth === w
+                                                        cellSize === s
                                                             ? 'bg-accent text-primary border-accent font-bold'
                                                             : 'border-gray-300 text-gray-500 hover:bg-gray-50'
                                                     }`}
                                                 >
-                                                    {w === 'compact' ? '매우좁게' : w === 'narrow' ? '좁게' : w === 'normal' ? '보통' : w === 'wide' ? '넓게' : '매우넓게'}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    {/* 세로 높이 */}
-                                    <div className="mb-2">
-                                        <div className="text-xxs text-gray-500 mb-1">세로 높이</div>
-                                        <div className="flex gap-0.5">
-                                            {(['compact', 'short', 'normal', 'tall', 'very-tall'] as const).map(h => (
-                                                <button
-                                                    key={h}
-                                                    onClick={() => setRowHeight(h)}
-                                                    className={`flex-1 py-1 text-micro rounded-sm border ${
-                                                        rowHeight === h
-                                                            ? 'bg-accent text-primary border-accent font-bold'
-                                                            : 'border-gray-300 text-gray-500 hover:bg-gray-50'
-                                                    }`}
-                                                >
-                                                    {h === 'compact' ? '매우낮게' : h === 'short' ? '낮게' : h === 'normal' ? '보통' : h === 'tall' ? '높게' : '매우높게'}
+                                                    {s === 'xs' ? '가장작음' : s === 'sm' ? '작음' : s === 'md' ? '보통' : s === 'lg' ? '큼' : '매우큼'}
                                                 </button>
                                             ))}
                                         </div>

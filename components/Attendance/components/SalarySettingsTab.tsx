@@ -419,7 +419,8 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 p-2.5 rounded-sm border border-slate-100">
                                             {item.type === 'fixed' ? (
-                                                <div className="md:col-span-2">
+                                                <>
+                                                <div>
                                                     <label className="block text-xxs font-bold text-slate-500 mb-1">1회 지급액 (선생님 수령)</label>
                                                     <div className="relative">
                                                         <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xxs">₩</span>
@@ -431,6 +432,21 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                                         />
                                                     </div>
                                                 </div>
+                                                <div>
+                                                    <label className="block text-xxs font-bold text-slate-500 mb-1">1회 수강료 (등록차수용)</label>
+                                                    <div className="relative">
+                                                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xxs">₩</span>
+                                                        <input
+                                                            type="text"
+                                                            value={(item.unitPrice || 0).toLocaleString()}
+                                                            onChange={(e) => handleItemChange(item.id, 'unitPrice', parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
+                                                            className="w-full pl-6 pr-2 py-1 border border-gray-200 rounded-sm focus:ring-1 focus:ring-blue-500 bg-white outline-none text-xs"
+                                                            placeholder="수납액 / 단가 = 등록 횟수"
+                                                        />
+                                                    </div>
+                                                    <p className="text-micro text-gray-400 mt-0.5">수납액 / 단가 = 등록 횟수 계산에 사용</p>
+                                                </div>
+                                                </>
                                             ) : (
                                                 <>
                                                     <div>

@@ -12,6 +12,7 @@ import StudentListModal from './components/StudentListModal';
 import AddStudentToAttendanceModal from './components/AddStudentToAttendanceModal';
 import AttendanceSettingsModal from './AttendanceSettingsModal';
 import SessionSettingsModal from './SessionSettingsModal';
+import EnrollmentTermPopover from './components/EnrollmentTermPopover';
 
 import {
   useAttendanceStudents,
@@ -30,6 +31,7 @@ import { useCreateDailyAttendance } from '../../hooks/useDailyAttendance';
 import { useVisibleAttendanceStudents } from '../../hooks/useVisibleAttendanceStudents';
 import { useHolidays } from '../../hooks/useFirebaseQueries';
 import { useStudents } from '../../hooks/useStudents';
+import { useMonthlyEnrollmentTerms } from '../../hooks/useEnrollmentTerms';
 import { UserProfile, Teacher, UnifiedStudent } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
 import { mapAttendanceValueToStatus } from '../../utils/attendanceSync';
@@ -191,6 +193,9 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   // Fetch holidays for attendance table styling
   const { data: holidays = [] } = useHolidays(!!userProfile);
 
+  // 등록차수 데이터 (월별)
+  const { data: enrollmentTerms } = useMonthlyEnrollmentTerms(currentYearMonth);
+
   // Resolve Teacher by Staff ID for Config
   const targetTeacher = useMemo(() => {
     if (!filterStaffId) return undefined;
@@ -230,6 +235,17 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
 
   const [isSettlementModalOpen, setSettlementModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  // 등록차수 팝오버 상태
+  const [enrollmentPopover, setEnrollmentPopover] = useState<{
+    studentId: string;
+    studentName: string;
+    rect: { top: number; left: number };
+  } | null>(null);
+
+  const handleEnrollmentTermClick = useCallback((studentId: string, studentName: string, rect: { top: number; left: number }) => {
+    setEnrollmentPopover({ studentId, studentName, rect });
+  }, []);
+
   const [listModal, setListModal] = useState<{ isOpen: boolean, type: 'new' | 'dropped' }>({ isOpen: false, type: 'new' });
   const [sortMode, setSortMode] = useState<'class' | 'name'>(() => {
     const saved = storage.getString(STORAGE_KEYS.ATTENDANCE_SORT_MODE);
@@ -794,6 +810,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             hiddenDates={hiddenDates}
             onHiddenDatesChange={handleHiddenDatesChange}
             totalGroupCounts={totalGroupCounts}
+            enrollmentTerms={enrollmentTerms}
+            onEnrollmentTermClick={handleEnrollmentTermClick}
           />
         </div>
       </div>
@@ -863,6 +881,18 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         isOpen={isSessionSettingsModalOpen}
         onClose={() => setSessionSettingsModalOpen(false)}
       />
+
+      {/* 등록차수 팝오버 */}
+      {enrollmentPopover && (
+        <EnrollmentTermPopover
+          studentId={enrollmentPopover.studentId}
+          studentName={enrollmentPopover.studentName}
+          month={currentYearMonth}
+          termSummary={enrollmentTerms?.get(enrollmentPopover.studentId)}
+          anchorRect={enrollmentPopover.rect}
+          onClose={() => setEnrollmentPopover(null)}
+        />
+      )}
 
     </div>
   );

@@ -148,7 +148,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
             style={hoverStyle}
             title={tooltipMessage}
         >
-            <span className={`font-medium truncate flex items-center gap-0.5 ${isHovered && isClickable ? '' : style.textClass}`}>
+            <span className={`font-normal truncate flex items-center gap-0.5 opacity-80 ${isHovered && isClickable ? '' : style.textClass}`}>
                 <span className="shrink-0">{student.name}</span>
                 {showEnglishName && student.englishName && (
                     <span
@@ -582,7 +582,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                 data-class-name={classInfo.name}
                 onDragOver={isTimeColumnOnly ? undefined : handleDragOver}
                 onDrop={isTimeColumnOnly ? undefined : handleDrop}
-                className={`${cardWidthClass} h-full flex flex-col border-r border-gray-300 shrink-0 bg-white transition-all`}
+                className={`${cardWidthClass} h-full flex flex-col border-r border-gray-300 shrink-0 bg-white transition-all overflow-hidden`}
             >
                 {/* 수업 상세 클릭 영역 */}
                 <div
@@ -593,7 +593,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                     {(() => {
                         if (isTimeColumnOnly) {
                             return (
-                                <div className="p-2 text-center font-bold text-sm border-b border-orange-300 flex items-center justify-center h-[50px] bg-orange-200 text-orange-900 select-none">
+                                <div className="text-center font-bold text-sm border-b border-orange-300 flex items-center justify-center w-[72px] h-[72px] mx-auto bg-orange-200 text-orange-900 select-none shrink-0 overflow-hidden">
                                     수업
                                 </div>
                             );
@@ -601,8 +601,9 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
 
                         return (
                             <div
-                                className={`p-2 text-center font-bold text-sm border-b border-gray-300 flex items-center justify-center h-[50px] break-keep leading-tight relative group ${mode === 'view' ? 'cursor-help' : ''}`}
-                                style={keywordColor ? { backgroundColor: keywordColor.bgColor, color: keywordColor.textColor } : { backgroundColor: '#EFF6FF', color: '#1F2937' }}
+                                className={`text-center font-bold text-xs border-b border-gray-300 flex items-center justify-center w-[72px] h-[72px] mx-auto leading-tight relative group shrink-0 overflow-hidden ${mode === 'view' ? 'cursor-help' : ''}`}
+                                title={classInfo.name}
+                                style={keywordColor ? { backgroundColor: keywordColor.bgColor, color: keywordColor.textColor } : { backgroundColor: '#EFF6FF', color: '#111827' }}
                                 onMouseEnter={() => isEnglish && mode !== 'edit' && setShowScheduleTooltip(true)}
                                 onMouseLeave={() => setShowScheduleTooltip(false)}
                             >
@@ -900,7 +901,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                     onClick={() => onStudentClick?.(student.id)}
                                                 >
                                                     <div className="flex items-center flex-1 min-w-0">
-                                                        <span className="font-medium shrink-0">{student.name}</span>
+                                                        <span className="font-normal shrink-0">{student.name}</span>
                                                         {isEnglish && student.englishName && <span className="ml-1 text-amber-600 truncate max-w-[60px]" title={student.englishName}>({student.englishName})</span>}
                                                     </div>
                                                     {(displayOptions?.showSchool !== false || displayOptions?.showGrade !== false) && (
@@ -922,7 +923,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                     onClick={() => onStudentClick?.(student.id)}
                                                 >
                                                     <div className="flex items-center flex-1 min-w-0">
-                                                        <span className="font-medium shrink-0">{student.name}</span>
+                                                        <span className="font-normal shrink-0">{student.name}</span>
                                                         {isEnglish && student.englishName && <span className="ml-1 text-amber-600 truncate max-w-[60px]" title={student.englishName}>({student.englishName})</span>}
                                                     </div>
                                                     {(displayOptions?.showSchool !== false || displayOptions?.showGrade !== false) && (
@@ -955,7 +956,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                     onClick={() => onStudentClick?.(student.id)}
                                                 >
                                                     <div className="flex items-center flex-1 min-w-0">
-                                                        <span className="font-medium shrink-0">{student.name}</span>
+                                                        <span className="font-normal shrink-0">{student.name}</span>
                                                         {isEnglish && student.englishName && <span className="ml-1 text-gray-400 truncate max-w-[60px]" title={student.englishName}>({student.englishName})</span>}
                                                     </div>
                                                     {(displayOptions?.showSchool !== false || displayOptions?.showGrade !== false) && (

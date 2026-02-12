@@ -303,7 +303,8 @@ export default function TimetableGrid({
                               {/* Class Name */}
                               {showClassName && (
                                 <div
-                                  className="font-semibold text-sm mb-1"
+                                  className="font-bold text-xs mb-1 w-[72px] h-[72px] mx-auto flex items-center justify-center shrink-0 overflow-hidden leading-tight"
+                                  title={cls.className}
                                   style={{ color: colors.text }}
                                 >
                                   {cls.className}
@@ -314,7 +315,7 @@ export default function TimetableGrid({
                               {showStudents && students.length > 0 && (
                                 <div className="text-xs">
                                   {students.map(student => (
-                                    <div key={student.id} className="text-gray-700">
+                                    <div key={student.id} className="text-gray-500 font-normal">
                                       {student.name}
                                       {student.school && ` (${student.school})`}
                                     </div>

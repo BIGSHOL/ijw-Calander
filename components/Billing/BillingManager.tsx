@@ -29,7 +29,7 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedStudent, setSelectedStudent] = useState<UnifiedStudent | null>(null);
 
-  const { records, isLoading, createRecord, updateRecord, deleteRecord, deleteByMonth, importRecords } =
+  const { records, isLoading, createRecord, updateRecord, deleteRecord, importRecords } =
     useBilling(selectedMonth);
 
   const { students } = useStudents(false); // 재원생만 조회
@@ -70,16 +70,13 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
   const handleImport = async (
     parsedRecords: Omit<BillingRecord, 'id'>[],
     month: string,
-    overwrite: boolean
   ) => {
-    if (overwrite && month) {
-      await deleteByMonth.mutateAsync(month);
-    }
-    await importRecords.mutateAsync(parsedRecords);
+    const result = await importRecords.mutateAsync({ records: parsedRecords, month });
     // import된 데이터의 월로 자동 전환하여 결과가 바로 보이게
     if (month && month !== selectedMonth) {
       setSelectedMonth(month);
     }
+    return result;
   };
 
   const handleStudentClick = (studentName: string) => {

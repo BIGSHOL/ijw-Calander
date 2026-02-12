@@ -63,10 +63,10 @@ interface MathTimetableContentProps {
     weekDates: Record<string, { date: Date; formatted: string }>;
     currentPeriods: string[];
     teachers: Teacher[];
+    cellSize: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+    setCellSize: (size: 'xs' | 'sm' | 'md' | 'lg' | 'xl') => void;
     columnWidth: 'compact' | 'narrow' | 'normal' | 'wide' | 'x-wide';
-    setColumnWidth: (width: 'compact' | 'narrow' | 'normal' | 'wide' | 'x-wide') => void;
     rowHeight: 'compact' | 'short' | 'normal' | 'tall' | 'very-tall';
-    setRowHeight: (height: 'compact' | 'short' | 'normal' | 'tall' | 'very-tall') => void;
     fontSize: 'small' | 'normal' | 'large';
     setFontSize: (size: 'small' | 'normal' | 'large') => void;
     showClassName: boolean;
@@ -144,10 +144,10 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     weekDates,
     currentPeriods,
     teachers,
+    cellSize,
+    setCellSize,
     columnWidth,
-    setColumnWidth,
     rowHeight,
-    setRowHeight,
     fontSize,
     setFontSize,
     showClassName,
@@ -425,9 +425,9 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     showWithdrawnStudents={showWithdrawnStudents}
                     setShowWithdrawnStudents={setShowWithdrawnStudents}
                     columnWidth={columnWidth}
-                    setColumnWidth={setColumnWidth}
+                    cellSize={cellSize}
+                    setCellSize={setCellSize}
                     rowHeight={rowHeight}
-                    setRowHeight={setRowHeight}
                     fontSize={fontSize}
                     setFontSize={setFontSize}
                     // 이미지 저장 (모든 viewType에서 사용 가능)
@@ -579,10 +579,10 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         onClose={() => setIsViewSettingsOpen(false)}
                         viewType="date-teacher"
                         columnWidth={columnWidth}
-                        setColumnWidth={setColumnWidth}
+                        cellSize={cellSize}
+                    setCellSize={setCellSize}
                         rowHeight={rowHeight}
-                        setRowHeight={setRowHeight}
-                        fontSize={fontSize}
+                            fontSize={fontSize}
                         setFontSize={setFontSize}
                         selectedDays={selectedDays}
                         setSelectedDays={setSelectedDays}
@@ -833,12 +833,12 @@ const TimetableManager = ({
     const [showSchool, setShowSchool] = useState(viewSettings.showSchool ?? true);
     const [showGrade, setShowGrade] = useState(viewSettings.showGrade ?? true);
     const [showEmptyRooms, setShowEmptyRooms] = useState(viewSettings.showEmptyRooms ?? false);
-    const [columnWidth, setColumnWidth] = useState<'compact' | 'narrow' | 'normal' | 'wide' | 'x-wide'>(
-        viewSettings.columnWidth || 'compact'
+    const [cellSize, setCellSize] = useState<'xs' | 'sm' | 'md' | 'lg' | 'xl'>(
+        viewSettings.cellSize || 'xs'
     );
-    const [rowHeight, setRowHeight] = useState<'compact' | 'short' | 'normal' | 'tall' | 'very-tall'>(
-        viewSettings.rowHeight || 'compact'
-    );
+    // cellSize에서 파생되는 columnWidth / rowHeight (하위 호환)
+    const columnWidth = ({ xs: 'compact', sm: 'narrow', md: 'normal', lg: 'wide', xl: 'x-wide' } as const)[cellSize];
+    const rowHeight = ({ xs: 'compact', sm: 'short', md: 'normal', lg: 'tall', xl: 'very-tall' } as const)[cellSize];
     const [fontSize, setFontSize] = useState<'small' | 'normal' | 'large'>(
         viewSettings.fontSize || 'small'
     );
@@ -853,8 +853,7 @@ const TimetableManager = ({
             showSchool,
             showGrade,
             showEmptyRooms,
-            columnWidth,
-            rowHeight,
+            cellSize,
             fontSize,
             showStudents: internalShowStudents,
             selectedDays: internalSelectedDays,
@@ -866,7 +865,7 @@ const TimetableManager = ({
         } catch (e) {
             console.warn('Failed to save view settings to localStorage:', e);
         }
-    }, [timetableViewMode, showClassName, showSchool, showGrade, showEmptyRooms, columnWidth, rowHeight, fontSize, internalShowStudents, internalSelectedDays, showHoldStudents, showWithdrawnStudents]);
+    }, [timetableViewMode, showClassName, showSchool, showGrade, showEmptyRooms, cellSize, fontSize, internalShowStudents, internalSelectedDays, showHoldStudents, showWithdrawnStudents]);
 
     // Step 1: 수학 수업의 enrollment 데이터를 classes에 병합 (드래그 전에 필요)
     const mathClassNamesFromRaw = useMemo(() => {
@@ -1117,9 +1116,9 @@ const TimetableManager = ({
                 currentPeriods={currentPeriods}
                 teachers={teachers}
                 columnWidth={columnWidth}
-                setColumnWidth={setColumnWidth}
+                cellSize={cellSize}
+                setCellSize={setCellSize}
                 rowHeight={rowHeight}
-                setRowHeight={setRowHeight}
                 fontSize={fontSize}
                 setFontSize={setFontSize}
                 showClassName={showClassName}

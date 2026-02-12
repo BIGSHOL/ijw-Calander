@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { X, Upload, FileSpreadsheet, Loader2, AlertCircle, Check, RotateCcw, Eye, Settings } from 'lucide-react';
+import { X, Upload, FileSpreadsheet, Loader2, AlertCircle, Check, RotateCcw, Eye } from 'lucide-react';
 import { read, utils } from 'xlsx';
 import { BillingRecord } from '../../types';
 import { normalizeMonth } from '../../hooks/useBilling';
@@ -7,7 +7,7 @@ import { normalizeMonth } from '../../hooks/useBilling';
 interface BillingImportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImport: (records: Omit<BillingRecord, 'id'>[], month: string, overwrite: boolean) => Promise<void>;
+  onImport: (records: Omit<BillingRecord, 'id'>[], month: string) => Promise<{ added: number; skipped: number }>;
 }
 
 interface ParsedRow {
@@ -63,8 +63,7 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
   const [parsedData, setParsedData] = useState<ParsedRow[]>([]);
   const [fileName, setFileName] = useState('');
   const [isImporting, setIsImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ success: boolean; count: number } | null>(null);
-  const [overwrite, setOverwrite] = useState(true);
+  const [importResult, setImportResult] = useState<{ success: boolean; added: number; skipped: number } | null>(null);
 
   const detectedMonth = parsedData.length > 0 ? parsedData[0].month : '';
 
@@ -112,11 +111,11 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
     if (parsedData.length === 0) return;
     setIsImporting(true);
     try {
-      await onImport(parsedData, detectedMonth, overwrite);
-      setImportResult({ success: true, count: parsedData.length });
+      const result = await onImport(parsedData, detectedMonth);
+      setImportResult({ success: true, added: result.added, skipped: result.skipped });
     } catch (err) {
       console.error('Import failed:', err);
-      setImportResult({ success: false, count: 0 });
+      setImportResult({ success: false, added: 0, skipped: 0 });
     } finally {
       setIsImporting(false);
     }
@@ -289,35 +288,7 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
             </div>
           )}
 
-          {/* Section 3: 가져오기 설정 */}
-          {summary && (
-            <div className="bg-white border border-gray-200 overflow-hidden">
-              <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                <Settings className="w-3 h-3 text-primary" />
-                <h3 className="text-primary font-bold text-xs">가져오기 설정</h3>
-              </div>
-              <div className="p-3">
-                <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-2 rounded-sm transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={overwrite}
-                    onChange={(e) => setOverwrite(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                  />
-                  <div className="flex-1">
-                    <span className="font-medium">같은 청구월 기존 데이터 삭제 후 가져오기</span>
-                    <p className="text-xxs text-gray-500 mt-0.5">
-                      {overwrite
-                        ? `${detectedMonth} 청구월의 기존 데이터를 모두 삭제하고 새로 가져옵니다.`
-                        : '기존 데이터를 유지하고 새 데이터를 추가합니다.'}
-                    </p>
-                  </div>
-                </label>
-              </div>
-            </div>
-          )}
-
-          {/* Section 4: 결과 */}
+          {/* Section 3: 결과 */}
           {importResult && (
             <div className="bg-white border border-gray-200 overflow-hidden">
               <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
@@ -340,9 +311,14 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
                 {importResult.success ? (
                   <div className="flex items-center gap-2">
                     <Check className="w-5 h-5 text-emerald-600 shrink-0" />
-                    <span className="text-sm text-emerald-700 font-medium">
-                      {importResult.count.toLocaleString()}건의 수납 데이터를 성공적으로 가져왔습니다.
-                    </span>
+                    <div className="text-sm text-emerald-700 font-medium">
+                      <span>{importResult.added.toLocaleString()}건 추가 완료</span>
+                      {importResult.skipped > 0 && (
+                        <span className="text-gray-500 font-normal ml-1">
+                          (중복 {importResult.skipped.toLocaleString()}건 건너뜀)
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div className="flex items-start gap-2">

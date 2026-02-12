@@ -436,9 +436,9 @@ html, body {
   contain-intrinsic-size: 0 60px;
 }
 
-/* 테이블 행 최적화 */
+/* 테이블 행 최적화 - 시간표 테이블은 제외 (고정 높이 레이아웃 방해) */
 .virtual-table-row,
-tbody tr {
+tbody:not(.timetable-body) tr {
   content-visibility: auto;
   contain-intrinsic-size: 0 48px;
 }
@@ -472,6 +472,21 @@ tbody tr {
 /* contain 속성으로 레이아웃 격리 */
 .isolated-component {
   contain: layout style paint;
+}
+
+/* 스크롤바 숨김 (스크롤 기능 유지) */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* 하단 페이드아웃 (더 있음 표시) */
+.fade-bottom {
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 18px), transparent);
+  mask-image: linear-gradient(to bottom, black calc(100% - 18px), transparent);
 }
 
 /* 스크롤 성능 개선 */
