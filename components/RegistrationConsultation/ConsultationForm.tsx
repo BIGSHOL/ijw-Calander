@@ -370,16 +370,16 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                             <h3 className="text-primary font-bold text-xs">접수 정보</h3>
                         </div>
                         <div className="p-2">
-                        <div className="grid grid-cols-4 gap-2">
+                        <div className="grid grid-cols-3 gap-2">
                             <div>
-                                <label className={labelClass}><UserCheck size={12} className="inline mr-1" />수신자 <span className="text-red-500">*</span></label>
+                                <label className={labelClass}><UserCheck size={12} className="inline mr-1" />상담자 <span className="text-red-500">*</span></label>
                                 <input
                                     required
                                     type="text"
-                                    value={formData.receiver}
-                                    onChange={e => setFormData({ ...formData, receiver: e.target.value })}
+                                    value={formData.counselor}
+                                    onChange={e => setFormData({ ...formData, counselor: e.target.value })}
                                     className={inputClass}
-                                    placeholder="받은 사람"
+                                    placeholder="상담 선생님"
                                     {...viewProps}
                                 />
                             </div>
@@ -390,17 +390,6 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                     value={formData.createdAt}
                                     onChange={e => setFormData({ ...formData, createdAt: e.target.value })}
                                     className={inputClass}
-                                    {...viewProps}
-                                />
-                            </div>
-                            <div>
-                                <label className={labelClass}><User size={12} className="inline mr-1" />상담자</label>
-                                <input
-                                    type="text"
-                                    value={formData.counselor}
-                                    onChange={e => setFormData({ ...formData, counselor: e.target.value })}
-                                    className={inputClass}
-                                    placeholder="상담 선생님"
                                     {...viewProps}
                                 />
                             </div>
