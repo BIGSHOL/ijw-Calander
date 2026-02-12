@@ -92,8 +92,8 @@ export const getConsecutiveSpan = (
 
     for (let i = startPeriodIndex + 1; i < periods.length; i++) {
         const nextPeriod = periods[i];
-        const targetSlot = `${day} ${nextPeriod}`;
-        const hasNextSlot = cls.schedule?.some(s => s === targetSlot);
+        const targetSlot = `${day}${nextPeriod}`.replace(/\s+/g, '');
+        const hasNextSlot = cls.schedule?.some(s => s.replace(/\s+/g, '') === targetSlot);
 
         if (!hasNextSlot) break;
 
@@ -134,8 +134,8 @@ export const shouldSkipCell = (
     // Look backwards to see if any previous consecutive period started a rowspan that covers this cell
     for (let i = periodIndex - 1; i >= 0; i--) {
         const prevPeriod = periods[i];
-        const targetSlot = `${day} ${prevPeriod}`;
-        const hasPrevSlot = cls.schedule?.some(s => s === targetSlot);
+        const targetSlot = `${day}${prevPeriod}`.replace(/\s+/g, '');
+        const hasPrevSlot = cls.schedule?.some(s => s.replace(/\s+/g, '') === targetSlot);
 
         if (hasPrevSlot) {
             // slotTeacher가 다르면 병합 불가 (이 셀은 새로운 시작점)

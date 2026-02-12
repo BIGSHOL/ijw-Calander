@@ -87,6 +87,9 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 }) => {
     // 수정 모드일 때만 실제 canEdit 적용
     const effectiveCanEdit = canEdit && mode === 'edit';
+    // 부담임 셀에서는 드래그 비활성화 (teacher 뷰에서 해당 셀의 리소스가 담임이 아닌 경우)
+    const getCanEdit = (cls: TimetableClass, resource: string) =>
+        effectiveCanEdit && !(viewType === 'teacher' && cls.teacher?.trim() !== resource?.trim());
     // 표시 옵션에 따른 너비 보정 계수
     // 학교/학년을 숨기면 학생명만 표시되므로 셀 폭을 줄임
     const widthFactor = useMemo(() => {
@@ -150,13 +153,19 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return mergedCellWidthCache[colspan] || { width: w, minWidth: `${colspan * minPerDay}px`, maxWidth: w, overflow: 'hidden' as const };
     };
 
-    // cellSize 픽셀 매핑: xs=72, sm=90, md=108, lg=126, xl=144
+    // cellSize 픽셀 매핑: columnWidth + rowHeight 둘 다 반영
+    // 사이즈(rowHeight) 변경 시 정사각형 헤더가 가로/세로 모두 커지도록
     const cellSizePx = useMemo(() => {
-        return columnWidth === 'compact' ? 72 :
+        const widthBased = columnWidth === 'compact' ? 72 :
             columnWidth === 'narrow' ? 90 :
                 columnWidth === 'wide' ? 126 :
                     columnWidth === 'x-wide' ? 144 : 108;
-    }, [columnWidth]);
+        const heightBased = rowHeight === 'compact' ? 54 :
+            rowHeight === 'short' ? 72 :
+                rowHeight === 'tall' ? 108 :
+                    rowHeight === 'very-tall' ? 126 : 90;
+        return Math.max(widthBased, heightBased);
+    }, [columnWidth, rowHeight]);
 
     const singleCellWidthStyle = useMemo(() => {
         const baseWidth = Math.round(cellSizePx * widthFactor);
@@ -164,17 +173,23 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return { width: `${baseWidth}px`, minWidth: `${minBase}px`, maxWidth: `${baseWidth}px`, overflow: 'hidden' as const };
     }, [cellSizePx, widthFactor]);
 
-    // 교시당 높이 (memoized) - cellSize 기반
+    // 교시당 높이 = 헤더(cellSizePx) + 학생 영역(studentSlotH)
+    // cellSizePx에 연동하여 열폭/행높이 조합에서 항상 적절한 학생 영역 확보
     const rowHeightValue = useMemo((): number | 'auto' => {
         if (!showStudents) return 'auto';
         if (rowHeight === 'compact') return 'auto';
-        if (rowHeight === 'short') return 100;
-        if (rowHeight === 'tall') return 320;
-        if (rowHeight === 'very-tall') return 450;
-        return 180;
-    }, [showStudents, rowHeight]);
+        const studentSlotH = rowHeight === 'short' ? 50 :
+            rowHeight === 'tall' ? 150 :
+                rowHeight === 'very-tall' ? 230 : 90;
+        return cellSizePx + studentSlotH;
+    }, [showStudents, rowHeight, cellSizePx]);
 
     const isCompactMode = rowHeight === 'compact' || !showStudents;
+
+    // td 내부 wrapper div 스타일 (td height는 CSS 최소값이므로 wrapper div로 실제 높이 제한)
+    // 별도 테이블(월/목, 화/금, 수)의 행 높이를 통일하기 위해 필수
+    const cellWrapperStyle = (h: string | undefined): React.CSSProperties | undefined =>
+        h ? { height: h, maxHeight: h, overflow: 'hidden' } : undefined;
 
     // 수요일만
     const hasWednesday = orderedSelectedDays.includes('수');
@@ -189,10 +204,9 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return orderedSelectedDays.filter(day => day === '화' || day === '금');
     }, [orderedSelectedDays]);
 
-    // 토/일 그룹 요일
-    const weekendDays = useMemo(() => {
-        return orderedSelectedDays.filter(day => day === '토' || day === '일');
-    }, [orderedSelectedDays]);
+    // 토/일: 개별 요일 (병합 불가 - 수요일과 같은 단일 컬럼)
+    const hasSaturday = orderedSelectedDays.includes('토');
+    const hasSunday = orderedSelectedDays.includes('일');
 
     // 월/목 그룹: 각 선생님이 어떤 요일에 수업이 있는지 계산 (slotTeachers 포함)
     const monThuResourceDaysMap = useMemo(() => {
@@ -226,21 +240,29 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return map;
     }, [allResources, tueFriDays, resourceDayLookup]);
 
-    // 토/일 그룹: 각 선생님이 어떤 요일에 수업이 있는지 계산 (slotTeachers 포함)
-    const weekendResourceDaysMap = useMemo(() => {
+    // 토요일: 각 선생님이 토요일 수업이 있는지 (단일 컬럼, 수요일과 동일 크기)
+    const saturdayResourceDaysMap = useMemo(() => {
         const map = new Map<string, string[]>();
-
+        if (!hasSaturday) return map;
         allResources.forEach(resource => {
-            const daysForResource = weekendDays.filter(day =>
-                resourceDayLookup.get(resource?.trim())?.has(day) ?? false
-            );
-            if (daysForResource.length > 0) {
-                map.set(resource, daysForResource);
+            if (resourceDayLookup.get(resource?.trim())?.has('토')) {
+                map.set(resource, ['토']);
             }
         });
-
         return map;
-    }, [allResources, weekendDays, resourceDayLookup]);
+    }, [allResources, hasSaturday, resourceDayLookup]);
+
+    // 일요일: 각 선생님이 일요일 수업이 있는지 (단일 컬럼, 수요일과 동일 크기)
+    const sundayResourceDaysMap = useMemo(() => {
+        const map = new Map<string, string[]>();
+        if (!hasSunday) return map;
+        allResources.forEach(resource => {
+            if (resourceDayLookup.get(resource?.trim())?.has('일')) {
+                map.set(resource, ['일']);
+            }
+        });
+        return map;
+    }, [allResources, hasSunday, resourceDayLookup]);
 
     // 수요일 수업이 있는 선생님 (수요일 전용, slotTeachers 포함)
     const wednesdayResources = useMemo(() => {
@@ -269,10 +291,15 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return allResources.filter(r => tueFriResourceDaysMap.has(r));
     }, [allResources, tueFriResourceDaysMap]);
 
-    // 토/일 그룹 활성 선생님
-    const weekendActiveResources = useMemo(() => {
-        return allResources.filter(r => weekendResourceDaysMap.has(r));
-    }, [allResources, weekendResourceDaysMap]);
+    // 토요일 활성 선생님
+    const saturdayActiveResources = useMemo(() => {
+        return allResources.filter(r => saturdayResourceDaysMap.has(r));
+    }, [allResources, saturdayResourceDaysMap]);
+
+    // 일요일 활성 선생님
+    const sundayActiveResources = useMemo(() => {
+        return allResources.filter(r => sundayResourceDaysMap.has(r));
+    }, [allResources, sundayResourceDaysMap]);
 
     if (filteredClasses.length === 0 && allResources.length === 0) {
         return (
@@ -298,6 +325,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
             if (title === '월/목') return { bg: 'bg-blue-600', border: 'border-blue-600', light: 'bg-blue-50', text: 'text-blue-700' };
             if (title === '화/금') return { bg: 'bg-purple-600', border: 'border-purple-600', light: 'bg-purple-50', text: 'text-purple-700' };
             if (title === '토/일') return { bg: 'bg-orange-600', border: 'border-orange-600', light: 'bg-orange-50', text: 'text-orange-700' };
+            if (title === '토요일') return { bg: 'bg-orange-600', border: 'border-orange-600', light: 'bg-orange-50', text: 'text-orange-700' };
+            if (title === '일요일') return { bg: 'bg-red-600', border: 'border-red-600', light: 'bg-red-50', text: 'text-red-700' };
             return { bg: 'bg-green-600', border: 'border-green-600', light: 'bg-green-50', text: 'text-green-700' };
         };
         const groupColors = getGroupColors();
@@ -423,7 +452,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                         <tbody className="timetable-body">
                             {(() => {
                                 // 주말 테이블은 그룹화하지 않고 시간만 표시
-                                const isWeekendTable = title === '토/일';
+                                const isWeekendTable = title === '토/일' || title === '토요일' || title === '일요일';
 
                                 // 평일: 교시 그룹화 (1-1+1-2 → 1교시, ...)
                                 // 단, 같은 수업이 두 교시 모두에 있을 때만 병합
@@ -563,12 +592,13 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                             cells.push(
                                                                 <td
                                                                     key={`${resource}-${day}-${firstPeriod}`}
-                                                                    className={`p-0 border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
+                                                                    className={`p-0 align-top border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
                                                                     style={cellStyle}
                                                                     rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                                     colSpan={colSpan > 1 ? colSpan : undefined}
                                                                 >
-                                                                    {isEmpty && showEmptyRooms ? (
+                                                                    <div style={cellWrapperStyle(cellStyle.height)}>
+                                                                    {isEmpty ? (
                                                                         <div className="text-xxs text-gray-500 text-center py-1">
                                                                             {viewType === 'room' ? resource : '빈 강의실'}
                                                                         </div>
@@ -583,7 +613,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 showClassName={showClassName}
                                                                                 showSchool={showSchool}
                                                                                 showGrade={showGrade}
-                                                                                canEdit={effectiveCanEdit}
+                                                                                canEdit={getCanEdit(cellClasses[0], resource)}
                                                                                 isDragOver={cellClasses.some(c => dragOverClassId === c.id)}
                                                                                 onClick={onClassClick}
                                                                                 onDragStart={onDragStart}
@@ -614,7 +644,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                     showClassName={showClassName}
                                                                                     showSchool={showSchool}
                                                                                     showGrade={showGrade}
-                                                                                    canEdit={effectiveCanEdit}
+                                                                                    canEdit={getCanEdit(cls, resource)}
                                                                                     isDragOver={dragOverClassId === cls.id}
                                                                                     onClick={onClassClick}
                                                                                     onDragStart={onDragStart}
@@ -636,6 +666,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             ))
                                                                         )
                                                                     )}
+                                                                    </div>
                                                                 </td>
                                                             );
 
@@ -738,12 +769,13 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                             cells.push(
                                                                 <td
                                                                     key={`${resource}-${day}-${secondPeriod}`}
-                                                                    className={`p-0 border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
+                                                                    className={`p-0 align-top border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
                                                                     style={cellStyle}
                                                                     rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                                     colSpan={colSpan > 1 ? colSpan : undefined}
                                                                 >
-                                                                    {isEmpty && showEmptyRooms ? (
+                                                                    <div style={cellWrapperStyle(cellStyle.height)}>
+                                                                    {isEmpty ? (
                                                                         <div className="text-xxs text-gray-500 text-center py-1">
                                                                             {viewType === 'room' ? resource : '빈 강의실'}
                                                                         </div>
@@ -758,7 +790,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 showClassName={showClassName}
                                                                                 showSchool={showSchool}
                                                                                 showGrade={showGrade}
-                                                                                canEdit={effectiveCanEdit}
+                                                                                canEdit={getCanEdit(cellClasses[0], resource)}
                                                                                 isDragOver={cellClasses.some(c => dragOverClassId === c.id)}
                                                                                 onClick={onClassClick}
                                                                                 onDragStart={onDragStart}
@@ -789,7 +821,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                     showClassName={showClassName}
                                                                                     showSchool={showSchool}
                                                                                     showGrade={showGrade}
-                                                                                    canEdit={effectiveCanEdit}
+                                                                                    canEdit={getCanEdit(cls, resource)}
                                                                                     isDragOver={dragOverClassId === cls.id}
                                                                                     onClick={onClassClick}
                                                                                     onDragStart={onDragStart}
@@ -811,6 +843,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             ))
                                                                         )
                                                                     )}
+                                                                    </div>
                                                                 </td>
                                                             );
 
@@ -930,12 +963,13 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 cells.push(
                                                                     <td
                                                                         key={`${resource}-${day}-${period}`}
-                                                                        className={`p-0 border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
+                                                                        className={`p-0 align-top border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
                                                                         style={cellStyle}
                                                                         rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                                         colSpan={colSpan > 1 ? colSpan : undefined}
                                                                     >
-                                                                        {isEmpty && showEmptyRooms ? (
+                                                                        <div style={cellWrapperStyle(cellStyle.height)}>
+                                                                        {isEmpty ? (
                                                                             <div className="text-xxs text-gray-500 text-center py-1">
                                                                                 {viewType === 'room' ? resource : '빈 강의실'}
                                                                             </div>
@@ -950,7 +984,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                     showClassName={showClassName}
                                                                                     showSchool={showSchool}
                                                                                     showGrade={showGrade}
-                                                                                    canEdit={effectiveCanEdit}
+                                                                                    canEdit={getCanEdit(cellClasses[0], resource)}
                                                                                     isDragOver={cellClasses.some(c => dragOverClassId === c.id)}
                                                                                     onClick={onClassClick}
                                                                                     onDragStart={onDragStart}
@@ -981,7 +1015,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                         showClassName={showClassName}
                                                                                         showSchool={showSchool}
                                                                                         showGrade={showGrade}
-                                                                                        canEdit={effectiveCanEdit}
+                                                                                        canEdit={getCanEdit(cls, resource)}
                                                                                         isDragOver={dragOverClassId === cls.id}
                                                                                         onClick={onClassClick}
                                                                                         onDragStart={onDragStart}
@@ -1003,6 +1037,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 ))
                                                                             )
                                                                         )}
+                                                                        </div>
                                                                     </td>
                                                                 );
 
@@ -1109,12 +1144,13 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                         cells.push(
                                                             <td
                                                                 key={`${resource}-${day}-${period}`}
-                                                                className={`p-0 border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
+                                                                className={`p-0 align-top border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
                                                                 style={cellStyle}
                                                                 rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                                 colSpan={colSpan > 1 ? colSpan : undefined}
                                                             >
-                                                                {isEmpty && showEmptyRooms ? (
+                                                                <div style={cellWrapperStyle(cellStyle.height)}>
+                                                                {isEmpty ? (
                                                                     <div className="text-xxs text-gray-500 text-center py-1">
                                                                         {viewType === 'room' ? resource : '빈 강의실'}
                                                                     </div>
@@ -1129,7 +1165,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             showClassName={showClassName}
                                                                             showSchool={showSchool}
                                                                             showGrade={showGrade}
-                                                                            canEdit={effectiveCanEdit}
+                                                                            canEdit={getCanEdit(cellClasses[0], resource)}
                                                                             isDragOver={cellClasses.some(c => dragOverClassId === c.id)}
                                                                             onClick={onClassClick}
                                                                             onDragStart={onDragStart}
@@ -1160,7 +1196,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 showClassName={showClassName}
                                                                                 showSchool={showSchool}
                                                                                 showGrade={showGrade}
-                                                                                canEdit={effectiveCanEdit}
+                                                                                canEdit={getCanEdit(cls, resource)}
                                                                                 isDragOver={dragOverClassId === cls.id}
                                                                                 onClick={onClassClick}
                                                                                 onDragStart={onDragStart}
@@ -1182,6 +1218,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         ))
                                                                     )
                                                                 )}
+                                                                </div>
                                                             </td>
                                                         );
 
@@ -1399,11 +1436,12 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                         return (
                                                             <td
                                                                 key={`${resource}-${firstPeriod}`}
-                                                                className={`p-0 border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
+                                                                className={`p-0 align-top border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
                                                                 style={cellStyle}
                                                                 rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                             >
-                                                                {isEmpty && showEmptyRooms ? (
+                                                                <div style={cellWrapperStyle(cellStyle.height)}>
+                                                                {isEmpty ? (
                                                                     <div className="text-xxs text-gray-500 text-center py-1">
                                                                         {viewType === 'room' ? resource : '빈 강의실'}
                                                                     </div>
@@ -1418,7 +1456,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             showClassName={showClassName}
                                                                             showSchool={showSchool}
                                                                             showGrade={showGrade}
-                                                                            canEdit={effectiveCanEdit}
+                                                                            canEdit={getCanEdit(cls, resource)}
                                                                             isDragOver={dragOverClassId === cls.id}
                                                                             onClick={onClassClick}
                                                                             onDragStart={onDragStart}
@@ -1438,6 +1476,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         />
                                                                     ))
                                                                 )}
+                                                                </div>
                                                             </td>
                                                         );
                                                     })}
@@ -1479,11 +1518,12 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                         return (
                                                             <td
                                                                 key={`${resource}-${secondPeriod}`}
-                                                                className={`p-0 border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
+                                                                className={`p-0 align-top border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
                                                                 style={cellStyle}
                                                                 rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                             >
-                                                                {isEmpty && showEmptyRooms ? (
+                                                                <div style={cellWrapperStyle(cellStyle.height)}>
+                                                                {isEmpty ? (
                                                                     <div className="text-xxs text-gray-500 text-center py-1">
                                                                         {viewType === 'room' ? resource : '빈 강의실'}
                                                                     </div>
@@ -1498,7 +1538,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             showClassName={showClassName}
                                                                             showSchool={showSchool}
                                                                             showGrade={showGrade}
-                                                                            canEdit={effectiveCanEdit}
+                                                                            canEdit={getCanEdit(cls, resource)}
                                                                             isDragOver={dragOverClassId === cls.id}
                                                                             onClick={onClassClick}
                                                                             onDragStart={onDragStart}
@@ -1518,6 +1558,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         />
                                                                     ))
                                                                 )}
+                                                                </div>
                                                             </td>
                                                         );
                                                     })}
@@ -1576,11 +1617,12 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                             return (
                                                                 <td
                                                                     key={`${resource}-${period}`}
-                                                                    className={`p-0 border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
+                                                                    className={`p-0 align-top border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
                                                                     style={cellStyle}
                                                                     rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                                 >
-                                                                    {isEmpty && showEmptyRooms ? (
+                                                                    <div style={cellWrapperStyle(cellStyle.height)}>
+                                                                    {isEmpty ? (
                                                                         <div className="text-xxs text-gray-500 text-center py-1">
                                                                             {viewType === 'room' ? resource : '빈 강의실'}
                                                                         </div>
@@ -1595,7 +1637,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 showClassName={showClassName}
                                                                                 showSchool={showSchool}
                                                                                 showGrade={showGrade}
-                                                                                canEdit={effectiveCanEdit}
+                                                                                canEdit={getCanEdit(cls, resource)}
                                                                                 isDragOver={dragOverClassId === cls.id}
                                                                                 onClick={onClassClick}
                                                                                 onDragStart={onDragStart}
@@ -1615,6 +1657,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             />
                                                                         ))
                                                                     )}
+                                                                    </div>
                                                                 </td>
                                                             );
                                                         })}
@@ -1683,11 +1726,12 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                     return (
                                                         <td
                                                             key={`${resource}-${period}`}
-                                                            className={`p-0 border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
+                                                            className={`p-0 align-top border-b-2 border-b-gray-400 overflow-hidden ${borderRightClass} ${isEmpty ? 'bg-gray-200' : ''}`}
                                                             style={cellStyle}
                                                             rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                         >
-                                                            {isEmpty && showEmptyRooms ? (
+                                                            <div style={cellWrapperStyle(cellStyle.height)}>
+                                                            {isEmpty ? (
                                                                 <div className="text-xxs text-gray-500 text-center py-1">
                                                                     {viewType === 'room' ? resource : '빈 강의실'}
                                                                 </div>
@@ -1702,7 +1746,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         showClassName={showClassName}
                                                                         showSchool={showSchool}
                                                                         showGrade={showGrade}
-                                                                        canEdit={effectiveCanEdit}
+                                                                        canEdit={getCanEdit(cls, resource)}
                                                                         isDragOver={dragOverClassId === cls.id}
                                                                         onClick={onClassClick}
                                                                         onDragStart={onDragStart}
@@ -1722,6 +1766,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                     />
                                                                 ))
                                                             )}
+                                                            </div>
                                                         </td>
                                                     );
                                                 })}
@@ -1758,8 +1803,11 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                 {/* 화/금 테이블 */}
                 {tueFriActiveResources.length > 0 && renderTable(tueFriActiveResources, tueFriResourceDaysMap, '화/금')}
 
-                {/* 토/일 테이블 */}
-                {weekendActiveResources.length > 0 && renderTable(weekendActiveResources, weekendResourceDaysMap, '토/일')}
+                {/* 토요일 테이블 */}
+                {saturdayActiveResources.length > 0 && renderTable(saturdayActiveResources, saturdayResourceDaysMap, '토요일')}
+
+                {/* 일요일 테이블 */}
+                {sundayActiveResources.length > 0 && renderTable(sundayActiveResources, sundayResourceDaysMap, '일요일')}
 
                 {/* 수요일 테이블 */}
                 {hasWednesday && wednesdayResources.length > 0 && renderTable(wednesdayResources, wednesdayResourceDaysMap, '수요일', true)}

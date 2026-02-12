@@ -148,11 +148,12 @@ const ClassCard: React.FC<ClassCardProps> = ({
     const isCompact = rowHeight === 'compact';
 
     // 셀 높이를 픽셀 단위로 고정 (테이블 td의 height는 최소값이므로 ClassCard에서 직접 제한)
+    // 행 높이 = cellSizePx(헤더) + studentSlotH(학생영역) — TimetableGrid의 rowHeightValue와 동일
     const fixedCardHeight = useMemo((): number | undefined => {
         if (!showStudents || rowHeight === 'compact') return undefined;
-        const baseH = rowHeight === 'short' ? 100 : rowHeight === 'tall' ? 320 : rowHeight === 'very-tall' ? 450 : 180;
-        return baseH * span;
-    }, [showStudents, rowHeight, span]);
+        const studentSlotH = rowHeight === 'short' ? 50 : rowHeight === 'tall' ? 150 : rowHeight === 'very-tall' ? 230 : 90;
+        return (cellSizePx + studentSlotH) * span;
+    }, [showStudents, rowHeight, span, cellSizePx]);
 
     // compact 모드: maxHeight로 행 높이 팽창 방지 (height 고정 없이 내용에 따라 자연스럽게 축소)
     // 학생이 많은 셀이 전체 행 높이를 팽창시켜 빈 셀에 큰 빈공간이 생기는 문제 해결
@@ -183,6 +184,15 @@ const ClassCard: React.FC<ClassCardProps> = ({
     const HOLD_BASE = 2;
     const WITHDRAWN_BASE = 3;
     const activeItemH = fontSize === 'small' ? 13 : fontSize === 'large' ? 18 : fontSize === 'very-large' ? 21 : 16;
+
+    // 수업명을 첫 번째 공백에서 2줄로 분리 (예: "초등M_초저 개별진도 A" → ["초등M_초저", "개별진도A"])
+    const classNameLines = useMemo(() => {
+        const name = cls.className || '';
+        const idx = name.indexOf(' ');
+        if (idx === -1) return [name];
+        return [name.slice(0, idx), name.slice(idx + 1).replace(/\s+/g, '')];
+    }, [cls.className]);
+
     const [showScheduleTooltip, setShowScheduleTooltip] = useState(false);
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
     const headerRef = useRef<HTMLDivElement>(null);
@@ -464,6 +474,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
     const hasPartialStudents = isMergedCell && partialStudentsByDay &&
         mergedDays.some(day => partialStudentsByDay[day]?.active.length > 0);
 
+    // 부분 등원 학생 수 (중복 제거) - 재원생 카운트에 합산 표시용
+    const partialActiveCount = isMergedCell && partialStudentsByDay
+        ? new Set(mergedDays.flatMap(d => (partialStudentsByDay[d]?.active || []).map((s: any) => s.id))).size
+        : 0;
+
     // 교시 수(span)에 따른 재원생 최대 높이 계산
     // 1교시당 4명 기준 (1명당 약 21px)
     const maxStudentHeight = span * 4 * 21; // span * 4명 * 21px
@@ -494,7 +509,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 }
             }}
             onDrop={(e) => canEdit && onDrop(e, cls.id, 'common')}
-            className={`flex flex-col ${fixedCardHeight ? '' : 'h-full '}overflow-hidden transition-all w-full max-w-full ${isDragOver ? 'ring-2 ring-indigo-400 scale-[1.02]' : ''} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''}`}
+            className={`flex flex-col ${fixedCardHeight ? '' : 'h-full '}overflow-hidden transition-all w-full max-w-full ${isDragOver ? 'ring-2 ring-indigo-400 shadow-lg shadow-indigo-200' : ''} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''}`}
             style={{
                 ...cardBgStyle,
                 ...(fixedCardHeight ? { height: `${fixedCardHeight}px`, maxHeight: `${fixedCardHeight}px` } : {}),
@@ -518,7 +533,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     onMouseLeave={() => setShowScheduleTooltip(false)}
                 >
                     <div className="relative min-w-0 w-full">
-                        <span className={`block leading-tight text-xs`}>{cls.className}</span>
+                        {classNameLines.map((line, i) => (
+                            <span key={i} className={`block leading-tight ${titleFontSizeClass} whitespace-nowrap overflow-hidden`}>{line}</span>
+                        ))}
                         {isMergedClass && (
                             <PortalTooltip
                                 triggerClassName="absolute -top-0.5 -right-0.5 z-10"
@@ -541,7 +558,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     </div>
                     {/* 강의실 (2행) + 재원생 수 (학생 목록 숨김 시) */}
                     {(cls.room || !showStudents) && (
-                        <div className={`text-[10px] font-normal text-gray-600 leading-tight`}>
+                        <div className={`${fontSizeClass} font-normal text-gray-600 leading-tight`}>
                             {cls.room}
                             {!showStudents && (
                                 <>
@@ -604,7 +621,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 isMergedCell ? (
                     <div className="flex-1 flex flex-col overflow-hidden min-w-0 min-h-0">
                         <div
-                            className={`flex-1 px-1 py-0 transition-colors min-w-0 min-h-0 overflow-y-auto no-scrollbar fade-bottom overscroll-contain ${dragOverZone === 'common' ? 'bg-indigo-50' : ''}`}
+                            className={`flex-1 px-1 py-0 transition-colors min-w-0 min-h-0 overflow-y-auto no-scrollbar fade-bottom overscroll-contain ${dragOverZone === 'common' ? 'bg-indigo-100 ring-2 ring-inset ring-indigo-400' : ''}`}
                             onDragOver={(e) => {
                                 if (!canEdit) return;
                                 e.preventDefault();
@@ -624,7 +641,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 onDrop(e, cls.id, 'common');
                             }}
                         >
-                            <div className={`${fontSizeClass} font-bold text-indigo-600 mb-0 overflow-hidden whitespace-nowrap`}>({commonStudents.active.length})</div>
+                            <div className={`${fontSizeClass} font-bold text-indigo-600 mb-0 overflow-hidden whitespace-nowrap`}>{commonStudents.active.length + partialActiveCount}명 - 재원생</div>
                             <ul className="flex flex-col gap-0 min-w-0">
                                 {commonStudents.active.map(s => {
                                     const isHighlighted = !!(searchQuery && s.name.includes(searchQuery));
@@ -656,14 +673,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         />
                                     );
                                 })}
-                                {/* 병합셀: 10명 기본 높이 - 빈 슬롯으로 공간 확보 */}
-                                {Array.from({ length: Math.max(0, MERGED_BASE - commonStudents.active.length) }).map((_, i) => (
-                                    <li key={`pad-${i}`} className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] invisible select-none`}>&nbsp;</li>
-                                ))}
                             </ul>
-                        </div>
 
-                        {/* 부분 등원 학생 (행 단위 좌우 분할: 학생 쪽만 표시, 반대쪽 회색) */}
+                        {/* 부분 등원 학생 (행 단위 좌우 분할: 학생 쪽만 표시, 반대쪽 회색) - 재원생 바로 밑 */}
                         {isMergedCell && (canEdit || hasPartialStudents) && mergedDays.length > 0 && (() => {
                             const partialRows: { student: typeof commonStudents.active[0]; day: string }[] = [];
                             mergedDays.forEach(day => {
@@ -689,7 +701,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                 {mergedDays.map((d, dIdx) => (
                                                     <div
                                                         key={d}
-                                                        className={`flex-1 min-w-0 overflow-hidden ${dIdx < mergedDays.length - 1 ? 'border-r border-dashed border-gray-300' : ''} ${d !== day ? 'bg-gray-200' : ''}`}
+                                                        className={`flex-1 min-w-0 overflow-hidden transition-colors ${dIdx < mergedDays.length - 1 ? 'border-r border-dashed border-gray-300' : ''} ${d !== day ? (dragOverZone === d ? 'bg-blue-200 ring-2 ring-inset ring-blue-400' : 'bg-gray-200') : ''}`}
+                                                        onDragOver={(e) => { if (!canEdit || d === day) return; e.preventDefault(); e.stopPropagation(); setDragOverZone(d); }}
+                                                        onDragLeave={(e) => { if (e.currentTarget.contains(e.relatedTarget as Node)) return; setDragOverZone(null); }}
+                                                        onDrop={(e) => { if (!canEdit || d === day) return; e.preventDefault(); e.stopPropagation(); setDragOverZone(null); onDrop(e, cls.id, d); }}
                                                     >
                                                         {d === day && (
                                                             <StudentItem
@@ -713,31 +728,40 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             </div>
                                         );
                                     })}
-                                    {canEdit && partialRows.length === 0 && (
-                                        <div className="flex min-w-0">
+                                    {canEdit && (
+                                        <div className="flex min-w-0 border-t border-gray-300">
                                             {mergedDays.map((d, dIdx) => (
                                                 <div
                                                     key={d}
-                                                    className={`flex-1 min-w-0 bg-gray-200 ${dIdx < mergedDays.length - 1 ? 'border-r border-dashed border-gray-300' : ''} ${dragOverZone === d ? 'bg-blue-50' : ''}`}
-                                                    style={{ height: `${activeItemH}px` }}
+                                                    className={`flex-1 min-w-0 flex items-center justify-center transition-all
+                                                        ${dIdx < mergedDays.length - 1 ? 'border-r border-dashed border-gray-300' : ''}
+                                                        ${dragOverZone === d
+                                                            ? 'bg-blue-200 ring-2 ring-inset ring-blue-500 text-blue-700 font-bold'
+                                                            : 'bg-gray-100 text-gray-400'}`}
+                                                    style={{ minHeight: `${Math.max(40, activeItemH * 3)}px` }}
                                                     onDragOver={(e) => { if (!canEdit) return; e.preventDefault(); e.stopPropagation(); setDragOverZone(d); }}
                                                     onDragLeave={(e) => { if (e.currentTarget.contains(e.relatedTarget as Node)) return; setDragOverZone(null); }}
                                                     onDrop={(e) => { if (!canEdit) return; e.preventDefault(); e.stopPropagation(); setDragOverZone(null); onDrop(e, cls.id, d); }}
-                                                />
+                                                >
+                                                    <span className="text-xxs">
+                                                        {dragOverZone === d ? '▼' : `${d}만`}
+                                                    </span>
+                                                </div>
                                             ))}
                                         </div>
                                     )}
                                 </div>
                             );
                         })()}
+                        </div>
 
                         {/* 대기 + 퇴원 (토글에 따라 조건부 렌더링) */}
                         {(showHoldStudents || showWithdrawnStudents) && (
-                            <div className="flex-shrink-0">
+                            <div className="flex-shrink overflow-y-auto no-scrollbar min-h-0" style={{ maxHeight: `${Math.max(60, 3 * activeItemH + 20)}px` }}>
                                 {showHoldStudents && (
-                                    <div className="px-1 py-0.5 bg-pink-50 border-b border-pink-200 overflow-y-auto no-scrollbar">
-                                        <div className="text-xxs font-bold text-pink-600">대기 ({commonStudents.hold.length}명)</div>
-                                        <ul className="flex flex-col gap-0.5">
+                                    <div className="px-0.5 py-0 bg-pink-50 border-b border-pink-200">
+                                        <div className={`${fontSizeClass} font-bold text-pink-600 overflow-hidden whitespace-nowrap`}>{commonStudents.hold.length}명 - 대기</div>
+                                        <ul className="flex flex-col gap-0">
                                             {commonStudents.hold.map(s => {
                                                 let text = s.name;
                                                 if (showSchool || showGrade) {
@@ -745,18 +769,15 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     if (sg && sg !== '-') text += `/${sg}`;
                                                 }
                                                 const tooltipText = s.enrollmentDate ? `예정일: ${s.enrollmentDate}` : undefined;
-                                                return <li key={s.id} className="text-xxs leading-tight bg-amber-50 text-amber-800 px-1 py-0.5 overflow-hidden whitespace-nowrap cursor-pointer" title={tooltipText}>{text}</li>;
+                                                return <li key={s.id} className={`${fontSizeClass} leading-[1.3] bg-amber-50 text-amber-800 px-0.5 py-0 overflow-hidden whitespace-nowrap cursor-pointer`} title={tooltipText}>{text}</li>;
                                             })}
-                                            {Array.from({ length: Math.max(0, HOLD_BASE - commonStudents.hold.length) }).map((_, i) => (
-                                                <li key={`hpad-${i}`} className="text-xxs leading-tight px-1 py-0.5 invisible select-none">&nbsp;</li>
-                                            ))}
                                         </ul>
                                     </div>
                                 )}
                                 {showWithdrawnStudents && (
-                                    <div className="px-1 py-0.5 bg-gray-100 overflow-y-auto no-scrollbar">
-                                        <div className="text-xxs font-bold text-gray-600">퇴원 ({commonStudents.withdrawn.length}명)</div>
-                                        <ul className="flex flex-col gap-0.5">
+                                    <div className="px-0.5 py-0 bg-gray-100">
+                                        <div className={`${fontSizeClass} font-bold text-gray-600 overflow-hidden whitespace-nowrap`}>{commonStudents.withdrawn.length}명 - 퇴원</div>
+                                        <ul className="flex flex-col gap-0">
                                             {commonStudents.withdrawn.map(s => {
                                                 let text = s.name;
                                                 if (showSchool || showGrade) {
@@ -767,7 +788,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                 return (
                                                     <li
                                                         key={s.id}
-                                                        className="text-xxs leading-tight bg-black text-white px-1 py-0.5 overflow-hidden whitespace-nowrap cursor-pointer hover:bg-gray-700 transition-colors"
+                                                        className={`${fontSizeClass} leading-[1.3] bg-black text-white px-0.5 py-0 overflow-hidden whitespace-nowrap cursor-pointer hover:bg-gray-700 transition-colors`}
                                                         title={tooltipText}
                                                         onClick={(e) => {
                                                             if (onStudentClick) {
@@ -780,9 +801,6 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     </li>
                                                 );
                                             })}
-                                            {Array.from({ length: Math.max(0, WITHDRAWN_BASE - commonStudents.withdrawn.length) }).map((_, i) => (
-                                                <li key={`wpad-${i}`} className="text-xxs leading-tight px-1 py-0.5 invisible select-none">&nbsp;</li>
-                                            ))}
                                         </ul>
                                     </div>
                                 )}
@@ -792,7 +810,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 ) : (
                     <div className="flex-1 flex flex-col overflow-hidden min-w-0 min-h-0">
                         <div className="flex-1 px-0.5 py-0.5 min-w-0 min-h-0 overflow-y-auto no-scrollbar fade-bottom overscroll-contain">
-                            <div className="text-xxs font-bold text-indigo-600 mb-0.5 overflow-hidden whitespace-nowrap">재원생 ({activeStudents.length}명)</div>
+                            <div className={`${fontSizeClass} font-bold text-indigo-600 mb-0 overflow-hidden whitespace-nowrap`}>{activeStudents.length}명 - 재원생</div>
                             <ul className="flex flex-col min-w-0">
                                 {activeStudents.map(s => {
                                     const isHighlighted = !!(searchQuery && s.name.includes(searchQuery));
@@ -832,12 +850,12 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
                         {/* 하단 고정 영역: 대기 + 퇴원 (토글에 따라 조건부 렌더링) */}
                         {(showHoldStudents || showWithdrawnStudents) && (
-                            <div className="flex-shrink-0">
+                            <div className="flex-shrink overflow-y-auto no-scrollbar min-h-0" style={{ maxHeight: `${Math.max(60, 3 * activeItemH + 20)}px` }}>
                                 {/* 대기생 Section */}
                                 {showHoldStudents && (
-                                    <div className="px-1 py-0.5 bg-pink-50 border-b border-pink-200 overflow-y-auto no-scrollbar">
-                                        <div className="text-xxs font-bold text-pink-600">대기 ({holdStudents.length}명)</div>
-                                        <ul className="flex flex-col gap-0.5">
+                                    <div className="px-0.5 py-0 bg-pink-50 border-b border-pink-200">
+                                        <div className={`${fontSizeClass} font-bold text-pink-600 overflow-hidden whitespace-nowrap`}>{holdStudents.length}명 - 대기</div>
+                                        <ul className="flex flex-col gap-0">
                                             {holdStudents.map(s => {
                                                 let text = s.name;
                                                 if (showSchool || showGrade) {
@@ -845,23 +863,20 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     if (sg && sg !== '-') text += `/${sg}`;
                                                 }
                                                 return (
-                                                    <li key={s.id} className="text-xxs leading-tight bg-amber-50 text-amber-800 px-1 py-0.5 overflow-hidden whitespace-nowrap" title={text}>
+                                                    <li key={s.id} className={`${fontSizeClass} leading-[1.3] bg-amber-50 text-amber-800 px-0.5 py-0 overflow-hidden whitespace-nowrap`} title={text}>
                                                         {text}
                                                     </li>
                                                 );
                                             })}
-                                            {Array.from({ length: Math.max(0, HOLD_BASE - holdStudents.length) }).map((_, i) => (
-                                                <li key={`hpad-${i}`} className="text-xxs leading-tight px-1 py-0.5 invisible select-none">&nbsp;</li>
-                                            ))}
                                         </ul>
                                     </div>
                                 )}
 
                                 {/* 퇴원생 Section */}
                                 {showWithdrawnStudents && (
-                                    <div className="px-1 py-0.5 bg-gray-100 overflow-y-auto no-scrollbar">
-                                        <div className="text-xxs font-bold text-gray-600">퇴원 ({withdrawnStudents.length}명)</div>
-                                        <ul className="flex flex-col gap-0.5">
+                                    <div className="px-0.5 py-0 bg-gray-100">
+                                        <div className={`${fontSizeClass} font-bold text-gray-600 overflow-hidden whitespace-nowrap`}>{withdrawnStudents.length}명 - 퇴원</div>
+                                        <ul className="flex flex-col gap-0">
                                             {withdrawnStudents.map(s => {
                                                 let text = s.name;
                                                 if (showSchool || showGrade) {
@@ -871,7 +886,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                 return (
                                                     <li
                                                         key={s.id}
-                                                        className="text-xxs leading-tight bg-black text-white px-1 py-0.5 overflow-hidden whitespace-nowrap cursor-pointer hover:bg-gray-700 transition-colors"
+                                                        className={`${fontSizeClass} leading-[1.3] bg-black text-white px-0.5 py-0 overflow-hidden whitespace-nowrap cursor-pointer hover:bg-gray-700 transition-colors`}
                                                         title={s.withdrawalDate ? `${text} (퇴원: ${s.withdrawalDate})` : text}
                                                         onClick={(e) => {
                                                             if (onStudentClick) {
@@ -884,9 +899,6 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     </li>
                                                 );
                                             })}
-                                            {Array.from({ length: Math.max(0, WITHDRAWN_BASE - withdrawnStudents.length) }).map((_, i) => (
-                                                <li key={`wpad-${i}`} className="text-xxs leading-tight px-1 py-0.5 invisible select-none">&nbsp;</li>
-                                            ))}
                                         </ul>
                                     </div>
                                 )}
