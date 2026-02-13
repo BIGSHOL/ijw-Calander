@@ -802,7 +802,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         {/* 대기 + 퇴원 (토글에 따라 조건부 렌더링) */}
                         {(showHoldStudents || showWithdrawnStudents) && (
                             <div className="flex-shrink overflow-y-auto no-scrollbar min-h-0" style={{ maxHeight: `${Math.max(60, 3 * activeItemH + 20)}px` }}>
-                                {showHoldStudents && (
+                                {showHoldStudents && commonStudents.hold.length > 0 && (
                                     <div className="px-0.5 py-0 bg-pink-50 border-b border-pink-200">
                                         <div className={`${fontSizeClass} font-bold text-pink-600 overflow-hidden whitespace-nowrap`}>{commonStudents.hold.length}명 - 대기</div>
                                         <ul className="flex flex-col gap-0">
@@ -930,7 +930,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         {(showHoldStudents || showWithdrawnStudents) && (
                             <div className="flex-shrink overflow-y-auto no-scrollbar min-h-0" style={{ maxHeight: `${Math.max(60, 3 * activeItemH + 20)}px` }}>
                                 {/* 대기생 Section */}
-                                {showHoldStudents && (
+                                {showHoldStudents && holdStudents.length > 0 && (
                                     <div className="px-0.5 py-0 bg-pink-50 border-b border-pink-200">
                                         <div className={`${fontSizeClass} font-bold text-pink-600 overflow-hidden whitespace-nowrap`}>{holdStudents.length}명 - 대기</div>
                                         <ul className="flex flex-col gap-0">
