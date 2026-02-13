@@ -276,6 +276,9 @@ export function useAddLevelTest() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['level_tests', data.studentId] });
     },
+    onError: (error: Error) => {
+      console.error('[useAddLevelTest] mutation error:', error);
+    },
   });
 }
 
@@ -294,6 +297,9 @@ export function useUpdateLevelTest() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['level_tests'] });
     },
+    onError: (error: Error) => {
+      console.error('[useUpdateLevelTest] mutation error:', error);
+    },
   });
 }
 
@@ -310,6 +316,9 @@ export function useDeleteLevelTest() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['level_tests', data.studentId] });
+    },
+    onError: (error: Error) => {
+      console.error('[useDeleteLevelTest] mutation error:', error);
     },
   });
 }
@@ -373,6 +382,9 @@ export function useAddGoalSetting() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['goal_settings', data.studentId] });
     },
+    onError: (error: Error) => {
+      console.error('[useAddGoalSetting] mutation error:', error);
+    },
   });
 }
 
@@ -406,6 +418,9 @@ export function useUpdateGoalAchievement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['goal_settings'] });
     },
+    onError: (error: Error) => {
+      console.error('[useUpdateGoalAchievement] mutation error:', error);
+    },
   });
 }
 
@@ -422,6 +437,9 @@ export function useDeleteGoalSetting() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['goal_settings', data.studentId] });
+    },
+    onError: (error: Error) => {
+      console.error('[useDeleteGoalSetting] mutation error:', error);
     },
   });
 }
@@ -491,6 +509,9 @@ export function useAddGradeComment() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['grade_comments', data.studentId] });
     },
+    onError: (error: Error) => {
+      console.error('[useAddGradeComment] mutation error:', error);
+    },
   });
 }
 
@@ -508,6 +529,9 @@ export function useUpdateGradeComment() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['grade_comments'] });
     },
+    onError: (error: Error) => {
+      console.error('[useUpdateGradeComment] mutation error:', error);
+    },
   });
 }
 
@@ -524,6 +548,9 @@ export function useDeleteGradeComment() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['grade_comments', data.studentId] });
+    },
+    onError: (error: Error) => {
+      console.error('[useDeleteGradeComment] mutation error:', error);
     },
   });
 }

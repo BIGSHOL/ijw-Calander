@@ -50,6 +50,9 @@ export const useCreateProject = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ganttProjects'] });
     },
+    onError: (error: Error) => {
+      console.error('[useCreateProject] mutation error:', error);
+    },
   });
 };
 
@@ -70,6 +73,9 @@ export const useUpdateProject = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ganttProjects'] });
     },
+    onError: (error: Error) => {
+      console.error('[useUpdateProject] mutation error:', error);
+    },
   });
 };
 
@@ -83,6 +89,9 @@ export const useDeleteProject = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ganttProjects'] });
+    },
+    onError: (error: Error) => {
+      console.error('[useDeleteProject] mutation error:', error);
     },
   });
 };

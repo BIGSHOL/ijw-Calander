@@ -54,6 +54,9 @@ export const useCreateExamSeries = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['exam_series'] });
         },
+        onError: (error: Error) => {
+            console.error('[useCreateExamSeries] mutation error:', error);
+        },
     });
 };
 

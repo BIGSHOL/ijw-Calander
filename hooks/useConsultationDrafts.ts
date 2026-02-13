@@ -81,6 +81,9 @@ export const useConvertDraft = () => {
                 reviewedBy: reviewerUid,
             });
         },
+        onError: (error: Error) => {
+            console.error('[useConvertDraft] mutation error:', error);
+        },
     });
 };
 
@@ -91,6 +94,9 @@ export const useDeleteDraft = () => {
     return useMutation({
         mutationFn: async (draftId: string) => {
             await deleteDoc(doc(db, COLLECTION_NAME, draftId));
+        },
+        onError: (error: Error) => {
+            console.error('[useDeleteDraft] mutation error:', error);
         },
     });
 };

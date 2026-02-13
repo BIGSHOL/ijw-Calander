@@ -134,6 +134,9 @@ export const useCreateConsultation = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['consultations'] });
         },
+        onError: (error: Error) => {
+            console.error('[useCreateConsultation] mutation error:', error);
+        },
     });
 };
 
@@ -155,6 +158,9 @@ export const useUpdateConsultation = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['consultations'] });
         },
+        onError: (error: Error) => {
+            console.error('[useUpdateConsultation] mutation error:', error);
+        },
     });
 };
 
@@ -173,6 +179,9 @@ export const useDeleteConsultation = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['consultations'] });
+        },
+        onError: (error: Error) => {
+            console.error('[useDeleteConsultation] mutation error:', error);
         },
     });
 };

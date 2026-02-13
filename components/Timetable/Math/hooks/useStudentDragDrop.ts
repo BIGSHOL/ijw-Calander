@@ -21,6 +21,7 @@ export interface PendingMove {
     fromZone: DragZone;
     toZone: DragZone;
     student: TimetableStudent;
+    scheduledDate?: string;  // 'YYYY-MM-DD' 예정일 (undefined = 오늘 즉시 이동)
 }
 
 export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
@@ -173,19 +174,21 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
         try {
             // 같은 학생의 여러 이동을 최종 결과로 압축
             // A→B, B→C 이동이 있으면 최종적으로 A→C만 처리
-            const finalMoves = new Map<string, { fromClassId: string; toClassId: string; fromZone: DragZone; toZone: DragZone }>();
+            const finalMoves = new Map<string, { fromClassId: string; toClassId: string; fromZone: DragZone; toZone: DragZone; scheduledDate?: string }>();
             pendingMoves.forEach(move => {
                 const existing = finalMoves.get(move.studentId);
                 if (existing) {
                     // 이미 이동 기록이 있으면 최초 출발지 유지, 목적지만 갱신
                     existing.toClassId = move.toClassId;
                     existing.toZone = move.toZone;
+                    existing.scheduledDate = move.scheduledDate;
                 } else {
                     finalMoves.set(move.studentId, {
                         fromClassId: move.fromClassId,
                         toClassId: move.toClassId,
                         fromZone: move.fromZone,
-                        toZone: move.toZone
+                        toZone: move.toZone,
+                        scheduledDate: move.scheduledDate
                     });
                 }
             });
@@ -235,6 +238,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
             );
 
             const batch = writeBatch(db);
+            const defaultToday = formatDateKey(new Date());
 
             for (const [studentId, move] of finalMoves) {
                 const isSameClass = move.fromClassId === move.toClassId;
@@ -262,13 +266,15 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                         const newEnrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${toClass.className}`);
 
                         const existingData = enrollmentDataMap.get(`${studentId}_${move.fromClassId}`);
-                        const today = formatDateKey(new Date());
+                        // 예정일이 있으면 해당 날짜 사용, 없으면 오늘
+                        const effectiveDate = move.scheduledDate || defaultToday;
 
                         // 기존 enrollment 종료 처리 (문서가 존재하는 경우에만)
                         if (existingData) {
                             batch.update(oldEnrollmentRef, {
-                                endDate: today,
-                                withdrawalDate: today,
+                                endDate: effectiveDate,
+                                withdrawalDate: effectiveDate,
+                                isTransferred: true,
                                 updatedAt: new Date().toISOString()
                             });
                         }
@@ -280,7 +286,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                                 ...preservedData,
                                 className: toClass.className,
                                 attendanceDays: newAttendanceDays,
-                                enrollmentDate: preservedData.enrollmentDate || today,  // 반이동 시 기존 신입생 날짜 유지
+                                enrollmentDate: preservedData.enrollmentDate || effectiveDate,
                                 createdAt: new Date().toISOString(),
                                 updatedAt: new Date().toISOString()
                             });
@@ -289,7 +295,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                                 className: toClass.className,
                                 subject: 'math',
                                 attendanceDays: newAttendanceDays,
-                                enrollmentDate: today,
+                                enrollmentDate: effectiveDate,
                                 createdAt: new Date().toISOString()
                             });
                         }
@@ -317,6 +323,13 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
         setLocalClasses(initialClasses); // Reset to Firebase state
     }, [initialClasses]);
 
+    // 특정 학생의 예정일 업데이트
+    const updatePendingMoveDate = useCallback((studentId: string, scheduledDate: string | undefined) => {
+        setPendingMoves(prev => prev.map(m =>
+            m.studentId === studentId ? { ...m, scheduledDate } : m
+        ));
+    }, []);
+
     return {
         localClasses: effectiveClasses,
         pendingMoves,
@@ -328,6 +341,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
         handleDragLeave,
         handleDrop,
         handleSavePendingMoves,
-        handleCancelPendingMoves
+        handleCancelPendingMoves,
+        updatePendingMoveDate
     };
 };

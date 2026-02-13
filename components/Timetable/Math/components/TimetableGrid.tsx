@@ -48,6 +48,7 @@ interface TimetableGridProps {
     onStudentClick?: (studentId: string) => void;
     // Pending Moved Students (드래그 이동 대기 중)
     pendingMovedStudentIds?: Set<string>;
+    pendingMoveSchedules?: Map<string, string | undefined>;
 }
 
 const TimetableGrid: React.FC<TimetableGridProps> = ({
@@ -83,7 +84,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     timetableViewMode,
     classKeywords = [],
     onStudentClick,
-    pendingMovedStudentIds
+    pendingMovedStudentIds,
+    pendingMoveSchedules
 }) => {
     // 수정 모드일 때만 실제 canEdit 적용
     const effectiveCanEdit = canEdit && mode === 'edit';
@@ -635,6 +637,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 showHoldStudents={showHoldStudents}
                                                                                 showWithdrawnStudents={showWithdrawnStudents}
                                                                                 pendingMovedStudentIds={pendingMovedStudentIds}
+                                                                                pendingMoveSchedules={pendingMoveSchedules}
                                                                                 mergedClasses={cellClasses}
                                                                             />
                                                                         ) : (
@@ -667,6 +670,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                     showHoldStudents={showHoldStudents}
                                                                                     showWithdrawnStudents={showWithdrawnStudents}
                                                                                     pendingMovedStudentIds={pendingMovedStudentIds}
+                                                                                    pendingMoveSchedules={pendingMoveSchedules}
                                                                                 />
                                                                             ))
                                                                         )
@@ -814,6 +818,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 showHoldStudents={showHoldStudents}
                                                                                 showWithdrawnStudents={showWithdrawnStudents}
                                                                                 pendingMovedStudentIds={pendingMovedStudentIds}
+                                                                                pendingMoveSchedules={pendingMoveSchedules}
                                                                                 mergedClasses={cellClasses}
                                                                             />
                                                                         ) : (
@@ -846,6 +851,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                     showHoldStudents={showHoldStudents}
                                                                                     showWithdrawnStudents={showWithdrawnStudents}
                                                                                     pendingMovedStudentIds={pendingMovedStudentIds}
+                                                                                    pendingMoveSchedules={pendingMoveSchedules}
                                                                                 />
                                                                             ))
                                                                         )
@@ -1010,6 +1016,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                     showHoldStudents={showHoldStudents}
                                                                                     showWithdrawnStudents={showWithdrawnStudents}
                                                                                     pendingMovedStudentIds={pendingMovedStudentIds}
+                                                                                    pendingMoveSchedules={pendingMoveSchedules}
                                                                                     mergedClasses={cellClasses}
                                                                                 />
                                                                             ) : (
@@ -1042,6 +1049,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                         showHoldStudents={showHoldStudents}
                                                                                         showWithdrawnStudents={showWithdrawnStudents}
                                                                                         pendingMovedStudentIds={pendingMovedStudentIds}
+                                                                                        pendingMoveSchedules={pendingMoveSchedules}
                                                                                     />
                                                                                 ))
                                                                             )
@@ -1193,6 +1201,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             showHoldStudents={showHoldStudents}
                                                                             showWithdrawnStudents={showWithdrawnStudents}
                                                                             pendingMovedStudentIds={pendingMovedStudentIds}
+                                                                            pendingMoveSchedules={pendingMoveSchedules}
                                                                             mergedClasses={cellClasses}
                                                                         />
                                                                     ) : (
@@ -1225,6 +1234,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 showHoldStudents={showHoldStudents}
                                                                                 showWithdrawnStudents={showWithdrawnStudents}
                                                                                 pendingMovedStudentIds={pendingMovedStudentIds}
+                                                                                pendingMoveSchedules={pendingMoveSchedules}
                                                                             />
                                                                         ))
                                                                     )
@@ -1485,6 +1495,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             showHoldStudents={showHoldStudents}
                                                                             showWithdrawnStudents={showWithdrawnStudents}
                                                                             pendingMovedStudentIds={pendingMovedStudentIds}
+                                                                            pendingMoveSchedules={pendingMoveSchedules}
                                                                         />
                                                                     ))
                                                                 )}
@@ -1568,6 +1579,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             showHoldStudents={showHoldStudents}
                                                                             showWithdrawnStudents={showWithdrawnStudents}
                                                                             pendingMovedStudentIds={pendingMovedStudentIds}
+                                                                            pendingMoveSchedules={pendingMoveSchedules}
                                                                         />
                                                                     ))
                                                                 )}
@@ -1668,6 +1680,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 showHoldStudents={showHoldStudents}
                                                                                 showWithdrawnStudents={showWithdrawnStudents}
                                                                                 pendingMovedStudentIds={pendingMovedStudentIds}
+                                                                                pendingMoveSchedules={pendingMoveSchedules}
                                                                             />
                                                                         ))
                                                                     )}
@@ -1778,6 +1791,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         showHoldStudents={showHoldStudents}
                                                                         showWithdrawnStudents={showWithdrawnStudents}
                                                                         pendingMovedStudentIds={pendingMovedStudentIds}
+                                                                        pendingMoveSchedules={pendingMoveSchedules}
                                                                     />
                                                                 ))
                                                             )}

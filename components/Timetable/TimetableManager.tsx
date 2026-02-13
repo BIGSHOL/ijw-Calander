@@ -34,6 +34,7 @@ import ExportImageModal, { ExportGroup } from '../Common/ExportImageModal';
 import type { ExportGroupInfo } from './Math/MathClassTab';
 import WithdrawalStudentDetail from '../WithdrawalManagement/WithdrawalStudentDetail';
 import { WithdrawalEntry } from '../../hooks/useWithdrawalFilters';
+import ScheduledDateModal from './Math/components/ScheduledDateModal';
 
 // Performance Note (bundle-dynamic-imports): Lazy load Generic Timetable
 const GenericTimetable = lazy(() => import('./Generic/GenericTimetable'));
@@ -50,7 +51,10 @@ interface MathTimetableContentProps {
     setIsTeacherOrderModalOpen: (open: boolean) => void;
     setIsViewSettingsOpen: (open: boolean) => void;
     pendingMovesCount: number;
+    scheduledMovesCount: number;
+    scheduledStudentDates?: Map<string, string>;  // studentId → scheduledDate (시뮬레이션 드래그 차단용)
     pendingMovedStudentIds?: Set<string>;
+    pendingMoveSchedules?: Map<string, string | undefined>;  // studentId → scheduledDate (툴팁용)
     handleSavePendingMoves: () => void;
     handleCancelPendingMoves: () => void;
     isSaving: boolean;
@@ -131,7 +135,10 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     setIsTeacherOrderModalOpen,
     setIsViewSettingsOpen,
     pendingMovesCount,
+    scheduledMovesCount,
+    scheduledStudentDates,
     pendingMovedStudentIds,
+    pendingMoveSchedules,
     handleSavePendingMoves,
     handleCancelPendingMoves,
     isSaving,
@@ -327,6 +334,13 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
 
     const handleGridDragStart = useCallback((e: React.DragEvent, sId: string, cId: string, zone?: string) => {
         if (isScenarioMode) {
+            // 예정일 이동이 걸린 학생은 시뮬레이션에서 드래그 차단
+            const scheduledDate = scheduledStudentDates?.get(sId);
+            if (scheduledDate) {
+                e.preventDefault();
+                alert(`이 학생은 반이동 예정(${scheduledDate})이 있습니다.\n실시간 모드에서 예정을 취소한 후 시뮬레이션에서 이동해주세요.`);
+                return;
+            }
             e.dataTransfer.setData('studentId', sId);
             e.dataTransfer.setData('fromClassId', cId);
             if (zone) e.dataTransfer.setData('fromZone', zone);
@@ -334,7 +348,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
         } else if (canEditMath) {
             handleDragStart(e, sId, cId, zone);
         }
-    }, [isScenarioMode, canEditMath, handleDragStart]);
+    }, [isScenarioMode, canEditMath, handleDragStart, scheduledStudentDates]);
 
     const handleGridDragOver = useCallback((e: React.DragEvent, classId: string) => {
         if (isScenarioMode) {
@@ -393,6 +407,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     setIsTeacherOrderModalOpen={setIsTeacherOrderModalOpen}
                     setIsViewSettingsOpen={setIsViewSettingsOpen}
                     pendingMovesCount={pendingMovesCount}
+                    scheduledMovesCount={scheduledMovesCount}
                     handleSavePendingMoves={handleSavePendingMoves}
                     handleCancelPendingMoves={handleCancelPendingMoves}
                     isSaving={isSaving}
@@ -476,6 +491,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         classKeywords={classKeywords}
                         onStudentClick={handleStudentClick}
                         pendingMovedStudentIds={pendingMovedStudentIds}
+                        pendingMoveSchedules={pendingMoveSchedules}
                     />
                 </div>
                 )}
@@ -815,6 +831,15 @@ const TimetableManager = ({
     const [selectedStudentForModal, setSelectedStudentForModal] = useState<UnifiedStudent | null>(null);
     const [selectedWithdrawalEntry, setSelectedWithdrawalEntry] = useState<WithdrawalEntry | null>(null);
 
+    // 드래그 예정일 모달 상태
+    const [dateModalInfo, setDateModalInfo] = useState<{
+        studentId: string;
+        studentName: string;
+        fromClassName: string;
+        toClassName: string;
+    } | null>(null);
+    const prevPendingMovesLengthRef = React.useRef(0);
+
     const [internalShowStudents, setInternalShowStudents] = useState(
         viewSettings.showStudents ?? true
     );
@@ -902,7 +927,8 @@ const TimetableManager = ({
         handleDragLeave,
         handleDrop,
         handleSavePendingMoves,
-        handleCancelPendingMoves
+        handleCancelPendingMoves,
+        updatePendingMoveDate
     } = useStudentDragDrop(classesWithEnrollments);
 
     // Search State
@@ -984,6 +1010,59 @@ const TimetableManager = ({
         pendingMoves.length > 0 ? new Set(pendingMoves.map(m => m.studentId)) : undefined,
         [pendingMoves]
     );
+
+    // 예정일 스케줄 Map (studentId → scheduledDate, 툴팁 표시용)
+    const pendingMoveSchedules = useMemo(() => {
+        if (pendingMoves.length === 0) return undefined;
+        const map = new Map<string, string | undefined>();
+        pendingMoves.forEach(m => map.set(m.studentId, m.scheduledDate));
+        return map;
+    }, [pendingMoves]);
+
+    // 예정일 이동 건수
+    const scheduledMovesCount = useMemo(() =>
+        pendingMoves.filter(m => m.scheduledDate).length,
+        [pendingMoves]
+    );
+
+    // 예정일 학생 Map (시뮬레이션 드래그 차단용)
+    const scheduledStudentDates = useMemo(() => {
+        const map = new Map<string, string>();
+        pendingMoves.forEach(m => {
+            if (m.scheduledDate) map.set(m.studentId, m.scheduledDate);
+        });
+        return map.size > 0 ? map : undefined;
+    }, [pendingMoves]);
+
+    // 새 cross-class 이동 감지 → 예정일 모달 표시
+    useEffect(() => {
+        if (pendingMoves.length > prevPendingMovesLengthRef.current) {
+            const lastMove = pendingMoves[pendingMoves.length - 1];
+            if (lastMove && lastMove.fromClassId !== lastMove.toClassId) {
+                const fromClass = classesWithEnrollments.find(c => c.id === lastMove.fromClassId);
+                const toClass = classesWithEnrollments.find(c => c.id === lastMove.toClassId);
+                const student = studentMap[lastMove.studentId];
+                setDateModalInfo({
+                    studentId: lastMove.studentId,
+                    studentName: student?.name || lastMove.studentId,
+                    fromClassName: fromClass?.className || '',
+                    toClassName: toClass?.className || '',
+                });
+            }
+        }
+        prevPendingMovesLengthRef.current = pendingMoves.length;
+    }, [pendingMoves, classesWithEnrollments, studentMap]);
+
+    const handleDateModalConfirm = useCallback((scheduledDate?: string) => {
+        if (dateModalInfo && scheduledDate) {
+            updatePendingMoveDate(dateModalInfo.studentId, scheduledDate);
+        }
+        setDateModalInfo(null);
+    }, [dateModalInfo, updatePendingMoveDate]);
+
+    const handleDateModalClose = useCallback(() => {
+        setDateModalInfo(null);
+    }, []);
 
     const openAddModal = () => {
         setIsAddClassOpen(true);
@@ -1102,7 +1181,10 @@ const TimetableManager = ({
                 setIsTeacherOrderModalOpen={setIsTeacherOrderModalOpen}
                 setIsViewSettingsOpen={setIsViewSettingsOpen}
                 pendingMovesCount={pendingMoves.length}
+                scheduledMovesCount={scheduledMovesCount}
+                scheduledStudentDates={scheduledStudentDates}
                 pendingMovedStudentIds={pendingMovedStudentIds}
+                pendingMoveSchedules={pendingMoveSchedules}
                 handleSavePendingMoves={handleSavePendingMoves}
                 handleCancelPendingMoves={handleCancelPendingMoves}
                 isSaving={isSaving}
@@ -1167,6 +1249,16 @@ const TimetableManager = ({
                 selectedWithdrawalEntry={selectedWithdrawalEntry}
                 setSelectedWithdrawalEntry={setSelectedWithdrawalEntry}
             />
+            {/* 드래그 예정일 선택 모달 */}
+            {dateModalInfo && (
+                <ScheduledDateModal
+                    studentName={dateModalInfo.studentName}
+                    fromClassName={dateModalInfo.fromClassName}
+                    toClassName={dateModalInfo.toClassName}
+                    onConfirm={handleDateModalConfirm}
+                    onClose={handleDateModalClose}
+                />
+            )}
         </MathSimulationProvider>
     );
 };

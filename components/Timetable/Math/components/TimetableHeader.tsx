@@ -22,6 +22,7 @@ interface TimetableHeaderProps {
     setIsTeacherOrderModalOpen: (isOpen: boolean) => void;
     setIsViewSettingsOpen: (isOpen: boolean) => void;
     pendingMovesCount: number;
+    scheduledMovesCount?: number;
     handleSavePendingMoves: () => void;
     handleCancelPendingMoves: () => void;
     isSaving: boolean;
@@ -92,6 +93,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     setIsTeacherOrderModalOpen,
     setIsViewSettingsOpen,
     pendingMovesCount,
+    scheduledMovesCount = 0,
     handleSavePendingMoves,
     handleCancelPendingMoves,
     isSaving,
@@ -912,6 +914,9 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                     <div className="flex items-center gap-1 bg-orange-50 border border-orange-200 rounded-sm px-2 py-1">
                         <span className="text-xs font-bold text-orange-600">
                             {pendingMovesCount}건 변경
+                            {scheduledMovesCount > 0 && (
+                                <span className="text-blue-600 ml-1">(예정 {scheduledMovesCount}건)</span>
+                            )}
                         </span>
                         <button
                             onClick={handleSavePendingMoves}
