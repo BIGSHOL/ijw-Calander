@@ -90,6 +90,9 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     // 부담임 셀에서는 드래그 비활성화 (teacher 뷰에서 해당 셀의 리소스가 담임이 아닌 경우)
     const getCanEdit = (cls: TimetableClass, resource: string) =>
         effectiveCanEdit && !(viewType === 'teacher' && cls.teacher?.trim() !== resource?.trim());
+    // 부담임 슬롯 여부 판별 (teacher 뷰에서 slotTeacher로 배정된 경우)
+    const isAssistantSlot = (cls: TimetableClass, resource: string) =>
+        viewType === 'teacher' && cls.teacher?.trim() !== resource?.trim();
     // 표시 옵션에 따른 너비 보정 계수
     // 학교/학년을 숨기면 학생명만 표시되므로 셀 폭을 줄임
     const widthFactor = useMemo(() => {
@@ -614,6 +617,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 showSchool={showSchool}
                                                                                 showGrade={showGrade}
                                                                                 canEdit={getCanEdit(cellClasses[0], resource)}
+                                                                                isAssistantTeacher={isAssistantSlot(cellClasses[0], resource)}
                                                                                 isDragOver={cellClasses.some(c => dragOverClassId === c.id)}
                                                                                 onClick={onClassClick}
                                                                                 onDragStart={onDragStart}
@@ -645,6 +649,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                     showSchool={showSchool}
                                                                                     showGrade={showGrade}
                                                                                     canEdit={getCanEdit(cls, resource)}
+                                                                                    isAssistantTeacher={isAssistantSlot(cls, resource)}
                                                                                     isDragOver={dragOverClassId === cls.id}
                                                                                     onClick={onClassClick}
                                                                                     onDragStart={onDragStart}
@@ -791,6 +796,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 showSchool={showSchool}
                                                                                 showGrade={showGrade}
                                                                                 canEdit={getCanEdit(cellClasses[0], resource)}
+                                                                                isAssistantTeacher={isAssistantSlot(cellClasses[0], resource)}
                                                                                 isDragOver={cellClasses.some(c => dragOverClassId === c.id)}
                                                                                 onClick={onClassClick}
                                                                                 onDragStart={onDragStart}
@@ -822,6 +828,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                     showSchool={showSchool}
                                                                                     showGrade={showGrade}
                                                                                     canEdit={getCanEdit(cls, resource)}
+                                                                                    isAssistantTeacher={isAssistantSlot(cls, resource)}
                                                                                     isDragOver={dragOverClassId === cls.id}
                                                                                     onClick={onClassClick}
                                                                                     onDragStart={onDragStart}
@@ -985,6 +992,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                     showSchool={showSchool}
                                                                                     showGrade={showGrade}
                                                                                     canEdit={getCanEdit(cellClasses[0], resource)}
+                                                                                    isAssistantTeacher={isAssistantSlot(cellClasses[0], resource)}
                                                                                     isDragOver={cellClasses.some(c => dragOverClassId === c.id)}
                                                                                     onClick={onClassClick}
                                                                                     onDragStart={onDragStart}
@@ -1016,6 +1024,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                         showSchool={showSchool}
                                                                                         showGrade={showGrade}
                                                                                         canEdit={getCanEdit(cls, resource)}
+                                                                                        isAssistantTeacher={isAssistantSlot(cls, resource)}
                                                                                         isDragOver={dragOverClassId === cls.id}
                                                                                         onClick={onClassClick}
                                                                                         onDragStart={onDragStart}
@@ -1166,6 +1175,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             showSchool={showSchool}
                                                                             showGrade={showGrade}
                                                                             canEdit={getCanEdit(cellClasses[0], resource)}
+                                                                            isAssistantTeacher={isAssistantSlot(cellClasses[0], resource)}
                                                                             isDragOver={cellClasses.some(c => dragOverClassId === c.id)}
                                                                             onClick={onClassClick}
                                                                             onDragStart={onDragStart}
@@ -1197,6 +1207,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 showSchool={showSchool}
                                                                                 showGrade={showGrade}
                                                                                 canEdit={getCanEdit(cls, resource)}
+                                                                                isAssistantTeacher={isAssistantSlot(cls, resource)}
                                                                                 isDragOver={dragOverClassId === cls.id}
                                                                                 onClick={onClassClick}
                                                                                 onDragStart={onDragStart}
@@ -1457,6 +1468,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             showSchool={showSchool}
                                                                             showGrade={showGrade}
                                                                             canEdit={getCanEdit(cls, resource)}
+                                                                            isAssistantTeacher={isAssistantSlot(cls, resource)}
                                                                             isDragOver={dragOverClassId === cls.id}
                                                                             onClick={onClassClick}
                                                                             onDragStart={onDragStart}
@@ -1539,6 +1551,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             showSchool={showSchool}
                                                                             showGrade={showGrade}
                                                                             canEdit={getCanEdit(cls, resource)}
+                                                                            isAssistantTeacher={isAssistantSlot(cls, resource)}
                                                                             isDragOver={dragOverClassId === cls.id}
                                                                             onClick={onClassClick}
                                                                             onDragStart={onDragStart}
@@ -1638,6 +1651,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 showSchool={showSchool}
                                                                                 showGrade={showGrade}
                                                                                 canEdit={getCanEdit(cls, resource)}
+                                                                                isAssistantTeacher={isAssistantSlot(cls, resource)}
                                                                                 isDragOver={dragOverClassId === cls.id}
                                                                                 onClick={onClassClick}
                                                                                 onDragStart={onDragStart}
@@ -1747,6 +1761,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         showSchool={showSchool}
                                                                         showGrade={showGrade}
                                                                         canEdit={getCanEdit(cls, resource)}
+                                                                        isAssistantTeacher={isAssistantSlot(cls, resource)}
                                                                         isDragOver={dragOverClassId === cls.id}
                                                                         onClick={onClassClick}
                                                                         onDragStart={onDragStart}

@@ -17,7 +17,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ student, onClos
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-sm shadow-xl w-full max-w-lg h-[600px] flex flex-col overflow-hidden relative"
+        className="bg-white rounded-sm shadow-xl w-full max-w-xl h-[600px] flex flex-col overflow-hidden relative"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 닫기 버튼 */}
