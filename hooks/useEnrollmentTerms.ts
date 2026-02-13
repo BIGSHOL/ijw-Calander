@@ -159,6 +159,9 @@ export function useCreateEnrollmentTerm() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['enrollment_terms'] });
     },
+    onError: (error: Error) => {
+      console.error('[useCreateEnrollmentTerm] mutation error:', error);
+    },
   });
 }
 
@@ -186,6 +189,9 @@ export function useUpdateEnrollmentTerm() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['enrollment_terms'] });
     },
+    onError: (error: Error) => {
+      console.error('[useUpdateEnrollmentTerm] mutation error:', error);
+    },
   });
 }
 
@@ -206,6 +212,9 @@ export function useCancelEnrollmentTerm() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['enrollment_terms'] });
+    },
+    onError: (error: Error) => {
+      console.error('[useCancelEnrollmentTerm] mutation error:', error);
     },
   });
 }

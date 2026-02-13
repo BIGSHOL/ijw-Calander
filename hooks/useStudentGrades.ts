@@ -87,6 +87,9 @@ export const useAddScore = () => {
             queryClient.invalidateQueries({ queryKey: ['exam_scores'] });
             queryClient.invalidateQueries({ queryKey: ['exams'] });
         },
+        onError: (error: Error) => {
+            console.error('[useAddScore] mutation error:', error);
+        },
     });
 };
 
@@ -120,6 +123,9 @@ export const useUpdateScore = () => {
             queryClient.invalidateQueries({ queryKey: ['exam_scores'] });
             queryClient.invalidateQueries({ queryKey: ['exams'] });
         },
+        onError: (error: Error) => {
+            console.error('[useUpdateScore] mutation error:', error);
+        },
     });
 };
 
@@ -140,6 +146,9 @@ export const useDeleteScore = () => {
             // GradesManager와 동기화: 시험별 성적 및 시험 통계 무효화
             queryClient.invalidateQueries({ queryKey: ['exam_scores'] });
             queryClient.invalidateQueries({ queryKey: ['exams'] });
+        },
+        onError: (error: Error) => {
+            console.error('[useDeleteScore] mutation error:', error);
         },
     });
 };

@@ -89,6 +89,9 @@ export const useCreateExam = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['exams'] });
         },
+        onError: (error: Error) => {
+            console.error('[useCreateExam] mutation error:', error);
+        },
     });
 };
 
@@ -110,6 +113,9 @@ export const useUpdateExam = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['exams'] });
         },
+        onError: (error: Error) => {
+            console.error('[useUpdateExam] mutation error:', error);
+        },
     });
 };
 
@@ -128,6 +134,9 @@ export const useDeleteExam = () => {
             queryClient.invalidateQueries({ queryKey: ['exams'] });
             // 관련 성적도 무효화 (삭제는 별도 처리 필요)
             queryClient.invalidateQueries({ queryKey: ['student_scores'] });
+        },
+        onError: (error: Error) => {
+            console.error('[useDeleteExam] mutation error:', error);
         },
     });
 };

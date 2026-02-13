@@ -160,6 +160,9 @@ export const useCreateTemplate = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ganttTemplates'] });
     },
+    onError: (error: Error) => {
+      console.error('[useCreateTemplate] mutation error:', error);
+    },
   });
 };
 
@@ -177,6 +180,9 @@ export const useUpdateTemplate = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ganttTemplates'] });
     },
+    onError: (error: Error) => {
+      console.error('[useUpdateTemplate] mutation error:', error);
+    },
   });
 };
 
@@ -190,6 +196,9 @@ export const useDeleteTemplate = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ganttTemplates'] });
+    },
+    onError: (error: Error) => {
+      console.error('[useDeleteTemplate] mutation error:', error);
     },
   });
 };

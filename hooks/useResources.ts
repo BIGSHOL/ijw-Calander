@@ -58,6 +58,9 @@ export function useCreateResource() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['resources'] });
     },
+    onError: (error: Error) => {
+      console.error('[useCreateResource] mutation error:', error);
+    },
   });
 }
 
@@ -83,6 +86,9 @@ export function useUpdateResource() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['resources'] });
     },
+    onError: (error: Error) => {
+      console.error('[useUpdateResource] mutation error:', error);
+    },
   });
 }
 
@@ -100,6 +106,9 @@ export function useDeleteResource() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['resources'] });
+    },
+    onError: (error: Error) => {
+      console.error('[useDeleteResource] mutation error:', error);
     },
   });
 }

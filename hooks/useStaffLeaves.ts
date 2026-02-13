@@ -94,6 +94,9 @@ export function useStaffLeaves(staffId?: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff_leaves'] });
     },
+    onError: (error: Error) => {
+      console.error('[useStaffLeaves] mutation error:', error);
+    },
   });
 
   // Approve leave mutation
@@ -110,6 +113,9 @@ export function useStaffLeaves(staffId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff_leaves'] });
+    },
+    onError: (error: Error) => {
+      console.error('[useStaffLeaves] mutation error:', error);
     },
   });
 
@@ -128,6 +134,9 @@ export function useStaffLeaves(staffId?: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff_leaves'] });
     },
+    onError: (error: Error) => {
+      console.error('[useStaffLeaves] mutation error:', error);
+    },
   });
 
   // Delete leave mutation
@@ -139,6 +148,9 @@ export function useStaffLeaves(staffId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff_leaves'] });
+    },
+    onError: (error: Error) => {
+      console.error('[useStaffLeaves] mutation error:', error);
     },
   });
 

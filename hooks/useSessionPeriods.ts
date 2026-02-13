@@ -110,6 +110,9 @@ export const useSaveSessionPeriod = () => {
         queryKey: [SESSION_PERIODS_KEY, savedSession.year, savedSession.category, savedSession.month]
       });
     },
+    onError: (error: Error) => {
+      console.error('[useSaveSessionPeriod] mutation error:', error);
+    },
   });
 };
 
@@ -137,6 +140,9 @@ export const useDeleteSessionPeriod = () => {
       queryClient.invalidateQueries({
         queryKey: [SESSION_PERIODS_KEY, year, category]
       });
+    },
+    onError: (error: Error) => {
+      console.error('[useDeleteSessionPeriod] mutation error:', error);
     },
   });
 };
@@ -176,6 +182,9 @@ export const useBatchSaveSessionPeriods = () => {
           queryKey: [SESSION_PERIODS_KEY, year]
         });
       });
+    },
+    onError: (error: Error) => {
+      console.error('[useBatchSaveSessionPeriods] mutation error:', error);
     },
   });
 };

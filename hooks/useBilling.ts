@@ -112,6 +112,9 @@ export function useBilling(month?: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['billing'] });
     },
+    onError: (error: Error) => {
+      console.error('[useBilling.createRecord] mutation error:', error);
+    },
   });
 
   // 수납 수정
@@ -131,6 +134,9 @@ export function useBilling(month?: string) {
         queryClient.invalidateQueries({ queryKey: ['enrollment_terms'] });
       }
     },
+    onError: (error: Error) => {
+      console.error('[useBilling.updateRecord] mutation error:', error);
+    },
   });
 
   // 수납 삭제
@@ -142,6 +148,9 @@ export function useBilling(month?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['billing'] });
+    },
+    onError: (error: Error) => {
+      console.error('[useBilling.deleteRecord] mutation error:', error);
     },
   });
 
@@ -198,6 +207,9 @@ export function useBilling(month?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['billing'] });
+    },
+    onError: (error: Error) => {
+      console.error('[useBilling.importRecords] mutation error:', error);
     },
   });
 
