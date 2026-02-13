@@ -114,6 +114,7 @@ interface ClassCardProps {
     showWithdrawnStudents?: boolean;  // 퇴원 학생 표시 여부
     pendingMovedStudentIds?: Set<string>;  // 드래그 이동 대기 중인 학생 ID
     mergedClasses?: TimetableClass[];  // 합반수업: 같은 슬롯의 모든 수업 목록
+    isAssistantTeacher?: boolean;  // 부담임 수업 여부 (teacher 뷰에서 slotTeacher로 배정된 경우)
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -142,7 +143,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
     showWithdrawnStudents = true,
     pendingMovedStudentIds,
     mergedClasses,
-    cellSizePx = 72
+    cellSizePx = 72,
+    isAssistantTeacher = false
 }) => {
     // 컴팩트 모드 여부
     const isCompact = rowHeight === 'compact';
@@ -521,7 +523,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 <div
                     ref={headerRef}
                     onClick={handleClassHeaderClick}
-                    className={`text-center font-bold px-0.5 mx-auto ${canEdit ? 'cursor-pointer hover:brightness-95' : 'cursor-pointer'} ${showStudents ? 'border-b border-gray-300' : ''} flex flex-col items-center justify-center shrink-0 overflow-hidden`}
+                    className={`relative text-center font-bold px-0.5 mx-auto ${canEdit ? 'cursor-pointer hover:brightness-95' : 'cursor-pointer'} ${showStudents ? 'border-b border-gray-300' : ''} flex flex-col items-center justify-center shrink-0 overflow-hidden`}
                     style={{
                         width: `${cellSizePx}px`,
                         maxWidth: `${cellSizePx}px`,
@@ -532,6 +534,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     onMouseEnter={() => !canEdit && setShowScheduleTooltip(true)}
                     onMouseLeave={() => setShowScheduleTooltip(false)}
                 >
+                    {isAssistantTeacher && (
+                        <span className="absolute top-0 left-0 z-10 text-[10px] leading-none bg-gray-600 text-white px-0.5 py-0.5 font-bold whitespace-nowrap animate-pulse">부담임</span>
+                    )}
                     <div className="relative min-w-0 w-full">
                         {classNameLines.map((line, i) => (
                             <span key={i} className={`block leading-tight ${titleFontSizeClass} whitespace-nowrap overflow-hidden`}>{line}</span>
@@ -933,6 +938,7 @@ export default React.memo(ClassCard, (prevProps, nextProps) => {
         prevProps.cellSizePx === nextProps.cellSizePx &&
         prevProps.showHoldStudents === nextProps.showHoldStudents &&
         prevProps.showWithdrawnStudents === nextProps.showWithdrawnStudents &&
-        prevProps.mergedClasses === nextProps.mergedClasses
+        prevProps.mergedClasses === nextProps.mergedClasses &&
+        prevProps.isAssistantTeacher === nextProps.isAssistantTeacher
     );
 });

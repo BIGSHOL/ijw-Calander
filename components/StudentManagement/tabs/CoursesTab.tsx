@@ -208,6 +208,7 @@ interface GroupedEnrollment {
   subject: 'math' | 'english' | 'science' | 'korean' | 'other';
   teachers: string[];
   days: string[];
+  attendanceDays: string[]; // 학생 실제 등원 요일 (비어있으면 모든 수업 요일에 등원)
   enrollmentIds: string[]; // 삭제를 위해 enrollment ID 저장
   startDate?: string; // 수강 시작일
   endDate?: string; // 수강 종료일 (undefined = 재원중)
@@ -278,6 +279,12 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
               existing.days.push(day);
             }
           });
+          // 학생 등원 요일 수집
+          (enrollment as any).attendanceDays?.forEach((day: string) => {
+            if (!existing.attendanceDays.includes(day)) {
+              existing.attendanceDays.push(day);
+            }
+          });
           // enrollment ID 추가
           if ((enrollment as any).id && !existing.enrollmentIds.includes((enrollment as any).id)) {
             existing.enrollmentIds.push((enrollment as any).id);
@@ -295,6 +302,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
             subject: enrollment.subject,
             teachers: staffId ? [staffId] : [],
             days: [...(enrollment.days || [])],
+            attendanceDays: [...((enrollment as any).attendanceDays || [])],
             enrollmentIds: (enrollment as any).id ? [(enrollment as any).id] : [],
             startDate: (enrollment as any).startDate,
             endDate: undefined,
@@ -331,6 +339,11 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
               existing.days.push(day);
             }
           });
+          (enrollment as any).attendanceDays?.forEach((day: string) => {
+            if (!existing.attendanceDays.includes(day)) {
+              existing.attendanceDays.push(day);
+            }
+          });
           // enrollment ID 추가
           if ((enrollment as any).id && !existing.enrollmentIds.includes((enrollment as any).id)) {
             existing.enrollmentIds.push((enrollment as any).id);
@@ -348,6 +361,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
             subject: enrollment.subject,
             teachers: staffId ? [staffId] : [],
             days: [...(enrollment.days || [])],
+            attendanceDays: [...((enrollment as any).attendanceDays || [])],
             enrollmentIds: (enrollment as any).id ? [(enrollment as any).id] : [],
             startDate: (enrollment as any).startDate,
             endDate: undefined,
@@ -659,6 +673,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
             subject: enrollment.subject as 'math' | 'english',
             teachers: staffId ? [staffId] : [],
             days: [],
+            attendanceDays: [],
             enrollmentIds: [],
             startDate: (enrollment as any).startDate,
             endDate: (enrollment as any).endDate,
@@ -734,9 +749,18 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
           </span>
         </div>
 
-        {/* 스케줄 (요일+교시 배지) */}
+        {/* 스케줄 (요일+교시 배지) - 학생의 등원 요일만 표시 */}
         <div className="w-40 min-w-0 overflow-hidden">
-          <ScheduleBadge schedule={actualClass?.schedule} subject={subjectForSchedule} />
+          <ScheduleBadge
+            schedule={actualClass?.schedule?.filter(s => {
+              // attendanceDays가 있으면 학생 등원 요일만, 없으면 전체 표시
+              const studentDays = group.attendanceDays?.length > 0 ? group.attendanceDays : null;
+              if (!studentDays) return true;
+              const day = s.split(' ')[0];
+              return studentDays.includes(day);
+            })}
+            subject={subjectForSchedule}
+          />
         </div>
 
         {/* 학생수 */}
@@ -959,6 +983,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
             ({groupedEnrollments.length}개)
           </span>
           <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showCurrentClasses ? '' : 'rotate-180'}`} />
+          <span className="text-[10px] text-gray-400 ml-1">실제 학생이 등원하는 요일만 표기됩니다</span>
         </div>
         {!readOnly && (
           <button
