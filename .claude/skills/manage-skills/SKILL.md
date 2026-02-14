@@ -30,10 +30,19 @@ argument-hint: "[선택사항: 특정 스킬 이름 또는 집중할 영역]"
 
 | 스킬 | 설명 | 커버 파일 패턴 |
 |------|------|---------------|
-| `verify-timetable` | 수학 시간표 도메인 패턴 검증 (React.memo, stale closure 방지, writeBatch, createPortal) | `components/Timetable/Math/**/*.{ts,tsx}`, `tests/**/*{DragDrop,ClassCard,Simulation,ScheduledDate}*` |
-| `verify-lazy-loading` | 탭/모달의 React.lazy + Suspense + ErrorBoundary 패턴 검증 | `components/Layout/TabContent.tsx`, `components/Layout/ModalManager.tsx`, `components/Timetable/TimetableManager.tsx` |
+| `verify-timetable` | 시간표 도메인(Math/shared) 패턴 검증 (React.memo, stale closure 방지, writeBatch, createPortal) | `components/Timetable/Math/**/*.{ts,tsx}`, `components/Timetable/shared/**/*.tsx`, `tests/**/*{DragDrop,ClassCard,Simulation,ScheduledDate}*` |
+| `verify-lazy-loading` | 탭/모달/서브매니저의 React.lazy + Suspense + ErrorBoundary 패턴 검증 | `components/Layout/TabContent.tsx`, `components/Layout/ModalManager.tsx`, `components/Timetable/TimetableManager.tsx`, 서브매니저 5개 |
 | `verify-test-coverage` | hooks/utils 테스트 파일 존재 검증 (100% 커버리지 유지) | `hooks/**/*.ts`, `utils/**/*.ts`, `tests/hooks/`, `tests/utils/` |
 | `verify-firebase-mutations` | Firebase mutation 훅의 invalidateQueries/에러처리 패턴 검증 | `hooks/use*Mutations.ts`, `hooks/use*.(ts|tsx)` (useMutation 사용 21개 훅) |
+| `verify-schedule-tabs` | 일정 그룹(연간일정/간트차트) 탭 기능 검증 | `components/Calendar/**`, `components/Gantt/**`, `hooks/useEventCrud.ts`, `hooks/useGantt*.ts` |
+| `verify-class-tabs` | 수업 그룹(시간표/출석부/출결/수업/강의실) 탭 기능 검증 | `components/Timetable/**`, `components/Attendance/**`, `components/DailyAttendance/**`, `components/ClassManagement/**`, `components/Classroom*/**` |
+| `verify-student-tabs` | 학생 그룹(학생/상담/성적/퇴원) 탭 기능 검증 | `components/StudentManagement/**`, `components/*Consultation/**`, `components/Grades/**`, `components/WithdrawalManagement/**` |
+| `verify-admin-tabs` | 관리 그룹(결재/직원/수납/자료실/역할) 탭 기능 검증 | `components/PaymentReport/**`, `components/Staff/**`, `components/Billing/**`, `components/Resources/**`, `components/RoleManagement/**` |
+| `verify-permissions` | 역할별 탭 접근권한/버튼 노출 검증 | `types/system.ts`, `hooks/usePermissions.ts`, `hooks/useTabPermissions.ts`, `components/Navigation/Sidebar.tsx` |
+| `verify-responsive` | 반응형 TailwindCSS 패턴 일관성 검증 | `components/Navigation/Sidebar.tsx`, `App.tsx`, `components/Common/Modal.tsx`, `tailwind.config.*` |
+| `verify-error-boundaries` | ErrorBoundary + fallback UI 패턴 검증 | `components/Common/ErrorBoundary.tsx`, `components/Layout/TabContent.tsx`, `index.tsx` |
+| `verify-query-patterns` | React Query 캐시키/enabled/staleTime 패턴 검증 | `queryClient.ts`, `hooks/*.ts` (useQuery/useMutation 사용 훅) |
+| `verify-bundle-size` | 코드 스플리팅/번들 크기 검증 | `vite.config.ts`, `components/Layout/TabContent.tsx`, `dist/assets/` |
 
 ## 워크플로우
 

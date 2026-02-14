@@ -1,6 +1,6 @@
 ---
 name: verify-timetable
-description: 수학 시간표 도메인의 핵심 패턴과 규칙을 검증합니다. 시간표 컴포넌트/훅 수정 후 사용.
+description: 시간표 도메인(Math/shared)의 핵심 패턴과 규칙을 검증합니다. 시간표 컴포넌트/훅 수정 후 사용.
 ---
 
 ## Purpose
@@ -14,6 +14,7 @@ description: 수학 시간표 도메인의 핵심 패턴과 규칙을 검증합�
 ## When to Run
 
 - `components/Timetable/Math/` 하위 파일을 수정한 후
+- `components/Timetable/shared/` 하위 파일을 수정한 후
 - `useStudentDragDrop` 훅의 드래그&드롭 로직을 변경한 후
 - SimulationContext 또는 시나리오 관련 코드를 수정한 후
 - 시간표 관련 새 컴포넌트/훅을 추가한 후
@@ -31,6 +32,8 @@ description: 수학 시간표 도메인의 핵심 패턴과 규칙을 검증합�
 | `components/Timetable/Math/context/SimulationContext.tsx` | 시나리오 모드 Context (writeBatch, sanitizeForFirestore) |
 | `components/Timetable/Math/ScenarioManagementModal.tsx` | 시나리오 관리 모달 (writeBatch) |
 | `components/Timetable/TimetableManager.tsx` | 시간표 매니저 (lazy load, 모드 관리) |
+| `components/Timetable/shared/IntegrationClassCard.tsx` | 통합뷰 수업 카드 (createPortal 툴팁) |
+| `components/Timetable/shared/IntegrationMiniGridRow.tsx` | 통합뷰 미니 그리드 행 |
 | `components/Timetable/Math/hooks/useTimetableClasses.ts` | 시간표 수업 데이터 훅 |
 | `components/Timetable/Math/hooks/useClassOperations.ts` | 수업 CRUD 훅 |
 | `components/Timetable/Math/hooks/useMathClassStudents.ts` | 수학 수업 학생 데이터 훅 |
@@ -130,7 +133,23 @@ grep -n "import.*createPortal.*from 'react-dom'" components/Timetable/Math/compo
 
 **수정:** `import { createPortal } from 'react-dom'` 추가 후 툴팁을 `createPortal(tooltip, document.body)`로 렌더링
 
-### Step 6: sanitizeForFirestore 사용 검증
+### Step 6: IntegrationClassCard createPortal 검증
+
+**파일:** `components/Timetable/shared/IntegrationClassCard.tsx`
+
+**검사:** 통합뷰의 수업시간 툴팁도 createPortal을 사용하여 overflow 잘림을 방지하는지 확인합니다.
+
+```bash
+grep -n "createPortal" components/Timetable/shared/IntegrationClassCard.tsx
+grep -n "import.*createPortal.*from 'react-dom'" components/Timetable/shared/IntegrationClassCard.tsx
+```
+
+**PASS 기준:** `createPortal` import 및 사용이 존재 (Math ClassCard과 동일 패턴)
+**FAIL 기준:** 툴팁이 createPortal 없이 부모 컨테이너 내부에 직접 렌더링 (overflow: hidden에 잘림)
+
+**수정:** `import { createPortal } from 'react-dom'` 추가 후 툴팁을 `createPortal(tooltip, document.body)`로 렌더링
+
+### Step 7: sanitizeForFirestore 사용 검증
 
 **파일:** `components/Timetable/Math/context/SimulationContext.tsx`
 
@@ -145,7 +164,7 @@ grep -n "sanitizeForFirestore" components/Timetable/Math/context/SimulationConte
 
 **수정:** Firebase에 쓰기 전 `sanitizeForFirestore(data)` 호출 추가
 
-### Step 7: 테스트 커버리지 검증
+### Step 8: 테스트 커버리지 검증
 
 **검사:** 주요 컴포넌트/훅에 대한 테스트 파일이 존재하는지 확인합니다.
 
@@ -161,7 +180,7 @@ ls tests/hooks/useSimulationContext.test.tsx 2>/dev/null || echo "MISSING: useSi
 
 **수정:** 누락된 테스트 파일 생성
 
-### Step 8: effectiveClasses 이중 페인트 방지 패턴 검증
+### Step 9: effectiveClasses 이중 페인트 방지 패턴 검증
 
 **파일:** `components/Timetable/Math/hooks/useStudentDragDrop.ts`
 
@@ -177,7 +196,7 @@ grep -n "pendingMoves.length === 0 ? initialClasses" components/Timetable/Math/h
 
 **수정:** `const effectiveClasses = pendingMoves.length === 0 ? initialClasses : localClasses;` 패턴 복원
 
-### Step 9: PendingMove scheduledDate 필드 검증
+### Step 10: PendingMove scheduledDate 필드 검증
 
 **파일:** `components/Timetable/Math/hooks/useStudentDragDrop.ts`
 
@@ -203,12 +222,13 @@ grep -n "scheduledDate" components/Timetable/Math/hooks/useStudentDragDrop.ts
 | 2 | React.memo TimetableGrid | TimetableGrid.tsx | PASS/FAIL | |
 | 3 | 커스텀 비교함수 ClassCard | ClassCard.tsx | PASS/FAIL | |
 | 4 | useRef stale closure 방지 | useStudentDragDrop.ts | PASS/FAIL | |
-| 5 | writeBatch 시퀀스 | useStudentDragDrop.ts | PASS/FAIL | |
-| 6 | createPortal 툴팁 | ClassCard.tsx | PASS/FAIL | |
-| 7 | sanitizeForFirestore | SimulationContext.tsx | PASS/FAIL | |
-| 8 | 테스트 파일 존재 | tests/ | PASS/FAIL | |
-| 9 | effectiveClasses 패턴 | useStudentDragDrop.ts | PASS/FAIL | |
-| 10 | scheduledDate 처리 | useStudentDragDrop.ts | PASS/FAIL | |
+| 5 | createPortal ClassCard | ClassCard.tsx | PASS/FAIL | |
+| 6 | createPortal IntegrationClassCard | IntegrationClassCard.tsx | PASS/FAIL | |
+| 7 | writeBatch 시퀀스 | useStudentDragDrop.ts | PASS/FAIL | |
+| 8 | sanitizeForFirestore | SimulationContext.tsx | PASS/FAIL | |
+| 9 | 테스트 파일 존재 | tests/ | PASS/FAIL | |
+| 10 | effectiveClasses 패턴 | useStudentDragDrop.ts | PASS/FAIL | |
+| 11 | scheduledDate 처리 | useStudentDragDrop.ts | PASS/FAIL | |
 
 ## Exceptions
 
@@ -219,3 +239,4 @@ grep -n "scheduledDate" components/Timetable/Math/hooks/useStudentDragDrop.ts
 3. **SimpleViewSettingsModal이 React.memo를 사용하지 않음** - 위와 동일 (모달 컴포넌트)
 4. **useClassOperations가 writeBatch를 사용하지 않음** - 단일 문서 CRUD는 setDoc/updateDoc이 적절
 5. **useMathConfig/useMathSettings에 useRef가 없음** - 설정 훅은 stale closure 문제가 발생하지 않는 단순한 구조
+6. **IntegrationMiniGridRow에 createPortal이 없음** - 미니 그리드 행은 툴팁이 없는 간략 표시 컴포넌트로 createPortal 불필요
