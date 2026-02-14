@@ -69,7 +69,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
             }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
-            className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap min-w-0 font-normal transition-all duration-150
+            className={`py-0 px-0.5 list-none ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap min-w-0 font-normal transition-all duration-150
             ${canEdit ? 'cursor-grab' : ''} ${isClickable ? 'cursor-pointer' : ''}
             ${isPendingMoved ? 'bg-purple-400 text-white font-bold' : isTransferScheduled ? 'bg-purple-200 text-purple-800 font-bold' : isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText}
             ${!isPendingMoved && !isTransferScheduled && !isHighlighted && !enrollmentStyle ? 'opacity-80' : ''}`}
@@ -680,7 +680,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                             }}
                         >
                             <div className={`${fontSizeClass} font-bold text-indigo-600 mb-0 overflow-hidden whitespace-nowrap`}>{commonStudents.active.length + partialActiveCount}명 - 재원생</div>
-                            <ul className="flex flex-col gap-0 min-w-0">
+                            <ul className="flex flex-col gap-0 min-w-0 list-none">
                                 {commonStudents.active.map(s => {
                                     const isHighlighted = !!(searchQuery && s.name.includes(searchQuery));
                                     const enrollmentStyle = getEnrollmentStyle(s);
@@ -805,7 +805,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 {showHoldStudents && commonStudents.hold.length > 0 && (
                                     <div className="px-0.5 py-0 bg-pink-50 border-b border-pink-200">
                                         <div className={`${fontSizeClass} font-bold text-pink-600 overflow-hidden whitespace-nowrap`}>{commonStudents.hold.length}명 - 대기</div>
-                                        <ul className="flex flex-col gap-0">
+                                        <ul className="flex flex-col gap-0 list-none">
                                             {commonStudents.hold.map(s => {
                                                 let text = s.name;
                                                 if (showSchool || showGrade) {
@@ -822,7 +822,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 {showWithdrawnStudents && commonStudents.withdrawnFuture.length > 0 && (
                                     <div className="px-0.5 py-0 bg-red-50">
                                         <div className={`${fontSizeClass} font-bold text-red-500 overflow-hidden whitespace-nowrap`}>{commonStudents.withdrawnFuture.length}명 - 퇴원예정</div>
-                                        <ul className="flex flex-col gap-0">
+                                        <ul className="flex flex-col gap-0 list-none">
                                             {commonStudents.withdrawnFuture.map(s => {
                                                 let text = s.name;
                                                 if (showSchool || showGrade) {
@@ -852,7 +852,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 {showWithdrawnStudents && commonStudents.withdrawn.length > 0 && (
                                     <div className="px-0.5 py-0 bg-gray-100">
                                         <div className={`${fontSizeClass} font-bold text-gray-600 overflow-hidden whitespace-nowrap`}>{commonStudents.withdrawn.length}명 - 퇴원</div>
-                                        <ul className="flex flex-col gap-0">
+                                        <ul className="flex flex-col gap-0 list-none">
                                             {commonStudents.withdrawn.map(s => {
                                                 let text = s.name;
                                                 if (showSchool || showGrade) {
@@ -886,7 +886,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     <div className="flex-1 flex flex-col overflow-hidden min-w-0 min-h-0">
                         <div className="flex-1 px-0.5 py-0.5 min-w-0 min-h-0 overflow-y-auto no-scrollbar fade-bottom overscroll-contain">
                             <div className={`${fontSizeClass} font-bold text-indigo-600 mb-0 overflow-hidden whitespace-nowrap`}>{activeStudents.length}명 - 재원생</div>
-                            <ul className="flex flex-col min-w-0">
+                            <ul className="flex flex-col min-w-0 list-none">
                                 {activeStudents.map(s => {
                                     const isHighlighted = !!(searchQuery && s.name.includes(searchQuery));
                                     const enrollmentStyle = getEnrollmentStyle(s);
@@ -933,7 +933,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 {showHoldStudents && holdStudents.length > 0 && (
                                     <div className="px-0.5 py-0 bg-pink-50 border-b border-pink-200">
                                         <div className={`${fontSizeClass} font-bold text-pink-600 overflow-hidden whitespace-nowrap`}>{holdStudents.length}명 - 대기</div>
-                                        <ul className="flex flex-col gap-0">
+                                        <ul className="flex flex-col gap-0 list-none">
                                             {holdStudents.map(s => {
                                                 let text = s.name;
                                                 if (showSchool || showGrade) {
@@ -954,7 +954,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 {showWithdrawnStudents && withdrawnFutureStudents.length > 0 && (
                                     <div className="px-0.5 py-0 bg-red-50">
                                         <div className={`${fontSizeClass} font-bold text-red-500 overflow-hidden whitespace-nowrap`}>{withdrawnFutureStudents.length}명 - 퇴원예정</div>
-                                        <ul className="flex flex-col gap-0">
+                                        <ul className="flex flex-col gap-0 list-none">
                                             {withdrawnFutureStudents.map(s => {
                                                 let text = s.name;
                                                 if (showSchool || showGrade) {
@@ -985,7 +985,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 {showWithdrawnStudents && withdrawnStudents.length > 0 && (
                                     <div className="px-0.5 py-0 bg-gray-100">
                                         <div className={`${fontSizeClass} font-bold text-gray-600 overflow-hidden whitespace-nowrap`}>{withdrawnStudents.length}명 - 퇴원</div>
-                                        <ul className="flex flex-col gap-0">
+                                        <ul className="flex flex-col gap-0 list-none">
                                             {withdrawnStudents.map(s => {
                                                 let text = s.name;
                                                 if (showSchool || showGrade) {
