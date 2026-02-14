@@ -1,6 +1,6 @@
 ---
 name: verify-admin-tabs
-description: 관리 그룹(전자결재/직원관리/수납관리/자료실/역할관리) 탭의 핵심 기능을 검증합니다. 관리 관련 컴포넌트 수정 후 사용.
+description: 관리 그룹(수강료현황/직원관리/수납관리/자료실/역할관리/통계분석/급여관리) 탭의 핵심 기능을 검증합니다. 관리 관련 컴포넌트 수정 후 사용.
 ---
 
 ## Purpose
@@ -9,7 +9,9 @@ description: 관리 그룹(전자결재/직원관리/수납관리/자료실/역�
 2. **수납 관리 흐름** - 수납 등록/조회/통계/import 기능이 정상 동작하는지 검증
 3. **자료실 구조** - 자료 업로드/조회/미리보기 기능이 올바르게 연결되어 있는지 검증
 4. **역할 관리 권한** - 역할별 탭 접근 권한 설정이 types/system.ts와 일치하는지 검증
-5. **전자 결재 보고** - PaymentReport의 차트/폼 컴포넌트가 올바르게 연결되어 있는지 검증
+5. **수강료 현황 보고** - PaymentReport의 차트/폼 컴포넌트가 올바르게 연결되어 있는지 검증
+6. **통계 분석** - AnalyticsTab의 대시보드/차트 컴포넌트가 올바르게 연결되어 있는지 검증
+7. **급여 관리** - PayrollTab의 급여 계산/내역 컴포넌트가 올바르게 연결되어 있는지 검증
 
 ## When to Run
 
@@ -48,18 +50,21 @@ description: 관리 그룹(전자결재/직원관리/수납관리/자료실/역�
 | `hooks/usePermissions.ts` | 권한 검증 훅 |
 | `hooks/useTabPermissions.ts` | 탭 접근 권한 훅 |
 | `types/system.ts` | 역할별 탭 접근 권한 정의 |
+| `components/Analytics/AnalyticsTab.tsx` | 통계 분석 메인 |
+| `components/Payroll/PayrollTab.tsx` | 급여 관리 메인 |
+| `hooks/usePayroll.ts` | 급여 데이터 + mutation (4 mutations) |
 
 ## Workflow
 
 ### Step 1: 관리 그룹 탭 lazy import 검증
 
-**검사:** 5개 탭 컴포넌트가 TabContent에서 lazy import되는지 확인합니다.
+**검사:** 7개 탭 컴포넌트가 TabContent에서 lazy import되는지 확인합니다.
 
 ```bash
-grep -n "PaymentReport\|StaffManager\|BillingManager\|ResourceDashboard\|RoleManagementPage" components/Layout/TabContent.tsx
+grep -n "PaymentReport\|StaffManager\|BillingManager\|ResourceDashboard\|RoleManagementPage\|AnalyticsTab\|PayrollTab" components/Layout/TabContent.tsx
 ```
 
-**PASS 기준:** 5개 컴포넌트가 모두 React.lazy로 import됨
+**PASS 기준:** 7개 컴포넌트가 모두 React.lazy로 import됨
 **FAIL 기준:** 하나 이상의 탭 컴포넌트 누락
 
 ### Step 2: 직원 관리 cascade 업데이트 검증
@@ -132,7 +137,7 @@ grep -n "TuitionChart\|EntryForm" components/PaymentReport/PaymentReport.tsx | h
 
 | # | 검사 항목 | 범위 | 결과 | 상세 |
 |---|----------|------|------|------|
-| 1 | 5개 탭 lazy import | TabContent.tsx | PASS/FAIL | |
+| 1 | 7개 탭 lazy import | TabContent.tsx | PASS/FAIL | |
 | 2 | 직원 cascade 업데이트 | useStaff.ts | PASS/FAIL | |
 | 3 | 수납 4대 컴포넌트 | BillingManager | PASS/FAIL | |
 | 4 | 자료실 CRUD 모달 | ResourceDashboard | PASS/FAIL | |

@@ -1,6 +1,6 @@
 ---
 name: verify-class-tabs
-description: 수업 그룹(시간표/출석부/출결관리/수업관리/강의실/강의실배정) 탭의 핵심 기능을 검증합니다. 수업 관련 컴포넌트 수정 후 사용.
+description: 수업 그룹(시간표/출석부/출결관리/수업관리/강의실/강의실배정/숙제관리/시험관리/교재관리) 탭의 핵심 기능을 검증합니다. 수업 관련 컴포넌트 수정 후 사용.
 ---
 
 ## Purpose
@@ -44,18 +44,24 @@ description: 수업 그룹(시간표/출석부/출결관리/수업관리/강의�
 | `hooks/useClassStats.ts` | 수업 통계 |
 | `hooks/useEnglishClassUpdater.ts` | 영어 수업명 업데이트 |
 | `hooks/useVisibleAttendanceStudents.ts` | 출석부 표시 학생 필터 |
+| `components/Homework/HomeworkTab.tsx` | 숙제 관리 메인 |
+| `components/Exams/ExamsTab.tsx` | 시험 관리 메인 |
+| `components/Textbooks/TextbooksTab.tsx` | 교재 관리 메인 |
+| `hooks/useHomework.ts` | 숙제 데이터 + mutation (4 mutations) |
+| `hooks/useExams.ts` | 시험 데이터 + mutation (4 mutations) |
+| `hooks/useTextbooks.ts` | 교재 데이터 + mutation (4 mutations) |
 
 ## Workflow
 
 ### Step 1: 수업 그룹 탭 lazy import 검증
 
-**검사:** 6개 탭 컴포넌트가 모두 TabContent에서 lazy import되는지 확인합니다.
+**검사:** 9개 탭 컴포넌트가 모두 TabContent에서 lazy import되는지 확인합니다.
 
 ```bash
-grep -n "TimetableManager\|AttendanceManager\|DailyAttendanceManager\|ClassManagementTab\|ClassroomTab\|ClassroomAssignmentTab" components/Layout/TabContent.tsx
+grep -n "TimetableManager\|AttendanceManager\|DailyAttendanceManager\|ClassManagementTab\|ClassroomTab\|ClassroomAssignmentTab\|HomeworkTab\|ExamsTab\|TextbooksTab" components/Layout/TabContent.tsx
 ```
 
-**PASS 기준:** 6개 컴포넌트가 모두 React.lazy로 import됨
+**PASS 기준:** 9개 컴포넌트가 모두 React.lazy로 import됨
 **FAIL 기준:** 하나 이상의 탭 컴포넌트가 누락되거나 직접 import됨
 
 ### Step 2: 시간표 Math/English 시뮬레이션 컨텍스트 분리 검증
@@ -132,7 +138,7 @@ grep -c "invalidateQueries" hooks/useClassMutations.ts
 
 | # | 검사 항목 | 범위 | 결과 | 상세 |
 |---|----------|------|------|------|
-| 1 | 6개 탭 lazy import | TabContent.tsx | PASS/FAIL | |
+| 1 | 9개 탭 lazy import | TabContent.tsx | PASS/FAIL | |
 | 2 | 시뮬레이션 컨텍스트 분리 | Timetable/Math,English | PASS/FAIL | |
 | 3 | 출석부 mutation 연결 | useAttendance.ts | PASS/FAIL | N개 mutation |
 | 4 | 수업 CRUD 모달 | ClassManagementTab | PASS/FAIL | |

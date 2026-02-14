@@ -34,14 +34,16 @@ argument-hint: "[선택사항: 특정 verify 스킬 이름]"
 | 3 | `verify-test-coverage` | hooks/utils 테스트 파일 존재 검증 (100% 커버리지 유지) |
 | 4 | `verify-firebase-mutations` | Firebase mutation 훅의 invalidateQueries/에러처리 패턴 검증 |
 | 5 | `verify-schedule-tabs` | 일정 그룹(연간일정/간트차트) 탭 기능 검증 |
-| 6 | `verify-class-tabs` | 수업 그룹(시간표/출석부/출결/수업/강의실/강의실배정) 탭 기능 검증 |
-| 7 | `verify-student-tabs` | 학생 그룹(학생관리/등록상담/학생상담/성적관리/퇴원관리) 탭 기능 검증 |
-| 8 | `verify-admin-tabs` | 관리 그룹(전자결재/직원관리/수납관리/자료실/역할관리) 탭 기능 검증 |
+| 6 | `verify-class-tabs` | 수업 그룹(시간표/출석부/출결/수업/강의실/강의실배정/숙제/시험/교재) 탭 기능 검증 |
+| 7 | `verify-student-tabs` | 학생 그룹(학생관리/등록상담/학생상담/성적관리/퇴원관리/계약관리/성적표) 탭 기능 검증 |
+| 8 | `verify-admin-tabs` | 관리 그룹(수강료현황/직원관리/수납관리/자료실/역할관리/통계분석/급여관리) 탭 기능 검증 |
 | 9 | `verify-permissions` | 역할별 탭 접근권한/버튼 노출/권한 체크 검증 |
 | 10 | `verify-responsive` | 반응형 TailwindCSS 패턴 일관성 검증 |
 | 11 | `verify-error-boundaries` | ErrorBoundary + fallback UI + 에러 복구 패턴 검증 |
 | 12 | `verify-query-patterns` | React Query 캐시키/enabled/staleTime 일관성 검증 |
 | 13 | `verify-bundle-size` | 코드 스플리팅 효과/번들 크기 검증 |
+| 14 | `verify-comm-tabs` | 소통 그룹(공지사항/학부모포털/알림센터) 탭 기능 검증 |
+| 15 | `verify-marketing-tabs` | 마케팅 그룹(마케팅/셔틀관리) 탭 기능 검증 |
 
 ## 워크플로우
 

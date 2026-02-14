@@ -23,7 +23,7 @@ description: 탭/모달의 React.lazy + Suspense + ErrorBoundary 패턴을 검�
 
 | File | Purpose |
 |------|---------|
-| `components/Layout/TabContent.tsx` | 탭 라우팅 (20개 React.lazy import + Suspense + ErrorBoundary) |
+| `components/Layout/TabContent.tsx` | 탭 라우팅 (32개 React.lazy import + Suspense + ErrorBoundary) |
 | `components/Layout/ModalManager.tsx` | 글로벌 모달 관리 (4개 React.lazy import + Suspense) |
 | `components/Timetable/TimetableManager.tsx` | 시간표 매니저 (7개 lazy import + Suspense) |
 | `components/Common/ErrorBoundary.tsx` | ErrorBoundary 컴포넌트 |
@@ -40,13 +40,13 @@ description: 탭/모달의 React.lazy + Suspense + ErrorBoundary 패턴을 검�
 
 **파일:** `components/Layout/TabContent.tsx`
 
-**검사:** 모든 탭 컴포넌트가 React.lazy()로 import되어야 합니다. 현재 20개의 lazy import가 존재해야 합니다.
+**검사:** 모든 탭 컴포넌트가 React.lazy()로 import되어야 합니다. 현재 32개의 lazy import가 존재해야 합니다.
 
 ```bash
 grep -c "React.lazy(" components/Layout/TabContent.tsx
 ```
 
-**PASS 기준:** 20개 이상의 lazy import 존재 (탭 추가 시 증가 가능)
+**PASS 기준:** 30개 이상의 lazy import 존재 (탭 추가 시 증가 가능)
 **FAIL 기준:** lazy import 수가 감소했거나, 직접 import로 전환된 탭이 있음
 
 **추가 검증:** 직접 import된 대형 컴포넌트가 없는지 확인

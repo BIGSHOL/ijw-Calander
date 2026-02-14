@@ -25,6 +25,18 @@ const RoleManagementPage = React.lazy(() => import('../RoleManagement/RoleManage
 const ResourceDashboard = React.lazy(() => import('../Resources').then(m => ({ default: m.ResourceDashboard })));
 const WithdrawalManagementTab = React.lazy(() => import('../WithdrawalManagement/WithdrawalManagementTab'));
 const HelpTab = React.lazy(() => import('../Help/HelpTab'));
+const NoticesTab = React.lazy(() => import('../Notices').then(m => ({ default: m.NoticesTab })));
+const ParentPortalTab = React.lazy(() => import('../ParentPortal').then(m => ({ default: m.ParentPortalTab })));
+const AnalyticsTab = React.lazy(() => import('../Analytics').then(m => ({ default: m.AnalyticsTab })));
+const PayrollTab = React.lazy(() => import('../Payroll').then(m => ({ default: m.PayrollTab })));
+const HomeworkTab = React.lazy(() => import('../Homework').then(m => ({ default: m.HomeworkTab })));
+const NotificationsTab = React.lazy(() => import('../Notifications').then(m => ({ default: m.NotificationsTab })));
+const TextbooksTab = React.lazy(() => import('../Textbooks').then(m => ({ default: m.TextbooksTab })));
+const ExamsTab = React.lazy(() => import('../Exams').then(m => ({ default: m.ExamsTab })));
+const ContractsTab = React.lazy(() => import('../Contracts').then(m => ({ default: m.ContractsTab })));
+const ReportsTab = React.lazy(() => import('../Reports').then(m => ({ default: m.ReportsTab })));
+const ShuttleTab = React.lazy(() => import('../Shuttle').then(m => ({ default: m.ShuttleTab })));
+const MarketingTab = React.lazy(() => import('../Marketing').then(m => ({ default: m.MarketingTab })));
 
 // Loading fallback
 const TabLoadingFallback = () => <VideoLoading className="flex-1 h-full" />;
@@ -366,6 +378,78 @@ export const TabContent: React.FC<TabContentProps> = ({
         <Suspense fallback={<TabLoadingFallback />}>
           <div className="w-full flex-1 overflow-hidden">
             <HelpTab currentUser={effectiveProfile} />
+          </div>
+        </Suspense>
+      ) : appMode === 'notices' ? (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <div className="w-full flex-1 overflow-auto">
+            <NoticesTab />
+          </div>
+        </Suspense>
+      ) : appMode === 'parent-portal' ? (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <div className="w-full flex-1 overflow-auto">
+            <ParentPortalTab />
+          </div>
+        </Suspense>
+      ) : appMode === 'analytics' ? (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <div className="w-full flex-1 overflow-auto bg-gray-50">
+            <AnalyticsTab />
+          </div>
+        </Suspense>
+      ) : appMode === 'payroll' ? (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <div className="w-full flex-1 overflow-auto">
+            <PayrollTab />
+          </div>
+        </Suspense>
+      ) : appMode === 'homework' ? (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <div className="w-full flex-1 overflow-auto">
+            <HomeworkTab />
+          </div>
+        </Suspense>
+      ) : appMode === 'sms-notifications' ? (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <div className="w-full flex-1 overflow-auto">
+            <NotificationsTab />
+          </div>
+        </Suspense>
+      ) : appMode === 'textbooks' ? (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <div className="w-full flex-1 overflow-auto">
+            <TextbooksTab />
+          </div>
+        </Suspense>
+      ) : appMode === 'exams' ? (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <div className="w-full flex-1 overflow-auto">
+            <ExamsTab />
+          </div>
+        </Suspense>
+      ) : appMode === 'contracts' ? (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <div className="w-full flex-1 overflow-auto">
+            <ContractsTab />
+          </div>
+        </Suspense>
+      ) : appMode === 'reports' ? (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <div className="w-full flex-1 overflow-auto">
+            <ReportsTab />
+          </div>
+        </Suspense>
+      ) : appMode === 'shuttle' ? (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <div className="w-full flex-1 overflow-auto">
+            <ShuttleTab />
+          </div>
+        </Suspense>
+      ) : appMode === 'marketing' ? (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <div className="w-full flex-1 overflow-auto">
+            <MarketingTab />
           </div>
         </Suspense>
       ) : null}

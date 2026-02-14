@@ -1,6 +1,6 @@
 ---
 name: verify-student-tabs
-description: 학생 그룹(학생관리/등록상담/학생상담/성적관리/퇴원관리) 탭의 핵심 기능을 검증합니다. 학생 관련 컴포넌트 수정 후 사용.
+description: 학생 그룹(학생관리/등록상담/학생상담/성적관리/퇴원관리/계약관리/성적표) 탭의 핵심 기능을 검증합니다. 학생 관련 컴포넌트 수정 후 사용.
 ---
 
 ## Purpose
@@ -48,18 +48,21 @@ description: 학생 그룹(학생관리/등록상담/학생상담/성적관리/�
 | `hooks/useWithdrawalStats.ts` | 퇴원 통계 |
 | `hooks/useWithdrawalFilters.ts` | 퇴원 필터링 |
 | `hooks/useEnrollments.ts` | 수강 등록 관리 |
+| `components/Contracts/ContractsTab.tsx` | 계약 관리 메인 |
+| `components/Reports/ReportsTab.tsx` | 성적표 메인 |
+| `hooks/useContracts.ts` | 계약 데이터 + mutation (4 mutations) |
 
 ## Workflow
 
 ### Step 1: 학생 그룹 탭 lazy import 검증
 
-**검사:** 5개 탭 컴포넌트가 모두 TabContent에서 lazy import되는지 확인합니다.
+**검사:** 7개 탭 컴포넌트가 모두 TabContent에서 lazy import되는지 확인합니다.
 
 ```bash
-grep -n "StudentManagementTab\|ConsultationManager\|ConsultationManagementTab\|GradesManager\|WithdrawalManagementTab" components/Layout/TabContent.tsx
+grep -n "StudentManagementTab\|ConsultationManager\|ConsultationManagementTab\|GradesManager\|WithdrawalManagementTab\|ContractsTab\|ReportsTab" components/Layout/TabContent.tsx
 ```
 
-**PASS 기준:** 5개 컴포넌트가 모두 React.lazy로 import됨
+**PASS 기준:** 7개 컴포넌트가 모두 React.lazy로 import됨
 **FAIL 기준:** 하나 이상의 탭 컴포넌트 누락
 
 ### Step 2: 학생 상세 서브탭 존재 검증
@@ -138,7 +141,7 @@ grep -n "useStudentFilters" components/StudentManagement/StudentManagementTab.ts
 
 | # | 검사 항목 | 범위 | 결과 | 상세 |
 |---|----------|------|------|------|
-| 1 | 5개 탭 lazy import | TabContent.tsx | PASS/FAIL | |
+| 1 | 7개 탭 lazy import | TabContent.tsx | PASS/FAIL | |
 | 2 | 학생 상세 6개 서브탭 | StudentDetailModal | PASS/FAIL | |
 | 3 | 학생 mutation 훅 | hooks/ | PASS/FAIL | 훅별 mutation 수 |
 | 4 | 상담 컴포넌트 분리 | Registration/Student | PASS/FAIL | |
