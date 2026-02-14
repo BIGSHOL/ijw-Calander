@@ -23,7 +23,7 @@ description: 코드 스플리팅 효과와 번들 크기를 검증합니다. 빌
 |------|---------|
 | `vite.config.ts` | Vite 빌드 설정 (splitChunks, rollupOptions) |
 | `package.json` | 의존성 목록 |
-| `components/Layout/TabContent.tsx` | 20개 lazy import (코드 스플리팅 핵심) |
+| `components/Layout/TabContent.tsx` | 32개 lazy import (코드 스플리팅 핵심) |
 | `components/Timetable/TimetableManager.tsx` | 7개 lazy import |
 | `index.tsx` | 앱 진입점 |
 
@@ -96,7 +96,7 @@ echo "TabContent lazy: $(grep -c 'React.lazy(' components/Layout/TabContent.tsx 
 echo "TimetableManager lazy: $(grep -c 'lazy(' components/Timetable/TimetableManager.tsx 2>/dev/null)"
 ```
 
-**PASS 기준:** TabContent 20개+, TimetableManager 5개+ lazy import
+**PASS 기준:** TabContent 30개+, TimetableManager 5개+ lazy import
 **FAIL 기준:** lazy import 수 감소
 
 ## Output Format

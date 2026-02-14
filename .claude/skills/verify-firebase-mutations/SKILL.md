@@ -42,6 +42,16 @@ description: Firebase mutation 훅의 invalidateQueries/에러처리/writeBatch 
 | `hooks/useConsultationDrafts.ts` | 상담 임시저장 (3 mutations, onSnapshot 기반) |
 | `hooks/useGradePromotion.ts` | 진급 관리 (2 mutations, 1 invalidation) |
 | `hooks/useBatchAttendanceUpdate.ts` | 일괄 출결 (2 mutations, 2 invalidations) |
+| `hooks/useContracts.ts` | 계약 관리 (4 mutations, 3 invalidations) |
+| `hooks/useHomework.ts` | 숙제 관리 (4 mutations, 3 invalidations) |
+| `hooks/useMarketing.ts` | 마케팅 관리 (4 mutations, 3 invalidations) |
+| `hooks/useNotices.ts` | 공지사항 (4 mutations, 3 invalidations) |
+| `hooks/useNotifications.ts` | 알림 관리 (4 mutations, 3 invalidations) |
+| `hooks/useParentLinks.ts` | 학부모 연동 (3 mutations, 2 invalidations) |
+| `hooks/useParentMessages.ts` | 학부모 메시지 (3 mutations, 2 invalidations) |
+| `hooks/usePayroll.ts` | 급여 관리 (4 mutations, 3 invalidations) |
+| `hooks/useShuttle.ts` | 셔틀 관리 (4 mutations, 3 invalidations) |
+| `hooks/useTextbooks.ts` | 교재 관리 (4 mutations, 3 invalidations) |
 
 ## Workflow
 
@@ -53,7 +63,7 @@ description: Firebase mutation 훅의 invalidateQueries/에러처리/writeBatch 
 grep -l "useMutation" hooks/*.ts hooks/*.tsx 2>/dev/null | sort
 ```
 
-**정보:** 현재 21개 훅이 useMutation을 사용합니다.
+**정보:** 현재 31개 훅이 useMutation을 사용합니다.
 
 ### Step 2: invalidateQueries 존재 검증
 
