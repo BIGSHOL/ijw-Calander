@@ -28,6 +28,11 @@ description: 탭/모달의 React.lazy + Suspense + ErrorBoundary 패턴을 검�
 | `components/Timetable/TimetableManager.tsx` | 시간표 매니저 (7개 lazy import + Suspense) |
 | `components/Common/ErrorBoundary.tsx` | ErrorBoundary 컴포넌트 |
 | `components/Common/VideoLoading.tsx` | 로딩 fallback 컴포넌트 |
+| `components/StudentManagement/StudentManagementTab.tsx` | 학생 관리 탭 (5개 lazy import) |
+| `components/Dashboard/roles/MasterDashboard.tsx` | 마스터 대시보드 (3개 lazy import) |
+| `components/StudentConsultation/ConsultationManagementTab.tsx` | 상담 관리 탭 (2개 lazy import) |
+| `components/RegistrationConsultation/ConsultationManager.tsx` | 등록 상담 매니저 (2개 lazy import) |
+| `components/Embed/EmbedRouter.tsx` | 임베드 라우터 (2개 lazy import) |
 
 ## Workflow
 
@@ -122,6 +127,30 @@ grep -n "export default" components/Common/ErrorBoundary.tsx
 
 **수정:** React ErrorBoundary 클래스 컴포넌트 생성
 
+### Step 6: 서브매니저/탭 lazy import 검증
+
+**검사:** 2개 이상의 lazy import를 사용하는 서브매니저/탭 컴포넌트가 Suspense로 감싸져 있는지 확인합니다.
+
+```bash
+for f in \
+  "components/StudentManagement/StudentManagementTab.tsx" \
+  "components/Dashboard/roles/MasterDashboard.tsx" \
+  "components/StudentConsultation/ConsultationManagementTab.tsx" \
+  "components/RegistrationConsultation/ConsultationManager.tsx" \
+  "components/Embed/EmbedRouter.tsx"; do
+  lazy_count=$(grep -c "lazy(" "$f" 2>/dev/null);
+  suspense_count=$(grep -c "Suspense" "$f" 2>/dev/null);
+  if [ "$suspense_count" -eq 0 ] && [ "$lazy_count" -gt 0 ]; then
+    echo "WARNING: $f has $lazy_count lazy imports but no Suspense";
+  fi;
+done
+```
+
+**PASS 기준:** lazy import를 사용하는 모든 서브매니저에 Suspense 래핑 존재
+**FAIL 기준:** lazy 컴포넌트를 Suspense 없이 렌더링 (런타임 에러)
+
+**수정:** `<Suspense fallback={<div>Loading...</div>}>` 또는 부모의 Suspense에 의존
+
 ## Output Format
 
 | # | 검사 항목 | 파일 | 결과 | 상세 |
@@ -132,6 +161,7 @@ grep -n "export default" components/Common/ErrorBoundary.tsx
 | 4 | ModalManager lazy + Suspense | ModalManager.tsx | PASS/FAIL | |
 | 5 | TimetableManager lazy | TimetableManager.tsx | PASS/FAIL | |
 | 6 | ErrorBoundary 컴포넌트 존재 | ErrorBoundary.tsx | PASS/FAIL | |
+| 7 | 서브매니저 lazy + Suspense | 5개 서브매니저 | PASS/FAIL | |
 
 ## Exceptions
 
@@ -141,3 +171,5 @@ grep -n "export default" components/Common/ErrorBoundary.tsx
 2. **ModalManager에서 fallback={null}** - 모달은 화면 전체를 차지하지 않으므로 로딩 스피너 대신 null fallback 사용 가능
 3. **조건부 렌더링 내부의 lazy 컴포넌트** - 삼항 연산자 내부에서 렌더되는 lazy 컴포넌트는 상위 Suspense가 커버하면 개별 Suspense 불필요
 4. **`.then(m => ({ default: m.ComponentName }))` 패턴** - named export를 lazy load할 때 사용하는 정상적인 패턴
+5. **1개의 lazy import만 가진 서브매니저** - `BillingManager`, `CalendarBoard`, `WithdrawalManagementTab` 등 단일 lazy import는 번들 영향이 미미하여 검증 대상에서 제외
+6. **부모 Suspense에 의존하는 서브매니저** - TabContent의 Suspense가 하위 lazy 컴포넌트를 이미 커버하는 경우, 서브매니저 내부에 별도 Suspense가 없어도 정상
