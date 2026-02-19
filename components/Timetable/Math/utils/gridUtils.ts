@@ -79,7 +79,7 @@ const getEffectiveResource = (
 
 // Helper: 두 셀의 수업 세트가 동일한지 비교 (className 기준)
 // 4-1과 4-2가 다른 Firestore 문서(다른 id)라도 같은 className이면 동일 세트로 간주
-const isSameClassNameSet = (classesA: TimetableClass[], classesB: TimetableClass[]): boolean => {
+export const isSameClassNameSet = (classesA: TimetableClass[], classesB: TimetableClass[]): boolean => {
     const namesA = classesA.map(c => c.className).sort();
     const namesB = classesB.map(c => c.className).sort();
     if (namesA.length !== namesB.length) return false;
