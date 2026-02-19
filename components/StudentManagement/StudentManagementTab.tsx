@@ -39,6 +39,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
   const { hasPermission } = usePermissions(currentUser);
   const canView = hasPermission('students.view');
   const canEdit = hasPermission('students.edit');
+  const canMigrate = hasPermission('students.migration');
   const canManageEnrollment = hasPermission('classes.edit');  // 수강배정은 수업 관리 권한 필요
 
   const { students, loading, error, refreshStudents } = useStudents(true); // includeWithdrawn: true
@@ -185,8 +186,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
             <span className="text-sm font-bold text-white">학생 목록</span>
           </div>
           <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
-            {currentUser?.role === 'master' && (
-              <>
+            {canMigrate && (
                 <button
                   onClick={() => setShowMigrationModal(true)}
                   className="p-1.5 text-white hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"
@@ -194,6 +194,9 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
                 >
                   <Database className="w-3.5 h-3.5" />
                 </button>
+            )}
+            {currentUser?.role === 'master' && (
+              <>
                 <button
                   onClick={() => setShowMergeModal(true)}
                   className="p-1.5 text-white hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"
