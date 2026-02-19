@@ -23,6 +23,35 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" />
   <!-- importmap removed - using bundled dependencies instead -->
 <link rel="stylesheet" href="/index.css">
+    <!-- 캐시 방지: 구버전 감지 시 강제 새로고침 -->
+    <script>
+    (function(){
+      var KEY='__app_v';
+      var BUILD='%%BUILD_HASH%%';
+      if(BUILD.indexOf('%%')===0)return; // dev 모드 스킵
+      var prev=localStorage.getItem(KEY);
+      if(prev && prev!==BUILD){
+        localStorage.setItem(KEY,BUILD);
+        // 구버전 → 캐시 무시하고 강제 새로고침
+        location.href=location.pathname+'?_v='+BUILD+location.hash;
+        return;
+      }
+      localStorage.setItem(KEY,BUILD);
+      // bfcache 복원 시에도 체크
+      window.addEventListener('pageshow',function(e){
+        if(e.persisted){
+          fetch('/version.json?t='+Date.now(),{cache:'no-store'})
+            .then(function(r){return r.json()})
+            .then(function(d){
+              if(d.version && d.version!==BUILD){
+                localStorage.setItem(KEY,d.version);
+                location.href=location.pathname+'?_v='+d.version+location.hash;
+              }
+            }).catch(function(){});
+        }
+      });
+    })();
+    </script>
 </head>
   <body>
     <div id="root">
