@@ -209,7 +209,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return orderedSelectedDays.filter(day => day === '화' || day === '금');
     }, [orderedSelectedDays]);
 
-    // 토/일: 개별 요일 (병합 불가 - 수요일과 같은 단일 컬럼)
+    // 토/일: 주말 통합 테이블로 표시 (교시 컬럼 공유)
     const hasSaturday = orderedSelectedDays.includes('토');
     const hasSunday = orderedSelectedDays.includes('일');
 
@@ -245,29 +245,21 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return map;
     }, [allResources, tueFriDays, resourceDayLookup]);
 
-    // 토요일: 각 선생님이 토요일 수업이 있는지 (단일 컬럼, 수요일과 동일 크기)
-    const saturdayResourceDaysMap = useMemo(() => {
+    // 주말(토+일) 통합: 각 선생님이 토/일 중 어떤 요일에 수업이 있는지
+    const weekendResourceDaysMap = useMemo(() => {
         const map = new Map<string, string[]>();
-        if (!hasSaturday) return map;
+        if (!hasSaturday && !hasSunday) return map;
+        const weekendDays = [hasSaturday ? '토' : null, hasSunday ? '일' : null].filter(Boolean) as string[];
         allResources.forEach(resource => {
-            if (resourceDayLookup.get(resource?.trim())?.has('토')) {
-                map.set(resource, ['토']);
+            const daysForResource = weekendDays.filter(day =>
+                resourceDayLookup.get(resource?.trim())?.has(day) ?? false
+            );
+            if (daysForResource.length > 0) {
+                map.set(resource, daysForResource);
             }
         });
         return map;
-    }, [allResources, hasSaturday, resourceDayLookup]);
-
-    // 일요일: 각 선생님이 일요일 수업이 있는지 (단일 컬럼, 수요일과 동일 크기)
-    const sundayResourceDaysMap = useMemo(() => {
-        const map = new Map<string, string[]>();
-        if (!hasSunday) return map;
-        allResources.forEach(resource => {
-            if (resourceDayLookup.get(resource?.trim())?.has('일')) {
-                map.set(resource, ['일']);
-            }
-        });
-        return map;
-    }, [allResources, hasSunday, resourceDayLookup]);
+    }, [allResources, hasSaturday, hasSunday, resourceDayLookup]);
 
     // 수요일 수업이 있는 선생님 (수요일 전용, slotTeachers 포함)
     const wednesdayResources = useMemo(() => {
@@ -296,15 +288,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return allResources.filter(r => tueFriResourceDaysMap.has(r));
     }, [allResources, tueFriResourceDaysMap]);
 
-    // 토요일 활성 선생님
-    const saturdayActiveResources = useMemo(() => {
-        return allResources.filter(r => saturdayResourceDaysMap.has(r));
-    }, [allResources, saturdayResourceDaysMap]);
-
-    // 일요일 활성 선생님
-    const sundayActiveResources = useMemo(() => {
-        return allResources.filter(r => sundayResourceDaysMap.has(r));
-    }, [allResources, sundayResourceDaysMap]);
+    // 주말 활성 선생님
+    const weekendActiveResources = useMemo(() => {
+        return allResources.filter(r => weekendResourceDaysMap.has(r));
+    }, [allResources, weekendResourceDaysMap]);
 
     if (filteredClasses.length === 0 && allResources.length === 0) {
         return (
@@ -329,9 +316,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         const getGroupColors = () => {
             if (title === '월/목') return { bg: 'bg-blue-600', border: 'border-blue-600', light: 'bg-blue-50', text: 'text-blue-700' };
             if (title === '화/금') return { bg: 'bg-purple-600', border: 'border-purple-600', light: 'bg-purple-50', text: 'text-purple-700' };
-            if (title === '토/일') return { bg: 'bg-orange-600', border: 'border-orange-600', light: 'bg-orange-50', text: 'text-orange-700' };
-            if (title === '토요일') return { bg: 'bg-orange-600', border: 'border-orange-600', light: 'bg-orange-50', text: 'text-orange-700' };
-            if (title === '일요일') return { bg: 'bg-red-600', border: 'border-red-600', light: 'bg-red-50', text: 'text-red-700' };
+            if (title === '주말' || title === '토/일') return { bg: 'bg-orange-600', border: 'border-orange-600', light: 'bg-orange-50', text: 'text-orange-700' };
             return { bg: 'bg-green-600', border: 'border-green-600', light: 'bg-green-50', text: 'text-green-700' };
         };
         const groupColors = getGroupColors();
@@ -457,7 +442,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                         <tbody className="timetable-body">
                             {(() => {
                                 // 주말 테이블은 그룹화하지 않고 시간만 표시
-                                const isWeekendTable = title === '토/일' || title === '토요일' || title === '일요일';
+                                const isWeekendTable = title === '주말' || title === '토/일';
 
                                 // 평일: 교시 그룹화 (1-1+1-2 → 1교시, ...)
                                 // 단, 같은 수업이 두 교시 모두에 있을 때만 병합
@@ -1832,11 +1817,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                 {/* 화/금 테이블 */}
                 {tueFriActiveResources.length > 0 && renderTable(tueFriActiveResources, tueFriResourceDaysMap, '화/금')}
 
-                {/* 토요일 테이블 */}
-                {saturdayActiveResources.length > 0 && renderTable(saturdayActiveResources, saturdayResourceDaysMap, '토요일')}
-
-                {/* 일요일 테이블 */}
-                {sundayActiveResources.length > 0 && renderTable(sundayActiveResources, sundayResourceDaysMap, '일요일')}
+                {/* 주말 테이블 (토+일 통합) */}
+                {weekendActiveResources.length > 0 && renderTable(weekendActiveResources, weekendResourceDaysMap, '주말')}
 
                 {/* 수요일 테이블 */}
                 {hasWednesday && wednesdayResources.length > 0 && renderTable(wednesdayResources, wednesdayResourceDaysMap, '수요일', true)}

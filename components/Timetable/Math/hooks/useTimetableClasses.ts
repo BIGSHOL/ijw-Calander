@@ -79,9 +79,9 @@ export const useTimetableClasses = () => {
 
             return loadedClasses;
         },
-        staleTime: 1000 * 30, // 30초
+        staleTime: 1000 * 10, // 10초 (실시간성 향상)
         gcTime: 1000 * 60 * 5, // 5분
-        refetchOnWindowFocus: false,
+        refetchOnWindowFocus: true,  // 탭 전환 시 자동 갱신
     });
 
     return { classes, loading };
