@@ -601,7 +601,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 const lines = nameIdx === -1 ? [name] : [name.slice(0, nameIdx), name.slice(nameIdx + 1)];
                                 return (
                                     <div key={mc.id} className={`flex-1 overflow-hidden relative flex flex-col items-center justify-center ${canEdit ? 'cursor-pointer hover:brightness-90' : ''}`} style={{ borderRight: idx < uniqueMergedNames.length - 1 ? '1px dashed #ccc' : undefined }} onClick={canEdit ? (e) => { e.stopPropagation(); onClick(mc); } : undefined}>
-                                        <span className="absolute top-0 left-0 z-10 text-[10px] leading-none bg-orange-600 text-white px-0.5 py-0.5 font-bold whitespace-nowrap animate-pulse">{`합반${idx + 1}`}</span>
+                                        <span className="absolute top-0 left-0 z-10 text-[10px] leading-none bg-gray-800 text-white px-0.5 py-0.5 font-bold whitespace-nowrap animate-pulse">{`합반${idx + 1}`}</span>
                                         <div className="min-w-0 w-full text-center pt-1">
                                             {lines.map((line, i) => (
                                                 <span key={i} className={`block leading-tight ${titleFontSizeClass} whitespace-nowrap overflow-hidden text-black`}>{line}</span>
@@ -615,7 +615,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         /* 단일 수업 또는 같은 이름 합반 */
                         <>
                         {(isMergedClass || showMergedLabel) && (
-                            <span className={`absolute ${isAssistantTeacher ? 'top-2.5' : 'top-0'} left-0 z-10 text-[10px] leading-none bg-orange-600 text-white px-0.5 py-0.5 font-bold whitespace-nowrap animate-pulse`}>합반</span>
+                            <span className={`absolute ${isAssistantTeacher ? 'top-2.5' : 'top-0'} left-0 z-10 text-[10px] leading-none bg-gray-800 text-white px-0.5 py-0.5 font-bold whitespace-nowrap animate-pulse`}>합반</span>
                         )}
                         <div className="relative min-w-0 w-full">
                             {classNameLines.map((line, i) => (
