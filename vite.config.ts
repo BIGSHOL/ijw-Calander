@@ -11,6 +11,10 @@ const BUILD_HASH = crypto.randomBytes(8).toString('hex');
 function versionPlugin(): Plugin {
   return {
     name: 'version-plugin',
+    transformIndexHtml(html) {
+      // index.html 인라인 스크립트의 %%BUILD_HASH%%를 실제 해시로 치환
+      return html.replace(/%%BUILD_HASH%%/g, BUILD_HASH);
+    },
     writeBundle(options) {
       const versionData = {
         version: BUILD_HASH,
