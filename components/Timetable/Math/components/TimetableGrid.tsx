@@ -321,10 +321,13 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         };
         const groupColors = getGroupColors();
 
+        // 주말 테이블: 토/일 각 열을 수요일과 동일한 정사각형 셀로
+        const isWeekend = title === '주말' || title === '토/일';
+
         // 테이블 총 폭 계산 (colgroup과 일치시켜 확장 방지)
         const totalTableWidth = 90 + resources.reduce((acc, resource) => {
             const daysForRes = isWednesdayTable ? ['수'] : (daysMap.get(resource) || []);
-            const isMerged = daysForRes.length > 1;
+            const isMerged = daysForRes.length > 1 && !isWeekend;
             const colW = isMerged ? perDayWidth : parseInt(singleCellWidthStyle.width);
             return acc + daysForRes.length * colW;
         }, 0);
@@ -339,7 +342,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                             {resources.map(resource => {
                                 const daysForRes = isWednesdayTable ? ['수'] : (daysMap.get(resource) || []);
                                 return daysForRes.map((day) => {
-                                    const colW = daysForRes.length > 1 ? `${perDayWidth}px` : singleCellWidthStyle.width;
+                                    const colW = (daysForRes.length > 1 && !isWeekend) ? `${perDayWidth}px` : singleCellWidthStyle.width;
                                     return <col key={`col-${resource}-${day}`} style={{ width: colW }} />;
                                 });
                             })}
@@ -419,11 +422,11 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                         const dateInfo = weekDates[day];
                                         // 강사 구분만 굵은선, 나머지는 테두리 없음
                                         const borderRightClass = isLastDayForResource ? 'border-r-2 border-r-gray-400' : '';
-                                        // 병합 요일(월/목 등)은 좁게, 단독 요일(수)은 넓게
-                                        const isMergedDay = daysForResource.length > 1;
+                                        // 병합 요일(월/목 등)은 좁게, 단독 요일(수)과 주말은 넓게
+                                        const isMergedDay = daysForResource.length > 1 && !isWeekend;
                                         const dayHeaderWidth = isMergedDay
                                             ? getMergedCellWidthStyle(1)  // 병합 셀의 1요일 너비
-                                            : singleCellWidthStyle;  // 단독 셀 너비
+                                            : singleCellWidthStyle;  // 단독 셀 너비 (수요일, 주말)
 
                                         return (
                                             <th
