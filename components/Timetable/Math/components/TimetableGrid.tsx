@@ -5,6 +5,13 @@ import ClassCard from './ClassCard';
 import { WEEKEND_PERIOD_TIMES, ALL_WEEKDAYS, LEGACY_TO_UNIFIED_PERIOD_MAP, MATH_GROUP_DISPLAY, MATH_GROUP_PERIOD_IDS, MATH_GROUPED_PERIODS, MATH_PERIOD_TIMES } from '../../constants';
 import { BookOpen } from 'lucide-react';
 
+// 시간 텍스트를 ~ 뒤에서 줄바꿈하는 헬퍼
+const renderTime = (time: string) => {
+    const idx = time.indexOf('~');
+    if (idx === -1) return time;
+    return <>{time.slice(0, idx + 1)}<br />{time.slice(idx + 1)}</>;
+};
+
 // hasClassOnDay replaced by resourceDayLookup (precomputed Map) inside component
 
 interface TimetableGridProps {
@@ -325,6 +332,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         const isWeekend = title === '주말' || title === '토/일';
 
         // 셀 내 수업 렌더링 헬퍼: 같은 수업 → 병합, 다른 수업 → 반반 레이아웃
+        // className 기준 그룹핑으로 같은 이름의 다른 문서(4-1/4-2 분리 등)도 하나로 병합
         const renderCellClassCards = (
             cellClasses: TimetableClass[],
             day: string,
@@ -333,14 +341,32 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
             colSpan: number,
             mergedDaysForCell: string[]
         ) => {
-            const hasDiffClasses = cellClasses.length > 1 && new Set(cellClasses.map(c => c.className)).size > 1;
-            const classesToRender = hasDiffClasses ? cellClasses : [cellClasses[0]];
-            const mergedClassesForCard = !hasDiffClasses && cellClasses.length > 1 ? cellClasses : undefined;
+            // className 기준 그룹핑
+            const classNameGroups = new Map<string, TimetableClass[]>();
+            cellClasses.forEach(cls => {
+                const key = cls.className;
+                if (!classNameGroups.has(key)) classNameGroups.set(key, []);
+                classNameGroups.get(key)!.push(cls);
+            });
+
+            const uniqueGroups = [...classNameGroups.values()];
+            const hasDiffClasses = uniqueGroups.length > 1;
+
+            // 각 그룹: 대표 1개 + 나머지는 mergedClasses
+            const groupsToRender = hasDiffClasses
+                ? uniqueGroups.map(group => ({
+                    cls: group[0],
+                    merged: group.length > 1 ? group : undefined,
+                }))
+                : [{
+                    cls: cellClasses[0],
+                    merged: cellClasses.length > 1 ? cellClasses : undefined,
+                }];
 
             return (
                 <div className={hasDiffClasses ? 'flex w-full h-full' : ''}>
-                    {classesToRender.map((cls: TimetableClass) => (
-                        <div key={cls.id} className={hasDiffClasses ? 'overflow-hidden' : ''} style={hasDiffClasses ? { width: `${100 / classesToRender.length}%` } : undefined}>
+                    {groupsToRender.map(({ cls, merged: mergedClassesForCard }) => (
+                        <div key={cls.id} className={hasDiffClasses ? 'overflow-hidden' : ''} style={hasDiffClasses ? { width: `${100 / groupsToRender.length}%` } : undefined}>
                             <ClassCard
                                 cls={cls}
                                 span={getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)}
@@ -351,7 +377,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                 showGrade={showGrade}
                                 canEdit={getCanEdit(cls, resource)}
                                 isAssistantTeacher={isAssistantSlot(cls, resource)}
-                                isDragOver={mergedClassesForCard ? cellClasses.some(c => dragOverClassId === c.id) : dragOverClassId === cls.id}
+                                isDragOver={mergedClassesForCard ? mergedClassesForCard.some(c => dragOverClassId === c.id) : dragOverClassId === cls.id}
                                 onClick={onClassClick}
                                 onDragStart={onDragStart}
                                 onDragOver={onDragOver}
@@ -422,7 +448,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                             {/* Teacher/Room Row */}
                             <tr>
                                 <th
-                                    className={`p-1.5 text-xxs font-bold ${groupColors.text} border-b border-gray-200 border-r-2 border-r-gray-400 sticky left-0 z-30`}
+                                    className={`p-1.5 text-period-label font-bold ${groupColors.text} border-b border-gray-200 border-r-2 border-r-gray-400 sticky left-0 z-30`}
                                     rowSpan={2}
                                     style={{
                                         width: '90px',
@@ -541,15 +567,15 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                 <tr key={`group-${groupId}-first`}>
                                                     <td
                                                         rowSpan={2}
-                                                        className={`p-1.5 text-xxs font-bold ${groupColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
+                                                        className={`p-1.5 text-period-label font-bold ${groupColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
                                                         style={{
                                                             width: '90px',
                                                             minWidth: '90px',
                                                             backgroundColor: bgHex
                                                         }}
                                                     >
-                                                        <div className="font-bold text-xxs text-gray-500">{groupInfo.label}</div>
-                                                        <div>{groupInfo.time}</div>
+                                                        <div className="font-bold text-period-label text-gray-500">{groupInfo.label}</div>
+                                                        <div>{renderTime(groupInfo.time)}</div>
                                                     </td>
                                                     {resources.map(resource => {
                                                         const daysForResource = isWednesdayTable ? ['수'] : (daysMap.get(resource) || []);
@@ -786,15 +812,15 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                 rows.push(
                                                     <tr key={`period-${period}`}>
                                                         <td
-                                                            className={`p-1.5 text-xxs font-bold ${groupColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
+                                                            className={`p-1.5 text-period-label font-bold ${groupColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
                                                             style={{
                                                                 width: '90px',
                                                                 minWidth: '90px',
                                                                 backgroundColor: bgHex
                                                             }}
                                                         >
-                                                            <div className="font-bold text-xxs text-gray-500">{period}</div>
-                                                            <div>{periodTime}</div>
+                                                            <div className="font-bold text-period-label text-gray-500">{period}</div>
+                                                            <div>{renderTime(periodTime)}</div>
                                                         </td>
                                                         {resources.map(resource => {
                                                             const daysForResource = isWednesdayTable ? ['수'] : (daysMap.get(resource) || []);
@@ -927,14 +953,14 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                         return (
                                             <tr key={period}>
                                                 <td
-                                                    className={`p-1.5 text-xxs font-bold ${groupColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
+                                                    className={`p-1.5 text-period-label font-bold ${groupColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
                                                     style={{
                                                         width: '90px',
                                                         minWidth: '90px',
                                                         backgroundColor: bgHex
                                                     }}
                                                 >
-                                                    <div>{periodTimeDisplay}</div>
+                                                    <div>{renderTime(periodTimeDisplay)}</div>
                                                 </td>
                                                 {resources.map(resource => {
                                                     const daysForResource = daysMap.get(resource) || [];
@@ -1108,7 +1134,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                             {/* Teacher/Room Row */}
                             <tr>
                                 <th
-                                    className={`p-1.5 text-xxs font-bold ${dayColors.text} border-b border-gray-200 border-r-2 border-r-gray-400 sticky left-0 z-30`}
+                                    className={`p-1.5 text-period-label font-bold ${dayColors.text} border-b border-gray-200 border-r-2 border-r-gray-400 sticky left-0 z-30`}
                                     style={{
                                         width: '90px',
                                         minWidth: '90px',
@@ -1189,15 +1215,15 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                 <tr key={`group-${groupId}-first`}>
                                                     <td
                                                         rowSpan={2}
-                                                        className={`p-1.5 text-xxs font-bold ${dayColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
+                                                        className={`p-1.5 text-period-label font-bold ${dayColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
                                                         style={{
                                                             width: '90px',
                                                             minWidth: '90px',
                                                             backgroundColor: bgHex
                                                         }}
                                                     >
-                                                        <div className="font-bold text-xxs text-gray-500">{groupInfo.label}</div>
-                                                        <div>{groupInfo.time}</div>
+                                                        <div className="font-bold text-period-label text-gray-500">{groupInfo.label}</div>
+                                                        <div>{renderTime(groupInfo.time)}</div>
                                                     </td>
                                                     {resources.map((resource, resourceIdx) => {
                                                         const periodIndex = currentPeriods.indexOf(firstPeriod);
@@ -1375,15 +1401,15 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                 rows.push(
                                                     <tr key={`period-${period}`}>
                                                         <td
-                                                            className={`p-1.5 text-xxs font-bold ${dayColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
+                                                            className={`p-1.5 text-period-label font-bold ${dayColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
                                                             style={{
                                                                 width: '90px',
                                                                 minWidth: '90px',
                                                                 backgroundColor: bgHex
                                                             }}
                                                         >
-                                                            <div className="font-bold text-xxs text-gray-500">{period}</div>
-                                                            <div>{periodTime}</div>
+                                                            <div className="font-bold text-period-label text-gray-500">{period}</div>
+                                                            <div>{renderTime(periodTime)}</div>
                                                         </td>
                                                         {resources.map((resource, resourceIdx) => {
                                                             const cellClasses = getClassesForCell(filteredClasses, day, period, resource, viewType);
@@ -1487,14 +1513,14 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                         return (
                                             <tr key={period}>
                                                 <td
-                                                    className={`p-1.5 text-xxs font-bold ${dayColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
+                                                    className={`p-1.5 text-period-label font-bold ${dayColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
                                                     style={{
                                                         width: '90px',
                                                         minWidth: '90px',
                                                         backgroundColor: bgHex
                                                     }}
                                                 >
-                                                    <div>{periodTimeDisplay}</div>
+                                                    <div>{renderTime(periodTimeDisplay)}</div>
                                                 </td>
                                                 {resources.map((resource, resourceIdx) => {
                                                     const cellClasses = getClassesForCell(filteredClasses, day, period, resource, viewType);
