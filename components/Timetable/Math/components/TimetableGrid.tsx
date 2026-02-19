@@ -596,42 +596,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             {viewType === 'room' ? resource : '빈 강의실'}
                                                                         </div>
                                                                     ) : (
-                                                                        cellClasses.length > 1 ? (
-                                                                            <ClassCard
-                                                                                key={cellClasses[0].id}
-                                                                                cls={cellClasses[0]}
-                                                                                span={getConsecutiveSpan(cellClasses[0], day, periodIndex, currentPeriods, filteredClasses, viewType)}
-                                                                                searchQuery={searchQuery}
-                                                                                showStudents={showStudents}
-                                                                                showClassName={showClassName}
-                                                                                showSchool={showSchool}
-                                                                                showGrade={showGrade}
-                                                                                canEdit={getCanEdit(cellClasses[0], resource)}
-                                                                                isAssistantTeacher={isAssistantSlot(cellClasses[0], resource)}
-                                                                                isDragOver={cellClasses.some(c => dragOverClassId === c.id)}
-                                                                                onClick={onClassClick}
-                                                                                onDragStart={onDragStart}
-                                                                                onDragOver={onDragOver}
-                                                                                onDragLeave={onDragLeave}
-                                                                                onDrop={onDrop}
-                                                                                studentMap={studentMap}
-                                                                                classKeywords={classKeywords}
-                                                                                onStudentClick={onStudentClick}
-                                                                                currentDay={colSpan === 1 ? day : undefined}
-                                                                                mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
-                                                                                fontSize={fontSize}
-                                                                                rowHeight={rowHeight}
-                                                                                cellSizePx={cellSizePx}
-                                                                                showHoldStudents={showHoldStudents}
-                                                                                showWithdrawnStudents={showWithdrawnStudents}
-                                                                                pendingMovedStudentIds={pendingMovedStudentIds}
-                                                                                pendingMoveSchedules={pendingMoveSchedules}
-                                                                                mergedClasses={cellClasses}
-                                                                            />
-                                                                        ) : (
-                                                                            cellClasses.map((cls: TimetableClass) => (
+                                                                        <div className={cellClasses.length > 1 ? 'flex w-full h-full' : ''}>
+                                                                            {cellClasses.map((cls: TimetableClass) => (
+                                                                                <div key={cls.id} className={cellClasses.length > 1 ? 'overflow-hidden' : ''} style={cellClasses.length > 1 ? { width: `${100 / cellClasses.length}%` } : undefined}>
                                                                                 <ClassCard
-                                                                                    key={cls.id}
                                                                                     cls={cls}
                                                                                     span={getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)}
                                                                                     searchQuery={searchQuery}
@@ -654,14 +622,16 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                     mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
                                                                                     fontSize={fontSize}
                                                                                     rowHeight={rowHeight}
-                                                                                cellSizePx={cellSizePx}
+                                                                                    cellSizePx={cellSizePx}
                                                                                     showHoldStudents={showHoldStudents}
                                                                                     showWithdrawnStudents={showWithdrawnStudents}
                                                                                     pendingMovedStudentIds={pendingMovedStudentIds}
                                                                                     pendingMoveSchedules={pendingMoveSchedules}
+                                                                                    showMergedLabel={cellClasses.length > 1}
                                                                                 />
-                                                                            ))
-                                                                        )
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
                                                                     )}
                                                                     </div>
                                                                 </td>
@@ -777,42 +747,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             {viewType === 'room' ? resource : '빈 강의실'}
                                                                         </div>
                                                                     ) : (
-                                                                        cellClasses.length > 1 ? (
-                                                                            <ClassCard
-                                                                                key={cellClasses[0].id}
-                                                                                cls={cellClasses[0]}
-                                                                                span={getConsecutiveSpan(cellClasses[0], day, periodIndex, currentPeriods, filteredClasses, viewType)}
-                                                                                searchQuery={searchQuery}
-                                                                                showStudents={showStudents}
-                                                                                showClassName={showClassName}
-                                                                                showSchool={showSchool}
-                                                                                showGrade={showGrade}
-                                                                                canEdit={getCanEdit(cellClasses[0], resource)}
-                                                                                isAssistantTeacher={isAssistantSlot(cellClasses[0], resource)}
-                                                                                isDragOver={cellClasses.some(c => dragOverClassId === c.id)}
-                                                                                onClick={onClassClick}
-                                                                                onDragStart={onDragStart}
-                                                                                onDragOver={onDragOver}
-                                                                                onDragLeave={onDragLeave}
-                                                                                onDrop={onDrop}
-                                                                                studentMap={studentMap}
-                                                                                classKeywords={classKeywords}
-                                                                                onStudentClick={onStudentClick}
-                                                                                currentDay={colSpan === 1 ? day : undefined}
-                                                                                mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
-                                                                                fontSize={fontSize}
-                                                                                rowHeight={rowHeight}
-                                                                                cellSizePx={cellSizePx}
-                                                                                showHoldStudents={showHoldStudents}
-                                                                                showWithdrawnStudents={showWithdrawnStudents}
-                                                                                pendingMovedStudentIds={pendingMovedStudentIds}
-                                                                                pendingMoveSchedules={pendingMoveSchedules}
-                                                                                mergedClasses={cellClasses}
-                                                                            />
-                                                                        ) : (
-                                                                            cellClasses.map((cls: TimetableClass) => (
+                                                                        <div className={cellClasses.length > 1 ? 'flex w-full h-full' : ''}>
+                                                                            {cellClasses.map((cls: TimetableClass) => (
+                                                                                <div key={cls.id} className={cellClasses.length > 1 ? 'overflow-hidden' : ''} style={cellClasses.length > 1 ? { width: `${100 / cellClasses.length}%` } : undefined}>
                                                                                 <ClassCard
-                                                                                    key={cls.id}
                                                                                     cls={cls}
                                                                                     span={getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)}
                                                                                     searchQuery={searchQuery}
@@ -835,14 +773,16 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                     mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
                                                                                     fontSize={fontSize}
                                                                                     rowHeight={rowHeight}
-                                                                                cellSizePx={cellSizePx}
+                                                                                    cellSizePx={cellSizePx}
                                                                                     showHoldStudents={showHoldStudents}
                                                                                     showWithdrawnStudents={showWithdrawnStudents}
                                                                                     pendingMovedStudentIds={pendingMovedStudentIds}
                                                                                     pendingMoveSchedules={pendingMoveSchedules}
+                                                                                    showMergedLabel={cellClasses.length > 1}
                                                                                 />
-                                                                            ))
-                                                                        )
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
                                                                     )}
                                                                     </div>
                                                                 </td>
@@ -975,42 +915,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 {viewType === 'room' ? resource : '빈 강의실'}
                                                                             </div>
                                                                         ) : (
-                                                                            cellClasses.length > 1 ? (
-                                                                                <ClassCard
-                                                                                    key={cellClasses[0].id}
-                                                                                    cls={cellClasses[0]}
-                                                                                    span={getConsecutiveSpan(cellClasses[0], day, periodIndex, currentPeriods, filteredClasses, viewType)}
-                                                                                    searchQuery={searchQuery}
-                                                                                    showStudents={showStudents}
-                                                                                    showClassName={showClassName}
-                                                                                    showSchool={showSchool}
-                                                                                    showGrade={showGrade}
-                                                                                    canEdit={getCanEdit(cellClasses[0], resource)}
-                                                                                    isAssistantTeacher={isAssistantSlot(cellClasses[0], resource)}
-                                                                                    isDragOver={cellClasses.some(c => dragOverClassId === c.id)}
-                                                                                    onClick={onClassClick}
-                                                                                    onDragStart={onDragStart}
-                                                                                    onDragOver={onDragOver}
-                                                                                    onDragLeave={onDragLeave}
-                                                                                    onDrop={onDrop}
-                                                                                    studentMap={studentMap}
-                                                                                    classKeywords={classKeywords}
-                                                                                    onStudentClick={onStudentClick}
-                                                                                    currentDay={colSpan === 1 ? day : undefined}
-                                                                                    mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
-                                                                                    fontSize={fontSize}
-                                                                                    rowHeight={rowHeight}
-                                                                                cellSizePx={cellSizePx}
-                                                                                    showHoldStudents={showHoldStudents}
-                                                                                    showWithdrawnStudents={showWithdrawnStudents}
-                                                                                    pendingMovedStudentIds={pendingMovedStudentIds}
-                                                                                    pendingMoveSchedules={pendingMoveSchedules}
-                                                                                    mergedClasses={cellClasses}
-                                                                                />
-                                                                            ) : (
-                                                                                cellClasses.map((cls: TimetableClass) => (
+                                                                            <div className={cellClasses.length > 1 ? 'flex w-full h-full' : ''}>
+                                                                                {cellClasses.map((cls: TimetableClass) => (
+                                                                                    <div key={cls.id} className={cellClasses.length > 1 ? 'overflow-hidden' : ''} style={cellClasses.length > 1 ? { width: `${100 / cellClasses.length}%` } : undefined}>
                                                                                     <ClassCard
-                                                                                        key={cls.id}
                                                                                         cls={cls}
                                                                                         span={getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)}
                                                                                         searchQuery={searchQuery}
@@ -1033,14 +941,16 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                         mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
                                                                                         fontSize={fontSize}
                                                                                         rowHeight={rowHeight}
-                                                                                cellSizePx={cellSizePx}
+                                                                                        cellSizePx={cellSizePx}
                                                                                         showHoldStudents={showHoldStudents}
                                                                                         showWithdrawnStudents={showWithdrawnStudents}
                                                                                         pendingMovedStudentIds={pendingMovedStudentIds}
                                                                                         pendingMoveSchedules={pendingMoveSchedules}
+                                                                                        showMergedLabel={cellClasses.length > 1}
                                                                                     />
-                                                                                ))
-                                                                            )
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
                                                                         )}
                                                                         </div>
                                                                     </td>
@@ -1160,42 +1070,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         {viewType === 'room' ? resource : '빈 강의실'}
                                                                     </div>
                                                                 ) : (
-                                                                    cellClasses.length > 1 ? (
-                                                                        <ClassCard
-                                                                            key={cellClasses[0].id}
-                                                                            cls={cellClasses[0]}
-                                                                            span={getConsecutiveSpan(cellClasses[0], day, periodIndex, currentPeriods, filteredClasses, viewType)}
-                                                                            searchQuery={searchQuery}
-                                                                            showStudents={showStudents}
-                                                                            showClassName={showClassName}
-                                                                            showSchool={showSchool}
-                                                                            showGrade={showGrade}
-                                                                            canEdit={getCanEdit(cellClasses[0], resource)}
-                                                                            isAssistantTeacher={isAssistantSlot(cellClasses[0], resource)}
-                                                                            isDragOver={cellClasses.some(c => dragOverClassId === c.id)}
-                                                                            onClick={onClassClick}
-                                                                            onDragStart={onDragStart}
-                                                                            onDragOver={onDragOver}
-                                                                            onDragLeave={onDragLeave}
-                                                                            onDrop={onDrop}
-                                                                            studentMap={studentMap}
-                                                                            classKeywords={classKeywords}
-                                                                            onStudentClick={onStudentClick}
-                                                                            currentDay={colSpan === 1 ? day : undefined}
-                                                                            mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
-                                                                            fontSize={fontSize}
-                                                                            rowHeight={rowHeight}
-                                                                                cellSizePx={cellSizePx}
-                                                                            showHoldStudents={showHoldStudents}
-                                                                            showWithdrawnStudents={showWithdrawnStudents}
-                                                                            pendingMovedStudentIds={pendingMovedStudentIds}
-                                                                            pendingMoveSchedules={pendingMoveSchedules}
-                                                                            mergedClasses={cellClasses}
-                                                                        />
-                                                                    ) : (
-                                                                        cellClasses.map((cls: TimetableClass) => (
+                                                                    <div className={cellClasses.length > 1 ? 'flex w-full h-full' : ''}>
+                                                                        {cellClasses.map((cls: TimetableClass) => (
+                                                                            <div key={cls.id} className={cellClasses.length > 1 ? 'overflow-hidden' : ''} style={cellClasses.length > 1 ? { width: `${100 / cellClasses.length}%` } : undefined}>
                                                                             <ClassCard
-                                                                                key={cls.id}
                                                                                 cls={cls}
                                                                                 span={getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)}
                                                                                 searchQuery={searchQuery}
@@ -1223,9 +1101,11 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 showWithdrawnStudents={showWithdrawnStudents}
                                                                                 pendingMovedStudentIds={pendingMovedStudentIds}
                                                                                 pendingMoveSchedules={pendingMoveSchedules}
+                                                                                showMergedLabel={cellClasses.length > 1}
                                                                             />
-                                                                        ))
-                                                                    )
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
                                                                 )}
                                                                 </div>
                                                             </td>
