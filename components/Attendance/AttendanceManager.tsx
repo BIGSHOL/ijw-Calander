@@ -32,6 +32,7 @@ import { useVisibleAttendanceStudents } from '../../hooks/useVisibleAttendanceSt
 import { useHolidays } from '../../hooks/useFirebaseQueries';
 import { useStudents } from '../../hooks/useStudents';
 import { useMonthlyEnrollmentTerms } from '../../hooks/useEnrollmentTerms';
+import { useBilling } from '../../hooks/useBilling';
 import { UserProfile, Teacher, UnifiedStudent } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
 import { mapAttendanceValueToStatus } from '../../utils/attendanceSync';
@@ -388,9 +389,22 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     [currentSettlement.isFinalized, currentSettlement.salaryConfig, salaryConfig]
   );
 
+  // 수납 데이터에서 학생별 납입금액 Map 생성
+  const { records: billingRecords } = useBilling(currentYearMonth);
+
+  const billingPaidMap = useMemo(() => {
+    const map = new Map<string, number>();
+    billingRecords.forEach(r => {
+      if (r.status === 'paid' && r.paidAmount > 0) {
+        map.set(r.studentName, (map.get(r.studentName) || 0) + r.paidAmount);
+      }
+    });
+    return map;
+  }, [billingRecords]);
+
   const stats = useMemo(() =>
-    calculateStats(allStudents, visibleStudents, effectiveSalaryConfig, currentDate, rawAllStudents),
-    [allStudents, visibleStudents, effectiveSalaryConfig, currentDate, rawAllStudents]
+    calculateStats(allStudents, visibleStudents, effectiveSalaryConfig, currentDate, rawAllStudents, billingPaidMap),
+    [allStudents, visibleStudents, effectiveSalaryConfig, currentDate, rawAllStudents, billingPaidMap]
   );
 
   const finalSalary = useMemo(() => {

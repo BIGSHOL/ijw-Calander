@@ -41,6 +41,7 @@ import RoleSimulationBanner from './components/Common/RoleSimulationBanner';
 import { HeaderCollapseProvider } from './contexts/HeaderCollapseContext';
 import { INJAEWON_LOGO } from './utils/styleUtils';
 import { VideoLoading } from './components/Common/VideoLoading';
+import VersionUpdateToast from './components/Common/VersionUpdateToast';
 
 // Embed Mode Support
 import EmbedRouter, { isEmbedMode } from './components/Embed/EmbedRouter';
@@ -635,6 +636,7 @@ const App: React.FC = () => {
       externalState={simulationState}
       onStateChange={setSimulationState}
     >
+      <VersionUpdateToast />
       <div className="h-screen overflow-hidden flex bg-[#f0f4f8]">
         <RoleSimulationBanner
           actualRole={userProfile?.role || null}
