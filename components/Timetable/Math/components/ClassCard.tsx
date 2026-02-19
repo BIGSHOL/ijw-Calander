@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom';
 import { TimetableClass, ClassKeywordColor, Teacher } from '../../../../types';
 import { getSubjectTheme } from '../utils/gridUtils';
-import { Clock } from 'lucide-react';
+import { Clock, BookOpen } from 'lucide-react';
 import { MATH_PERIOD_INFO, MATH_PERIOD_TIMES, WEEKEND_PERIOD_INFO, WEEKEND_PERIOD_TIMES } from '../../constants';
 import { formatSchoolGrade } from '../../../../utils/studentUtils';
 import { formatDateKey } from '../../../../utils/dateUtils';
@@ -26,6 +26,7 @@ interface StudentItemProps {
     isTransferScheduled?: boolean;  // 반이동예정 (미래 withdrawalDate + isTransferred)
     transferScheduledDate?: string;  // 반이동예정일
     classLabel?: string;  // 합반수업 시 소속 수업 라벨
+    textbookInfo?: { month: string; textbookName: string } | null;
 }
 
 const StudentItem: React.FC<StudentItemProps> = ({
@@ -44,7 +45,8 @@ const StudentItem: React.FC<StudentItemProps> = ({
     pendingScheduledDate,
     isTransferScheduled = false,
     transferScheduledDate,
-    classLabel
+    classLabel,
+    textbookInfo
 }) => {
     const [isHovered, setIsHovered] = useState(false);
     // 조회 모드/수정 모드 모두에서 학생 클릭 가능 (영어 시간표와 동일)
@@ -75,17 +77,16 @@ const StudentItem: React.FC<StudentItemProps> = ({
             ${!isPendingMoved && !isTransferScheduled && !isHighlighted && !enrollmentStyle ? 'opacity-80' : ''}`}
             style={hoverStyle}
             title={
-                isPendingMoved && pendingScheduledDate
+                (isPendingMoved && pendingScheduledDate
                     ? `${displayText}\n이동 예정일: ${pendingScheduledDate}`
                     : isPendingMoved
                         ? `${displayText}\n즉시 이동 (저장 대기)`
                     : isTransferScheduled && transferScheduledDate
                         ? `${displayText}\n반이동예정: ${transferScheduledDate}`
-                    : student.isTransferredIn
-                        ? `${displayText}\n반이동 학생`
                     : enrollmentStyle && student.enrollmentDate
                         ? `${displayText}\n입학일: ${student.enrollmentDate}`
                         : displayText
+                ) + (textbookInfo ? `\n${textbookInfo.month} ${textbookInfo.textbookName}` : '')
             }
         >
             {classLabel && (
@@ -129,6 +130,8 @@ interface ClassCardProps {
     mergedClasses?: TimetableClass[];  // 합반수업: 같은 슬롯의 모든 수업 목록
     showMergedLabel?: boolean;  // 반반 레이아웃용 합반 라벨 표시
     isAssistantTeacher?: boolean;  // 부담임 수업 여부 (teacher 뷰에서 slotTeacher로 배정된 경우)
+    latestTextbook?: { textbookName: string; distributedAt: string } | null;
+    studentTextbookMap?: Map<string, { month: string; textbookName: string }>;
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -160,7 +163,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
     mergedClasses,
     showMergedLabel = false,
     cellSizePx = 72,
-    isAssistantTeacher = false
+    isAssistantTeacher = false,
+    latestTextbook,
+    studentTextbookMap
 }) => {
     // 컴팩트 모드 여부
     const isCompact = rowHeight === 'compact';
@@ -662,7 +667,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     )}
 
                     {/* Schedule Tooltip - Portal을 사용하여 DOM 최상위에 렌더링 */}
-                    {showScheduleTooltip && scheduleInfo.length > 0 && createPortal(
+                    {showScheduleTooltip && (scheduleInfo.length > 0 || latestTextbook) && createPortal(
                         <div
                             className="fixed bg-gray-900 text-white text-xs rounded-sm shadow-xl p-2 min-w-[140px] whitespace-nowrap pointer-events-none"
                             style={{
@@ -671,6 +676,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 zIndex: 9999
                             }}
                         >
+                            {scheduleInfo.length > 0 && (
+                            <>
                             <div className="flex items-center gap-1.5 mb-1.5 pb-1.5 border-b border-gray-700">
                                 <Clock size={12} className="text-yellow-400" />
                                 <span className="font-bold">수업 시간</span>
@@ -685,6 +692,20 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                     </div>
                                 ))}
                             </div>
+                            </>
+                            )}
+                            {latestTextbook && (
+                                <div className={scheduleInfo.length > 0 ? "mt-1.5 pt-1.5 border-t border-gray-700" : ""}>
+                                    <div className="flex items-center gap-1.5 mb-1">
+                                        <BookOpen size={12} className="text-green-400" />
+                                        <span className="font-bold">교재</span>
+                                    </div>
+                                    <div className="text-gray-200">{latestTextbook.textbookName}</div>
+                                    <div className="text-gray-400 mt-0.5" style={{ fontSize: '10px' }}>
+                                        배부일: {latestTextbook.distributedAt.slice(0, 10)}
+                                    </div>
+                                </div>
+                            )}
                         </div>,
                         document.body
                     )}
@@ -748,6 +769,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             isTransferScheduled={!!(s.isTransferred && s.withdrawalDate)}
                                             transferScheduledDate={s.isTransferred ? s.withdrawalDate : undefined}
                                             classLabel={isMergedClass ? s._classLabel : undefined}
+                                            textbookInfo={studentTextbookMap?.get(s.name) || null}
                                         />
                                     );
                                 })}
@@ -802,6 +824,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                 isTransferScheduled={!!(s.isTransferred && s.withdrawalDate)}
                                                                 transferScheduledDate={s.isTransferred ? s.withdrawalDate : undefined}
                                                                 classLabel={isMergedClass ? s._classLabel : undefined}
+                                                                textbookInfo={studentTextbookMap?.get(s.name) || null}
                                                             />
                                                         )}
                                                     </div>
@@ -953,6 +976,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             isTransferScheduled={!!(s.isTransferred && s.withdrawalDate)}
                                             transferScheduledDate={s.isTransferred ? s.withdrawalDate : undefined}
                                             classLabel={isMergedClass ? s._classLabel : undefined}
+                                            textbookInfo={studentTextbookMap?.get(s.name) || null}
                                         />
                                     );
                                 })}
@@ -1082,6 +1106,8 @@ export default React.memo(ClassCard, (prevProps, nextProps) => {
         prevProps.mergedClasses === nextProps.mergedClasses &&
         prevProps.showMergedLabel === nextProps.showMergedLabel &&
         prevProps.isAssistantTeacher === nextProps.isAssistantTeacher &&
-        prevProps.pendingMoveSchedules === nextProps.pendingMoveSchedules
+        prevProps.pendingMoveSchedules === nextProps.pendingMoveSchedules &&
+        prevProps.latestTextbook === nextProps.latestTextbook &&
+        prevProps.studentTextbookMap === nextProps.studentTextbookMap
     );
 });

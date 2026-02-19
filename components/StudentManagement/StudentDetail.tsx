@@ -6,13 +6,14 @@ import GradesTab from './tabs/GradesTab';
 import ConsultationsTab from './tabs/ConsultationsTab';
 import AttendanceTab from './tabs/AttendanceTab';
 import BillingTab from './tabs/BillingTab';
+import StudentTextbookTab from './tabs/StudentTextbookTab';
 import WithdrawalModal from './WithdrawalModal';
 import { useStudents } from '../../hooks/useStudents';
 import { usePermissions } from '../../hooks/usePermissions';
 import { collection, getDocs, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
-import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2, Calendar, CreditCard, AlertTriangle } from 'lucide-react';
+import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2, Calendar, CreditCard, AlertTriangle, BookCopy } from 'lucide-react';
 import { useStudentEnrollmentValidation } from './hooks/useStudentEnrollmentValidation';
 
 interface StudentDetailProps {
@@ -23,7 +24,7 @@ interface StudentDetailProps {
   // compact 모드(모달)에서는 퇴원처리 버튼이 항상 숨겨짐 - 학생관리에서만 처리
 }
 
-type TabType = 'basic' | 'courses' | 'grades' | 'attendance' | 'consultations' | 'billing';
+type TabType = 'basic' | 'courses' | 'grades' | 'attendance' | 'consultations' | 'billing' | 'textbooks';
 
 const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false, readOnly = false, currentUser }) => {
   const [activeTab, setActiveTab] = useState<TabType>('basic');
@@ -48,6 +49,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
     { id: 'attendance', label: '출결', icon: <Calendar className="w-3 h-3" /> },
     { id: 'consultations', label: '상담', icon: <MessageSquare className="w-3 h-3" /> },
     { id: 'billing', label: '수납', icon: <CreditCard className="w-3 h-3" /> },
+    { id: 'textbooks', label: '교재', icon: <BookCopy className="w-3 h-3" /> },
   ];
 
   const isWithdrawn = student.status === 'withdrawn';
@@ -226,6 +228,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false,
         {activeTab === 'attendance' && <AttendanceTab student={student} readOnly={readOnly || !canEditStudent} />}
         {activeTab === 'consultations' && <ConsultationsTab student={student} readOnly={readOnly || !canEditStudent} currentUser={currentUser} />}
         {activeTab === 'billing' && <BillingTab student={student} />}
+        {activeTab === 'textbooks' && <StudentTextbookTab student={student} />}
       </div>
 
       {/* 퇴원 처리 모달 */}

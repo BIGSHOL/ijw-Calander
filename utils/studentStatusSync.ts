@@ -56,18 +56,35 @@ export async function syncStudentStatus(
     let newStatus = previousStatus;
     let reason = '';
 
-    // 3-1. 퇴원/예비 상태는 변경하지 않음 (명시적으로 설정된 상태)
-    if (previousStatus === 'withdrawn' || previousStatus === 'prospect' || previousStatus === 'prospective') {
+    // 3-1. 예비 상태는 변경하지 않음 (명시적으로 설정된 상태)
+    if (previousStatus === 'prospect' || previousStatus === 'prospective') {
       return {
         success: true,
         previousStatus,
         newStatus: previousStatus,
-        reason: '퇴원/예비 상태는 자동 변경하지 않음'
+        reason: '예비 상태는 자동 변경하지 않음'
       };
     }
 
-    // 3-2. enrollments가 없으면 상태 유지
-    if (activeEnrollments.length === 0) {
+    // 3-2. 퇴원 상태: 활성 enrollment가 있으면 복구 (반이동 예외)
+    if (previousStatus === 'withdrawn') {
+      if (activeEnrollments.length > 0) {
+        // 다른 수업에 활성 등록이 있으므로 퇴원이 아닌 반이동
+        const allOnHold = activeEnrollments.every(e => e.onHold === true);
+        newStatus = allOnHold ? 'on_hold' : 'active';
+        reason = '퇴원 상태였으나 활성 수강 과목 존재 (반이동 복구)';
+      } else {
+        return {
+          success: true,
+          previousStatus,
+          newStatus: previousStatus,
+          reason: '퇴원 상태 유지 (활성 수강 없음)'
+        };
+      }
+    }
+
+    // 3-3. enrollments가 없으면 상태 유지
+    else if (activeEnrollments.length === 0) {
       return {
         success: true,
         previousStatus,
@@ -76,13 +93,12 @@ export async function syncStudentStatus(
       };
     }
 
-    // 3-3. 모든 enrollments가 onHold=true이면 on_hold
-    const allOnHold = activeEnrollments.every(e => e.onHold === true);
-    if (allOnHold) {
+    // 3-4. 모든 enrollments가 onHold=true이면 on_hold
+    else if (activeEnrollments.every(e => e.onHold === true)) {
       newStatus = 'on_hold';
       reason = '모든 수강 과목이 대기 상태';
     }
-    // 3-4. 하나라도 활성 enrollment가 있으면 active
+    // 3-5. 하나라도 활성 enrollment가 있으면 active
     else {
       newStatus = 'active';
       reason = '활성 수강 과목 존재';

@@ -13,9 +13,10 @@ import StudentDetailModal from '../StudentManagement/StudentDetailModal';
 
 interface BillingManagerProps {
   userProfile?: any;
+  onNavigateToTextbooks?: () => void;
 }
 
-const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
+const BillingManager: React.FC<BillingManagerProps> = ({ userProfile, onNavigateToTextbooks }) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -255,6 +256,7 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
             isOpen={isImportOpen}
             onClose={() => setIsImportOpen(false)}
             onImport={handleImport}
+            onNavigateToTextbooks={onNavigateToTextbooks ? () => { setIsImportOpen(false); onNavigateToTextbooks(); } : undefined}
           />
         </Suspense>
       )}

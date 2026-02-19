@@ -131,8 +131,8 @@ grep -rn "출석\|결석\|지각\|조퇴\|present\|absent\|late\|early" componen
 grep -c "invalidateQueries" hooks/useClassMutations.ts
 ```
 
-**PASS 기준:** 15개 이상의 invalidateQueries 호출 (5 mutations × 평균 3 invalidations)
-**FAIL 기준:** invalidateQueries 수가 현저히 감소
+**PASS 기준:** 20개 이상의 invalidateQueries 호출 (5 mutations × 평균 4+ invalidations, timetableClasses 포함)
+**FAIL 기준:** invalidateQueries 수가 현저히 감소 (20 미만)
 
 ## Output Format
 

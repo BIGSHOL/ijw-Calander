@@ -76,6 +76,8 @@ const PERMISSION_CATEGORIES = [
       { id: 'students.edit' as PermissionId, label: '수정' },
       { id: 'students.delete' as PermissionId, label: '삭제' },
       { id: 'students.migration' as PermissionId, label: '데이터 가져오기' },
+      { id: 'students.duplicate_check' as PermissionId, label: '중복확인' },
+      { id: 'students.cleanup' as PermissionId, label: '데이터정리' },
       // 수강배정은 수업 관리(classes.edit) 권한으로 통합됨
     ]
   },

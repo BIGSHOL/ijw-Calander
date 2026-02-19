@@ -196,7 +196,31 @@ grep -n "pendingMoves.length === 0 ? initialClasses" components/Timetable/Math/h
 
 **수정:** `const effectiveClasses = pendingMoves.length === 0 ? initialClasses : localClasses;` 패턴 복원
 
-### Step 10: PendingMove scheduledDate 필드 검증
+### Step 10: useClassOperations invalidateMathCaches 일관성 검증
+
+**파일:** `components/Timetable/Math/hooks/useClassOperations.ts`
+
+**검사:** 모든 쓰기 메서드(addClass, updateClass, deleteClass, addStudent, removeStudent, withdrawStudent, restoreStudent)가 `invalidateMathCaches()`를 호출하여 시간표 캐시를 무효화하는지 확인합니다. 이 패턴이 누락되면 수업 추가/수정 후 시간표가 실시간으로 갱신되지 않습니다.
+
+```bash
+grep -c "invalidateMathCaches()" components/Timetable/Math/hooks/useClassOperations.ts
+```
+
+**PASS 기준:** 7회 이상 호출 (7개 쓰기 메서드 각각 1회)
+**FAIL 기준:** 7회 미만 (일부 메서드에서 캐시 무효화 누락)
+
+**추가 검증:** invalidateMathCaches 함수가 `timetableClasses` 키를 포함하는지 확인
+
+```bash
+grep -A5 "const invalidateMathCaches" components/Timetable/Math/hooks/useClassOperations.ts | grep "timetableClasses"
+```
+
+**PASS 기준:** `timetableClasses` 쿼리 키가 무효화 대상에 포함
+**FAIL 기준:** `timetableClasses` 키 누락 (시간표 뷰가 갱신되지 않음)
+
+**수정:** 누락된 메서드에 `invalidateMathCaches()` 호출 추가, invalidateMathCaches 내에 `queryClient.invalidateQueries({ queryKey: ['timetableClasses'] })` 추가
+
+### Step 11: PendingMove scheduledDate 필드 검증
 
 **파일:** `components/Timetable/Math/hooks/useStudentDragDrop.ts`
 
@@ -227,8 +251,9 @@ grep -n "scheduledDate" components/Timetable/Math/hooks/useStudentDragDrop.ts
 | 7 | writeBatch 시퀀스 | useStudentDragDrop.ts | PASS/FAIL | |
 | 8 | sanitizeForFirestore | SimulationContext.tsx | PASS/FAIL | |
 | 9 | 테스트 파일 존재 | tests/ | PASS/FAIL | |
-| 10 | effectiveClasses 패턴 | useStudentDragDrop.ts | PASS/FAIL | |
-| 11 | scheduledDate 처리 | useStudentDragDrop.ts | PASS/FAIL | |
+| 10 | invalidateMathCaches 일관성 | useClassOperations.ts | PASS/FAIL | |
+| 11 | effectiveClasses 패턴 | useStudentDragDrop.ts | PASS/FAIL | |
+| 12 | scheduledDate 처리 | useStudentDragDrop.ts | PASS/FAIL | |
 
 ## Exceptions
 

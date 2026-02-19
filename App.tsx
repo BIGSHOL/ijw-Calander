@@ -811,6 +811,7 @@ const App: React.FC = () => {
                   setGradesSearchQuery,
                   setGradesSubjectFilter: setGradesSubjectFilter as any,
                 } : undefined}
+                onNavigateToTab={setAppMode}
               />
 
               {/* Floating Save Button */}

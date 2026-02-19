@@ -73,6 +73,7 @@ export default {
       },
       fontSize: {
         'xxs': ['11px', { lineHeight: '16px' }],
+        'period-label': ['16.5px', { lineHeight: '24px' }],
         'micro': ['11px', { lineHeight: '16px' }],
         'nano': ['10px', { lineHeight: '14px' }],
         xs: ['0.75rem', { lineHeight: '1rem' }],
