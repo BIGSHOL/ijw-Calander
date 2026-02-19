@@ -89,7 +89,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
             }
         >
             {classLabel && (
-                <span className="inline-block text-[8px] leading-none bg-gray-500 text-white rounded px-0.5 mr-0.5 align-middle font-normal">
+                <span className={`inline-block leading-none bg-gray-500 text-white px-0.5 mr-0.5 align-middle font-bold ${fontSizeClass}`}>
                     {classLabel}
                 </span>
             )}
@@ -345,6 +345,23 @@ const ClassCard: React.FC<ClassCardProps> = ({
     const isMergedClass = mergedClasses && mergedClasses.length > 1;
     const mergedClassCount = mergedClasses ? mergedClasses.length : 0;
 
+    // 합반 수업의 고유 className 목록 및 인덱스 맵 (수업명 2등분 + 학생 [1]/[2] 라벨용)
+    const uniqueMergedNames = useMemo(() => {
+        if (!isMergedClass) return [];
+        const seen = new Set<string>();
+        return mergedClasses!.filter(c => {
+            if (seen.has(c.className)) return false;
+            seen.add(c.className);
+            return true;
+        });
+    }, [mergedClasses, isMergedClass]);
+
+    const classNameToIndex = useMemo(() => {
+        const map = new Map<string, number>();
+        uniqueMergedNames.forEach((c, i) => map.set(c.className, i + 1));
+        return map;
+    }, [uniqueMergedNames]);
+
     // 전체 학생 목록 가져오기 (합반수업 시 모든 수업의 학생을 합침)
     const allStudents = useMemo(() => {
         const today = formatDateKey(new Date());
@@ -368,17 +385,18 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 return s.enrollmentDate <= today;
             });
 
-            // 합반수업일 때 classLabel 태깅 (중복 학생 방지)
+            // 합반수업일 때 classLabel 태깅 - 번호 인덱스 사용 (중복 학생 방지)
+            const labelIdx = classNameToIndex.get(targetCls.className) || 0;
             students.forEach(s => {
                 if (!seenIds.has(s.id)) {
                     seenIds.add(s.id);
-                    allStudentsList.push(isMergedClass ? { ...s, _classLabel: targetCls.className } : s);
+                    allStudentsList.push(isMergedClass ? { ...s, _classLabel: `${labelIdx}` } : s);
                 }
             });
         });
 
         return allStudentsList;
-    }, [cls, mergedClasses, isMergedClass, studentMap]);
+    }, [cls, mergedClasses, isMergedClass, studentMap, classNameToIndex]);
 
     // 학생이 병합된 모든 요일에 등원하는지 확인
     const isStudentAttendingAllMergedDays = (student: any): boolean => {
@@ -572,33 +590,38 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     {isAssistantTeacher && (
                         <span className="absolute top-0 left-0 z-10 text-[10px] leading-none bg-gray-800 text-white px-0.5 py-0.5 font-bold whitespace-nowrap animate-pulse">부담임</span>
                     )}
-                    {(isMergedClass || showMergedLabel) && (
-                        <span className={`absolute ${isAssistantTeacher ? 'top-2.5' : 'top-0'} left-0 z-10 text-[10px] leading-none bg-orange-600 text-white px-0.5 py-0.5 font-bold whitespace-nowrap`}>합반</span>
-                    )}
-                    <div className="relative min-w-0 w-full">
-                        {classNameLines.map((line, i) => (
-                            <span key={i} className={`block leading-tight ${titleFontSizeClass} whitespace-nowrap overflow-hidden text-black`}>{line}</span>
-                        ))}
-                        {isMergedClass && (
-                            <PortalTooltip
-                                triggerClassName="absolute -top-0.5 -right-0.5 z-10"
-                                content={
-                                    <div className="bg-gray-900 text-white text-xs rounded shadow-xl p-2 min-w-[120px]">
-                                        <div className="font-bold mb-1 border-b border-gray-700 pb-1">합반 수업 ({mergedClassCount}개)</div>
-                                        <ul className="space-y-0.5">
-                                            {mergedClasses!.map(mc => (
-                                                <li key={mc.id} className="text-gray-200">• {mc.className}</li>
+                    {isMergedClass && uniqueMergedNames.length > 1 ? (
+                        /* 합반: 수업명 가로 2등분 */
+                        <div className="flex w-full h-full">
+                            {uniqueMergedNames.map((mc, idx) => {
+                                const name = mc.className || '';
+                                const nameIdx = name.indexOf(' ');
+                                const lines = nameIdx === -1 ? [name] : [name.slice(0, nameIdx), name.slice(nameIdx + 1)];
+                                return (
+                                    <div key={mc.id} className="flex-1 overflow-hidden relative flex flex-col items-center justify-center" style={{ borderRight: idx < uniqueMergedNames.length - 1 ? '1px dashed #ccc' : undefined }}>
+                                        <span className="absolute top-0 left-0 z-10 text-[8px] leading-none bg-orange-600 text-white px-0.5 font-bold">{`합반${idx + 1}`}</span>
+                                        <div className="min-w-0 w-full text-center pt-1">
+                                            {lines.map((line, i) => (
+                                                <span key={i} className={`block leading-tight ${titleFontSizeClass} whitespace-nowrap overflow-hidden text-black`}>{line}</span>
                                             ))}
-                                        </ul>
+                                        </div>
                                     </div>
-                                }
-                            >
-                                <span className="inline-flex items-center justify-center bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-[16px] px-1 cursor-pointer shadow-sm">
-                                    +{mergedClassCount - 1}
-                                </span>
-                            </PortalTooltip>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        /* 단일 수업 또는 같은 이름 합반 */
+                        <>
+                        {(isMergedClass || showMergedLabel) && (
+                            <span className={`absolute ${isAssistantTeacher ? 'top-2.5' : 'top-0'} left-0 z-10 text-[10px] leading-none bg-orange-600 text-white px-0.5 py-0.5 font-bold whitespace-nowrap`}>합반</span>
                         )}
-                    </div>
+                        <div className="relative min-w-0 w-full">
+                            {classNameLines.map((line, i) => (
+                                <span key={i} className={`block leading-tight ${titleFontSizeClass} whitespace-nowrap overflow-hidden text-black`}>{line}</span>
+                            ))}
+                        </div>
+                        </>
+                    )}
                     {/* 강의실 (2행) + 재원생 수 (학생 목록 숨김 시) */}
                     {(cls.room || !showStudents) && (
                         <div className={`${fontSizeClass} font-normal text-gray-600 leading-tight`}>

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { TimetableClass, Teacher, ClassKeywordColor } from '../../../../types';
-import { getClassesForCell, getConsecutiveSpan, shouldSkipCell } from '../utils/gridUtils';
+import { getClassesForCell, getConsecutiveSpan, shouldSkipCell, isSameClassNameSet } from '../utils/gridUtils';
 import ClassCard from './ClassCard';
 import { WEEKEND_PERIOD_TIMES, ALL_WEEKDAYS, LEGACY_TO_UNIFIED_PERIOD_MAP, MATH_GROUP_DISPLAY, MATH_GROUP_PERIOD_IDS, MATH_GROUPED_PERIODS, MATH_PERIOD_TIMES } from '../../constants';
 import { BookOpen } from 'lucide-react';
@@ -331,8 +331,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         // 주말 테이블: 토/일 각 열을 수요일과 동일한 정사각형 셀로
         const isWeekend = title === '주말' || title === '토/일';
 
-        // 셀 내 수업 렌더링 헬퍼: 같은 수업 → 병합, 다른 수업 → 반반 레이아웃
-        // className 기준 그룹핑으로 같은 이름의 다른 문서(4-1/4-2 분리 등)도 하나로 병합
+        // 셀 내 수업 렌더링 헬퍼: 합반이면 1개 카드에 통합 (수업명만 2등분 표시)
         const renderCellClassCards = (
             cellClasses: TimetableClass[],
             day: string,
@@ -341,66 +340,42 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
             colSpan: number,
             mergedDaysForCell: string[]
         ) => {
-            // className 기준 그룹핑
-            const classNameGroups = new Map<string, TimetableClass[]>();
-            cellClasses.forEach(cls => {
-                const key = cls.className;
-                if (!classNameGroups.has(key)) classNameGroups.set(key, []);
-                classNameGroups.get(key)!.push(cls);
-            });
-
-            const uniqueGroups = [...classNameGroups.values()];
-            const hasDiffClasses = uniqueGroups.length > 1;
-
-            // 각 그룹: 대표 1개 + 나머지는 mergedClasses
-            const groupsToRender = hasDiffClasses
-                ? uniqueGroups.map(group => ({
-                    cls: group[0],
-                    merged: group.length > 1 ? group : undefined,
-                }))
-                : [{
-                    cls: cellClasses[0],
-                    merged: cellClasses.length > 1 ? cellClasses : undefined,
-                }];
+            // 항상 첫 번째 수업을 대표로, 나머지는 mergedClasses로 통합
+            const mergedClassesForCard = cellClasses.length > 1 ? cellClasses : undefined;
+            const cls = cellClasses[0];
 
             return (
-                <div className={hasDiffClasses ? 'flex w-full h-full' : ''}>
-                    {groupsToRender.map(({ cls, merged: mergedClassesForCard }) => (
-                        <div key={cls.id} className={hasDiffClasses ? 'overflow-hidden' : ''} style={hasDiffClasses ? { width: `${100 / groupsToRender.length}%` } : undefined}>
-                            <ClassCard
-                                cls={cls}
-                                span={getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)}
-                                searchQuery={searchQuery}
-                                showStudents={showStudents}
-                                showClassName={showClassName}
-                                showSchool={showSchool}
-                                showGrade={showGrade}
-                                canEdit={getCanEdit(cls, resource)}
-                                isAssistantTeacher={isAssistantSlot(cls, resource)}
-                                isDragOver={mergedClassesForCard ? mergedClassesForCard.some(c => dragOverClassId === c.id) : dragOverClassId === cls.id}
-                                onClick={onClassClick}
-                                onDragStart={onDragStart}
-                                onDragOver={onDragOver}
-                                onDragLeave={onDragLeave}
-                                onDrop={onDrop}
-                                studentMap={studentMap}
-                                classKeywords={classKeywords}
-                                onStudentClick={onStudentClick}
-                                currentDay={colSpan === 1 ? day : undefined}
-                                mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
-                                fontSize={fontSize}
-                                rowHeight={rowHeight}
-                                cellSizePx={cellSizePx}
-                                showHoldStudents={showHoldStudents}
-                                showWithdrawnStudents={showWithdrawnStudents}
-                                pendingMovedStudentIds={pendingMovedStudentIds}
-                                pendingMoveSchedules={pendingMoveSchedules}
-                                mergedClasses={mergedClassesForCard}
-                                showMergedLabel={hasDiffClasses}
-                            />
-                        </div>
-                    ))}
-                </div>
+                <ClassCard
+                    cls={cls}
+                    span={getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)}
+                    searchQuery={searchQuery}
+                    showStudents={showStudents}
+                    showClassName={showClassName}
+                    showSchool={showSchool}
+                    showGrade={showGrade}
+                    canEdit={getCanEdit(cls, resource)}
+                    isAssistantTeacher={isAssistantSlot(cls, resource)}
+                    isDragOver={mergedClassesForCard ? cellClasses.some(c => dragOverClassId === c.id) : dragOverClassId === cls.id}
+                    onClick={onClassClick}
+                    onDragStart={onDragStart}
+                    onDragOver={onDragOver}
+                    onDragLeave={onDragLeave}
+                    onDrop={onDrop}
+                    studentMap={studentMap}
+                    classKeywords={classKeywords}
+                    onStudentClick={onStudentClick}
+                    currentDay={colSpan === 1 ? day : undefined}
+                    mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
+                    fontSize={fontSize}
+                    rowHeight={rowHeight}
+                    cellSizePx={cellSizePx}
+                    showHoldStudents={showHoldStudents}
+                    showWithdrawnStudents={showWithdrawnStudents}
+                    pendingMovedStudentIds={pendingMovedStudentIds}
+                    pendingMoveSchedules={pendingMoveSchedules}
+                    mergedClasses={mergedClassesForCard}
+                    showMergedLabel={!!mergedClassesForCard}
+                />
             );
         };
 
@@ -603,15 +578,14 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)
                                                             ));
 
-                                                            // 수평 병합 확인
+                                                            // 수평 병합 확인 (같은 className 세트면 요일 병합)
                                                             let shouldSkipHorizontalMerge = false;
-                                                            if (!isWednesdayTable && cellClasses.length === 1 && dayIndex > 0) {
-                                                                const cls = cellClasses[0];
+                                                            if (!isWednesdayTable && cellClasses.length > 0 && dayIndex > 0) {
                                                                 for (let prevIdx = dayIndex - 1; prevIdx >= 0; prevIdx--) {
                                                                     const prevDay = daysForResource[prevIdx];
                                                                     const prevDayClasses = getClassesForCell(filteredClasses, prevDay, firstPeriod, resource, viewType);
 
-                                                                    if (prevDayClasses.length === 1 && prevDayClasses[0].className === cls.className) {
+                                                                    if (isSameClassNameSet(cellClasses, prevDayClasses)) {
                                                                         shouldSkipHorizontalMerge = true;
                                                                         break;
                                                                     } else {
@@ -625,17 +599,18 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 continue;
                                                             }
 
-                                                            // 수평 병합 span 계산
+                                                            // 수평 병합 span 계산 (같은 className 세트 + 같은 rowSpan이면 병합)
                                                             let colSpan = 1;
                                                             const mergedDaysForCell: string[] = [day];
-                                                            if (!isWednesdayTable && cellClasses.length === 1) {
-                                                                const cls = cellClasses[0];
+                                                            if (!isWednesdayTable && cellClasses.length > 0) {
                                                                 for (let nextIdx = dayIndex + 1; nextIdx < daysForResource.length; nextIdx++) {
                                                                     const nextDay = daysForResource[nextIdx];
                                                                     const nextDayClasses = getClassesForCell(filteredClasses, nextDay, firstPeriod, resource, viewType);
 
-                                                                    if (nextDayClasses.length === 1 && nextDayClasses[0].className === cls.className) {
-                                                                        const nextRowSpan = getConsecutiveSpan(nextDayClasses[0], nextDay, periodIndex, currentPeriods, filteredClasses, viewType);
+                                                                    if (isSameClassNameSet(cellClasses, nextDayClasses)) {
+                                                                        const nextRowSpan = Math.max(1, ...nextDayClasses.map((c: TimetableClass) =>
+                                                                            getConsecutiveSpan(c, nextDay, periodIndex, currentPeriods, filteredClasses, viewType)
+                                                                        ));
                                                                         if (nextRowSpan === maxRowSpan) {
                                                                             colSpan++;
                                                                             mergedDaysForCell.push(nextDay);
@@ -717,15 +692,14 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)
                                                             ));
 
-                                                            // 수평 병합 확인
+                                                            // 수평 병합 확인 (같은 className 세트면 요일 병합)
                                                             let shouldSkipHorizontalMerge = false;
-                                                            if (!isWednesdayTable && cellClasses.length === 1 && dayIndex > 0) {
-                                                                const cls = cellClasses[0];
+                                                            if (!isWednesdayTable && cellClasses.length > 0 && dayIndex > 0) {
                                                                 for (let prevIdx = dayIndex - 1; prevIdx >= 0; prevIdx--) {
                                                                     const prevDay = daysForResource[prevIdx];
                                                                     const prevDayClasses = getClassesForCell(filteredClasses, prevDay, secondPeriod, resource, viewType);
 
-                                                                    if (prevDayClasses.length === 1 && prevDayClasses[0].className === cls.className) {
+                                                                    if (isSameClassNameSet(cellClasses, prevDayClasses)) {
                                                                         shouldSkipHorizontalMerge = true;
                                                                         break;
                                                                     } else {
@@ -739,17 +713,18 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 continue;
                                                             }
 
-                                                            // 수평 병합 span 계산
+                                                            // 수평 병합 span 계산 (같은 className 세트 + 같은 rowSpan이면 병합)
                                                             let colSpan = 1;
                                                             const mergedDaysForCell: string[] = [day];
-                                                            if (!isWednesdayTable && cellClasses.length === 1) {
-                                                                const cls = cellClasses[0];
+                                                            if (!isWednesdayTable && cellClasses.length > 0) {
                                                                 for (let nextIdx = dayIndex + 1; nextIdx < daysForResource.length; nextIdx++) {
                                                                     const nextDay = daysForResource[nextIdx];
                                                                     const nextDayClasses = getClassesForCell(filteredClasses, nextDay, secondPeriod, resource, viewType);
 
-                                                                    if (nextDayClasses.length === 1 && nextDayClasses[0].className === cls.className) {
-                                                                        const nextRowSpan = getConsecutiveSpan(nextDayClasses[0], nextDay, periodIndex, currentPeriods, filteredClasses, viewType);
+                                                                    if (isSameClassNameSet(cellClasses, nextDayClasses)) {
+                                                                        const nextRowSpan = Math.max(1, ...nextDayClasses.map((c: TimetableClass) =>
+                                                                            getConsecutiveSpan(c, nextDay, periodIndex, currentPeriods, filteredClasses, viewType)
+                                                                        ));
                                                                         if (nextRowSpan === maxRowSpan) {
                                                                             colSpan++;
                                                                             mergedDaysForCell.push(nextDay);
@@ -848,15 +823,14 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                     getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)
                                                                 ));
 
-                                                                // 수평 병합 확인
+                                                                // 수평 병합 확인 (같은 className 세트면 요일 병합)
                                                                 let shouldSkipHorizontalMerge = false;
-                                                                if (!isWednesdayTable && cellClasses.length === 1 && dayIndex > 0) {
-                                                                    const cls = cellClasses[0];
+                                                                if (!isWednesdayTable && cellClasses.length > 0 && dayIndex > 0) {
                                                                     for (let prevIdx = dayIndex - 1; prevIdx >= 0; prevIdx--) {
                                                                         const prevDay = daysForResource[prevIdx];
                                                                         const prevDayClasses = getClassesForCell(filteredClasses, prevDay, period, resource, viewType);
 
-                                                                        if (prevDayClasses.length === 1 && prevDayClasses[0].className === cls.className) {
+                                                                        if (isSameClassNameSet(cellClasses, prevDayClasses)) {
                                                                             shouldSkipHorizontalMerge = true;
                                                                             break;
                                                                         } else {
@@ -870,17 +844,18 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                     continue;
                                                                 }
 
-                                                                // 수평 병합 span 계산
+                                                                // 수평 병합 span 계산 (같은 className 세트 + 같은 rowSpan이면 병합)
                                                                 let colSpan = 1;
                                                                 const mergedDaysForCell: string[] = [day];
-                                                                if (!isWednesdayTable && cellClasses.length === 1) {
-                                                                    const cls = cellClasses[0];
+                                                                if (!isWednesdayTable && cellClasses.length > 0) {
                                                                     for (let nextIdx = dayIndex + 1; nextIdx < daysForResource.length; nextIdx++) {
                                                                         const nextDay = daysForResource[nextIdx];
                                                                         const nextDayClasses = getClassesForCell(filteredClasses, nextDay, period, resource, viewType);
 
-                                                                        if (nextDayClasses.length === 1 && nextDayClasses[0].className === cls.className) {
-                                                                            const nextRowSpan = getConsecutiveSpan(nextDayClasses[0], nextDay, periodIndex, currentPeriods, filteredClasses, viewType);
+                                                                        if (isSameClassNameSet(cellClasses, nextDayClasses)) {
+                                                                            const nextRowSpan = Math.max(1, ...nextDayClasses.map((c: TimetableClass) =>
+                                                                                getConsecutiveSpan(c, nextDay, periodIndex, currentPeriods, filteredClasses, viewType)
+                                                                            ));
                                                                             if (nextRowSpan === maxRowSpan) {
                                                                                 colSpan++;
                                                                                 mergedDaysForCell.push(nextDay);
