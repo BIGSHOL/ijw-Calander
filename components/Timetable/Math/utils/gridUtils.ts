@@ -101,12 +101,15 @@ export const getConsecutiveSpan = (
         const nextResource = getEffectiveResource(cls, day, nextPeriod, viewType);
         if (nextResource !== startResource) break;
 
-        // Check if next slot is "pure" (only contains this class)
-        // If next slot has other classes, we must break the span to allow displaying them
+        // 다음 슬롯의 수업 세트와 시작 슬롯의 수업 세트 비교
+        // 동일한 수업 세트면 병합 가능 (합반 포함)
         const classesInNextSlot = getClassesForCell(filteredClasses, day, nextPeriod, startResource, viewType);
-        const isNextSlotDirty = classesInNextSlot.some(c => c.id !== cls.id);
+        const classesInStartSlot = getClassesForCell(filteredClasses, day, startPeriod, startResource, viewType);
+        const startIds = new Set(classesInStartSlot.map(c => c.id));
+        const nextIds = new Set(classesInNextSlot.map(c => c.id));
+        const isSameSet = startIds.size === nextIds.size && [...startIds].every(id => nextIds.has(id));
 
-        if (!isNextSlotDirty) {
+        if (isSameSet) {
             span++;
         } else {
             break;
@@ -125,11 +128,9 @@ export const shouldSkipCell = (
     filteredClasses: TimetableClass[],
     viewType: 'teacher' | 'room' | 'class'
 ): boolean => {
-    // If current cell has multiple classes (conflict), NEVER skip. Show all.
-    if (currentCellClasses.length > 1) return false;
-
     const currentPeriod = periods[periodIndex];
     const currentResource = getEffectiveResource(cls, day, currentPeriod, viewType);
+    const currentIds = new Set(currentCellClasses.map(c => c.id));
 
     // Look backwards to see if any previous consecutive period started a rowspan that covers this cell
     for (let i = periodIndex - 1; i >= 0; i--) {
@@ -144,16 +145,18 @@ export const shouldSkipCell = (
                 return false;
             }
 
-            // Check if the PREVIOUS cell was "dirty". If it was dirty, it couldn't have spanned to here.
+            // 이전 슬롯의 수업 세트와 현재 슬롯의 수업 세트 비교
+            // 동일한 수업 세트면 이전 셀의 rowspan에 포함됨
             const classesInPrevSlot = getClassesForCell(filteredClasses, day, prevPeriod, currentResource, viewType);
-            const isPrevSlotDirty = classesInPrevSlot.some(c => c.id !== cls.id);
+            const prevIds = new Set(classesInPrevSlot.map(c => c.id));
+            const isSameSet = currentIds.size === prevIds.size && [...currentIds].every(id => prevIds.has(id));
 
-            if (isPrevSlotDirty) {
-                // Previous slot had conflict, so it didn't span. We are the start of new segment.
+            if (!isSameSet) {
+                // 수업 세트가 다르면 병합 불가, 새로운 시작점
                 return false;
             }
 
-            // Previous period has this class and was pure, so this cell is covered
+            // 이전 슬롯과 동일한 수업 세트 → 이 셀은 rowspan에 포함됨
             return true;
         } else {
             // Break in the chain, so this is a new start
