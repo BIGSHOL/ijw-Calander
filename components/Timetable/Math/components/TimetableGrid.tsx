@@ -420,8 +420,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                         const isWeekend = day === '토' || day === '일';
                                         const isLastDayForResource = dayIndex === daysForResource.length - 1;
                                         const dateInfo = weekDates[day];
-                                        // 강사 구분만 굵은선, 나머지는 테두리 없음
-                                        const borderRightClass = isLastDayForResource ? 'border-r-2 border-r-gray-400' : '';
+                                        // 강사 구분은 굵은선, 요일 사이는 얇은선
+                                        const borderRightClass = isLastDayForResource ? 'border-r-2 border-r-gray-400' : 'border-r border-r-gray-300';
                                         // 병합 요일(월/목 등)은 좁게, 단독 요일(수)과 주말은 넓게
                                         const isMergedDay = daysForResource.length > 1 && !isWeekend;
                                         const dayHeaderWidth = isMergedDay
@@ -1144,7 +1144,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
                                                         const isEmpty = cellClasses.length === 0;
                                                         const isLastDayForResource = (dayIndex + colSpan - 1) === daysForResource.length - 1;
-                                                        const borderRightClass = isLastDayForResource ? 'border-r-2 border-r-gray-400' : '';
+                                                        const borderRightClass = isLastDayForResource ? 'border-r-2 border-r-gray-400' : 'border-r border-r-gray-300';
 
                                                         cells.push(
                                                             <td
