@@ -77,6 +77,15 @@ const getEffectiveResource = (
     }
 };
 
+// Helper: 두 셀의 수업 세트가 동일한지 비교 (className 기준)
+// 4-1과 4-2가 다른 Firestore 문서(다른 id)라도 같은 className이면 동일 세트로 간주
+const isSameClassNameSet = (classesA: TimetableClass[], classesB: TimetableClass[]): boolean => {
+    const namesA = classesA.map(c => c.className).sort();
+    const namesB = classesB.map(c => c.className).sort();
+    if (namesA.length !== namesB.length) return false;
+    return namesA.every((name, i) => name === namesB[i]);
+};
+
 // Calculate how many consecutive periods a class spans starting from given period
 export const getConsecutiveSpan = (
     cls: TimetableClass,
@@ -92,24 +101,19 @@ export const getConsecutiveSpan = (
 
     for (let i = startPeriodIndex + 1; i < periods.length; i++) {
         const nextPeriod = periods[i];
-        const targetSlot = `${day}${nextPeriod}`.replace(/\s+/g, '');
-        const hasNextSlot = cls.schedule?.some(s => s.replace(/\s+/g, '') === targetSlot);
 
-        if (!hasNextSlot) break;
-
-        // slotTeacher가 다르면 병합 불가 (다른 선생님 담당 교시)
+        // 다음 교시에도 같은 선생님/강의실의 수업이 있는지 확인
         const nextResource = getEffectiveResource(cls, day, nextPeriod, viewType);
         if (nextResource !== startResource) break;
 
-        // 다음 슬롯의 수업 세트와 시작 슬롯의 수업 세트 비교
-        // 동일한 수업 세트면 병합 가능 (합반 포함)
+        // 다음 슬롯의 수업 세트와 시작 슬롯의 수업 세트 비교 (className 기준)
+        // 4-1/4-2가 다른 문서여도 같은 className이면 병합
         const classesInNextSlot = getClassesForCell(filteredClasses, day, nextPeriod, startResource, viewType);
-        const classesInStartSlot = getClassesForCell(filteredClasses, day, startPeriod, startResource, viewType);
-        const startIds = new Set(classesInStartSlot.map(c => c.id));
-        const nextIds = new Set(classesInNextSlot.map(c => c.id));
-        const isSameSet = startIds.size === nextIds.size && [...startIds].every(id => nextIds.has(id));
+        if (classesInNextSlot.length === 0) break;
 
-        if (isSameSet) {
+        const classesInStartSlot = getClassesForCell(filteredClasses, day, startPeriod, startResource, viewType);
+
+        if (isSameClassNameSet(classesInStartSlot, classesInNextSlot)) {
             span++;
         } else {
             break;
@@ -130,38 +134,28 @@ export const shouldSkipCell = (
 ): boolean => {
     const currentPeriod = periods[periodIndex];
     const currentResource = getEffectiveResource(cls, day, currentPeriod, viewType);
-    const currentIds = new Set(currentCellClasses.map(c => c.id));
 
     // Look backwards to see if any previous consecutive period started a rowspan that covers this cell
     for (let i = periodIndex - 1; i >= 0; i--) {
         const prevPeriod = periods[i];
-        const targetSlot = `${day}${prevPeriod}`.replace(/\s+/g, '');
-        const hasPrevSlot = cls.schedule?.some(s => s.replace(/\s+/g, '') === targetSlot);
 
-        if (hasPrevSlot) {
-            // slotTeacher가 다르면 병합 불가 (이 셀은 새로운 시작점)
-            const prevResource = getEffectiveResource(cls, day, prevPeriod, viewType);
-            if (prevResource !== currentResource) {
-                return false;
-            }
-
-            // 이전 슬롯의 수업 세트와 현재 슬롯의 수업 세트 비교
-            // 동일한 수업 세트면 이전 셀의 rowspan에 포함됨
-            const classesInPrevSlot = getClassesForCell(filteredClasses, day, prevPeriod, currentResource, viewType);
-            const prevIds = new Set(classesInPrevSlot.map(c => c.id));
-            const isSameSet = currentIds.size === prevIds.size && [...currentIds].every(id => prevIds.has(id));
-
-            if (!isSameSet) {
-                // 수업 세트가 다르면 병합 불가, 새로운 시작점
-                return false;
-            }
-
-            // 이전 슬롯과 동일한 수업 세트 → 이 셀은 rowspan에 포함됨
-            return true;
-        } else {
-            // Break in the chain, so this is a new start
-            break;
+        // 이전 교시에 같은 선생님/강의실인지 확인
+        const prevResource = getEffectiveResource(cls, day, prevPeriod, viewType);
+        if (prevResource !== currentResource) {
+            return false;
         }
+
+        // 이전 슬롯의 수업 세트와 현재 슬롯의 수업 세트 비교 (className 기준)
+        const classesInPrevSlot = getClassesForCell(filteredClasses, day, prevPeriod, currentResource, viewType);
+        if (classesInPrevSlot.length === 0) break;
+
+        if (!isSameClassNameSet(currentCellClasses, classesInPrevSlot)) {
+            // 수업 세트가 다르면 병합 불가, 새로운 시작점
+            return false;
+        }
+
+        // 이전 슬롯과 동일한 수업 세트 → 이 셀은 rowspan에 포함됨
+        return true;
     }
     return false;
 };
