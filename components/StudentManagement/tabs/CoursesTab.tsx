@@ -947,18 +947,18 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
           </span>
         )}
 
-        {/* 삭제 버튼 (권한이 있는 경우만) */}
+        {/* 이력 삭제 버튼 (권한이 있는 경우만) */}
         {canManageClassHistory && !readOnly && (
           <button
-            onClick={(e) => handleRemoveEnrollment(group, e)}
+            onClick={(e) => handleDeleteCompletedEnrollment(group, e)}
             disabled={deletingClass === `${group.subject}_${group.className}`}
             className="w-5 h-5 shrink-0 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-sm transition-colors disabled:opacity-50"
-            title="수업 배정 취소"
+            title="수업 이력 삭제"
           >
             {deletingClass === `${group.subject}_${group.className}` ? (
               <Loader2 className="w-3 h-3 animate-spin" />
             ) : (
-              <X className="w-3 h-3" />
+              <Trash2 className="w-3 h-3" />
             )}
           </button>
         )}
