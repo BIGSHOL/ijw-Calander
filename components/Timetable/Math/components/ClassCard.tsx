@@ -546,6 +546,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
     // 수정 모드에서 수업명 헤더 클릭 핸들러
     const handleClassHeaderClick = (e: React.MouseEvent) => {
         if (canEdit) {
+            // 합반 수업에서는 각 수업 영역에서 개별 클릭 처리하므로 전체 헤더 클릭은 무시
+            if (isMergedClass && uniqueMergedNames.length > 1) return;
             e.stopPropagation();
             onClick(cls);
         }
@@ -598,8 +600,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 const nameIdx = name.indexOf(' ');
                                 const lines = nameIdx === -1 ? [name] : [name.slice(0, nameIdx), name.slice(nameIdx + 1)];
                                 return (
-                                    <div key={mc.id} className="flex-1 overflow-hidden relative flex flex-col items-center justify-center" style={{ borderRight: idx < uniqueMergedNames.length - 1 ? '1px dashed #ccc' : undefined }}>
-                                        <span className="absolute top-0 left-0 z-10 text-[8px] leading-none bg-orange-600 text-white px-0.5 font-bold">{`합반${idx + 1}`}</span>
+                                    <div key={mc.id} className={`flex-1 overflow-hidden relative flex flex-col items-center justify-center ${canEdit ? 'cursor-pointer hover:brightness-90' : ''}`} style={{ borderRight: idx < uniqueMergedNames.length - 1 ? '1px dashed #ccc' : undefined }} onClick={canEdit ? (e) => { e.stopPropagation(); onClick(mc); } : undefined}>
+                                        <span className="absolute top-0 left-0 z-10 text-[10px] leading-none bg-orange-600 text-white px-0.5 py-0.5 font-bold whitespace-nowrap">{`합반${idx + 1}`}</span>
                                         <div className="min-w-0 w-full text-center pt-1">
                                             {lines.map((line, i) => (
                                                 <span key={i} className={`block leading-tight ${titleFontSizeClass} whitespace-nowrap overflow-hidden text-black`}>{line}</span>
