@@ -115,6 +115,10 @@ export const useClassOperations = () => {
         }
 
         await setDoc(doc(db, COL_CLASSES, classId), newClass);
+
+        // 캐시 무효화 - 실시간 반영
+        invalidateMathCaches();
+
         return newClass;
     };
 
@@ -142,6 +146,9 @@ export const useClassOperations = () => {
         }
 
         await updateDoc(doc(db, COL_CLASSES, classId), updateData);
+
+        // 캐시 무효화 - 실시간 반영
+        invalidateMathCaches();
     };
 
     const deleteClass = async (classId: string) => {

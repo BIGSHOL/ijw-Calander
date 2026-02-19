@@ -201,12 +201,12 @@ const ClassCard: React.FC<ClassCardProps> = ({
     const WITHDRAWN_BASE = 3;
     const activeItemH = fontSize === 'small' ? 13 : fontSize === 'large' ? 18 : fontSize === 'very-large' ? 21 : 16;
 
-    // 수업명을 첫 번째 공백에서 2줄로 분리 (예: "초등M_초저 개별진도 A" → ["초등M_초저", "개별진도A"])
+    // 수업명을 첫 번째 공백에서 2줄로 분리 (예: "초등M_수 개별진도 1A" → ["초등M_수", "개별진도 1A"])
     const classNameLines = useMemo(() => {
         const name = cls.className || '';
         const idx = name.indexOf(' ');
         if (idx === -1) return [name];
-        return [name.slice(0, idx), name.slice(idx + 1).replace(/\s+/g, '')];
+        return [name.slice(0, idx), name.slice(idx + 1)];
     }, [cls.className]);
 
     const [showScheduleTooltip, setShowScheduleTooltip] = useState(false);
@@ -568,7 +568,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     onMouseLeave={() => setShowScheduleTooltip(false)}
                 >
                     {isAssistantTeacher && (
-                        <span className="absolute top-0 left-0 z-10 text-[10px] leading-none bg-gray-600 text-white px-0.5 py-0.5 font-bold whitespace-nowrap animate-pulse">부담임</span>
+                        <span className="absolute top-0 left-0 z-10 text-[10px] leading-none bg-gray-800 text-white px-0.5 py-0.5 font-bold whitespace-nowrap animate-pulse">부담임</span>
                     )}
                     <div className="relative min-w-0 w-full">
                         {classNameLines.map((line, i) => (

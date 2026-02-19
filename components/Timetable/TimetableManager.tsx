@@ -439,10 +439,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     setShowHoldStudents={setShowHoldStudents}
                     showWithdrawnStudents={showWithdrawnStudents}
                     setShowWithdrawnStudents={setShowWithdrawnStudents}
-                    columnWidth={columnWidth}
                     cellSize={cellSize}
                     setCellSize={setCellSize}
-                    rowHeight={rowHeight}
                     fontSize={fontSize}
                     setFontSize={setFontSize}
                     // 이미지 저장 (모든 viewType에서 사용 가능)
@@ -594,10 +592,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         isOpen={isViewSettingsOpen}
                         onClose={() => setIsViewSettingsOpen(false)}
                         viewType="date-teacher"
-                        columnWidth={columnWidth}
                         cellSize={cellSize}
                     setCellSize={setCellSize}
-                        rowHeight={rowHeight}
                             fontSize={fontSize}
                         setFontSize={setFontSize}
                         selectedDays={selectedDays}

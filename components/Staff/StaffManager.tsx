@@ -9,7 +9,7 @@ import StaffForm from './StaffForm';
 import StaffViewModal from './StaffViewModal';
 import StaffSchedule from './StaffSchedule';
 import LeaveManagement from './LeaveManagement';
-import TeacherIdMigrationModal from '../settings/TeacherIdMigrationModal';
+import TeacherIdMigrationModal from '../Settings/TeacherIdMigrationModal';
 
 type ViewMode = 'list' | 'schedule' | 'leave';
 

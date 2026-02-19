@@ -11,7 +11,7 @@ import { PendingApprovalOverlay } from '../Auth/PendingApprovalOverlay';
 
 // Lazy loaded modals
 const EventModal = React.lazy(() => import('../Calendar/EventModal'));
-const SettingsModal = React.lazy(() => import('../settings/SettingsModal'));
+const SettingsModal = React.lazy(() => import('../Settings/SettingsModal'));
 const TimetableSettingsModal = React.lazy(() => import('../Timetable/TimetableSettingsModal'));
 const CalendarSettingsModal = React.lazy(() => import('../Calendar/CalendarSettingsModal'));
 
