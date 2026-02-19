@@ -577,7 +577,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     )}
                     <div className="relative min-w-0 w-full">
                         {classNameLines.map((line, i) => (
-                            <span key={i} className={`block leading-tight ${titleFontSizeClass} whitespace-nowrap overflow-hidden`}>{line}</span>
+                            <span key={i} className={`block leading-tight ${titleFontSizeClass} whitespace-nowrap overflow-hidden text-black`}>{line}</span>
                         ))}
                         {isMergedClass && (
                             <PortalTooltip
