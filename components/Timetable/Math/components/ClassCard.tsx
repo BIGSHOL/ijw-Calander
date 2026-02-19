@@ -385,12 +385,19 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 return s.enrollmentDate <= today;
             });
 
-            // 합반수업일 때 classLabel 태깅 - 번호 인덱스 사용 (중복 학생 방지)
+            // 합반수업일 때 classLabel 태깅 - 번호 인덱스 사용
+            // 두 수업 모두 등록된 학생은 라벨을 합침 (예: "1,2")
             const labelIdx = classNameToIndex.get(targetCls.className) || 0;
             students.forEach(s => {
                 if (!seenIds.has(s.id)) {
                     seenIds.add(s.id);
                     allStudentsList.push(isMergedClass ? { ...s, _classLabel: `${labelIdx}` } : s);
+                } else if (isMergedClass) {
+                    // 이미 추가된 학생 → 라벨 합치기
+                    const existing = allStudentsList.find(e => e.id === s.id);
+                    if (existing && !existing._classLabel.includes(`${labelIdx}`)) {
+                        existing._classLabel = `${existing._classLabel},${labelIdx}`;
+                    }
                 }
             });
         });
