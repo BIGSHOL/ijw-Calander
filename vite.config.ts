@@ -1,6 +1,29 @@
 import path from 'path';
+import fs from 'fs';
+import crypto from 'crypto';
 import { defineConfig, loadEnv, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+
+// Build hash generated once per build, shared between define and writeBundle
+const BUILD_HASH = crypto.randomBytes(8).toString('hex');
+
+// Plugin to generate version.json with build hash for cache-busting
+function versionPlugin(): Plugin {
+  return {
+    name: 'version-plugin',
+    writeBundle(options) {
+      const versionData = {
+        version: BUILD_HASH,
+        buildTime: new Date().toISOString(),
+      };
+      const outDir = options.dir || 'dist';
+      fs.writeFileSync(
+        path.resolve(outDir, 'version.json'),
+        JSON.stringify(versionData)
+      );
+    },
+  };
+}
 
 // Plugin to ensure correct chunk loading order in HTML
 function chunkOrderPlugin(): Plugin {
@@ -37,14 +60,15 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       host: '0.0.0.0',
     },
-    plugins: [react(), chunkOrderPlugin()],
+    plugins: [react(), chunkOrderPlugin(), versionPlugin()],
     optimizeDeps: {
       include: ['lucide-react'],
       exclude: []
     },
     define: {
       'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+      '__APP_VERSION__': JSON.stringify(isProduction ? BUILD_HASH : 'dev'),
     },
     resolve: {
       alias: {

@@ -128,7 +128,8 @@ export const calculateStats = (
   visibleStudents: Student[], // Only visible students for salary/attendance
   salaryConfig: SalaryConfig,
   currentMonth: Date,
-  rawAllStudents?: Student[] // Raw students with original startDate/endDate (not overridden by enrollment mapping)
+  rawAllStudents?: Student[], // Raw students with original startDate/endDate (not overridden by enrollment mapping)
+  billingPaidMap?: Map<string, number>, // 학생별 납입금액 (수납 연동)
 ) => {
   let totalSalary = 0;
   let totalPresent = 0;
@@ -181,8 +182,8 @@ export const calculateStats = (
     const settingItem = effectiveSalarySettingId
       ? salaryConfig.items.find(item => item.id === effectiveSalarySettingId)
       : getSchoolLevelSalarySetting(student.school, salaryConfig.items);
-    const rate = calculateClassRate(settingItem, salaryConfig.academyFee);
-    totalSalary += studentClassUnits * rate;
+    const studentPaid = billingPaidMap?.get(student.name);
+    totalSalary += calculateStudentSalary(settingItem, salaryConfig.academyFee, studentClassUnits, studentPaid);
 
     // Attendance Rate Stats (New Logic: Based on Scheduled Days UP TO TODAY)
     // Count how many "Blue Dots" (Scheduled Days) this student has in this valid month range
@@ -306,6 +307,43 @@ export const getEffectiveUnitPrice = (item: SalarySettingItem | undefined): numb
   if (item.type === 'percentage' && item.baseTuition > 0) return item.baseTuition;
 
   return 0;
+};
+
+/**
+ * Google Sheets 급여 수식 포팅
+ * 실급여 = MIN(납입금액, ROUNDDOWN(회당단가 × 수업차수, 0)) × (1 - 수수료/100) × (비율/100)
+ *
+ * paidAmount가 없으면 기존 방식(출석 × rate)으로 fallback
+ */
+export const calculateStudentSalary = (
+  settingItem: SalarySettingItem | undefined,
+  academyFee: number,
+  studentClassUnits: number,
+  paidAmount?: number,
+): number => {
+  if (!settingItem || studentClassUnits <= 0) return 0;
+
+  // paidAmount 없으면 기존 방식 fallback (수납 데이터 미연동 시)
+  if (paidAmount === undefined || paidAmount === null) {
+    return studentClassUnits * calculateClassRate(settingItem, academyFee);
+  }
+
+  if (settingItem.type === 'fixed') {
+    // 고정급: fixedRate × MIN(출석횟수, 납입금 기준 차수)
+    const unitPrice = getEffectiveUnitPrice(settingItem);
+    if (unitPrice <= 0) return settingItem.fixedRate * studentClassUnits;
+    const coveredSessions = Math.min(studentClassUnits, Math.floor(paidAmount / unitPrice));
+    return settingItem.fixedRate * coveredSessions;
+  } else {
+    // 비율제: MIN(납입금, ROUNDDOWN(단가 × 차수)) × (1 - 수수료/100) × (비율/100)
+    const unitPrice = getEffectiveUnitPrice(settingItem);
+    if (unitPrice <= 0) {
+      return studentClassUnits * calculateClassRate(settingItem, academyFee);
+    }
+    const grossByAttendance = Math.floor(unitPrice * studentClassUnits); // ROUNDDOWN
+    const effectiveBase = Math.min(paidAmount, grossByAttendance);       // MIN cap
+    return Math.round(effectiveBase * (1 - academyFee / 100) * (settingItem.ratio / 100));
+  }
 };
 
 // Legacy color mapping for migration
