@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { X, Upload, FileSpreadsheet, Loader2, AlertCircle, Check, RotateCcw, Eye } from 'lucide-react';
+import React, { useState, useRef, useMemo } from 'react';
+import { X, Upload, FileSpreadsheet, Loader2, AlertCircle, Check, RotateCcw, Eye, BookOpen } from 'lucide-react';
 import { read, utils } from 'xlsx';
 import { BillingRecord } from '../../types';
 import { normalizeMonth } from '../../hooks/useBilling';
@@ -8,6 +8,7 @@ interface BillingImportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onImport: (records: Omit<BillingRecord, 'id'>[], month: string) => Promise<{ added: number; skipped: number }>;
+  onNavigateToTextbooks?: (file: File) => void;
 }
 
 interface ParsedRow {
@@ -58,6 +59,7 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
   isOpen,
   onClose,
   onImport,
+  onNavigateToTextbooks,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [parsedData, setParsedData] = useState<ParsedRow[]>([]);
@@ -105,7 +107,15 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
     }));
 
     setParsedData(parsed);
+    setUploadedFile(file);
   };
+
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+
+  const textbookCount = useMemo(
+    () => parsedData.filter(r => r.category === '교재').length,
+    [parsedData]
+  );
 
   const handleImport = async () => {
     if (parsedData.length === 0) return;
@@ -220,6 +230,13 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
                   </div>
                 </div>
 
+                {textbookCount > 0 && (
+                  <div className="flex items-center gap-2 px-2 py-1.5 bg-purple-50 border border-purple-200 rounded-sm">
+                    <BookOpen className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                    <span className="text-xxs text-purple-700">교재 수납 {textbookCount}건 감지 — 수납 가져오기 후 교재 관리 탭으로 이동 가능</span>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-3 gap-2 text-sm">
                   <div className="bg-blue-50 rounded-sm p-2 border border-blue-100">
                     <p className="text-xxs text-blue-600 font-medium">총 청구액</p>
@@ -309,16 +326,29 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
                   : 'bg-red-50'
               }`}>
                 {importResult.success ? (
-                  <div className="flex items-center gap-2">
-                    <Check className="w-5 h-5 text-emerald-600 shrink-0" />
-                    <div className="text-sm text-emerald-700 font-medium">
-                      <span>{importResult.added.toLocaleString()}건 추가 완료</span>
-                      {importResult.skipped > 0 && (
-                        <span className="text-gray-500 font-normal ml-1">
-                          (중복 {importResult.skipped.toLocaleString()}건 건너뜀)
-                        </span>
-                      )}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Check className="w-5 h-5 text-emerald-600 shrink-0" />
+                      <div className="text-sm text-emerald-700 font-medium">
+                        <span>{importResult.added.toLocaleString()}건 추가 완료</span>
+                        {importResult.skipped > 0 && (
+                          <span className="text-gray-500 font-normal ml-1">
+                            (중복 {importResult.skipped.toLocaleString()}건 건너뜀)
+                          </span>
+                        )}
+                      </div>
                     </div>
+                    {textbookCount > 0 && onNavigateToTextbooks && uploadedFile && (
+                      <button
+                        onClick={() => { onNavigateToTextbooks(uploadedFile); onClose(); }}
+                        className="flex items-center gap-2 w-full px-3 py-2 bg-purple-50 border border-purple-200 rounded-sm hover:bg-purple-100 transition-colors"
+                      >
+                        <BookOpen className="w-4 h-4 text-purple-600" />
+                        <span className="text-xs text-purple-700 font-medium">
+                          교재 수납 {textbookCount}건 감지 → 교재 관리 탭에서 가져오기
+                        </span>
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="flex items-start gap-2">

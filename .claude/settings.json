@@ -4,7 +4,8 @@
       "Read(//d/ijw-calander/**)"
     ],
     "additionalDirectories": [
-      "f:\\ijw-calander"
+      "f:\\ijw-calander",
+      "d:\\ijw-calander\\.claude\\skills"
     ]
   }
 }

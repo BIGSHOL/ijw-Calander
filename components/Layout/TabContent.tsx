@@ -124,6 +124,9 @@ interface TabContentProps {
     setGradesSearchQuery: (query: string) => void;
     setGradesSubjectFilter: (filter: string) => void;
   };
+
+  // 탭 전환
+  onNavigateToTab?: (tab: AppTab) => void;
 }
 
 export const TabContent: React.FC<TabContentProps> = ({
@@ -138,6 +141,7 @@ export const TabContent: React.FC<TabContentProps> = ({
   attendanceProps,
   studentsProps,
   gradesProps,
+  onNavigateToTab,
 }) => {
   // Render gating: if permission fails, show loading
   if (!canAccessTab(appMode)) {
@@ -341,7 +345,7 @@ export const TabContent: React.FC<TabContentProps> = ({
       ) : appMode === 'billing' ? (
         <Suspense fallback={<TabLoadingFallback />}>
           <div className="w-full flex-1 overflow-auto">
-            <BillingManager userProfile={effectiveProfile} />
+            <BillingManager userProfile={effectiveProfile} onNavigateToTextbooks={onNavigateToTab ? () => onNavigateToTab('textbooks') : undefined} />
           </div>
         </Suspense>
       ) : appMode === 'daily-attendance' ? (

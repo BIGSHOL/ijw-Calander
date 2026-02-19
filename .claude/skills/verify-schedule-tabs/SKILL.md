@@ -39,6 +39,8 @@ description: 일정 그룹(연간일정/간트차트) 탭의 컴포넌트 구조
 | `hooks/useGanttProjects.ts` | 간트 프로젝트 쿼리 |
 | `hooks/useGanttCategories.ts` | 간트 카테고리 관리 |
 | `hooks/useAppState.ts` | 캘린더 상태 (useCalendarState, useEventModalState, usePendingEventMoves) |
+| `components/Calendar/CalendarSettingsModal.tsx` | 캘린더 설정 모달 (뷰 옵션, 표시 설정) |
+| `components/Gantt/GanttSettingsModal.tsx` | 간트 설정 모달 (차트 표시 옵션) |
 
 ## Workflow
 

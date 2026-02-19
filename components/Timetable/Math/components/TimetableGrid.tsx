@@ -4,6 +4,7 @@ import { getClassesForCell, getConsecutiveSpan, shouldSkipCell, isSameClassNameS
 import ClassCard from './ClassCard';
 import { WEEKEND_PERIOD_TIMES, ALL_WEEKDAYS, LEGACY_TO_UNIFIED_PERIOD_MAP, MATH_GROUP_DISPLAY, MATH_GROUP_PERIOD_IDS, MATH_GROUPED_PERIODS, MATH_PERIOD_TIMES } from '../../constants';
 import { BookOpen } from 'lucide-react';
+import { useClassTextbookMap } from '../../../../hooks/useClassTextbookMap';
 
 // 시간 텍스트를 ~ 뒤에서 줄바꿈하는 헬퍼
 const renderTime = (time: string) => {
@@ -94,6 +95,11 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     pendingMovedStudentIds,
     pendingMoveSchedules
 }) => {
+    // 수업별 최신 교재 + 학생별 교재 수납 조회
+    const { byClassId, byClassName, byStudentName } = useClassTextbookMap();
+    const getLatestTextbook = (cls: TimetableClass) =>
+        byClassId.get(cls.id) || byClassName.get(cls.className) || null;
+
     // 수정 모드일 때만 실제 canEdit 적용
     const effectiveCanEdit = canEdit && mode === 'edit';
     // 부담임 셀에서는 드래그 비활성화 (teacher 뷰에서 해당 셀의 리소스가 담임이 아닌 경우)
@@ -375,6 +381,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     pendingMoveSchedules={pendingMoveSchedules}
                     mergedClasses={mergedClassesForCard}
                     showMergedLabel={!!mergedClassesForCard}
+                    latestTextbook={getLatestTextbook(cls)}
+                    studentTextbookMap={byStudentName}
                 />
             );
         };
@@ -1271,6 +1279,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             showWithdrawnStudents={showWithdrawnStudents}
                                                                             pendingMovedStudentIds={pendingMovedStudentIds}
                                                                             pendingMoveSchedules={pendingMoveSchedules}
+                                                                            latestTextbook={getLatestTextbook(cls)}
+                    studentTextbookMap={byStudentName}
                                                                         />
                                                                     ))
                                                                 )}
@@ -1355,6 +1365,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             showWithdrawnStudents={showWithdrawnStudents}
                                                                             pendingMovedStudentIds={pendingMovedStudentIds}
                                                                             pendingMoveSchedules={pendingMoveSchedules}
+                                                                            latestTextbook={getLatestTextbook(cls)}
+                    studentTextbookMap={byStudentName}
                                                                         />
                                                                     ))
                                                                 )}
@@ -1456,6 +1468,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 showWithdrawnStudents={showWithdrawnStudents}
                                                                                 pendingMovedStudentIds={pendingMovedStudentIds}
                                                                                 pendingMoveSchedules={pendingMoveSchedules}
+                                                                                latestTextbook={getLatestTextbook(cls)}
+                    studentTextbookMap={byStudentName}
                                                                             />
                                                                         ))
                                                                     )}
@@ -1567,6 +1581,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         showWithdrawnStudents={showWithdrawnStudents}
                                                                         pendingMovedStudentIds={pendingMovedStudentIds}
                                                                         pendingMoveSchedules={pendingMoveSchedules}
+                                                                        latestTextbook={getLatestTextbook(cls)}
+                    studentTextbookMap={byStudentName}
                                                                     />
                                                                 ))
                                                             )}

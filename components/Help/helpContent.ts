@@ -47,11 +47,11 @@ const systemOverview: HelpEntry = {
       items: [
         '홈 — 대시보드, 공지사항',
         '일정 — 연간 일정, 간트 차트',
-        '수업 — 시간표, 출석부, 출결 관리, 수업 관리, 강의실, 강의실 배정, 과제 관리, 시험 관리, 교재 관리',
-        '학생 — 학생 관리, 등록 상담, 학생 상담, 성적 관리, 퇴원 관리, 수강 계약, 리포트',
-        '소통 — 학부모 포털, 문자/알림톡',
-        '마케팅 — 마케팅, 셔틀',
-        '관리 — 수강료 현황, 직원 관리, 수납 관리, 자료실, 역할 관리, 급여 관리, 학원 분석',
+        '수업 — 시간표, 출석부, 출결 관리, 수업 관리, 강의실, 강의실 배정, 숙제 관리, 시험 관리, 교재 관리',
+        '학생 — 학생 관리, 등록 상담, 학생 상담, 성적 관리, 퇴원 관리, 계약 관리, 학습 리포트',
+        '소통 — 학부모 소통, 알림 발송',
+        '마케팅 — 마케팅, 셔틀 관리',
+        '관리 — 수강료 현황, 직원 관리, 수납 관리, 자료실, 역할 관리, 급여 관리, 매출 분석',
       ],
     },
   ],
@@ -325,6 +325,7 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
         title: '관리 도구',
         requiredPermissions: ['students.edit', 'students.delete'],
         items: [
+          '데이터 마이그레이션 — Excel/JSON 파일에서 학생 데이터 일괄 등록/업데이트 (출결번호·이름+학교+학년 자동 매칭, 학교명 보정, 전화번호 정규화)',
           '중복 학생 병합 — 같은 이름의 중복 데이터 통합',
           '데이터 정리 — 비활성 데이터 정리',
           '일괄 영어이름 업데이트 — 영어 이름 일괄 등록',
@@ -427,7 +428,7 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
   },
   withdrawal: {
     title: '퇴원 관리',
-    overview: '퇴원 또는 수강 종료된 학생을 관리합니다.',
+    overview: '퇴원 또는 수강 종료된 학생을 관리합니다. 퇴원 사유 추적 및 재원 복구를 지원합니다.',
     sections: [
       {
         title: '뷰 모드',
@@ -446,9 +447,11 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
         ],
       },
       {
-        title: '퇴원 정보 수정',
+        title: '퇴원 처리',
         requiredPermissions: ['withdrawal.edit'],
         items: [
+          '퇴원 등록 — 퇴원일, 퇴원 사유(졸업/이사/타학원/경제적 사유/스케줄/불만족/기타), 메모 입력',
+          '활성 수업 감지 — 퇴원 시 현재 등록된 수업을 자동 감지하여 경고 표시',
           '퇴원 사유 변경 — 퇴원 카테고리 및 상세 사유 수정',
           '상담 추적 — 관리자/담임 통화, 학생 상담 완료 체크',
         ],
@@ -519,7 +522,7 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
   },
   billing: {
     title: '수납 관리',
-    overview: '학생별 수납(수강료) 기록을 관리합니다.',
+    overview: '학생별 수납(수강료) 기록을 관리합니다. Excel 일괄 등록을 지원합니다.',
     sections: [
       {
         title: '조회 기능',
@@ -535,8 +538,9 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
         requiredPermissions: ['billing.edit'],
         items: [
           '수납 추가 — 새 수납 기록 등록',
-          'Excel 가져오기 — xlsx 파일에서 수납 데이터 일괄 등록',
+          'Excel 가져오기 — xlsx 파일에서 수납 데이터 일괄 등록 (학생 자동 매칭, 납부 상태/결제 수단/카드사 등 19개 필드 파싱)',
           'Excel 내보내기 — 수납 데이터를 엑셀로 다운로드',
+          '교재 수납 감지 — 가져오기 시 교재 항목을 자동 감지하여 교재 관리 탭으로 안내',
         ],
       },
     ],
@@ -588,7 +592,7 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
         title: '섹션',
         requiredPermissions: ['settings.role_permissions'],
         items: [
-          '권한 설정 — 12개 카테고리별 세부 권한 ON/OFF',
+          '권한 설정 — 14개 카테고리별 세부 권한 ON/OFF (체크박스 매트릭스)',
           '탭 접근 관리 — 역할별로 접근 가능한 탭 설정',
         ],
       },
@@ -596,18 +600,20 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
         title: '권한 카테고리',
         requiredPermissions: ['settings.role_permissions'],
         items: [
-          '학생 관리 — 학생 조회/수정/등록/삭제',
-          '출석부 — 출석 조회/수정',
-          '시간표 — 시간표 조회/수정',
-          '수업 관리 — 수업 조회/수정/생성/삭제',
-          '상담 — 상담 조회/수정/등록',
-          '성적 — 성적 조회/수정/시험 관리',
-          '일정 — 일정 조회/수정',
-          '직원 관리 — 직원 정보 조회/수정',
-          '수납 — 수납 조회/수정',
-          '설정 — 시스템 설정 접근',
-          '자료실 — 자료 조회/수정',
-          '강의실 — 강의실 조회/수정',
+          '일정 — 일정 생성/수정/드래그/출석/버킷',
+          '시간표 — 수학·영어 조회/수정/시뮬레이션/백업',
+          '출석부 — 본인 수업/전체 수정/과목별/세션 설정',
+          '학생 관리 — 조회/수정/삭제/마이그레이션/중복확인/정리',
+          '수업 관리 — 조회/생성/수정/삭제',
+          '상담 — 조회/생성/수정/원생 전환/관리',
+          '성적 — 조회/수정/시험 관리',
+          '수납 — 조회/수정',
+          '직원/시스템 — 부서/강사/수업 관리',
+          '사용자 — 조회/승인/역할/권한 변경',
+          '설정 — 접근/공휴일/역할 권한/카테고리 관리',
+          '간트 — 조회/생성/수정/삭제',
+          '퇴원 — 조회/수정/재원 복구',
+          '역할 — 조회/수정',
         ],
       },
       {
@@ -616,8 +622,9 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
         items: [
           '역할 선택 후 카테고리별 접기/펼치기로 세부 권한 설정',
           '연동 권한 자동 처리 (예: "수정" 활성화 시 "조회" 자동 활성화)',
+          '접기 시 진행률 표시 (예: 3/6)',
           '"기본값 초기화" 버튼으로 기본 설정 복원',
-          '"저장" 버튼으로 변경사항 저장',
+          '"저장" 버튼으로 변경사항 저장 (캐시 반영까지 최대 30분 소요 안내)',
         ],
       },
     ],
@@ -630,14 +637,14 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
     ],
   },
   'parent-portal': {
-    title: '학부모 포털',
+    title: '학부모 소통',
     overview: '학부모에게 메시지를 발송하고, 소통 이력을 관리합니다.',
     sections: [
       { title: '주요 기능', items: ['학부모 목록 조회', '메시지 작성/발송', '발송 이력 관리'] },
     ],
   },
   analytics: {
-    title: '학원 분석',
+    title: '매출 분석',
     overview: '학원 운영 KPI를 분석하고 시각화합니다. 매출, 재원생 추이, 출석률 등을 확인합니다.',
     sections: [
       { title: '주요 기능', items: ['월별 KPI 카드 (매출, 수납률, 재원생 수, 등록/퇴원 수, 유지율)', '차트 시각화'] },
@@ -651,14 +658,14 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
     ],
   },
   homework: {
-    title: '과제 관리',
+    title: '숙제 관리',
     overview: '학생별 과제를 등록하고 제출 현황을 추적합니다.',
     sections: [
       { title: '주요 기능', items: ['과목별 필터링', '마감일 추적 (기한 초과/임박 표시)', '과제 목록 관리'] },
     ],
   },
   'sms-notifications': {
-    title: '문자/알림톡',
+    title: '알림 발송',
     overview: 'SMS, 카카오 알림톡을 통해 학부모/학생에게 알림을 발송합니다.',
     sections: [
       { title: '주요 기능', items: ['메시지 작성/발송', '템플릿 관리 (변수 지원)', '발송 이력 조회'] },
@@ -666,9 +673,27 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
   },
   textbooks: {
     title: '교재 관리',
-    overview: '교재 재고를 관리하고 학생별 배부 이력을 추적합니다.',
+    overview: '교재 재고를 관리하고 학생별 배부 이력 및 청구 이력을 추적합니다.',
     sections: [
-      { title: '주요 기능', items: ['교재 목록/재고 관리', '재고 부족 알림', '학생별 교재 배부 기록'] },
+      {
+        title: '뷰 모드',
+        items: [
+          '교재 목록 — 과목별 교재 목록을 카드 형태로 표시, 재고 현황 확인',
+          '배부 이력 — 학생별 교재 배부 기록 조회',
+          '청구 이력 — 교재 관련 수납 기록을 월별로 조회 (학생 매칭 상태 표시)',
+        ],
+      },
+      {
+        title: '주요 기능',
+        items: [
+          '교재 추가 — 교재명, 과목, 재고 수량, 최소 재고 설정',
+          '재고 부족 알림 — 최소 재고 이하 교재를 상단 배지로 경고',
+          '과목별 필터 — 전체/수학/영어/과학/국어',
+          'Excel 가져오기 — xlsx 파일에서 교재 청구 데이터 일괄 등록 (학생 자동 매칭)',
+          '월별 필터 — 청구 이력에서 청구월별 조회',
+          '검색 — 교재명, 학생명 등 키워드 검색',
+        ],
+      },
     ],
   },
   exams: {
@@ -679,21 +704,21 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
     ],
   },
   contracts: {
-    title: '수강 계약',
+    title: '계약 관리',
     overview: '학생별 수강 계약서를 관리합니다. 계약 상태 추적과 수강료 관리를 지원합니다.',
     sections: [
       { title: '주요 기능', items: ['계약 상태 관리 (초안→서명→활성→만료→해지)', '유형별 필터', '수강료 및 할인 관리'] },
     ],
   },
   reports: {
-    title: '리포트',
+    title: '학습 리포트',
     overview: '학생별, 수업별, 월별 종합 리포트를 생성합니다.',
     sections: [
       { title: '주요 기능', items: ['학생 리포트 — 개별 학생 종합 성과', '수업 리포트 — 수업별 분석', '월간 리포트 — 월별 운영 요약'] },
     ],
   },
   shuttle: {
-    title: '셔틀',
+    title: '셔틀 관리',
     overview: '학원 셔틀 노선과 학생 배정을 관리합니다.',
     sections: [
       { title: '주요 기능', items: ['노선 관리 (정류장, 출발시간, 운전기사)', '학생 노선 배정', '노선별 학생 현황'] },
@@ -718,11 +743,11 @@ function buildHelpEntries(): HelpEntry[] {
       const meta = TAB_META[tabId];
       if (data && meta) {
         entries.push({
+          ...data,
           tab: tabId,
           title: meta.label,
           icon: meta.icon,
           group: group.label,
-          ...data,
         });
       }
     }

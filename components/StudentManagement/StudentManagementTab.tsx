@@ -40,6 +40,8 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
   const canView = hasPermission('students.view');
   const canEdit = hasPermission('students.edit');
   const canMigrate = hasPermission('students.migration');
+  const canDuplicateCheck = hasPermission('students.duplicate_check');
+  const canCleanup = hasPermission('students.cleanup');
   const canManageEnrollment = hasPermission('classes.edit');  // 수강배정은 수업 관리 권한 필요
 
   const { students, loading, error, refreshStudents } = useStudents(true); // includeWithdrawn: true
@@ -196,7 +198,6 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
                 </button>
             )}
             {currentUser?.role === 'master' && (
-              <>
                 <button
                   onClick={() => setShowMergeModal(true)}
                   className="p-1.5 text-white hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"
@@ -204,6 +205,8 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
                 >
                   <GitMerge className="w-3.5 h-3.5" />
                 </button>
+            )}
+            {canDuplicateCheck && (
                 <button
                   onClick={() => setShowDuplicateNamesModal(true)}
                   className="p-1.5 text-amber-400 hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"
@@ -211,6 +214,8 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
                 >
                   <AlertTriangle className="w-3.5 h-3.5" />
                 </button>
+            )}
+            {canCleanup && (
                 <button
                   onClick={() => setShowCleanupModal(true)}
                   className="p-1.5 text-orange-400 hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"
@@ -218,6 +223,8 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
+            )}
+            {currentUser?.role === 'master' && (
                 <button
                   onClick={() => setShowBulkEnglishNameModal(true)}
                   className="p-1.5 text-accent hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"
@@ -225,7 +232,6 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
                 >
                   <Languages className="w-3.5 h-3.5" />
                 </button>
-              </>
             )}
             {canEdit && (
               <button

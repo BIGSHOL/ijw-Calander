@@ -212,13 +212,48 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ============================================================
+  // DRAG & DROP HANDLER
+  // ============================================================
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (loading) return;
+
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+
+    const isValid = file.name.endsWith('.xlsx') || file.name.endsWith('.xls') || file.name.endsWith('.json');
+    if (!isValid) {
+      setError('지원하지 않는 파일 형식입니다. (.xlsx, .xls, .json만 지원)');
+      return;
+    }
+
+    // fileInputRef에 직접 파일 세팅이 불가하므로 processFile로 처리
+    processFile(file);
+  };
+
+  // ============================================================
   // FILE UPLOAD HANDLER
   // ============================================================
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    processFile(file);
 
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const processFile = async (file: File) => {
     setLoading(true);
     setError(null);
 
@@ -257,7 +292,32 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
         throw new Error('파일에 데이터가 없습니다.');
       }
 
-      setRawData(data);
+      // 필수 필드 "이름" 검증: 이름이 없는 행 필터링
+      const validData = data.filter(item => item.이름 && item.이름.trim());
+      const skippedCount = data.length - validData.length;
+      if (validData.length === 0) {
+        throw new Error('유효한 학생 데이터가 없습니다. "이름" 컬럼을 확인하세요.');
+      }
+      if (skippedCount > 0) {
+        setError(`이름이 없는 ${skippedCount}건은 제외되었습니다.`);
+      }
+
+      // 비정상 이름 필터링 (괄호, 테스트, 특수문자 등)
+      const invalidNamePattern = /[()（）\[\]{}]|테스트|test|임시|삭제|sample/i;
+      const filtered = validData.filter(item => !invalidNamePattern.test(item.이름));
+      const invalidCount = validData.length - filtered.length;
+      if (invalidCount > 0) {
+        const invalidNames = validData
+          .filter(item => invalidNamePattern.test(item.이름))
+          .map(item => item.이름)
+          .join(', ');
+        setError(prev => {
+          const base = prev ? prev + ' / ' : '';
+          return `${base}비정상 이름 ${invalidCount}건 제외: ${invalidNames}`;
+        });
+      }
+      setRawData(filtered);
+      data = filtered;
       setTotalCount(data.length);
 
       // 기존 학생과 매칭 분석 (출결번호 + 이름_학교_학년 기준)
@@ -282,6 +342,13 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
           existingStudentsByNameKey.set(nameKey, student);
         }
       });
+
+      // 학교 약칭 보정 맵 생성 (프리뷰에서도 동일 적용)
+      const existingStudentList = existingSnapshot.docs.map(d => ({
+        id: d.id,
+        school: (d.data() as UnifiedStudent).school,
+      }));
+      const schoolCorrections = buildSchoolCorrections(existingStudentList);
 
       // 신규/업데이트 카운트 및 상세 변경 내역 (출결번호 기준으로 판단)
       let newCnt = 0;
@@ -314,7 +381,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
 
         // 2차: 출결번호로 못 찾으면 이름_학교_학년으로 찾기 (기존 ID 형식 호환)
         if (!existingData) {
-          const normalizedSchool = normalizeSchoolName(item.학교) || ''; // preview에서는 기본 정규화만
+          const normalizedSchool = fullNormalizeSchoolName(item.학교, schoolCorrections) || '';
           // 학년 정규화 (간단히)
           let grade = item.학년 || '';
           const gradeNum = grade.match(/\d+/)?.[0];
@@ -330,7 +397,15 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
             }
           }
           const nameKey = `${item.이름}_${normalizedSchool}_${grade}`;
-          existingData = existingStudentsByNameKey.get(nameKey);
+          const candidate = existingStudentsByNameKey.get(nameKey);
+          // 이름_학교_학년이 같아도 전화번호가 다르면 다른 학생으로 판단
+          if (candidate) {
+            const excelPhone = formatPhoneNumber(item.보호자연락처 || item.원생연락처);
+            const existingPhone = candidate.parentPhone || candidate.studentPhone;
+            if (!excelPhone || !existingPhone || excelPhone === existingPhone) {
+              existingData = candidate;
+            }
+          }
         }
 
         const isNew = !existingData;
@@ -378,11 +453,6 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
       console.error('에러 발생:', err);
       setError(err.message || '파일 업로드 중 오류가 발생했습니다.');
       setLoading(false);
-    } finally {
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
     }
   };
 
@@ -492,8 +562,15 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
           // 출결번호로 못 찾으면 이름_학교_학년으로 찾기 (기존 ID 형식 호환)
           if (!existingStudent) {
             const nameKey = `${excelData.이름}_${normalizedSchool}_${grade || ''}`;
-            existingStudent = existingStudentsByNameKey.get(nameKey) as (UnifiedStudent & { _firestoreDocId?: string }) | undefined;
-
+            const candidate = existingStudentsByNameKey.get(nameKey) as (UnifiedStudent & { _firestoreDocId?: string }) | undefined;
+            // 이름_학교_학년이 같아도 전화번호가 다르면 다른 학생으로 판단
+            if (candidate) {
+              const excelPhone = formatPhoneNumber(excelData.보호자연락처 || excelData.원생연락처);
+              const existingPhone = candidate.parentPhone || candidate.studentPhone;
+              if (!excelPhone || !existingPhone || excelPhone === existingPhone) {
+                existingStudent = candidate;
+              }
+            }
           }
 
           // 문서 ID: 기존 학생이면 기존 ID 사용, 신규면 이름_학교_학년 형식
@@ -515,12 +592,6 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
             // 새 ID를 맵에 추가하여 같은 배치 내 중복 방지
             existingStudentsByNameKey.set(id, { _firestoreDocId: id } as any);
           }
-
-          // 주소 통합
-          const address = [excelData.주소1, excelData.주소2]
-            .filter(Boolean)
-            .join(' ')
-            .trim();
 
           // 과목 추출
           const subjects: ('math' | 'english')[] = [];
@@ -705,6 +776,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
           onChange={handleFileUpload}
           className="hidden"
           id="student-file-upload"
+          disabled={loading}
         />
         <label
           htmlFor="student-file-upload"
@@ -717,6 +789,8 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
               : 'border-blue-300 bg-blue-50 hover:bg-blue-100 hover:border-blue-400'
             }
           `}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
         >
           <Upload className={`w-12 h-12 mb-3 ${loading ? 'text-gray-400' : 'text-blue-500'}`} />
           <p className={`text-sm font-medium ${loading ? 'text-gray-500' : 'text-gray-700'}`}>

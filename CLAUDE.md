@@ -23,3 +23,4 @@
 | `verify-bundle-size` | 코드 스플리팅 효과와 번들 크기를 검증합니다 |
 | `generate-tab-component` | 새 탭 추가 시 보일러플레이트(컴포넌트/lazy import/권한/메타데이터)를 자동 생성합니다 |
 | `generate-hook-test` | 훅 테스트 템플릿을 프로젝트 표준 패턴에 맞춰 자동 생성합니다 |
+| `generate-import-modal` | Excel 가져오기 모달을 useExcelImport 훅 기반으로 자동 생성합니다 |

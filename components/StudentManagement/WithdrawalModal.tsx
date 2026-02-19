@@ -30,6 +30,14 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   onConfirm,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 활성 enrollment 체크 (퇴원/종료되지 않은 수업)
+  const activeEnrollments = (student.enrollments || []).filter(
+    e => !e.withdrawalDate && !e.endDate
+  );
+  const hasActiveEnrollments = activeEnrollments.length > 0;
+  const activeClassNames = activeEnrollments.map(e => e.className).filter(Boolean);
+
   const [formData, setFormData] = useState({
     withdrawalDate: new Date().toISOString().split('T')[0],
     withdrawalReason: '',
@@ -140,6 +148,29 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
               </div>
             </div>
           </div>
+
+          {/* 활성 수업 경고 */}
+          {hasActiveEnrollments && (
+            <div className="bg-white border-2 border-red-300 overflow-hidden">
+              <div className="flex items-center gap-1 px-2 py-1.5 bg-red-50 border-b border-red-300">
+                <AlertTriangle className="w-3 h-3 text-red-600" />
+                <h3 className="text-red-800 font-bold text-xs">현재 수강 중인 수업이 있습니다!</h3>
+              </div>
+              <div className="px-2 py-2 bg-red-50/50">
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {activeClassNames.map((name, i) => (
+                    <span key={i} className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded-sm text-xxs font-bold">
+                      {name}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-xs text-red-700">
+                  퇴원 시 위 {activeEnrollments.length}개 수업에서 모두 제외됩니다.
+                  반이동이라면 수업 탭에서 개별 처리하세요.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Section 2: 확인 사항 */}
           <div className="bg-white border border-gray-200 overflow-hidden">
