@@ -570,6 +570,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     {isAssistantTeacher && (
                         <span className="absolute top-0 left-0 z-10 text-[10px] leading-none bg-gray-800 text-white px-0.5 py-0.5 font-bold whitespace-nowrap animate-pulse">부담임</span>
                     )}
+                    {isMergedClass && (
+                        <span className={`absolute ${isAssistantTeacher ? 'top-2.5' : 'top-0'} left-0 z-10 text-[10px] leading-none bg-orange-600 text-white px-0.5 py-0.5 font-bold whitespace-nowrap`}>합반</span>
+                    )}
                     <div className="relative min-w-0 w-full">
                         {classNameLines.map((line, i) => (
                             <span key={i} className={`block leading-tight ${titleFontSizeClass} whitespace-nowrap overflow-hidden`}>{line}</span>
