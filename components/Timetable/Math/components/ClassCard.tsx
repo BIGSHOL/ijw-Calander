@@ -127,6 +127,7 @@ interface ClassCardProps {
     pendingMovedStudentIds?: Set<string>;  // 드래그 이동 대기 중인 학생 ID
     pendingMoveSchedules?: Map<string, string | undefined>;  // studentId → scheduledDate
     mergedClasses?: TimetableClass[];  // 합반수업: 같은 슬롯의 모든 수업 목록
+    showMergedLabel?: boolean;  // 반반 레이아웃용 합반 라벨 표시
     isAssistantTeacher?: boolean;  // 부담임 수업 여부 (teacher 뷰에서 slotTeacher로 배정된 경우)
 }
 
@@ -157,6 +158,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
     pendingMovedStudentIds,
     pendingMoveSchedules,
     mergedClasses,
+    showMergedLabel = false,
     cellSizePx = 72,
     isAssistantTeacher = false
 }) => {
@@ -570,7 +572,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     {isAssistantTeacher && (
                         <span className="absolute top-0 left-0 z-10 text-[10px] leading-none bg-gray-800 text-white px-0.5 py-0.5 font-bold whitespace-nowrap animate-pulse">부담임</span>
                     )}
-                    {isMergedClass && (
+                    {(isMergedClass || showMergedLabel) && (
                         <span className={`absolute ${isAssistantTeacher ? 'top-2.5' : 'top-0'} left-0 z-10 text-[10px] leading-none bg-orange-600 text-white px-0.5 py-0.5 font-bold whitespace-nowrap`}>합반</span>
                     )}
                     <div className="relative min-w-0 w-full">
@@ -1046,6 +1048,7 @@ export default React.memo(ClassCard, (prevProps, nextProps) => {
         prevProps.showHoldStudents === nextProps.showHoldStudents &&
         prevProps.showWithdrawnStudents === nextProps.showWithdrawnStudents &&
         prevProps.mergedClasses === nextProps.mergedClasses &&
+        prevProps.showMergedLabel === nextProps.showMergedLabel &&
         prevProps.isAssistantTeacher === nextProps.isAssistantTeacher &&
         prevProps.pendingMoveSchedules === nextProps.pendingMoveSchedules
     );
