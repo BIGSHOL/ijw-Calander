@@ -32,6 +32,11 @@ dist-ssr
 backups/
 *.backup.json
 
+# Next.js (textbook-request-generator)
+.next/
+next-env.d.ts
+tsconfig.tsbuildinfo
+
 # System/Generated
 nul
 nul*
