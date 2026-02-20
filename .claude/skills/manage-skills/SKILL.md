@@ -33,7 +33,7 @@ argument-hint: "[선택사항: 특정 스킬 이름 또는 집중할 영역]"
 | `verify-timetable` | 시간표 도메인(Math/shared) 패턴 검증 (React.memo, stale closure 방지, writeBatch, createPortal) | `components/Timetable/Math/**/*.{ts,tsx}`, `components/Timetable/shared/**/*.tsx`, `tests/**/*{DragDrop,ClassCard,Simulation,ScheduledDate}*` |
 | `verify-lazy-loading` | 탭/모달/서브매니저의 React.lazy + Suspense + ErrorBoundary 패턴 검증 | `components/Layout/TabContent.tsx`, `components/Layout/ModalManager.tsx`, `components/Timetable/TimetableManager.tsx`, 서브매니저 5개 |
 | `verify-test-coverage` | hooks/utils 테스트 파일 존재 검증 (100% 커버리지 유지) | `hooks/**/*.ts`, `utils/**/*.ts`, `tests/hooks/`, `tests/utils/` |
-| `verify-firebase-mutations` | Firebase mutation 훅의 invalidateQueries/에러처리 패턴 검증 | `hooks/use*Mutations.ts`, `hooks/use*.(ts|tsx)` (useMutation 사용 31개 훅) |
+| `verify-firebase-mutations` | Firebase mutation 훅의 invalidateQueries/에러처리 패턴 검증 | `hooks/use*Mutations.ts`, `hooks/use*.(ts|tsx)` (useMutation 사용 32개 훅) |
 | `verify-schedule-tabs` | 일정 그룹(연간일정/간트차트) 탭 기능 검증 | `components/Calendar/**`, `components/Gantt/**`, `hooks/useEventCrud.ts`, `hooks/useGantt*.ts` |
 | `verify-class-tabs` | 수업 그룹(시간표/출석부/출결/수업/강의실/숙제/시험/교재) 탭 기능 검증 | `components/Timetable/**`, `components/Attendance/**`, `components/DailyAttendance/**`, `components/ClassManagement/**`, `components/Classroom*/**`, `components/Homework/**`, `components/Exams/**`, `components/Textbooks/**` |
 | `verify-student-tabs` | 학생 그룹(학생/상담/성적/퇴원/계약/성적표) 탭 기능 검증 | `components/StudentManagement/**`, `components/*Consultation/**`, `components/Grades/**`, `components/WithdrawalManagement/**`, `components/Contracts/**`, `components/Reports/**` |

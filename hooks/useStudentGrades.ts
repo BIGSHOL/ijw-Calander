@@ -81,8 +81,6 @@ export const useAddScore = () => {
         onSuccess: (data) => {
             // 해당 학생의 성적 캐시 무효화
             queryClient.invalidateQueries({ queryKey: ['student_scores', data.studentId] });
-            // 전체 성적 캐시도 무효화
-            queryClient.invalidateQueries({ queryKey: ['all_scores'] });
             // GradesManager와 동기화: 시험별 성적 및 시험 통계 무효화
             queryClient.invalidateQueries({ queryKey: ['exam_scores'] });
             queryClient.invalidateQueries({ queryKey: ['exams'] });
@@ -142,7 +140,6 @@ export const useDeleteScore = () => {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['student_scores'] });
-            queryClient.invalidateQueries({ queryKey: ['all_scores'] });
             // GradesManager와 동기화: 시험별 성적 및 시험 통계 무효화
             queryClient.invalidateQueries({ queryKey: ['exam_scores'] });
             queryClient.invalidateQueries({ queryKey: ['exams'] });

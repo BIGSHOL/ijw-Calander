@@ -1,5 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { collection, getDocs, addDoc, query, orderBy } from 'firebase/firestore';
+import { useQuery } from '@tanstack/react-query';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 
 export interface MarketingLead {
@@ -37,8 +37,6 @@ export interface Promotion {
 }
 
 export function useMarketing() {
-  const queryClient = useQueryClient();
-
   const { data: leads, isLoading: leadsLoading } = useQuery({
     queryKey: ['marketingLeads'],
     queryFn: async () => {

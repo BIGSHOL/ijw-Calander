@@ -139,7 +139,6 @@ export async function migratePhase2_MergeUserData(): Promise<MigrationReport> {
           };
           // undefined 값 제외 (Firestore는 undefined를 허용하지 않음)
           if (user.departmentId) updateData.primaryDepartmentId = user.departmentId;
-          if (user.teacherId) updateData.teacherId = user.teacherId;
 
           await updateDoc(staffRef, updateData);
           report.matched++;
@@ -167,7 +166,6 @@ export async function migratePhase2_MergeUserData(): Promise<MigrationReport> {
           };
           // undefined 값 제외
           if (user.departmentId) newStaff.primaryDepartmentId = user.departmentId;
-          if (user.teacherId) newStaff.teacherId = user.teacherId;
 
           await setDoc(newStaffRef, newStaff);
           report.staffCreated++;

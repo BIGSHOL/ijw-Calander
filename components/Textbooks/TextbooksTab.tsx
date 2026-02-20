@@ -1,9 +1,11 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { UserProfile } from '../../types';
 import { useTextbooks } from '../../hooks/useTextbooks';
 import { useStudents } from '../../hooks/useStudents';
-import { Search, Plus, BookOpen, Package, AlertTriangle, FileSpreadsheet, UserCheck, UserX, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, BookOpen, Package, AlertTriangle, FileSpreadsheet, UserCheck, UserX, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { TextbookImportModal, TextbookImportRow } from './TextbookImportModal';
+
+const TextbookRequestView = lazy(() => import('./TextbookRequestView'));
 
 interface TextbooksTabProps {
   currentUser?: UserProfile | null;
@@ -14,7 +16,7 @@ export default function TextbooksTab({ currentUser }: TextbooksTabProps) {
   const { students } = useStudents();
   const [searchQuery, setSearchQuery] = useState('');
   const [subjectFilter, setSubjectFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'list' | 'distribution' | 'billing'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'distribution' | 'billing' | 'request'>('list');
   const [showImportModal, setShowImportModal] = useState(false);
   const [billingMonthFilter, setBillingMonthFilter] = useState<string>('all');
   const [billingPage, setBillingPage] = useState(1);
@@ -88,6 +90,9 @@ export default function TextbooksTab({ currentUser }: TextbooksTabProps) {
             <button onClick={() => setViewMode('billing')} className={`px-2 py-1 text-xs rounded ${viewMode === 'billing' ? 'bg-white shadow-sm' : ''}`}>
               수납 내역{billings.length > 0 && <span className="ml-1 text-xxs text-gray-400">{billings.length}</span>}
             </button>
+            <button onClick={() => setViewMode('request')} className={`px-2 py-1 text-xs rounded flex items-center gap-1 ${viewMode === 'request' ? 'bg-white shadow-sm' : ''}`}>
+              <FileText size={12} /> 교재 요청
+            </button>
           </div>
           <button onClick={() => setShowImportModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded hover:bg-emerald-700">
             <FileSpreadsheet size={14} /> xlsx 가져오기
@@ -98,7 +103,7 @@ export default function TextbooksTab({ currentUser }: TextbooksTabProps) {
         </div>
       </div>
 
-      <div className="bg-white border-b px-4 py-2 flex items-center gap-3">
+      {viewMode !== 'request' && <div className="bg-white border-b px-4 py-2 flex items-center gap-3">
         <div className="relative flex-1 max-w-xs">
           <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input type="text" placeholder={viewMode === 'billing' ? '학생명, 교재명 검색...' : '교재명, 출판사 검색...'} value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
@@ -127,10 +132,14 @@ export default function TextbooksTab({ currentUser }: TextbooksTabProps) {
             ))}
           </div>
         )}
-      </div>
+      </div>}
 
-      <div className="flex-1 overflow-auto p-4">
-        {isLoading ? (
+      <div className={`flex-1 overflow-auto ${viewMode === 'request' ? '' : 'p-4'}`}>
+        {viewMode === 'request' ? (
+          <Suspense fallback={<div className="text-center text-gray-400 text-sm py-8">로딩 중...</div>}>
+            <TextbookRequestView isAdmin={currentUser?.role === 'admin'} />
+          </Suspense>
+        ) : isLoading ? (
           <div className="text-center text-gray-400 text-sm py-8">로딩 중...</div>
         ) : viewMode === 'list' ? (
           filteredTextbooks.length === 0 ? (

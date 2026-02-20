@@ -209,9 +209,7 @@ export function useStaff() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff'] });
-      queryClient.invalidateQueries({ queryKey: ['unifiedClasses'] });
       queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
-      queryClient.invalidateQueries({ queryKey: ['currentUserProfile'] });
     },
   });
 

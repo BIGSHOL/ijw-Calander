@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Search, Filter, RefreshCw, Calendar, Briefcase, AlertCircle, Database } from 'lucide-react';
+import { Plus, Search, Filter, RefreshCw, Calendar, Briefcase, AlertCircle } from 'lucide-react';
 import { useStaff } from '../../hooks/useStaff';
 import { useStaffLeaves } from '../../hooks/useStaffLeaves';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -9,7 +9,6 @@ import StaffForm from './StaffForm';
 import StaffViewModal from './StaffViewModal';
 import StaffSchedule from './StaffSchedule';
 import LeaveManagement from './LeaveManagement';
-import TeacherIdMigrationModal from '../Settings/TeacherIdMigrationModal';
 
 type ViewMode = 'list' | 'schedule' | 'leave';
 
@@ -33,7 +32,6 @@ const StaffManager: React.FC<StaffManagerProps> = ({
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
   const [viewingStaff, setViewingStaff] = useState<StaffMember | null>(null); // 조회 모달용
-  const [showMigrationModal, setShowMigrationModal] = useState(false); // 마이그레이션 모달
 
   // Hooks
   const { staff, loading, error, refreshStaff, addStaff, updateStaff, deleteStaff } = useStaff();
@@ -236,16 +234,6 @@ const StaffManager: React.FC<StaffManagerProps> = ({
                 <RefreshCw className="w-4 h-4" />
               </button>
             )}
-            {isMaster && (
-              <button
-                onClick={() => setShowMigrationModal(true)}
-                className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white rounded text-xs font-bold hover:bg-purple-700 transition-colors"
-                title="Enrollment 데이터 마이그레이션 (완료됨)"
-              >
-                <Database className="w-3 h-3" />
-                <span>DB 마이그레이션</span>
-              </button>
-            )}
             <button
               onClick={handleAddNew}
               className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded text-xs font-bold hover:bg-primary-800 transition-colors"
@@ -401,10 +389,6 @@ const StaffManager: React.FC<StaffManagerProps> = ({
         />
       )}
 
-      {/* TeacherId Migration Modal */}
-      {showMigrationModal && (
-        <TeacherIdMigrationModal onClose={() => setShowMigrationModal(false)} />
-      )}
 
     </div>
   );

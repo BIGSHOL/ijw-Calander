@@ -376,6 +376,4 @@ export interface UserProfile {
 
   // Attendance: Link to Staff Profile (for view_own filtering)
   staffId?: string; // ID from staff collection (allows any role to be linked to a staff member)
-  /** @deprecated Use staffId instead */
-  teacherId?: string; // Legacy field, use staffId
 }

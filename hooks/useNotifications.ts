@@ -60,6 +60,7 @@ export function useNotifications() {
       await addDoc(collection(db, 'notification_templates'), { ...data, createdAt: now, updatedAt: now });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notificationTemplates'] }),
+    onError: (error: Error) => { console.error('createTemplate failed:', error); },
   });
 
   const sendNotification = useMutation({
@@ -67,6 +68,7 @@ export function useNotifications() {
       await addDoc(collection(db, 'notification_logs'), data);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notificationLogs'] }),
+    onError: (error: Error) => { console.error('sendNotification failed:', error); },
   });
 
   return {

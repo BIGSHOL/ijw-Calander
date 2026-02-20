@@ -42,7 +42,6 @@ export interface StaffMember {
   favoriteDepartments?: string[];  // 즐겨찾기 부서
   primaryDepartmentId?: string;    // 주 소속 부서
   jobTitle?: string;               // 호칭
-  teacherId?: string;              // 강사 프로필 연동 ID
 
   // === 선생님 전용 필드 (role === 'teacher'일 때만 사용) ===
   // 시간표 표시 설정

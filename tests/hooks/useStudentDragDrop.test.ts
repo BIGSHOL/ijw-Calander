@@ -21,7 +21,6 @@ vi.mock('firebase/firestore', () => ({
   writeBatch: (...args: any[]) => mockWriteBatch(...args),
 }));
 
-vi.mock('../../../../firebaseConfig', () => ({ db: {} }));
 vi.mock('../../firebaseConfig', () => ({ db: {} }));
 
 // Helper: 테스트용 클래스 생성
