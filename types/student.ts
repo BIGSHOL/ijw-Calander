@@ -6,9 +6,8 @@ export interface Enrollment {
   classId: string;    // Document ID of the class
   className: string;  // Name of the class
 
-  // Teacher identification (migration complete)
+  // Teacher identification
   staffId?: string;   // Staff document ID (references staff collection)
-  teacherId_deprecated?: string; // Backup of original teacherId after migration (for rollback only)
   teacher?: string;   // 강사명 (레거시 호환)
 
   days: string[];     // Class schedule days (e.g., ['월', '수'])

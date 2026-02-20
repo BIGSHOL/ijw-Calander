@@ -57,6 +57,7 @@ export function usePayroll(month: string) {
       await addDoc(collection(db, 'payroll'), { ...data, createdAt: now, updatedAt: now });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['payroll', month] }),
+    onError: (error: Error) => { console.error('createRecord failed:', error); },
   });
 
   const updateRecord = useMutation({
@@ -64,6 +65,7 @@ export function usePayroll(month: string) {
       await updateDoc(doc(db, 'payroll', id), { ...data, updatedAt: new Date().toISOString() });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['payroll', month] }),
+    onError: (error: Error) => { console.error('updateRecord failed:', error); },
   });
 
   return { records: records ?? [], isLoading, error, createRecord, updateRecord };

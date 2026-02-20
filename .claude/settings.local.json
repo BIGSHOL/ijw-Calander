@@ -60,7 +60,10 @@
       "Bash(npm run test:coverage:*)",
       "WebSearch",
       "Bash(claude:*)",
-      "Bash(npm view:*)"
+      "Bash(npm view:*)",
+      "Bash(pip install:*)",
+      "Bash(npx cross-env:*)",
+      "Bash(npx next build:*)"
     ],
     "additionalDirectories": [
       "d:\\ijw-calander\\components\\Timetable\\English",

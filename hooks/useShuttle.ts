@@ -56,6 +56,7 @@ export function useShuttle() {
       await addDoc(collection(db, 'shuttle_routes'), { ...data, createdAt: now, updatedAt: now });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['shuttleRoutes'] }),
+    onError: (error: Error) => { console.error('createRoute failed:', error); },
   });
 
   return { routes: routes ?? [], assignments: assignments ?? [], isLoading: routesLoading, createRoute };

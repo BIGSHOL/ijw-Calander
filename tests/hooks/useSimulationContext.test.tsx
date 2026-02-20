@@ -30,8 +30,6 @@ vi.mock('firebase/firestore', () => ({
   })),
 }));
 
-vi.mock('../../../../firebaseConfig', () => ({ db: {} }));
-// Also mock the relative path used by SimulationContext
 vi.mock('../../firebaseConfig', () => ({ db: {} }));
 
 import {

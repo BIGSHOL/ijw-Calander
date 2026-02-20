@@ -45,6 +45,7 @@ export function useContracts() {
       await addDoc(collection(db, 'contracts'), { ...data, createdAt: now, updatedAt: now });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contracts'] }),
+    onError: (error: Error) => { console.error('createContract failed:', error); },
   });
 
   const updateContract = useMutation({
@@ -52,6 +53,7 @@ export function useContracts() {
       await updateDoc(doc(db, 'contracts', id), { ...data, updatedAt: new Date().toISOString() });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['contracts'] }),
+    onError: (error: Error) => { console.error('updateContract failed:', error); },
   });
 
   return { contracts: contracts ?? [], isLoading, error, createContract, updateContract };

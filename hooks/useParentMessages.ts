@@ -36,6 +36,7 @@ export function useParentMessages() {
       await addDoc(collection(db, 'parent_messages'), { ...data, createdAt: now, sentAt: now });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['parentMessages'] }),
+    onError: (error: Error) => { console.error('sendMessage failed:', error); },
   });
 
   return { messages: messages ?? [], isLoading, error, sendMessage };

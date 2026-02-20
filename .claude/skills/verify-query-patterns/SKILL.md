@@ -31,6 +31,7 @@ description: React Query 캐시키/enabled/staleTime 일관성과 쿼리 패턴�
 | `hooks/useFirebaseQueries.ts` | Firebase 공통 쿼리 |
 | `hooks/useEnrollments.ts` | 수강 등록 쿼리 |
 | `hooks/useGradeProfile.ts` | 성적 프로필 쿼리 |
+| `hooks/useTextbookRequests.ts` | 교재 요청서 쿼리 (textbookRequests, textbookAccountSettings, textbookCatalog) |
 
 ## Workflow
 

@@ -39,6 +39,7 @@ export function useHomework() {
       await addDoc(collection(db, 'homework'), { ...data, createdAt: now, updatedAt: now });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['homework'] }),
+    onError: (error: Error) => { console.error('createHomework failed:', error); },
   });
 
   const updateHomework = useMutation({
@@ -46,6 +47,7 @@ export function useHomework() {
       await updateDoc(doc(db, 'homework', id), { ...data, updatedAt: new Date().toISOString() });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['homework'] }),
+    onError: (error: Error) => { console.error('updateHomework failed:', error); },
   });
 
   const deleteHomework = useMutation({
@@ -53,6 +55,7 @@ export function useHomework() {
       await deleteDoc(doc(db, 'homework', id));
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['homework'] }),
+    onError: (error: Error) => { console.error('deleteHomework failed:', error); },
   });
 
   return { homeworkList: homeworkList ?? [], isLoading, error, createHomework, updateHomework, deleteHomework };

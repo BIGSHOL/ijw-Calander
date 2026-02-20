@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import { useTextbookRequests, TextbookRequest } from '../../hooks/useTextbookRequests';
 import { TextbookCatalogItem } from '../../data/textbookCatalog';
 import { TextbookPreviewCard, TextbookRequestData } from './TextbookPreviewCard';
-import { TextbookBookSelector } from './TextbookBookSelector';
+import TextbookBookSelector from './TextbookBookSelector';
 import { toPng } from 'html-to-image';
 import Search from 'lucide-react/dist/esm/icons/search';
 import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
@@ -243,7 +243,7 @@ interface TextbookRequestViewProps {
 }
 
 export default function TextbookRequestView({ isAdmin = false }: TextbookRequestViewProps) {
-  const { requests, requestsLoading, accountSettings, createRequest, updateRequest, deleteRequest } =
+  const { requests, requestsLoading, accountSettings, catalog, createRequest, updateRequest, deleteRequest } =
     useTextbookRequests();
 
   // Sub-tab
@@ -866,6 +866,7 @@ export default function TextbookRequestView({ isAdmin = false }: TextbookRequest
         isOpen={isBookSelectorOpen}
         onClose={() => setIsBookSelectorOpen(false)}
         onSelect={handleBookSelect}
+        books={catalog}
       />
     </div>
   );

@@ -88,7 +88,6 @@ export const useCreateClass = () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['students', true] });  // 시간표 studentMap 갱신
       queryClient.invalidateQueries({ queryKey: ['classDetail'] });
-      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 영어 시간표 실시간 반영
       queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });  // 수학 시간표 실시간 반영
       // mathClassStudents는 students 쿼리 무효화로 자동 갱신됨 (useMemo 의존성)
     },
@@ -216,7 +215,6 @@ export const useUpdateClass = () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['students', true] });  // 시간표 studentMap 갱신
       queryClient.invalidateQueries({ queryKey: ['classDetail'] });
-      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 영어 시간표 실시간 반영
       queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });  // 수학 시간표 실시간 반영
       // mathClassStudents는 students 쿼리 무효화로 자동 갱신됨 (useMemo 의존성)
     },
@@ -284,7 +282,6 @@ export const useDeleteClass = () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['students', true] });  // 시간표 studentMap 갱신
       queryClient.invalidateQueries({ queryKey: ['classDetail'] });
-      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 영어 시간표 실시간 반영
       queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });  // 수학 시간표 실시간 반영
       // mathClassStudents는 students 쿼리 무효화로 자동 갱신됨 (useMemo 의존성)
     },
@@ -547,7 +544,6 @@ export const useManageClassStudents = () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['students', true] });  // 시간표 studentMap 갱신
       queryClient.invalidateQueries({ queryKey: ['classDetail'] });
-      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });  // 영어 시간표 실시간 반영
       queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });  // 수학 시간표 실시간 반영
       // mathClassStudents는 students 쿼리 무효화로 자동 갱신됨 (useMemo 의존성)
     },

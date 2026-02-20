@@ -33,6 +33,7 @@ export function useParentLinks() {
       await addDoc(collection(db, 'parent_links'), { ...data, createdAt: now, updatedAt: now });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['parentLinks'] }),
+    onError: (error: Error) => { console.error('createLink failed:', error); },
   });
 
   const updateLink = useMutation({
@@ -40,6 +41,7 @@ export function useParentLinks() {
       await updateDoc(doc(db, 'parent_links', id), { ...data, updatedAt: new Date().toISOString() });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['parentLinks'] }),
+    onError: (error: Error) => { console.error('updateLink failed:', error); },
   });
 
   return { parentLinks: parentLinks ?? [], isLoading, error, createLink, updateLink };

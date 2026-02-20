@@ -456,9 +456,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
         const commonHold = allStudents
             .filter(s => s.onHold && !s.withdrawalDate && isStudentAttendingAllMergedDays(s))
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
-        // 퇴원 학생: 과거/오늘 날짜만 (퇴원 이력 추적)
+        // 퇴원 학생: 과거/오늘 날짜 + 반이동이 아닌 실제 퇴원만
         const commonWithdrawn = allStudents
-            .filter(s => s.withdrawalDate && s.withdrawalDate <= today)
+            .filter(s => s.withdrawalDate && s.withdrawalDate <= today && !s.isTransferred)
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
         // 퇴원예정: 미래 withdrawalDate + 다른 반에 활성 등록 없음 (실제 퇴원)
         const commonWithdrawnFuture = allStudents
@@ -524,9 +524,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
             .filter(s => s.onHold && !s.withdrawalDate && (filterDay ? isStudentAttendingDay(s, filterDay) : true))
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
-        // 퇴원 학생: 과거/오늘 날짜만 (퇴원 이력 추적)
+        // 퇴원 학생: 과거/오늘 날짜 + 반이동이 아닌 실제 퇴원만
         const withdrawn = allStudents
-            .filter(s => s.withdrawalDate && s.withdrawalDate <= today)
+            .filter(s => s.withdrawalDate && s.withdrawalDate <= today && !s.isTransferred)
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
         // 퇴원예정: 미래 withdrawalDate + 다른 반에 활성 등록 없음 (실제 퇴원)

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy, writeBatch, where } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 
 export interface Textbook {
@@ -130,9 +130,54 @@ export function useTextbooks() {
         await batch.commit();
       }
 
-      return { added, skipped };
+      // 수납 자동 매칭: 새로 추가된 billing의 학생명+교재명으로 미납 요청서 자동 업데이트
+      let matched = 0;
+      if (added > 0) {
+        try {
+          const normalize = (s: string) => s.replace(/\s+/g, '').toLowerCase();
+          const requestsSnap = await getDocs(
+            query(collection(db, 'textbook_requests'), where('isPaid', '==', false))
+          );
+          const unpaidRequests = requestsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          const matchedIds = new Set<string>();
+          const matchBatch = writeBatch(db);
+
+          for (const row of toAdd) {
+            const normalizedStudent = normalize(row.studentName);
+            const normalizedBook = normalize(row.textbookName);
+
+            const match = unpaidRequests.find(r => {
+              if (matchedIds.has(r.id)) return false;
+              const nameMatch = normalize((r as Record<string, string>).studentName) === normalizedStudent;
+              if (!nameMatch) return false;
+              const reqBook = normalize((r as Record<string, string>).bookName);
+              return reqBook.includes(normalizedBook) || normalizedBook.includes(reqBook);
+            });
+
+            if (match) {
+              matchedIds.add(match.id);
+              matchBatch.update(doc(db, 'textbook_requests', match.id), {
+                isPaid: true,
+                paidAt: new Date().toISOString(),
+              });
+              matched++;
+            }
+          }
+
+          if (matched > 0) {
+            await matchBatch.commit();
+          }
+        } catch {
+          // 매칭 실패 시 billing import 자체는 성공으로 유지
+        }
+      }
+
+      return { added, skipped, matched };
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['textbookBillings'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['textbookBillings'] });
+      queryClient.invalidateQueries({ queryKey: ['textbookRequests'] });
+    },
   });
 
   return {

@@ -94,6 +94,7 @@ export function useTextbookRequests() {
       return request;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['textbookRequests'] }),
+    onError: (error: Error) => { console.error('createRequest failed:', error); },
   });
 
   // 요청서 업데이트
@@ -114,6 +115,7 @@ export function useTextbookRequests() {
       await updateDoc(doc(db, 'textbook_requests', id), updatesWithTimestamps);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['textbookRequests'] }),
+    onError: (error: Error) => { console.error('updateRequest failed:', error); },
   });
 
   // 요청서 삭제
@@ -122,6 +124,7 @@ export function useTextbookRequests() {
       await deleteDoc(doc(db, 'textbook_requests', id));
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['textbookRequests'] }),
+    onError: (error: Error) => { console.error('deleteRequest failed:', error); },
   });
 
   // 계좌 설정 저장
@@ -130,6 +133,7 @@ export function useTextbookRequests() {
       await setDoc(doc(db, 'settings', 'textbook-account'), settings);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['textbookAccountSettings'] }),
+    onError: (error: Error) => { console.error('saveAccountSettings failed:', error); },
   });
 
   // 카탈로그 저장
@@ -141,6 +145,7 @@ export function useTextbookRequests() {
       });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['textbookCatalog'] }),
+    onError: (error: Error) => { console.error('saveCatalog failed:', error); },
   });
 
   // 수납 자동 매칭: billing 데이터로 미납 요청 자동 업데이트

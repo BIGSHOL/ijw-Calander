@@ -286,8 +286,8 @@ const filterBySubjects = (students: UnifiedStudent[], subjects: string[], mode: 
  * Filter students by teacher
  * CoursesTab과 동일한 로직: 현재 수강 중인 수업만 (배정 예정 제외)
  */
-const filterByTeacher = (students: UnifiedStudent[], teacherId: string): UnifiedStudent[] => {
-    if (teacherId === 'all') return students;
+const filterByTeacher = (students: UnifiedStudent[], staffId: string): UnifiedStudent[] => {
+    if (staffId === 'all') return students;
 
     const today = new Date().toISOString().split('T')[0];
 
@@ -303,7 +303,7 @@ const filterByTeacher = (students: UnifiedStudent[], teacherId: string): Unified
                 // 종료되지 않았고, 미래가 아닌 수업만 (현재 수강 중)
                 return !hasEnded && !isFuture;
             })
-            .some((e) => e.staffId === teacherId);
+            .some((e) => e.staffId === staffId);
     });
 };
 

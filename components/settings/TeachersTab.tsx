@@ -4,9 +4,8 @@ import { db } from '../../firebaseConfig';
 import { setDoc, doc, deleteDoc, writeBatch, getDocs, collection, query, where } from 'firebase/firestore';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-    Search, Plus, Check, X, Eye, EyeOff, Edit, Trash2, Database
+    Search, Plus, Check, X, Eye, EyeOff, Edit, Trash2
 } from 'lucide-react';
-import TeacherIdMigrationModal from './TeacherIdMigrationModal';
 import { SUBJECT_COLORS } from '../../utils/styleUtils';
 
 interface TeachersTabProps {
@@ -41,8 +40,6 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
     // Drag and Drop
     const [draggedTeacherId, setDraggedTeacherId] = useState<string | null>(null);
 
-    // Migration Modal
-    const [showMigrationModal, setShowMigrationModal] = useState(false);
 
     // --- Handlers ---
     // NOTE: staff 컬렉션 사용 (강사목록 → staff 마이그레이션 완료)
@@ -269,15 +266,6 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                             >
                                 <Plus size={16} /> 추가
                             </button>
-                            {isMaster && (
-                                <button
-                                    onClick={() => setShowMigrationModal(true)}
-                                    className="bg-purple-600 text-white px-4 py-2 rounded-sm text-sm font-bold hover:bg-purple-700 flex items-center gap-1"
-                                    title="Enrollment 데이터 마이그레이션 (완료됨)"
-                                >
-                                    <Database size={16} /> DB 마이그레이션
-                                </button>
-                            )}
                         </div>
                     </div>
                 )}
@@ -507,10 +495,6 @@ const TeachersTab: React.FC<TeachersTabProps> = ({ teachers, isMaster, canEdit =
                 </div>
             </div>
 
-            {/* Migration Modal */}
-            {showMigrationModal && (
-                <TeacherIdMigrationModal onClose={() => setShowMigrationModal(false)} />
-            )}
         </div>
     );
 };

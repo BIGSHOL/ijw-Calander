@@ -279,14 +279,16 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                             });
                         }
 
-                        // 새 enrollment 생성 (attendanceDays 포함)
+                        // 새 enrollment 생성 (attendanceDays 포함, isTransferred는 제거 - 실시간 계산으로 판단)
                         if (existingData) {
-                            const { endDate, withdrawalDate, ...preservedData } = existingData;
+                            const { endDate, withdrawalDate, isTransferred, ...preservedData } = existingData;
                             batch.set(newEnrollmentRef, {
                                 ...preservedData,
                                 className: toClass.className,
                                 attendanceDays: newAttendanceDays,
-                                enrollmentDate: preservedData.enrollmentDate || effectiveDate,
+                                // 예정이동: 이동일을 시작일로 설정 → 대기섹션 배치, 이동일 도래 시 초록배경으로 활성화
+                                // 즉시이동: 원래 입학일 보존
+                                enrollmentDate: move.scheduledDate ? effectiveDate : (preservedData.enrollmentDate || effectiveDate),
                                 createdAt: new Date().toISOString(),
                                 updatedAt: new Date().toISOString()
                             });
