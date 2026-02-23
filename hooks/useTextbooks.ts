@@ -102,13 +102,18 @@ export function useTextbooks() {
   const importBillings = useMutation({
     mutationFn: async (rows: Omit<TextbookBilling, 'id' | 'importedAt'>[]) => {
       const now = new Date().toISOString();
-      const existing = billings ?? [];
       let added = 0;
       let skipped = 0;
 
-      // 중복 체크 키: studentId + textbookName + month
+      // Firestore에서 직접 조회하여 중복 체크 (캐시 의존 제거)
+      const existingSnap = await getDocs(
+        query(collection(db, 'textbook_billings'))
+      );
       const existingKeys = new Set(
-        existing.map(b => `${b.studentId}_${b.textbookName}_${b.month}`)
+        existingSnap.docs.map(d => {
+          const data = d.data();
+          return `${data.studentId}_${data.textbookName}_${data.month}`;
+        })
       );
 
       const toAdd = rows.filter(r => {
