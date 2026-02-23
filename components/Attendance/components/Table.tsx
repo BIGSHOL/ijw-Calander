@@ -34,6 +34,8 @@ interface Props {
   selectedSession?: SessionPeriod | null;
   // 주말 회색 처리 옵션
   highlightWeekends?: boolean;
+  // 발행예정금액 표시 옵션
+  showExpectedBilling?: boolean;
   // 공휴일 데이터
   holidays?: Holiday[];
   // 정렬 모드: 수업별 그룹 | 이름순 flat
@@ -80,6 +82,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
   viewMode = 'monthly',
   selectedSession,
   highlightWeekends = false,
+  showExpectedBilling = false,
   holidays = [],
   sortMode = 'class',
   hiddenDates = new Set<string>(),
@@ -205,18 +208,21 @@ const Table = forwardRef<HTMLTableElement, Props>(({
 
   return (
     <>
-      <table ref={ref} className="border-separate border-spacing-0 w-full min-w-full text-sm text-left bg-white border border-gray-200 rounded-sm shadow-sm table-fixed">
+      <table ref={ref} className="border-separate border-spacing-0 text-sm text-left bg-white border border-gray-200 rounded-sm shadow-sm table-fixed">
         <thead className="bg-primary text-white font-medium sticky top-0 z-[100] shadow-md">
           <tr>
             {/* Sticky Left Columns - Compact width */}
             <th className="p-2 sticky left-0 top-0 z-[110] bg-primary border-r border-b border-[#ffffff]/10 w-8 text-center text-gray-400 align-middle text-xs">#</th>
-            <th className="p-2 sticky left-8 top-0 z-[110] bg-primary border-r border-b border-[#ffffff]/10 w-[70px] align-middle text-xs">이름</th>
-            <th className="p-2 sticky left-[102px] top-0 z-[110] bg-primary border-r border-b border-[#ffffff]/10 w-[80px] align-middle text-xs">학교</th>
+            <th className="p-2 sticky left-8 top-0 z-[110] bg-primary border-r border-b border-[#ffffff]/10 w-[90px] align-middle text-xs">이름</th>
+            <th className="p-2 sticky left-[122px] top-0 z-[110] bg-primary border-r border-b border-[#ffffff]/10 w-[80px] align-middle text-xs">학교</th>
 
             {/* Stat Columns - Compact */}
-            <th className="p-2 sticky left-[182px] top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[70px] text-center bg-primary align-middle text-xs">요일</th>
-            <th className="p-2 sticky left-[252px] top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[36px] text-center bg-primary align-middle text-xs">출석</th>
-            <th className="p-2 sticky left-[288px] top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[36px] text-center bg-primary align-middle text-xs">등록</th>
+            <th className="p-2 sticky left-[202px] top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[70px] text-center bg-primary align-middle text-xs">요일</th>
+            {showExpectedBilling && (
+              <th className="p-1 sticky left-[272px] top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[60px] text-center bg-primary align-middle text-xxs whitespace-nowrap" title="발행예정금액 (이달 등원일 × 수업 단가)">예정액</th>
+            )}
+            <th className="p-1 sticky top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[36px] text-center bg-primary align-middle text-xs whitespace-nowrap" style={{ left: showExpectedBilling ? 332 : 272 }}>출석</th>
+            <th className="p-1 sticky top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[36px] text-center bg-primary align-middle text-xs whitespace-nowrap" style={{ left: showExpectedBilling ? 368 : 308 }}>등록</th>
 
             {/* 숨긴 열 표시 바 */}
             {hiddenDates.size > 0 && onHiddenDatesChange && (
@@ -257,7 +263,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
               return (
                 <th
                   key={day.toISOString()}
-                  className={`p-1 sticky top-0 border-r border-b border-[#ffffff]/10 text-center align-middle min-w-[40px] bg-primary ${headerColorClass} cursor-context-menu`}
+                  className={`p-1 sticky top-0 border-r border-b border-[#ffffff]/10 text-center align-middle w-[32px] bg-primary ${headerColorClass} cursor-context-menu`}
                   title={holidayName || '우클릭으로 열 숨기기'}
                   onContextMenu={(e) => {
                     e.preventDefault();
@@ -295,6 +301,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
               collapsedGroups={collapsedGroups}
               onCollapsedGroupsChange={onCollapsedGroupsChange}
               highlightWeekends={highlightWeekends}
+              showExpectedBilling={showExpectedBilling}
               holidayDateSet={holidayDateSet}
               holidayNameMap={holidayNameMap}
               sortMode={sortMode}
@@ -304,7 +311,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
             />
           ) : (
             <tr>
-              <td colSpan={days.length + 6 + (hasHiddenDates ? 1 : 0)} className="p-12 text-center text-gray-400">
+              <td colSpan={days.length + 6 + (hasHiddenDates ? 1 : 0) + (showExpectedBilling ? 1 : 0)} className="p-12 text-center text-gray-400">
                 등록된 학생이 없습니다. 상단의 '학생 추가' 버튼을 눌러 시작하세요.
               </td>
             </tr>

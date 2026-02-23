@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { Users, UserMinus, UserPlus, Settings, Calendar, Image, CalendarOff, RefreshCw, LayoutList, SortAsc } from 'lucide-react';
+import { Users, UserMinus, UserPlus, Settings, Calendar, Image, CalendarOff, LayoutList, SortAsc, Receipt } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import { VideoLoading } from '../Common/VideoLoading';
 import { Student, SalaryConfig, SalarySettingItem, MonthlySettlement, AttendanceSubject, AttendanceViewMode, SessionPeriod } from './types';
@@ -329,6 +329,9 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const [highlightWeekends, setHighlightWeekends] = useState<boolean>(() => {
     return storage.getJSON<boolean>(STORAGE_KEYS.ATTENDANCE_HIGHLIGHT_WEEKENDS, false);
   });
+  const [showExpectedBilling, setShowExpectedBilling] = useState<boolean>(() => {
+    return storage.getJSON<boolean>(STORAGE_KEYS.ATTENDANCE_SHOW_EXPECTED_BILLING, false);
+  });
 
   // 주말 회색 처리 토글
   const handleToggleHighlightWeekends = useCallback(() => {
@@ -336,6 +339,12 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     setHighlightWeekends(newValue);
     storage.setJSON(STORAGE_KEYS.ATTENDANCE_HIGHLIGHT_WEEKENDS, newValue);
   }, [highlightWeekends]);
+
+  const handleToggleExpectedBilling = useCallback(() => {
+    const newValue = !showExpectedBilling;
+    setShowExpectedBilling(newValue);
+    storage.setJSON(STORAGE_KEYS.ATTENDANCE_SHOW_EXPECTED_BILLING, newValue);
+  }, [showExpectedBilling]);
 
 
 
@@ -461,7 +470,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     const yearMonth = dateKey.substring(0, 7);
 
     // 2. 출석부(attendance_records)에 저장 (className 복합키로 저장)
-    updateAttendanceMutation.mutate({ studentId, className, yearMonth, dateKey, value }, {
+    const student = allStudents.find(s => s.id === studentId);
+    updateAttendanceMutation.mutate({ studentId, className, yearMonth, dateKey, value, staffId: filterStaffId, studentName: student?.name }, {
       onSuccess: () => {
         // 3. 출결 관리(daily_attendance)에도 동기화
         syncToDailyAttendance(studentId, dateKey, value);
@@ -658,7 +668,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           </div>
           <div>
             <p className="text-xxs text-gray-600 font-medium">신입생 유입</p>
-            <p className="text-sm font-bold text-accent">+{stats.newStudentsCount}명</p>
+            <p className="text-sm font-bold text-accent">+{stats.newStudentsCount}명 <span className="text-xxs font-medium text-yellow-600/70">({stats.newStudentRate}%)</span></p>
           </div>
         </div>
 
@@ -671,7 +681,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           </div>
           <div>
             <p className="text-xxs text-gray-600 font-medium">지난달 퇴원</p>
-            <p className="text-sm font-bold text-red-500">-{stats.droppedStudentsCount}명</p>
+            <p className="text-sm font-bold text-red-500">-{stats.droppedStudentsCount}명 <span className="text-xxs font-medium text-red-400/70">({stats.droppedStudentRate}%)</span></p>
           </div>
         </div>
 
@@ -683,6 +693,23 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             </p>
           </div>
         </div>
+
+        {/* 발행예정금액 토글 */}
+        <label
+          className="bg-white px-3 py-1.5 rounded-sm border border-gray-200 shadow-sm flex items-center gap-2 cursor-pointer hover:border-gray-300 transition-colors flex-shrink-0"
+          title="발행예정금액 열 표시 (이달 등원일 × 수업 단가)"
+        >
+          <input
+            type="checkbox"
+            checked={showExpectedBilling}
+            onChange={handleToggleExpectedBilling}
+            className="w-4 h-4 text-gray-600 rounded border-gray-300 focus:ring-gray-500 cursor-pointer"
+          />
+          <div className="flex items-center gap-1">
+            <Receipt size={14} className="text-gray-400" />
+            <span className="text-xs font-medium text-gray-600">예정액</span>
+          </div>
+        </label>
 
         {/* 주말 회색 처리 체크박스 */}
         <label
@@ -726,23 +753,6 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             이름
           </button>
         </div>
-
-        {/* 새로고침 버튼 */}
-        <button
-          onClick={() => {
-            refetch();
-          }}
-          disabled={isLoadingStudents}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm font-bold text-xs transition-colors shadow-sm flex-shrink-0 ${
-            isLoadingStudents
-              ? 'bg-gray-400 text-white cursor-wait'
-              : 'bg-blue-600 text-white hover:bg-blue-700'
-          }`}
-          title="학생 목록 새로고침"
-        >
-          <RefreshCw size={14} className={isLoadingStudents ? 'animate-spin' : ''} />
-          {isLoadingStudents ? '불러오는 중...' : '새로고침'}
-        </button>
 
         {/* Settings Buttons - same row */}
         <div className="flex-1"></div>
@@ -819,6 +829,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             viewMode={viewMode}
             selectedSession={selectedSession}
             highlightWeekends={highlightWeekends}
+            showExpectedBilling={showExpectedBilling}
             holidays={holidays}
             sortMode={sortMode}
             hiddenDates={hiddenDates}
@@ -888,6 +899,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         onClose={() => setSettingsModalOpen(false)}
         teachers={teachers}
         canEdit={canManageSessions}
+        initialStaffId={filterStaffId}
       />
 
       {/* 세션 설정 모달 - 관리자 전용 */}

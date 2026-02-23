@@ -8,6 +8,7 @@ interface AttendanceSettingsModalProps {
   onClose: () => void;
   teachers?: Teacher[];
   canEdit?: boolean;  // 권한 체크: false이면 읽기 전용
+  initialStaffId?: string;  // 현재 선택된 선생님 ID (자동 선택용)
 }
 
 const AttendanceSettingsModal: React.FC<AttendanceSettingsModalProps> = ({
@@ -15,6 +16,7 @@ const AttendanceSettingsModal: React.FC<AttendanceSettingsModalProps> = ({
   onClose,
   teachers = [],
   canEdit = true,
+  initialStaffId,
 }) => {
   if (!isOpen) return null;
 
@@ -43,7 +45,7 @@ const AttendanceSettingsModal: React.FC<AttendanceSettingsModalProps> = ({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-3">
-          <SalarySettingsTab teachers={teachers} canEdit={canEdit} />
+          <SalarySettingsTab teachers={teachers} canEdit={canEdit} initialStaffId={initialStaffId} />
         </div>
       </div>
     </div>
