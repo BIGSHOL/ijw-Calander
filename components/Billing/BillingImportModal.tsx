@@ -3,6 +3,7 @@ import { X, Upload, FileSpreadsheet, Loader2, AlertCircle, Check, RotateCcw, Eye
 import { read, utils } from 'xlsx';
 import { BillingRecord } from '../../types';
 import { normalizeMonth } from '../../hooks/useBilling';
+import { useTextbooks } from '../../hooks/useTextbooks';
 
 interface BillingImportModalProps {
   isOpen: boolean;
@@ -59,7 +60,7 @@ function parsePaidDate(raw: string | number): string {
 /**
  * 앱스크립트 정리 로직 반영: 교재 행 제거 + 동일 학생 병합 + 이름 정렬
  */
-function cleanupParsedRows(rows: ParsedRow[]): { cleaned: ParsedRow[]; textbookRemoved: number; mergedCount: number } {
+function cleanupParsedRows(rows: ParsedRow[]): { cleaned: ParsedRow[]; textbookRows: ParsedRow[]; mergedCount: number } {
   // 1) 교재 행 제거 (수납명 또는 구분에 "교재" 포함)
   const textbookRows = rows.filter(r =>
     r.billingName.includes('교재') || r.category === '교재'
@@ -109,7 +110,7 @@ function cleanupParsedRows(rows: ParsedRow[]): { cleaned: ParsedRow[]; textbookR
   const cleaned = Array.from(studentMap.values())
     .sort((a, b) => a.studentName.localeCompare(b.studentName, 'ko'));
 
-  return { cleaned, textbookRemoved: textbookRows.length, mergedCount };
+  return { cleaned, textbookRows, mergedCount };
 }
 
 export const BillingImportModal: React.FC<BillingImportModalProps> = ({
@@ -120,11 +121,13 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [parsedData, setParsedData] = useState<ParsedRow[]>([]);
+  const [textbookData, setTextbookData] = useState<ParsedRow[]>([]); // 교재 행 별도 저장
   const [rawCount, setRawCount] = useState(0); // 원본 행 수
   const [cleanupInfo, setCleanupInfo] = useState<{ textbookRemoved: number; mergedCount: number } | null>(null);
   const [fileName, setFileName] = useState('');
   const [isImporting, setIsImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ success: boolean; added: number; skipped: number } | null>(null);
+  const [importResult, setImportResult] = useState<{ success: boolean; added: number; skipped: number; textbookAdded?: number } | null>(null);
+  const { importBillings: importTextbookBillings } = useTextbooks();
 
   const detectedMonth = parsedData.length > 0 ? parsedData[0].month : '';
 
@@ -169,9 +172,10 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
 
     // 앱스크립트 정리 로직 적용: 교재 제거 + 병합 + 정렬
     setRawCount(parsed.length);
-    const { cleaned, textbookRemoved, mergedCount } = cleanupParsedRows(parsed);
-    setCleanupInfo({ textbookRemoved, mergedCount });
+    const { cleaned, textbookRows, mergedCount } = cleanupParsedRows(parsed);
+    setCleanupInfo({ textbookRemoved: textbookRows.length, mergedCount });
     setParsedData(cleaned);
+    setTextbookData(textbookRows);
     setUploadedFile(file);
   };
 
@@ -184,7 +188,29 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
     setIsImporting(true);
     try {
       const result = await onImport(parsedData, detectedMonth);
-      setImportResult({ success: true, added: result.added, skipped: result.skipped });
+
+      // 교재 행이 있으면 textbook_billings로 자동 전송
+      let textbookAdded = 0;
+      if (textbookData.length > 0) {
+        try {
+          const textbookRows = textbookData.map(row => ({
+            studentId: `${row.studentName}_${row.school}_${row.grade}`,
+            studentName: row.studentName,
+            grade: row.grade,
+            school: row.school,
+            textbookName: row.billingName,
+            amount: row.billedAmount,
+            month: row.month || detectedMonth,
+            matched: false,
+          }));
+          const tbResult = await importTextbookBillings.mutateAsync(textbookRows);
+          textbookAdded = tbResult.added;
+        } catch (tbErr) {
+          console.error('Textbook billing import failed:', tbErr);
+        }
+      }
+
+      setImportResult({ success: true, added: result.added, skipped: result.skipped, textbookAdded });
     } catch (err) {
       console.error('Import failed:', err);
       setImportResult({ success: false, added: 0, skipped: 0 });
@@ -195,6 +221,7 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
 
   const handleReset = () => {
     setParsedData([]);
+    setTextbookData([]);
     setRawCount(0);
     setCleanupInfo(null);
     setFileName('');
@@ -307,7 +334,7 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
                 {textbookCount > 0 && (
                   <div className="flex items-center gap-2 px-2 py-1.5 bg-purple-50 border border-purple-200 rounded-sm">
                     <BookOpen className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                    <span className="text-xxs text-purple-700">교재 수납 {textbookCount}건은 수납 가져오기에서 제외됨</span>
+                    <span className="text-xxs text-purple-700">교재 수납 {textbookCount}건 → 가져오기 시 교재 관리 수납 내역으로 자동 전송</span>
                   </div>
                 )}
 
@@ -416,7 +443,7 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
                     <div className="flex items-center gap-2">
                       <Check className="w-5 h-5 text-emerald-600 shrink-0" />
                       <div className="text-sm text-emerald-700 font-medium">
-                        <span>{importResult.added.toLocaleString()}건 추가 완료</span>
+                        <span>수납 {importResult.added.toLocaleString()}건 추가</span>
                         {importResult.skipped > 0 && (
                           <span className="text-gray-500 font-normal ml-1">
                             (중복 {importResult.skipped.toLocaleString()}건 건너뜀)
@@ -424,16 +451,13 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
                         )}
                       </div>
                     </div>
-                    {textbookCount > 0 && onNavigateToTextbooks && uploadedFile && (
-                      <button
-                        onClick={() => { onNavigateToTextbooks(uploadedFile); onClose(); }}
-                        className="flex items-center gap-2 w-full px-3 py-2 bg-purple-50 border border-purple-200 rounded-sm hover:bg-purple-100 transition-colors"
-                      >
-                        <BookOpen className="w-4 h-4 text-purple-600" />
-                        <span className="text-xs text-purple-700 font-medium">
-                          교재 수납 {textbookCount}건 감지 → 교재 관리 탭에서 가져오기
+                    {(importResult.textbookAdded ?? 0) > 0 && (
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="w-5 h-5 text-purple-600 shrink-0" />
+                        <span className="text-sm text-purple-700 font-medium">
+                          교재 수납 {importResult.textbookAdded}건 → 교재 관리 탭 수납 내역으로 전송 완료
                         </span>
-                      </button>
+                      </div>
                     )}
                   </div>
                 ) : (
