@@ -26,12 +26,15 @@ interface StudentDetailProps {
 
 type TabType = 'basic' | 'courses' | 'grades' | 'attendance' | 'consultations' | 'billing' | 'textbooks';
 
-const StudentDetail: React.FC<StudentDetailProps> = ({ student, compact = false, readOnly = false, currentUser }) => {
+const StudentDetail: React.FC<StudentDetailProps> = ({ student: studentProp, compact = false, readOnly = false, currentUser }) => {
   const [activeTab, setActiveTab] = useState<TabType>('basic');
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
   const [showEnrollmentWarning, setShowEnrollmentWarning] = useState(true);
-  const { updateStudent, deleteStudent } = useStudents();
+  const { students, updateStudent, deleteStudent } = useStudents();
   const queryClient = useQueryClient();
+
+  // React Query 캐시에서 최신 학생 데이터 사용 (실시간 반영)
+  const student = students.find(s => s.id === studentProp.id) || studentProp;
 
   // Enrollment 유효성 검사
   const { hasIssues, invalidEnrollments } = useStudentEnrollmentValidation(student);

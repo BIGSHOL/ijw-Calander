@@ -33,6 +33,7 @@ interface ParsedRow {
   paidDate: string;
   cashReceipt: string;
   memo: string;
+  teacher: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -102,6 +103,7 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
       paidDate: parsePaidDate(row['수납일']),
       cashReceipt: String(row['현금영수증'] ?? ''),
       memo: String(row['메모'] ?? ''),
+      teacher: String(row['담임강사'] ?? ''),
       createdAt: String(row['등록일시'] ?? ''),
       updatedAt: String(row['수정일시'] ?? ''),
     }));
@@ -267,6 +269,7 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
                           <th className="px-2 py-1.5 text-right font-medium text-gray-600">청구액</th>
                           <th className="px-2 py-1.5 text-right font-medium text-gray-600">할인</th>
                           <th className="px-2 py-1.5 text-right font-medium text-gray-600">납부액</th>
+                          <th className="px-2 py-1.5 text-left font-medium text-gray-600">담임</th>
                           <th className="px-2 py-1.5 text-center font-medium text-gray-600">상태</th>
                         </tr>
                       </thead>
@@ -279,6 +282,7 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
                             <td className="px-2 py-1.5 text-right">{row.billedAmount.toLocaleString()}</td>
                             <td className="px-2 py-1.5 text-right">{row.discountAmount.toLocaleString()}</td>
                             <td className="px-2 py-1.5 text-right">{row.paidAmount.toLocaleString()}</td>
+                            <td className="px-2 py-1.5 text-gray-600 max-w-[80px] truncate">{row.teacher}</td>
                             <td className="px-2 py-1.5 text-center">
                               <span className={`px-1.5 py-0.5 rounded text-xxs font-medium ${
                                 row.status === 'paid'

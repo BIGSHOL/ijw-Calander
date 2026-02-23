@@ -98,7 +98,16 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
         return Array.from(classNameSet);
     }, [scheduleData, labRooms]);
 
-    const { classDataMap } = useClassStudents(labClassNames, false, studentMap);
+    // 주차 기준일 (YYYY-MM-DD)
+    const referenceDate = useMemo(() => {
+        if (!currentWeekStart) return undefined;
+        const y = currentWeekStart.getFullYear();
+        const m = String(currentWeekStart.getMonth() + 1).padStart(2, '0');
+        const d = String(currentWeekStart.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }, [currentWeekStart]);
+
+    const { classDataMap } = useClassStudents(labClassNames, false, studentMap, referenceDate);
 
     const getActiveStudentCount = (className: string, slotUnderline?: boolean): number => {
         const data = classDataMap[className];

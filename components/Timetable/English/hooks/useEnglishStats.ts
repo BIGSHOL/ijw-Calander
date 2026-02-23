@@ -62,7 +62,8 @@ interface StudentStats {
 export const useEnglishStats = (
     scheduleData: ScheduleData,
     isSimulationMode: boolean,
-    studentMap: Record<string, any> = {}
+    studentMap: Record<string, any> = {},
+    referenceDate?: string  // 주차 기준일 (YYYY-MM-DD), 없으면 오늘
 ) => {
     const studentStats = useMemo<StudentStats>(() => {
         // Get unique class names from scheduleData
@@ -80,8 +81,9 @@ export const useEnglishStats = (
             return { active: 0, new1: 0, new2: 0, withdrawn: 0, withdrawnFuture: 0, waiting: 0, waitingStudents: [], withdrawnStudents: [], withdrawnFutureStudents: [] };
         }
 
-        const now = new Date();
-        const today = now.toISOString().split('T')[0];
+        const refDate = referenceDate || new Date().toISOString().split('T')[0];
+        const now = new Date(refDate);
+        const today = refDate;
         let active = 0, new1 = 0, new2 = 0, withdrawn = 0, withdrawnFuture = 0, waiting = 0;
         const waitingStudents: StudentInfo[] = [];
         const withdrawnStudents: StudentInfo[] = [];
@@ -186,7 +188,7 @@ export const useEnglishStats = (
             withdrawnStudents,
             withdrawnFutureStudents
         };
-    }, [scheduleData, studentMap]);
+    }, [scheduleData, studentMap, referenceDate]);
 
     return studentStats;
 };
