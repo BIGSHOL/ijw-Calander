@@ -202,8 +202,17 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
         }
     }, [isSimulationMode, scenario, updateLiveSettings]);
 
+    // 주차 기준일 (YYYY-MM-DD)
+    const referenceDate = useMemo(() => {
+        if (!currentWeekStart) return undefined;
+        const y = currentWeekStart.getFullYear();
+        const m = String(currentWeekStart.getMonth() + 1).padStart(2, '0');
+        const d = String(currentWeekStart.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }, [currentWeekStart]);
+
     // 5. Student Statistics (now uses enrollments + studentMap)
-    const studentStats = useEnglishStats(scheduleData, isSimulationMode, studentMap);
+    const studentStats = useEnglishStats(scheduleData, isSimulationMode, studentMap, referenceDate);
 
     // 6. Move Changes
     const { moveChanges, isSaving, handleMoveStudent, handleCancelChanges, handleSaveChanges } = useEnglishChanges(isSimulationMode);
@@ -213,7 +222,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
 
     // 6. Centralized Student Data Fetch (Cost Optimization)
     const classNames = useMemo(() => rawClasses.map(c => c.name), [rawClasses]);
-    const { classDataMap, refetch: refetchClassStudents } = useClassStudents(classNames, isSimulationMode, studentMap);
+    const { classDataMap, refetch: refetchClassStudents } = useClassStudents(classNames, isSimulationMode, studentMap, referenceDate);
 
     // Filter by search term (Original 'classes' variable name preserved for compatibility)
     const classes = useMemo(() => {

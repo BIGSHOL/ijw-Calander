@@ -160,8 +160,17 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
         return Array.from(classNameSet);
     }, [roomScheduleData, labRooms]);
 
+    // 주차 기준일 (YYYY-MM-DD)
+    const referenceDate = useMemo(() => {
+        if (!currentWeekStart) return undefined;
+        const y = currentWeekStart.getFullYear();
+        const m = String(currentWeekStart.getMonth() + 1).padStart(2, '0');
+        const d = String(currentWeekStart.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }, [currentWeekStart]);
+
     // LAB실 학생수 조회
-    const { classDataMap } = useClassStudents(labClassNames, false, studentMap);
+    const { classDataMap } = useClassStudents(labClassNames, false, studentMap, referenceDate);
 
     // 학생수 헬퍼: 퇴원/휴원 제외 재원 학생수
     // slotUnderline: 슬롯의 밑줄 여부 → 밑줄 슬롯이면 밑줄 학생만, 비밑줄 슬롯이면 비밑줄 학생만 카운트

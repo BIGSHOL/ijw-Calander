@@ -47,7 +47,8 @@ export interface ClassStudentData {
 export const useClassStudents = (
     classNames: string[],
     isSimulationMode: boolean = false,
-    studentMap: Record<string, any> = {}
+    studentMap: Record<string, any> = {},
+    referenceDate?: string  // 주차 기준일 (YYYY-MM-DD), 없으면 오늘
 ) => {
     const queryClient = useQueryClient();
 
@@ -71,7 +72,7 @@ export const useClassStudents = (
             return {};
         }
 
-        const today = new Date().toISOString().split('T')[0];
+        const today = referenceDate || new Date().toISOString().split('T')[0];
 
         // 반이동 감지: 학생별로 활성/종료 등록 수업 목록 수집 (english only)
         const studentActiveClasses: Record<string, Set<string>> = {};
@@ -226,7 +227,7 @@ export const useClassStudents = (
         });
 
         return result;
-    }, [classNames, studentMap, isSimulationMode]);
+    }, [classNames, studentMap, isSimulationMode, referenceDate]);
 
     // isLoading: studentMap이 아직 비어있으면 로딩 중
     const isLoading = !isSimulationMode && classNames.length > 0 && Object.keys(studentMap).length === 0;

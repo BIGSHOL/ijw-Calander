@@ -5,6 +5,7 @@ import ClassCard from './ClassCard';
 import { WEEKEND_PERIOD_TIMES, ALL_WEEKDAYS, LEGACY_TO_UNIFIED_PERIOD_MAP, MATH_GROUP_DISPLAY, MATH_GROUP_PERIOD_IDS, MATH_GROUPED_PERIODS, MATH_PERIOD_TIMES } from '../../constants';
 import { BookOpen } from 'lucide-react';
 import { useClassTextbookMap } from '../../../../hooks/useClassTextbookMap';
+import { formatDateKey } from '../../../../utils/dateUtils';
 
 // 시간 텍스트를 ~ 뒤에서 줄바꿈하는 헬퍼
 const renderTime = (time: string) => {
@@ -95,6 +96,14 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     pendingMovedStudentIds,
     pendingMoveSchedules
 }) => {
+    // 주차 기준일: weekDates의 첫 번째 요일 날짜를 YYYY-MM-DD로 변환
+    const referenceDate = useMemo(() => {
+        const firstDay = orderedSelectedDays[0];
+        const dateInfo = firstDay && weekDates[firstDay];
+        if (dateInfo?.date) return formatDateKey(dateInfo.date);
+        return formatDateKey(new Date());
+    }, [weekDates, orderedSelectedDays]);
+
     // 수업별 최신 교재 + 학생별 교재 수납 조회
     const { byClassId, byClassName, byStudentName } = useClassTextbookMap();
     const getLatestTextbook = (cls: TimetableClass) =>
@@ -383,6 +392,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     showMergedLabel={!!mergedClassesForCard}
                     latestTextbook={getLatestTextbook(cls)}
                     studentTextbookMap={byStudentName}
+                    referenceDate={referenceDate}
                 />
             );
         };
@@ -1281,6 +1291,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             pendingMoveSchedules={pendingMoveSchedules}
                                                                             latestTextbook={getLatestTextbook(cls)}
                     studentTextbookMap={byStudentName}
+                                                                            referenceDate={referenceDate}
                                                                         />
                                                                     ))
                                                                 )}
@@ -1367,6 +1378,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             pendingMoveSchedules={pendingMoveSchedules}
                                                                             latestTextbook={getLatestTextbook(cls)}
                     studentTextbookMap={byStudentName}
+                                                                            referenceDate={referenceDate}
                                                                         />
                                                                     ))
                                                                 )}

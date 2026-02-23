@@ -215,7 +215,7 @@ interface GroupedEnrollment {
   schedule?: string[]; // 스케줄 정보
 }
 
-const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact = false, readOnly = false, currentUser }) => {
+const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readOnly = false, currentUser }) => {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
   const [deletingClass, setDeletingClass] = useState<string | null>(null);
@@ -224,7 +224,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
   const [showCurrentClasses, setShowCurrentClasses] = useState(true);
   const [showScheduledClasses, setShowScheduledClasses] = useState(true);
   const [showCompletedClasses, setShowCompletedClasses] = useState(true);
-  const { students, refreshStudents } = useStudents();
+  const { refreshStudents } = useStudents();
   const { data: teachers = [], isLoading: loadingTeachers } = useTeachers();
   const { data: allClasses = [] } = useClasses();
   const queryClient = useQueryClient();
@@ -236,9 +236,6 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student: studentProp, compact =
 
   // 날짜 수정 상태 (key = subject_className, field = startDate/endDate)
   const [editingDate, setEditingDate] = useState<{ key: string; field: 'startDate' | 'endDate' } | null>(null);
-
-  // 실시간 학생 데이터: students 목록에서 최신 데이터를 가져오거나 prop을 사용
-  const student = students.find(s => s.id === studentProp.id) || studentProp;
 
   // 날짜 포맷팅 함수 (YYYY-MM-DD -> YY.MM.DD)
   const formatDate = (dateStr?: string) => {

@@ -106,8 +106,17 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     const simulation = useSimulation();
     const { isScenarioMode: isSimulationMode, currentScenarioName, enterScenarioMode: enterSimulationMode, exitScenarioMode: exitSimulationMode, loadFromLive, publishToLive, setCurrentScenarioName, canUndo, canRedo, undo, redo, history, historyIndex, getHistoryDescription } = simulation;
 
+    // 주차 기준일 (YYYY-MM-DD)
+    const referenceDate = useMemo(() => {
+        if (!currentWeekStart) return undefined;
+        const y = currentWeekStart.getFullYear();
+        const m = String(currentWeekStart.getMonth() + 1).padStart(2, '0');
+        const d = String(currentWeekStart.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }, [currentWeekStart]);
+
     // 학생 통계
-    const studentStats = useEnglishStats(scheduleData, isSimulationMode, studentMap);
+    const studentStats = useEnglishStats(scheduleData, isSimulationMode, studentMap, referenceDate);
 
     // 영어 시간표 설정 (표시 옵션 포함)
     const { settings, updateSettings } = useEnglishSettings();
