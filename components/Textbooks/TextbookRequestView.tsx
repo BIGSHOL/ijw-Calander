@@ -663,28 +663,32 @@ export default function TextbookRequestView({ isAdmin = false }: TextbookRequest
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-6xl mx-auto p-4 space-y-4">
             {/* Chrome Extension Banner */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="flex items-center gap-2 text-blue-800 font-medium text-sm">
-                <Chrome size={16} className="shrink-0" />
-                <span>메이크에듀 연동이 필요하신가요?</span>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 space-y-2">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex items-center gap-2 text-blue-800 font-medium text-sm">
+                  <Chrome size={16} className="shrink-0" />
+                  <span>메이크에듀 연동이 필요하신가요?</span>
+                </div>
+                <div className="flex items-center gap-3 sm:ml-auto">
+                  <a
+                    href="/makeedu-sync-extension.zip"
+                    download
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors shrink-0"
+                  >
+                    <Download size={12} />
+                    확장 프로그램 다운로드
+                  </a>
+                </div>
               </div>
-              <div className="flex items-center gap-3 sm:ml-auto">
-                <a
-                  href="/makeedu-sync-extension.zip"
-                  download
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors shrink-0"
-                >
-                  <Download size={12} />
-                  확장 프로그램 다운로드
-                </a>
+              <div className="text-[11px] text-blue-700 space-y-0.5 border-t border-blue-200 pt-2">
+                <p className="font-semibold text-blue-800 mb-1">설치 및 사용 방법:</p>
+                <p>1. 위 버튼을 눌러 ZIP 파일을 다운로드한 후 압축을 해제합니다.</p>
+                <p>2. Chrome 주소창에 <span className="font-mono bg-blue-100 px-1 rounded">chrome://extensions</span> 입력 → 우측 상단 <span className="font-semibold">개발자 모드</span> 활성화</p>
+                <p>3. <span className="font-semibold">압축 해제된 확장 프로그램을 로드합니다</span> 클릭 → 압축 해제한 폴더 선택</p>
+                <p>4. 메이크에듀 사이트에 로그인 → 확장 프로그램 아이콘 클릭 → <span className="font-semibold">교재 수납 데이터 동기화</span></p>
+                <p className="text-blue-500 mt-1">* 동기화된 데이터는 아래 목록에 자동으로 반영됩니다.</p>
               </div>
-              <p className="text-[11px] text-blue-600 sm:hidden">
-                다운로드 후 Chrome 확장 프로그램 관리에서 압축 해제하여 설치하세요.
-              </p>
             </div>
-            <p className="hidden sm:block text-[11px] text-blue-500 -mt-2">
-              다운로드 후 Chrome → 확장 프로그램 → 압축 해제된 확장 로드에서 설치하세요.
-            </p>
 
             {/* Tab filter + Search */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
