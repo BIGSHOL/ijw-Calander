@@ -103,41 +103,63 @@ export function useTextbooks() {
     mutationFn: async (rows: Omit<TextbookBilling, 'id' | 'importedAt'>[]) => {
       const now = new Date().toISOString();
       let added = 0;
-      let skipped = 0;
+      let updated = 0;
 
       // Firestore에서 직접 조회하여 중복 체크 (캐시 의존 제거)
       const existingSnap = await getDocs(
         query(collection(db, 'textbook_billings'))
       );
-      const existingKeys = new Set(
-        existingSnap.docs.map(d => {
-          const data = d.data();
-          return `${data.studentId}_${data.textbookName}_${data.month}`;
-        })
-      );
-
-      const toAdd = rows.filter(r => {
-        const key = `${r.studentId}_${r.textbookName}_${r.month}`;
-        if (existingKeys.has(key)) { skipped++; return false; }
-        existingKeys.add(key);
-        return true;
+      const existingMap = new Map<string, string>();
+      existingSnap.docs.forEach(d => {
+        const data = d.data();
+        const key = `${data.studentId}_${data.textbookName}_${data.month}`;
+        existingMap.set(key, d.id);
       });
 
-      // writeBatch (최대 500개씩)
-      for (let i = 0; i < toAdd.length; i += 500) {
-        const batch = writeBatch(db);
-        const chunk = toAdd.slice(i, i + 500);
-        for (const row of chunk) {
-          const ref = doc(collection(db, 'textbook_billings'));
-          batch.set(ref, { ...row, importedAt: now });
-          added++;
+      // 신규 / 업데이트 분류
+      const toAdd: Omit<TextbookBilling, 'id' | 'importedAt'>[] = [];
+      const toUpdate: { docId: string; row: Omit<TextbookBilling, 'id' | 'importedAt'> }[] = [];
+      const seenKeys = new Set<string>();
+      for (const r of rows) {
+        const key = `${r.studentId}_${r.textbookName}_${r.month}`;
+        if (seenKeys.has(key)) continue; // 같은 배치 내 중복 방지
+        seenKeys.add(key);
+        const existingDocId = existingMap.get(key);
+        if (existingDocId) {
+          toUpdate.push({ docId: existingDocId, row: r });
+        } else {
+          toAdd.push(r);
         }
+      }
+
+      // writeBatch (최대 450개씩 - 추가 + 업데이트 혼합)
+      let opCount = 0;
+      let batch = writeBatch(db);
+
+      for (const row of toAdd) {
+        const ref = doc(collection(db, 'textbook_billings'));
+        batch.set(ref, { ...row, importedAt: now });
+        added++;
+        opCount++;
+        if (opCount % 450 === 0) { await batch.commit(); batch = writeBatch(db); }
+      }
+
+      for (const { docId, row } of toUpdate) {
+        const ref = doc(db, 'textbook_billings', docId);
+        batch.update(ref, { ...row, importedAt: now });
+        updated++;
+        opCount++;
+        if (opCount % 450 === 0) { await batch.commit(); batch = writeBatch(db); }
+      }
+
+      if (opCount % 450 !== 0) {
         await batch.commit();
       }
 
       // 수납 자동 매칭: 새로 추가된 billing의 학생명+교재명으로 미납 요청서 자동 업데이트
+      const allProcessed = [...toAdd, ...toUpdate.map(t => t.row)];
       let matched = 0;
-      if (added > 0) {
+      if (allProcessed.length > 0) {
         try {
           const normalize = (s: string) => s.replace(/\s+/g, '').toLowerCase();
           const requestsSnap = await getDocs(
@@ -147,7 +169,7 @@ export function useTextbooks() {
           const matchedIds = new Set<string>();
           const matchBatch = writeBatch(db);
 
-          for (const row of toAdd) {
+          for (const row of allProcessed) {
             const normalizedStudent = normalize(row.studentName);
             const normalizedBook = normalize(row.textbookName);
 
@@ -177,7 +199,7 @@ export function useTextbooks() {
         }
       }
 
-      return { added, skipped, matched };
+      return { added, updated, matched };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['textbookBillings'] });
