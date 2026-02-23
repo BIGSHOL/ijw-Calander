@@ -421,6 +421,18 @@ service cloud.firestore {
       allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('billing.edit');
     }
 
+    // === Textbook Requests (교재 신청) ===
+    match /textbook_requests/{docId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('textbook.edit');
+    }
+
+    // === Textbook Billings (교재 수납) ===
+    match /textbook_billings/{docId} {
+      allow read: if hasRole(['master', 'admin']) || hasPermission('billing.view');
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('billing.edit');
+    }
+
     // === Enrollment Terms (등록차수 관리) ===
     match /enrollment_terms/{termId} {
       allow read: if isAuthenticated();

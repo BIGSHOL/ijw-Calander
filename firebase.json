@@ -1,5 +1,6 @@
 {
   "firestore": {
+    "database": "restore260202",
     "rules": "firestore.rules"
   },
   "hosting": {
