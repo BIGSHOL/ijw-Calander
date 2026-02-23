@@ -423,7 +423,7 @@ export const TabContent: React.FC<TabContentProps> = ({
       ) : appMode === 'textbooks' ? (
         <Suspense fallback={<TabLoadingFallback />}>
           <div className="w-full flex-1 overflow-auto">
-            <TextbooksTab />
+            <TextbooksTab currentUser={effectiveProfile} />
           </div>
         </Suspense>
       ) : appMode === 'exams' ? (

@@ -71,18 +71,13 @@ interface AttendanceManagerProps {
 const groupUpdates = <T,>(updates: Record<string, T>): Record<string, Record<string, T>> => {
   const grouped: Record<string, Record<string, T>> = {};
   Object.entries(updates).forEach(([key, value]) => {
-    const parts = key.split('_');
-    if (parts.length >= 2) {
-      // studentId might contain underscores? No, usually generated ids.
-      // But to be safe, dateKey is YYYY-MM-DD (fixed length 10 or 3 parts).
-      // safely split: dateKey is last part (if format is ID_YYYY-MM-DD)
-      // Actually standard format is `${studentId}_${dateKey}`.
-      // dateKey examples: 2024-01-01.
-      const dateKey = parts.pop()!;
-      const studentId = parts.join('_');
-
+    // 키 형식: "studentId\tcompositeKey" (탭 구분자로 studentId와 복합키 분리)
+    const sepIdx = key.indexOf('\t');
+    if (sepIdx > 0) {
+      const studentId = key.substring(0, sepIdx);
+      const compositeKey = key.substring(sepIdx + 1);
       if (!grouped[studentId]) grouped[studentId] = {};
-      grouped[studentId][dateKey] = value;
+      grouped[studentId][compositeKey] = value;
     }
   });
   return grouped;
@@ -346,7 +341,14 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
     storage.setJSON(STORAGE_KEYS.ATTENDANCE_SHOW_EXPECTED_BILLING, newValue);
   }, [showExpectedBilling]);
 
-
+  const [showSettlement, setShowSettlement] = useState<boolean>(() => {
+    return storage.getJSON<boolean>(STORAGE_KEYS.ATTENDANCE_SHOW_SETTLEMENT, false);
+  });
+  const handleToggleSettlement = useCallback(() => {
+    const newValue = !showSettlement;
+    setShowSettlement(newValue);
+    storage.setJSON(STORAGE_KEYS.ATTENDANCE_SHOW_SETTLEMENT, newValue);
+  }, [showSettlement]);
 
   // Optimistic UI State: { [studentId_dateKey]: value }
   const [pendingUpdates, setPendingUpdates] = useState<Record<string, number | null>>({});
@@ -463,7 +465,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
 
   // Handlers
   const handleAttendanceChange = useCallback(async (studentId: string, className: string, dateKey: string, value: number | null) => {
-    const key = `${studentId}_${className}_${dateKey}`;
+    const compositeKey = `${className}::${dateKey}`;
+    const key = `${studentId}\t${compositeKey}`;
     // 1. Optimistic Update (Immediate Feedback)
     setPendingUpdates(prev => ({ ...prev, [key]: value }));
 
@@ -496,7 +499,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   }, [updateAttendanceMutation, syncToDailyAttendance]);
 
   const handleMemoChange = useCallback(async (studentId: string, className: string, dateKey: string, memo: string) => {
-    const key = `${studentId}_${className}_${dateKey}`;
+    const compositeKey = `${className}::${dateKey}`;
+    const key = `${studentId}\t${compositeKey}`;
     setPendingMemos(prev => ({ ...prev, [key]: memo }));
 
     const yearMonth = dateKey.substring(0, 7);
@@ -711,6 +715,23 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           </div>
         </label>
 
+        {/* 정산액 토글 */}
+        <label
+          className="bg-white px-3 py-1.5 rounded-sm border border-gray-200 shadow-sm flex items-center gap-2 cursor-pointer hover:border-gray-300 transition-colors flex-shrink-0"
+          title="학생별 정산액 열 표시 (출석 기반 선생님 정산금액)"
+        >
+          <input
+            type="checkbox"
+            checked={showSettlement}
+            onChange={handleToggleSettlement}
+            className="w-4 h-4 text-gray-600 rounded border-gray-300 focus:ring-gray-500 cursor-pointer"
+          />
+          <div className="flex items-center gap-1">
+            <Receipt size={14} className="text-gray-400" />
+            <span className="text-xs font-medium text-gray-600">정산액</span>
+          </div>
+        </label>
+
         {/* 주말 회색 처리 체크박스 */}
         <label
           className="bg-white px-3 py-1.5 rounded-sm border border-gray-200 shadow-sm flex items-center gap-2 cursor-pointer hover:border-gray-300 transition-colors flex-shrink-0"
@@ -830,6 +851,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             selectedSession={selectedSession}
             highlightWeekends={highlightWeekends}
             showExpectedBilling={showExpectedBilling}
+            showSettlement={showSettlement}
             holidays={holidays}
             sortMode={sortMode}
             hiddenDates={hiddenDates}
