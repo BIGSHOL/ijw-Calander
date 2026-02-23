@@ -61,6 +61,10 @@
         "source": "**",
         "headers": [
           {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          },
+          {
             "key": "Content-Security-Policy",
             "value": "frame-ancestors *"
           }
