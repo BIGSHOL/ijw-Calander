@@ -856,7 +856,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         </span>
 
         {/* 수업명 */}
-        <span className="w-40 shrink-0 text-xs text-primary-700 truncate">
+        <span className="w-52 shrink-0 text-xs text-primary-700 truncate">
           {group.className}
         </span>
 
