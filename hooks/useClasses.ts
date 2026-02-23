@@ -62,8 +62,9 @@ export const useClasses = (subjectOrEnabled?: SubjectType | boolean, enabled = t
 
             const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
 
-            // 수업명별 학생 수 집계 (중복 학생 제거)
+            // 수업명별 학생 수 집계 (중복 학생 제거, 퇴원/미래배정 제외)
             const classStudentCount = new Map<string, Set<string>>();
+            const today = new Date().toISOString().split('T')[0];
 
             enrollmentsSnapshot.docs.forEach(doc => {
                 const data = doc.data();
@@ -71,6 +72,24 @@ export const useClasses = (subjectOrEnabled?: SubjectType | boolean, enabled = t
                 const studentId = doc.ref.parent.parent?.id;
 
                 if (className && studentId) {
+                    // 퇴원/종료 학생 제외
+                    const withdrawalDate = data.withdrawalDate?.toDate?.()
+                        ? data.withdrawalDate.toDate().toISOString().split('T')[0]
+                        : (typeof data.withdrawalDate === 'string' ? data.withdrawalDate : null);
+                    const endDate = data.endDate?.toDate?.()
+                        ? data.endDate.toDate().toISOString().split('T')[0]
+                        : (typeof data.endDate === 'string' ? data.endDate : null);
+                    if (withdrawalDate || endDate) return;
+
+                    // 미래 배정 학생 제외
+                    const startDate = data.enrollmentDate?.toDate?.()
+                        ? data.enrollmentDate.toDate().toISOString().split('T')[0]
+                        : (typeof data.enrollmentDate === 'string' ? data.enrollmentDate
+                            : data.startDate?.toDate?.()
+                                ? data.startDate.toDate().toISOString().split('T')[0]
+                                : (typeof data.startDate === 'string' ? data.startDate : null));
+                    if (startDate && startDate > today) return;
+
                     if (!classStudentCount.has(className)) {
                         classStudentCount.set(className, new Set());
                     }
