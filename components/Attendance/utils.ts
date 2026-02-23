@@ -180,7 +180,8 @@ export const calculateStats = (
     const salarySettingOverrideId = student.salarySettingOverrides?.[student.group || ''];
     const effectiveSalarySettingId = salarySettingOverrideId || student.salarySettingId;
     const settingItem = effectiveSalarySettingId
-      ? salaryConfig.items.find(item => item.id === effectiveSalarySettingId)
+      ? (salaryConfig.items.find(item => item.id === effectiveSalarySettingId)
+         || getSchoolLevelSalarySetting(student.school, salaryConfig.items))
       : getSchoolLevelSalarySetting(student.school, salaryConfig.items);
     const studentPaid = billingPaidMap?.get(student.name);
     totalSalary += calculateStudentSalary(settingItem, salaryConfig.academyFee, studentClassUnits, studentPaid);
@@ -294,8 +295,8 @@ export const calculateStats = (
 };
 
 /**
- * 등록차수 계산용 유효 단가 결정
- * 우선순위: unitPrice > baseTuition (비율제) > 0 (고정급에서 unitPrice 미설정 시)
+ * 수업 단가 결정 (발행예정금액, 등록차수, 급여 cap 등에 공통 사용)
+ * 우선순위: unitPrice > baseTuition > 0
  */
 export const getEffectiveUnitPrice = (item: SalarySettingItem | undefined): number => {
   if (!item) return 0;
@@ -303,8 +304,8 @@ export const getEffectiveUnitPrice = (item: SalarySettingItem | undefined): numb
   // unitPrice가 명시적으로 설정되어 있으면 그것을 사용
   if (item.unitPrice && item.unitPrice > 0) return item.unitPrice;
 
-  // 비율제인 경우 baseTuition을 fallback으로 사용
-  if (item.type === 'percentage' && item.baseTuition > 0) return item.baseTuition;
+  // baseTuition을 fallback으로 사용 (고정급/비율제 모두)
+  if (item.baseTuition > 0) return item.baseTuition;
 
   return 0;
 };

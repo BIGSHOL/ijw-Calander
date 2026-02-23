@@ -24,6 +24,7 @@ export interface StudentTableBodyProps {
   collapsedGroups?: Set<string>;
   onCollapsedGroupsChange?: (newCollapsed: Set<string>) => void;
   highlightWeekends?: boolean;
+  showExpectedBilling?: boolean;
   holidayDateSet?: Set<string>;
   holidayNameMap?: Map<string, string>;
   sortMode?: 'class' | 'name';
@@ -53,6 +54,7 @@ const StudentTableBody = React.memo(({
   collapsedGroups: externalCollapsedGroups,
   onCollapsedGroupsChange,
   highlightWeekends = false,
+  showExpectedBilling = false,
   holidayDateSet = new Set(),
   holidayNameMap = new Map(),
   sortMode = 'class',
@@ -195,7 +197,7 @@ const StudentTableBody = React.memo(({
 
       rows.push(
         <tr key={`group-${currentGroup}`} className="bg-slate-100 border-y border-slate-200">
-          <td colSpan={days.length + 6 + (hasHiddenDates ? 1 : 0)} className="py-2 px-4 text-xs font-bold text-slate-600 uppercase tracking-wider">
+          <td colSpan={days.length + 6 + (hasHiddenDates ? 1 : 0) + (showExpectedBilling ? 1 : 0)} className="py-2 px-4 text-xs font-bold text-slate-600 uppercase tracking-wider">
             <div className="flex items-center gap-2">
               {/* 접기/펼치기 버튼 */}
               <button
@@ -261,7 +263,7 @@ const StudentTableBody = React.memo(({
 
       rows.push(
         <tr key="group-none" className="bg-slate-100 border-y border-slate-200">
-          <td colSpan={days.length + 6 + (hasHiddenDates ? 1 : 0)} className="py-2 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+          <td colSpan={days.length + 6 + (hasHiddenDates ? 1 : 0) + (showExpectedBilling ? 1 : 0)} className="py-2 px-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => toggleGroupCollapse('그룹 없음')}
@@ -314,6 +316,7 @@ const StudentTableBody = React.memo(({
         scoresByStudent={scoresByStudent}
         onHomeworkChange={onHomeworkChange}
         highlightWeekends={highlightWeekends}
+        showExpectedBilling={showExpectedBilling}
         holidayDateSet={holidayDateSet}
         holidayNameMap={holidayNameMap}
         hasHiddenDates={hasHiddenDates}

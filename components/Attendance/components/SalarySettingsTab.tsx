@@ -24,10 +24,11 @@ const COLOR_PALETTE = [
 interface Props {
     teachers?: Teacher[];
     canEdit?: boolean;  // 권한 체크: false이면 읽기 전용
+    initialStaffId?: string;  // 현재 선택된 선생님 ID (자동 선택용)
 }
 
-const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) => {
-    const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
+const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true, initialStaffId }) => {
+    const [selectedStaffId, setSelectedStaffId] = useState<string | null>(initialStaffId || null);
     const configId = selectedStaffId ? `salary_${selectedStaffId}` : 'salary';
 
     const { data: config, isLoading } = useAttendanceConfig(configId);
@@ -433,18 +434,17 @@ const SalarySettingsTab: React.FC<Props> = ({ teachers = [], canEdit = true }) =
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <label className="block text-xxs font-bold text-slate-500 mb-1">1회 수강료 (등록차수용)</label>
+                                                    <label className="block text-xxs font-bold text-slate-500 mb-1">1회 수강료 (학생 납부)</label>
                                                     <div className="relative">
                                                         <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xxs">₩</span>
                                                         <input
                                                             type="text"
-                                                            value={(item.unitPrice || 0).toLocaleString()}
-                                                            onChange={(e) => handleItemChange(item.id, 'unitPrice', parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
+                                                            value={item.baseTuition.toLocaleString()}
+                                                            onChange={(e) => handleItemChange(item.id, 'baseTuition', parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
                                                             className="w-full pl-6 pr-2 py-1 border border-gray-200 rounded-sm focus:ring-1 focus:ring-blue-500 bg-white outline-none text-xs"
-                                                            placeholder="수납액 / 단가 = 등록 횟수"
                                                         />
                                                     </div>
-                                                    <p className="text-micro text-gray-400 mt-0.5">수납액 / 단가 = 등록 횟수 계산에 사용</p>
+                                                    <p className="text-micro text-gray-400 mt-0.5">발행예정금액 계산 단가로 사용</p>
                                                 </div>
                                                 </>
                                             ) : (

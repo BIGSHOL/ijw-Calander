@@ -347,17 +347,20 @@ export const useAttendanceStudents = (options?: {
                 };
             });
 
-            // 이름순 정렬
-            data.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
+            // 수업 없는 학생 제외 (활성 enrollment 매칭 실패)
+            const filtered = data.filter(s => s.group);
 
-            return { filtered: data, all: allRaw };
+            // 이름순 정렬
+            filtered.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
+
+            return { filtered, all: allRaw };
         },
         enabled: options?.enabled !== false,
-        staleTime: 1000 * 60 * 5, // === COST OPTIMIZATION: 5-minute cache ===
-        gcTime: 1000 * 60 * 30, // Keep in memory for 30 minutes (was cacheTime in v4)
-        refetchOnWindowFocus: false, // === COST OPTIMIZATION: No refetch on tab focus ===
-        refetchOnReconnect: false, // === COST OPTIMIZATION: No refetch on reconnect ===
-        refetchOnMount: false, // === PERFORMANCE: Use cache on mount if available ===
+        staleTime: 0, // 출석부는 실시간 반영
+        gcTime: 1000 * 60 * 10,
+        refetchOnWindowFocus: true,
+        refetchOnReconnect: true,
+        refetchOnMount: true,
     });
 
     // Phase 2: Fetch attendance records for current month
@@ -431,6 +434,70 @@ export const useAttendanceStudents = (options?: {
                         salarySettingOverrides: record?.salarySettingOverrides || {}
                     };
                 });
+
+                // === Orphaned Records Recovery ===
+                // enrollment 삭제 후에도 출석 기록이 있는 학생을 복원
+                if (options?.staffId) {
+                    try {
+                        const existingIds = new Set(studentData.filtered.map((s: Student) => s.id));
+                        const orphanQuery = query(
+                            collection(db, RECORDS_COLLECTION),
+                            where('staffId', '==', options.staffId),
+                            where('yearMonth', '==', options.yearMonth)
+                        );
+                        const orphanSnapshot = await getDocs(orphanQuery);
+                        const orphanStudentIds: string[] = [];
+                        const orphanRecordsMap = new Map<string, any>();
+
+                        orphanSnapshot.docs.forEach(docSnap => {
+                            const data = docSnap.data();
+                            const sid = data.studentId as string;
+                            if (sid && !existingIds.has(sid)) {
+                                orphanStudentIds.push(sid);
+                                orphanRecordsMap.set(sid, {
+                                    attendance: data.attendance || {},
+                                    memos: data.memos || {},
+                                    cellColors: data.cellColors || {},
+                                    salarySettingOverrides: data.salarySettingOverrides || {},
+                                    studentName: data.studentName || '',
+                                    className: data.className || '',
+                                });
+                            }
+                        });
+
+                        // Orphan 학생 문서 조회 후 merged에 추가
+                        if (orphanStudentIds.length > 0) {
+                            const orphanChunks: string[][] = [];
+                            for (let i = 0; i < orphanStudentIds.length; i += 10) {
+                                orphanChunks.push(orphanStudentIds.slice(i, i + 10));
+                            }
+                            const orphanResults = await Promise.allSettled(
+                                orphanChunks.map(chunk =>
+                                    getDocs(query(collection(db, STUDENTS_COLLECTION), where('__name__', 'in', chunk)))
+                                )
+                            );
+                            orphanResults.forEach(result => {
+                                if (result.status === 'fulfilled') {
+                                    result.value.docs.forEach(docSnap => {
+                                        const orphanRecord = orphanRecordsMap.get(docSnap.id);
+                                        merged.push({
+                                            id: docSnap.id,
+                                            ...docSnap.data(),
+                                            group: orphanRecord?.className ? `[삭제됨] ${orphanRecord.className}` : '[수업 삭제됨]',
+                                            days: [],
+                                            attendance: orphanRecord?.attendance || {},
+                                            memos: orphanRecord?.memos || {},
+                                            cellColors: orphanRecord?.cellColors || {},
+                                            salarySettingOverrides: orphanRecord?.salarySettingOverrides || {},
+                                        } as Student);
+                                    });
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.warn('[useAttendance] Orphan recovery failed:', e);
+                    }
+                }
 
                 return merged;
             } catch (err) {
@@ -585,13 +652,17 @@ export const useUpdateAttendance = () => {
             className,
             yearMonth,
             dateKey,
-            value
+            value,
+            staffId,
+            studentName
         }: {
             studentId: string;
             className: string;  // 수업별 분리를 위한 className
             yearMonth: string;
             dateKey: string;
             value: number | null;
+            staffId?: string;    // 메타데이터: 기록한 선생님
+            studentName?: string; // 메타데이터: 학생 이름 (orphan 복원용)
         }) => {
             const docId = `${studentId}_${yearMonth}`;
             const docRef = doc(db, RECORDS_COLLECTION, docId);
@@ -601,11 +672,18 @@ export const useUpdateAttendance = () => {
 
             // Use deleteField() to properly remove keys during a merge
             // This also avoids the need to read the document first (Write Optimization)
-            const payload = {
+            const payload: Record<string, any> = {
                 attendance: {
                     [compositeKey]: value === null ? deleteField() : value
-                }
+                },
+                // 메타데이터: enrollment 삭제 후에도 기록 추적 가능
+                studentId,
+                yearMonth,
+                updatedAt: new Date().toISOString(),
             };
+            if (staffId) payload.staffId = staffId;
+            if (studentName) payload.studentName = studentName;
+            if (className) payload.className = className;
 
             await setDoc(docRef, payload, { merge: true });
             return { studentId, className, yearMonth, dateKey, value };

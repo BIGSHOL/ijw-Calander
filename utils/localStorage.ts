@@ -45,6 +45,7 @@ export const STORAGE_KEYS = {
   RESOURCE_FAVORITES: 'ijw_resource_favorites',
   RESOURCE_CATEGORY_ORDER: 'ijw_resource_category_order',
   ATTENDANCE_HIGHLIGHT_WEEKENDS: 'ijw_attendance_highlight_weekends',
+  ATTENDANCE_SHOW_EXPECTED_BILLING: 'ijw_attendance_show_expected_billing',
   ATTENDANCE_SORT_MODE: 'ijw_attendance_sort_mode',
   ATTENDANCE_PAGE_SIZE: 'ijw_attendance_page_size',
 

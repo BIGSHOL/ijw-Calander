@@ -331,19 +331,18 @@ const SalarySettings: React.FC<Props> = ({ isOpen, onClose, config, onSave, read
                                                 </div>
                                             </div>
                                             <div>
-                                                <label className="block text-xs font-medium text-gray-500 mb-1">1회 수강료 (등록차수용)</label>
+                                                <label className="block text-xs font-medium text-gray-500 mb-1">1회 수강료 (학생 납부)</label>
                                                 <div className="relative">
                                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">₩</span>
                                                     <input
                                                         type="text"
-                                                        value={(item.unitPrice || 0).toLocaleString()}
-                                                        onChange={(e) => handleItemChange(item.id, 'unitPrice', parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
+                                                        value={item.baseTuition.toLocaleString()}
+                                                        onChange={(e) => handleItemChange(item.id, 'baseTuition', parseInt(e.target.value.replace(/[^0-9]/g, ''), 10) || 0)}
                                                         disabled={readOnly}
                                                         className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-100 disabled:text-gray-500"
-                                                        placeholder="수납액 / 단가 = 등록 횟수"
                                                     />
                                                 </div>
-                                                <p className="text-xxs text-gray-400 mt-1">수납액 / 단가 = 등록 횟수 계산에 사용</p>
+                                                <p className="text-xxs text-gray-400 mt-1">발행예정금액 계산 단가로 사용</p>
                                             </div>
                                             </>
                                         ) : (

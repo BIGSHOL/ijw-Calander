@@ -38,7 +38,8 @@ export const getGradeLevel = (grade: string | undefined | null): string => {
  */
 export const formatSchoolGrade = (
   school: string | undefined | null,
-  grade: string | undefined | null
+  grade: string | undefined | null,
+  options?: { numberLast?: boolean }
 ): string => {
   const schoolStr = school?.trim() || '';
   const gradeStr = grade?.trim() || '';
@@ -50,6 +51,12 @@ export const formatSchoolGrade = (
   const gradeNum = getGradeNumber(gradeStr);
   const gradeLevel = getGradeLevel(gradeStr);
 
+  // 출석부 등: 학교명 + 학년숫자 ("경명여고1")
+  if (options?.numberLast) {
+    return `${schoolStr}${gradeNum}`;
+  }
+
+  // 시간표용 기본: 학년숫자 + 학교명
   // 학교명이 이미 레벨(초/중/고)로 끝나는 경우
   const schoolEndsWithLevel =
     schoolStr.endsWith('초') ||

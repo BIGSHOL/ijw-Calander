@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Student, SalaryConfig } from '../types';
 import { Exam, StudentScore, GRADE_COLORS } from '../../../types';
 import { StudentTermSummary } from '../../../types/enrollmentTerm';
-import { formatDateDisplay, formatDateKey, getBadgeStyle, getStudentStatus, isDateValidForStudent, getSchoolLevelSalarySetting, getLocalYearMonth } from '../utils';
+import { formatDateDisplay, formatDateKey, getBadgeStyle, getStudentStatus, isDateValidForStudent, getSchoolLevelSalarySetting, getLocalYearMonth, getDaysInMonth, getEffectiveUnitPrice } from '../utils';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
 import { LogOut, Check } from 'lucide-react';
 import { PREDEFINED_CELL_COLORS } from './cellColors';
@@ -24,6 +24,7 @@ export interface StudentRowProps {
   scoresByStudent?: Map<string, Map<string, StudentScore>>;
   onHomeworkChange?: (studentId: string, className: string, dateKey: string, value: boolean) => void;
   highlightWeekends?: boolean;
+  showExpectedBilling?: boolean;
   holidayDateSet?: Set<string>;
   holidayNameMap?: Map<string, string>;
   hasHiddenDates?: boolean;
@@ -47,6 +48,7 @@ const StudentRow = React.memo(({
   scoresByStudent,
   onHomeworkChange,
   highlightWeekends = false,
+  showExpectedBilling = false,
   holidayDateSet = new Set(),
   holidayNameMap = new Map(),
   hasHiddenDates = false,
@@ -58,6 +60,49 @@ const StudentRow = React.memo(({
   const salaryBtnRef = useRef<HTMLButtonElement>(null);
   const salaryDropdownRef = useRef<HTMLDivElement>(null);
   const currentMonthStr = getLocalYearMonth(currentDate);
+
+  // 발행예정금액 계산: 이달 등원일 × 수업 단가
+  const expectedBilling = useMemo(() => {
+    if (!showExpectedBilling) return 0;
+    const salarySettingOverrideId = student.salarySettingOverrides?.[student.group || ''];
+    const effectiveSalarySettingId = salarySettingOverrideId || student.salarySettingId;
+    const settingItem = effectiveSalarySettingId
+      ? (salaryConfig.items.find(item => item.id === effectiveSalarySettingId)
+         || getSchoolLevelSalarySetting(student.school, salaryConfig.items))
+      : getSchoolLevelSalarySetting(student.school, salaryConfig.items);
+    const unitPrice = getEffectiveUnitPrice(settingItem);
+    if (unitPrice <= 0) return 0;
+
+    const allDays = getDaysInMonth(currentDate);
+    let scheduledCount = 0;
+    allDays.forEach(day => {
+      const dateKey = formatDateKey(day);
+      if (!isDateValidForStudent(dateKey, student)) return;
+      if (holidayDateSet.has(dateKey)) return;
+      const { day: dayName } = formatDateDisplay(day);
+      if (student.days && student.days.includes(dayName)) scheduledCount++;
+    });
+    return scheduledCount * unitPrice;
+  }, [showExpectedBilling, student, salaryConfig, currentDate, holidayDateSet]);
+
+  // 반이동 여부 감지: endDate가 있지만 다른 수업에 활성 enrollment가 존재
+  // 반환: null(퇴원) 또는 { teacher, className } (반이동 대상 정보)
+  const transferInfo = useMemo(() => {
+    if (!student.endDate || !student.enrollments?.length || !student.group) return null;
+    const today = formatDateKey(new Date());
+    const target = student.enrollments.find((e: any) => {
+      const className = e.className || e.group || '';
+      if (className === student.group) return false;
+      const startDate = typeof e.startDate === 'string' ? e.startDate : '';
+      const endDate = e.endDate || e.withdrawalDate || '';
+      return startDate <= today && (!endDate || endDate >= today);
+    });
+    if (!target) return null;
+    return {
+      teacher: target.teacher || '',
+      className: target.className || target.group || '',
+    };
+  }, [student.endDate, student.enrollments, student.group]);
 
   // 드롭다운 위치 계산 및 열기/닫기
   const toggleDropdown = useCallback((e: React.MouseEvent) => {
@@ -120,7 +165,7 @@ const StudentRow = React.memo(({
       <td className="p-1 sticky left-0 z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 text-center text-primary-700/50 font-mono text-xxs align-middle w-8">
         {idx}
       </td>
-      <td className="p-1 sticky left-8 z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle w-[70px]">
+      <td className="p-1 sticky left-8 z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle w-[90px]">
         <button
           onClick={() => onEditStudent(student)}
           className="text-left w-full hover:text-primary font-bold text-primary-700 truncate flex items-center gap-0.5 text-xs"
@@ -138,10 +183,10 @@ const StudentRow = React.memo(({
           )}
         </button>
       </td>
-      <td className="p-1 sticky left-[102px] z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle w-[80px]">
+      <td className="p-1 sticky left-[122px] z-[90] bg-white group-hover:bg-gray-50 border-r border-b border-gray-200 align-middle w-[80px]">
         <div className="flex flex-col gap-0.5 justify-center">
-          <div className="text-xxs text-primary-700 font-medium truncate" title={formatSchoolGrade(student.school, student.grade)}>
-            {formatSchoolGrade(student.school, student.grade)}
+          <div className="text-xxs text-primary-700 font-medium truncate" title={formatSchoolGrade(student.school, student.grade, { numberLast: true })}>
+            {formatSchoolGrade(student.school, student.grade, { numberLast: true })}
           </div>
           <button
             ref={salaryBtnRef}
@@ -204,28 +249,33 @@ const StudentRow = React.memo(({
       </td>
 
       {/* Stat Cells - Compact & Sticky */}
-      <td className="p-1 sticky left-[182px] z-[90] border-r border-b border-gray-200 text-center text-gray-500 bg-[#f8f9fa] font-mono align-middle w-[70px]">
+      <td className="p-1 sticky left-[202px] z-[90] border-r border-b border-gray-200 text-center text-gray-500 bg-[#f8f9fa] font-mono align-middle w-[70px]">
         <div className="flex flex-wrap justify-center gap-0.5">
           {[...(student.days || [])].sort((a, b) => {
             const order = ['월', '화', '수', '목', '금', '토', '일'];
             return order.indexOf(a[0]) - order.indexOf(b[0]);
           }).map(d => {
             const dayChar = d[0];
-            let colorClass = "bg-gray-200 text-gray-700";
-            if (dayChar === '토') colorClass = "bg-blue-100 text-blue-700";
-            if (dayChar === '일') colorClass = "bg-red-100 text-red-700";
+            let colorClass = "bg-gray-200 text-gray-800";
+            if (dayChar === '토') colorClass = "bg-blue-200 text-blue-800";
+            if (dayChar === '일') colorClass = "bg-red-200 text-red-800";
             return (
-              <span key={d} className={`text-xxs px-1.5 py-px rounded font-medium ${colorClass}`}>{dayChar}</span>
+              <span key={d} className={`text-xxs px-1.5 py-px rounded-sm font-bold ${colorClass}`}>{dayChar}</span>
             );
           })}
         </div>
       </td>
-      <td className="p-1 sticky left-[252px] z-[90] border-r border-b border-gray-200 text-center font-bold text-primary bg-[#f0f4f8] align-middle w-[36px] text-xs">
+      {showExpectedBilling && (
+        <td className="p-1 sticky left-[272px] z-[90] border-r border-b border-gray-200 text-center bg-[#fefce8] align-middle w-[60px]" title={`발행예정: ${expectedBilling.toLocaleString()}원`}>
+          <span className="text-xxs font-bold text-amber-700">{expectedBilling > 0 ? expectedBilling.toLocaleString() : '-'}</span>
+        </td>
+      )}
+      <td className="p-1 sticky z-[90] border-r border-b border-gray-200 text-center font-bold text-primary bg-[#f0f4f8] align-middle w-[36px] text-xs" style={{ left: showExpectedBilling ? 332 : 272 }}>
         {attendedUnits}
       </td>
 
       {/* 등록차수 셀 */}
-      <td className="p-1 sticky left-[288px] z-[90] border-r border-b border-gray-200 text-center bg-white group-hover:bg-gray-50 align-middle w-[36px]">
+      <td className="p-1 sticky z-[90] border-r border-b border-gray-200 text-center bg-white group-hover:bg-gray-50 align-middle w-[36px]" style={{ left: showExpectedBilling ? 368 : 308 }}>
         {enrollmentTerm && enrollmentTerm.currentTermNumber > 0 ? (
           <button
             type="button"
@@ -259,7 +309,7 @@ const StudentRow = React.memo(({
       )}
 
       {/* Attendance Cells - 4-Quadrant Design */}
-      {days.map((day) => {
+      {days.map((day, dayIndex) => {
         const dateKey = formatDateKey(day);
         const { day: dayName } = formatDateDisplay(day);
         const status = pendingUpdates?.[dateKey] ?? student.attendance[dateKey];
@@ -274,6 +324,14 @@ const StudentRow = React.memo(({
 
         // Validity Check
         const isValid = isDateValidForStudent(dateKey, student);
+
+        // 첫수업/퇴원 경계 감지 (회색→흰색 전환점에 라벨 표시)
+        const nextDay = dayIndex + 1 < days.length ? days[dayIndex + 1] : null;
+        const prevDay = dayIndex > 0 ? days[dayIndex - 1] : null;
+        const nextIsValid = nextDay ? isDateValidForStudent(formatDateKey(nextDay), student) : false;
+        const prevIsValid = prevDay ? isDateValidForStudent(formatDateKey(prevDay), student) : false;
+        const isFirstClassBoundary = !isValid && nextIsValid; // 회색 셀인데 다음이 흰색 → "첫수업"
+        const isEndBoundary = !isValid && prevIsValid; // 회색 셀인데 이전이 흰색 → "퇴원"
 
         // 과제 완료 여부 (Q2: 1시 방향)
         const homeworkDone = student.homework?.[dateKey] ?? false;
@@ -426,7 +484,19 @@ const StudentRow = React.memo(({
                 </div>
               </div>
             ) : (
-              <div className="w-full h-full min-h-[36px]" />
+              <div className="w-full h-full min-h-[36px] flex items-center justify-center">
+                {isFirstClassBoundary && (
+                  <span className="text-micro font-black text-emerald-700 bg-emerald-100 border border-emerald-400 rounded-sm px-1 py-0.5 animate-pulse whitespace-nowrap">첫수업</span>
+                )}
+                {isEndBoundary && (
+                  transferInfo
+                    ? <span
+                        className="text-micro font-black text-violet-700 bg-violet-100 border border-violet-400 rounded-sm px-1 py-0.5 animate-pulse whitespace-nowrap cursor-help"
+                        title={`반이동 → ${transferInfo.teacher ? transferInfo.teacher + ' 선생님' : ''} ${transferInfo.className}`.trim()}
+                      >반이동</span>
+                    : <span className="text-micro font-black text-gray-700 bg-gray-100 border border-gray-400 rounded-sm px-1 py-0.5 whitespace-nowrap">퇴원</span>
+                )}
+              </div>
             )}
             {/* Memo Indicator: Red Triangle in top-right */}
             {memo && (
