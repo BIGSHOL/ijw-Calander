@@ -132,6 +132,7 @@ interface ClassCardProps {
     isAssistantTeacher?: boolean;  // 부담임 수업 여부 (teacher 뷰에서 slotTeacher로 배정된 경우)
     latestTextbook?: { textbookName: string; distributedAt: string } | null;
     studentTextbookMap?: Map<string, { month: string; textbookName: string }>;
+    referenceDate?: string;  // 주차 기준일 (YYYY-MM-DD), 없으면 오늘
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -165,8 +166,12 @@ const ClassCard: React.FC<ClassCardProps> = ({
     cellSizePx = 72,
     isAssistantTeacher = false,
     latestTextbook,
-    studentTextbookMap
+    studentTextbookMap,
+    referenceDate
 }) => {
+    // 주차 기준일: referenceDate가 있으면 해당 날짜, 없으면 오늘
+    const refDateStr = referenceDate || formatDateKey(new Date());
+    const refDateMs = new Date(refDateStr).getTime();
     // 컴팩트 모드 여부
     const isCompact = rowHeight === 'compact';
 
@@ -336,7 +341,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
             return { bg: 'bg-green-200', text: 'text-gray-900 font-bold' };
         }
         if (student.enrollmentDate) {
-            const days = Math.ceil((Date.now() - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
+            const days = Math.ceil((refDateMs - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
             if (days <= 30) return { bg: 'bg-red-500', text: 'text-white font-bold' };
             if (days <= 60) return { bg: 'bg-pink-100', text: 'text-black font-bold' };
         }
@@ -369,7 +374,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
     // 전체 학생 목록 가져오기 (합반수업 시 모든 수업의 학생을 합침)
     const allStudents = useMemo(() => {
-        const today = formatDateKey(new Date());
+        const today = refDateStr;
         const classesToProcess = isMergedClass ? mergedClasses! : [cls];
 
         const allStudentsList: any[] = [];
@@ -408,7 +413,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
         });
 
         return allStudentsList;
-    }, [cls, mergedClasses, isMergedClass, studentMap, classNameToIndex]);
+    }, [cls, mergedClasses, isMergedClass, studentMap, classNameToIndex, refDateStr]);
 
     // 학생이 병합된 모든 요일에 등원하는지 확인
     const isStudentAttendingAllMergedDays = (student: any): boolean => {
@@ -425,7 +430,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
             return { commonStudents: { active: [], hold: [], withdrawn: [], withdrawnFuture: [] }, partialStudentsByDay: null };
         }
 
-        const today = formatDateKey(new Date());
+        const today = refDateStr;
 
         // 신입생 정렬 가중치 함수 (영어 시간표와 동일)
         const getEnrollmentWeight = (student: any) => {
@@ -435,7 +440,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
             if (student.underline) return 0;
             // enrollmentDate 기반 가중치
             if (student.enrollmentDate) {
-                const days = Math.ceil((Date.now() - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
+                const days = Math.ceil((refDateMs - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
                 if (days <= 30) return 3;  // 30일 이내 신입생 최하단
                 if (days <= 60) return 2;  // 31-60일 신입생 중간
             }
@@ -485,7 +490,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
             commonStudents: { active: commonActive, hold: commonHold, withdrawn: commonWithdrawn, withdrawnFuture: commonWithdrawnFuture },
             partialStudentsByDay: partial
         };
-    }, [isMergedCell, mergedDays, allStudents]);
+    }, [isMergedCell, mergedDays, allStudents, refDateStr, refDateMs]);
 
     // 단일 셀: 해당 요일에 등원하는 학생만 (기존 로직)
     const { activeStudents, holdStudents, withdrawnStudents, withdrawnFutureStudents } = useMemo(() => {
@@ -495,7 +500,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
         }
 
         const filterDay = currentDay || '';
-        const today = formatDateKey(new Date());
+        const today = refDateStr;
 
         // 신입생 정렬 가중치 함수 (영어 시간표와 동일)
         const getEnrollmentWeight = (student: any) => {
@@ -503,7 +508,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
             if (student.isTransferredIn) return -1;
             if (student.underline) return 0;
             if (student.enrollmentDate) {
-                const days = Math.ceil((Date.now() - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
+                const days = Math.ceil((refDateMs - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
                 if (days <= 30) return 3;
                 if (days <= 60) return 2;
             }
@@ -535,7 +540,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
         return { activeStudents: active, holdStudents: hold, withdrawnStudents: withdrawn, withdrawnFutureStudents: withdrawnFuture };
-    }, [isMergedCell, allStudents, currentDay]);
+    }, [isMergedCell, allStudents, currentDay, refDateStr, refDateMs]);
 
     // 병합 셀에서 부분 등원 학생이 있는지 확인
     const hasPartialStudents = isMergedCell && partialStudentsByDay &&
