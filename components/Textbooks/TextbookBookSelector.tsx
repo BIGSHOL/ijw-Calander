@@ -145,6 +145,9 @@ const TextbookBookSelector: React.FC<TextbookBookSelectorProps> = ({
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-xxs font-semibold px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 whitespace-nowrap">
+                        {book.subject || '수학'}
+                      </span>
                       <span className="text-xxs font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 whitespace-nowrap">
                         {book.grade}
                       </span>

@@ -326,7 +326,7 @@ export const calculateStudentSalary = (
 
   // paidAmount 없으면 기존 방식 fallback (수납 데이터 미연동 시)
   if (paidAmount === undefined || paidAmount === null) {
-    return studentClassUnits * calculateClassRate(settingItem, academyFee);
+    return Math.ceil(studentClassUnits * calculateClassRate(settingItem, academyFee));
   }
 
   if (settingItem.type === 'fixed') {
@@ -339,11 +339,11 @@ export const calculateStudentSalary = (
     // 비율제: MIN(납입금, ROUNDDOWN(단가 × 차수)) × (1 - 수수료/100) × (비율/100)
     const unitPrice = getEffectiveUnitPrice(settingItem);
     if (unitPrice <= 0) {
-      return studentClassUnits * calculateClassRate(settingItem, academyFee);
+      return Math.ceil(studentClassUnits * calculateClassRate(settingItem, academyFee));
     }
     const grossByAttendance = Math.floor(unitPrice * studentClassUnits); // ROUNDDOWN
     const effectiveBase = Math.min(paidAmount, grossByAttendance);       // MIN cap
-    return Math.round(effectiveBase * (1 - academyFee / 100) * (settingItem.ratio / 100));
+    return Math.ceil(effectiveBase * (1 - academyFee / 100) * (settingItem.ratio / 100));
   }
 };
 

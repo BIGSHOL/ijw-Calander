@@ -61,14 +61,44 @@ export type PermissionId =
   | 'consultation.view' | 'consultation.create' | 'consultation.edit' | 'consultation.convert' | 'consultation.manage'  // manage: 모든 상담 조회/수정 가능
   // Grades (NEW)
   | 'grades.view' | 'grades.edit' | 'grades.manage_exams'
-  // Billing (NEW)
+  // Billing (수납관리)
   | 'billing.view' | 'billing.edit'
   // Withdrawal (퇴원 관리)
   | 'withdrawal.view' | 'withdrawal.edit' | 'withdrawal.reactivate'
-  // Resources (리소스 관리)
-  | 'resources.edit'
+  // Resources (자료실)
+  | 'resources.view' | 'resources.edit'
   // Role Management (역할 관리)
-  | 'roles.view' | 'roles.manage';
+  | 'roles.view' | 'roles.manage'
+  // Daily Attendance (출결관리)
+  | 'daily_attendance.view' | 'daily_attendance.edit'
+  // Homework (숙제관리)
+  | 'homework.view' | 'homework.create' | 'homework.edit'
+  // Exams (시험관리)
+  | 'exams.view' | 'exams.create' | 'exams.edit'
+  // Textbooks (교재관리)
+  | 'textbooks.view' | 'textbooks.create' | 'textbooks.edit' | 'textbooks.admin'
+  // Contracts (계약관리)
+  | 'contracts.view' | 'contracts.create' | 'contracts.edit'
+  // Reports (학습리포트)
+  | 'reports.view' | 'reports.create'
+  // Classroom (강의실/강의실배정)
+  | 'classroom.view' | 'classroom.edit'
+  // Notices (공지사항)
+  | 'notices.view' | 'notices.create' | 'notices.edit'
+  // Parent Portal (학부모포털)
+  | 'parent_portal.view' | 'parent_portal.manage'
+  // Notifications (알림센터)
+  | 'notifications.view' | 'notifications.send'
+  // Payment (수강료현황)
+  | 'payment.view' | 'payment.edit'
+  // Analytics (매출분석/통계)
+  | 'analytics.view' | 'analytics.export'
+  // Payroll (급여관리)
+  | 'payroll.view' | 'payroll.edit'
+  // Shuttle (셔틀관리)
+  | 'shuttle.view' | 'shuttle.edit'
+  // Marketing (마케팅)
+  | 'marketing.view' | 'marketing.edit';
 
 // Role-based permission configuration (stored in Firestore)
 export type RolePermissions = {
@@ -119,9 +149,39 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     // Withdrawal
     'withdrawal.view': true, 'withdrawal.edit': true, 'withdrawal.reactivate': true,
     // Resources
-    'resources.edit': true,
+    'resources.view': true, 'resources.edit': true,
     // Role Management
     'roles.view': true, 'roles.manage': false,
+    // Daily Attendance
+    'daily_attendance.view': true, 'daily_attendance.edit': true,
+    // Homework
+    'homework.view': true, 'homework.create': true, 'homework.edit': true,
+    // Exams
+    'exams.view': true, 'exams.create': true, 'exams.edit': true,
+    // Textbooks
+    'textbooks.view': true, 'textbooks.create': true, 'textbooks.edit': true, 'textbooks.admin': true,
+    // Contracts
+    'contracts.view': true, 'contracts.create': true, 'contracts.edit': true,
+    // Reports
+    'reports.view': true, 'reports.create': true,
+    // Classroom
+    'classroom.view': true, 'classroom.edit': true,
+    // Notices
+    'notices.view': true, 'notices.create': true, 'notices.edit': true,
+    // Parent Portal
+    'parent_portal.view': true, 'parent_portal.manage': true,
+    // Notifications
+    'notifications.view': true, 'notifications.send': true,
+    // Payment
+    'payment.view': true, 'payment.edit': true,
+    // Analytics
+    'analytics.view': true, 'analytics.export': true,
+    // Payroll
+    'payroll.view': true, 'payroll.edit': true,
+    // Shuttle
+    'shuttle.view': true, 'shuttle.edit': true,
+    // Marketing
+    'marketing.view': true, 'marketing.edit': true,
   },
   manager: {
     // Events
@@ -161,9 +221,39 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     // Withdrawal
     'withdrawal.view': true, 'withdrawal.edit': true, 'withdrawal.reactivate': true,
     // Resources
-    'resources.edit': true,
+    'resources.view': true, 'resources.edit': true,
     // Role Management
     'roles.view': false, 'roles.manage': false,
+    // Daily Attendance
+    'daily_attendance.view': true, 'daily_attendance.edit': true,
+    // Homework
+    'homework.view': true, 'homework.create': true, 'homework.edit': true,
+    // Exams
+    'exams.view': true, 'exams.create': true, 'exams.edit': true,
+    // Textbooks
+    'textbooks.view': true, 'textbooks.create': true, 'textbooks.edit': true, 'textbooks.admin': true,
+    // Contracts
+    'contracts.view': true, 'contracts.create': true, 'contracts.edit': true,
+    // Reports
+    'reports.view': true, 'reports.create': true,
+    // Classroom
+    'classroom.view': true, 'classroom.edit': true,
+    // Notices
+    'notices.view': true, 'notices.create': true, 'notices.edit': true,
+    // Parent Portal
+    'parent_portal.view': true, 'parent_portal.manage': true,
+    // Notifications
+    'notifications.view': true, 'notifications.send': true,
+    // Payment
+    'payment.view': true, 'payment.edit': false,
+    // Analytics
+    'analytics.view': true, 'analytics.export': false,
+    // Payroll
+    'payroll.view': false, 'payroll.edit': false,
+    // Shuttle
+    'shuttle.view': true, 'shuttle.edit': true,
+    // Marketing
+    'marketing.view': true, 'marketing.edit': true,
   },
   math_lead: {
     // Events
@@ -203,6 +293,36 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'withdrawal.view': true, 'withdrawal.edit': true, 'withdrawal.reactivate': false,
     // Role Management
     'roles.view': false, 'roles.manage': false,
+    // Daily Attendance
+    'daily_attendance.view': true, 'daily_attendance.edit': true,
+    // Homework
+    'homework.view': true, 'homework.create': true, 'homework.edit': true,
+    // Exams
+    'exams.view': true, 'exams.create': true, 'exams.edit': true,
+    // Textbooks
+    'textbooks.view': true, 'textbooks.create': true, 'textbooks.edit': true, 'textbooks.admin': false,
+    // Contracts
+    'contracts.view': true, 'contracts.create': false, 'contracts.edit': false,
+    // Reports
+    'reports.view': true, 'reports.create': true,
+    // Classroom
+    'classroom.view': true, 'classroom.edit': false,
+    // Notices
+    'notices.view': true, 'notices.create': false, 'notices.edit': false,
+    // Parent Portal
+    'parent_portal.view': true, 'parent_portal.manage': false,
+    // Notifications
+    'notifications.view': true, 'notifications.send': true,
+    // Payment
+    'payment.view': false, 'payment.edit': false,
+    // Analytics
+    'analytics.view': false, 'analytics.export': false,
+    // Payroll
+    'payroll.view': false, 'payroll.edit': false,
+    // Shuttle
+    'shuttle.view': true, 'shuttle.edit': false,
+    // Marketing
+    'marketing.view': false, 'marketing.edit': false,
   },
   english_lead: {
     // Events
@@ -244,6 +364,36 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'withdrawal.view': true, 'withdrawal.edit': true, 'withdrawal.reactivate': false,
     // Role Management
     'roles.view': false, 'roles.manage': false,
+    // Daily Attendance
+    'daily_attendance.view': true, 'daily_attendance.edit': true,
+    // Homework
+    'homework.view': true, 'homework.create': true, 'homework.edit': true,
+    // Exams
+    'exams.view': true, 'exams.create': true, 'exams.edit': true,
+    // Textbooks
+    'textbooks.view': true, 'textbooks.create': true, 'textbooks.edit': true, 'textbooks.admin': false,
+    // Contracts
+    'contracts.view': true, 'contracts.create': false, 'contracts.edit': false,
+    // Reports
+    'reports.view': true, 'reports.create': true,
+    // Classroom
+    'classroom.view': true, 'classroom.edit': false,
+    // Notices
+    'notices.view': true, 'notices.create': false, 'notices.edit': false,
+    // Parent Portal
+    'parent_portal.view': true, 'parent_portal.manage': false,
+    // Notifications
+    'notifications.view': true, 'notifications.send': true,
+    // Payment
+    'payment.view': false, 'payment.edit': false,
+    // Analytics
+    'analytics.view': false, 'analytics.export': false,
+    // Payroll
+    'payroll.view': false, 'payroll.edit': false,
+    // Shuttle
+    'shuttle.view': true, 'shuttle.edit': false,
+    // Marketing
+    'marketing.view': false, 'marketing.edit': false,
   },
   math_teacher: {
     // Events
@@ -282,6 +432,36 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'withdrawal.view': true, 'withdrawal.edit': false, 'withdrawal.reactivate': false,
     // Role Management
     'roles.view': false, 'roles.manage': false,
+    // Daily Attendance
+    'daily_attendance.view': true, 'daily_attendance.edit': false,
+    // Homework
+    'homework.view': true, 'homework.create': true, 'homework.edit': true,
+    // Exams
+    'exams.view': true, 'exams.create': false, 'exams.edit': false,
+    // Textbooks
+    'textbooks.view': true, 'textbooks.create': false, 'textbooks.edit': false, 'textbooks.admin': false,
+    // Contracts
+    'contracts.view': false, 'contracts.create': false, 'contracts.edit': false,
+    // Reports
+    'reports.view': true, 'reports.create': true,
+    // Classroom
+    'classroom.view': true, 'classroom.edit': false,
+    // Notices
+    'notices.view': true, 'notices.create': false, 'notices.edit': false,
+    // Parent Portal
+    'parent_portal.view': true, 'parent_portal.manage': false,
+    // Notifications
+    'notifications.view': true, 'notifications.send': false,
+    // Payment
+    'payment.view': false, 'payment.edit': false,
+    // Analytics
+    'analytics.view': false, 'analytics.export': false,
+    // Payroll
+    'payroll.view': false, 'payroll.edit': false,
+    // Shuttle
+    'shuttle.view': true, 'shuttle.edit': false,
+    // Marketing
+    'marketing.view': false, 'marketing.edit': false,
   },
   english_teacher: {
     // Events
@@ -320,6 +500,36 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'withdrawal.view': true, 'withdrawal.edit': false, 'withdrawal.reactivate': false,
     // Role Management
     'roles.view': false, 'roles.manage': false,
+    // Daily Attendance
+    'daily_attendance.view': true, 'daily_attendance.edit': false,
+    // Homework
+    'homework.view': true, 'homework.create': true, 'homework.edit': true,
+    // Exams
+    'exams.view': true, 'exams.create': false, 'exams.edit': false,
+    // Textbooks
+    'textbooks.view': true, 'textbooks.create': false, 'textbooks.edit': false, 'textbooks.admin': false,
+    // Contracts
+    'contracts.view': false, 'contracts.create': false, 'contracts.edit': false,
+    // Reports
+    'reports.view': true, 'reports.create': true,
+    // Classroom
+    'classroom.view': true, 'classroom.edit': false,
+    // Notices
+    'notices.view': true, 'notices.create': false, 'notices.edit': false,
+    // Parent Portal
+    'parent_portal.view': true, 'parent_portal.manage': false,
+    // Notifications
+    'notifications.view': true, 'notifications.send': false,
+    // Payment
+    'payment.view': false, 'payment.edit': false,
+    // Analytics
+    'analytics.view': false, 'analytics.export': false,
+    // Payroll
+    'payroll.view': false, 'payroll.edit': false,
+    // Shuttle
+    'shuttle.view': true, 'shuttle.edit': false,
+    // Marketing
+    'marketing.view': false, 'marketing.edit': false,
   },
   user: {
     // Events (basic)
@@ -343,6 +553,36 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'withdrawal.view': false, 'withdrawal.edit': false, 'withdrawal.reactivate': false,
     // Role Management
     'roles.view': false, 'roles.manage': false,
+    // Daily Attendance
+    'daily_attendance.view': false, 'daily_attendance.edit': false,
+    // Homework
+    'homework.view': false, 'homework.create': false, 'homework.edit': false,
+    // Exams
+    'exams.view': false, 'exams.create': false, 'exams.edit': false,
+    // Textbooks
+    'textbooks.view': false, 'textbooks.create': false, 'textbooks.edit': false, 'textbooks.admin': false,
+    // Contracts
+    'contracts.view': false, 'contracts.create': false, 'contracts.edit': false,
+    // Reports
+    'reports.view': false, 'reports.create': false,
+    // Classroom
+    'classroom.view': false, 'classroom.edit': false,
+    // Notices
+    'notices.view': true, 'notices.create': false, 'notices.edit': false,
+    // Parent Portal
+    'parent_portal.view': false, 'parent_portal.manage': false,
+    // Notifications
+    'notifications.view': false, 'notifications.send': false,
+    // Payment
+    'payment.view': false, 'payment.edit': false,
+    // Analytics
+    'analytics.view': false, 'analytics.export': false,
+    // Payroll
+    'payroll.view': false, 'payroll.edit': false,
+    // Shuttle
+    'shuttle.view': false, 'shuttle.edit': false,
+    // Marketing
+    'marketing.view': false, 'marketing.edit': false,
   },
 };
 

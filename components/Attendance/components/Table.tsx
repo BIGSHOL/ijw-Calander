@@ -36,6 +36,8 @@ interface Props {
   highlightWeekends?: boolean;
   // 발행예정금액 표시 옵션
   showExpectedBilling?: boolean;
+  // 정산액 표시 옵션
+  showSettlement?: boolean;
   // 공휴일 데이터
   holidays?: Holiday[];
   // 정렬 모드: 수업별 그룹 | 이름순 flat
@@ -83,6 +85,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
   selectedSession,
   highlightWeekends = false,
   showExpectedBilling = false,
+  showSettlement = false,
   holidays = [],
   sortMode = 'class',
   hiddenDates = new Set<string>(),
@@ -167,9 +170,10 @@ const Table = forwardRef<HTMLTableElement, Props>(({
     e.preventDefault();
 
     // Get existing memo and cell color if any
-    const existingMemo = student.memos?.[dateKey] || '';
-    const existingColor = student.cellColors?.[dateKey] || '';
     const className = student.group || '';  // group이 className으로 설정됨
+    const compositeKey = `${className}::${dateKey}`;
+    const existingMemo = student.memos?.[compositeKey] || student.memos?.[dateKey] || '';
+    const existingColor = student.cellColors?.[compositeKey] || student.cellColors?.[dateKey] || '';
 
     // Calculate position (keep it within viewport bounds roughly)
     // For simplicity, just using clientX/Y. A robust solution would measure window size.
@@ -221,8 +225,11 @@ const Table = forwardRef<HTMLTableElement, Props>(({
             {showExpectedBilling && (
               <th className="p-1 sticky left-[272px] top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[60px] text-center bg-primary align-middle text-xxs whitespace-nowrap" title="발행예정금액 (이달 등원일 × 수업 단가)">예정액</th>
             )}
-            <th className="p-1 sticky top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[36px] text-center bg-primary align-middle text-xs whitespace-nowrap" style={{ left: showExpectedBilling ? 332 : 272 }}>출석</th>
-            <th className="p-1 sticky top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[36px] text-center bg-primary align-middle text-xs whitespace-nowrap" style={{ left: showExpectedBilling ? 368 : 308 }}>등록</th>
+            {showSettlement && (
+              <th className="p-1 sticky top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[60px] text-center bg-primary align-middle text-xxs whitespace-nowrap" style={{ left: 272 + (showExpectedBilling ? 60 : 0) }} title="학생별 정산액 (출석 기반)">정산액</th>
+            )}
+            <th className="p-1 sticky top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[36px] text-center bg-primary align-middle text-xs whitespace-nowrap" style={{ left: 272 + (showExpectedBilling ? 60 : 0) + (showSettlement ? 60 : 0) }}>출석</th>
+            <th className="p-1 sticky top-0 z-[110] border-r border-b border-[#ffffff]/10 w-[36px] text-center bg-primary align-middle text-xs whitespace-nowrap" style={{ left: 308 + (showExpectedBilling ? 60 : 0) + (showSettlement ? 60 : 0) }}>등록</th>
 
             {/* 숨긴 열 표시 바 */}
             {hiddenDates.size > 0 && onHiddenDatesChange && (
@@ -302,6 +309,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
               onCollapsedGroupsChange={onCollapsedGroupsChange}
               highlightWeekends={highlightWeekends}
               showExpectedBilling={showExpectedBilling}
+              showSettlement={showSettlement}
               holidayDateSet={holidayDateSet}
               holidayNameMap={holidayNameMap}
               sortMode={sortMode}
@@ -311,7 +319,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
             />
           ) : (
             <tr>
-              <td colSpan={days.length + 6 + (hasHiddenDates ? 1 : 0) + (showExpectedBilling ? 1 : 0)} className="p-12 text-center text-gray-400">
+              <td colSpan={days.length + 6 + (hasHiddenDates ? 1 : 0) + (showExpectedBilling ? 1 : 0) + (showSettlement ? 1 : 0)} className="p-12 text-center text-gray-400">
                 등록된 학생이 없습니다. 상단의 '학생 추가' 버튼을 눌러 시작하세요.
               </td>
             </tr>

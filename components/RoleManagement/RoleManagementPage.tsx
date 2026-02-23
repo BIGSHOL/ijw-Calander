@@ -188,6 +188,156 @@ const PERMISSION_CATEGORIES = [
       { id: 'roles.manage' as PermissionId, label: '관리' },
     ]
   },
+  {
+    id: 'daily_attendance',
+    label: '출결관리',
+    icon: '📋',
+    permissions: [
+      { id: 'daily_attendance.view' as PermissionId, label: '조회' },
+      { id: 'daily_attendance.edit' as PermissionId, label: '수정' },
+    ]
+  },
+  {
+    id: 'homework',
+    label: '숙제',
+    icon: '📝',
+    permissions: [
+      { id: 'homework.view' as PermissionId, label: '조회' },
+      { id: 'homework.create' as PermissionId, label: '생성' },
+      { id: 'homework.edit' as PermissionId, label: '수정' },
+    ]
+  },
+  {
+    id: 'exams',
+    label: '시험',
+    icon: '📄',
+    permissions: [
+      { id: 'exams.view' as PermissionId, label: '조회' },
+      { id: 'exams.create' as PermissionId, label: '생성' },
+      { id: 'exams.edit' as PermissionId, label: '수정' },
+    ]
+  },
+  {
+    id: 'textbooks',
+    label: '교재',
+    icon: '📖',
+    permissions: [
+      { id: 'textbooks.view' as PermissionId, label: '조회' },
+      { id: 'textbooks.create' as PermissionId, label: '생성' },
+      { id: 'textbooks.edit' as PermissionId, label: '수정' },
+      { id: 'textbooks.admin' as PermissionId, label: '관리자모드' },
+    ]
+  },
+  {
+    id: 'contracts',
+    label: '계약',
+    icon: '📃',
+    permissions: [
+      { id: 'contracts.view' as PermissionId, label: '조회' },
+      { id: 'contracts.create' as PermissionId, label: '생성' },
+      { id: 'contracts.edit' as PermissionId, label: '수정' },
+    ]
+  },
+  {
+    id: 'reports',
+    label: '리포트',
+    icon: '📊',
+    permissions: [
+      { id: 'reports.view' as PermissionId, label: '조회' },
+      { id: 'reports.create' as PermissionId, label: '생성' },
+    ]
+  },
+  {
+    id: 'classroom',
+    label: '강의실',
+    icon: '🏫',
+    permissions: [
+      { id: 'classroom.view' as PermissionId, label: '조회' },
+      { id: 'classroom.edit' as PermissionId, label: '수정/배정' },
+    ]
+  },
+  {
+    id: 'notices',
+    label: '공지사항',
+    icon: '📢',
+    permissions: [
+      { id: 'notices.view' as PermissionId, label: '조회' },
+      { id: 'notices.create' as PermissionId, label: '생성' },
+      { id: 'notices.edit' as PermissionId, label: '수정' },
+    ]
+  },
+  {
+    id: 'parent_portal',
+    label: '학부모포털',
+    icon: '👨‍👩‍👧',
+    permissions: [
+      { id: 'parent_portal.view' as PermissionId, label: '조회' },
+      { id: 'parent_portal.manage' as PermissionId, label: '관리' },
+    ]
+  },
+  {
+    id: 'notifications',
+    label: '알림센터',
+    icon: '🔔',
+    permissions: [
+      { id: 'notifications.view' as PermissionId, label: '조회' },
+      { id: 'notifications.send' as PermissionId, label: '발송' },
+    ]
+  },
+  {
+    id: 'payment',
+    label: '수강료현황',
+    icon: '💳',
+    permissions: [
+      { id: 'payment.view' as PermissionId, label: '조회' },
+      { id: 'payment.edit' as PermissionId, label: '수정' },
+    ]
+  },
+  {
+    id: 'analytics',
+    label: '매출분석',
+    icon: '📈',
+    permissions: [
+      { id: 'analytics.view' as PermissionId, label: '조회' },
+      { id: 'analytics.export' as PermissionId, label: '내보내기' },
+    ]
+  },
+  {
+    id: 'payroll',
+    label: '급여',
+    icon: '💵',
+    permissions: [
+      { id: 'payroll.view' as PermissionId, label: '조회' },
+      { id: 'payroll.edit' as PermissionId, label: '수정' },
+    ]
+  },
+  {
+    id: 'shuttle',
+    label: '셔틀',
+    icon: '🚐',
+    permissions: [
+      { id: 'shuttle.view' as PermissionId, label: '조회' },
+      { id: 'shuttle.edit' as PermissionId, label: '수정' },
+    ]
+  },
+  {
+    id: 'marketing',
+    label: '마케팅',
+    icon: '📣',
+    permissions: [
+      { id: 'marketing.view' as PermissionId, label: '조회' },
+      { id: 'marketing.edit' as PermissionId, label: '수정' },
+    ]
+  },
+  {
+    id: 'resources_mgmt',
+    label: '자료실',
+    icon: '📁',
+    permissions: [
+      { id: 'resources.view' as PermissionId, label: '조회' },
+      { id: 'resources.edit' as PermissionId, label: '수정' },
+    ]
+  },
 ];
 
 const ROLES_TO_SHOW = ROLE_HIERARCHY.filter(r => r !== 'master') as UserRole[];

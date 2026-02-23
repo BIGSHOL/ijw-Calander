@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '../firebaseConfig';
 import { collection, query, orderBy, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc, writeBatch } from 'firebase/firestore';
-import { TEXTBOOK_CATALOG, TextbookCatalogItem } from '../data/textbookCatalog';
+import { TEXTBOOK_CATALOG, TextbookCatalogItem, DEFAULT_SUBJECT } from '../data/textbookCatalog';
 
 // ===== Types =====
 
@@ -24,6 +24,8 @@ export interface TextbookRequest {
   paidAt?: string;
   isOrdered?: boolean;
   orderedAt?: string;
+  copiedToBilling?: boolean;
+  copiedAt?: string;
 }
 
 export interface AccountSettings {
@@ -68,9 +70,11 @@ export function useTextbookRequests() {
       const snap = await getDoc(docRef);
       if (snap.exists()) {
         const list = snap.data().list as TextbookCatalogItem[];
-        if (list && list.length > 0) return list;
+        if (list && list.length > 0) {
+          return list.map(item => ({ ...item, subject: item.subject || DEFAULT_SUBJECT }));
+        }
       }
-      return TEXTBOOK_CATALOG;
+      return TEXTBOOK_CATALOG.map(item => ({ ...item, subject: item.subject || DEFAULT_SUBJECT }));
     },
     staleTime: 30 * 60 * 1000,
   });
@@ -189,6 +193,86 @@ export function useTextbookRequests() {
     return { matched };
   };
 
+  // 완료된 요청 → 수납 내역(textbook_billings)으로 복사
+  const copyToBillings = useMutation({
+    mutationFn: async (targetRequests: TextbookRequest[]) => {
+      // 학생 정보 조회 (grade, school 매핑용)
+      const studentsSnap = await getDocs(collection(db, 'students'));
+      const studentMap = new Map<string, { id: string; grade: string; school: string }>();
+      studentsSnap.docs.forEach(d => {
+        const data = d.data();
+        studentMap.set(data.name, {
+          id: d.id,
+          grade: data.grade || '',
+          school: data.school || '',
+        });
+      });
+
+      // 기존 billing 중복 체크
+      const billingsSnap = await getDocs(collection(db, 'textbook_billings'));
+      const existingKeys = new Set<string>();
+      billingsSnap.docs.forEach(d => {
+        const data = d.data();
+        existingKeys.add(`${data.studentName}_${data.textbookName}_${data.month}`);
+      });
+
+      const now = new Date().toISOString();
+      const batch = writeBatch(db);
+      let copied = 0;
+      let skipped = 0;
+      const copiedIds: string[] = [];
+
+      for (const req of targetRequests) {
+        const month = req.requestDate.slice(0, 7).replace('-', ''); // YYYY-MM-DD → YYYYMM
+        const key = `${req.studentName}_${req.bookName}_${month}`;
+
+        if (existingKeys.has(key)) {
+          skipped++;
+          // 이미 복사된 건이지만 copiedToBilling 플래그만 갱신
+          if (!req.copiedToBilling) copiedIds.push(req.id);
+          continue;
+        }
+
+        const student = studentMap.get(req.studentName);
+        const billingRef = doc(collection(db, 'textbook_billings'));
+        batch.set(billingRef, {
+          studentId: student?.id || '',
+          studentName: req.studentName,
+          grade: student?.grade || '',
+          school: student?.school || '',
+          textbookName: req.bookName,
+          amount: req.price,
+          month,
+          matched: true,
+          importedAt: now,
+          sourceRequestId: req.id,
+        });
+        existingKeys.add(key);
+        copiedIds.push(req.id);
+        copied++;
+      }
+
+      // 요청서에 copiedToBilling 플래그 설정
+      for (const id of copiedIds) {
+        batch.update(doc(db, 'textbook_requests', id), {
+          copiedToBilling: true,
+          copiedAt: now,
+        });
+      }
+
+      if (copied > 0 || copiedIds.length > 0) {
+        await batch.commit();
+      }
+
+      return { copied, skipped };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['textbookRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['textbookBillings'] });
+    },
+    onError: (error: Error) => { console.error('copyToBillings failed:', error); },
+  });
+
   // 통계
   const stats = useMemo(() => {
     const total = requests.length;
@@ -212,5 +296,6 @@ export function useTextbookRequests() {
     saveAccountSettings,
     saveCatalog,
     autoMatchBillings,
+    copyToBillings,
   };
 }

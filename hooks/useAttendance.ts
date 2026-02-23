@@ -792,9 +792,13 @@ export const useUpdateMemo = () => {
         },
         onMutate: async ({ studentId, className, yearMonth, dateKey, memo }) => {
             const compositeKey = `${className}::${dateKey}`;
-            await queryClient.cancelQueries({ queryKey: ['attendanceRecords', studentId, yearMonth] });
-            const previousRecord = queryClient.getQueryData(['attendanceRecords', studentId, yearMonth]);
+            // 관련된 모든 attendanceRecords 쿼리 취소
+            await queryClient.cancelQueries({ queryKey: ['attendanceRecords'] });
 
+            // 이전 상태 저장 (롤백용)
+            const previousData = queryClient.getQueriesData({ queryKey: ['attendanceRecords'] });
+
+            // 1. useAttendanceRecords용 캐시 업데이트
             queryClient.setQueryData(['attendanceRecords', studentId, yearMonth], (old: any) => {
                 if (!old) return { attendance: {}, memos: { [compositeKey]: memo } };
                 const newMemos = { ...old.memos };
@@ -803,13 +807,47 @@ export const useUpdateMemo = () => {
                 return { ...old, memos: newMemos };
             });
 
-            return { previousRecord };
+            // 2. useAttendanceStudents용 bulk 캐시 업데이트
+            queryClient.setQueriesData(
+                { queryKey: ['attendanceRecords', yearMonth] },
+                (old: any) => {
+                    if (!old || !Array.isArray(old)) return old;
+                    return old.map((student: any) => {
+                        if (student.id !== studentId) return student;
+                        const newMemos = { ...student.memos };
+                        if (!memo?.trim()) delete newMemos[compositeKey];
+                        else newMemos[compositeKey] = memo.trim();
+                        return { ...student, memos: newMemos };
+                    });
+                }
+            );
+
+            return { previousData };
         },
-        onError: (err, newTodo, context: any) => {
-            queryClient.setQueryData(['attendanceRecords', newTodo.studentId, newTodo.yearMonth], context.previousRecord);
+        onError: (err, variables, context: any) => {
+            // 롤백: 이전 캐시 복원
+            if (context?.previousData) {
+                context.previousData.forEach(([queryKey, data]: [any, any]) => {
+                    queryClient.setQueryData(queryKey, data);
+                });
+            }
         },
-        onSettled: (data, error, variables) => {
-            queryClient.invalidateQueries({ queryKey: ['attendanceRecords', variables.studentId, variables.yearMonth] });
+        onSuccess: ({ studentId, className, yearMonth, dateKey, memo }) => {
+            const compositeKey = `${className}::${dateKey}`;
+            // Firebase 저장 완료 후 bulk 캐시 확정 업데이트
+            queryClient.setQueriesData(
+                { queryKey: ['attendanceRecords'] },
+                (old: any) => {
+                    if (!old || !Array.isArray(old)) return old;
+                    return old.map((student: any) => {
+                        if (student.id !== studentId) return student;
+                        const newMemos = { ...student.memos };
+                        if (!memo?.trim()) delete newMemos[compositeKey];
+                        else newMemos[compositeKey] = memo.trim();
+                        return { ...student, memos: newMemos };
+                    });
+                }
+            );
         },
     });
 };

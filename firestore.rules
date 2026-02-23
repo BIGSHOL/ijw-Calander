@@ -421,10 +421,16 @@ service cloud.firestore {
       allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('billing.edit');
     }
 
+    // === Extension Version (확장 프로그램 버전 - 비인증 읽기 허용) ===
+    match /settings/extension-version {
+      allow read: if true;
+      allow write: if hasRole(['master', 'admin']);
+    }
+
     // === Textbook Requests (교재 신청) ===
     match /textbook_requests/{docId} {
       allow read: if isAuthenticated();
-      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('textbook.edit');
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('textbooks.edit');
     }
 
     // === Textbook Billings (교재 수납) ===

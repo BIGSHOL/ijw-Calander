@@ -1,5 +1,7 @@
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { useTextbookRequests, TextbookRequest } from '../../hooks/useTextbookRequests';
+import { useStudents } from '../../hooks/useStudents';
+import { useTeachers } from '../../hooks/useFirebaseQueries';
 import { TextbookCatalogItem } from '../../data/textbookCatalog';
 import { TextbookPreviewCard, TextbookRequestData } from './TextbookPreviewCard';
 import TextbookBookSelector from './TextbookBookSelector';
@@ -16,6 +18,10 @@ import BookOpen from 'lucide-react/dist/esm/icons/book-open';
 import CreditCard from 'lucide-react/dist/esm/icons/credit-card';
 import Chrome from 'lucide-react/dist/esm/icons/chrome';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import Copy from 'lucide-react/dist/esm/icons/copy';
+import Settings from 'lucide-react/dist/esm/icons/settings';
+import Check from 'lucide-react/dist/esm/icons/check';
+import X from 'lucide-react/dist/esm/icons/x';
 
 // ===== Types =====
 
@@ -109,6 +115,69 @@ const LabeledInput: React.FC<LabeledInputProps> = ({ label, children, className 
 
 const inputCls =
   'w-full px-2.5 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500';
+
+// ===== Autocomplete Input =====
+
+interface AutocompleteOption {
+  label: string;
+  sub?: string;
+  value: string;
+}
+
+interface AutocompleteInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  onSelect: (option: AutocompleteOption) => void;
+  options: AutocompleteOption[];
+  placeholder: string;
+}
+
+const AutocompleteInput: React.FC<AutocompleteInputProps> = ({ value, onChange, onSelect, options, placeholder }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const filtered = useMemo(() => {
+    if (!value.trim()) return [];
+    const q = value.toLowerCase();
+    return options.filter(o => o.label.toLowerCase().includes(q) || (o.sub && o.sub.toLowerCase().includes(q))).slice(0, 8);
+  }, [value, options]);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        placeholder={placeholder}
+        className={inputCls}
+        autoComplete="off"
+      />
+      {open && filtered.length > 0 && (
+        <ul className="absolute z-50 left-0 right-0 mt-0.5 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-auto">
+          {filtered.map((o, i) => (
+            <li
+              key={i}
+              className="px-2.5 py-1.5 text-xs hover:bg-blue-50 cursor-pointer flex items-center justify-between"
+              onMouseDown={() => { onSelect(o); setOpen(false); }}
+            >
+              <span className="font-medium">{o.label}</span>
+              {o.sub && <span className="text-gray-400 text-[10px]">{o.sub}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+};
 
 // ===== Status Checkbox =====
 
@@ -240,14 +309,70 @@ const Pagination: React.FC<PaginationProps> = ({ page, totalPages, total, onPage
 
 interface TextbookRequestViewProps {
   isAdmin?: boolean;
+  initialTab?: SubTab;
+  onRequestCreated?: () => void;
 }
 
-export default function TextbookRequestView({ isAdmin = false }: TextbookRequestViewProps) {
-  const { requests, requestsLoading, accountSettings, catalog, createRequest, updateRequest, deleteRequest } =
+export default function TextbookRequestView({ isAdmin = false, initialTab, onRequestCreated }: TextbookRequestViewProps) {
+  const { requests, requestsLoading, accountSettings, catalog, createRequest, updateRequest, deleteRequest, copyToBillings, saveAccountSettings } =
     useTextbookRequests();
 
-  // Sub-tab
-  const [subTab, setSubTab] = useState<SubTab>('create');
+  const effectiveAdmin = isAdmin;
+
+  // Sub-tab은 상위 TextbooksTab에서 제어 (initialTab prop으로 결정)
+  const subTab: SubTab = initialTab || 'create';
+
+  // 학생/선생님 자동완성용 데이터
+  const { students = [] } = useStudents(false, subTab === 'create');
+  const { data: teachers = [] } = useTeachers(subTab === 'create');
+
+  const studentOptions = useMemo<AutocompleteOption[]>(() =>
+    students.map(s => ({
+      label: s.name,
+      sub: [s.grade, s.school].filter(Boolean).join(' · '),
+      value: s.id,
+    })),
+    [students]
+  );
+
+  const subjectKo: Record<string, string> = { math: '수학', english: '영어', science: '과학', korean: '국어' };
+  const teacherOptions = useMemo<AutocompleteOption[]>(() =>
+    teachers.map((t: any) => ({
+      label: t.name,
+      sub: t.subjects?.map((s: string) => subjectKo[s] || s).join(', ') || '',
+      value: t.id,
+    })),
+    [teachers]
+  );
+
+  // Account settings panel (admin only)
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsForm, setSettingsForm] = useState({
+    bankName: accountSettings.bankName,
+    accountNumber: accountSettings.accountNumber,
+    accountHolder: accountSettings.accountHolder,
+  });
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+
+  useEffect(() => {
+    setSettingsForm({
+      bankName: accountSettings.bankName,
+      accountNumber: accountSettings.accountNumber,
+      accountHolder: accountSettings.accountHolder,
+    });
+  }, [accountSettings]);
+
+  const handleSaveSettings = useCallback(async () => {
+    setIsSavingSettings(true);
+    try {
+      await saveAccountSettings.mutateAsync(settingsForm);
+      setShowSettings(false);
+    } catch (err) {
+      console.error('saveAccountSettings failed:', err);
+      alert('계좌 설정 저장에 실패했습니다.');
+    }
+    setIsSavingSettings(false);
+  }, [settingsForm, saveAccountSettings]);
 
   // Create form state
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
@@ -356,7 +481,7 @@ export default function TextbookRequestView({ isAdmin = false }: TextbookRequest
         accountHolder: form.accountHolder,
       });
       alert('이미지가 다운로드되고 요청 내역이 저장되었습니다.');
-      setSubTab('history');
+      onRequestCreated?.();
     } catch (err) {
       console.error('Firestore save failed:', err);
       alert('서버 저장에 실패했습니다. (이미지는 다운로드되었습니다)');
@@ -434,41 +559,59 @@ export default function TextbookRequestView({ isAdmin = false }: TextbookRequest
     [deleteRequest]
   );
 
+  // 완료된 요청 → 수납 내역 복사
+  const uncopiedCompleteCount = useMemo(
+    () => requests.filter(r => isFullyComplete(r) && !r.copiedToBilling).length,
+    [requests]
+  );
+
+  const [isCopying, setIsCopying] = useState(false);
+  const handleCopyToBillings = useCallback(async () => {
+    const targets = requests.filter(r => isFullyComplete(r) && !r.copiedToBilling);
+    if (targets.length === 0) {
+      alert('복사할 새로운 완료 건이 없습니다.');
+      return;
+    }
+    if (!window.confirm(`완료된 요청 ${targets.length}건을 수납 내역으로 복사하시겠습니까?\n(원본 데이터는 유지됩니다)`)) return;
+    setIsCopying(true);
+    try {
+      const result = await copyToBillings.mutateAsync(targets);
+      alert(`수납 내역 복사 완료!\n신규 복사: ${result.copied}건${result.skipped > 0 ? `\n이미 존재: ${result.skipped}건` : ''}`);
+    } catch (err) {
+      console.error('copyToBillings failed:', err);
+      alert('수납 내역 복사에 실패했습니다.');
+    }
+    setIsCopying(false);
+  }, [requests, copyToBillings]);
+
+  // 요청 내역에서 이미지 재다운로드
+  const historyPreviewRef = useRef<HTMLDivElement>(null);
+  const [downloadTarget, setDownloadTarget] = useState<TextbookRequest | null>(null);
+
+  useEffect(() => {
+    if (!downloadTarget || !historyPreviewRef.current) return;
+    const el = historyPreviewRef.current;
+    // 렌더링 완료 후 캡처
+    const timer = setTimeout(async () => {
+      try {
+        const dataUrl = await toPng(el, { cacheBust: true, pixelRatio: 2 });
+        const link = document.createElement('a');
+        link.download = `${downloadTarget.requestDate}_${downloadTarget.studentName}_${downloadTarget.bookName}.png`;
+        link.href = dataUrl;
+        link.click();
+      } catch (err) {
+        console.error('Image download failed:', err);
+        alert('이미지 생성에 실패했습니다.');
+      }
+      setDownloadTarget(null);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [downloadTarget]);
+
   // ===== Render =====
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      {/* Sub-tab navigation */}
-      <div className="bg-white border-b border-gray-200 px-4 py-2 flex items-center gap-1">
-        <div className="flex gap-1 bg-gray-100 rounded p-0.5">
-          <button
-            onClick={() => setSubTab('create')}
-            className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-              subTab === 'create'
-                ? 'bg-white text-blue-700 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            작성하기
-          </button>
-          <button
-            onClick={() => setSubTab('history')}
-            className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-              subTab === 'history'
-                ? 'bg-white text-blue-700 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            요청 이력
-            {incompleteCount > 0 && (
-              <span className="ml-1.5 text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full">
-                {incompleteCount}
-              </span>
-            )}
-          </button>
-        </div>
-      </div>
-
       {/* ===== 작성하기 Tab ===== */}
       {subTab === 'create' && (
         <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
@@ -479,26 +622,88 @@ export default function TextbookRequestView({ isAdmin = false }: TextbookRequest
               <FormSectionHeader
                 icon={<User size={14} />}
                 title="기본 정보"
+                action={effectiveAdmin ? (
+                  <button
+                    onClick={() => setShowSettings(!showSettings)}
+                    className={`p-1 rounded transition-colors ${showSettings ? 'text-blue-600 bg-blue-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+                    title="계좌 설정"
+                  >
+                    <Settings size={14} />
+                  </button>
+                ) : undefined}
               />
+              {/* Admin Settings Panel */}
+              {showSettings && effectiveAdmin && (
+                <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-semibold text-blue-700">기본 계좌 설정</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={handleSaveSettings}
+                        disabled={isSavingSettings}
+                        className="flex items-center gap-1 px-2 py-1 text-[11px] bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                      >
+                        {isSavingSettings ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />}
+                        저장
+                      </button>
+                      <button
+                        onClick={() => setShowSettings(false)}
+                        className="p-1 text-gray-400 hover:text-gray-600 rounded transition-colors"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <LabeledInput label="은행명">
+                      <input
+                        type="text"
+                        value={settingsForm.bankName}
+                        onChange={(e) => setSettingsForm(prev => ({ ...prev, bankName: e.target.value }))}
+                        placeholder="은행명"
+                        className={inputCls}
+                      />
+                    </LabeledInput>
+                    <LabeledInput label="예금주">
+                      <input
+                        type="text"
+                        value={settingsForm.accountHolder}
+                        onChange={(e) => setSettingsForm(prev => ({ ...prev, accountHolder: e.target.value }))}
+                        placeholder="예금주"
+                        className={inputCls}
+                      />
+                    </LabeledInput>
+                  </div>
+                  <LabeledInput label="계좌번호">
+                    <input
+                      type="text"
+                      value={settingsForm.accountNumber}
+                      onChange={(e) => setSettingsForm(prev => ({ ...prev, accountNumber: e.target.value }))}
+                      placeholder="계좌번호"
+                      className={inputCls}
+                    />
+                  </LabeledInput>
+                  <p className="text-[10px] text-blue-500">* 저장하면 새 요청서 작성시 자동으로 입력됩니다.</p>
+                </div>
+              )}
+
               <div className="space-y-3">
                 <LabeledInput label="학생 이름">
-                  <input
-                    type="text"
-                    name="studentName"
+                  <AutocompleteInput
                     value={form.studentName}
-                    onChange={handleFormChange}
+                    onChange={(v) => setForm(prev => ({ ...prev, studentName: v }))}
+                    onSelect={(o) => setForm(prev => ({ ...prev, studentName: o.label }))}
+                    options={studentOptions}
                     placeholder="학생 이름을 입력하세요"
-                    className={inputCls}
                   />
                 </LabeledInput>
                 <LabeledInput label="담임 선생님">
-                  <input
-                    type="text"
-                    name="teacherName"
+                  <AutocompleteInput
                     value={form.teacherName}
-                    onChange={handleFormChange}
+                    onChange={(v) => setForm(prev => ({ ...prev, teacherName: v }))}
+                    onSelect={(o) => setForm(prev => ({ ...prev, teacherName: o.label }))}
+                    options={teacherOptions}
                     placeholder="선생님 성함을 입력하세요"
-                    className={inputCls}
                   />
                 </LabeledInput>
                 <LabeledInput label="요청 일자">
@@ -723,6 +928,21 @@ export default function TextbookRequestView({ isAdmin = false }: TextbookRequest
                     </span>
                   )}
                 </button>
+                {effectiveAdmin && historyFilter === 'complete' && (
+                  <button
+                    onClick={handleCopyToBillings}
+                    disabled={isCopying || uncopiedCompleteCount === 0}
+                    className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  >
+                    {isCopying ? <Loader2 size={13} className="animate-spin" /> : <Copy size={13} />}
+                    수납 내역으로 복사
+                    {uncopiedCompleteCount > 0 && (
+                      <span className="bg-white/25 px-1.5 py-0.5 rounded-full text-[11px]">
+                        {uncopiedCompleteCount}
+                      </span>
+                    )}
+                  </button>
+                )}
               </div>
               <div className="relative sm:ml-auto sm:w-64">
                 <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -764,7 +984,8 @@ export default function TextbookRequestView({ isAdmin = false }: TextbookRequest
                         <th className="px-3 py-2 text-center font-medium text-gray-600">납부</th>
                         <th className="px-3 py-2 text-center font-medium text-gray-600">주문</th>
                         <th className="px-3 py-2 text-center font-medium text-gray-600">요청일</th>
-                        {isAdmin && (
+                        <th className="px-3 py-2 text-center font-medium text-gray-600 w-10">저장</th>
+                        {effectiveAdmin && (
                           <th className="px-3 py-2 text-center font-medium text-gray-600">삭제</th>
                         )}
                       </tr>
@@ -803,7 +1024,7 @@ export default function TextbookRequestView({ isAdmin = false }: TextbookRequest
                                 checked={!!r.isCompleted}
                                 timestamp={r.completedAt}
                                 color="green"
-                                disabled={!isAdmin}
+                                disabled={!effectiveAdmin}
                                 onChange={(v) =>
                                   handleUpdateStatus(r.id, { isCompleted: v })
                                 }
@@ -815,7 +1036,7 @@ export default function TextbookRequestView({ isAdmin = false }: TextbookRequest
                                 checked={!!r.isPaid}
                                 timestamp={r.paidAt}
                                 color="blue"
-                                disabled={!isAdmin}
+                                disabled={!effectiveAdmin}
                                 onChange={(v) =>
                                   handleUpdateStatus(r.id, { isPaid: v })
                                 }
@@ -827,16 +1048,30 @@ export default function TextbookRequestView({ isAdmin = false }: TextbookRequest
                                 checked={!!r.isOrdered}
                                 timestamp={r.orderedAt}
                                 color="orange"
-                                disabled={!isAdmin}
+                                disabled={!effectiveAdmin}
                                 onChange={(v) =>
                                   handleUpdateStatus(r.id, { isOrdered: v })
                                 }
                               />
                             </td>
                             <td className="px-3 py-2.5 text-center text-gray-500 whitespace-nowrap">
-                              {r.requestDate}
+                              <div className="flex items-center justify-center gap-1">
+                                {r.requestDate}
+                                {r.copiedToBilling && (
+                                  <span className="text-[9px] px-1 py-0.5 rounded bg-emerald-100 text-emerald-600">수납</span>
+                                )}
+                              </div>
                             </td>
-                            {isAdmin && (
+                            <td className="px-3 py-2.5 text-center">
+                              <button
+                                onClick={() => setDownloadTarget(r)}
+                                className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                title="이미지 다운로드"
+                              >
+                                <Download size={14} />
+                              </button>
+                            </td>
+                            {effectiveAdmin && (
                               <td className="px-3 py-2.5 text-center">
                                 <button
                                   onClick={() => handleDelete(r.id)}
@@ -870,8 +1105,28 @@ export default function TextbookRequestView({ isAdmin = false }: TextbookRequest
         isOpen={isBookSelectorOpen}
         onClose={() => setIsBookSelectorOpen(false)}
         onSelect={handleBookSelect}
-        books={catalog}
+        books={catalog.filter(b => (b.subject || '수학') === '수학')}
       />
+
+      {/* 히스토리 이미지 재다운로드용 Hidden Preview */}
+      {downloadTarget && (
+        <div className="fixed -left-[9999px] top-0">
+          <TextbookPreviewCard
+            ref={historyPreviewRef}
+            data={{
+              studentName: downloadTarget.studentName,
+              teacherName: downloadTarget.teacherName,
+              requestDate: downloadTarget.requestDate,
+              bookName: downloadTarget.bookName,
+              bookDetail: downloadTarget.bookDetail,
+              price: downloadTarget.price,
+              bankName: downloadTarget.bankName,
+              accountNumber: downloadTarget.accountNumber,
+              accountHolder: downloadTarget.accountHolder,
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

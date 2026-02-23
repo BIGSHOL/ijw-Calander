@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
 import { UserProfile } from '../../types';
 import { useTextbooks } from '../../hooks/useTextbooks';
-import { useStudents } from '../../hooks/useStudents';
-import { Search, Plus, BookOpen, Package, AlertTriangle, FileSpreadsheet, UserCheck, UserX, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
-import { TextbookImportModal, TextbookImportRow } from './TextbookImportModal';
+import { useTextbookRequests } from '../../hooks/useTextbookRequests';
+import { usePermissions } from '../../hooks/usePermissions';
+import { TextbookCatalogItem } from '../../data/textbookCatalog';
+import { Search, BookOpen, UserCheck, UserX, ChevronLeft, ChevronRight, FileText, FileSpreadsheet, Check, X } from 'lucide-react';
 
 const TextbookRequestView = lazy(() => import('./TextbookRequestView'));
 
@@ -12,26 +13,44 @@ interface TextbooksTabProps {
 }
 
 export default function TextbooksTab({ currentUser }: TextbooksTabProps) {
-  const { textbooks, distributions, billings, isLoading, billingsLoading, createTextbook, updateTextbook, deleteTextbook, importBillings } = useTextbooks();
-  const { students } = useStudents();
+  const { billings, billingsLoading } = useTextbooks();
+  const { catalog, saveCatalog, requests } = useTextbookRequests();
+  const { hasPermission } = usePermissions(currentUser ?? null);
+  const isAdmin = hasPermission('textbooks.admin');
+  const incompleteRequestCount = useMemo(
+    () => requests.filter(r => !r.isCompleted || !r.isPaid || !r.isOrdered).length,
+    [requests]
+  );
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [subjectFilter, setSubjectFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'list' | 'distribution' | 'billing' | 'request'>('list');
-  const [showImportModal, setShowImportModal] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [subjectFilter, setSubjectFilter] = useState<string>('수학');
+  const [viewMode, setViewMode] = useState<'list' | 'billing' | 'request' | 'history'>('list');
   const [billingMonthFilter, setBillingMonthFilter] = useState<string>('all');
   const [billingPage, setBillingPage] = useState(1);
   const PAGE_SIZE = 30;
 
-  const studentIds = useMemo(() => new Set(students.map(s => s.id)), [students]);
+  // 인라인 편집 상태
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<{ name: string; price: number; subject: string }>({ name: '', price: 0, subject: '수학' });
 
-  const filteredTextbooks = useMemo(() => {
-    if (!textbooks) return [];
-    return textbooks.filter(t => {
-      if (subjectFilter !== 'all' && t.subject !== subjectFilter) return false;
-      if (searchQuery) return t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.publisher.toLowerCase().includes(searchQuery.toLowerCase());
+  const subjects = useMemo(() => {
+    const set = new Set(catalog.map(item => item.subject || '수학'));
+    return ['all', ...Array.from(set).sort()];
+  }, [catalog]);
+
+  const filteredCatalog = useMemo(() => {
+    return catalog.filter(item => {
+      const itemSubject = item.subject || '수학';
+      if (subjectFilter !== 'all' && itemSubject !== subjectFilter) return false;
+      if (categoryFilter !== 'all' && item.category !== categoryFilter) return false;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        return item.name.toLowerCase().includes(q) || item.grade.toLowerCase().includes(q) || item.difficulty.toLowerCase().includes(q);
+      }
       return true;
     });
-  }, [textbooks, subjectFilter, searchQuery]);
+  }, [catalog, categoryFilter, subjectFilter, searchQuery]);
 
   const filteredBillings = useMemo(() => {
     let list = billings;
@@ -42,7 +61,6 @@ export default function TextbooksTab({ currentUser }: TextbooksTabProps) {
     return list;
   }, [billings, billingMonthFilter, searchQuery]);
 
-  // 필터 변경 시 페이지 리셋 (useMemo 내부에서 setState 호출하면 무한루프)
   useEffect(() => {
     setBillingPage(1);
   }, [billingMonthFilter, searchQuery]);
@@ -55,58 +73,76 @@ export default function TextbooksTab({ currentUser }: TextbooksTabProps) {
     return months;
   }, [billings]);
 
-  const lowStockCount = useMemo(() =>
-    textbooks?.filter(t => t.stock <= t.minStock).length ?? 0
-  , [textbooks]);
+  const handleStartEdit = useCallback((item: TextbookCatalogItem, catalogIndex: number) => {
+    setEditingIdx(catalogIndex);
+    setEditForm({ name: item.name, price: item.price, subject: item.subject || '수학' });
+  }, []);
 
-  const handleImport = async (rows: TextbookImportRow[]) => {
-    return importBillings.mutateAsync(rows.map(({ studentName, grade, school, textbookName, amount, month, studentId, matched }) => ({
-      studentId,
-      studentName,
-      grade,
-      school,
-      textbookName,
-      amount,
-      month,
-      matched,
-    })));
-  };
+  const handleSaveEdit = useCallback(async () => {
+    if (editingIdx === null) return;
+    const updated = catalog.map((item, i) =>
+      i === editingIdx ? { ...item, name: editForm.name, price: editForm.price, subject: editForm.subject } : item
+    );
+    try {
+      await saveCatalog.mutateAsync(updated);
+    } catch (err) {
+      console.error('카탈로그 저장 실패:', err);
+      alert('저장에 실패했습니다.');
+    }
+    setEditingIdx(null);
+  }, [editingIdx, editForm, catalog, saveCatalog]);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingIdx(null);
+  }, []);
+
+  // filteredCatalog → catalog 원본 인덱스 매핑
+  const catalogIndexMap = useMemo(() => {
+    const map: number[] = [];
+    catalog.forEach((item, i) => {
+      const itemSubject = item.subject || '수학';
+      if (subjectFilter !== 'all' && itemSubject !== subjectFilter) return;
+      const match = categoryFilter === 'all' || item.category === categoryFilter;
+      if (!match) return;
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        if (!item.name.toLowerCase().includes(q) && !item.grade.toLowerCase().includes(q) && !item.difficulty.toLowerCase().includes(q)) return;
+      }
+      map.push(i);
+    });
+    return map;
+  }, [catalog, categoryFilter, subjectFilter, searchQuery]);
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
       <div className="bg-white border-b px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-bold text-gray-900">교재 관리</h1>
-          {lowStockCount > 0 && (
-            <span className="flex items-center gap-1 text-xxs text-amber-600 bg-amber-50 px-2 py-0.5 rounded">
-              <AlertTriangle size={10} /> 재고 부족 {lowStockCount}건
-            </span>
-          )}
+          <span className="text-xxs text-gray-400">{catalog.length}개 교재</span>
         </div>
         <div className="flex gap-2">
           <div className="flex gap-1 bg-gray-100 rounded p-0.5">
             <button onClick={() => setViewMode('list')} className={`px-2 py-1 text-xs rounded ${viewMode === 'list' ? 'bg-white shadow-sm' : ''}`}>교재 목록</button>
-            <button onClick={() => setViewMode('distribution')} className={`px-2 py-1 text-xs rounded ${viewMode === 'distribution' ? 'bg-white shadow-sm' : ''}`}>배부 이력</button>
-            <button onClick={() => setViewMode('billing')} className={`px-2 py-1 text-xs rounded ${viewMode === 'billing' ? 'bg-white shadow-sm' : ''}`}>
-              수납 내역{billings.length > 0 && <span className="ml-1 text-xxs text-gray-400">{billings.length}</span>}
-            </button>
             <button onClick={() => setViewMode('request')} className={`px-2 py-1 text-xs rounded flex items-center gap-1 ${viewMode === 'request' ? 'bg-white shadow-sm' : ''}`}>
               <FileText size={12} /> 교재 요청
             </button>
+            <button onClick={() => setViewMode('billing')} className={`px-2 py-1 text-xs rounded ${viewMode === 'billing' ? 'bg-white shadow-sm' : ''}`}>
+              수납 내역{billings.length > 0 && <span className="ml-1 text-xxs text-gray-400">{billings.length}</span>}
+            </button>
+            <button onClick={() => setViewMode('history')} className={`px-2 py-1 text-xs rounded flex items-center gap-1 ${viewMode === 'history' ? 'bg-white shadow-sm' : ''}`}>
+              요청 내역
+              {incompleteRequestCount > 0 && (
+                <span className="text-[10px] bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded-full">{incompleteRequestCount}</span>
+              )}
+            </button>
           </div>
-          <button onClick={() => setShowImportModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded hover:bg-emerald-700">
-            <FileSpreadsheet size={14} /> xlsx 가져오기
-          </button>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700">
-            <Plus size={14} /> 교재 추가
-          </button>
         </div>
       </div>
 
-      {viewMode !== 'request' && <div className="bg-white border-b px-4 py-2 flex items-center gap-3">
+      {(viewMode === 'list' || viewMode === 'billing') && <div className="bg-white border-b px-4 py-2 flex items-center gap-3">
         <div className="relative flex-1 max-w-xs">
           <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input type="text" placeholder={viewMode === 'billing' ? '학생명, 교재명 검색...' : '교재명, 출판사 검색...'} value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+          <input type="text" placeholder={viewMode === 'billing' ? '학생명, 교재명 검색...' : '교재명, 학년, 난이도 검색...'} value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
             className="w-full pl-8 pr-3 py-1.5 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-blue-500" />
         </div>
         {viewMode === 'billing' ? (
@@ -123,49 +159,128 @@ export default function TextbooksTab({ currentUser }: TextbooksTabProps) {
             ))}
           </div>
         ) : (
+          <>
           <div className="flex gap-1">
-            {['all', 'math', 'english', 'science', 'korean'].map(s => (
+            {subjects.map(s => (
               <button key={s} onClick={() => setSubjectFilter(s)}
                 className={`px-2.5 py-1 text-xs rounded ${subjectFilter === s ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-                {s === 'all' ? '전체' : s === 'math' ? '수학' : s === 'english' ? '영어' : s === 'science' ? '과학' : '국어'}
+                {s === 'all' ? '전체과목' : s}
               </button>
             ))}
           </div>
+          <div className="w-px h-5 bg-gray-300" />
+          <div className="flex gap-1">
+            {(['all', 'elementary', 'middle', 'high'] as const).map(c => (
+              <button key={c} onClick={() => setCategoryFilter(c)}
+                className={`px-2.5 py-1 text-xs rounded ${categoryFilter === c ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                {c === 'all' ? '전체' : c === 'elementary' ? '초등' : c === 'middle' ? '중등' : '고등'}
+              </button>
+            ))}
+          </div>
+          </>
         )}
       </div>}
 
-      <div className={`flex-1 overflow-auto ${viewMode === 'request' ? '' : 'p-4'}`}>
+      <div className={`flex-1 overflow-auto ${viewMode === 'request' || viewMode === 'history' ? '' : 'p-4'}`}>
         {viewMode === 'request' ? (
           <Suspense fallback={<div className="text-center text-gray-400 text-sm py-8">로딩 중...</div>}>
-            <TextbookRequestView isAdmin={currentUser?.role === 'admin'} />
+            <TextbookRequestView isAdmin={isAdmin} initialTab="create" onRequestCreated={() => setViewMode('history')} />
           </Suspense>
-        ) : isLoading ? (
-          <div className="text-center text-gray-400 text-sm py-8">로딩 중...</div>
+        ) : viewMode === 'history' ? (
+          <Suspense fallback={<div className="text-center text-gray-400 text-sm py-8">로딩 중...</div>}>
+            <TextbookRequestView isAdmin={isAdmin} initialTab="history" />
+          </Suspense>
         ) : viewMode === 'list' ? (
-          filteredTextbooks.length === 0 ? (
-            <div className="text-center text-gray-400 py-8"><BookOpen size={32} className="mx-auto mb-2" /><p className="text-sm">등록된 교재가 없습니다</p></div>
+          filteredCatalog.length === 0 ? (
+            <div className="text-center text-gray-400 py-8"><BookOpen size={32} className="mx-auto mb-2" /><p className="text-sm">교재가 없습니다</p></div>
           ) : (
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-              {filteredTextbooks.map(tb => (
-                <div key={tb.id} className={`bg-white rounded-lg border p-3 ${tb.stock <= tb.minStock ? 'border-amber-300' : 'border-gray-200'}`}>
-                  <div className="flex items-start justify-between mb-1">
-                    <h3 className="text-sm font-semibold text-gray-900">{tb.name}</h3>
-                    <span className="text-xxs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">
-                      {tb.subject === 'math' ? '수학' : tb.subject === 'english' ? '영어' : tb.subject}
-                    </span>
-                  </div>
-                  <div className="text-xxs text-gray-500">{tb.publisher}</div>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-xs font-medium">{tb.price.toLocaleString()}원</span>
-                    <div className="flex items-center gap-1">
-                      <Package size={12} className={tb.stock <= tb.minStock ? 'text-amber-500' : 'text-gray-400'} />
-                      <span className={`text-xs font-bold ${tb.stock <= tb.minStock ? 'text-amber-600' : 'text-gray-700'}`}>
-                        재고 {tb.stock}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <table className="w-full text-xs">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600">과목</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600">학년</th>
+                    <th className="px-3 py-2 text-center font-medium text-gray-600">난이도</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600">교재명</th>
+                    <th className="px-3 py-2 text-right font-medium text-gray-600">가격</th>
+                    {isAdmin && <th className="px-3 py-2 text-center font-medium text-gray-600 w-16">수정</th>}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredCatalog.map((item, i) => {
+                    const origIdx = catalogIndexMap[i];
+                    const isEditing = editingIdx === origIdx;
+                    return (
+                      <tr key={`${item.name}-${i}`} className="hover:bg-gray-50">
+                        <td className="px-3 py-2">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editForm.subject}
+                              onChange={e => setEditForm(f => ({ ...f, subject: e.target.value }))}
+                              className="w-16 px-1.5 py-0.5 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          ) : (
+                            <span className="text-xxs px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 font-medium">{item.subject || '수학'}</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="text-xxs px-1.5 py-0.5 rounded bg-gray-100 text-gray-700 font-medium">{item.grade}</span>
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <span className={`text-xxs px-1.5 py-0.5 rounded font-medium ${
+                            item.difficulty === '심화' ? 'bg-red-100 text-red-700' :
+                            item.difficulty === '발전' ? 'bg-blue-100 text-blue-700' :
+                            'bg-green-100 text-green-700'
+                          }`}>{item.difficulty}</span>
+                        </td>
+                        <td className="px-3 py-2 font-medium text-gray-900">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editForm.name}
+                              onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                              className="w-full px-1.5 py-0.5 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              autoFocus
+                            />
+                          ) : item.name}
+                        </td>
+                        <td className="px-3 py-2 text-right font-medium">
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              value={editForm.price}
+                              onChange={e => setEditForm(f => ({ ...f, price: Number(e.target.value) }))}
+                              className="w-24 px-1.5 py-0.5 text-xs border rounded text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          ) : `${item.price.toLocaleString()}원`}
+                        </td>
+                        {isAdmin && (
+                          <td className="px-3 py-2 text-center">
+                            {isEditing ? (
+                              <div className="flex items-center justify-center gap-1">
+                                <button onClick={handleSaveEdit} className="p-0.5 rounded text-emerald-600 hover:bg-emerald-50" title="저장">
+                                  <Check size={14} />
+                                </button>
+                                <button onClick={handleCancelEdit} className="p-0.5 rounded text-gray-400 hover:bg-gray-100" title="취소">
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleStartEdit(item, origIdx)}
+                                className="text-xxs text-blue-600 hover:underline"
+                              >
+                                수정
+                              </button>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )
         ) : viewMode === 'billing' ? (
@@ -175,7 +290,6 @@ export default function TextbooksTab({ currentUser }: TextbooksTabProps) {
             <div className="text-center text-gray-400 py-8">
               <FileSpreadsheet size={32} className="mx-auto mb-2" />
               <p className="text-sm">수납 내역이 없습니다</p>
-              <button onClick={() => setShowImportModal(true)} className="mt-2 text-xs text-emerald-600 hover:underline">xlsx 파일로 가져오기</button>
             </div>
           ) : (
             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -213,7 +327,6 @@ export default function TextbooksTab({ currentUser }: TextbooksTabProps) {
                   ))}
                 </tbody>
               </table>
-              {/* 페이지네이션 */}
               {totalPages > 1 && (
                 <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200 bg-gray-50">
                   <span className="text-xxs text-gray-500">
@@ -260,17 +373,9 @@ export default function TextbooksTab({ currentUser }: TextbooksTabProps) {
               )}
             </div>
           )
-        ) : (
-          <div className="text-center text-gray-400 py-8"><Package size={32} className="mx-auto mb-2" /><p className="text-sm">배부 이력이 없습니다</p></div>
-        )}
+        ) : null}
       </div>
 
-      <TextbookImportModal
-        isOpen={showImportModal}
-        onClose={() => setShowImportModal(false)}
-        onImport={handleImport}
-        studentIds={studentIds}
-      />
     </div>
   );
 }

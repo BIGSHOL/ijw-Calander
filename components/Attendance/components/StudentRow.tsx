@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Student, SalaryConfig } from '../types';
 import { Exam, StudentScore, GRADE_COLORS } from '../../../types';
 import { StudentTermSummary } from '../../../types/enrollmentTerm';
-import { formatDateDisplay, formatDateKey, getBadgeStyle, getStudentStatus, isDateValidForStudent, getSchoolLevelSalarySetting, getLocalYearMonth, getDaysInMonth, getEffectiveUnitPrice } from '../utils';
+import { formatDateDisplay, formatDateKey, getBadgeStyle, getStudentStatus, isDateValidForStudent, getSchoolLevelSalarySetting, getLocalYearMonth, getDaysInMonth, getEffectiveUnitPrice, calculateClassRate } from '../utils';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
 import { LogOut, Check } from 'lucide-react';
 import { PREDEFINED_CELL_COLORS } from './cellColors';
@@ -25,6 +25,7 @@ export interface StudentRowProps {
   onHomeworkChange?: (studentId: string, className: string, dateKey: string, value: boolean) => void;
   highlightWeekends?: boolean;
   showExpectedBilling?: boolean;
+  showSettlement?: boolean;
   holidayDateSet?: Set<string>;
   holidayNameMap?: Map<string, string>;
   hasHiddenDates?: boolean;
@@ -49,6 +50,7 @@ const StudentRow = React.memo(({
   onHomeworkChange,
   highlightWeekends = false,
   showExpectedBilling = false,
+  showSettlement = false,
   holidayDateSet = new Set(),
   holidayNameMap = new Map(),
   hasHiddenDates = false,
@@ -84,6 +86,25 @@ const StudentRow = React.memo(({
     });
     return scheduledCount * unitPrice;
   }, [showExpectedBilling, student, salaryConfig, currentDate, holidayDateSet]);
+
+  // 정산액 계산: 출석횟수 × 회당 정산액 (선생님 급여)
+  const settlementAmount = useMemo(() => {
+    if (!showSettlement) return 0;
+    const salarySettingOverrideId = student.salarySettingOverrides?.[student.group || ''];
+    const effectiveSalarySettingId = salarySettingOverrideId || student.salarySettingId;
+    const settingItem = effectiveSalarySettingId
+      ? (salaryConfig.items.find(item => item.id === effectiveSalarySettingId)
+         || getSchoolLevelSalarySetting(student.school, salaryConfig.items))
+      : getSchoolLevelSalarySetting(student.school, salaryConfig.items);
+    if (!settingItem) return 0;
+    // 출석횟수 합산 (attendance에서 양수 값만)
+    let classUnits = 0;
+    Object.entries(student.attendance).forEach(([, val]) => {
+      if (typeof val === 'number' && val > 0) classUnits += val;
+    });
+    if (classUnits <= 0) return 0;
+    return Math.ceil(classUnits * calculateClassRate(settingItem, salaryConfig.academyFee));
+  }, [showSettlement, student, salaryConfig]);
 
   // 반이동 여부 감지: endDate가 있지만 다른 수업에 활성 enrollment가 존재
   // 반환: null(퇴원) 또는 { teacher, className } (반이동 대상 정보)
@@ -270,12 +291,17 @@ const StudentRow = React.memo(({
           <span className="text-xxs font-bold text-amber-700">{expectedBilling > 0 ? expectedBilling.toLocaleString() : '-'}</span>
         </td>
       )}
-      <td className="p-1 sticky z-[90] border-r border-b border-gray-200 text-center font-bold text-primary bg-[#f0f4f8] align-middle w-[36px] text-xs" style={{ left: showExpectedBilling ? 332 : 272 }}>
+      {showSettlement && (
+        <td className="p-1 sticky z-[90] border-r border-b border-gray-200 text-center bg-[#eff6ff] align-middle w-[60px]" style={{ left: 272 + (showExpectedBilling ? 60 : 0) }} title={`정산액: ${settlementAmount.toLocaleString()}원`}>
+          <span className="text-xxs font-bold text-blue-700">{settlementAmount > 0 ? settlementAmount.toLocaleString() : '-'}</span>
+        </td>
+      )}
+      <td className="p-1 sticky z-[90] border-r border-b border-gray-200 text-center font-bold text-primary bg-[#f0f4f8] align-middle w-[36px] text-xs" style={{ left: 272 + (showExpectedBilling ? 60 : 0) + (showSettlement ? 60 : 0) }}>
         {attendedUnits}
       </td>
 
       {/* 등록차수 셀 */}
-      <td className="p-1 sticky z-[90] border-r border-b border-gray-200 text-center bg-white group-hover:bg-gray-50 align-middle w-[36px]" style={{ left: showExpectedBilling ? 368 : 308 }}>
+      <td className="p-1 sticky z-[90] border-r border-b border-gray-200 text-center bg-white group-hover:bg-gray-50 align-middle w-[36px]" style={{ left: 308 + (showExpectedBilling ? 60 : 0) + (showSettlement ? 60 : 0) }}>
         {enrollmentTerm && enrollmentTerm.currentTermNumber > 0 ? (
           <button
             type="button"
@@ -311,9 +337,10 @@ const StudentRow = React.memo(({
       {/* Attendance Cells - 4-Quadrant Design */}
       {days.map((day, dayIndex) => {
         const dateKey = formatDateKey(day);
+        const compositeKey = `${student.group || ''}::${dateKey}`;
         const { day: dayName } = formatDateDisplay(day);
-        const status = pendingUpdates?.[dateKey] ?? student.attendance[dateKey];
-        const memo = pendingMemos?.[dateKey] ?? student.memos?.[dateKey];
+        const status = pendingUpdates?.[compositeKey] ?? student.attendance[compositeKey] ?? student.attendance[dateKey];
+        const memo = pendingMemos?.[compositeKey] ?? student.memos?.[compositeKey] ?? student.memos?.[dateKey];
         const isSaturday = day.getDay() === 6;
         const isSunday = day.getDay() === 0;
         const isHoliday = holidayDateSet.has(dateKey);
@@ -334,7 +361,7 @@ const StudentRow = React.memo(({
         const isEndBoundary = !isValid && prevIsValid; // 회색 셀인데 이전이 흰색 → "퇴원"
 
         // 과제 완료 여부 (Q2: 1시 방향)
-        const homeworkDone = student.homework?.[dateKey] ?? false;
+        const homeworkDone = student.homework?.[compositeKey] ?? student.homework?.[dateKey] ?? false;
 
         // 해당 날짜의 시험 목록 조회
         const examsOnDate = examsByDate?.get(dateKey) || [];
@@ -363,8 +390,8 @@ const StudentRow = React.memo(({
           cellBaseClass = "bg-slate-200 bg-[linear-gradient(45deg,#cbd5e1_25%,transparent_25%,transparent_50%,#cbd5e1_50%,#cbd5e1_75%,transparent_75%,transparent)] bg-[length:8px_8px] cursor-not-allowed shadow-inner border-slate-200";
         }
 
-        // 커스텀 셀 색상 조회
-        const customCellColor = student.cellColors?.[dateKey];
+        // 커스텀 셀 색상 조회 (복합키 우선, 레거시 dateKey 폴백)
+        const customCellColor = student.cellColors?.[compositeKey] ?? student.cellColors?.[dateKey];
         const customColorConfig = customCellColor ? PREDEFINED_CELL_COLORS.find(c => c.key === customCellColor) : null;
 
         // 커스텀 색상이 있으면 전체 셀에 적용
@@ -392,10 +419,13 @@ const StudentRow = React.memo(({
             q1BgClass = highlightWeekends && isWeekend ? "bg-gray-300 hover:bg-gray-400" : "bg-white hover:bg-gray-50";
           }
 
-          // 출석값 표시 (숫자만, 배경색은 변경하지 않음)
+          // 출석값 표시
           if (status !== undefined && status !== null) {
             if (status === 0) {
-              q1Content = <span className="text-red-600 font-bold text-xs">0</span>;
+              // 결석: 배경 빨간색으로 강조
+              q1BgClass = "bg-red-500 hover:bg-red-600";
+              q1BgStyle = undefined;
+              q1Content = <span className="text-white font-black text-xs drop-shadow-sm">0</span>;
             } else {
               q1Content = <span className="text-gray-800 font-bold text-xs">{status}</span>;
             }
