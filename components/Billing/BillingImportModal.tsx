@@ -56,6 +56,62 @@ function parsePaidDate(raw: string | number): string {
   return s;
 }
 
+/**
+ * 앱스크립트 정리 로직 반영: 교재 행 제거 + 동일 학생 병합 + 이름 정렬
+ */
+function cleanupParsedRows(rows: ParsedRow[]): { cleaned: ParsedRow[]; textbookRemoved: number; mergedCount: number } {
+  // 1) 교재 행 제거 (수납명 또는 구분에 "교재" 포함)
+  const textbookRows = rows.filter(r =>
+    r.billingName.includes('교재') || r.category === '교재'
+  );
+  const nonTextbook = rows.filter(r =>
+    !r.billingName.includes('교재') && r.category !== '교재'
+  );
+
+  // 2) 동일 학생 병합 (이름 기준: 수납명 합치기, 금액 합산)
+  const studentMap = new Map<string, ParsedRow>();
+  let mergedCount = 0;
+  for (const row of nonTextbook) {
+    const key = row.studentName;
+    const existing = studentMap.get(key);
+    if (existing) {
+      // 수납명 합치기 (중복 아닌 것만)
+      const existingNames = existing.billingName.split(' + ');
+      if (!existingNames.includes(row.billingName)) {
+        existing.billingName = existing.billingName + ' + ' + row.billingName;
+      }
+      // 금액 합산
+      existing.billedAmount += row.billedAmount;
+      existing.discountAmount += row.discountAmount;
+      existing.pointsUsed += row.pointsUsed;
+      existing.paidAmount += row.paidAmount;
+      existing.unpaidAmount += row.unpaidAmount;
+      // 메모 합치기
+      if (row.memo && row.memo !== existing.memo) {
+        existing.memo = existing.memo ? existing.memo + ' / ' + row.memo : row.memo;
+      }
+      // 담임강사: 비어있으면 채우기
+      if (!existing.teacher && row.teacher) {
+        existing.teacher = row.teacher;
+      }
+      // 수납여부: 하나라도 미납이면 미납
+      if (row.status === 'pending') {
+        existing.status = 'pending';
+      }
+      mergedCount++;
+    } else {
+      // 새 학생 - 복사본 저장 (원본 변경 방지)
+      studentMap.set(key, { ...row });
+    }
+  }
+
+  // 3) 이름 기준 정렬
+  const cleaned = Array.from(studentMap.values())
+    .sort((a, b) => a.studentName.localeCompare(b.studentName, 'ko'));
+
+  return { cleaned, textbookRemoved: textbookRows.length, mergedCount };
+}
+
 export const BillingImportModal: React.FC<BillingImportModalProps> = ({
   isOpen,
   onClose,
@@ -64,6 +120,8 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [parsedData, setParsedData] = useState<ParsedRow[]>([]);
+  const [rawCount, setRawCount] = useState(0); // 원본 행 수
+  const [cleanupInfo, setCleanupInfo] = useState<{ textbookRemoved: number; mergedCount: number } | null>(null);
   const [fileName, setFileName] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ success: boolean; added: number; skipped: number } | null>(null);
@@ -75,6 +133,7 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
     if (!file) return;
     setFileName(file.name);
     setImportResult(null);
+    setCleanupInfo(null);
 
     const arrayBuffer = await file.arrayBuffer();
     const workbook = read(arrayBuffer, { type: 'array' });
@@ -108,16 +167,17 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
       updatedAt: String(row['수정일시'] ?? ''),
     }));
 
-    setParsedData(parsed);
+    // 앱스크립트 정리 로직 적용: 교재 제거 + 병합 + 정렬
+    setRawCount(parsed.length);
+    const { cleaned, textbookRemoved, mergedCount } = cleanupParsedRows(parsed);
+    setCleanupInfo({ textbookRemoved, mergedCount });
+    setParsedData(cleaned);
     setUploadedFile(file);
   };
 
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
-  const textbookCount = useMemo(
-    () => parsedData.filter(r => r.category === '교재').length,
-    [parsedData]
-  );
+  const textbookCount = cleanupInfo?.textbookRemoved ?? 0;
 
   const handleImport = async () => {
     if (parsedData.length === 0) return;
@@ -135,16 +195,18 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
 
   const handleReset = () => {
     setParsedData([]);
+    setRawCount(0);
+    setCleanupInfo(null);
     setFileName('');
     setImportResult(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // 통계 요약
+  // 통계 요약 (병합 후 기준)
   const summary = parsedData.length > 0
     ? {
         totalRecords: parsedData.length,
-        uniqueStudents: new Set(parsedData.map((r) => r.externalStudentId)).size,
+        uniqueStudents: parsedData.length, // 이미 학생 단위로 병합됨
         totalBilled: parsedData.reduce((s, r) => s + r.billedAmount, 0),
         totalPaid: parsedData.reduce((s, r) => s + r.paidAmount, 0),
         totalUnpaid: parsedData.reduce((s, r) => s + r.unpaidAmount, 0),
@@ -208,15 +270,25 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
                 <h3 className="text-primary font-bold text-xs">데이터 미리보기</h3>
               </div>
               <div className="p-3 space-y-3">
+                {/* 정리 결과 배너 */}
+                {cleanupInfo && (cleanupInfo.textbookRemoved > 0 || cleanupInfo.mergedCount > 0) && (
+                  <div className="flex items-center gap-2 px-2 py-1.5 bg-blue-50 border border-blue-200 rounded-sm">
+                    <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span className="text-xxs text-blue-700">
+                      자동 정리 완료 (원본 {rawCount}건):
+                      {cleanupInfo.textbookRemoved > 0 && ` 교재 ${cleanupInfo.textbookRemoved}건 제외`}
+                      {cleanupInfo.textbookRemoved > 0 && cleanupInfo.mergedCount > 0 && ','}
+                      {cleanupInfo.mergedCount > 0 && ` 동일 학생 ${cleanupInfo.mergedCount}건 병합`}
+                      {' → '}{parsedData.length}건
+                    </span>
+                  </div>
+                )}
+
                 {/* 통계 카드 */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                <div className="grid grid-cols-3 gap-2 text-sm">
                   <div className="bg-blue-50 rounded-sm p-2 border border-blue-100">
                     <p className="text-xxs text-blue-600 font-medium">청구월</p>
                     <p className="font-bold text-sm text-blue-700">{detectedMonth}</p>
-                  </div>
-                  <div className="bg-gray-50 rounded-sm p-2 border border-gray-100">
-                    <p className="text-xxs text-gray-500 font-medium">총 레코드</p>
-                    <p className="font-bold text-sm">{summary.totalRecords.toLocaleString()}건</p>
                   </div>
                   <div className="bg-gray-50 rounded-sm p-2 border border-gray-100">
                     <p className="text-xxs text-gray-500 font-medium">학생 수</p>
@@ -232,10 +304,10 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
                   </div>
                 </div>
 
-                {textbookCount > 0 && (
+                {textbookCount > 0 && onNavigateToTextbooks && (
                   <div className="flex items-center gap-2 px-2 py-1.5 bg-purple-50 border border-purple-200 rounded-sm">
                     <BookOpen className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                    <span className="text-xxs text-purple-700">교재 수납 {textbookCount}건 감지 — 수납 가져오기 후 교재 관리 탭으로 이동 가능</span>
+                    <span className="text-xxs text-purple-700">교재 수납 {textbookCount}건 별도 분리됨 — 교재 관리 탭에서 가져오기 가능</span>
                   </div>
                 )}
 
