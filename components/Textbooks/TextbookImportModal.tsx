@@ -43,9 +43,9 @@ export const TextbookImportModal: React.FC<TextbookImportModalProps> = ({
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = utils.sheet_to_json<Record<string, any>>(sheet);
 
-    // 구분 === '교재' 만 필터
+    // 교재 행 필터: 구분이 '교재'이거나 수납명에 '교재' 포함
     const parsed: TextbookImportRow[] = rows
-      .filter(row => String(row['구분'] ?? '') === '교재')
+      .filter(row => String(row['구분'] ?? '') === '교재' || String(row['수납명'] ?? '').includes('교재'))
       .map(row => {
         const name = String(row['이름'] ?? '').trim();
         const school = String(row['학교'] ?? '').trim();
@@ -134,7 +134,7 @@ export const TextbookImportModal: React.FC<TextbookImportModalProps> = ({
                 </button>
                 {fileName && <span className="text-sm text-gray-600 font-medium">{fileName}</span>}
               </div>
-              <p className="text-xxs text-gray-400 mt-2">* 구분이 "교재"인 행만 가져옵니다 (이름, 학년, 학교, 수납명, 청구액, 청구월)</p>
+              <p className="text-xxs text-gray-400 mt-2">* 구분이 "교재"이거나 수납명에 "교재"가 포함된 행만 가져옵니다</p>
             </div>
           </div>
 
