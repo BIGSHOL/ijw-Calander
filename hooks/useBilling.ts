@@ -154,7 +154,7 @@ export function useBilling(month?: string) {
     },
   });
 
-  // xlsx 일괄 import (중복 제외, 신규만 추가)
+  // xlsx 일괄 import (upsert: 신규 추가 + 기존 업데이트)
   const importRecords = useMutation({
     mutationFn: async ({
       records: billingRecords,
@@ -170,40 +170,51 @@ export function useBilling(month?: string) {
       );
       const snapshot = await getDocs(q);
 
-      // 2) 중복 판별 키셋 생성 (학생ID + 청구월 + 수납명)
-      const existingKeys = new Set(
-        snapshot.docs.map((d) => {
-          const data = d.data();
-          return `${data.externalStudentId}__${data.month}__${data.billingName}`;
-        })
-      );
+      // 2) 기존 데이터를 키 → docId 맵으로 생성
+      const existingMap = new Map<string, string>();
+      snapshot.docs.forEach((d) => {
+        const data = d.data();
+        const key = `${data.externalStudentId}__${data.month}__${data.billingName}`;
+        existingMap.set(key, d.id);
+      });
 
-      // 3) 신규 레코드만 필터링
-      const newRecords = billingRecords.filter(
-        (r) => !existingKeys.has(`${r.externalStudentId}__${r.month}__${r.billingName}`)
-      );
-
-      if (newRecords.length === 0) {
-        return { added: 0, skipped: billingRecords.length };
-      }
-
-      // 4) 신규 레코드만 batch insert
-      const now = new Date().toISOString();
-      let count = 0;
-      let batch = writeBatch(db);
-      for (const record of newRecords) {
-        const docRef = doc(collection(db, COL_BILLING));
-        batch.set(docRef, { ...record, createdAt: now, updatedAt: now });
-        count++;
-        if (count % 450 === 0) {
-          await batch.commit();
-          batch = writeBatch(db);
+      // 3) 신규 / 업데이트 분류
+      const toAdd: Omit<BillingRecord, 'id'>[] = [];
+      const toUpdate: { docId: string; record: Omit<BillingRecord, 'id'> }[] = [];
+      for (const r of billingRecords) {
+        const key = `${r.externalStudentId}__${r.month}__${r.billingName}`;
+        const existingDocId = existingMap.get(key);
+        if (existingDocId) {
+          toUpdate.push({ docId: existingDocId, record: r });
+        } else {
+          toAdd.push(r);
         }
       }
-      if (count % 450 !== 0) {
+
+      // 4) batch upsert (추가 + 업데이트)
+      const now = new Date().toISOString();
+      let opCount = 0;
+      let batch = writeBatch(db);
+
+      for (const record of toAdd) {
+        const docRef = doc(collection(db, COL_BILLING));
+        batch.set(docRef, { ...record, createdAt: now, updatedAt: now });
+        opCount++;
+        if (opCount % 450 === 0) { await batch.commit(); batch = writeBatch(db); }
+      }
+
+      for (const { docId, record } of toUpdate) {
+        const docRef = doc(db, COL_BILLING, docId);
+        batch.update(docRef, { ...record, updatedAt: now });
+        opCount++;
+        if (opCount % 450 === 0) { await batch.commit(); batch = writeBatch(db); }
+      }
+
+      if (opCount % 450 !== 0) {
         await batch.commit();
       }
-      return { added: count, skipped: billingRecords.length - count };
+
+      return { added: toAdd.length, updated: toUpdate.length };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['billing'] });

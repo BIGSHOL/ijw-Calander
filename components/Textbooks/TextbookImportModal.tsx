@@ -16,7 +16,7 @@ export interface TextbookImportRow {
 interface TextbookImportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImport: (rows: TextbookImportRow[]) => Promise<{ added: number; skipped: number }>;
+  onImport: (rows: TextbookImportRow[]) => Promise<{ added: number; updated: number }>;
   studentIds: Set<string>; // 기존 학생 ID 세트
 }
 
@@ -30,7 +30,7 @@ export const TextbookImportModal: React.FC<TextbookImportModalProps> = ({
   const [parsedData, setParsedData] = useState<TextbookImportRow[]>([]);
   const [fileName, setFileName] = useState('');
   const [isImporting, setIsImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ success: boolean; added: number; skipped: number } | null>(null);
+  const [importResult, setImportResult] = useState<{ success: boolean; added: number; updated: number } | null>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -82,10 +82,10 @@ export const TextbookImportModal: React.FC<TextbookImportModalProps> = ({
     setIsImporting(true);
     try {
       const result = await onImport(parsedData);
-      setImportResult({ success: true, added: result.added, skipped: result.skipped });
+      setImportResult({ success: true, added: result.added, updated: result.updated });
     } catch (err) {
       console.error('Import failed:', err);
-      setImportResult({ success: false, added: 0, skipped: 0 });
+      setImportResult({ success: false, added: 0, updated: 0 });
     } finally {
       setIsImporting(false);
     }
@@ -248,8 +248,8 @@ export const TextbookImportModal: React.FC<TextbookImportModalProps> = ({
                     <Check className="w-5 h-5 text-emerald-600 shrink-0" />
                     <div className="text-sm text-emerald-700 font-medium">
                       {importResult.added.toLocaleString()}건 추가 완료
-                      {importResult.skipped > 0 && (
-                        <span className="text-gray-500 font-normal ml-1">(중복 {importResult.skipped.toLocaleString()}건 건너뜀)</span>
+                      {importResult.updated > 0 && (
+                        <span className="text-blue-600 font-normal ml-1">+ {importResult.updated.toLocaleString()}건 업데이트</span>
                       )}
                     </div>
                   </div>

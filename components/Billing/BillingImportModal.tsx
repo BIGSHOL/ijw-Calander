@@ -8,7 +8,7 @@ import { useTextbooks } from '../../hooks/useTextbooks';
 interface BillingImportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImport: (records: Omit<BillingRecord, 'id'>[], month: string) => Promise<{ added: number; skipped: number }>;
+  onImport: (records: Omit<BillingRecord, 'id'>[], month: string) => Promise<{ added: number; updated: number }>;
   onNavigateToTextbooks?: (file: File) => void;
 }
 
@@ -126,7 +126,7 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
   const [cleanupInfo, setCleanupInfo] = useState<{ textbookRemoved: number; mergedCount: number } | null>(null);
   const [fileName, setFileName] = useState('');
   const [isImporting, setIsImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ success: boolean; added: number; skipped: number; textbookAdded?: number } | null>(null);
+  const [importResult, setImportResult] = useState<{ success: boolean; added: number; updated: number; textbookAdded?: number } | null>(null);
   const { importBillings: importTextbookBillings } = useTextbooks();
 
   const detectedMonth = parsedData.length > 0 ? parsedData[0].month : '';
@@ -210,10 +210,10 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
         }
       }
 
-      setImportResult({ success: true, added: result.added, skipped: result.skipped, textbookAdded });
+      setImportResult({ success: true, added: result.added, updated: result.updated, textbookAdded });
     } catch (err) {
       console.error('Import failed:', err);
-      setImportResult({ success: false, added: 0, skipped: 0 });
+      setImportResult({ success: false, added: 0, updated: 0 });
     } finally {
       setIsImporting(false);
     }
@@ -444,9 +444,9 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
                       <Check className="w-5 h-5 text-emerald-600 shrink-0" />
                       <div className="text-sm text-emerald-700 font-medium">
                         <span>수납 {importResult.added.toLocaleString()}건 추가</span>
-                        {importResult.skipped > 0 && (
-                          <span className="text-gray-500 font-normal ml-1">
-                            (중복 {importResult.skipped.toLocaleString()}건 건너뜀)
+                        {importResult.updated > 0 && (
+                          <span className="text-blue-600 font-normal ml-1">
+                            + {importResult.updated.toLocaleString()}건 업데이트
                           </span>
                         )}
                       </div>
