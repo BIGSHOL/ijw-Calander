@@ -219,7 +219,7 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]" onClick={onClose}>
-      <div className="bg-white rounded-sm w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-sm w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
           <h2 className="text-sm font-bold text-primary flex items-center gap-2">
@@ -332,36 +332,46 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
                     <h4 className="text-xs font-medium text-gray-600">처음 10건 미리보기</h4>
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
+                    <table className="w-full text-xs table-fixed">
+                      <colgroup>
+                        <col className="w-[60px]" />
+                        <col className="w-[40px]" />
+                        <col />
+                        <col className="w-[80px]" />
+                        <col className="w-[60px]" />
+                        <col className="w-[80px]" />
+                        <col className="w-[70px]" />
+                        <col className="w-[56px]" />
+                      </colgroup>
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
-                          <th className="px-2 py-1.5 text-left font-medium text-gray-600">이름</th>
-                          <th className="px-2 py-1.5 text-left font-medium text-gray-600">학년</th>
-                          <th className="px-2 py-1.5 text-left font-medium text-gray-600">수납명</th>
-                          <th className="px-2 py-1.5 text-right font-medium text-gray-600">청구액</th>
-                          <th className="px-2 py-1.5 text-right font-medium text-gray-600">할인</th>
-                          <th className="px-2 py-1.5 text-right font-medium text-gray-600">납부액</th>
-                          <th className="px-2 py-1.5 text-left font-medium text-gray-600">담임</th>
-                          <th className="px-2 py-1.5 text-center font-medium text-gray-600">상태</th>
+                          <th className="px-2 py-1.5 text-left font-medium text-gray-600 whitespace-nowrap">이름</th>
+                          <th className="px-2 py-1.5 text-left font-medium text-gray-600 whitespace-nowrap">학년</th>
+                          <th className="px-2 py-1.5 text-left font-medium text-gray-600 whitespace-nowrap">수납명</th>
+                          <th className="px-2 py-1.5 text-right font-medium text-gray-600 whitespace-nowrap">청구액</th>
+                          <th className="px-2 py-1.5 text-right font-medium text-gray-600 whitespace-nowrap">할인</th>
+                          <th className="px-2 py-1.5 text-right font-medium text-gray-600 whitespace-nowrap">납부액</th>
+                          <th className="px-2 py-1.5 text-left font-medium text-gray-600 whitespace-nowrap">담임</th>
+                          <th className="px-2 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap">상태</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 bg-white">
                         {parsedData.slice(0, 10).map((row, i) => (
                           <tr key={i} className="hover:bg-gray-50">
-                            <td className="px-2 py-1.5">{row.studentName}</td>
-                            <td className="px-2 py-1.5">{row.grade}</td>
-                            <td className="px-2 py-1.5 max-w-[200px] truncate">{row.billingName}</td>
-                            <td className="px-2 py-1.5 text-right">{row.billedAmount.toLocaleString()}</td>
-                            <td className="px-2 py-1.5 text-right">{row.discountAmount.toLocaleString()}</td>
-                            <td className="px-2 py-1.5 text-right">{row.paidAmount.toLocaleString()}</td>
-                            <td className="px-2 py-1.5 text-gray-600 max-w-[80px] truncate">{row.teacher}</td>
-                            <td className="px-2 py-1.5 text-center">
+                            <td className="px-2 py-1.5 whitespace-nowrap">{row.studentName}</td>
+                            <td className="px-2 py-1.5 whitespace-nowrap">{row.grade}</td>
+                            <td className="px-2 py-1.5 truncate" title={row.billingName}>{row.billingName}</td>
+                            <td className="px-2 py-1.5 text-right whitespace-nowrap">{row.billedAmount.toLocaleString()}</td>
+                            <td className="px-2 py-1.5 text-right whitespace-nowrap">{row.discountAmount.toLocaleString()}</td>
+                            <td className="px-2 py-1.5 text-right whitespace-nowrap">{row.paidAmount.toLocaleString()}</td>
+                            <td className="px-2 py-1.5 text-gray-600 truncate" title={row.teacher}>{row.teacher}</td>
+                            <td className="px-2 py-1.5 text-center whitespace-nowrap">
                               <span className={`px-1.5 py-0.5 rounded text-xxs font-medium ${
                                 row.status === 'paid'
                                   ? 'bg-emerald-100 text-emerald-700'
                                   : 'bg-yellow-100 text-yellow-700'
                               }`}>
-                                {row.status === 'paid' ? '납부완료' : '미납'}
+                                {row.status === 'paid' ? '완료' : '미납'}
                               </span>
                             </td>
                           </tr>
