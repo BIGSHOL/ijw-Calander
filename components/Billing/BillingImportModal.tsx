@@ -304,10 +304,10 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
                   </div>
                 </div>
 
-                {textbookCount > 0 && onNavigateToTextbooks && (
+                {textbookCount > 0 && (
                   <div className="flex items-center gap-2 px-2 py-1.5 bg-purple-50 border border-purple-200 rounded-sm">
                     <BookOpen className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                    <span className="text-xxs text-purple-700">교재 수납 {textbookCount}건 별도 분리됨 — 교재 관리 탭에서 가져오기 가능</span>
+                    <span className="text-xxs text-purple-700">교재 수납 {textbookCount}건은 수납 가져오기에서 제외됨</span>
                   </div>
                 )}
 
