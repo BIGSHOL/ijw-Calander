@@ -474,8 +474,8 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
     <div className="h-full flex flex-col bg-gray-50">
       {/* 상단 네비게이션 바 */}
       <TabSubNavigation variant="compact" className="px-3 md:px-6 py-2 border-b border-white/10">
-        <div className="flex flex-wrap items-center justify-between gap-3 w-full">
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center justify-between gap-3 min-w-max">
+          <div className="flex items-center gap-3 shrink-0">
             {/* 뷰 토글: 시험 / 레벨테스트 */}
             <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm">
               <TabButton
@@ -542,7 +542,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
           </div>
 
           {/* 우측: 결과 카운트, 버튼들 */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {viewMode === 'levelTests' ? (
               <span className="text-gray-400 text-xs">
                 총 <span className="text-accent font-bold">{filteredLevelTests.length}</span>개 레벨테스트

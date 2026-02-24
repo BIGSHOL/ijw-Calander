@@ -158,7 +158,7 @@ const WithdrawalManagementTab: React.FC<WithdrawalManagementTabProps> = ({ curre
 
         {/* Right: Search + Filter (목록 탭만) */}
         {subTab === 'list' && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {/* 검색 */}
             <div className="relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" />
