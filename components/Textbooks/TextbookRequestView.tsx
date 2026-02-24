@@ -474,7 +474,7 @@ export default function TextbookRequestView({ isAdmin = false, initialTab, onReq
         teacherName: form.teacherName,
         requestDate: form.requestDate,
         bookName: form.bookName,
-        bookDetail: form.bookDetail || undefined,
+        ...(form.bookDetail ? { bookDetail: form.bookDetail } : {}),
         price: form.price,
         bankName: form.bankName,
         accountNumber: form.accountNumber,
