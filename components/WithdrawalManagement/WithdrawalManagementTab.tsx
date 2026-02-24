@@ -115,10 +115,10 @@ const WithdrawalManagementTab: React.FC<WithdrawalManagementTabProps> = ({ curre
         variant="compact"
         theme="light"
         showBorder={true}
-        className="justify-between px-4 relative"
+        className="justify-between px-3 md:px-4 relative"
       >
         {/* Left: Sub Tabs */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 md:gap-3 shrink-0">
           <div className="flex bg-gray-200 rounded-sm p-0.5">
             <TabButton
               active={subTab === 'stats'}

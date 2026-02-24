@@ -101,7 +101,7 @@ const StaffSelector: React.FC<StaffSelectorProps> = ({
           </button>
 
           {showDropdown && (
-            <div className="absolute top-full left-0 mt-1 bg-[#1e293b] border border-white/10 rounded-sm shadow-xl z-50 min-w-[600px] max-h-[400px] overflow-y-auto">
+            <div className="absolute top-full left-0 mt-1 bg-[#1e293b] border border-white/10 rounded-sm shadow-xl z-50 min-w-[min(600px,90vw)] max-h-[400px] overflow-y-auto">
               {/* 내 대시보드 */}
               <div className="p-1.5 border-b border-white/10">
                 <TabButton
@@ -127,7 +127,7 @@ const StaffSelector: React.FC<StaffSelectorProps> = ({
                       <div className={`text-xxs text-${roleColor}-400 font-bold px-1.5 py-0.5 border-b border-white/10 mb-0.5`}>
                         {role}
                       </div>
-                      <div className="grid grid-cols-5 gap-0.5">
+                      <div className="grid grid-cols-3 md:grid-cols-5 gap-0.5">
                         {members.map(staff => (
                           <TabButton
                             key={staff.id}

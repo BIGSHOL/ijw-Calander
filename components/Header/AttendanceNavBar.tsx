@@ -101,8 +101,8 @@ export const AttendanceNavBar: React.FC<AttendanceNavBarProps> = ({
   };
 
   return (
-    <TabSubNavigation variant="compact" className="justify-between px-6 border-b border-white/10 z-30">
-      <div className="flex items-center gap-3">
+    <TabSubNavigation variant="compact" className="justify-between px-3 md:px-6 border-b border-white/10 z-30">
+      <div className="flex items-center gap-2 md:gap-3 shrink-0">
         {/* Subject Toggle */}
         <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm">
           {(canManageMath || isMasterOrAdmin) && (

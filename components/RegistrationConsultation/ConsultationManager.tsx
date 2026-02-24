@@ -588,10 +588,10 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                 variant="compact"
                 theme="light"
                 showBorder={true}
-                className="hidden md:flex justify-between px-4 relative"
+                className="hidden md:flex justify-between px-3 md:px-4 relative"
             >
                 {/* Left: View Tabs + Year/Month Filter */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 md:gap-3 shrink-0">
                     {/* View Switcher Tabs */}
                     <div className="flex bg-gray-200 p-0.5 rounded-sm">
                         <TabButton

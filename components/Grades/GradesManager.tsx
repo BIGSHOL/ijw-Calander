@@ -473,7 +473,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
   return (
     <div className="h-full flex flex-col bg-gray-50">
       {/* 상단 네비게이션 바 */}
-      <TabSubNavigation variant="compact" className="px-6 py-2 border-b border-white/10">
+      <TabSubNavigation variant="compact" className="px-3 md:px-6 py-2 border-b border-white/10">
         <div className="flex flex-wrap items-center justify-between gap-3 w-full">
           <div className="flex flex-wrap items-center gap-3">
             {/* 뷰 토글: 시험 / 레벨테스트 */}

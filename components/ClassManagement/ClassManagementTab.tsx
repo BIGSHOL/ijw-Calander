@@ -249,7 +249,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
       {/* 상단 고정 영역 - flex-shrink-0으로 절대 줄어들지 않음 */}
       <div className="flex-shrink-0">
         {/* 상단 네비게이션 바 */}
-        <TabSubNavigation variant="compact" className="px-6 py-2 border-b border-white/10">
+        <TabSubNavigation variant="compact" className="px-3 md:px-6 py-2 border-b border-white/10">
           <div className="flex flex-wrap items-center gap-2 w-full">
               {/* 과목 토글 */}
               <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm flex-shrink-0">

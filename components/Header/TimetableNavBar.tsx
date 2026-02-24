@@ -29,7 +29,7 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
   setIsTimetableSettingsOpen,
 }) => {
   return (
-    <div className="bg-primary h-10 flex items-center px-6 border-b border-gray-700 relative z-30 text-xs">
+    <div className="bg-primary h-10 flex items-center px-3 md:px-6 border-b border-gray-700 relative z-30 text-xs overflow-x-auto no-scrollbar">
       {/* Main Filter Toggle - Only show for Math */
         /* Removed Global Option Settings Button */
       }
