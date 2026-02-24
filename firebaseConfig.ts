@@ -17,7 +17,7 @@ const getEnv = (key: string) => {
 
 // Firebase configuration loaded from environment variables
 // All sensitive keys are now stored in .env.local (not committed to Git)
-const firebaseConfig = {
+export const firebaseConfig = {
     apiKey: getEnv('VITE_FIREBASE_API_KEY'),
     authDomain: getEnv('VITE_FIREBASE_AUTH_DOMAIN'),
     projectId: getEnv('VITE_FIREBASE_PROJECT_ID'),

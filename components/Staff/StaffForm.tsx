@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, User, Shield } from 'lucide-react';
+import { X, Save, User, Shield, KeyRound } from 'lucide-react';
 import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS, ROLE_LABELS, UserRole } from '../../types';
 
 interface StaffFormProps {
   staff: StaffMember | null;
   onClose: () => void;
-  onSubmit: (data: Omit<StaffMember, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  onSubmit: (data: Omit<StaffMember, 'id' | 'createdAt' | 'updatedAt'>, password?: string) => Promise<void>;
   showSystemFields?: boolean; // 시스템 권한 필드 표시 여부 (MASTER/ADMIN만)
   currentUserRole?: UserRole; // 현재 사용자의 시스템 역할
 }
@@ -48,6 +48,8 @@ const ROLE_HIERARCHY: Record<UserRole, number> = {
 
 const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSystemFields = false, currentUserRole = 'user' }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     englishName: '',
@@ -135,9 +137,29 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
       return;
     }
 
+    // 신규 등록 시 이메일+비밀번호 필수 검증
+    if (!staff) {
+      if (!formData.email.trim()) {
+        alert('이메일을 입력해주세요. (로그인 계정 생성에 필요합니다)');
+        return;
+      }
+      if (!password) {
+        alert('비밀번호를 입력해주세요.');
+        return;
+      }
+      if (password.length < 6) {
+        alert('비밀번호는 6자 이상이어야 합니다.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        alert('비밀번호가 일치하지 않습니다.');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
-      await onSubmit(formData);
+      await onSubmit(formData, !staff ? password : undefined);
     } catch (error) {
       console.error('Submit error:', error);
     } finally {
@@ -204,7 +226,8 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
             {/* Email */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                이메일 {staff && <span className="text-gray-400 font-normal">(수정 불가)</span>}
+                이메일 {!staff && <span className="text-red-500">*</span>}
+                {staff && <span className="text-gray-400 font-normal">(수정 불가)</span>}
               </label>
               <input
                 type="email"
@@ -213,6 +236,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                 onChange={handleChange}
                 placeholder="example@email.com"
                 disabled={!!staff}
+                required={!staff}
                 className={`w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${
                   staff ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
                 }`}
@@ -238,6 +262,52 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                 className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
               />
             </div>
+
+            {/* Password - 신규 등록 시에만 표시 */}
+            {!staff && (
+              <>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    비밀번호 <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="6자 이상"
+                      required
+                      minLength={6}
+                      className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    비밀번호 확인 <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="비밀번호 재입력"
+                      required
+                      className={`w-full pl-8 pr-3 py-1.5 text-sm border rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${
+                        confirmPassword && password !== confirmPassword
+                          ? 'border-red-400 bg-red-50'
+                          : 'border-gray-300'
+                      }`}
+                    />
+                  </div>
+                  {confirmPassword && password !== confirmPassword && (
+                    <p className="text-xxs text-red-500 mt-0.5">비밀번호가 일치하지 않습니다.</p>
+                  )}
+                </div>
+              </>
+            )}
 
             {/* Role */}
             <div>
