@@ -624,6 +624,127 @@ exports.setUserPassword = functions
     });
 
 /**
+ * Cloud Function: 미연동 직원 계정 연결/생성
+ * 이메일로 기존 Firebase Auth 계정이 있으면 uid를 반환하고 비밀번호를 재설정,
+ * 없으면 새 계정을 생성하여 uid를 반환합니다.
+ *
+ * @param {string} email - 직원 이메일
+ * @param {string} password - 설정할 비밀번호 (min 6 chars)
+ * @returns {{ uid: string, created: boolean }}
+ */
+exports.linkOrCreateStaffAccount = functions
+    .region("asia-northeast3")
+    .https.onCall(async (data, context) => {
+        const logger = functions.logger;
+
+        // 1. Authentication check
+        if (!context.auth) {
+            throw new functions.https.HttpsError(
+                "unauthenticated",
+                "로그인이 필요합니다."
+            );
+        }
+
+        const callerUid = context.auth.uid;
+
+        // 2. Get caller's role from Firestore (staff collection)
+        const callerSnap = await db.collection("staff")
+            .where("uid", "==", callerUid)
+            .limit(1)
+            .get();
+        if (callerSnap.empty) {
+            throw new functions.https.HttpsError(
+                "permission-denied",
+                "사용자 정보를 찾을 수 없습니다."
+            );
+        }
+
+        const callerData = callerSnap.docs[0].data();
+        const callerRole = callerData.systemRole || callerData.role;
+        const allowedRoles = ["master", "admin"];
+
+        if (!allowedRoles.includes(callerRole)) {
+            throw new functions.https.HttpsError(
+                "permission-denied",
+                "계정 생성/연결 권한이 없습니다. (관리자만 가능)"
+            );
+        }
+
+        // 3. Validate input
+        const { email, password } = data;
+
+        if (!email || typeof email !== "string") {
+            throw new functions.https.HttpsError(
+                "invalid-argument",
+                "이메일이 필요합니다."
+            );
+        }
+
+        if (!password || typeof password !== "string" || password.length < 6) {
+            throw new functions.https.HttpsError(
+                "invalid-argument",
+                "비밀번호는 최소 6자 이상이어야 합니다."
+            );
+        }
+
+        // 4. Try to find existing user by email
+        try {
+            const existingUser = await admin.auth().getUserByEmail(email);
+
+            // User exists → update password and return uid
+            await admin.auth().updateUser(existingUser.uid, { password });
+
+            logger.info(`[linkOrCreateStaffAccount] Linked existing account ${email} (uid: ${existingUser.uid}) by ${callerUid}`);
+
+            return {
+                success: true,
+                uid: existingUser.uid,
+                created: false,
+                message: "기존 계정을 연결하고 비밀번호를 설정했습니다."
+            };
+        } catch (error) {
+            if (error.code !== "auth/user-not-found") {
+                logger.error(`[linkOrCreateStaffAccount] Error looking up user:`, error);
+                throw new functions.https.HttpsError(
+                    "internal",
+                    "계정 조회 중 오류가 발생했습니다."
+                );
+            }
+        }
+
+        // 5. User not found → create new account
+        try {
+            const newUser = await admin.auth().createUser({
+                email,
+                password,
+            });
+
+            logger.info(`[linkOrCreateStaffAccount] Created new account ${email} (uid: ${newUser.uid}) by ${callerUid}`);
+
+            return {
+                success: true,
+                uid: newUser.uid,
+                created: true,
+                message: "새 계정을 생성했습니다."
+            };
+        } catch (error) {
+            logger.error(`[linkOrCreateStaffAccount] Error creating user:`, error);
+
+            if (error.code === "auth/invalid-email") {
+                throw new functions.https.HttpsError(
+                    "invalid-argument",
+                    "올바른 이메일 주소를 입력해주세요."
+                );
+            }
+
+            throw new functions.https.HttpsError(
+                "internal",
+                "계정 생성 중 오류가 발생했습니다."
+            );
+        }
+    });
+
+/**
  * Cloud Function: 서버 측 전화번호 암호화
  * 클라이언트에 암호화 키를 노출하지 않고 서버에서 암호화 수행
  *

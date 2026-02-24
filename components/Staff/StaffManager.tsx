@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Plus, Search, Filter, RefreshCw, Calendar, Briefcase, AlertCircle } from 'lucide-react';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { firebaseConfig } from '../../firebaseConfig';
 import { useStaff } from '../../hooks/useStaff';
 import { useStaffLeaves } from '../../hooks/useStaffLeaves';
@@ -166,30 +167,19 @@ const StaffManager: React.FC<StaffManagerProps> = ({
   const handleFormSubmit = async (data: Omit<StaffMember, 'id' | 'createdAt' | 'updatedAt'>, password?: string) => {
     try {
       if (editingStaff) {
-        // 미연동 직원에게 계정 생성
+        // 미연동 직원에게 계정 생성/연결
         if (password && data.email && !editingStaff.uid) {
-          let secondaryApp;
           try {
-            secondaryApp = initializeApp(firebaseConfig, `staffCreate_${Date.now()}`);
-            const secondaryAuth = getAuth(secondaryApp);
-            const userCredential = await createUserWithEmailAndPassword(secondaryAuth, data.email, password);
-            data = { ...data, uid: userCredential.user.uid, approvalStatus: 'approved' };
-            await signOut(secondaryAuth);
+            const fns = getFunctions(undefined, 'asia-northeast3');
+            const linkOrCreate = httpsCallable(fns, 'linkOrCreateStaffAccount');
+            const result = await linkOrCreate({ email: data.email, password });
+            const { uid, created } = result.data as { uid: string; created: boolean };
+            data = { ...data, uid, approvalStatus: 'approved' };
+            alert(created ? '새 계정이 생성되었습니다.' : '기존 계정을 연결하고 비밀번호를 설정했습니다.');
           } catch (authErr: any) {
-            if (authErr.code === 'auth/email-already-in-use') {
-              alert('이미 사용 중인 이메일입니다. 기존 계정으로 로그인 후 직원 연동을 이용해주세요.');
-            } else if (authErr.code === 'auth/weak-password') {
-              alert('비밀번호는 6자 이상이어야 합니다.');
-            } else if (authErr.code === 'auth/invalid-email') {
-              alert('올바른 이메일 주소를 입력해주세요.');
-            } else {
-              alert('계정 생성 실패: ' + authErr.message);
-            }
+            const msg = authErr?.message || '계정 생성/연결에 실패했습니다.';
+            alert(msg);
             return;
-          } finally {
-            if (secondaryApp) {
-              await deleteApp(secondaryApp).catch(() => {});
-            }
           }
         }
         await updateStaff(editingStaff.id, data, editingStaff);
