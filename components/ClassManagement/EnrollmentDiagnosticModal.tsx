@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
     X,
     Search,
@@ -73,6 +74,7 @@ interface StudentDiagnosis {
 const EnrollmentDiagnosticModal: React.FC<EnrollmentDiagnosticModalProps> = ({
     onClose
 }) => {
+    const queryClient = useQueryClient();
     const [step, setStep] = useState<'loading' | 'results'>('loading');
     const [progress, setProgress] = useState(0);
     const [allStudents, setAllStudents] = useState<StudentDiagnosis[]>([]);
@@ -271,6 +273,8 @@ const EnrollmentDiagnosticModal: React.FC<EnrollmentDiagnosticModalProps> = ({
                 return;
             }
             await deleteDoc(doc(db, `students/${studentId}/enrollments`, enrollmentId));
+            queryClient.invalidateQueries({ queryKey: ['classes'] });
+            queryClient.invalidateQueries({ queryKey: ['students'] });
 
             setAllStudents(prev => prev.map(s => {
                 if (s.studentId !== studentId) return s;

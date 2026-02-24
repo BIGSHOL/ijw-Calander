@@ -91,7 +91,6 @@ export function useMonthlyEnrollmentTerms(month?: string) {
     enabled: !!month,
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 15,
-    refetchOnWindowFocus: false,
   });
 }
 
@@ -120,7 +119,6 @@ export function useStudentEnrollmentTerms(studentId?: string) {
     },
     enabled: !!studentId,
     staleTime: 1000 * 60 * 5,
-    refetchOnWindowFocus: false,
   });
 }
 

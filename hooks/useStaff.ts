@@ -123,7 +123,6 @@ export function useStaff() {
     },
     staleTime: 1000 * 60 * 5, // 5분 캐싱
     gcTime: 1000 * 60 * 15, // 15분 GC
-    refetchOnWindowFocus: false,
   });
 
   const error = queryError ? (queryError as Error).message : null;

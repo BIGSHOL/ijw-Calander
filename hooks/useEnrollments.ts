@@ -166,7 +166,6 @@ export const useEnrollmentsAsClasses = (subject?: SubjectType) => {
         },
         staleTime: 1000 * 60 * 5,    // 5분 캐싱
         gcTime: 1000 * 60 * 15,       // 15분 GC
-        refetchOnWindowFocus: false
     });
 };
 

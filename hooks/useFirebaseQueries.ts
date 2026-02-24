@@ -33,6 +33,7 @@ export const useDepartments = (enabled: boolean = true) => {
         },
         staleTime: 1000 * 60 * 30, // 30분
         gcTime: 1000 * 60 * 60, // 1시간
+        refetchOnWindowFocus: false, // 정적 데이터 - 윈도우 포커스 재조회 불필요
         enabled,
     });
 };
@@ -85,6 +86,7 @@ export const useHolidays = (enabled: boolean = true) => {
         },
         staleTime: 1000 * 60 * 60, // 1시간
         gcTime: 1000 * 60 * 120, // 2시간
+        refetchOnWindowFocus: false, // 정적 데이터 - 윈도우 포커스 재조회 불필요
         enabled,
     });
 };
@@ -101,6 +103,7 @@ export const useClassKeywords = (enabled: boolean = true) => {
         },
         staleTime: 1000 * 60 * 30, // 30분
         gcTime: 1000 * 60 * 60, // 1시간
+        refetchOnWindowFocus: false, // 정적 데이터 - 윈도우 포커스 재조회 불필요
         enabled,
     });
 };
@@ -154,6 +157,7 @@ export const useSystemConfig = (enabled: boolean = true) => {
         },
         staleTime: 1000 * 60 * 60, // 1시간
         gcTime: 1000 * 60 * 120, // 2시간
+        refetchOnWindowFocus: false, // 정적 데이터 - 윈도우 포커스 재조회 불필요
         enabled,
     });
 };
