@@ -166,6 +166,32 @@ const StaffManager: React.FC<StaffManagerProps> = ({
   const handleFormSubmit = async (data: Omit<StaffMember, 'id' | 'createdAt' | 'updatedAt'>, password?: string) => {
     try {
       if (editingStaff) {
+        // 미연동 직원에게 계정 생성
+        if (password && data.email && !editingStaff.uid) {
+          let secondaryApp;
+          try {
+            secondaryApp = initializeApp(firebaseConfig, `staffCreate_${Date.now()}`);
+            const secondaryAuth = getAuth(secondaryApp);
+            const userCredential = await createUserWithEmailAndPassword(secondaryAuth, data.email, password);
+            data = { ...data, uid: userCredential.user.uid, approvalStatus: 'approved' };
+            await signOut(secondaryAuth);
+          } catch (authErr: any) {
+            if (authErr.code === 'auth/email-already-in-use') {
+              alert('이미 사용 중인 이메일입니다. 기존 계정으로 로그인 후 직원 연동을 이용해주세요.');
+            } else if (authErr.code === 'auth/weak-password') {
+              alert('비밀번호는 6자 이상이어야 합니다.');
+            } else if (authErr.code === 'auth/invalid-email') {
+              alert('올바른 이메일 주소를 입력해주세요.');
+            } else {
+              alert('계정 생성 실패: ' + authErr.message);
+            }
+            return;
+          } finally {
+            if (secondaryApp) {
+              await deleteApp(secondaryApp).catch(() => {});
+            }
+          }
+        }
         await updateStaff(editingStaff.id, data, editingStaff);
       } else {
         // 신규 등록: Firebase Auth 계정 생성 (secondary app으로 현재 로그인 유지)
