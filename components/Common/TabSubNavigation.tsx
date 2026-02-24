@@ -8,6 +8,7 @@ interface TabSubNavigationProps {
   theme?: 'dark' | 'light'; // 다크(기본) vs 라이트(수학시간표 스타일)
   showBorder?: boolean;
   ignoreCollapse?: boolean; // 접기 무시 옵션 (특정 네비게이션에만 적용)
+  allowOverflow?: boolean; // true이면 overflow-x-auto 제거 (드롭다운 등이 잘리지 않도록)
 }
 
 /**
@@ -41,7 +42,8 @@ export const TabSubNavigation: React.FC<TabSubNavigationProps> = ({
   variant = 'compact',
   theme = 'dark',
   showBorder = true,
-  ignoreCollapse = false
+  ignoreCollapse = false,
+  allowOverflow = false
 }) => {
   const { isHeaderCollapsed } = useHeaderCollapse();
 
@@ -81,7 +83,7 @@ export const TabSubNavigation: React.FC<TabSubNavigationProps> = ({
         ${currentTheme.shadow}
         ${variantClasses[variant]}
         flex items-center
-        overflow-x-auto no-scrollbar
+        ${allowOverflow ? 'overflow-visible' : 'overflow-x-auto no-scrollbar'}
         text-xs
         z-20
         ${className}
