@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, User, Shield, KeyRound } from 'lucide-react';
+import { X, Save, User, Shield, KeyRound, Lock } from 'lucide-react';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS, ROLE_LABELS, UserRole } from '../../types';
 
 interface StaffFormProps {
@@ -50,6 +51,11 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  // 비밀번호 변경 (수정 모드)
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordChangeResult, setPasswordChangeResult] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     englishName: '',
@@ -127,6 +133,33 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
         : [...prev.subjects, subject];
       return { ...prev, subjects };
     });
+  };
+
+  const handlePasswordChange = async () => {
+    if (!staff?.uid) return;
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordChangeResult({ type: 'error', msg: '비밀번호는 6자 이상이어야 합니다.' });
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPasswordChangeResult({ type: 'error', msg: '비밀번호가 일치하지 않습니다.' });
+      return;
+    }
+    setIsChangingPassword(true);
+    setPasswordChangeResult(null);
+    try {
+      const functions = getFunctions(undefined, 'asia-northeast3');
+      const setUserPassword = httpsCallable(functions, 'setUserPassword');
+      await setUserPassword({ uid: staff.uid, password: newPassword });
+      setPasswordChangeResult({ type: 'success', msg: '비밀번호가 변경되었습니다.' });
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } catch (err: any) {
+      const msg = err?.message || '비밀번호 변경에 실패했습니다.';
+      setPasswordChangeResult({ type: 'error', msg });
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -565,6 +598,76 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                 </div>
                 <p className="text-xxs text-gray-500">
                   시스템 역할은 앱 내 기능 접근 권한을 결정합니다. 승인 상태가 '승인됨'이어야 로그인이 가능합니다.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* 비밀번호 변경 섹션 (수정 모드 + uid 있는 경우 + 관리자) */}
+          {showSystemFields && staff?.uid && (
+            <div className="border-t border-gray-200 pt-3 mt-3">
+              <h3 className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-amber-600" />
+                비밀번호 변경
+              </h3>
+              <div className="bg-amber-50/50 rounded-sm p-3 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      새 비밀번호
+                    </label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => { setNewPassword(e.target.value); setPasswordChangeResult(null); }}
+                        placeholder="6자 이상"
+                        minLength={6}
+                        className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      비밀번호 확인
+                    </label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                      <input
+                        type="password"
+                        value={confirmNewPassword}
+                        onChange={(e) => { setConfirmNewPassword(e.target.value); setPasswordChangeResult(null); }}
+                        placeholder="비밀번호 재입력"
+                        className={`w-full pl-8 pr-3 py-1.5 text-sm border rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent ${
+                          confirmNewPassword && newPassword !== confirmNewPassword
+                            ? 'border-red-400 bg-red-50'
+                            : 'border-gray-300'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                </div>
+                {passwordChangeResult && (
+                  <p className={`text-xs font-medium ${passwordChangeResult.type === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+                    {passwordChangeResult.msg}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={handlePasswordChange}
+                  disabled={isChangingPassword || !newPassword}
+                  className="px-3 py-1.5 text-xs font-bold bg-amber-500 text-white rounded-sm hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                >
+                  {isChangingPassword ? (
+                    <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Lock className="w-3 h-3" />
+                  )}
+                  비밀번호 변경
+                </button>
+                <p className="text-xxs text-gray-500">
+                  변경된 비밀번호는 즉시 적용됩니다. 해당 직원에게 새 비밀번호를 안내해주세요.
                 </p>
               </div>
             </div>
