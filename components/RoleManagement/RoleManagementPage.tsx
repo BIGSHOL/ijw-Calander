@@ -7,10 +7,11 @@ import {
   PermissionId,
   TabPermissionConfig,
   DEFAULT_TAB_PERMISSIONS,
-  APP_TABS,
   AppTab,
   UserRole,
-  UserProfile
+  UserProfile,
+  TAB_GROUPS,
+  TAB_META,
 } from '../../types';
 import { db } from '../../firebaseConfig';
 import { setDoc, doc, onSnapshot, getDoc } from 'firebase/firestore';
@@ -25,10 +26,12 @@ interface RoleManagementPageProps {
 }
 
 // Permission categories for compact display
+// 순서: TAB_GROUPS 네비게이션 순서에 맞춤
 const PERMISSION_CATEGORIES = [
+  // ── 일정 그룹 ──
   {
     id: 'events',
-    label: '일정',
+    label: '연간 일정',
     icon: '📅',
     permissions: [
       { id: 'events.create' as PermissionId, label: '생성' },
@@ -39,6 +42,18 @@ const PERMISSION_CATEGORIES = [
       { id: 'events.bucket' as PermissionId, label: '버킷' },
     ]
   },
+  {
+    id: 'gantt',
+    label: '간트 차트',
+    icon: '📊',
+    permissions: [
+      { id: 'gantt.view' as PermissionId, label: '조회' },
+      { id: 'gantt.create' as PermissionId, label: '생성' },
+      { id: 'gantt.edit' as PermissionId, label: '수정' },
+      { id: 'gantt.delete' as PermissionId, label: '삭제' },
+    ]
+  },
+  // ── 수업 그룹 ──
   {
     id: 'timetable',
     label: '시간표',
@@ -68,8 +83,69 @@ const PERMISSION_CATEGORIES = [
     ]
   },
   {
+    id: 'daily_attendance',
+    label: '출결 관리',
+    icon: '✅',
+    permissions: [
+      { id: 'daily_attendance.view' as PermissionId, label: '조회' },
+      { id: 'daily_attendance.edit' as PermissionId, label: '수정' },
+    ]
+  },
+  {
+    id: 'classes',
+    label: '수업 관리',
+    icon: '📚',
+    permissions: [
+      { id: 'classes.view' as PermissionId, label: '조회' },
+      { id: 'classes.create' as PermissionId, label: '생성' },
+      { id: 'classes.edit' as PermissionId, label: '수정' },
+      { id: 'classes.delete' as PermissionId, label: '삭제' },
+    ]
+  },
+  {
+    id: 'classroom',
+    label: '강의실/배정',
+    icon: '🏫',
+    permissions: [
+      { id: 'classroom.view' as PermissionId, label: '조회' },
+      { id: 'classroom.edit' as PermissionId, label: '수정/배정' },
+    ]
+  },
+  {
+    id: 'homework',
+    label: '숙제 관리',
+    icon: '📓',
+    permissions: [
+      { id: 'homework.view' as PermissionId, label: '조회' },
+      { id: 'homework.create' as PermissionId, label: '생성' },
+      { id: 'homework.edit' as PermissionId, label: '수정' },
+    ]
+  },
+  {
+    id: 'exams',
+    label: '시험 관리',
+    icon: '📝',
+    permissions: [
+      { id: 'exams.view' as PermissionId, label: '조회' },
+      { id: 'exams.create' as PermissionId, label: '생성' },
+      { id: 'exams.edit' as PermissionId, label: '수정' },
+    ]
+  },
+  {
+    id: 'textbooks',
+    label: '교재 관리',
+    icon: '📖',
+    permissions: [
+      { id: 'textbooks.view' as PermissionId, label: '조회' },
+      { id: 'textbooks.create' as PermissionId, label: '생성' },
+      { id: 'textbooks.edit' as PermissionId, label: '수정' },
+      { id: 'textbooks.admin' as PermissionId, label: '관리자모드' },
+    ]
+  },
+  // ── 학생 그룹 ──
+  {
     id: 'students',
-    label: '학생',
+    label: '학생 관리',
     icon: '👥',
     permissions: [
       { id: 'students.view' as PermissionId, label: '조회' },
@@ -82,19 +158,8 @@ const PERMISSION_CATEGORIES = [
     ]
   },
   {
-    id: 'classes',
-    label: '수업',
-    icon: '📚',
-    permissions: [
-      { id: 'classes.view' as PermissionId, label: '조회' },
-      { id: 'classes.create' as PermissionId, label: '생성' },
-      { id: 'classes.edit' as PermissionId, label: '수정' },
-      { id: 'classes.delete' as PermissionId, label: '삭제' },
-    ]
-  },
-  {
     id: 'consultation',
-    label: '상담',
+    label: '등록 상담',
     icon: '📞',
     permissions: [
       { id: 'consultation.view' as PermissionId, label: '조회' },
@@ -106,7 +171,7 @@ const PERMISSION_CATEGORIES = [
   },
   {
     id: 'grades',
-    label: '성적',
+    label: '성적 관리',
     icon: '📊',
     permissions: [
       { id: 'grades.view' as PermissionId, label: '조회' },
@@ -115,14 +180,138 @@ const PERMISSION_CATEGORIES = [
     ]
   },
   {
+    id: 'withdrawal',
+    label: '퇴원 관리',
+    icon: '🚪',
+    permissions: [
+      { id: 'withdrawal.view' as PermissionId, label: '조회' },
+      { id: 'withdrawal.edit' as PermissionId, label: '수정' },
+      { id: 'withdrawal.reactivate' as PermissionId, label: '재원복구' },
+    ]
+  },
+  {
+    id: 'contracts',
+    label: '계약 관리',
+    icon: '📄',
+    permissions: [
+      { id: 'contracts.view' as PermissionId, label: '조회' },
+      { id: 'contracts.create' as PermissionId, label: '생성' },
+      { id: 'contracts.edit' as PermissionId, label: '수정' },
+    ]
+  },
+  {
+    id: 'reports',
+    label: '학습 리포트',
+    icon: '📑',
+    permissions: [
+      { id: 'reports.view' as PermissionId, label: '조회' },
+      { id: 'reports.create' as PermissionId, label: '생성' },
+    ]
+  },
+  // ── 관리 그룹 ──
+  {
+    id: 'payment',
+    label: '수강료 현황',
+    icon: '💳',
+    permissions: [
+      { id: 'payment.view' as PermissionId, label: '조회' },
+      { id: 'payment.edit' as PermissionId, label: '수정' },
+    ]
+  },
+  {
     id: 'billing',
-    label: '수납',
+    label: '수납 관리',
     icon: '💰',
     permissions: [
       { id: 'billing.view' as PermissionId, label: '조회' },
       { id: 'billing.edit' as PermissionId, label: '수정' },
     ]
   },
+  {
+    id: 'resources_mgmt',
+    label: '자료실',
+    icon: '📁',
+    permissions: [
+      { id: 'resources.view' as PermissionId, label: '조회' },
+      { id: 'resources.edit' as PermissionId, label: '수정' },
+    ]
+  },
+  {
+    id: 'roles',
+    label: '역할 관리',
+    icon: '🔐',
+    permissions: [
+      { id: 'roles.view' as PermissionId, label: '조회' },
+      { id: 'roles.manage' as PermissionId, label: '관리' },
+    ]
+  },
+  {
+    id: 'payroll',
+    label: '급여 관리',
+    icon: '💵',
+    permissions: [
+      { id: 'payroll.view' as PermissionId, label: '조회' },
+      { id: 'payroll.edit' as PermissionId, label: '수정' },
+    ]
+  },
+  {
+    id: 'analytics',
+    label: '매출 분석',
+    icon: '📈',
+    permissions: [
+      { id: 'analytics.view' as PermissionId, label: '조회' },
+      { id: 'analytics.export' as PermissionId, label: '내보내기' },
+    ]
+  },
+  // ── 소통 그룹 ──
+  {
+    id: 'notices',
+    label: '공지사항',
+    icon: '📢',
+    permissions: [
+      { id: 'notices.view' as PermissionId, label: '조회' },
+      { id: 'notices.create' as PermissionId, label: '생성' },
+      { id: 'notices.edit' as PermissionId, label: '수정' },
+    ]
+  },
+  {
+    id: 'parent_portal',
+    label: '학부모 소통',
+    icon: '👨‍👩‍👧',
+    permissions: [
+      { id: 'parent_portal.view' as PermissionId, label: '조회' },
+      { id: 'parent_portal.manage' as PermissionId, label: '관리' },
+    ]
+  },
+  {
+    id: 'notifications',
+    label: '알림 발송',
+    icon: '📲',
+    permissions: [
+      { id: 'notifications.view' as PermissionId, label: '조회' },
+      { id: 'notifications.send' as PermissionId, label: '발송' },
+    ]
+  },
+  // ── 마케팅 그룹 ──
+  {
+    id: 'marketing',
+    label: '마케팅',
+    icon: '📣',
+    permissions: [
+      { id: 'marketing.view' as PermissionId, label: '조회' },
+      { id: 'marketing.edit' as PermissionId, label: '수정' },
+    ]
+  },
+  {
+    id: 'shuttle',
+    label: '셔틀 관리',
+    icon: '🚌',
+    permissions: [
+      { id: 'shuttle.view' as PermissionId, label: '조회' },
+      { id: 'shuttle.edit' as PermissionId, label: '수정' },
+    ]
+  },
+  // ── 시스템 전용 (탭 없음) ──
   {
     id: 'system',
     label: '시스템',
@@ -156,186 +345,6 @@ const PERMISSION_CATEGORIES = [
       { id: 'settings.holidays' as PermissionId, label: '공휴일' },
       { id: 'settings.role_permissions' as PermissionId, label: '역할권한' },
       { id: 'settings.manage_categories' as PermissionId, label: '카테고리' },
-    ]
-  },
-  {
-    id: 'gantt',
-    label: '간트',
-    icon: '📊',
-    permissions: [
-      { id: 'gantt.view' as PermissionId, label: '조회' },
-      { id: 'gantt.create' as PermissionId, label: '생성' },
-      { id: 'gantt.edit' as PermissionId, label: '수정' },
-      { id: 'gantt.delete' as PermissionId, label: '삭제' },
-    ]
-  },
-  {
-    id: 'withdrawal',
-    label: '퇴원',
-    icon: '🚪',
-    permissions: [
-      { id: 'withdrawal.view' as PermissionId, label: '조회' },
-      { id: 'withdrawal.edit' as PermissionId, label: '수정' },
-      { id: 'withdrawal.reactivate' as PermissionId, label: '재원복구' },
-    ]
-  },
-  {
-    id: 'roles',
-    label: '역할 관리',
-    icon: '🔐',
-    permissions: [
-      { id: 'roles.view' as PermissionId, label: '조회' },
-      { id: 'roles.manage' as PermissionId, label: '관리' },
-    ]
-  },
-  {
-    id: 'daily_attendance',
-    label: '출결관리',
-    icon: '📋',
-    permissions: [
-      { id: 'daily_attendance.view' as PermissionId, label: '조회' },
-      { id: 'daily_attendance.edit' as PermissionId, label: '수정' },
-    ]
-  },
-  {
-    id: 'homework',
-    label: '숙제',
-    icon: '📝',
-    permissions: [
-      { id: 'homework.view' as PermissionId, label: '조회' },
-      { id: 'homework.create' as PermissionId, label: '생성' },
-      { id: 'homework.edit' as PermissionId, label: '수정' },
-    ]
-  },
-  {
-    id: 'exams',
-    label: '시험',
-    icon: '📄',
-    permissions: [
-      { id: 'exams.view' as PermissionId, label: '조회' },
-      { id: 'exams.create' as PermissionId, label: '생성' },
-      { id: 'exams.edit' as PermissionId, label: '수정' },
-    ]
-  },
-  {
-    id: 'textbooks',
-    label: '교재',
-    icon: '📖',
-    permissions: [
-      { id: 'textbooks.view' as PermissionId, label: '조회' },
-      { id: 'textbooks.create' as PermissionId, label: '생성' },
-      { id: 'textbooks.edit' as PermissionId, label: '수정' },
-      { id: 'textbooks.admin' as PermissionId, label: '관리자모드' },
-    ]
-  },
-  {
-    id: 'contracts',
-    label: '계약',
-    icon: '📃',
-    permissions: [
-      { id: 'contracts.view' as PermissionId, label: '조회' },
-      { id: 'contracts.create' as PermissionId, label: '생성' },
-      { id: 'contracts.edit' as PermissionId, label: '수정' },
-    ]
-  },
-  {
-    id: 'reports',
-    label: '리포트',
-    icon: '📊',
-    permissions: [
-      { id: 'reports.view' as PermissionId, label: '조회' },
-      { id: 'reports.create' as PermissionId, label: '생성' },
-    ]
-  },
-  {
-    id: 'classroom',
-    label: '강의실',
-    icon: '🏫',
-    permissions: [
-      { id: 'classroom.view' as PermissionId, label: '조회' },
-      { id: 'classroom.edit' as PermissionId, label: '수정/배정' },
-    ]
-  },
-  {
-    id: 'notices',
-    label: '공지사항',
-    icon: '📢',
-    permissions: [
-      { id: 'notices.view' as PermissionId, label: '조회' },
-      { id: 'notices.create' as PermissionId, label: '생성' },
-      { id: 'notices.edit' as PermissionId, label: '수정' },
-    ]
-  },
-  {
-    id: 'parent_portal',
-    label: '학부모포털',
-    icon: '👨‍👩‍👧',
-    permissions: [
-      { id: 'parent_portal.view' as PermissionId, label: '조회' },
-      { id: 'parent_portal.manage' as PermissionId, label: '관리' },
-    ]
-  },
-  {
-    id: 'notifications',
-    label: '알림센터',
-    icon: '🔔',
-    permissions: [
-      { id: 'notifications.view' as PermissionId, label: '조회' },
-      { id: 'notifications.send' as PermissionId, label: '발송' },
-    ]
-  },
-  {
-    id: 'payment',
-    label: '수강료현황',
-    icon: '💳',
-    permissions: [
-      { id: 'payment.view' as PermissionId, label: '조회' },
-      { id: 'payment.edit' as PermissionId, label: '수정' },
-    ]
-  },
-  {
-    id: 'analytics',
-    label: '매출분석',
-    icon: '📈',
-    permissions: [
-      { id: 'analytics.view' as PermissionId, label: '조회' },
-      { id: 'analytics.export' as PermissionId, label: '내보내기' },
-    ]
-  },
-  {
-    id: 'payroll',
-    label: '급여',
-    icon: '💵',
-    permissions: [
-      { id: 'payroll.view' as PermissionId, label: '조회' },
-      { id: 'payroll.edit' as PermissionId, label: '수정' },
-    ]
-  },
-  {
-    id: 'shuttle',
-    label: '셔틀',
-    icon: '🚐',
-    permissions: [
-      { id: 'shuttle.view' as PermissionId, label: '조회' },
-      { id: 'shuttle.edit' as PermissionId, label: '수정' },
-    ]
-  },
-  {
-    id: 'marketing',
-    label: '마케팅',
-    icon: '📣',
-    permissions: [
-      { id: 'marketing.view' as PermissionId, label: '조회' },
-      { id: 'marketing.edit' as PermissionId, label: '수정' },
-    ]
-  },
-  {
-    id: 'resources_mgmt',
-    label: '자료실',
-    icon: '📁',
-    permissions: [
-      { id: 'resources.view' as PermissionId, label: '조회' },
-      { id: 'resources.edit' as PermissionId, label: '수정' },
     ]
   },
 ];
@@ -684,31 +693,79 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
             </div>
           )}
 
-          {/* Tabs Section */}
+          {/* Tabs Section - TAB_GROUPS 기반 접기/펼치기 */}
           {activeSection === 'tabs' && (
             <div className="divide-y divide-gray-100">
-              {APP_TABS.map(tab => (
-                <div key={tab.id} className="flex hover:bg-gray-50/30">
-                  <div className="w-48 shrink-0 px-3 py-2 border-r">
-                    <span className="text-xs font-medium text-gray-700">{tab.label}</span>
-                    <span className="text-xxs text-gray-400 ml-1 font-mono">({tab.id})</span>
+              {TAB_GROUPS.map(group => {
+                const tabGroupKey = `tab_${group.id}`;
+                const isExpanded = expandedCategories.has(tabGroupKey);
+                return (
+                  <div key={group.id}>
+                    {/* 그룹 헤더 */}
+                    <button
+                      onClick={() => toggleCategory(tabGroupKey)}
+                      className="w-full flex items-center px-3 py-2 bg-gray-50/50 hover:bg-gray-100/50 transition-colors"
+                    >
+                      <div className="w-48 shrink-0 flex items-center gap-2 text-left">
+                        {isExpanded ? (
+                          <ChevronDown size={14} className="text-gray-400" />
+                        ) : (
+                          <ChevronRight size={14} className="text-gray-400" />
+                        )}
+                        <span className="text-sm">{group.icon}</span>
+                        <span className="text-xs font-bold text-gray-700">{group.label}</span>
+                        <span className="text-xxs text-gray-400">({group.tabs.length})</span>
+                      </div>
+                      {/* 접힌 상태: 역할별 활성탭 수 요약 */}
+                      {!isExpanded && (
+                        <div className="flex-1 flex">
+                          {ROLES_TO_SHOW.map(role => {
+                            const enabledCount = group.tabs.filter(
+                              tabId => tabPermissions[role]?.includes(tabId)
+                            ).length;
+                            return (
+                              <div key={role} className="flex-1 min-w-[80px] text-center">
+                                <span className={`text-xxs font-bold ${enabledCount === group.tabs.length ? 'text-green-600' : enabledCount > 0 ? 'text-yellow-600' : 'text-gray-300'}`}>
+                                  {enabledCount}/{group.tabs.length}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </button>
+                    {/* 펼친 상태: 개별 탭 행 */}
+                    {isExpanded && (
+                      <div className="divide-y divide-gray-50">
+                        {group.tabs.map(tabId => {
+                          const tabMeta = TAB_META[tabId];
+                          return (
+                            <div key={tabId} className="flex hover:bg-gray-50/30">
+                              <div className="w-48 shrink-0 px-3 py-1.5 pl-8 border-r">
+                                <span className="text-xs text-gray-600">{tabMeta.label}</span>
+                              </div>
+                              {ROLES_TO_SHOW.map(role => (
+                                <div key={role} className="flex-1 min-w-[80px] flex items-center justify-center border-r last:border-r-0 py-1">
+                                  <button
+                                    onClick={() => handleTabToggle(role, tabId, !tabPermissions[role]?.includes(tabId))}
+                                    disabled={!canEdit}
+                                    className={`w-5 h-5 rounded-none flex items-center justify-center transition-colors ${tabPermissions[role]?.includes(tabId)
+                                      ? 'bg-indigo-500 text-white'
+                                      : 'bg-gray-100 text-gray-300 hover:bg-gray-200'
+                                      } ${!canEdit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                                  >
+                                    {tabPermissions[role]?.includes(tabId) ? <Check size={12} /> : null}
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                  {ROLES_TO_SHOW.map(role => (
-                    <div key={role} className="flex-1 min-w-[80px] flex items-center justify-center border-r last:border-r-0 py-2">
-                      <button
-                        onClick={() => handleTabToggle(role, tab.id, !tabPermissions[role]?.includes(tab.id))}
-                        disabled={!canEdit}
-                        className={`w-5 h-5 rounded-none flex items-center justify-center transition-colors ${tabPermissions[role]?.includes(tab.id)
-                          ? 'bg-indigo-500 text-white'
-                          : 'bg-gray-100 text-gray-300 hover:bg-gray-200'
-                          } ${!canEdit ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                      >
-                        {tabPermissions[role]?.includes(tab.id) ? <Check size={12} /> : null}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
