@@ -266,10 +266,10 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                 variant="compact"
                 theme="light"
                 showBorder={true}
-                className="justify-between px-4 relative z-30"
+                className="justify-between px-3 md:px-4 relative z-30"
             >
                 {/* Left: View Toggle + Date Presets + Filter Dropdown */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 md:gap-3 shrink-0">
                     {/* 뷰 모드 토글 */}
                     <div className="flex bg-gray-200 rounded-sm p-0.5">
                         <TabButton

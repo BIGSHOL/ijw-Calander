@@ -81,6 +81,7 @@ export const TabSubNavigation: React.FC<TabSubNavigationProps> = ({
         ${currentTheme.shadow}
         ${variantClasses[variant]}
         flex items-center
+        overflow-x-auto no-scrollbar
         text-xs
         z-20
         ${className}
