@@ -37,15 +37,15 @@ export const useDepartments = (enabled: boolean = true) => {
     });
 };
 
-// 강사 (staff 컬렉션에서 role='teacher' 조회) - 30분 캐시
+// 강사 (staff 컬렉션에서 role='teacher' 또는 '강사' 조회) - 30분 캐시
 export const useTeachers = (enabled: boolean = true) => {
     return useQuery({
         queryKey: ['teachers'],
         queryFn: async () => {
-            // Read from staff collection where role = 'teacher'
+            // Read from staff collection where role in ['teacher', '강사']
             const q = query(
                 collection(db, 'staff'),
-                where('role', '==', 'teacher')
+                where('role', 'in', ['teacher', '강사'])
             );
             const snapshot = await getDocs(q);
 

@@ -223,10 +223,15 @@ const StaffList: React.FC<StaffListProps> = ({
                         )}
                         {member.isHiddenInTimetable && (
                           <span className="text-xxs px-1 py-0.5 bg-gray-100 text-gray-600 rounded">
-                            숨김
+                            시간표숨김
                           </span>
                         )}
-                        {!member.bgColor && !member.defaultRoom && !member.isNative && !member.isHiddenInTimetable && (
+                        {member.isHiddenInAttendance && (
+                          <span className="text-xxs px-1 py-0.5 bg-orange-100 text-orange-600 rounded">
+                            출석부숨김
+                          </span>
+                        )}
+                        {!member.bgColor && !member.defaultRoom && !member.isNative && !member.isHiddenInTimetable && !member.isHiddenInAttendance && (
                           <span className="text-xxs text-gray-400">-</span>
                         )}
                       </div>
