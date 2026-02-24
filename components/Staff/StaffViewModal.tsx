@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { X, Edit, Trash2, Phone, Mail, Calendar, Shield, ShieldCheck, ShieldAlert, Building, User, CheckCircle, XCircle, Clock, Briefcase, Eye, EyeOff, Globe, AlertTriangle, KeyRound, Send, Loader2, Lock, AlignLeft } from 'lucide-react';
+import { X, Edit, Trash2, Phone, Mail, Calendar, Shield, ShieldCheck, ShieldAlert, Building, User, CheckCircle, XCircle, Clock, Briefcase, Eye, EyeOff, Globe, AlertTriangle, KeyRound, Send, Loader2, Lock, AlignLeft, BookOpen } from 'lucide-react';
 import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS, ROLE_LABELS, UserRole } from '../../types';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { auth } from '../../firebaseConfig';
 import { SUBJECT_COLORS, SubjectType } from '../../utils/styleUtils';
+import StaffClassHistory from './StaffClassHistory';
 
 interface StaffViewModalProps {
   staff: StaffMember;
@@ -49,6 +50,10 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
   const [newPassword, setNewPassword] = useState('');
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [resetResult, setResetResult] = useState<{ success: boolean; message: string } | null>(null);
+  // 탭 상태 (강사만 사용)
+  const [activeTab, setActiveTab] = useState<'basic' | 'history'>('basic');
+
+  const isTeacher = staff.role === 'teacher' || staff.role === '강사';
 
   const systemRoleStyle = staff.systemRole ? SYSTEM_ROLE_STYLES[staff.systemRole] : null;
   const approvalStyle = staff.approvalStatus ? APPROVAL_STYLES[staff.approvalStatus] : null;
@@ -210,8 +215,43 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
           </button>
         </div>
 
+        {/* 탭 네비게이션 (강사만 표시) */}
+        {isTeacher && (
+          <div className="border-b border-gray-200 bg-white px-3">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setActiveTab('basic')}
+                className={`flex items-center gap-1 px-1 py-1.5 text-xs font-bold border-b-2 transition-all ${
+                  activeTab === 'basic'
+                    ? 'text-primary border-accent'
+                    : 'text-gray-400 border-transparent hover:text-gray-600'
+                }`}
+              >
+                <User className="w-3 h-3" />
+                기본정보
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`flex items-center gap-1 px-1 py-1.5 text-xs font-bold border-b-2 transition-all ${
+                  activeTab === 'history'
+                    ? 'text-primary border-accent'
+                    : 'text-gray-400 border-transparent hover:text-gray-600'
+                }`}
+              >
+                <BookOpen className="w-3 h-3" />
+                수업이력
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-5 space-y-2">
+          {/* 수업이력 탭 (강사만) */}
+          {isTeacher && activeTab === 'history' ? (
+            <StaffClassHistory staffName={staff.name} />
+          ) : (
+          <>
           {/* Section 1: 기본 정보 */}
           <div className="bg-white border border-gray-200 overflow-hidden">
             <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
@@ -478,6 +518,8 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
                 <p className="text-sm text-gray-700 whitespace-pre-wrap">{staff.memo}</p>
               </div>
             </div>
+          )}
+          </>
           )}
         </div>
 
