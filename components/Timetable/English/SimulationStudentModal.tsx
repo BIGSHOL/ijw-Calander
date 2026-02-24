@@ -5,6 +5,7 @@ import React, { useState, useMemo } from 'react';
 import { X, Search, UserPlus, UserMinus, Users, ArrowRight, FlaskConical, Save, RotateCcw } from 'lucide-react';
 import { useScenario, ScenarioEnrollment } from './context/SimulationContext';
 import { UnifiedStudent } from '../../../types';
+import { useEscapeClose } from '../../../hooks/useEscapeClose';
 
 interface SimulationStudentModalProps {
     className: string;
@@ -22,6 +23,8 @@ const SimulationStudentModal: React.FC<SimulationStudentModalProps> = ({
     const scenario = useScenario();
     const [searchTerm, setSearchTerm] = useState('');
     const [showAddPanel, setShowAddPanel] = useState(false);
+
+    useEscapeClose(onClose);
 
     // 현재 수업의 학생 목록 (시나리오 데이터에서)
     const currentStudents = useMemo(() => {
@@ -112,10 +115,9 @@ const SimulationStudentModal: React.FC<SimulationStudentModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-[110] flex items-start justify-center pt-[8vh]" onClick={onClose}>
+        <div className="fixed inset-0 bg-black/50 z-[110] flex items-start justify-center pt-[8vh]">
             <div
                 className="bg-white rounded-sm shadow-2xl w-[600px] max-h-[85vh] flex flex-col overflow-hidden"
-                onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="flex justify-between items-center px-5 py-4 bg-indigo-600 text-white">

@@ -6,6 +6,7 @@ import { X, Save, Download, Clock, User, AlertTriangle, Pencil, Trash2, Check, F
 import { ScenarioEntry } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useMathSimulationOptional } from './context/SimulationContext';
+import { useEscapeClose } from '../../../hooks/useEscapeClose';
 
 // Math-specific constants
 const SCENARIO_COLLECTION = 'math_scenarios';
@@ -85,6 +86,8 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
 
     // SimulationContext 사용 (새 구조)
     const simulation = useMathSimulationOptional();
+
+    useEscapeClose(onClose);
 
     // Format date
     const formatDate = (dateString: string) => {
@@ -410,8 +413,8 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh] p-4" onClick={onClose}>
-            <div className="bg-white rounded-sm shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh] p-4">
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
                     <div className="flex items-center gap-2">

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, collectionGroup, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 import { TimetableClass, TimetableStudent } from '../../../../types';
 import { convertToLegacyPeriodId } from '../../constants';
@@ -9,25 +9,65 @@ const COL_CLASSES = 'classes';
 /**
  * useTimetableClasses - 수학 시간표용 수업 목록 조회
  *
- * 데이터 소스: classes 컬렉션 (isActive=true)
- * 학생 데이터: enrollments에서 별도 조회 (useMathClassStudents)
+ * 데이터 소스: classes 컬렉션 (isActive=true) + enrollments collectionGroup
+ * 학생 수: enrollments 기반 직접 집계 (퇴원/미래배정 제외)
+ * 상세 학생 데이터: useMathClassStudents에서 별도 파생
  *
  * React Query로 전환:
  * - onSnapshot → getDocs (실시간 업데이트 제거, 폴링 기반)
- * - staleTime: 30초 (캐시 유지 시간)
+ * - staleTime: 10초 (실시간성 향상)
  * - gcTime: 5분 (가비지 컬렉션 시간)
  */
 export const useTimetableClasses = () => {
     const { data: classes = [], isLoading: loading } = useQuery({
         queryKey: ['timetableClasses'],
         queryFn: async () => {
-            // classes 컬렉션에서 활성 수업만 조회
-            const q = query(
+            // classes + enrollments 병렬 조회
+            const classesQuery = query(
                 collection(db, COL_CLASSES),
                 where('isActive', '==', true)
             );
+            const enrollmentsQuery = collectionGroup(db, 'enrollments');
 
-            const snapshot = await getDocs(q);
+            const [snapshot, enrollmentsSnapshot] = await Promise.all([
+                getDocs(classesQuery),
+                getDocs(enrollmentsQuery),
+            ]);
+
+            // enrollment 기반 수업별 학생 ID 집계 (퇴원/미래배정 제외)
+            const classStudentIds = new Map<string, Set<string>>();
+            const today = new Date().toISOString().split('T')[0];
+
+            enrollmentsSnapshot.docs.forEach(doc => {
+                const data = doc.data();
+                const className = data.className as string;
+                const studentId = doc.ref.parent.parent?.id;
+
+                if (!className || !studentId) return;
+
+                // 퇴원/종료 학생 제외
+                const withdrawalDate = data.withdrawalDate?.toDate?.()
+                    ? data.withdrawalDate.toDate().toISOString().split('T')[0]
+                    : (typeof data.withdrawalDate === 'string' ? data.withdrawalDate : null);
+                const endDate = data.endDate?.toDate?.()
+                    ? data.endDate.toDate().toISOString().split('T')[0]
+                    : (typeof data.endDate === 'string' ? data.endDate : null);
+                if (withdrawalDate || endDate) return;
+
+                // 미래 배정 학생 제외
+                const startDate = data.enrollmentDate?.toDate?.()
+                    ? data.enrollmentDate.toDate().toISOString().split('T')[0]
+                    : (typeof data.enrollmentDate === 'string' ? data.enrollmentDate
+                        : data.startDate?.toDate?.()
+                            ? data.startDate.toDate().toISOString().split('T')[0]
+                            : (typeof data.startDate === 'string' ? data.startDate : null));
+                if (startDate && startDate > today) return;
+
+                if (!classStudentIds.has(className)) {
+                    classStudentIds.set(className, new Set());
+                }
+                classStudentIds.get(className)!.add(studentId);
+            });
 
             const loadedClasses: TimetableClass[] = snapshot.docs.map(doc => {
                 const data = doc.data();
@@ -40,8 +80,14 @@ export const useTimetableClasses = () => {
                     return `${slot.day} ${legacyPeriodId}`;
                 }) || data.legacySchedule || [];
 
+                // enrollment 기반 학생 ID (classes 문서의 studentIds 대신)
+                const enrollmentStudentIds = classStudentIds.get(data.className);
+                const studentIds = enrollmentStudentIds
+                    ? Array.from(enrollmentStudentIds)
+                    : (data.studentIds || []);
+
                 // studentIds를 TimetableStudent[] 형식으로 변환
-                const studentList: TimetableStudent[] = (data.studentIds || []).map((sid: string) => {
+                const studentList: TimetableStudent[] = studentIds.map((sid: string) => {
                     // studentId 파싱: "이름_학교_학년" 형식
                     const parts = sid.split('_');
                     if (parts.length >= 3) {
@@ -65,7 +111,7 @@ export const useTimetableClasses = () => {
                     teacher: data.teacher || '',
                     subject: subjectLabel,
                     studentList,
-                    studentIds: data.studentIds || [],
+                    studentIds,
                     schedule: scheduleStrings,
                     room: data.room || '',
                     color: data.color,

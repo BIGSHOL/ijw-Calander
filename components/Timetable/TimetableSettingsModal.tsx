@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Settings } from 'lucide-react';
 import ClassSettingsModal from '../ClassManagement/ClassSettingsModal';
 import { UserProfile } from '../../types';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 // TeachersTab 제거됨 - 강사 관리는 시스템 관리의 사용자 관리(staff 컬렉션)에서 통합 관리
 
 interface TimetableSettingsModalProps {
@@ -16,16 +17,16 @@ const TimetableSettingsModal: React.FC<TimetableSettingsModalProps> = ({
   onClose,
   canEdit = true,
 }) => {
+  useEscapeClose(onClose);
+
   if (!isOpen) return null;
 
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]"
-      onClick={onClose}
     >
       <div
         className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Flag, Calendar, Star } from 'lucide-react';
 import { BucketItem } from '../../types';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface BucketModalProps {
     isOpen: boolean;
@@ -21,6 +22,8 @@ const BucketModal: React.FC<BucketModalProps> = ({
 }) => {
     const [title, setTitle] = useState('');
     const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');
+
+    useEscapeClose(onClose);
 
     // Populate fields when editing
     useEffect(() => {
@@ -45,10 +48,9 @@ const BucketModal: React.FC<BucketModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', transform: 'translateZ(0)', transition: 'none', zIndex: 9998 }} onClick={onClose}>
+        <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', transform: 'translateZ(0)', transition: 'none', zIndex: 9998 }}>
             <div
                 className="bg-white rounded-sm shadow-xl max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden"
-                onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">

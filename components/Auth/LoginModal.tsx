@@ -4,6 +4,7 @@ import { auth, db } from '../../firebaseConfig';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, setDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { StaffMember } from '../../types';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface LoginModalProps {
     isOpen: boolean;
@@ -12,6 +13,8 @@ interface LoginModalProps {
 }
 
 const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = true }) => {
+    useEscapeClose(() => canClose && onClose());
+
     const [isSignUp, setIsSignUp] = useState(false);
     const [isForgotPassword, setIsForgotPassword] = useState(false);
     const [email, setEmail] = useState('');
@@ -148,14 +151,12 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
     return (
         <div
             className="fixed inset-0 bg-black/60 backdrop-blur-xl flex items-start justify-center pt-[8vh] z-[100]"
-            onClick={() => canClose && onClose()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="login-modal-title"
         >
             <div
                 className="bg-white rounded-sm shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden p-0 relative border border-gray-200"
-                onClick={(e) => e.stopPropagation()}
             >
 
                 {/* Header */}

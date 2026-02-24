@@ -5,6 +5,7 @@ import { doc, setDoc, getDoc, Timestamp } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useForm } from '../../hooks/useForm';
 import { required, phone as phoneValidator } from '../../utils/formValidation';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface AddStudentModalProps {
     isOpen: boolean;
@@ -198,6 +199,8 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
         onClose();
     };
 
+    useEscapeClose(handleClose);
+
     if (!isOpen) return null;
 
     // 입력 필드 클래스
@@ -207,10 +210,9 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
         }`;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]" onClick={handleClose}>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
             <div
                 className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
-                onClick={(e) => e.stopPropagation()}
             >
                 {/* 헤더 */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">

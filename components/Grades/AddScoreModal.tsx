@@ -6,6 +6,7 @@ import { useAddScore } from '../../hooks/useStudentGrades';
 import { db } from '../../firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface AddScoreModalProps {
     onClose: () => void;
@@ -58,6 +59,8 @@ const AddScoreModal: React.FC<AddScoreModalProps> = ({
     hideCreateExam = false,
     currentUser,
 }) => {
+    useEscapeClose(onClose);
+
     const queryClient = useQueryClient();
     const { data: exams = [], isLoading: loadingExams } = useExams();
     const addScore = useAddScore();
@@ -210,8 +213,8 @@ const AddScoreModal: React.FC<AddScoreModalProps> = ({
     const grade = percentage ? calculateGrade(parseFloat(percentage)) : null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]" onClick={onClose}>
-            <div className="bg-white rounded-sm w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
+            <div className="bg-white rounded-sm w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden">
                 {/* 헤더 */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
                     <h2 className="text-sm font-bold text-primary flex items-center gap-2">

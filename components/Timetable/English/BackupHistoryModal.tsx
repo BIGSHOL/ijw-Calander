@@ -5,6 +5,7 @@ import { listenerRegistry } from '../../../utils/firebaseCleanup';
 import { X, RotateCcw, Clock, User, AlertTriangle, Pencil, Trash2, Check, Database, Eye, FileText } from 'lucide-react';
 import { CLASS_COLLECTION } from './englishUtils';
 import { usePermissions } from '../../../hooks/usePermissions';
+import { useEscapeClose } from '../../../hooks/useEscapeClose';
 
 interface BackupEntry {
     id: string;
@@ -88,6 +89,8 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
     const { hasPermission } = usePermissions(currentUser);
     const canRestore = hasPermission('timetable.english.backup.restore') || currentUser?.role === 'master';
     const isMaster = currentUser?.role === 'master';
+
+    useEscapeClose(onClose);
 
     // Calculate total student count from studentData
     const getStudentCount = (backup: BackupEntry) => {
@@ -326,10 +329,9 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] bg-black/50" onClick={onClose}>
+        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] bg-black/50">
             <div
                 className="bg-white rounded-sm shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden"
-                onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 py-4 border-b bg-gray-50 rounded-t-xl">

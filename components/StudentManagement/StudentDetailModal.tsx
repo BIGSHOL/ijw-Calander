@@ -1,7 +1,8 @@
-﻿import React from 'react';
+import React from 'react';
 import { X } from 'lucide-react';
 import { UnifiedStudent, UserProfile } from '../../types';
 import StudentDetail from './StudentDetail';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface StudentDetailModalProps {
   student: UnifiedStudent;
@@ -11,14 +12,14 @@ interface StudentDetailModalProps {
 }
 
 const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ student, onClose, readOnly = false, currentUser }) => {
+  useEscapeClose(onClose);
+
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]"
-      onClick={onClose}
     >
       <div
         className="bg-white rounded-sm shadow-xl w-full max-w-xl h-[600px] flex flex-col overflow-hidden relative"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* 닫기 버튼 */}
         <div className="absolute top-2 right-2 z-10">

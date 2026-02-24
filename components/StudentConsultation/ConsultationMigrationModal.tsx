@@ -6,6 +6,7 @@ import { useStaff } from '../../hooks/useStaff';
 import { StaffMember, UnifiedStudent } from '../../types';
 import { collection, writeBatch, doc, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface ParsedConsultation {
     no: number | string;
@@ -89,6 +90,8 @@ const parseExcelDate = (cellVal: any) => {
 };
 
 const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({ onClose, onSuccess }) => {
+    useEscapeClose(onClose);
+
     const { students, loading: studentsLoading } = useStudents(true);
     const { staff: staffMembers, loading: staffLoading } = useStaff();
 
@@ -545,8 +548,8 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
     const newStudentCount = migrationItems.filter(i => i.isNewStudent).length;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]" onClick={onClose}>
-            <div className="bg-white rounded-sm shadow-2xl w-[900px] max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
+            <div className="bg-white rounded-sm shadow-2xl w-[900px] max-h-[85vh] flex flex-col overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
                     <h2 className="text-sm font-bold text-primary flex items-center gap-2">

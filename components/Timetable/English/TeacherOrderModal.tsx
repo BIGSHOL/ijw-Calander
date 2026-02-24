@@ -17,6 +17,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { X, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
+import { useEscapeClose } from '../../../hooks/useEscapeClose';
 
 interface TeacherOrderModalProps {
     isOpen: boolean;
@@ -83,6 +84,8 @@ const TeacherOrderModal: React.FC<TeacherOrderModalProps> = ({ isOpen, onClose, 
     const [items, setItems] = useState<string[]>([]);
     const [isSaving, setIsSaving] = useState(false);
 
+    useEscapeClose(onClose);
+
     useEffect(() => {
         if (isOpen) {
             // Merge currentOrder with any new teachers not in the list
@@ -139,8 +142,8 @@ const TeacherOrderModal: React.FC<TeacherOrderModalProps> = ({ isOpen, onClose, 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-[110] flex items-start justify-center pt-[8vh]" onClick={onClose}>
-            <div className="bg-white rounded-sm shadow-xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-[110] flex items-start justify-center pt-[8vh]">
+            <div className="bg-white rounded-sm shadow-xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden">
                 <div className="flex justify-between items-center p-4 border-b bg-gray-900 text-white rounded-sm">
                     <h2 className="text-base font-bold">강사 순서 설정</h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">

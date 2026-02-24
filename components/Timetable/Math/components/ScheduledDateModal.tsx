@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { formatDateKey } from '../../../../utils/dateUtils';
 import { addDays } from 'date-fns';
+import { useEscapeClose } from '../../../../hooks/useEscapeClose';
 
 interface ScheduledDateModalProps {
     studentName: string;
@@ -20,6 +21,8 @@ const ScheduledDateModal: React.FC<ScheduledDateModalProps> = ({
     const [mode, setMode] = useState<'immediate' | 'scheduled'>('immediate');
     const [selectedDate, setSelectedDate] = useState('');
 
+    useEscapeClose(onClose);
+
     const tomorrow = formatDateKey(addDays(new Date(), 1));
 
     const handleConfirm = () => {
@@ -33,11 +36,9 @@ const ScheduledDateModal: React.FC<ScheduledDateModalProps> = ({
     return (
         <div
             className="fixed inset-0 bg-black/50 z-[110] flex items-start justify-center pt-[8vh] p-4"
-            onClick={onClose}
         >
             <div
                 className="bg-white rounded-sm shadow-2xl w-[320px] flex flex-col overflow-hidden"
-                onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="bg-primary text-white p-3 font-bold text-sm flex justify-between items-center">

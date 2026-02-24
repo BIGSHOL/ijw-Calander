@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Play, CheckCircle, AlertCircle, Loader2, Database, TrendingUp, FileText, Check } from 'lucide-react';
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface Props {
     isOpen: boolean;
@@ -16,6 +17,8 @@ const AttendanceMigrationModal: React.FC<Props> = ({ isOpen, onClose }) => {
     const [errorCount, setErrorCount] = useState(0);
     const [isComplete, setIsComplete] = useState(false);
     const [updateCount, setUpdateCount] = useState(0);
+
+    useEscapeClose(onClose);
 
     const addLog = (msg: string) => setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
 
@@ -97,8 +100,8 @@ const AttendanceMigrationModal: React.FC<Props> = ({ isOpen, onClose }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh]" onClick={onClose}>
-            <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh]">
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
                     <h3 className="text-sm font-bold text-primary flex items-center gap-2">

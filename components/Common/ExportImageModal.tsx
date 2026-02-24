@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Download, Loader2, Image as ImageIcon, ZoomIn, ZoomOut, Check, RotateCcw } from 'lucide-react';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 // html-to-image는 동적 import로 로드 (한글 폰트 렌더링이 html2canvas보다 우수)
 
 // 그룹 정보 인터페이스 (행 선택용)
@@ -30,6 +31,8 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
   groups,
   onGroupsChanged,
 }) => {
+  useEscapeClose(onClose);
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -230,7 +233,6 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
       {/* 배경 오버레이 */}
       <div
         className="absolute inset-0 bg-black/50"
-        onClick={onClose}
       />
 
       {/* 모달 컨텐츠 */}

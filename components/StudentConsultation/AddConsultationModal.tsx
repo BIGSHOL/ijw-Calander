@@ -5,6 +5,7 @@ import { useCreateConsultation, useUpdateConsultation } from '../../hooks/useCon
 import { Consultation, ConsultationCategory, CATEGORY_CONFIG, UserProfile } from '../../types';
 import { X, Search, Loader2, User, Users, Clock, Calendar, MessageSquare, Edit2, FileText, BookOpen, AlertCircle } from 'lucide-react';
 import { SUBJECT_COLORS } from '../../utils/styleUtils';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface AddConsultationModalProps {
     onClose: () => void;
@@ -27,6 +28,8 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
     editingConsultation,
     userProfile,
 }) => {
+    useEscapeClose(onClose);
+
     const currentUser = userProfile ? {
         uid: userProfile.uid,
         displayName: userProfile.displayName,
@@ -208,10 +211,9 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]" onClick={onClose}>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
             <div
                 className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden"
-                onClick={e => e.stopPropagation()}
             >
                 {/* 헤더 */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">

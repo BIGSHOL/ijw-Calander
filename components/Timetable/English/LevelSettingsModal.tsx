@@ -22,6 +22,7 @@ import { db } from '../../../firebaseConfig';
 import { listenerRegistry } from '../../../utils/firebaseCleanup';
 import { EnglishLevel, LevelSettings } from '../../../types';
 import { DEFAULT_ENGLISH_LEVELS } from './englishUtils';
+import { useEscapeClose } from '../../../hooks/useEscapeClose';
 
 interface LevelSettingsModalProps {
     isOpen: boolean;
@@ -113,6 +114,8 @@ const LevelSettingsModal: React.FC<LevelSettingsModalProps> = ({ isOpen, onClose
     const [editId, setEditId] = useState<string | null>(null);
     const [inputAbbr, setInputAbbr] = useState('');
     const [inputName, setInputName] = useState('');
+
+    useEscapeClose(onClose);
 
     useEffect(() => {
         if (!isOpen) return;
@@ -228,8 +231,8 @@ const LevelSettingsModal: React.FC<LevelSettingsModalProps> = ({ isOpen, onClose
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-[110] flex items-start justify-center pt-[8vh]" onClick={onClose}>
-            <div className="bg-white rounded-sm shadow-2xl w-[480px] max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-[110] flex items-start justify-center pt-[8vh]">
+            <div className="bg-white rounded-sm shadow-2xl w-[480px] max-h-[85vh] flex flex-col overflow-hidden">
                 {/* Header */}
                 <div className="flex justify-between items-center px-5 py-4 border-b bg-gray-50">
                     <div>
@@ -318,7 +321,7 @@ const LevelSettingsModal: React.FC<LevelSettingsModalProps> = ({ isOpen, onClose
                                         value={inputName}
                                         onChange={(e) => setInputName(e.target.value)}
                                         placeholder="전체 이름 (예: Dr. Phonics)"
-                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-sm focus:ring-2 focus:ring-indide-500 focus:border-indigo-500 outline-none"
                                         onKeyDown={(e) => e.key === 'Enter' && handleAddOrUpdate()}
                                     />
                                 </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { X, DollarSign, Settings } from 'lucide-react';
 import { Teacher } from '../../types';
 import SalarySettingsTab from './components/SalarySettingsTab';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface AttendanceSettingsModalProps {
   isOpen: boolean;
@@ -18,16 +19,16 @@ const AttendanceSettingsModal: React.FC<AttendanceSettingsModalProps> = ({
   canEdit = true,
   initialStaffId,
 }) => {
+  useEscapeClose(onClose);
+
   if (!isOpen) return null;
 
   return (
     <div
       className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh]"
-      onClick={onClose}
     >
       <div
         className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">

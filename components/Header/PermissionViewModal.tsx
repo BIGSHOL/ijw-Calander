@@ -6,6 +6,7 @@
 import React from 'react';
 import { Eye, X, ClipboardList, Check, Shield } from 'lucide-react';
 import { UserProfile, ROLE_LABELS, AppTab, TAB_META } from '../../types';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface PermissionViewModalProps {
   isOpen: boolean;
@@ -22,6 +23,8 @@ export const PermissionViewModal: React.FC<PermissionViewModalProps> = ({
   accessibleTabs,
   rolePermissions,
 }) => {
+  useEscapeClose(onClose);
+
   if (!isOpen) return null;
 
   const permLabels: Record<string, string> = {
@@ -89,7 +92,6 @@ export const PermissionViewModal: React.FC<PermissionViewModalProps> = ({
     <>
       <div
         className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]"
-        onClick={onClose}
       />
       <div className="fixed left-1/2 top-[8vh] -translate-x-1/2 w-[500px] max-h-[85vh] bg-white rounded-sm shadow-xl z-[110] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">

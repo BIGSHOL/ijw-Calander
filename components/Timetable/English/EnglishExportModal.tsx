@@ -4,6 +4,7 @@ import { addDays, format } from 'date-fns';
 import html2canvas from 'html2canvas';
 import { Teacher, ClassKeywordColor } from '../../../types';
 import { EN_PERIODS, EN_WEEKDAYS, getCellKey, getTeacherColor, getContrastColor, formatClassNameWithBreaks } from './englishUtils';
+import { useEscapeClose } from '../../../hooks/useEscapeClose';
 
 interface ScheduleCell {
   className?: string;
@@ -47,6 +48,8 @@ const EnglishExportModal: React.FC<EnglishExportModalProps> = ({
 
   const filteredWeekdays = EN_WEEKDAYS.filter(day => selectedWeekdays.has(day));
   const previewRef = useRef<HTMLDivElement>(null);
+
+  useEscapeClose(() => { if (!isExporting) onClose(); });
 
   // 요일별 날짜 계산 (2/9 형식)
   const weekDates = useMemo(() => {
@@ -277,7 +280,6 @@ const EnglishExportModal: React.FC<EnglishExportModalProps> = ({
       {/* 배경 오버레이 */}
       <div
         className="absolute inset-0 bg-black/60"
-        onClick={!isExporting ? onClose : undefined}
       />
 
       {/* 모달 컨텐츠 */}

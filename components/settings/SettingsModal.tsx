@@ -18,6 +18,7 @@ import { useTabPermissions } from '../../hooks/useTabPermissions';
 // DepartmentsManagementTab 제거됨 - 캘린더 페이지(CalendarSettingsModal)에서 관리
 // UsersTab 제거됨 - 직원 관리 페이지의 "시스템 사용자" 탭(UsersManagement)으로 통합
 import { NewDepartmentForm, CategoryManagementState, DepartmentFilterState, INITIAL_DEPARTMENT_FORM } from '../../types/departmentForm';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -48,6 +49,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   showArchived,
   onToggleArchived,
 }) => {
+  useEscapeClose(onClose);
+
   const { hasPermission } = usePermissions(currentUserProfile || null);
 
   const canViewDepartments = hasPermission('departments.view_all');
@@ -459,11 +462,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     <>
       <div
         className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]"
-        onClick={onClose}
       >
         <div
           className="bg-white rounded-sm shadow-xl w-full max-w-4xl p-0 relative max-h-[85vh] flex flex-col overflow-hidden border border-gray-200"
-          onClick={(e) => e.stopPropagation()}
         >
 
           {/* Header */}

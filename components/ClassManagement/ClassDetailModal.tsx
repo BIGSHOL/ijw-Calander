@@ -13,6 +13,7 @@ import { useClassStats } from '../../hooks/useClassStats';
 import { formatSchoolGrade } from '../../utils/studentUtils';
 import { useSimulationOptional } from '../Timetable/English/context/SimulationContext';
 import { ScenarioClass } from '../Timetable/English/context/SimulationContext';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface ClassDetailModalProps {
   classInfo: ClassInfo;
@@ -38,6 +39,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
   isSimulationMode = false,
   initialSlotTeachers
 }) => {
+  useEscapeClose(onClose);
   const { className: initialClassName, subject, studentCount } = classInfo;
 
   // ==================== 공통 상태 ====================
@@ -138,6 +140,13 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
   const currentStudents = classDetail?.students || [];
   const currentStudentIds = currentStudents.map(s => s.id);
 
+  // 학생 3분류: 재원생 / 대기생(배정 예정) / 퇴원생
+  const activeStudents = useMemo(() => currentStudents.filter(s => !s.isScheduled && !s.isWithdrawn), [currentStudents]);
+  const scheduledStudents = useMemo(() => currentStudents.filter(s => s.isScheduled), [currentStudents]);
+  const withdrawnStudents = useMemo(() => currentStudents.filter(s => s.isWithdrawn), [currentStudents]);
+  const [showScheduled, setShowScheduled] = useState(false);
+  const [showWithdrawn, setShowWithdrawn] = useState(false);
+
   const availableStudents = useMemo(() => {
     if (!allStudents) return [];
     return allStudents
@@ -145,7 +154,11 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
       .filter(s => {
         if (!studentSearch.trim()) return true;
         const search = studentSearch.toLowerCase();
-        return (s.name || '').toLowerCase().includes(search) || s.school?.toLowerCase().includes(search) || s.grade?.toLowerCase().includes(search);
+        return (
+          (s.name || '').toLowerCase().includes(search) ||
+          s.school?.toLowerCase().includes(search) ||
+          s.grade?.toLowerCase().includes(search)
+        );
       })
       .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
   }, [allStudents, currentStudentIds, studentsToAdd, studentSearch]);
@@ -437,12 +450,12 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
     setStudentsToRemove(new Set());
   };
 
-  const finalStudentCount = currentStudents.length - studentsToRemove.size + studentsToAdd.size;
+  const finalStudentCount = activeStudents.length - studentsToRemove.size + studentsToAdd.size;
   const isPending = updateClassMutation.isPending || manageStudentsMutation.isPending || deleteClassMutation.isPending;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]" onClick={onClose}>
-      <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
+      <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* 헤더 */}
         <div className="flex items-center justify-between px-2 py-1.5 border-b border-gray-200">
           <div className="flex items-center gap-2">
@@ -668,16 +681,16 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                     <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
                       <Users className="w-3 h-3 text-primary" />
                       <h3 className="text-primary font-bold text-xs">현재 등록된 학생</h3>
-                      <span className="text-xxs text-gray-500 ml-1">({currentStudents.length - studentsToRemove.size}명)</span>
+                      <span className="text-xxs text-gray-500 ml-1">({activeStudents.length - studentsToRemove.size}명)</span>
                       {classInfo.subject === 'math' && classDays.length > 1 && <span className="text-xxs text-blue-500 ml-auto">클릭: 등원요일 · 체크박스: 부담임</span>}
                       {classInfo.subject === 'math' && classDays.length <= 1 && <span className="text-xxs text-blue-500 ml-auto">체크박스: 부담임</span>}
                       {classInfo.subject === 'english' && <span className="text-xxs text-blue-500 ml-auto">U: 밑줄 강조</span>}
                     </div>
                     <div className="max-h-40 overflow-y-auto">
-                      {currentStudents.length === 0 ? (
+                      {activeStudents.length === 0 ? (
                         <div className="p-3 text-center text-gray-400 text-sm">등록된 학생이 없습니다</div>
                       ) : (
-                        currentStudents.map(student => {
+                        activeStudents.map(student => {
                           const isMarkedForRemoval = studentsToRemove.has(student.id);
                           const isExpanded = expandedStudentId === student.id;
                           const attendanceDaysText = getAttendanceDaysText(student.id);
@@ -900,20 +913,96 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
               )}
 
               {activeViewTab === 'students' && (
-                <div className="bg-white border border-gray-200 overflow-hidden">
-                  <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
-                    <Users className="w-3 h-3 text-primary" />
-                    <h3 className="text-primary font-bold text-xs">수강 학생</h3>
-                    <span className="text-xxs text-gray-500 ml-1">({classDetail?.studentCount || studentCount || 0}명)</span>
+                <div className="space-y-2">
+                  {/* 재원생 */}
+                  <div className="bg-white border border-gray-200 overflow-hidden">
+                    <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
+                      <Users className="w-3 h-3 text-primary" />
+                      <h3 className="text-primary font-bold text-xs">수강 학생</h3>
+                      <span className="text-xxs text-gray-500 ml-1">({classDetail?.studentCount || studentCount || 0}명)</span>
+                    </div>
+                    {detailLoading ? (
+                      <div className="p-6 text-center"><p className="text-gray-500 text-xs">불러오는 중...</p></div>
+                    ) : classDetail ? (
+                      <ClassStudentList students={activeStudents} onStudentClick={onStudentClick} classDays={classDisplayDays} />
+                    ) : (
+                      <div className="p-6 text-center">
+                        <Users className="w-8 h-8 mx-auto mb-2 opacity-30 text-gray-400" />
+                        <p className="text-gray-500 text-xs">학생 정보를 불러올 수 없습니다.</p>
+                      </div>
+                    )}
                   </div>
-                  {detailLoading ? (
-                    <div className="p-6 text-center"><p className="text-gray-500 text-xs">불러오는 중...</p></div>
-                  ) : classDetail ? (
-                    <ClassStudentList students={classDetail.students} onStudentClick={onStudentClick} classDays={classDisplayDays} />
-                  ) : (
-                    <div className="p-6 text-center">
-                      <Users className="w-8 h-8 mx-auto mb-2 opacity-30 text-gray-400" />
-                      <p className="text-gray-500 text-xs">학생 정보를 불러올 수 없습니다.</p>
+
+                  {/* 대기생 (배정 예정) - 접이식 */}
+                  {scheduledStudents.length > 0 && (
+                    <div className="bg-white border border-blue-200 overflow-hidden">
+                      <button
+                        onClick={() => setShowScheduled(!showScheduled)}
+                        className="flex items-center gap-1 px-2 py-1 bg-blue-50 border-b border-blue-200 w-full text-left hover:bg-blue-100 transition-colors"
+                      >
+                        {showScheduled ? <ChevronUp className="w-3 h-3 text-blue-600" /> : <ChevronDown className="w-3 h-3 text-blue-600" />}
+                        <Calendar className="w-3 h-3 text-blue-600" />
+                        <h3 className="text-blue-700 font-bold text-xs">배정 예정</h3>
+                        <span className="text-xxs text-blue-500 ml-1">({scheduledStudents.length}명)</span>
+                      </button>
+                      {showScheduled && (
+                        <div className="divide-y divide-blue-100 max-h-[200px] overflow-y-auto">
+                          {scheduledStudents.map(student => (
+                            <div
+                              key={student.id}
+                              className="flex items-center justify-between gap-2 px-2 py-1.5 hover:bg-blue-50/50 transition-colors"
+                            >
+                              <div
+                                onClick={() => onStudentClick?.(student.id)}
+                                className={`flex items-center gap-2 flex-1 ${onStudentClick ? 'cursor-pointer hover:text-accent' : ''}`}
+                              >
+                                <span className="text-xs font-medium text-primary">{student.name}</span>
+                                <span className="text-xs text-primary-700">{formatSchoolGrade(student.school, student.grade)}</span>
+                                <span className="text-xxs bg-blue-100 text-blue-700 px-1.5 py-0.5 font-medium">배정 예정</span>
+                                {student.enrollmentDate && (
+                                  <span className="text-xxs text-blue-500">{student.enrollmentDate}~</span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 퇴원생 - 접이식 */}
+                  {withdrawnStudents.length > 0 && (
+                    <div className="bg-white border border-gray-300 overflow-hidden">
+                      <button
+                        onClick={() => setShowWithdrawn(!showWithdrawn)}
+                        className="flex items-center gap-1 px-2 py-1 bg-gray-100 border-b border-gray-300 w-full text-left hover:bg-gray-200 transition-colors"
+                      >
+                        {showWithdrawn ? <ChevronUp className="w-3 h-3 text-gray-500" /> : <ChevronDown className="w-3 h-3 text-gray-500" />}
+                        <UserMinus className="w-3 h-3 text-gray-500" />
+                        <h3 className="text-gray-600 font-bold text-xs">퇴원생</h3>
+                        <span className="text-xxs text-gray-500 ml-1">({withdrawnStudents.length}명)</span>
+                      </button>
+                      {showWithdrawn && (
+                        <div className="divide-y divide-gray-100 max-h-[200px] overflow-y-auto">
+                          {withdrawnStudents.map(student => (
+                            <div
+                              key={student.id}
+                              className="flex items-center justify-between gap-2 px-2 py-1.5 hover:bg-gray-50 transition-colors"
+                            >
+                              <div
+                                onClick={() => onStudentClick?.(student.id)}
+                                className={`flex items-center gap-2 flex-1 ${onStudentClick ? 'cursor-pointer hover:text-accent' : ''}`}
+                              >
+                                <span className="text-xs font-medium text-gray-400 line-through">{student.name}</span>
+                                <span className="text-xs text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
+                                {student.withdrawalDate && (
+                                  <span className="text-xxs text-gray-400">~{student.withdrawalDate}</span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -928,13 +1017,13 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                   <div className="grid grid-cols-2 gap-2 p-1.5">
                     <div className="bg-gray-50 p-3 text-center border border-gray-100">
                       <p className="text-xxs text-gray-500 mb-1">활성 학생</p>
-                      <p className="text-xl font-bold text-success">{classDetail?.students.filter(s => !s.onHold).length || 0}</p>
+                      <p className="text-xl font-bold text-success">{activeStudents.filter(s => !s.onHold).length || 0}</p>
                       <p className="text-xxs text-gray-400">전체 {classDetail?.studentCount || 0}명</p>
                     </div>
                     <div className="bg-gray-50 p-3 text-center border border-gray-100">
                       <p className="text-xxs text-gray-500 mb-1">대기 학생</p>
-                      <p className="text-xl font-bold text-warning">{classDetail?.students.filter(s => s.onHold).length || 0}</p>
-                      <p className="text-xxs text-gray-400">{(classDetail?.students.filter(s => s.onHold).length || 0) > 0 ? '휴원 중' : '휴원생 없음'}</p>
+                      <p className="text-xl font-bold text-warning">{activeStudents.filter(s => s.onHold).length || 0}</p>
+                      <p className="text-xxs text-gray-400">{(activeStudents.filter(s => s.onHold).length || 0) > 0 ? '휴원 중' : '휴원생 없음'}</p>
                     </div>
                     <div className="bg-gray-50 p-3 text-center border border-gray-100">
                       <p className="text-xxs text-gray-500 mb-1">이번 달 출석률</p>

@@ -4,6 +4,7 @@ import { doc, updateDoc, arrayUnion, Timestamp } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
 import { useQueryClient } from '@tanstack/react-query';
+import { useEscapeClose } from '../../../hooks/useEscapeClose';
 
 interface StudentInfo {
     id: string;
@@ -45,6 +46,8 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
     const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [enrollmentType, setEnrollmentType] = useState<'regular' | 'temporary'>('temporary');
+
+    useEscapeClose(onClose);
 
     // 섹션별 학생 분류
     const { currentStudents, teacherStudents, otherStudents } = useMemo(() => {
@@ -152,10 +155,9 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh]" onClick={onClose}>
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh]">
             <div
                 className="bg-white rounded-sm shadow-xl w-full max-w-lg h-[600px] flex flex-col overflow-hidden relative"
-                onClick={(e) => e.stopPropagation()}
             >
                 {/* 닫기 버튼 */}
                 <div className="absolute top-2 right-2 z-10">
