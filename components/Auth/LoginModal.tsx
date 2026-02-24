@@ -18,7 +18,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [displayName, setDisplayName] = useState(''); // 이름(한글)
-    const [jobTitle, setJobTitle] = useState(''); // 닉네임(영어이름) (선택)
+    const [phone, setPhone] = useState(''); // 전화번호
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -61,7 +61,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                     await updateDoc(existingStaff.ref, {
                         uid: user.uid,
                         name: displayName.trim() || existingStaff.data().name,
-                        englishName: jobTitle.trim() || existingStaff.data().englishName || '',
+                        englishName: existingStaff.data().englishName || '',
+                        phone: phone.trim() || existingStaff.data().phone || '',
                         systemRole: isMaster ? 'master' : (existingStaff.data().systemRole || 'user'),
                         approvalStatus: isMaster ? 'approved' : (existingStaff.data().approvalStatus || 'pending'),
                         updatedAt: new Date().toISOString(),
@@ -73,7 +74,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                         id: newStaffRef.id,
                         uid: user.uid,
                         name: displayName.trim() || email.split('@')[0],
-                        englishName: jobTitle.trim() || '',
+                        englishName: '',
+                        phone: phone.trim() || '',
                         email: user.email || '',
                         role: 'staff',
                         systemRole: isMaster ? 'master' : 'user',
@@ -152,7 +154,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
             aria-labelledby="login-modal-title"
         >
             <div
-                className="bg-white rounded-sm shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden p-0 relative border border-gray-200"
+                className="bg-white rounded-sm shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden p-0 relative border border-gray-200"
                 onClick={(e) => e.stopPropagation()}
             >
 
@@ -162,7 +164,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                         {isSignUp ? <UserPlus size={32} className="text-primary" /> : <LockIcon size={32} className="text-primary" />}
                     </div>
                     <h2 id="login-modal-title" className="text-xl font-bold text-white">
-                        {isForgotPassword ? '비밀번호 찾기' : (isSignUp ? '관리자/직원 가입' : '로그인')}
+                        {isForgotPassword ? '비밀번호 찾기' : (isSignUp ? 'Eywa 가입' : '로그인')}
                     </h2>
                     <p className="text-gray-300 text-sm mt-1">
                         {isForgotPassword ? '비밀번호 재설정 링크를 보내드립니다.' : (isSignUp ? '새로운 계정을 생성합니다.' : '인재원 Eywa에 로그인합니다.')}
@@ -236,7 +238,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                                     {/* Email Row */}
                                     <div className="flex items-center gap-2 px-2 py-1.5">
                                         <Mail className="w-3 h-3 text-gray-400 shrink-0" />
-                                        <span className="w-16 shrink-0 text-xs font-medium text-primary-700">이메일 <span className="text-red-500">*</span></span>
+                                        <span className="w-20 shrink-0 text-xs font-medium text-primary-700">이메일 <span className="text-red-500">*</span></span>
                                         <input
                                             id="signup-email"
                                             type="email"
@@ -252,7 +254,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                                     {/* Password Row */}
                                     <div className="flex items-center gap-2 px-2 py-1.5">
                                         <KeyRound className="w-3 h-3 text-gray-400 shrink-0" />
-                                        <span className="w-16 shrink-0 text-xs font-medium text-primary-700">비밀번호 <span className="text-red-500">*</span></span>
+                                        <span className="w-20 shrink-0 text-xs font-medium text-primary-700">비밀번호 <span className="text-red-500">*</span></span>
                                         <input
                                             id="signup-password"
                                             type="password"
@@ -268,7 +270,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                                     {/* Confirm Password Row */}
                                     <div className="flex items-center gap-2 px-2 py-1.5">
                                         <KeyRound className="w-3 h-3 text-gray-400 shrink-0" />
-                                        <span className="w-16 shrink-0 text-xs font-medium text-primary-700">비밀번호 확인 <span className="text-red-500">*</span></span>
+                                        <span className="w-20 shrink-0 text-xs font-medium text-primary-700">비밀번호 확인 <span className="text-red-500">*</span></span>
                                         <input
                                             type="password"
                                             value={confirmPassword}
@@ -292,7 +294,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                                 <div className="divide-y divide-gray-100">
                                     {/* Display Name Row */}
                                     <div className="flex items-center gap-2 px-2 py-1.5">
-                                        <span className="w-16 shrink-0 text-xs font-medium text-primary-700">이름(한글) <span className="text-red-500">*</span></span>
+                                        <span className="w-20 shrink-0 text-xs font-medium text-primary-700">이름(한글) <span className="text-red-500">*</span></span>
                                         <input
                                             type="text"
                                             value={displayName}
@@ -302,15 +304,15 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                                             required
                                         />
                                     </div>
-                                    {/* Job Title Row */}
+                                    {/* Phone Row */}
                                     <div className="flex items-center gap-2 px-2 py-1.5">
-                                        <span className="w-16 shrink-0 text-xs font-medium text-primary-700">닉네임 <span className="text-gray-400 text-xs">(영어)</span></span>
+                                        <span className="w-20 shrink-0 text-xs font-medium text-primary-700">전화번호</span>
                                         <input
-                                            type="text"
-                                            value={jobTitle}
-                                            onChange={(e) => setJobTitle(e.target.value)}
+                                            type="tel"
+                                            value={phone}
+                                            onChange={(e) => setPhone(e.target.value)}
                                             className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none"
-                                            placeholder="예: John, Alice"
+                                            placeholder="010-0000-0000"
                                         />
                                     </div>
                                 </div>
@@ -411,7 +413,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                                     setPassword('');
                                     setConfirmPassword('');
                                     setDisplayName('');
-                                    setJobTitle('');
+                                    setPhone('');
                                 }}
                                 className="text-sm font-bold text-accent hover:underline"
                             >
