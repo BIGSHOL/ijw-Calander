@@ -346,7 +346,10 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
       const currentDays = prev[studentId] || [];
       let newDays: string[];
 
-      if (currentDays.includes(day)) {
+      if (currentDays.length === 0) {
+        // 전체 등원 상태 → 클릭한 요일만 제외
+        newDays = classDays.filter(d => d !== day);
+      } else if (currentDays.includes(day)) {
         // 해당 요일 제거
         newDays = currentDays.filter(d => d !== day);
       } else {
@@ -354,8 +357,14 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
         newDays = [...currentDays, day].sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
       }
 
-      // 빈 배열이면 키 자체를 제거 (모든 요일 등원 = 설정 없음)
+      // 빈 배열이거나 전체 요일 선택 시 키 제거 (= 전체 등원)
       if (newDays.length === 0) {
+        const { [studentId]: _, ...rest } = prev;
+        return rest;
+      }
+      const sortedNew = [...newDays].sort();
+      const sortedAll = [...classDays].sort();
+      if (sortedNew.length === sortedAll.length && sortedNew.every((d, i) => d === sortedAll[i])) {
         const { [studentId]: _, ...rest } = prev;
         return rest;
       }
