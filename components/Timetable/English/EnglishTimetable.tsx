@@ -341,11 +341,8 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
             (!t.subjects || t.subjects.includes('english'))
         );
 
-        // 통합뷰(class, room)에서는 isHidden 강사를 제외
-        // 강사뷰(teacher)에서는 모든 강사 포함 (LAB 등도 표시)
-        const visibleForView = viewType === 'teacher'
-            ? filtered
-            : filtered.filter(t => !t.isHidden);
+        // 모든 뷰에서 isHidden 강사를 제외 (수학 시간표와 일관성 유지)
+        const visibleForView = filtered.filter(t => !t.isHidden);
 
         // teachersData는 항상 모든 강사 포함 (useEnglishClasses에서 isHidden 체크용)
         setTeachersData(filtered);

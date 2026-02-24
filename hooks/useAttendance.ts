@@ -137,6 +137,10 @@ export const useAttendanceStudents = (options?: {
                 const staffMember = staffSnapshot.docs.find(doc => doc.id === options.staffId);
                 if (staffMember) {
                     const staffData = staffMember.data();
+                    // 출석부 숨김 처리된 강사는 빈 결과 반환
+                    if (staffData.isHiddenInAttendance) {
+                        return { filtered: [], all: [] };
+                    }
                     teacherName = staffData.englishName || staffData.name || '';
                     teacherKoreanName = staffData.name || '';
                 }
