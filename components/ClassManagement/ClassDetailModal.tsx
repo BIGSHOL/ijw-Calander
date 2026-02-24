@@ -263,9 +263,25 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
     setStudentAttendanceDays(prev => {
       const currentDays = prev[studentId] || [];
       let newDays: string[];
-      if (currentDays.includes(day)) newDays = currentDays.filter(d => d !== day);
-      else newDays = [...currentDays, day].sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
+
+      if (currentDays.length === 0) {
+        // 전체 등원 상태 → 클릭한 요일만 제외
+        newDays = classDays.filter(d => d !== day);
+      } else if (currentDays.includes(day)) {
+        newDays = currentDays.filter(d => d !== day);
+      } else {
+        newDays = [...currentDays, day].sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
+      }
+
+      // 빈 배열이거나 전체 요일 선택 시 키 제거 (= 전체 등원)
       if (newDays.length === 0) { const { [studentId]: _, ...rest } = prev; return rest; }
+      const sortedNew = [...newDays].sort();
+      const sortedAll = [...classDays].sort();
+      if (sortedNew.length === sortedAll.length && sortedNew.every((d, i) => d === sortedAll[i])) {
+        const { [studentId]: _, ...rest } = prev;
+        return rest;
+      }
+
       return { ...prev, [studentId]: newDays };
     });
   };
