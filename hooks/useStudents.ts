@@ -125,7 +125,6 @@ export function useStudents(includeWithdrawn = false, enabled = true) {
         },
         staleTime: 1000 * 60 * 5,    // 5분 캐싱
         gcTime: 1000 * 60 * 15,       // 15분 GC
-        refetchOnWindowFocus: false,  // 창 포커스 시 자동 재요청 비활성화
     });
 
     const error = queryError ? (queryError as Error).message : null;

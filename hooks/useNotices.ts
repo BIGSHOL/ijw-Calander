@@ -92,6 +92,7 @@ export function useNotices() {
     mutationFn: async (id: string) => {
       await updateDoc(doc(db, 'notices', id), { viewCount: increment(1) });
     },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notices'] }),
     onError: (error: Error) => {
       console.error('[useNotices.incrementViewCount] mutation error:', error);
     },

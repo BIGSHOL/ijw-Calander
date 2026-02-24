@@ -146,7 +146,6 @@ export function useStudentConsultations(filters?: StudentConsultationFilters) {
         },
         staleTime: 1000 * 60 * 5,     // 5분 캐싱
         gcTime: 1000 * 60 * 10,       // 10분 GC
-        refetchOnWindowFocus: false,  // 포커스 시 자동 갱신 비활성화 (비용 절감)
     });
 
     const error = queryError ? (queryError as Error).message : null;
@@ -309,7 +308,6 @@ export function usePaginatedConsultations(
         },
         staleTime: 1000 * 60 * 5,     // 5분 캐싱
         gcTime: 1000 * 60 * 10,       // 10분 GC
-        refetchOnWindowFocus: false,
     });
 
     const error = queryError ? (queryError as Error).message : null;

@@ -132,7 +132,6 @@ export const useClasses = (subjectOrEnabled?: SubjectType | boolean, enabled = t
         },
         staleTime: 1000 * 60 * 5,     // 5분 캐싱 (invalidateQueries로 즉시 반영)
         gcTime: 1000 * 60 * 30,
-        refetchOnWindowFocus: false,  // 성능 최적화 (invalidateQueries로 관리)
     });
 };
 
