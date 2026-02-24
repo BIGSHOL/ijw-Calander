@@ -143,9 +143,9 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
     );
   }, [students, studentSearch]);
 
-  // 스케줄 겹침 감지
+  // 스케줄 겹침 감지 (선택된 강사와 겹치는 수업만 체크)
   const scheduleConflicts = useMemo(() => {
-    if (!existingClasses || selectedSlots.size === 0) return [];
+    if (!existingClasses || selectedSlots.size === 0 || !mainTeacher.trim()) return [];
 
     const conflicts: { slot: string; className: string; teacher: string }[] = [];
 
@@ -153,6 +153,9 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
     const slotMap = new Map<string, { className: string; teacher: string }[]>();
 
     existingClasses.forEach(cls => {
+      // 선택된 강사와 동일한 강사의 수업만 체크
+      if (cls.teacher !== mainTeacher.trim()) return;
+
       cls.schedule?.forEach(slot => {
         const parts = slot.split(' ');
         if (parts.length >= 2) {
@@ -175,7 +178,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
     });
 
     return conflicts;
-  }, [existingClasses, selectedSlots]);
+  }, [existingClasses, selectedSlots, mainTeacher]);
 
   // 슬롯 토글
   const toggleSlot = (day: string, periodId: string) => {
