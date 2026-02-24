@@ -190,9 +190,25 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
       }
     }
 
+    // 미연동 직원 수정 시 비밀번호 입력한 경우 검증
+    if (staff && !staff.uid && password) {
+      if (!formData.email.trim()) {
+        alert('계정 생성을 위해 이메일을 입력해주세요.');
+        return;
+      }
+      if (password.length < 6) {
+        alert('비밀번호는 6자 이상이어야 합니다.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        alert('비밀번호가 일치하지 않습니다.');
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
-      await onSubmit(formData, !staff ? password : undefined);
+      await onSubmit(formData, (!staff || (staff && !staff.uid && password)) ? password : undefined);
     } catch (error) {
       console.error('Submit error:', error);
     } finally {
@@ -259,8 +275,8 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
             {/* Email */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                이메일 {!staff && <span className="text-red-500">*</span>}
-                {staff && <span className="text-gray-400 font-normal">(수정 불가)</span>}
+                이메일 {(!staff || (staff && !staff.uid)) && <span className="text-red-500">*</span>}
+                {staff && staff.uid && <span className="text-gray-400 font-normal">(수정 불가)</span>}
               </label>
               <input
                 type="email"
@@ -268,15 +284,20 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="example@email.com"
-                disabled={!!staff}
-                required={!staff}
+                disabled={!!(staff && staff.uid)}
+                required={!staff || (!!staff && !staff.uid)}
                 className={`w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${
-                  staff ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
+                  staff && staff.uid ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
                 }`}
               />
-              {staff && formData.email && (
+              {staff && staff.uid && formData.email && (
                 <p className="text-xxs text-gray-400 mt-0.5">
                   시스템 계정과 연동된 이메일은 변경할 수 없습니다.
+                </p>
+              )}
+              {staff && !staff.uid && (
+                <p className="text-xxs text-blue-500 mt-0.5">
+                  계정 생성 시 로그인 이메일로 사용됩니다.
                 </p>
               )}
             </div>
@@ -296,12 +317,12 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
               />
             </div>
 
-            {/* Password - 신규 등록 시에만 표시 */}
-            {!staff && (
+            {/* Password - 신규 등록 또는 미연동 직원 수정 시 표시 */}
+            {(!staff || (staff && !staff.uid)) && (
               <>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
-                    비밀번호 <span className="text-red-500">*</span>
+                    비밀번호 {!staff ? <span className="text-red-500">*</span> : <span className="text-gray-400 font-normal">(계정 생성 시 입력)</span>}
                   </label>
                   <div className="relative">
                     <KeyRound className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
@@ -310,15 +331,20 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="6자 이상"
-                      required
+                      required={!staff}
                       minLength={6}
                       className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                     />
                   </div>
+                  {staff && !staff.uid && (
+                    <p className="text-xxs text-blue-500 mt-0.5">
+                      비밀번호를 입력하면 로그인 계정이 생성됩니다.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
-                    비밀번호 확인 <span className="text-red-500">*</span>
+                    비밀번호 확인 {!staff && <span className="text-red-500">*</span>}
                   </label>
                   <div className="relative">
                     <KeyRound className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
@@ -327,7 +353,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="비밀번호 재입력"
-                      required
+                      required={!staff}
                       className={`w-full pl-8 pr-3 py-1.5 text-sm border rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${
                         confirmPassword && password !== confirmPassword
                           ? 'border-red-400 bg-red-50'
