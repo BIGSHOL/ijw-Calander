@@ -154,21 +154,20 @@ describe('ScheduledDateModal', () => {
       expect(defaultProps.onClose).toHaveBeenCalled();
     });
 
-    it('배경 클릭 시 onClose가 호출된다', () => {
+    it('배경 클릭 시 onClose가 호출되지 않는다', () => {
       const { container } = render(<ScheduledDateModal {...defaultProps} />);
 
-      // 최외곽 overlay div 클릭
+      // 최외곽 overlay div 클릭 - 외부 클릭으로 닫히지 않아야 함
       const overlay = container.firstChild as HTMLElement;
       fireEvent.click(overlay);
-      expect(defaultProps.onClose).toHaveBeenCalled();
+      expect(defaultProps.onClose).not.toHaveBeenCalled();
     });
 
-    it('모달 내부 클릭 시 onClose가 호출되지 않는다', () => {
+    it('ESC 키 누르면 onClose가 호출된다', () => {
       render(<ScheduledDateModal {...defaultProps} />);
 
-      // 모달 내부 컨텐츠 클릭
-      fireEvent.click(screen.getByText('반 이동 날짜 설정'));
-      expect(defaultProps.onClose).not.toHaveBeenCalled();
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(defaultProps.onClose).toHaveBeenCalled();
     });
   });
 });

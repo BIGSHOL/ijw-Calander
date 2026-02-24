@@ -7,6 +7,7 @@ import {
   ChevronDown, ChevronUp, Hash, Mic, MapPin, FileText, Calendar, UserCheck, Mail, Tag, Palette
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface SeminarEventModalProps {
   isOpen: boolean;
@@ -95,6 +96,8 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
   const canSaveEvent = hasDeptAccess && (!existingEvent ? canCreate : canEdit);
   const canDeleteEvent = existingEvent && hasDeptAccess && canDelete;
   const canEditCurrent = canSaveEvent;
+
+  useEscapeClose(onClose);
 
   useEffect(() => {
     if (isOpen) {
@@ -262,8 +265,8 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
   const confirmedCount = attendees.filter(a => a.status === 'confirmed' || a.status === 'attended').length;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', transform: 'translateZ(0)', transition: 'none', zIndex: 9998 }} onClick={onClose}>
-      <div className="bg-white rounded-sm shadow-xl max-w-3xl p-0 relative max-h-[85vh] flex flex-col overflow-hidden border border-gray-200" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', transform: 'translateZ(0)', transition: 'none', zIndex: 9998 }}>
+      <div className="bg-white rounded-sm shadow-xl max-w-3xl p-0 relative max-h-[85vh] flex flex-col overflow-hidden border border-gray-200">
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
           <h2 className="text-sm font-bold text-primary flex items-center gap-2">

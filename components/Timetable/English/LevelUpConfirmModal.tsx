@@ -4,6 +4,7 @@ import { collection, getDocs, writeBatch, doc, query, where, collectionGroup } f
 import { useQueryClient } from '@tanstack/react-query';
 import { db } from '../../../firebaseConfig';
 import { CLASS_COLLECTION } from './englishUtils';
+import { useEscapeClose } from '../../../hooks/useEscapeClose';
 
 interface LevelUpConfirmModalProps {
     isOpen: boolean;
@@ -33,6 +34,8 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [updateCount, setUpdateCount] = useState<number | null>(null);
+
+    useEscapeClose(onClose);
 
     const handleConfirm = async () => {
         setIsProcessing(true);
@@ -121,8 +124,8 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-[110] flex items-start justify-center pt-[8vh]" onClick={onClose}>
-            <div className="bg-white rounded-sm shadow-2xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-[110] flex items-start justify-center pt-[8vh]">
+            <div className="bg-white rounded-sm shadow-2xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden">
                 {/* Header */}
                 <div className={`flex justify-between items-center px-5 py-4 ${
                     isLevelDown

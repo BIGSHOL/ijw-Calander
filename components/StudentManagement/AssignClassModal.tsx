@@ -7,6 +7,7 @@ import { useClasses } from '../../hooks/useClasses';
 import { SUBJECT_LABELS, SUBJECT_COLORS } from '../../utils/styleUtils';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatScheduleCompact, SubjectForSchedule } from '../Timetable/constants';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface AssignClassModalProps {
     isOpen: boolean;
@@ -149,13 +150,14 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
         onClose();
     };
 
+    useEscapeClose(handleClose);
+
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]" onClick={handleClose}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
             <div
                 className="bg-white rounded-sm shadow-2xl w-[420px] max-h-[85vh] flex flex-col"
-                onClick={(e) => e.stopPropagation()}
             >
                 {/* Header - Compact */}
                 <div className="px-3 py-2 border-b border-gray-200 flex items-center justify-between bg-primary text-white rounded-t-sm shrink-0">

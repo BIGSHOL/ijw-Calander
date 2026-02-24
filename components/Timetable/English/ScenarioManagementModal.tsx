@@ -9,6 +9,7 @@ import { ScenarioEntry } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useSimulationOptional } from './context/SimulationContext';
 import ScenarioCompareModal from './ScenarioCompareModal';
+import { useEscapeClose } from '../../../hooks/useEscapeClose';
 
 /**
  * Firebase에 저장 전 undefined 값을 제거합니다.
@@ -70,6 +71,8 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
 
     // SimulationContext 사용 (새 구조)
     const simulation = useSimulationOptional();
+
+    useEscapeClose(onClose);
 
     // Format date
     const formatDate = (dateString: string) => {
@@ -500,8 +503,8 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
     }
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh] p-4" onClick={onClose}>
-            <div className="bg-white rounded-sm shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh] p-4">
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
                 {/* Header */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
                     <div className="flex items-center gap-2">

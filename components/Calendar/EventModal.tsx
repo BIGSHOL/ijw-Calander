@@ -6,6 +6,7 @@ import EventFormFields from './EventFormFields';
 import ParticipantSelector from './ParticipantSelector';
 import EventModalActions from './EventModalActions';
 import SeminarPanel from './SeminarPanel';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface EventModalProps {
   isOpen: boolean;
@@ -70,10 +71,12 @@ const EventModal: React.FC<EventModalProps> = ({
     templateEvent
   });
 
+  useEscapeClose(onClose);
+
   return (
-    <div className="fixed inset-0 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', transform: 'translateZ(0)', transition: 'none', zIndex: 9998, display: isOpen ? 'flex' : 'none' }} onClick={onClose}>
+    <div className="fixed inset-0 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', transform: 'translateZ(0)', transition: 'none', zIndex: 9998, display: isOpen ? 'flex' : 'none' }}>
       {/* Main Event Modal */}
-      <div className="bg-white rounded-sm shadow-xl max-w-2xl relative max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-sm shadow-xl max-w-2xl relative max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header - StudentDetailModal 스타일 */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
           <h2 className="text-sm font-bold text-primary flex items-center gap-2">
@@ -190,7 +193,7 @@ const EventModal: React.FC<EventModalProps> = ({
 
       {/* Seminar Management Side Panel */}
       {state.isPanelOpen && (
-        <div className="absolute right-4 top-1/2 -translate-y-1/2" onClick={(e) => e.stopPropagation()}>
+        <div className="absolute right-4 top-1/2 -translate-y-1/2">
           <SeminarPanel
             isOpen={state.isPanelOpen}
             eventTitle={state.title}

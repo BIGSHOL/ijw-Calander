@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, UserMinus, AlertTriangle, Calendar, FileText, Info } from 'lucide-react';
 import { UnifiedStudent } from '../../types';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 // 퇴원 사유 옵션
 const WITHDRAWAL_REASONS = [
@@ -44,6 +45,8 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
     withdrawalMemo: '',
   });
 
+  useEscapeClose(onClose);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -71,11 +74,9 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4"
-      onClick={onClose}
     >
       <div
         className="bg-white rounded-sm shadow-xl w-full max-w-md"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">

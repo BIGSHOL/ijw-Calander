@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { LevelTest, UserProfile } from '../../../../types';
 import { Zap, Loader2, X, FileText, Calendar } from 'lucide-react';
+import { useEscapeClose } from '../../../../hooks/useEscapeClose';
 
 interface LevelTestModalProps {
     onClose: () => void;
@@ -67,6 +68,8 @@ const LevelTestModal: React.FC<LevelTestModalProps> = ({ onClose, studentId, stu
     const [engEieGrammarAvg, setEngEieGrammarAvg] = useState('');
 
     const inputCls = "w-full px-1 py-1 text-sm text-center border border-slate-200 rounded-sm bg-white outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500";
+
+    useEscapeClose(onClose);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -142,8 +145,8 @@ const LevelTestModal: React.FC<LevelTestModalProps> = ({ onClose, studentId, stu
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[3vh] z-[100]" onClick={onClose}>
-            <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[94vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[3vh] z-[100]">
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[94vh] flex flex-col overflow-hidden">
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
                     <h3 className="text-sm font-bold text-primary flex items-center gap-2">
                         <Zap size={16} className="text-indigo-600" />

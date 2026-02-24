@@ -3,6 +3,7 @@ import { GradeComment, GradeCommentCategory, COMMENT_CATEGORY_LABELS } from '../
 import { getCurrentPeriod } from '../../../../hooks/useGradeProfile';
 import { MessageSquare, Loader2, X, Tag, FileText } from 'lucide-react';
 import { SUBJECT_COLORS, SubjectType } from '../../../../utils/styleUtils';
+import { useEscapeClose } from '../../../../hooks/useEscapeClose';
 
 interface CommentModalProps {
     onClose: () => void;
@@ -22,6 +23,8 @@ const CommentModal: React.FC<CommentModalProps> = ({ onClose, studentId, student
 
     const currentPeriod = getCurrentPeriod();
     const categoryInfo = COMMENT_CATEGORY_LABELS[category];
+
+    useEscapeClose(onClose);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -62,8 +65,8 @@ const CommentModal: React.FC<CommentModalProps> = ({ onClose, studentId, student
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]" onClick={onClose}>
-            <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
                     <h3 className="text-sm font-bold text-primary flex items-center gap-2">
                         <MessageSquare size={16} className="text-emerald-600" />

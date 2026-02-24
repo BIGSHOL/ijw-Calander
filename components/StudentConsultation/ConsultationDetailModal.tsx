@@ -3,6 +3,7 @@ import { ClipboardList, FileText, Users, Bell, Settings, X } from 'lucide-react'
 import { Consultation, CATEGORY_CONFIG } from '../../types';
 import { useDeleteConsultation, useCompleteFollowUp } from '../../hooks/useConsultationMutations';
 import { getFollowUpUrgency, getFollowUpDaysLeft } from '../../hooks/useStudentConsultations';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 // Lazy load AddConsultationModal to avoid circular dependencies if any
 const AddConsultationModal = React.lazy(() => import('./AddConsultationModal'));
@@ -22,6 +23,8 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
     consultation,
     onClose,
 }) => {
+    useEscapeClose(onClose);
+
     const [followUpNotes, setFollowUpNotes] = useState('');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
@@ -71,8 +74,8 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4" onClick={onClose}>
-            <div className="bg-white rounded-sm shadow-xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4">
+            <div className="bg-white rounded-sm shadow-xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden">
                 {/* 헤더 */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 sticky top-0 bg-white z-10">
                     <h2 className="text-sm font-bold text-primary">상담 상세 - {typeLabel}</h2>

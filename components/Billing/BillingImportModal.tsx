@@ -4,6 +4,7 @@ import { read, utils } from 'xlsx';
 import { BillingRecord } from '../../types';
 import { normalizeMonth } from '../../hooks/useBilling';
 import { useTextbooks } from '../../hooks/useTextbooks';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface BillingImportModalProps {
   isOpen: boolean;
@@ -119,6 +120,8 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
   onImport,
   onNavigateToTextbooks,
 }) => {
+  useEscapeClose(onClose);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [parsedData, setParsedData] = useState<ParsedRow[]>([]);
   const [textbookData, setTextbookData] = useState<ParsedRow[]>([]); // 교재 행 별도 저장
@@ -245,8 +248,8 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]" onClick={onClose}>
-      <div className="bg-white rounded-sm w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
+      <div className="bg-white rounded-sm w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
           <h2 className="text-sm font-bold text-primary flex items-center gap-2">

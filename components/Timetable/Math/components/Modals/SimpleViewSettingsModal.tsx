@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, SlidersHorizontal } from 'lucide-react';
+import { useEscapeClose } from '../../../../../hooks/useEscapeClose';
 
 interface SimpleViewSettingsModalProps {
     isOpen: boolean;
@@ -65,6 +66,8 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
     showSchedule,
     setShowSchedule,
 }) => {
+    useEscapeClose(onClose);
+
     if (!isOpen) return null;
 
     const weekdayDays = ['월', '화', '수', '목', '금'];
@@ -98,11 +101,9 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
     return (
         <div
             className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh]"
-            onClick={onClose}
         >
             <div
                 className="bg-white rounded-sm shadow-xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden"
-                onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 sticky top-0 bg-white z-10">

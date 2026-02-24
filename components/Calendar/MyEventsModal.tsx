@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { CalendarEvent, UserProfile } from '../../types';
 import { format, parseISO, isAfter, isBefore } from 'date-fns';
 import { X, Calendar, Clock, MapPin, Filter } from 'lucide-react';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 type StatusFilter = 'all' | 'pending' | 'joined' | 'declined';
 
@@ -25,6 +26,8 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
     customTitle,
 }) => {
     const [filterStatus, setFilterStatus] = useState<StatusFilter>('all');
+
+    useEscapeClose(onClose);
 
     // Compute filtered events based on current user and selected status
     // NOTE: Hooks must be called before any conditional return
@@ -126,11 +129,9 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
         <div
             className="fixed inset-0 flex items-center justify-center p-4"
             style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', transform: 'translateZ(0)', transition: 'none', zIndex: 9998 }}
-            onClick={onClose}
         >
             <div
                 className="bg-white rounded-sm shadow-xl max-w-lg max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
-                onClick={(e) => e.stopPropagation()}
             >
 
                 {/* Header */}

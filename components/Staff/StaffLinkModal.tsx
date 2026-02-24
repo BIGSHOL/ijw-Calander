@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { X, Link2, Search, User, Mail, AlertCircle } from 'lucide-react';
 import { StaffMember, UserProfile } from '../../types';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface StaffLinkModalProps {
   staff: StaffMember;
@@ -17,6 +18,8 @@ const StaffLinkModal: React.FC<StaffLinkModalProps> = ({
   onClose,
   onLink,
 }) => {
+  useEscapeClose(onClose);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [isLinking, setIsLinking] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
@@ -54,11 +57,9 @@ const StaffLinkModal: React.FC<StaffLinkModalProps> = ({
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4"
-      onClick={onClose}
     >
       <div
         className="bg-white rounded-sm shadow-xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">

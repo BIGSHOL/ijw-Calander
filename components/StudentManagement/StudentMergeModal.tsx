@@ -16,6 +16,7 @@ import { UnifiedStudent } from '../../types';
 import { useStudents } from '../../hooks/useStudents';
 import { useStudentDuplicates, DuplicateGroup } from './hooks/useStudentDuplicates';
 import { useQueryClient } from '@tanstack/react-query';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface StudentMergeModalProps {
   onClose: () => void;
@@ -51,6 +52,8 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [progress, setProgress] = useState({ current: 0, total: 0, currentGroup: '' });
   const [result, setResult] = useState<MergeResult | null>(null);
+
+  useEscapeClose(onClose);
 
   // 로딩 완료 시 preview로 전환
   React.useEffect(() => {
@@ -296,10 +299,9 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
       <div
         className="bg-white rounded-sm shadow-2xl w-[600px] max-h-[80vh] flex flex-col"
-        onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-primary text-white rounded-t-sm">

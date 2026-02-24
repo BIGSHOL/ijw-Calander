@@ -10,6 +10,7 @@ import { useDepartments, useSystemConfig, useStaffWithAccounts } from '../../hoo
 import { db } from '../../firebaseConfig';
 import { setDoc, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { useQueryClient } from '@tanstack/react-query';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 // StaffMember를 UserProfile처럼 사용하기 위한 변환 헬퍼
 const staffToUserLike = (staff: StaffMember): UserProfile => ({
@@ -39,6 +40,8 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('departments');
   const queryClient = useQueryClient();
+
+  useEscapeClose(onClose);
 
   // Permissions
   const { hasPermission } = usePermissions(currentUser);
@@ -206,11 +209,9 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]"
-      onClick={onClose}
     >
       <div
         className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden border border-gray-200"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">

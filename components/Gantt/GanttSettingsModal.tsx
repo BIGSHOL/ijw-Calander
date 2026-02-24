@@ -3,6 +3,7 @@ import { X, Building2, Tag } from 'lucide-react';
 import { UserProfile } from '../../types';
 import DepartmentsTab from '../Settings/DepartmentsTab';
 import GanttCategoriesTab from '../Settings/GanttCategoriesTab';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface GanttSettingsModalProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ const GanttSettingsModal: React.FC<GanttSettingsModalProps> = ({
   onClose,
   currentUser,
 }) => {
+  useEscapeClose(onClose);
+
   const [activeTab, setActiveTab] = useState<TabType>('departments');
 
   if (!isOpen) return null;
@@ -24,11 +27,9 @@ const GanttSettingsModal: React.FC<GanttSettingsModalProps> = ({
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]"
-      onClick={onClose}
     >
       <div
         className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden border border-gray-200"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">

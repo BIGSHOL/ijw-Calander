@@ -5,6 +5,7 @@ import { db } from '../../firebaseConfig';
 import { setDoc, doc, deleteDoc, collection, onSnapshot, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { listenerRegistry } from '../../utils/firebaseCleanup';
 import { X, Check, Clock, Hash, DoorOpen, ChevronUp, ChevronDown, FlaskConical, Plus, Settings } from 'lucide-react';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface ClassSettingsModalProps {
     isOpen: boolean;
@@ -34,6 +35,7 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
     canEdit = true,
     embedded = false
 }) => {
+    useEscapeClose(onClose);
     const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState<TabType>('general');
 
@@ -705,11 +707,9 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
     return (
         <div
             className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]"
-            onClick={onClose}
         >
             <div
                 className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
-                onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-2 py-1.5 border-b border-gray-200">

@@ -12,6 +12,7 @@ import { collection, collectionGroup, getDocs, doc, writeBatch, deleteDoc } from
 import { db } from '../../firebaseConfig';
 import { UnifiedStudent } from '../../types';
 import { useQueryClient } from '@tanstack/react-query';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 type TabType = 'numericId' | 'noHistory';
 
@@ -55,6 +56,8 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
   const [noHistoryStep, setNoHistoryStep] = useState<Step>('analyzing');
   const [noHistoryProgress, setNoHistoryProgress] = useState({ current: 0, total: 0 });
   const [noHistoryDeleteResult, setNoHistoryDeleteResult] = useState({ deleted: 0, errors: 0 });
+
+  useEscapeClose(onClose);
 
   // 숫자 ID 판별
   const isNumericId = (id: string): boolean => /^\d{4,6}$/.test(id);
@@ -309,10 +312,9 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
       <div
         className="bg-white rounded-sm shadow-2xl w-[650px] max-h-[80vh] flex flex-col"
-        onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-primary text-white rounded-t-sm">

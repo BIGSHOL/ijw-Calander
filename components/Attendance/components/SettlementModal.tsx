@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { IncentiveConfig, MonthlySettlement, SalaryConfig } from '../types';
 import { formatCurrency } from '../utils';
 import { X, Gift, CheckCircle2, Circle, DollarSign, Calendar, FileText, Clock, Lock, Unlock, AlertTriangle, Calculator, CreditCard, MessageSquare } from 'lucide-react';
+import { useEscapeClose } from '../../../hooks/useEscapeClose';
 
 interface Props {
     isOpen: boolean;
@@ -20,6 +21,8 @@ const SettlementModal: React.FC<Props> = ({
 }) => {
     const [localData, setLocalData] = useState<MonthlySettlement>(data);
     const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
+
+    useEscapeClose(onClose);
 
     useEffect(() => {
         setLocalData(data);
@@ -91,10 +94,9 @@ const SettlementModal: React.FC<Props> = ({
         : `+${formatCurrency(incentiveConfig.blogAmount ?? 0)}`;
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh] p-4" onClick={onClose}>
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh] p-4">
             <div
                 className="bg-white rounded-sm shadow-xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden"
-                onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">

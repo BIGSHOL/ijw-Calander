@@ -17,6 +17,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { X, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface WeekdayOrderModalProps {
     isOpen: boolean;
@@ -93,6 +94,8 @@ const WeekdayOrderModal: React.FC<WeekdayOrderModalProps> = ({ isOpen, onClose, 
     const [items, setItems] = useState<string[]>([]);
     const [isSaving, setIsSaving] = useState(false);
 
+    useEscapeClose(onClose);
+
     useEffect(() => {
         if (isOpen) {
             // Merge currentOrder with any new weekdays not in the list
@@ -149,8 +152,8 @@ const WeekdayOrderModal: React.FC<WeekdayOrderModalProps> = ({ isOpen, onClose, 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh]" onClick={onClose}>
-            <div className="bg-white rounded-sm shadow-xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh]">
+            <div className="bg-white rounded-sm shadow-xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden">
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
                     <h2 className="text-sm font-bold text-primary">요일 순서 설정</h2>
                     <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">

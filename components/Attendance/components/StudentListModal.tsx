@@ -2,6 +2,7 @@ import React from 'react';
 import { Student } from '../types';
 import { X, UserPlus, UserMinus } from 'lucide-react';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
+import { useEscapeClose } from '../../../hooks/useEscapeClose';
 
 interface Props {
   isOpen: boolean;
@@ -12,13 +13,14 @@ interface Props {
 }
 
 const StudentListModal: React.FC<Props> = ({ isOpen, onClose, title, students, type }) => {
+  useEscapeClose(onClose);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh] p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh] p-4">
       <div
         className="bg-white rounded-sm shadow-xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">

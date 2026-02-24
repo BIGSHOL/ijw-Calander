@@ -11,6 +11,7 @@ import { useStaff } from '../../hooks/useStaff';
 import { formatSchoolGrade } from '../../utils/studentUtils';
 import { useSimulationOptional } from '../Timetable/English/context/SimulationContext';
 import { ScenarioClass } from '../Timetable/English/context/SimulationContext';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 
 interface EditClassModalProps {
   classInfo: ClassInfo;
@@ -23,6 +24,7 @@ const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 const WEEKDAY_ORDER: Record<string, number> = { '월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5, '일': 6 };
 
 const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotTeachers, onClose, isSimulationMode = false }) => {
+  useEscapeClose(() => onClose());
   const simulationContext = isSimulationMode ? useSimulationOptional() : null;
   const [className, setClassName] = useState(classInfo.className);
   const [teacher, setTeacher] = useState(classInfo.teacher);
@@ -346,10 +348,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
       const currentDays = prev[studentId] || [];
       let newDays: string[];
 
-      if (currentDays.length === 0) {
-        // 전체 등원 상태 → 클릭한 요일만 제외
-        newDays = classDays.filter(d => d !== day);
-      } else if (currentDays.includes(day)) {
+      if (currentDays.includes(day)) {
         // 해당 요일 제거
         newDays = currentDays.filter(d => d !== day);
       } else {
@@ -357,14 +356,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
         newDays = [...currentDays, day].sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
       }
 
-      // 빈 배열이거나 전체 요일 선택 시 키 제거 (= 전체 등원)
+      // 빈 배열이면 키 자체를 제거 (모든 요일 등원 = 설정 없음)
       if (newDays.length === 0) {
-        const { [studentId]: _, ...rest } = prev;
-        return rest;
-      }
-      const sortedNew = [...newDays].sort();
-      const sortedAll = [...classDays].sort();
-      if (sortedNew.length === sortedAll.length && sortedNew.every((d, i) => d === sortedAll[i])) {
         const { [studentId]: _, ...rest } = prev;
         return rest;
       }
@@ -537,8 +530,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
   const finalStudentCount = currentStudents.length - studentsToRemove.size + studentsToAdd.size;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4" onClick={() => onClose()}>
-      <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4">
+      <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* 헤더 */}
         <div className="bg-primary text-white px-4 py-3">
           <div className="flex items-center justify-between mb-2">

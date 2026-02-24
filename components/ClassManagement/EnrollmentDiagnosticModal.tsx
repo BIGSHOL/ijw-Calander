@@ -35,6 +35,7 @@ import {
     arrayRemove
 } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
+import { useEscapeClose } from '../../hooks/useEscapeClose';
 // UnifiedClass 타입 정의가 types.ts에 있지만, 여기서 간단히 정의하거나 import
 interface SimplifiedClass {
     id: string;
@@ -74,6 +75,7 @@ interface StudentDiagnosis {
 const EnrollmentDiagnosticModal: React.FC<EnrollmentDiagnosticModalProps> = ({
     onClose
 }) => {
+    useEscapeClose(onClose);
     const queryClient = useQueryClient();
     const [step, setStep] = useState<'loading' | 'results'>('loading');
     const [progress, setProgress] = useState(0);
@@ -374,8 +376,8 @@ const EnrollmentDiagnosticModal: React.FC<EnrollmentDiagnosticModalProps> = ({
     }, []);
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] bg-black/50" onClick={onClose}>
-            <div className="bg-white rounded-sm shadow-2xl w-[95%] max-w-6xl max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] bg-black/50">
+            <div className="bg-white rounded-sm shadow-2xl w-[95%] max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
                 {/* 헤더 */}
                 <div className="bg-primary px-6 py-4 flex items-center justify-between">
                     <h2 className="text-lg font-bold text-white flex items-center gap-2">

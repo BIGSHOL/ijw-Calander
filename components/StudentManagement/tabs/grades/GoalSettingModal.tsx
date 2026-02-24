@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { GoalSetting } from '../../../../types';
 import { Target, Loader2, X, Calendar, TrendingUp, BookOpen } from 'lucide-react';
+import { useEscapeClose } from '../../../../hooks/useEscapeClose';
 
 interface GoalSettingModalProps {
     onClose: () => void;
@@ -18,6 +19,8 @@ const GoalSettingModal: React.FC<GoalSettingModalProps> = ({ onClose, studentId,
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const selectedExam = exams.find(e => e.id === examId);
+
+    useEscapeClose(onClose);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -52,8 +55,8 @@ const GoalSettingModal: React.FC<GoalSettingModalProps> = ({ onClose, studentId,
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]" onClick={onClose}>
-            <div className="bg-white rounded-sm shadow-xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
+            <div className="bg-white rounded-sm shadow-xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden">
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
                     <h3 className="text-sm font-bold text-primary flex items-center gap-2">
                         <Target size={16} className="text-amber-600" />
