@@ -977,14 +977,15 @@ export default function TextbookRequestView({ isAdmin = false, initialTab, onReq
                   <table className="w-full text-xs">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
-                        <th className="px-3 py-2 text-left font-medium text-gray-600">학생명</th>
-                        <th className="px-3 py-2 text-left font-medium text-gray-600">교재명</th>
-                        <th className="px-3 py-2 text-right font-medium text-gray-600">금액</th>
+                        <th className="px-3 py-2 text-center font-medium text-gray-600">학생명</th>
+                        <th className="px-3 py-2 text-center font-medium text-gray-600">담임</th>
+                        <th className="px-3 py-2 text-center font-medium text-gray-600">교재명</th>
+                        <th className="px-3 py-2 text-center font-medium text-gray-600">금액</th>
                         <th className="px-3 py-2 text-center font-medium text-gray-600">등록</th>
                         <th className="px-3 py-2 text-center font-medium text-gray-600">납부</th>
                         <th className="px-3 py-2 text-center font-medium text-gray-600">주문</th>
                         <th className="px-3 py-2 text-center font-medium text-gray-600">요청일</th>
-                        <th className="px-3 py-2 text-center font-medium text-gray-600 w-10">저장</th>
+                        <th className="px-3 py-2 text-center font-medium text-gray-600">저장</th>
                         {effectiveAdmin && (
                           <th className="px-3 py-2 text-center font-medium text-gray-600">삭제</th>
                         )}
@@ -1000,11 +1001,14 @@ export default function TextbookRequestView({ isAdmin = false, initialTab, onReq
                               done ? 'text-gray-400' : 'text-gray-800'
                             }`}
                           >
-                            <td className="px-3 py-2.5 font-medium whitespace-nowrap">
+                            <td className="px-3 py-2.5 text-center font-medium whitespace-nowrap">
                               {r.studentName}
                             </td>
-                            <td className="px-3 py-2.5">
-                              <div className="flex flex-col">
+                            <td className="px-3 py-2.5 text-center text-gray-500 whitespace-nowrap">
+                              {r.teacherName}
+                            </td>
+                            <td className="px-3 py-2.5 text-center">
+                              <div className="flex flex-col items-center">
                                 <span className={done ? 'line-through decoration-gray-400' : ''}>
                                   {r.bookName}
                                 </span>
@@ -1015,7 +1019,7 @@ export default function TextbookRequestView({ isAdmin = false, initialTab, onReq
                                 )}
                               </div>
                             </td>
-                            <td className="px-3 py-2.5 text-right whitespace-nowrap font-medium">
+                            <td className="px-3 py-2.5 text-center whitespace-nowrap font-medium">
                               {r.price.toLocaleString()}원
                             </td>
                             <td className="px-3 py-2.5 text-center">
