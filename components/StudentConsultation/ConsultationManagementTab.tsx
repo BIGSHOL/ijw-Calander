@@ -496,7 +496,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                 </h1>
 
                 {/* Right: Count + Search + Actions */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                     {/* 결과 카운트 */}
                     {viewMode === 'list' && (
                         <span className="text-gray-500 text-xs">

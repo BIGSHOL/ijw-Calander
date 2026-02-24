@@ -35,7 +35,7 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
       }
 
       {/* Current Settings Summary - Clickable Toggles */}
-      <div className="flex items-center gap-2 px-4 overflow-hidden flex-1">
+      <div className="flex items-center gap-2 px-4 shrink-0 min-w-max">
         {/* Subject Select Dropdown */}
         <select
           value={timetableSubject}

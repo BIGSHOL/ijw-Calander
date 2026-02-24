@@ -211,7 +211,7 @@ const PaymentReport: React.FC<PaymentReportProps> = () => {
         <div className="min-h-screen bg-gray-50 text-primary-700 font-sans pb-20 print:bg-white print:pb-0">
             {/* Header */}
             <TabSubNavigation variant="compact" className="border-b border-white/10 sticky top-0 z-30 print:hidden">
-                <div className="w-full px-4 sm:px-6 flex items-center justify-between">
+                <div className="px-4 sm:px-6 flex items-center justify-between min-w-max">
                     <div className="flex items-center gap-4">
                         <div className="bg-accent p-1.5 rounded-sm hidden sm:block">
                             <FileText className="text-primary h-3.5 w-3.5" />

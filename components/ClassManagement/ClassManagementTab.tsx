@@ -250,7 +250,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
       <div className="flex-shrink-0">
         {/* 상단 네비게이션 바 */}
         <TabSubNavigation variant="compact" className="px-3 md:px-6 py-2 border-b border-white/10">
-          <div className="flex flex-wrap items-center gap-2 w-full">
+          <div className="flex items-center gap-2 shrink-0">
               {/* 과목 토글 */}
               <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm flex-shrink-0">
                 {subjectFilters.map(({ value, label, icon }) => (
