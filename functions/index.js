@@ -1340,11 +1340,12 @@ exports.submitConsultationDraft = functions
 const CHATBOT_TOOL_DEFS = [
     {
         name: "search_students",
-        description: "학생을 검색합니다. 이름, 상태, 학년으로 필터링 가능. 재원생 수를 알려면 status='active'로 호출. 파라미터 없이 호출하면 전체 학생 목록 반환. '고등학생 몇명?' 같은 질문에는 grade 필터 사용.",
+        description: "학생을 검색합니다. 이름, 상태, 학년, 학교로 필터링 가능. 재원생 수를 알려면 status='active'로 호출. 파라미터 없이 호출하면 전체 학생 목록 반환. '고등학생 몇명?' 같은 질문에는 grade 필터 사용. '한빛중학교 학생' 같은 질문에는 school 필터 사용.",
         parameters: { type: "object", properties: {
             name: { type: "string", description: "학생 이름 (부분 일치 검색)" },
             status: { type: "string", description: "학생 상태. active=재원생, withdrawn=퇴원생, on_hold=휴원, prospect=상담예정", enum: ["active", "withdrawn", "on_hold", "prospect"] },
             grade: { type: "string", description: "학년. 예: 초1, 초2, 중1, 중2, 중3, 고1, 고2, 고3" },
+            school: { type: "string", description: "학교명 (부분 일치 검색)" },
         }, required: [] },
     },
     {
@@ -1381,15 +1382,16 @@ const CHATBOT_TOOL_DEFS = [
     },
     {
         name: "get_class_info",
-        description: "수업(반) 목록을 조회합니다. 과목별 반 목록, 담당 선생님, 강의실 정보를 반환합니다. '수학 반 목록', '영어 수업' 같은 질문에 사용.",
+        description: "수업(반) 목록을 조회합니다. 과목별 반 목록, 담당 선생님, 강의실, 수업 요일 정보를 반환합니다. 요일별 수업 수 통계(daySummary)도 포함됩니다. '수학 반 목록', '영어 수업', '월요일 수업', '요일별 수업 수' 같은 질문에 사용.",
         parameters: { type: "object", properties: {
             className: { type: "string", description: "수업명 (부분 일치 검색)" },
             subject: { type: "string", description: "과목 필터", enum: ["math", "english", "science", "korean"] },
+            day: { type: "string", description: "요일 필터 (특정 요일의 수업만 조회)", enum: ["월", "화", "수", "목", "금", "토", "일"] },
         }, required: [] },
     },
     {
         name: "get_staff_info",
-        description: "선생님/직원 정보를 조회합니다. 이름, 담당 과목(subjects), 직책 정보를 반환합니다. '수학 선생님 몇명?', '영어 선생님 목록' 같은 질문에 subject 파라미터 사용.",
+        description: "선생님/직원 정보를 조회합니다. 이름, 담당 과목(subjects), 직책, 담당 반 정보를 반환합니다. '수학 선생님 몇명?', '영어 선생님 목록', '김선생님 담당 반' 같은 질문에 사용.",
         parameters: { type: "object", properties: {
             name: { type: "string", description: "이름 (부분 일치 검색)" },
             subject: { type: "string", description: "담당 과목 필터", enum: ["math", "english", "science", "korean"] },
@@ -1397,9 +1399,10 @@ const CHATBOT_TOOL_DEFS = [
     },
     {
         name: "get_billing_summary",
-        description: "특정 월의 수납 현황을 조회합니다. 총 청구액, 납부액, 미납액, 수납률을 반환합니다.",
+        description: "특정 월의 수납 현황을 조회합니다. 총 청구액, 납부액, 미납액, 수납률을 반환합니다. studentName 파라미터로 특정 학생의 미납 내역도 조회 가능. '이번 달 수납률', '김민수 미납 내역' 같은 질문에 사용.",
         parameters: { type: "object", properties: {
             month: { type: "string", description: "조회할 월 (YYYY-MM 형식, 예: 2026-02)" },
+            studentName: { type: "string", description: "학생 이름 (부분 일치 검색, 특정 학생 미납 조회)" },
         }, required: ["month"] },
     },
     {
@@ -1419,6 +1422,34 @@ const CHATBOT_TOOL_DEFS = [
             endDate: { type: "string", description: "종료일 (YYYY-MM-DD)" },
         }, required: ["startDate", "endDate"] },
     },
+    {
+        name: "get_consultations",
+        description: "학생 상담 내역을 조회합니다. 학생별/선생님별/기간별 상담 기록, 상담 유형(학부모/학생), 카테고리별 통계를 반환합니다. '김민수 상담 내역', '이번 달 상담 건수', '학부모 상담 목록' 같은 질문에 사용.",
+        parameters: { type: "object", properties: {
+            studentName: { type: "string", description: "학생 이름 (부분 일치 검색)" },
+            consultantName: { type: "string", description: "상담 선생님 이름 (부분 일치 검색)" },
+            type: { type: "string", description: "상담 유형", enum: ["parent", "student"] },
+            startDate: { type: "string", description: "시작일 (YYYY-MM-DD)" },
+            endDate: { type: "string", description: "종료일 (YYYY-MM-DD)" },
+        }, required: [] },
+    },
+    {
+        name: "get_exam_info",
+        description: "시험 정보를 조회합니다. 예정된 시험, 과목별 시험, 시험 일정을 반환합니다. '다음 시험 언제?', '수학 시험 목록', '이번 달 시험 일정' 같은 질문에 사용.",
+        parameters: { type: "object", properties: {
+            subject: { type: "string", description: "과목 필터", enum: ["math", "english", "both"] },
+            upcoming: { type: "boolean", description: "true이면 오늘 이후 예정된 시험만 반환" },
+        }, required: [] },
+    },
+    {
+        name: "get_homework_status",
+        description: "숙제 현황을 조회합니다. 반별/과목별 숙제 목록, 마감 상태를 반환합니다. '숙제 현황', '수학 숙제', '이번 주 숙제' 같은 질문에 사용.",
+        parameters: { type: "object", properties: {
+            subject: { type: "string", description: "과목 필터", enum: ["math", "english", "science", "korean"] },
+            status: { type: "string", description: "숙제 상태", enum: ["active", "closed"] },
+            className: { type: "string", description: "반 이름 (부분 일치 검색)" },
+        }, required: [] },
+    },
 ];
 
 // Tool executor functions (server-side, using firebase-admin)
@@ -1429,6 +1460,7 @@ async function toolSearchStudents(args) {
     let students = snap.docs.map(d => ({ id: d.id, name: d.data().name, grade: d.data().grade, status: d.data().status, school: d.data().school, startDate: d.data().startDate, withdrawalDate: d.data().withdrawalDate }));
     if (args.name) { const s = args.name.toLowerCase(); students = students.filter(st => st.name?.toLowerCase().includes(s)); }
     if (args.grade) students = students.filter(st => st.grade?.includes(args.grade));
+    if (args.school) { const s = args.school.toLowerCase(); students = students.filter(st => st.school?.toLowerCase().includes(s)); }
     const totalCount = students.length;
     return { totalCount, students: students.slice(0, 30) };
 }
@@ -1481,10 +1513,22 @@ async function toolGetClassInfo(args) {
     const snap = await query.get();
     let classes = snap.docs.map(d => {
         const data = d.data();
-        return { id: d.id, className: data.className, subject: data.subject, teacher: data.mainTeacher || data.teacher, room: data.room };
+        let days = [];
+        if (Array.isArray(data.schedule)) {
+            days = [...new Set(data.schedule.map(s => s.day).filter(Boolean))];
+        } else if (Array.isArray(data.legacySchedule)) {
+            days = [...new Set(data.legacySchedule.map(s => s.split(' ')[0]).filter(Boolean))];
+        }
+        const studentCount = Array.isArray(data.students) ? data.students.length : 0;
+        const capacity = data.capacity || data.maxStudents || null;
+        return { id: d.id, className: data.className, subject: data.subject, teacher: data.mainTeacher || data.teacher, room: data.room, days, studentCount, capacity };
     });
     if (args.className) { const s = args.className.toLowerCase(); classes = classes.filter(c => c.className?.toLowerCase().includes(s)); }
-    return { count: classes.length, classes };
+    if (args.day) classes = classes.filter(c => c.days.includes(args.day));
+    const daySummary = {};
+    ['월','화','수','목','금','토','일'].forEach(day => { daySummary[day] = 0; });
+    classes.forEach(c => c.days.forEach(day => { if (daySummary[day] !== undefined) daySummary[day]++; }));
+    return { totalCount: classes.length, daySummary, classes };
 }
 
 async function toolGetStaffInfo(args) {
@@ -1492,6 +1536,21 @@ async function toolGetStaffInfo(args) {
     let staff = snap.docs.map(d => ({ id: d.id, name: d.data().name, englishName: d.data().englishName, role: d.data().role, subjects: d.data().subjects, jobTitle: d.data().jobTitle, isNative: d.data().isNative }));
     if (args.name) { const s = args.name.toLowerCase(); staff = staff.filter(st => st.name?.toLowerCase().includes(s) || st.englishName?.toLowerCase().includes(s)); }
     if (args.subject) staff = staff.filter(st => Array.isArray(st.subjects) && st.subjects.includes(args.subject));
+    // 담당 반 조회 (비용 최소화: 이름 검색 시에만)
+    if (args.name && staff.length > 0 && staff.length <= 3) {
+        const classSnap = await db.collection("classes").where("isActive", "==", true).get();
+        const staffNames = staff.map(s => s.name);
+        const classMap = {};
+        classSnap.docs.forEach(d => {
+            const data = d.data();
+            const teacher = data.mainTeacher || data.teacher;
+            if (teacher && staffNames.includes(teacher)) {
+                if (!classMap[teacher]) classMap[teacher] = [];
+                classMap[teacher].push({ className: data.className, subject: data.subject });
+            }
+        });
+        staff = staff.map(s => ({ ...s, assignedClasses: classMap[s.name] || [] }));
+    }
     return { totalCount: staff.length, staff };
 }
 
@@ -1523,9 +1582,22 @@ async function toolGetEnrollmentsBySubject(args) {
 async function toolGetBillingSummary(args) {
     const snap = await db.collection("billing").where("month", "==", args.month).get();
     let totalBilled = 0, totalPaid = 0, totalUnpaid = 0, paidCount = 0, pendingCount = 0;
-    snap.docs.forEach(d => { const data = d.data(); totalBilled += data.billedAmount || 0; totalPaid += data.paidAmount || 0; totalUnpaid += data.unpaidAmount || 0; if (data.status === "paid") paidCount++; else pendingCount++; });
+    const unpaidStudents = [];
+    snap.docs.forEach(d => {
+        const data = d.data();
+        totalBilled += data.billedAmount || 0; totalPaid += data.paidAmount || 0; totalUnpaid += data.unpaidAmount || 0;
+        if (data.status === "paid") paidCount++; else { pendingCount++; unpaidStudents.push({ studentName: data.studentName, unpaidAmount: data.unpaidAmount || 0 }); }
+    });
     const rate = totalBilled > 0 ? Math.round((totalPaid / totalBilled) * 1000) / 10 : 0;
-    return { month: args.month, totalRecords: snap.size, totalBilled, totalPaid, totalUnpaid, paidCount, pendingCount, collectionRate: `${rate}%` };
+    let result = { month: args.month, totalRecords: snap.size, totalBilled, totalPaid, totalUnpaid, paidCount, pendingCount, collectionRate: `${rate}%` };
+    if (args.studentName) {
+        const s = args.studentName.toLowerCase();
+        const filtered = unpaidStudents.filter(u => u.studentName?.toLowerCase().includes(s));
+        result.studentUnpaid = filtered;
+    } else if (unpaidStudents.length > 0) {
+        result.unpaidStudents = unpaidStudents.slice(0, 10);
+    }
+    return result;
 }
 
 async function toolGetWithdrawalStats(args) {
@@ -1546,6 +1618,53 @@ async function toolGetTeacherEnrollmentStats(args) {
     return { period: `${args.startDate} ~ ${args.endDate}`, teacherStats: result };
 }
 
+async function toolGetConsultations(args) {
+    let query = db.collection("student_consultations");
+    if (args.type) query = query.where("type", "==", args.type);
+    const snap = await query.get();
+    let consultations = snap.docs.map(d => {
+        const data = d.data();
+        return { id: d.id, studentName: data.studentName, consultantName: data.consultantName, type: data.type, category: data.category, title: data.title, date: data.date, followUpNeeded: data.followUpNeeded, followUpDone: data.followUpDone };
+    });
+    if (args.studentName) { const s = args.studentName.toLowerCase(); consultations = consultations.filter(c => c.studentName?.toLowerCase().includes(s)); }
+    if (args.consultantName) { const s = args.consultantName.toLowerCase(); consultations = consultations.filter(c => c.consultantName?.toLowerCase().includes(s)); }
+    if (args.startDate) consultations = consultations.filter(c => c.date >= args.startDate);
+    if (args.endDate) consultations = consultations.filter(c => c.date <= args.endDate);
+    consultations.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    const categoryStats = {};
+    consultations.forEach(c => { categoryStats[c.category || "기타"] = (categoryStats[c.category || "기타"] || 0) + 1; });
+    const followUpNeeded = consultations.filter(c => c.followUpNeeded && !c.followUpDone).length;
+    return { totalCount: consultations.length, categoryStats, followUpNeeded, consultations: consultations.slice(0, 20) };
+}
+
+async function toolGetExamInfo(args) {
+    const snap = await db.collection("exams").get();
+    let exams = snap.docs.map(d => {
+        const data = d.data();
+        return { id: d.id, title: data.title, date: data.date, type: data.type, subject: data.subject, maxScore: data.maxScore, scope: data.scope, targetGrades: data.targetGrades };
+    });
+    if (args.subject) exams = exams.filter(e => e.subject === args.subject || e.subject === "both");
+    if (args.upcoming) { const today = new Date().toISOString().split("T")[0]; exams = exams.filter(e => e.date >= today); }
+    exams.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+    return { totalCount: exams.length, exams: exams.slice(0, 20) };
+}
+
+async function toolGetHomeworkStatus(args) {
+    let query = db.collection("homework");
+    if (args.status) query = query.where("status", "==", args.status);
+    if (args.subject) query = query.where("subject", "==", args.subject);
+    const snap = await query.get();
+    let homework = snap.docs.map(d => {
+        const data = d.data();
+        return { id: d.id, title: data.title, className: data.className, subject: data.subject, assignedByName: data.assignedByName, assignedDate: data.assignedDate, dueDate: data.dueDate, status: data.status, targetCount: Array.isArray(data.targetStudentIds) ? data.targetStudentIds.length : 0 };
+    });
+    if (args.className) { const s = args.className.toLowerCase(); homework = homework.filter(h => h.className?.toLowerCase().includes(s)); }
+    homework.sort((a, b) => (b.dueDate || "").localeCompare(a.dueDate || ""));
+    const today = new Date().toISOString().split("T")[0];
+    const overdue = homework.filter(h => h.status === "active" && h.dueDate < today).length;
+    return { totalCount: homework.length, overdueCount: overdue, homework: homework.slice(0, 20) };
+}
+
 const TOOL_EXECUTOR_MAP = {
     search_students: toolSearchStudents,
     get_student_enrollments: toolGetStudentEnrollments,
@@ -1557,6 +1676,9 @@ const TOOL_EXECUTOR_MAP = {
     get_billing_summary: toolGetBillingSummary,
     get_withdrawal_stats: toolGetWithdrawalStats,
     get_teacher_enrollment_stats: toolGetTeacherEnrollmentStats,
+    get_consultations: toolGetConsultations,
+    get_exam_info: toolGetExamInfo,
+    get_homework_status: toolGetHomeworkStatus,
 };
 
 exports.chatWithAI = functions.region("asia-northeast3").https.onCall(async (data, context) => {
@@ -1598,10 +1720,19 @@ exports.chatWithAI = functions.region("asia-northeast3").https.onCall(async (dat
 - "김민수 출석률" → 먼저 search_students(name="김민수")로 ID 획득 → get_student_attendance 호출
 - "수학 선생님" → get_staff_info(subject="math") 호출
 - "이번 달 수납률" → get_billing_summary(month="${currentMonth}") 호출
+- "김민수 상담 내역" → get_consultations(studentName="김민수") 호출
+- "다음 시험 언제?" → get_exam_info(upcoming=true) 호출
+- "숙제 현황" → get_homework_status(status="active") 호출
+- "요일별 수업 수" → get_class_info() 호출 (daySummary 확인)
+- "월요일 수업" → get_class_info(day="월") 호출
+- "한빛중 학생" → search_students(school="한빛중") 호출
+- "미납 학생" → get_billing_summary(month="${currentMonth}") 호출 (unpaidStudents 확인)
 - 기간 미지정 통계 → 최근 1개월 (${today.slice(0,8)}01 ~ ${today}) 사용
 
 과목 코드: math=수학, english=영어, science=과학, korean=국어
-학년 형식: 초1~초6, 중1~중3, 고1~고3`;
+학년 형식: 초1~초6, 중1~중3, 고1~고3
+
+조회할 수 없는 질문(공지사항, 자료실, 셔틀, 급여, 마케팅, 일정표 등)에 대해서는 "해당 정보는 시스템 화면에서 직접 확인하시는 것이 더 빠르고 정확합니다"라고 안내하세요.`;
 
         // 3. Build conversation history for Gemini
         const contents = [];
