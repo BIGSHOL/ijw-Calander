@@ -104,6 +104,7 @@ const App: React.FC = () => {
 
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
   const [isRoleSimulationOpen, setIsRoleSimulationOpen] = useState(false);
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
 
   const {
     timetableSubject, setTimetableSubject, timetableViewType, setTimetableViewType,
@@ -654,6 +655,9 @@ const App: React.FC = () => {
           accessibleTabs={accessibleTabs}
           onTabSelect={(tab) => setAppMode(tab as typeof appMode)}
           logoUrl={INJAEWON_LOGO}
+          isChatbotOpen={isChatbotOpen}
+          onChatbotToggle={() => setIsChatbotOpen(prev => !prev)}
+          hasChatbotAccess={hasPermission('chatbot.access')}
         />
 
         <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
@@ -909,6 +913,8 @@ const App: React.FC = () => {
       <Chatbot
         userProfile={effectiveProfile || null}
         hasPermission={hasPermission}
+        isOpen={isChatbotOpen}
+        onClose={() => setIsChatbotOpen(false)}
       />
     </RoleSimulationProvider>
   );

@@ -11,7 +11,7 @@ const ChatbotFAB: React.FC<ChatbotFABProps> = ({ isOpen, onClick }) => {
     <button
       onClick={onClick}
       className={`
-        fixed bottom-6 right-6 z-[90]
+        fixed bottom-20 right-6 z-[90]
         w-14 h-14 rounded-full shadow-lg
         flex items-center justify-center
         transition-all duration-300 ease-in-out
