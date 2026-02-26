@@ -577,7 +577,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                     </div>
 
                     {/* Center: 시간표 제목 */}
-                    <h1 className="flex-1 min-w-0 text-center text-sm font-black text-gray-800 tracking-tight flex items-center justify-center gap-2 truncate">
+                    <h1 className="flex-shrink-0 whitespace-nowrap text-sm font-black text-gray-800 tracking-tight flex items-center gap-2">
                         <span>
                             {isSimulationMode && currentScenarioName
                                 ? currentScenarioName
@@ -845,7 +845,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                     </div>
 
                     {/* Center: 시간표 제목 */}
-                    <h1 className="flex-1 min-w-0 text-center text-sm font-black text-gray-800 tracking-tight flex items-center justify-center gap-2 truncate">
+                    <h1 className="flex-shrink-0 whitespace-nowrap text-sm font-black text-gray-800 tracking-tight flex items-center gap-2">
                         <span>
                             {isSimulationMode && currentScenarioName
                                 ? currentScenarioName
@@ -1056,7 +1056,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                     </div>
 
                     {/* Center: 시간표 제목 */}
-                    <h1 className="flex-1 min-w-0 text-center text-sm font-black text-gray-800 tracking-tight flex items-center justify-center gap-2 truncate">
+                    <h1 className="flex-shrink-0 whitespace-nowrap text-sm font-black text-gray-800 tracking-tight flex items-center gap-2">
                         <span>
                             {isSimulationMode && currentScenarioName
                                 ? currentScenarioName
