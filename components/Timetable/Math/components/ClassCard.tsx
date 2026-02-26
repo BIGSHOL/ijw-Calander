@@ -25,6 +25,8 @@ interface StudentItemProps {
     pendingScheduledDate?: string;  // 예정일 (있으면 툴팁에 표시)
     isTransferScheduled?: boolean;  // 반이동예정 (미래 withdrawalDate + isTransferred)
     transferScheduledDate?: string;  // 반이동예정일
+    isWithdrawalScheduled?: boolean;  // 퇴원예정 (미래 withdrawalDate, 재원생 섹션에 가로줄로 표시)
+    withdrawalScheduledDate?: string;  // 퇴원예정일
     classLabel?: string;  // 합반수업 시 소속 수업 라벨
     textbookInfo?: { month: string; textbookName: string } | null;
 }
@@ -45,6 +47,8 @@ const StudentItem: React.FC<StudentItemProps> = ({
     pendingScheduledDate,
     isTransferScheduled = false,
     transferScheduledDate,
+    isWithdrawalScheduled = false,
+    withdrawalScheduledDate,
     classLabel,
     textbookInfo
 }) => {
@@ -73,8 +77,8 @@ const StudentItem: React.FC<StudentItemProps> = ({
             onMouseLeave={() => setIsHovered(false)}
             className={`py-0 px-0.5 list-none ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap min-w-0 font-normal transition-all duration-150
             ${canEdit ? 'cursor-grab' : ''} ${isClickable ? 'cursor-pointer' : ''}
-            ${isPendingMoved ? 'bg-purple-400 text-white font-bold' : isTransferScheduled ? 'bg-purple-200 text-purple-800 font-bold' : isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText}
-            ${!isPendingMoved && !isTransferScheduled && !isHighlighted && !enrollmentStyle ? 'opacity-80' : ''}`}
+            ${isPendingMoved ? 'bg-purple-400 text-white font-bold' : isTransferScheduled ? 'bg-purple-200 text-purple-800 font-bold' : isWithdrawalScheduled ? 'bg-orange-100 text-orange-800 line-through' : isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText}
+            ${!isPendingMoved && !isTransferScheduled && !isWithdrawalScheduled && !isHighlighted && !enrollmentStyle ? 'opacity-80' : ''}`}
             style={hoverStyle}
             title={
                 (isPendingMoved && pendingScheduledDate
@@ -83,6 +87,8 @@ const StudentItem: React.FC<StudentItemProps> = ({
                         ? `${displayText}\n즉시 이동 (저장 대기)`
                     : isTransferScheduled && transferScheduledDate
                         ? `${displayText}\n반이동예정: ${transferScheduledDate}`
+                    : isWithdrawalScheduled && withdrawalScheduledDate
+                        ? `${displayText}\n퇴원예정: ${withdrawalScheduledDate}`
                     : enrollmentStyle && student.enrollmentDate
                         ? `${displayText}\n입학일: ${student.enrollmentDate}`
                         : displayText
@@ -463,10 +469,14 @@ const ClassCard: React.FC<ClassCardProps> = ({
         const isFutureWithdrawal = (s: any) => s.withdrawalDate && s.withdrawalDate > today;
 
         // 모든 병합 요일에 등원하는 학생 (공통)
-        // 미래 퇴원예정이면서 isTransferred가 아닌 학생은 withdrawnFuture에 표시되므로 active에서 제외
+        // 퇴원예정 학생도 재원생에 포함 (가로줄로 표시, 통합뷰와 동일)
         const commonActive = allStudents
-            .filter(s => (!s.withdrawalDate || (isFutureWithdrawal(s) && s.isTransferred)) && !s.onHold && isStudentAttendingAllMergedDays(s))
+            .filter(s => (!s.withdrawalDate || isFutureWithdrawal(s)) && !s.onHold && isStudentAttendingAllMergedDays(s))
             .sort((a, b) => {
+                // 퇴원예정 학생은 하단에 배치
+                const aIsWS = isFutureWithdrawal(a) && !a.isTransferred ? 1 : 0;
+                const bIsWS = isFutureWithdrawal(b) && !b.isTransferred ? 1 : 0;
+                if (aIsWS !== bIsWS) return aIsWS - bIsWS;
                 const wA = getEnrollmentWeight(a), wB = getEnrollmentWeight(b);
                 return wA !== wB ? wA - wB : (a.name || '').localeCompare(b.name || '', 'ko');
             });
@@ -477,17 +487,19 @@ const ClassCard: React.FC<ClassCardProps> = ({
         const commonWithdrawn = allStudents
             .filter(s => s.withdrawalDate && s.withdrawalDate <= today && !s.isTransferred)
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
-        // 퇴원예정: 미래 withdrawalDate + 다른 반에 활성 등록 없음 (실제 퇴원)
-        const commonWithdrawnFuture = allStudents
-            .filter(s => isFutureWithdrawal(s) && !s.isTransferred)
-            .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
+        // 퇴원예정: 재원생 섹션에서 가로줄로 표시하므로 별도 섹션은 빈 배열
+        const commonWithdrawnFuture: any[] = [];
 
         // 요일별 부분 등원 학생 (특정 요일만 오는 학생)
         const partial: Record<string, { active: any[]; hold: any[]; withdrawn: any[] }> = {};
         mergedDays.forEach(day => {
+            // 퇴원예정 학생도 재원생에 포함 (가로줄로 표시, 통합뷰와 동일)
             const active = allStudents
-                .filter(s => (!s.withdrawalDate || (isFutureWithdrawal(s) && s.isTransferred)) && !s.onHold && !isStudentAttendingAllMergedDays(s) && isStudentAttendingDay(s, day))
+                .filter(s => (!s.withdrawalDate || isFutureWithdrawal(s)) && !s.onHold && !isStudentAttendingAllMergedDays(s) && isStudentAttendingDay(s, day))
                 .sort((a, b) => {
+                    const aIsWS = isFutureWithdrawal(a) && !a.isTransferred ? 1 : 0;
+                    const bIsWS = isFutureWithdrawal(b) && !b.isTransferred ? 1 : 0;
+                    if (aIsWS !== bIsWS) return aIsWS - bIsWS;
                     const wA = getEnrollmentWeight(a), wB = getEnrollmentWeight(b);
                     return wA !== wB ? wA - wB : (a.name || '').localeCompare(b.name || '', 'ko');
                 });
@@ -530,9 +542,14 @@ const ClassCard: React.FC<ClassCardProps> = ({
         // 미래 예정 학생은 아직 재원생으로 표시 (영어 통합뷰와 동일)
         const isFutureWithdrawal = (s: any) => s.withdrawalDate && s.withdrawalDate > today;
 
+        // 퇴원예정 학생도 재원생에 포함 (가로줄로 표시, 통합뷰와 동일)
         const active = allStudents
-            .filter(s => (!s.withdrawalDate || (isFutureWithdrawal(s) && s.isTransferred)) && !s.onHold && (filterDay ? isStudentAttendingDay(s, filterDay) : true))
+            .filter(s => (!s.withdrawalDate || isFutureWithdrawal(s)) && !s.onHold && (filterDay ? isStudentAttendingDay(s, filterDay) : true))
             .sort((a, b) => {
+                // 퇴원예정 학생은 하단에 배치
+                const aIsWS = isFutureWithdrawal(a) && !a.isTransferred ? 1 : 0;
+                const bIsWS = isFutureWithdrawal(b) && !b.isTransferred ? 1 : 0;
+                if (aIsWS !== bIsWS) return aIsWS - bIsWS;
                 const wA = getEnrollmentWeight(a), wB = getEnrollmentWeight(b);
                 return wA !== wB ? wA - wB : (a.name || '').localeCompare(b.name || '', 'ko');
             });
@@ -546,10 +563,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
             .filter(s => s.withdrawalDate && s.withdrawalDate <= today && !s.isTransferred)
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
-        // 퇴원예정: 미래 withdrawalDate + 다른 반에 활성 등록 없음 (실제 퇴원)
-        const withdrawnFuture = allStudents
-            .filter(s => isFutureWithdrawal(s) && !s.isTransferred)
-            .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
+        // 퇴원예정: 재원생 섹션에서 가로줄로 표시하므로 별도 섹션은 빈 배열
+        const withdrawnFuture: any[] = [];
 
         return { activeStudents: active, holdStudents: hold, withdrawnStudents: withdrawn, withdrawnFutureStudents: withdrawnFuture };
     }, [isMergedCell, allStudents, currentDay, refDateStr, refDateMs]);
@@ -785,6 +800,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             pendingScheduledDate={pendingMoveSchedules?.get(s.id) || undefined}
                                             isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
                                             transferScheduledDate={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
+                                            isWithdrawalScheduled={!!(!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
+                                            withdrawalScheduledDate={!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
                                             classLabel={isMergedClass ? s._classLabel : undefined}
                                             textbookInfo={studentTextbookMap?.get(s.name) || null}
                                         />
@@ -840,6 +857,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                 pendingScheduledDate={pendingMoveSchedules?.get(s.id) || undefined}
                                                                 isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
                                                                 transferScheduledDate={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
+                                                                isWithdrawalScheduled={!!(!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
+                                                                withdrawalScheduledDate={!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
                                                                 classLabel={isMergedClass ? s._classLabel : undefined}
                                                                 textbookInfo={studentTextbookMap?.get(s.name) || null}
                                                             />
@@ -997,7 +1016,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             canEdit={canEdit}
                                             onStudentClick={onStudentClick}
                                             onDragStart={onDragStart}
-                                            classId={s._classLabel ? cls.id : cls.id}
+                                            classId={cls.id}
                                             fontSizeClass={fontSizeClass}
                                             isHighlighted={isHighlighted}
                                             enrollmentStyle={enrollmentStyle}
@@ -1006,6 +1025,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             pendingScheduledDate={pendingMoveSchedules?.get(s.id) || undefined}
                                             isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
                                             transferScheduledDate={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
+                                            isWithdrawalScheduled={!!(!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
+                                            withdrawalScheduledDate={!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
                                             classLabel={isMergedClass ? s._classLabel : undefined}
                                             textbookInfo={studentTextbookMap?.get(s.name) || null}
                                         />
