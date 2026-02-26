@@ -250,6 +250,13 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
   // 오늘 날짜 (미래 수업 구분용)
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
+  // enrollment 시작일 추출 (enrollmentDate 또는 startDate 필드 사용)
+  const getStartDate = (enrollment: any): string | undefined =>
+    enrollment.enrollmentDate || enrollment.startDate;
+  // enrollment 종료일 추출 (endDate 또는 withdrawalDate 필드 사용)
+  const getEndDate = (enrollment: any): string | undefined =>
+    enrollment.endDate || enrollment.withdrawalDate;
+
   // 같은 수업(className)끼리 그룹화 (현재 수강중인 수업만)
   const groupedEnrollments = useMemo(() => {
     const groups = new Map<string, GroupedEnrollment>();
@@ -257,8 +264,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
     (student.enrollments || [])
       .filter(enrollment => {
         // endDate가 없고, startDate가 오늘 이전이거나 없는 것만 = 현재 수강중
-        const hasEnded = !!(enrollment as any).endDate;
-        const startDate = (enrollment as any).startDate;
+        const hasEnded = !!getEndDate(enrollment);
+        const startDate = getStartDate(enrollment);
         const hasStarted = !startDate || startDate <= today;
         return !hasEnded && hasStarted;
       })
@@ -288,9 +295,10 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           }
           // startDate는 가장 빠른 날짜 사용
           const existingStartDate = existing.startDate ? new Date(existing.startDate) : null;
-          const currentStartDate = (enrollment as any).startDate ? new Date((enrollment as any).startDate) : null;
+          const sd = getStartDate(enrollment);
+          const currentStartDate = sd ? new Date(sd) : null;
           if (currentStartDate && (!existingStartDate || currentStartDate < existingStartDate)) {
-            existing.startDate = (enrollment as any).startDate;
+            existing.startDate = sd;
           }
         } else {
           const staffId = enrollment.staffId;
@@ -301,7 +309,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             days: [...(enrollment.days || [])],
             attendanceDays: [...((enrollment as any).attendanceDays || [])],
             enrollmentIds: (enrollment as any).id ? [(enrollment as any).id] : [],
-            startDate: (enrollment as any).startDate,
+            startDate: getStartDate(enrollment),
             endDate: undefined,
           });
         }
@@ -317,8 +325,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
     (student.enrollments || [])
       .filter(enrollment => {
         // endDate가 없고, startDate가 미래인 것만
-        const hasEnded = !!(enrollment as any).endDate;
-        const startDate = (enrollment as any).startDate;
+        const hasEnded = !!getEndDate(enrollment);
+        const startDate = getStartDate(enrollment);
         const isFuture = startDate && startDate > today;
         return !hasEnded && isFuture;
       })
@@ -347,9 +355,10 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           }
           // startDate는 가장 빠른 날짜 사용
           const existingStartDate = existing.startDate ? new Date(existing.startDate) : null;
-          const currentStartDate = (enrollment as any).startDate ? new Date((enrollment as any).startDate) : null;
+          const sd = getStartDate(enrollment);
+          const currentStartDate = sd ? new Date(sd) : null;
           if (currentStartDate && (!existingStartDate || currentStartDate < existingStartDate)) {
-            existing.startDate = (enrollment as any).startDate;
+            existing.startDate = sd;
           }
         } else {
           const staffId = enrollment.staffId;
@@ -360,7 +369,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             days: [...(enrollment.days || [])],
             attendanceDays: [...((enrollment as any).attendanceDays || [])],
             enrollmentIds: (enrollment as any).id ? [(enrollment as any).id] : [],
-            startDate: (enrollment as any).startDate,
+            startDate: getStartDate(enrollment),
             endDate: undefined,
           });
         }
@@ -641,7 +650,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
     const groups = new Map<string, GroupedEnrollment>();
 
     (student.enrollments || [])
-      .filter(enrollment => (enrollment as any).endDate) // endDate가 있는 것만 = 종료됨
+      .filter(enrollment => !!getEndDate(enrollment)) // endDate/withdrawalDate가 있는 것만 = 종료됨
       .forEach(enrollment => {
         const key = `${enrollment.subject}_${enrollment.className}`;
 
@@ -653,15 +662,17 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           }
           // startDate는 가장 빠른 날짜, endDate는 가장 늦은 날짜 사용
           const existingStartDate = existing.startDate ? new Date(existing.startDate) : null;
-          const currentStartDate = (enrollment as any).startDate ? new Date((enrollment as any).startDate) : null;
+          const sd = getStartDate(enrollment);
+          const currentStartDate = sd ? new Date(sd) : null;
           if (currentStartDate && (!existingStartDate || currentStartDate < existingStartDate)) {
-            existing.startDate = (enrollment as any).startDate;
+            existing.startDate = sd;
           }
 
           const existingEndDate = existing.endDate ? new Date(existing.endDate) : null;
-          const currentEndDate = (enrollment as any).endDate ? new Date((enrollment as any).endDate) : null;
+          const ed = getEndDate(enrollment);
+          const currentEndDate = ed ? new Date(ed) : null;
           if (currentEndDate && (!existingEndDate || currentEndDate > existingEndDate)) {
-            existing.endDate = (enrollment as any).endDate;
+            existing.endDate = ed;
           }
         } else {
           const staffId = enrollment.staffId;
@@ -672,8 +683,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             days: [],
             attendanceDays: [],
             enrollmentIds: [],
-            startDate: (enrollment as any).startDate,
-            endDate: (enrollment as any).endDate,
+            startDate: getStartDate(enrollment),
+            endDate: getEndDate(enrollment),
           });
         }
       });

@@ -12,6 +12,31 @@ const logger = functions.logger;
 admin.initializeApp();
 const db = getFirestore("restore260202");
 
+// 인메모리 캐시 (인스턴스 재사용 시 Firestore 읽기 절약)
+const cache = { students: null, studentsAt: 0, classes: null, classesAt: 0, staff: null, staffAt: 0 };
+const CACHE_TTL = 5 * 60 * 1000; // 5분
+async function getCachedStudents() {
+    if (cache.students && Date.now() - cache.studentsAt < CACHE_TTL) return cache.students;
+    const snap = await db.collection("students").get();
+    cache.students = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    cache.studentsAt = Date.now();
+    return cache.students;
+}
+async function getCachedClasses() {
+    if (cache.classes && Date.now() - cache.classesAt < CACHE_TTL) return cache.classes;
+    const snap = await db.collection("classes").where("isActive", "==", true).get();
+    cache.classes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    cache.classesAt = Date.now();
+    return cache.classes;
+}
+async function getCachedStaff() {
+    if (cache.staff && Date.now() - cache.staffAt < CACHE_TTL) return cache.staff;
+    const snap = await db.collection("staff").orderBy("name").get();
+    cache.staff = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    cache.staffAt = Date.now();
+    return cache.staff;
+}
+
 // Helper: Normalize teacher name
 function normalizeTeacherName(name) {
     if (!name) return "";
@@ -1454,10 +1479,9 @@ const CHATBOT_TOOL_DEFS = [
 
 // Tool executor functions (server-side, using firebase-admin)
 async function toolSearchStudents(args) {
-    let query = db.collection("students");
-    if (args.status) query = query.where("status", "==", args.status);
-    const snap = await query.get();
-    let students = snap.docs.map(d => ({ id: d.id, name: d.data().name, grade: d.data().grade, status: d.data().status, school: d.data().school, startDate: d.data().startDate, withdrawalDate: d.data().withdrawalDate }));
+    const allStudents = await getCachedStudents();
+    let students = allStudents.map(d => ({ id: d.id, name: d.name, grade: d.grade, status: d.status, school: d.school, startDate: d.startDate, withdrawalDate: d.withdrawalDate }));
+    if (args.status) students = students.filter(st => st.status === args.status);
     if (args.name) { const s = args.name.toLowerCase(); students = students.filter(st => st.name?.toLowerCase().includes(s)); }
     if (args.grade) students = students.filter(st => st.grade?.includes(args.grade));
     if (args.school) { const s = args.school.toLowerCase(); students = students.filter(st => st.school?.toLowerCase().includes(s)); }
@@ -1474,16 +1498,13 @@ async function toolGetStudentEnrollments(args) {
     const active = enrollments.filter(e => !e.endDate);
     const ended = enrollments.filter(e => !!e.endDate);
 
-    // 활성 수강의 수업 스케줄(요일/시간) 조회
+    // 활성 수강의 수업 스케줄(요일/시간) 조회 (캐시 활용)
     if (active.length > 0) {
         const classNames = active.map(e => e.className).filter(Boolean);
         if (classNames.length > 0) {
-            const classSnap = await db.collection("classes").where("isActive", "==", true).get();
+            const allClasses = await getCachedClasses();
             const classMap = {};
-            classSnap.docs.forEach(d => {
-                const data = d.data();
-                classMap[data.className] = data;
-            });
+            allClasses.forEach(data => { classMap[data.className] = data; });
             for (const enrollment of active) {
                 const cls = classMap[enrollment.className];
                 if (cls) {
@@ -1533,11 +1554,8 @@ async function toolGetStudentAttendance(args) {
 }
 
 async function toolGetClassInfo(args) {
-    let query = db.collection("classes").where("isActive", "==", true);
-    if (args.subject) query = query.where("subject", "==", args.subject);
-    const snap = await query.get();
-    let classes = snap.docs.map(d => {
-        const data = d.data();
+    const allClasses = await getCachedClasses();
+    let classes = allClasses.map(data => {
         let days = [];
         if (Array.isArray(data.schedule)) {
             days = [...new Set(data.schedule.map(s => s.day).filter(Boolean))];
@@ -1546,8 +1564,9 @@ async function toolGetClassInfo(args) {
         }
         const studentCount = Array.isArray(data.students) ? data.students.length : 0;
         const capacity = data.capacity || data.maxStudents || null;
-        return { id: d.id, className: data.className, subject: data.subject, teacher: data.mainTeacher || data.teacher, room: data.room, days, studentCount, capacity };
+        return { id: data.id, className: data.className, subject: data.subject, teacher: data.mainTeacher || data.teacher, room: data.room, days, studentCount, capacity };
     });
+    if (args.subject) classes = classes.filter(c => c.subject === args.subject);
     if (args.className) { const s = args.className.toLowerCase(); classes = classes.filter(c => c.className?.toLowerCase().includes(s)); }
     if (args.day) classes = classes.filter(c => c.days.includes(args.day));
     const daySummary = {};
@@ -1557,17 +1576,16 @@ async function toolGetClassInfo(args) {
 }
 
 async function toolGetStaffInfo(args) {
-    const snap = await db.collection("staff").orderBy("name").get();
-    let staff = snap.docs.map(d => ({ id: d.id, name: d.data().name, englishName: d.data().englishName, role: d.data().role, subjects: d.data().subjects, jobTitle: d.data().jobTitle, isNative: d.data().isNative }));
+    const allStaff = await getCachedStaff();
+    let staff = allStaff.map(d => ({ id: d.id, name: d.name, englishName: d.englishName, role: d.role, subjects: d.subjects, jobTitle: d.jobTitle, isNative: d.isNative }));
     if (args.name) { const s = args.name.toLowerCase(); staff = staff.filter(st => st.name?.toLowerCase().includes(s) || st.englishName?.toLowerCase().includes(s)); }
     if (args.subject) staff = staff.filter(st => Array.isArray(st.subjects) && st.subjects.includes(args.subject));
-    // 담당 반 조회 (비용 최소화: 이름 검색 시에만)
+    // 담당 반 조회 (캐시 활용)
     if (args.name && staff.length > 0 && staff.length <= 3) {
-        const classSnap = await db.collection("classes").where("isActive", "==", true).get();
+        const allClasses = await getCachedClasses();
         const staffNames = staff.map(s => s.name);
         const classMap = {};
-        classSnap.docs.forEach(d => {
-            const data = d.data();
+        allClasses.forEach(data => {
             const teacher = data.mainTeacher || data.teacher;
             if (teacher && staffNames.includes(teacher)) {
                 if (!classMap[teacher]) classMap[teacher] = [];
@@ -1706,7 +1724,7 @@ const TOOL_EXECUTOR_MAP = {
     get_homework_status: toolGetHomeworkStatus,
 };
 
-exports.chatWithAI = functions.region("asia-northeast3").https.onCall(async (data, context) => {
+exports.chatWithAI = functions.region("asia-northeast3").runWith({ timeoutSeconds: 60, memory: "512MB" }).https.onCall(async (data, context) => {
     // 1. Auth check
     if (!context.auth) {
         throw new functions.https.HttpsError("unauthenticated", "로그인이 필요합니다.");
@@ -1777,42 +1795,20 @@ exports.chatWithAI = functions.region("asia-northeast3").https.onCall(async (dat
 
 또한, 시스템 사용법도 안내해드릴 수 있어요! 예: '출석부 어떻게 써?', '학생 등록 방법'"
 
-시스템 사용법 안내 (도구 호출 없이 아래 지식 기반으로 직접 답변):
-사용자가 탭/기능의 사용법을 물어보면 (예: "출석부 어떻게 써?", "시간표 기능 알려줘", "학생 등록하는 법", "역할이 뭐가 있어?", "강의실 배정 어떻게 해?"), 도구를 호출하지 말고 아래 도움말 지식을 참고하여 직접 안내하세요.
-
-[시스템 도움말 지식]
-■ 역할 체계: Master(전체관리), Admin(시스템관리), Manager(운영매니저), 수학팀장/영어팀장(교과총괄), 수학강사/영어강사(교과담당), User(기본사용자-대시보드/일정/출결만)
-■ 탭 그룹: 홈(대시보드,공지사항) | 일정(연간일정,간트차트) | 수업(시간표,출석부,출결관리,수업관리,강의실,강의실배정,숙제관리,시험관리,교재관리) | 학생(학생관리,등록상담,학생상담,성적관리,퇴원관리,계약관리,학습리포트) | 소통(학부모소통,알림발송) | 마케팅(마케팅,셔틀관리) | 관리(수강료현황,직원관리,수납관리,자료실,역할관리,급여관리,매출분석)
-■ 대시보드: 역할별 자동 전환. Master/Admin은 전체 KPI + 직원별 전환 가능. 팀장은 해당 과목 통계. 강사는 담당 수업/학생 현황
-■ 연간일정: 일간/주간/월간/연간 뷰, 부서필터, 해시태그, 버킷리스트, 드래그이동, 이미지내보내기
-■ 간트차트: 프로젝트/태스크 관리, 담당자배정, 진행률추적, 시뮬레이션모드, 템플릿, 시나리오비교
-■ 시간표: 수학/영어/과학/국어 과목별, 강사별/교실별/수업별 뷰, 수업 추가/수정, 학생 드래그앤드롭 배정, 시뮬레이션모드, 이미지저장
-■ 출석부: 월간/세션별 뷰, 출석/결석/지각/조퇴/사유결석 상태, 이름클릭으로 상태변경, 월급계산(강사용)
-■ 출결관리: 카드뷰/리스트뷰/통계뷰, 일별 전체 출결 현황, 달력 네비게이션
-■ 수업관리: 과목별/담임별/요일별 필터, 수업 생성(수업명/과목/강사/시간/교실), 학생배정
-■ 강의실: 요일별 교실 사용현황, 시간대별 점유율 확인
-■ 강의실배정: AI자동배정(프리셋), 수동 드래그앤드롭, 충돌감지, 병합제안, 미리보기/원본 비교
-■ 학생관리: 2단레이아웃(목록+상세), 검색/필터/정렬, 기본정보/수강이력/성적/출결/메모, Excel마이그레이션, 중복병합
-■ 등록상담: 대시보드/테이블/연도별 뷰, 상담등록, 레벨테스트(수학4영역/영어AI·NELT·EiE), 원생전환, QR접수
-■ 학생상담: 목록/대시보드, 기간/유형/카테고리/후속조치 필터, 상담등록
-■ 성적관리: 시험/레벨테스트 토글, 시험등록/성적입력/자동통계, 레벨테스트 날짜별그룹핑
-■ 퇴원관리: 통계/목록 뷰, 퇴원등록(사유:졸업/이사/타학원/경제적/스케줄/불만족/기타), 활성수업감지, 재원복구
-■ 수강료현황: 대시보드/보고서 뷰, 사업장별통계, AI보고서생성, 인쇄용뷰
-■ 직원관리: 직원목록/근무일정, 권한관리, 승인관리, 휴가관리
-■ 수납관리: 상태필터(미납/완납), 월별조회, Excel가져오기(19개필드)/내보내기, 교재수납감지
-■ 자료실: 3단폴더구조, 검색, 즐겨찾기, 고정(Pin), 다중선택삭제, 카테고리순서변경
-■ 역할관리: Master전용, 14개 카테고리별 세부권한 ON/OFF, 탭접근관리, 연동권한자동처리
-■ 숙제관리: 과목별필터, 마감일추적, 과제목록관리
-■ 시험관리: 시험목록/캘린더/분석뷰, 과목별필터, 응시인원/평균점수
-■ 교재관리: 교재목록(카드)/배부이력/청구이력, 재고관리, 재고부족알림, Excel가져오기
-■ 계약관리: 상태(초안→서명→활성→만료→해지), 수강료/할인관리
-■ 학습리포트: 학생별/수업별/월별 종합리포트
-■ 셔틀관리: 노선관리(정류장/출발시간/운전기사), 학생배정
-■ 마케팅: 유입경로분석, 체험수업관리, 프로모션
-■ 알림발송: SMS/카카오알림톡, 템플릿관리(변수지원), 발송이력
-
-답변 시 해당 탭의 핵심 기능만 2~4줄로 간결하게 안내하세요. 사용자가 더 자세히 물어보면 추가 설명하세요.
-탭에 관한 질문이 아닌 일반 데이터 조회 질문에는 반드시 도구를 호출하세요.`;
+시스템 사용법 안내 (도구 호출 없이 직접 답변):
+사용자가 탭/기능의 사용법을 물어보면 도구 호출 없이 아래 지식으로 답변하세요.
+■ 역할: Master/Admin(전체) > Manager(운영) > 팀장(교과총괄) > 강사(교과담당) > User(기본)
+■ 시간표: 과목별 강사/교실/수업별 뷰, 드래그 배정, 시뮬레이션
+■ 출석부: 월간/세션별 뷰, 이름클릭 상태변경(출석/결석/지각/조퇴/사유결석)
+■ 수업관리: 과목/담임/요일 필터, 수업 생성, 학생배정
+■ 학생관리: 2단레이아웃, 검색/필터, 수강이력/성적/출결/메모, Excel마이그레이션
+■ 등록상담: 상담등록, 레벨테스트, 원생전환, QR접수
+■ 성적: 시험등록/성적입력/자동통계, 레벨테스트
+■ 퇴원: 퇴원등록(사유추적), 재원복구
+■ 수납: 상태필터, Excel가져오기/내보내기
+■ 강의실배정: AI자동배정, 드래그 수동배정, 충돌감지
+■ 기타: 연간일정(뷰모드/부서필터), 간트차트(프로젝트관리), 역할관리(권한설정), 자료실(폴더구조)
+해당 탭 핵심만 2~3줄로 간결하게 안내. 데이터 조회 질문에는 반드시 도구 호출.`;
 
         // 3. Build conversation history for Gemini
         const contents = [];
