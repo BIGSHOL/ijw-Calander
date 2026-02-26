@@ -22,6 +22,8 @@ import { db } from '../../../../firebaseConfig';
 import { TimetableStudent } from '../../../../types';
 import { SCENARIO_COLLECTION } from '../englishUtils';
 import { IntegrationSettings, CustomGroup } from '../IntegrationViewSettings';
+import { convertTimestampToDate } from '../../../../utils/firestoreConverters';
+import { formatDateKey } from '../../../../utils/dateUtils';
 
 // ============ UTILITIES ============
 
@@ -472,17 +474,6 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
         scenarioEnrollments[className] = {};
       }
 
-      // Convert Firestore Timestamp to YYYY-MM-DD string
-      const convertTimestampToDate = (timestamp: any): string | undefined => {
-        if (!timestamp) return undefined;
-        if (typeof timestamp === 'string') return timestamp;
-        if (timestamp?.toDate) {
-          const date = timestamp.toDate();
-          return date.toISOString().split('T')[0];
-        }
-        return undefined;
-      };
-
       // withdrawalDate와 endDate 둘 다 체크 (실시간 모드와 동일)
       const withdrawalDate = convertTimestampToDate(data.withdrawalDate);
       const endDate = convertTimestampToDate(data.endDate);
@@ -524,7 +515,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       return result;
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = formatDateKey(new Date());
 
     // 1단계: 반이동 감지를 위해 모든 학생의 활성/종료 수업 목록 수집
     const studentActiveClasses: Record<string, Set<string>> = {};  // studentId -> Set of active classNames
@@ -1326,7 +1317,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
         query(collectionGroup(db, 'enrollments'), where('subject', '==', 'english'))
       );
 
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+      const today = formatDateKey(new Date()); // YYYY-MM-DD
 
       // 반 이름 변경 감지: 같은 classId인데 className이 바뀐 경우 (레벨업 등)
       // oldClassName → newClassName 매핑

@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedStudent } from '../../types';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { formatDateKey } from '../../utils/dateUtils';
 
 interface StudentListProps {
   students: UnifiedStudent[];
@@ -22,7 +23,7 @@ const StudentList: React.FC<StudentListProps> = ({
   }, [students.length]);
 
   // 오늘 날짜 (YYYY-MM-DD 형식 문자열) - CoursesTab과 동일한 방식
-  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const today = useMemo(() => formatDateKey(new Date()), []);
 
   // 이번 주 마지막 날 계산 (일요일)
   const weekEnd = useMemo(() => {
@@ -31,7 +32,7 @@ const StudentList: React.FC<StudentListProps> = ({
     const daysUntilSunday = currentDay === 0 ? 0 : 7 - currentDay;
     const sunday = new Date(now);
     sunday.setDate(now.getDate() + daysUntilSunday);
-    return sunday.toISOString().split('T')[0];
+    return formatDateKey(sunday);
   }, []);
 
   // 학생 섹션 분류 (ClassCard 로직과 동일)

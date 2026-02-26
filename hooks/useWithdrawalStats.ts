@@ -11,6 +11,7 @@ import { db } from '../firebaseConfig';
 import { UnifiedStudent, Enrollment, StaffMember } from '../types';
 import { COL_STUDENTS } from './useStudents';
 import { WITHDRAWAL_REASON_LABEL, SUBJECT_LABEL } from '../constants/withdrawal';
+import { getEndedSubjects } from '../utils/enrollment';
 
 /**
  * 퇴원 통계 필터 옵션
@@ -90,31 +91,6 @@ export interface WithdrawalStatsResult {
   reasonStats: WithdrawalReasonStat[];
   subjectStats: SubjectWithdrawalStat[];
   staffStats: StaffWithdrawalStat[];
-}
-
-/**
- * 과목별 수강종료 여부 판정
- */
-function getEndedSubjects(student: UnifiedStudent): { subjects: string[]; enrollments: Enrollment[] } {
-  const bySubject = new Map<string, Enrollment[]>();
-  for (const e of student.enrollments || []) {
-    const list = bySubject.get(e.subject) || [];
-    list.push(e);
-    bySubject.set(e.subject, list);
-  }
-
-  const endedSubjects: string[] = [];
-  const endedEnrollments: Enrollment[] = [];
-
-  for (const [subject, enrollments] of bySubject) {
-    const hasActive = enrollments.some(e => !e.withdrawalDate && !e.endDate);
-    if (!hasActive && enrollments.length > 0) {
-      endedSubjects.push(subject);
-      endedEnrollments.push(...enrollments);
-    }
-  }
-
-  return { subjects: endedSubjects, enrollments: endedEnrollments };
 }
 
 /**

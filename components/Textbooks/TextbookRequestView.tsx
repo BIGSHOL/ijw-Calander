@@ -22,6 +22,7 @@ import Copy from 'lucide-react/dist/esm/icons/copy';
 import Settings from 'lucide-react/dist/esm/icons/settings';
 import Check from 'lucide-react/dist/esm/icons/check';
 import X from 'lucide-react/dist/esm/icons/x';
+import { getTodayKST } from '../../utils/dateUtils';
 
 // ===== Types =====
 
@@ -44,7 +45,7 @@ interface FormData {
 
 const PAGE_SIZE = 20;
 
-const TODAY = new Date().toISOString().slice(0, 10);
+const TODAY = getTodayKST();
 
 const EMPTY_FORM: FormData = {
   studentName: '',
@@ -434,7 +435,7 @@ export default function TextbookRequestView({ isAdmin = false, initialTab, onReq
     if (window.confirm('입력한 내용을 모두 초기화하시겠습니까?')) {
       setForm({
         ...EMPTY_FORM,
-        requestDate: new Date().toISOString().slice(0, 10),
+        requestDate: getTodayKST(),
         bankName: accountSettings.bankName,
         accountHolder: accountSettings.accountHolder,
         accountNumber: accountSettings.accountNumber,

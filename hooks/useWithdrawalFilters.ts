@@ -1,6 +1,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import { UnifiedStudent, Enrollment } from '../types';
 import { WithdrawalSortBy, WithdrawalEntryType } from '../constants/withdrawal';
+import { getEndedSubjects } from '../utils/enrollment';
 
 // 퇴원/수강종료 항목 래퍼
 export interface WithdrawalEntry {
@@ -35,35 +36,6 @@ const DEFAULT_FILTERS: WithdrawalFilters = {
   search: '',
   sortBy: 'withdrawalDate',
 };
-
-/**
- * 과목별 수강종료 여부 판정:
- * - 해당 과목의 모든 enrollment에 종료일(withdrawalDate/endDate)이 있고
- * - 현재 활성(종료일 없는) enrollment가 없으면 → 수강종료
- */
-function getEndedSubjects(student: UnifiedStudent): { subjects: string[]; enrollments: Enrollment[] } {
-  // 과목별 enrollment 그룹화
-  const bySubject = new Map<string, Enrollment[]>();
-  for (const e of student.enrollments) {
-    const list = bySubject.get(e.subject) || [];
-    list.push(e);
-    bySubject.set(e.subject, list);
-  }
-
-  const endedSubjects: string[] = [];
-  const endedEnrollments: Enrollment[] = [];
-
-  for (const [subject, enrollments] of bySubject) {
-    const hasActive = enrollments.some(e => !e.withdrawalDate && !e.endDate);
-    if (!hasActive && enrollments.length > 0) {
-      // 모든 enrollment이 종료됨 → 이 과목은 수강종료
-      endedSubjects.push(subject);
-      endedEnrollments.push(...enrollments);
-    }
-  }
-
-  return { subjects: endedSubjects, enrollments: endedEnrollments };
-}
 
 export function useWithdrawalFilters(students: UnifiedStudent[]) {
   const [filters, setFilters] = useState<WithdrawalFilters>(DEFAULT_FILTERS);

@@ -5,6 +5,7 @@ import { db } from '../firebaseConfig';
 import { Student, SalaryConfig, MonthlySettlement, AttendanceSubject } from '../components/Attendance/types';
 import { StaffMember } from '../types';
 import { isTeacherMatch, isTeacherMatchWithStaffId, isTeacherInSlotTeachers, isSlotTeacherMatch, isAssistantTeacher } from '../utils/teacherUtils';
+import { getTodayKST } from '../utils/dateUtils';
 
 // Classes collection for checking assistants
 const CLASSES_COLLECTION = 'classes';
@@ -105,7 +106,8 @@ export const useAttendanceStudents = (options?: {
         queryKey: ['attendanceStudents', options?.staffId, options?.subject, options?.yearMonth],
         queryFn: async (): Promise<{ filtered: Student[], all: Student[] }> => {
             // 조회 월 기준 날짜 계산 (과거 월 조회 시 퇴원생도 포함)
-            const monthFirstDay = options?.yearMonth ? `${options.yearMonth}-01` : new Date().toISOString().split('T')[0];
+            // KST 기준 오늘 날짜를 기본값으로 사용 (yearMonth 없는 경우)
+            const monthFirstDay = options?.yearMonth ? `${options.yearMonth}-01` : getTodayKST();
 
             // === PERFORMANCE: 수업 기준으로 학생 찾기 ===
             // OPTIMIZATION (async-parallel): staff + classes 병렬 조회로 로딩 시간 300-500ms 단축

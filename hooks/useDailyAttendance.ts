@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collection, doc, getDocs, getDoc, setDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { DailyAttendanceRecord, AttendanceStatus, DailyAttendanceStats } from '../types';
+import { formatDateKST } from '../utils/dateUtils';
 
 // Firestore collection path: daily_attendance/{date}/records/{recordId}
 const COLLECTION_NAME = 'daily_attendance';
@@ -63,7 +64,8 @@ export const useDailyAttendanceByRange = (
       const end = new Date(endDate);
 
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        dates.push(d.toISOString().split('T')[0]);
+        // KST 기준 날짜 문자열로 변환
+        dates.push(formatDateKST(new Date(d)));
       }
 
       // === 성능 최적화: 주 단위로 배치 처리 ===

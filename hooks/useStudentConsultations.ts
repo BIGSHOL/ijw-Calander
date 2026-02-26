@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { Consultation, ConsultationCategory } from '../types';
+import { getTodayKST } from '../utils/dateUtils';
 
 export const COL_STUDENT_CONSULTATIONS = 'student_consultations';
 
@@ -124,11 +125,13 @@ export function useStudentConsultations(filters?: StudentConsultationFilters) {
                 } else if (filters.followUpStatus === 'done') {
                     consultationList = consultationList.filter(c => c.followUpNeeded && c.followUpDone);
                 } else if (filters.followUpStatus === 'pending') {
+                    // KST 기준 오늘 날짜로 후속 조치 예정일 판별
+                    const today = getTodayKST();
                     consultationList = consultationList.filter(c => {
                         if (!c.followUpNeeded || c.followUpDone) return false;
                         // 예정일이 없거나 지나지 않은 것들
                         if (!c.followUpDate) return true;
-                        return c.followUpDate >= new Date().toISOString().split('T')[0];
+                        return c.followUpDate >= today;
                     });
                 }
             }
@@ -180,7 +183,8 @@ export function getFollowUpUrgency(consultation: Consultation): 'urgent' | 'pend
     if (consultation.followUpDone) return 'done';
     if (!consultation.followUpDate) return 'pending';
 
-    const today = new Date().toISOString().split('T')[0];
+    // KST 기준 오늘 날짜로 긴급 여부 판별
+    const today = getTodayKST();
     const followUpDate = new Date(consultation.followUpDate);
     const todayDate = new Date(today);
     const diffTime = followUpDate.getTime() - todayDate.getTime();
@@ -194,7 +198,8 @@ export function getFollowUpUrgency(consultation: Consultation): 'urgent' | 'pend
  * 후속 조치 남은 일수 계산
  */
 export function getFollowUpDaysLeft(followUpDate: string): number {
-    const today = new Date().toISOString().split('T')[0];
+    // KST 기준 오늘 날짜로 남은 일수 계산
+    const today = getTodayKST();
     const followUp = new Date(followUpDate);
     const todayDate = new Date(today);
     const diffTime = followUp.getTime() - todayDate.getTime();
@@ -272,10 +277,12 @@ export function usePaginatedConsultations(
                 } else if (filters.followUpStatus === 'done') {
                     allConsultations = allConsultations.filter(c => c.followUpNeeded && c.followUpDone);
                 } else if (filters.followUpStatus === 'pending') {
+                    // KST 기준 오늘 날짜로 후속 조치 예정일 판별
+                    const today = getTodayKST();
                     allConsultations = allConsultations.filter(c => {
                         if (!c.followUpNeeded || c.followUpDone) return false;
                         if (!c.followUpDate) return true;
-                        return c.followUpDate >= new Date().toISOString().split('T')[0];
+                        return c.followUpDate >= today;
                     });
                 }
             }

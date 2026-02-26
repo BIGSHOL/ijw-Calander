@@ -14,17 +14,8 @@
  */
 
 import { useMemo } from 'react';
-
-// Helper to convert Firestore Timestamp to YYYY-MM-DD string
-const convertTimestampToDate = (timestamp: any): string | undefined => {
-    if (!timestamp) return undefined;
-    if (typeof timestamp === 'string') return timestamp;
-    if (timestamp?.toDate) {
-        const date = timestamp.toDate();
-        return date.toISOString().split('T')[0];
-    }
-    return undefined;
-};
+import { convertTimestampToDate } from '../../../../utils/firestoreConverters';
+import { formatDateKey } from '../../../../utils/dateUtils';
 
 interface ScheduleCell {
     className?: string;
@@ -81,7 +72,7 @@ export const useEnglishStats = (
             return { active: 0, new1: 0, new2: 0, withdrawn: 0, withdrawnFuture: 0, waiting: 0, waitingStudents: [], withdrawnStudents: [], withdrawnFutureStudents: [] };
         }
 
-        const refDate = referenceDate || new Date().toISOString().split('T')[0];
+        const refDate = referenceDate || formatDateKey(new Date());
         const now = new Date(refDate);
         const today = refDate;
         let active = 0, new1 = 0, new2 = 0, withdrawn = 0, withdrawnFuture = 0, waiting = 0;

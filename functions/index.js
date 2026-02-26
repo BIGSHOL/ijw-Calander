@@ -12,6 +12,17 @@ const logger = functions.logger;
 admin.initializeApp();
 const db = getFirestore("restore260202");
 
+// KST(UTC+9) 기준 오늘 날짜 반환 (서버는 UTC 기준이므로 변환 필요)
+function getTodayKST() {
+    const now = new Date();
+    const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    return kst.toISOString().split("T")[0];
+}
+function formatDateKST(date) {
+    const kst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+    return kst.toISOString().split("T")[0];
+}
+
 // 인메모리 캐시 (인스턴스 재사용 시 Firestore 읽기 절약)
 const cache = { students: null, studentsAt: 0, classes: null, classesAt: 0, staff: null, staffAt: 0 };
 const CACHE_TTL = 5 * 60 * 1000; // 5분
@@ -475,7 +486,7 @@ exports.archiveOldEvents = functions
             const now = new Date();
             // Subtract years
             const cutoffDateObj = new Date(now.setFullYear(now.getFullYear() - lookbackYears));
-            const cutoffDate = cutoffDateObj.toISOString().split("T")[0]; // YYYY-MM-DD
+            const cutoffDate = formatDateKST(cutoffDateObj); // YYYY-MM-DD (KST)
 
             logger.info(`[archiveOldEvents] Cutoff Date: ${cutoffDate} (Lookback: ${lookbackYears} years)`);
 
@@ -918,10 +929,7 @@ exports.applyScheduledScenarios = functions
 
         try {
             // 1. Get today's date in YYYY-MM-DD format (KST)
-            const now = new Date();
-            const kstOffset = 9 * 60 * 60 * 1000; // UTC+9
-            const kstDate = new Date(now.getTime() + kstOffset);
-            const today = kstDate.toISOString().split("T")[0];
+            const today = getTodayKST();
 
             logger.info(`[applyScheduledScenarios] Today (KST): ${today}`);
 
@@ -989,7 +997,7 @@ async function applyScenarioToLive(scenarioId, scenario) {
     const scenarioClasses = scenario.classes || {};
     const scenarioEnrollments = scenario.enrollments || {};
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = getTodayKST();
 
     // 1. Get current live classes
     const liveClassesSnapshot = await db.collection("classes")
@@ -1687,7 +1695,7 @@ async function toolGetExamInfo(args) {
         return { id: d.id, title: data.title, date: data.date, type: data.type, subject: data.subject, maxScore: data.maxScore, scope: data.scope, targetGrades: data.targetGrades };
     });
     if (args.subject) exams = exams.filter(e => e.subject === args.subject || e.subject === "both");
-    if (args.upcoming) { const today = new Date().toISOString().split("T")[0]; exams = exams.filter(e => e.date >= today); }
+    if (args.upcoming) { const today = getTodayKST(); exams = exams.filter(e => e.date >= today); }
     exams.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
     return { totalCount: exams.length, exams: exams.slice(0, 20) };
 }
@@ -1703,7 +1711,7 @@ async function toolGetHomeworkStatus(args) {
     });
     if (args.className) { const s = args.className.toLowerCase(); homework = homework.filter(h => h.className?.toLowerCase().includes(s)); }
     homework.sort((a, b) => (b.dueDate || "").localeCompare(a.dueDate || ""));
-    const today = new Date().toISOString().split("T")[0];
+    const today = getTodayKST();
     const overdue = homework.filter(h => h.status === "active" && h.dueDate < today).length;
     return { totalCount: homework.length, overdueCount: overdue, homework: homework.slice(0, 20) };
 }
@@ -1744,7 +1752,7 @@ exports.chatWithAI = functions.region("asia-northeast3").runWith({ timeoutSecond
 
     try {
         const ai = new GoogleGenAI({ apiKey: geminiApiKey });
-        const today = new Date().toISOString().split("T")[0];
+        const today = getTodayKST();
         const currentMonth = today.slice(0, 7);
 
         const systemPrompt = `당신은 인재원 학원 관리 시스템의 AI 어시스턴트입니다.

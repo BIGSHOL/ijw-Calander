@@ -1,4 +1,6 @@
 import { Student, SalaryConfig, SalarySettingItem, SessionPeriod, DateRange } from './types';
+import { formatDateKey } from '../../utils/dateUtils';
+import { getSchoolLevel } from '../../utils/studentUtils';
 
 // Color Palette Constants
 export const COLORS = {
@@ -21,20 +23,9 @@ export const getSchoolLevelSalarySetting = (
   school: string | undefined,
   salaryItems: SalarySettingItem[]
 ): SalarySettingItem | undefined => {
-  if (!school) return undefined;
-
-  // Check if school name contains 초, 중, 고 (elementary, middle, high)
-  if (school.includes('초등') || school.includes('초')) {
-    return salaryItems.find(item => item.name === '초등' || item.name.includes('초등'));
-  }
-  if (school.includes('중학') || school.includes('중')) {
-    return salaryItems.find(item => item.name === '중등' || item.name.includes('중등'));
-  }
-  if (school.includes('고등') || school.includes('고')) {
-    return salaryItems.find(item => item.name === '고등' || item.name.includes('고등'));
-  }
-
-  return undefined;
+  const level = getSchoolLevel(school);
+  if (!level) return undefined;
+  return salaryItems.find(item => item.name === level || item.name.includes(level));
 };
 
 // Get all days in a specific month
@@ -51,12 +42,8 @@ export const getDaysInMonth = (date: Date): Date[] => {
   return days;
 };
 
-// Format date to YYYY-MM-DD for storage keys
-export const formatDateKey = (date: Date): string => {
-  const offset = date.getTimezoneOffset();
-  const adjustedDate = new Date(date.getTime() - offset * 60 * 1000);
-  return adjustedDate.toISOString().split('T')[0];
-};
+// formatDateKey는 utils/dateUtils.ts에서 import (단일 소스)
+export { formatDateKey };
 
 // Format date for display (e.g., "12/01 (Mon)")
 export const formatDateDisplay = (date: Date): { date: string; day: string; isWeekend: boolean } => {

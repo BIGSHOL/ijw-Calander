@@ -6,6 +6,7 @@ import { Consultation, ConsultationCategory, CATEGORY_CONFIG, UserProfile } from
 import { X, Search, Loader2, User, Users, Clock, Calendar, MessageSquare, Edit2, FileText, BookOpen, AlertCircle } from 'lucide-react';
 import { SUBJECT_COLORS } from '../../utils/styleUtils';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { formatDateKey } from '../../utils/dateUtils';
 
 interface AddConsultationModalProps {
     onClose: () => void;
@@ -55,7 +56,7 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
             ? editingConsultation.subject
             : 'other'
     );
-    const [date, setDate] = useState(editingConsultation?.date || new Date().toISOString().split('T')[0]);
+    const [date, setDate] = useState(editingConsultation?.date || formatDateKey(new Date()));
     const [time, setTime] = useState(editingConsultation?.time || getCurrentTime());
     const [duration, setDuration] = useState(editingConsultation?.duration?.toString() || '30');
     const [title, setTitle] = useState(editingConsultation?.title || '');

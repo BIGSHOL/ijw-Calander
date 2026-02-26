@@ -7,6 +7,7 @@ import { StaffMember, UnifiedStudent } from '../../types';
 import { collection, writeBatch, doc, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { formatDateKey } from '../../utils/dateUtils';
 
 interface ParsedConsultation {
     no: number | string;
@@ -83,7 +84,7 @@ const mapStatus = (statusCell: any) => {
 
 const parseExcelDate = (cellVal: any) => {
     if (!cellVal) return '';
-    if (cellVal instanceof Date) return cellVal.toISOString().split('T')[0];
+    if (cellVal instanceof Date) return formatDateKey(cellVal as Date);
     const str = String(cellVal).trim();
     if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
     return '';

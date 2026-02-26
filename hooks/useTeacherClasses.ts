@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
+import { toDateStringKST } from '../utils/dateUtils';
 
 export interface TeacherClassInfo {
   id: string;
@@ -41,13 +42,6 @@ export const useTeacherClasses = (teacherName: string | undefined) => {
       // 담임 수업 맵 (중복 방지)
       const classMap = new Map<string, TeacherClassInfo>();
 
-      const toDateString = (val: any): string | null => {
-        if (!val) return null;
-        if (val.toDate) return val.toDate().toISOString().split('T')[0];
-        if (typeof val === 'string') return val;
-        return null;
-      };
-
       // teacher 필드 매칭
       teacherSnapshot.docs.forEach(doc => {
         const data = doc.data();
@@ -57,8 +51,9 @@ export const useTeacherClasses = (teacherName: string | undefined) => {
           subject: data.subject || 'math',
           role: '담임',
           isActive: data.isActive !== false,
-          startDate: toDateString(data.createdAt),
-          endDate: data.isActive === false ? toDateString(data.updatedAt) : null,
+          // KST 기준으로 Firestore Timestamp 변환
+          startDate: toDateStringKST(data.createdAt),
+          endDate: data.isActive === false ? toDateStringKST(data.updatedAt) : null,
         });
       });
 
@@ -72,8 +67,9 @@ export const useTeacherClasses = (teacherName: string | undefined) => {
           subject: data.subject || 'math',
           role: '담임',
           isActive: data.isActive !== false,
-          startDate: toDateString(data.createdAt),
-          endDate: data.isActive === false ? toDateString(data.updatedAt) : null,
+          // KST 기준으로 Firestore Timestamp 변환
+          startDate: toDateStringKST(data.createdAt),
+          endDate: data.isActive === false ? toDateStringKST(data.updatedAt) : null,
         });
       });
 
@@ -93,8 +89,9 @@ export const useTeacherClasses = (teacherName: string | undefined) => {
             subject: data.subject || 'math',
             role: '부담임',
             isActive: data.isActive !== false,
-            startDate: toDateString(data.createdAt),
-            endDate: data.isActive === false ? toDateString(data.updatedAt) : null,
+            // KST 기준으로 Firestore Timestamp 변환
+            startDate: toDateStringKST(data.createdAt),
+            endDate: data.isActive === false ? toDateStringKST(data.updatedAt) : null,
           });
         }
       });
