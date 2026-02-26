@@ -5,6 +5,7 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswor
 import { doc, setDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { StaffMember } from '../../types';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { getTodayKST } from '../../utils/dateUtils';
 
 interface LoginModalProps {
     isOpen: boolean;
@@ -85,7 +86,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                         approvalStatus: isMaster ? 'approved' : 'pending',
                         departmentPermissions: {},
                         favoriteDepartments: [],
-                        hireDate: new Date().toISOString().split('T')[0],
+                        hireDate: getTodayKST(),
                         status: 'active',
                         createdAt: new Date().toISOString(),
                         updatedAt: new Date().toISOString(),

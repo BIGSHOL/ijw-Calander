@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, UserMinus, AlertTriangle, Calendar, FileText, Info } from 'lucide-react';
 import { UnifiedStudent } from '../../types';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { formatDateKey } from '../../utils/dateUtils';
 
 // 퇴원 사유 옵션
 const WITHDRAWAL_REASONS = [
@@ -40,7 +41,7 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   const activeClassNames = activeEnrollments.map(e => e.className).filter(Boolean);
 
   const [formData, setFormData] = useState({
-    withdrawalDate: new Date().toISOString().split('T')[0],
+    withdrawalDate: formatDateKey(new Date()),
     withdrawalReason: '',
     withdrawalMemo: '',
   });

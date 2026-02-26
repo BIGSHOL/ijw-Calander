@@ -18,6 +18,7 @@
 import { useMemo } from 'react';
 import { UnifiedStudent } from '../types';
 import { StudentFilters } from './useAppState';
+import { getTodayKST } from '../utils/dateUtils';
 
 type SearchField = 'all' | 'name' | 'englishName' | 'phone' | 'school' | 'address' | 'parent' | 'memo' | 'email' | 'etc';
 
@@ -233,8 +234,8 @@ const filterByStatus = (students: UnifiedStudent[], status: string): UnifiedStud
         }
 
         if (status === 'no_enrollment') {
-            // 현재 수강 중인 enrollment가 없는 학생 (배정 예정 제외)
-            const today = new Date().toISOString().split('T')[0];
+            // KST 기준 오늘 날짜로 현재 수강 중인 enrollment 판별
+            const today = getTodayKST();
             const activeStartedEnrollments = (s.enrollments || []).filter(e => {
                 if (e.endDate) return false;
                 const startDate = e.startDate;
@@ -256,7 +257,8 @@ const filterByStatus = (students: UnifiedStudent[], status: string): UnifiedStud
 const filterBySubjects = (students: UnifiedStudent[], subjects: string[], mode: 'OR' | 'AND' = 'OR'): UnifiedStudent[] => {
     if (subjects.length === 0) return students;
 
-    const today = new Date().toISOString().split('T')[0];
+    // KST 기준 오늘 날짜로 미래 수업 판별
+    const today = getTodayKST();
 
     return students.filter((s) => {
         if (s.status === 'withdrawn') return true;
@@ -289,7 +291,8 @@ const filterBySubjects = (students: UnifiedStudent[], subjects: string[], mode: 
 const filterByTeacher = (students: UnifiedStudent[], staffId: string): UnifiedStudent[] => {
     if (staffId === 'all') return students;
 
-    const today = new Date().toISOString().split('T')[0];
+    // KST 기준 오늘 날짜로 미래 수업 판별
+    const today = getTodayKST();
 
     return students.filter((s) => {
         if (s.status === 'withdrawn') return true;
@@ -316,7 +319,8 @@ const filterByEnrollment = (students: UnifiedStudent[], excludeNoEnrollment: boo
     return students.filter((s) => {
         if (s.status === 'withdrawn') return true;
 
-        const today = new Date().toISOString().split('T')[0];
+        // KST 기준 오늘 날짜로 활성 수업 판별
+        const today = getTodayKST();
 
         const activeStartedEnrollments = (s.enrollments || []).filter(e => {
             if (e.endDate) return false;

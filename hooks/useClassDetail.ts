@@ -2,19 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, where, collectionGroup, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { UnifiedStudent, SubjectType } from '../types';
+import { convertTimestampToDate } from '../utils/firestoreConverters';
+import { getTodayKST } from '../utils/dateUtils';
 
 const COL_CLASSES = 'classes';
-
-// Helper to convert Firestore Timestamp to YYYY-MM-DD string (hoisted to module level)
-const convertTimestampToDate = (timestamp: any): string | undefined => {
-  if (!timestamp) return undefined;
-  if (typeof timestamp === 'string') return timestamp;
-  if (timestamp?.toDate) {
-    const date = timestamp.toDate();
-    return date.toISOString().split('T')[0];
-  }
-  return undefined;
-};
 
 export interface ClassStudent {
   id: string;
@@ -118,8 +109,8 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
       const studentWithdrawalDates: Record<string, string> = {};  // studentId -> withdrawalDate
       const studentEnrollmentStartDates: Record<string, string> = {};  // enrollment별 시작일
 
-      // Get today's date for filtering future enrollments
-      const today = new Date().toISOString().split('T')[0];
+      // KST 기준 오늘 날짜로 미래 enrollment 필터링
+      const today = getTodayKST();
 
       if (enrollmentsSnapshot) {
         enrollmentsSnapshot.docs.forEach(doc => {

@@ -6,6 +6,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useForm } from '../../hooks/useForm';
 import { required, phone as phoneValidator } from '../../utils/formValidation';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { getTodayKST } from '../../utils/dateUtils';
 
 interface AddStudentModalProps {
     isOpen: boolean;
@@ -94,7 +95,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
             addressDetail: '',
             birthDate: '',
             nickname: '',
-            startDate: new Date().toISOString().split('T')[0],
+            startDate: getTodayKST(),
             enrollmentReason: '',
             memo: '',
         },
@@ -161,7 +162,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                     // 추가 정보
                     birthDate: formData.birthDate || null,
                     nickname: formData.nickname.trim() || null,
-                    startDate: formData.startDate || new Date().toISOString().split('T')[0],
+                    startDate: formData.startDate || getTodayKST(),
                     enrollmentReason: formData.enrollmentReason.trim() || null,
                     memo: formData.memo.trim() || null,
                     // 시스템 필드

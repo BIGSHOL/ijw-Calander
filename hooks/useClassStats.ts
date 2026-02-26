@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { formatDateKST } from '../utils/dateUtils';
 
 interface ClassStatsResult {
   attendanceRate: number;
@@ -39,7 +40,8 @@ export const useClassStats = (
       const end = new Date(monthEnd);
 
       for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        dates.push(d.toISOString().split('T')[0]);
+        // KST 기준 날짜 문자열로 변환
+        dates.push(formatDateKST(new Date(d)));
       }
 
       // 배치로 데이터 조회 (성능 최적화)

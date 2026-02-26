@@ -9,6 +9,7 @@ import AttendanceCalendar from './AttendanceCalendar';
 import ClassAttendanceList from './ClassAttendanceList';
 import ClassAttendanceCards from './ClassAttendanceCards';
 import AttendanceStats from './AttendanceStats';
+import { getTodayKST } from '../../utils/dateUtils';
 
 interface DailyAttendanceManagerProps {
   userProfile: UserProfile | null;
@@ -19,7 +20,7 @@ const DailyAttendanceManager: React.FC<DailyAttendanceManagerProps> = ({
 }) => {
   // State
   const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
+    getTodayKST()
   );
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'cards' | 'list' | 'stats'>('cards');

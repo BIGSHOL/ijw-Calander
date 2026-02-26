@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, User, Shield, KeyRound, Lock } from 'lucide-react';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS, ROLE_LABELS, UserRole } from '../../types';
+import { formatDateKey } from '../../utils/dateUtils';
 
 interface StaffFormProps {
   staff: StaffMember | null;
@@ -64,7 +65,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
     role: 'teacher' as StaffMember['role'],
     jobTitle: '', // 호칭 (예: 대표, 팀장, 선생님)
     subjects: [] as ('math' | 'english')[],
-    hireDate: new Date().toISOString().split('T')[0],
+    hireDate: formatDateKey(new Date()),
     status: 'active' as StaffMember['status'],
     memo: '',
     // 강사 전용 필드
@@ -91,7 +92,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
         role: staff.role || 'teacher',
         jobTitle: staff.jobTitle || '',
         subjects: staff.subjects || [],
-        hireDate: staff.hireDate || new Date().toISOString().split('T')[0],
+        hireDate: staff.hireDate || formatDateKey(new Date()),
         status: staff.status || 'active',
         memo: staff.memo || '',
         // 강사 전용 필드

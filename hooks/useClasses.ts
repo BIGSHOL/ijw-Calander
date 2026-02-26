@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, where, collectionGroup } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
+import { getTodayKST, toDateStringKST } from '../utils/dateUtils';
 
 export type SubjectType = 'math' | 'english' | 'science' | 'korean' | 'other';
 
@@ -64,7 +65,8 @@ export const useClasses = (subjectOrEnabled?: SubjectType | boolean, enabled = t
 
             // 수업명별 학생 수 집계 (중복 학생 제거, 퇴원/미래배정 제외)
             const classStudentCount = new Map<string, Set<string>>();
-            const today = new Date().toISOString().split('T')[0];
+            // KST 기준 오늘 날짜로 퇴원/미래배정 학생 필터링
+            const today = getTodayKST();
 
             enrollmentsSnapshot.docs.forEach(doc => {
                 const data = doc.data();
@@ -73,21 +75,13 @@ export const useClasses = (subjectOrEnabled?: SubjectType | boolean, enabled = t
 
                 if (className && studentId) {
                     // 퇴원/종료 학생 제외
-                    const withdrawalDate = data.withdrawalDate?.toDate?.()
-                        ? data.withdrawalDate.toDate().toISOString().split('T')[0]
-                        : (typeof data.withdrawalDate === 'string' ? data.withdrawalDate : null);
-                    const endDate = data.endDate?.toDate?.()
-                        ? data.endDate.toDate().toISOString().split('T')[0]
-                        : (typeof data.endDate === 'string' ? data.endDate : null);
+                    const withdrawalDate = toDateStringKST(data.withdrawalDate);
+                    const endDate = toDateStringKST(data.endDate);
                     if (withdrawalDate || endDate) return;
 
                     // 미래 배정 학생 제외
-                    const startDate = data.enrollmentDate?.toDate?.()
-                        ? data.enrollmentDate.toDate().toISOString().split('T')[0]
-                        : (typeof data.enrollmentDate === 'string' ? data.enrollmentDate
-                            : data.startDate?.toDate?.()
-                                ? data.startDate.toDate().toISOString().split('T')[0]
-                                : (typeof data.startDate === 'string' ? data.startDate : null));
+                    const enrollmentDate = toDateStringKST(data.enrollmentDate);
+                    const startDate = enrollmentDate ?? toDateStringKST(data.startDate);
                     if (startDate && startDate > today) return;
 
                     if (!classStudentCount.has(className)) {

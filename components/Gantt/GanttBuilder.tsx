@@ -5,6 +5,7 @@ import { GanttSubTask, GanttTemplate, UserProfile, ProjectVisibility, ProjectMem
 import { useGanttCategories } from '../../hooks/useGanttCategories';
 import { useGanttDepartments } from '../../hooks/useGanttDepartments';
 import { Plus, X, User, Building2, Calendar, Clock, FileText, ChevronRight, Save, Edit2, RotateCcw, Lock, Globe, ClipboardList } from 'lucide-react';
+import { getTodayKST } from '../../utils/dateUtils';
 
 interface GanttBuilderProps {
     onSave: (template: GanttTemplate) => void;
@@ -18,7 +19,7 @@ interface GanttBuilderProps {
 const GanttBuilder: React.FC<GanttBuilderProps> = ({ onSave, onCancel, initialData, allUsers, currentUser, templates }) => {
     const [title, setTitle] = useState(initialData?.title || '');
     const [desc, setDesc] = useState(initialData?.description || '');
-    const [startDate, setStartDate] = useState(initialData?.startDate || new Date().toISOString().split('T')[0]);
+    const [startDate, setStartDate] = useState(initialData?.startDate || getTodayKST());
     // Deep copy tasks to avoid reference issues
     const [tasks, setTasks] = useState<GanttSubTask[]>(initialData?.tasks ? JSON.parse(JSON.stringify(initialData.tasks)) : []);
 

@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { SubjectType } from '../types';
+import { getTodayKST, formatDateKST } from '../utils/dateUtils';
 
 const COL_STUDENTS = 'students';
 const COL_CLASSES = 'classes';
@@ -346,10 +347,12 @@ export const useManageClassStudents = () => {
           const snapshot = await getDocs(enrollmentsQuery);
 
           // 기존 수업 종료일 = 새 수업 시작일의 하루 전
-          const startDate = studentStartDates[studentId] || new Date().toISOString().split('T')[0];
+          // KST 기준 오늘 날짜를 기본값으로 사용
+          const startDate = studentStartDates[studentId] || getTodayKST();
           const startDateObj = new Date(startDate);
           startDateObj.setDate(startDateObj.getDate() - 1);
-          const endDate = startDateObj.toISOString().split('T')[0];
+          // KST 기준으로 -1일 후 날짜 문자열 계산
+          const endDate = formatDateKST(startDateObj);
 
           const updateOps = snapshot.docs.map(async (docSnap) => {
             await updateDoc(docSnap.ref, {
@@ -366,7 +369,8 @@ export const useManageClassStudents = () => {
 
       // 학생 추가
       if (addStudentIds.length > 0) {
-        const today = new Date().toISOString().split('T')[0];
+        // KST 기준 오늘 날짜
+        const today = getTodayKST();
         const addPromises = addStudentIds.map(async (studentId) => {
           const enrollmentsRef = collection(db, COL_STUDENTS, studentId, 'enrollments');
           // 개별 시작일이 지정되어 있으면 사용, 없으면 오늘 날짜
@@ -401,7 +405,8 @@ export const useManageClassStudents = () => {
       // 학생 제거 (반이동): enrollment에 endDate 설정 (삭제하지 않음)
       // 이렇게 하면 출석부에서 해당 월의 수강 기록을 유지하면서, 이후 월에서는 제외됨
       if (removeStudentIds.length > 0) {
-        const today = new Date().toISOString().split('T')[0];
+        // KST 기준 오늘 날짜
+        const today = getTodayKST();
         const removePromises = removeStudentIds.map(async (studentId) => {
           // 해당 학생의 enrollments에서 className + subject 일치하는 것 찾아서 endDate 설정
           const enrollmentsQuery = query(

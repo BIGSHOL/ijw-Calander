@@ -22,6 +22,7 @@ import ExamCreateModal from './ExamCreateModal';
 import ScoreInputView from './ScoreInputView';
 import ExamListView from './ExamListView';
 import { calculateGrade } from '../../types';
+import { getTodayKST } from '../../utils/dateUtils';
 
 type ViewMode = 'exams' | 'students' | 'input' | 'levelTests';
 
@@ -144,7 +145,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
   // 새 시험 생성 핸들러
   const [newExam, setNewExam] = useState({
     title: '',
-    date: new Date().toISOString().split('T')[0],
+    date: getTodayKST(),
     type: 'weekly' as ExamType,
     subject: 'math' as 'math' | 'english' | 'both',
     maxScore: 100,
@@ -263,7 +264,7 @@ const GradesManager: React.FC<GradesManagerProps> = ({ subjectFilter, searchQuer
     setIsCreatingExam(false);
     setNewExam({
       title: '',
-      date: new Date().toISOString().split('T')[0],
+      date: getTodayKST(),
       type: 'weekly',
       subject: 'math',
       maxScore: 100,

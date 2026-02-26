@@ -13,6 +13,18 @@ export const getGradeNumber = (grade: string | undefined | null): string => {
 };
 
 /**
+ * 학교명에서 학교 레벨(초등/중등/고등) 추출
+ * "대명초" -> "초등", "경북중" -> "중등", "대구고" -> "고등"
+ */
+export const getSchoolLevel = (school: string | undefined | null): '초등' | '중등' | '고등' | null => {
+  if (!school) return null;
+  if (school.includes('초등') || school.includes('초')) return '초등';
+  if (school.includes('중학') || school.includes('중')) return '중등';
+  if (school.includes('고등') || school.includes('고')) return '고등';
+  return null;
+};
+
+/**
  * 학년에서 레벨(초/중/고) 추출
  * "초3" -> "초", "중1" -> "중", "고2" -> "고", "3" -> ""
  */
