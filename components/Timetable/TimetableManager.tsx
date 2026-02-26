@@ -894,7 +894,18 @@ const TimetableManager = ({
         return classes.filter(c => c.subject === '수학').map(c => c.className);
     }, [classes]);
 
-    const { classDataMap: mathClassDataMap } = useMathClassStudents(mathClassNamesFromRaw, studentMap);
+    // 주차 기준일: 현재/과거 주 → 오늘, 미래 주 → 해당 주 월요일
+    const mathReferenceDate = useMemo(() => {
+        if (!currentMonday) return undefined;
+        const y = currentMonday.getFullYear();
+        const m = String(currentMonday.getMonth() + 1).padStart(2, '0');
+        const d = String(currentMonday.getDate()).padStart(2, '0');
+        const weekStartStr = `${y}-${m}-${d}`;
+        const todayStr = getTodayKST();
+        return weekStartStr > todayStr ? weekStartStr : todayStr;
+    }, [currentMonday]);
+
+    const { classDataMap: mathClassDataMap } = useMathClassStudents(mathClassNamesFromRaw, studentMap, mathReferenceDate);
 
     const classesWithEnrollments = useMemo(() => {
         return classes.map(cls => {
