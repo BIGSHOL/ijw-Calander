@@ -8,6 +8,7 @@ import StudentList from './StudentList';
 import StudentDetail from './StudentDetail';
 import AddStudentModal from './AddStudentModal';
 import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft, Database, GitMerge, Trash2, AlertTriangle, Languages, Download } from 'lucide-react';
+import { formatDateKey } from '../../utils/dateUtils';
 
 // Performance: bundle-dynamic-imports - Modal components lazy load (~80-100KB bundle reduction)
 const StudentMigrationModal = lazy(() => import('./StudentMigrationModal'));
@@ -145,7 +146,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `학생명단_${filteredStudents.length}명_${new Date().toISOString().split('T')[0]}.txt`;
+    link.download = `학생명단_${filteredStudents.length}명_${formatDateKey(new Date())}.txt`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

@@ -8,6 +8,7 @@ import { SUBJECT_LABELS, SUBJECT_COLORS } from '../../utils/styleUtils';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatScheduleCompact, SubjectForSchedule } from '../Timetable/constants';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { formatDateKey } from '../../utils/dateUtils';
 
 interface AssignClassModalProps {
     isOpen: boolean;
@@ -25,7 +26,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
     const [searchQuery, setSearchQuery] = useState('');
     const [startDate, setStartDate] = useState(() => {
         // 기본값: 오늘 날짜
-        return new Date().toISOString().split('T')[0];
+        return formatDateKey(new Date());
     });
     const [isSlotTeacher, setIsSlotTeacher] = useState(false); // 부담임 여부 (주로 수학 과목)
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,7 +51,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
 
     // 현재 과목의 활성 enrollment (배정 중 + 배정 예정)
     const activeEnrollments = useMemo(() => {
-        const today = new Date().toISOString().split('T')[0];
+        const today = formatDateKey(new Date());
         return student.enrollments
             .filter(e => e.subject === selectedSubject && !e.endDate)
             .map(e => ({
@@ -146,7 +147,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
         setError('');
         setSelectedClassName('');
         setSearchQuery('');
-        setStartDate(new Date().toISOString().split('T')[0]); // 날짜 초기화
+        setStartDate(formatDateKey(new Date())); // 날짜 초기화
         onClose();
     };
 
