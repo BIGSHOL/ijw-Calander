@@ -28,8 +28,10 @@ export function useAnalytics(month: string) {
       const billingRecords = billingSnap.docs.map(d => d.data());
 
       const totalBilled = billingRecords.reduce((sum, r) => sum + (r.billedAmount || 0), 0);
+      const totalDiscount = billingRecords.reduce((sum, r) => sum + (r.discountAmount || 0), 0);
       const totalPaid = billingRecords.reduce((sum, r) => sum + (r.paidAmount || 0), 0);
-      const collectionRate = totalBilled > 0 ? (totalPaid / totalBilled) * 100 : 0;
+      const effectiveBilled = totalBilled - totalDiscount;
+      const collectionRate = effectiveBilled > 0 ? Math.min((totalPaid / effectiveBilled) * 100, 100) : 0;
 
       // Student data
       const studentsSnap = await getDocs(collection(db, 'students'));
