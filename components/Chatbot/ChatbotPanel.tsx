@@ -66,6 +66,25 @@ const ChatbotPanel: React.FC<ChatbotPanelProps> = ({
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-3 py-3">
+        {messages.length === 0 && !isLoading && (
+          <div className="flex flex-col items-center justify-center h-full text-center px-2">
+            <div className="w-10 h-10 rounded-full bg-[#081429]/5 flex items-center justify-center mb-3">
+              <Bot size={20} className="text-[#081429]" />
+            </div>
+            <p className="text-sm font-semibold text-gray-700 mb-3">무엇을 도와드릴까요?</p>
+            <div className="w-full text-left space-y-1.5 text-xs text-gray-500">
+              <p className="font-medium text-gray-600 mb-1">이런 질문을 해보세요:</p>
+              <p>👩‍🎓 "재원생 몇 명이야?" · "고등학생 목록"</p>
+              <p>📚 "영어 수강생 누구야?" · "김민수 수강 과목"</p>
+              <p>✅ "김민수 출석률" · "이번 달 결석 현황"</p>
+              <p>📝 "다음 시험 언제?" · "숙제 현황"</p>
+              <p>💰 "이번 달 수납률" · "미납 학생"</p>
+              <p>👨‍🏫 "수학 선생님 목록" · "김선생님 담당 반"</p>
+              <p>📊 "이번 달 신규/퇴원 통계" · "상담 내역"</p>
+            </div>
+          </div>
+        )}
+
         {messages.map(msg => (
           <ChatMessageBubble key={msg.id} message={msg} />
         ))}
