@@ -330,9 +330,9 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     return (
         <div className="flex flex-col flex-shrink-0">
             {/* Main Header Row */}
-            <div className={`bg-gray-50 h-10 flex items-center justify-between px-4 border-b border-gray-200 text-xs relative ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
+            <div className={`bg-gray-50 min-h-[2.5rem] flex items-center justify-between px-4 border-b border-gray-200 text-xs relative overflow-x-auto ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
             {/* Left: Week Info */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-shrink-0">
                 <span className="text-gray-600 font-medium">{weekLabel}</span>
                 <div className="flex items-center gap-1">
                     <button
@@ -469,7 +469,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
             </h1>
 
             {/* Right: Search and Actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
                 {/* Simulation Mode Toggle */}
                 {canEdit && onToggleSimulation && (
                     <>
