@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense } from
 import { TimetableClass, Teacher, ClassKeywordColor, SubjectType } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
 import { VideoLoading } from '../Common/VideoLoading';
-import { getTodayKST } from '../../utils/dateUtils';
+import { getTodayKST, getWeekReferenceDate } from '../../utils/dateUtils';
 import { format, addDays, startOfWeek, addWeeks, subWeeks, getMonth, getYear } from 'date-fns';
 import { ko } from 'date-fns/locale';
 // Performance: bundle-dynamic-imports - EnglishTimetable lazy load (초기 번들 ~150KB 절감)
@@ -894,15 +894,10 @@ const TimetableManager = ({
         return classes.filter(c => c.subject === '수학').map(c => c.className);
     }, [classes]);
 
-    // 주차 기준일: 현재/과거 주 → 오늘, 미래 주 → 해당 주 월요일
+    // 주차 기준일: 미래 주 → weekStart, 이번 주 → today, 과거 주 → weekEnd(일요일)
     const mathReferenceDate = useMemo(() => {
         if (!currentMonday) return undefined;
-        const y = currentMonday.getFullYear();
-        const m = String(currentMonday.getMonth() + 1).padStart(2, '0');
-        const d = String(currentMonday.getDate()).padStart(2, '0');
-        const weekStartStr = `${y}-${m}-${d}`;
-        const todayStr = getTodayKST();
-        return weekStartStr > todayStr ? weekStartStr : todayStr;
+        return getWeekReferenceDate(currentMonday);
     }, [currentMonday]);
 
     const { classDataMap: mathClassDataMap } = useMathClassStudents(mathClassNamesFromRaw, studentMap, mathReferenceDate);

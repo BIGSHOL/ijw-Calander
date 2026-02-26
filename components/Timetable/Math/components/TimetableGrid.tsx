@@ -5,7 +5,7 @@ import ClassCard from './ClassCard';
 import { WEEKEND_PERIOD_TIMES, ALL_WEEKDAYS, LEGACY_TO_UNIFIED_PERIOD_MAP, MATH_GROUP_DISPLAY, MATH_GROUP_PERIOD_IDS, MATH_GROUPED_PERIODS, MATH_PERIOD_TIMES } from '../../constants';
 import { BookOpen } from 'lucide-react';
 import { useClassTextbookMap } from '../../../../hooks/useClassTextbookMap';
-import { formatDateKey } from '../../../../utils/dateUtils';
+import { formatDateKey, getWeekReferenceDate } from '../../../../utils/dateUtils';
 
 // 시간 텍스트를 ~ 뒤에서 줄바꿈하는 헬퍼
 const renderTime = (time: string) => {
@@ -96,15 +96,12 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     pendingMovedStudentIds,
     pendingMoveSchedules
 }) => {
-    // 주차 기준일: 현재/과거 주 → 오늘 날짜, 미래 주 → 해당 주 월요일
-    // 이유: 이번 주를 볼 때 월요일 기준이면, 오늘 반이동/퇴원인 학생이 여전히 '예정'으로 표시됨
+    // 주차 기준일: 미래 주 → weekStart, 이번 주 → today, 과거 주 → weekEnd(일요일)
     const referenceDate = useMemo(() => {
         const firstDay = orderedSelectedDays[0];
         const dateInfo = firstDay && weekDates[firstDay];
         if (dateInfo?.date) {
-            const weekDateStr = formatDateKey(dateInfo.date);
-            const todayStr = formatDateKey(new Date());
-            return weekDateStr > todayStr ? weekDateStr : todayStr;
+            return getWeekReferenceDate(dateInfo.date);
         }
         return formatDateKey(new Date());
     }, [weekDates, orderedSelectedDays]);

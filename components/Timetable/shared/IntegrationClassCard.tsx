@@ -7,7 +7,7 @@ import { Eye, EyeOff, Users, MoreVertical, TrendingUp, TrendingDown, ArrowUpCirc
 import { Teacher, TimetableStudent, ClassKeywordColor, EnglishLevel } from '../../../types';
 import IntegrationMiniGridRow, { PeriodInfo, ScheduleCell } from './IntegrationMiniGridRow';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
-import { formatDateKey } from '../../../utils/dateUtils';
+import { formatDateKey, getWeekReferenceDate } from '../../../utils/dateUtils';
 import LevelUpConfirmModal from '../English/LevelUpConfirmModal';
 import { isValidLevel, numberLevelUp, classLevelUp, isMaxLevel, numberLevelDown, classLevelDown, isMinLevel, canNumberLevelDown, canNumberLevelUp, EN_PERIODS, INJAE_PERIODS } from '../English/englishUtils';
 import { collection, getDocs, writeBatch, doc, query, where, collectionGroup } from 'firebase/firestore';
@@ -423,14 +423,10 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
         }
     }, [classStudentData]);
 
-    // 학생 목록 업데이트 (moveChanges 반영)
-    // 현재/과거 주 → 오늘 날짜 기준, 미래 주 → 해당 주 월요일 기준
-    // 이유: 이번 주를 볼 때 월요일 기준이면, 오늘 반이동/퇴원인 학생이 여전히 '예정'으로 표시됨
+    // 주차 기준일: 미래 주 → weekStart, 이번 주 → today, 과거 주 → weekEnd(일요일)
     const referenceDate = useMemo(() => {
         if (currentWeekStart) {
-            const weekStartStr = formatDateKey(currentWeekStart);
-            const todayStr = formatDateKey(new Date());
-            return weekStartStr > todayStr ? weekStartStr : todayStr;
+            return getWeekReferenceDate(currentWeekStart);
         }
         return formatDateKey(new Date());
     }, [currentWeekStart]);

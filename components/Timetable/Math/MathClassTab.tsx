@@ -7,6 +7,7 @@ import { doc, collection, query, where, getDocs, updateDoc, deleteField } from '
 import { db } from '../../../firebaseConfig';
 import { Teacher, TimetableStudent, ClassKeywordColor, TimetableClass } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
+import { getWeekReferenceDate } from '../../../utils/dateUtils';
 
 // Hooks
 import { useMathSettings, MathIntegrationSettings } from './hooks/useMathSettings';
@@ -115,7 +116,14 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     const { settings, settingsLoading, updateSettings } = useMathSettings();
     const mathClasses = useMathIntegrationClasses(classes, settings, teachersData);
     const classNames = useMemo(() => mathClasses.map(c => c.name), [mathClasses]);
-    const { classDataMap, isLoading: studentsLoading, refetch: refetchClassStudents } = useMathClassStudents(classNames, studentMap);
+
+    // 주차 기준일: 미래 주 → weekStart, 이번 주 → today, 과거 주 → weekEnd(일요일)
+    const referenceDate = useMemo(() => {
+        if (!currentWeekStart) return undefined;
+        return getWeekReferenceDate(currentWeekStart);
+    }, [currentWeekStart]);
+
+    const { classDataMap, isLoading: studentsLoading, refetch: refetchClassStudents } = useMathClassStudents(classNames, studentMap, referenceDate);
 
     // Filter by search term (통합 검색: TimetableHeader의 searchQuery 사용)
     const filteredClasses = useMemo(() => {
