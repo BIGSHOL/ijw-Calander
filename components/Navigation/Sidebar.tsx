@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { TAB_GROUPS, TAB_META, AppTab } from '../../types';
-import { ChevronLeft, ChevronRight, Menu, X, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Menu, X, ExternalLink, MessageCircle } from 'lucide-react';
 
 interface SidebarProps {
   currentTab: AppTab | null;
   accessibleTabs: AppTab[];
   onTabSelect: (tab: AppTab) => void;
   logoUrl?: string;
+  isChatbotOpen?: boolean;
+  onChatbotToggle?: () => void;
+  hasChatbotAccess?: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -14,6 +17,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   accessibleTabs,
   onTabSelect,
   logoUrl,
+  isChatbotOpen,
+  onChatbotToggle,
+  hasChatbotAccess,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -185,6 +191,24 @@ const Sidebar: React.FC<SidebarProps> = ({
           );
         })}
       </nav>
+
+      {/* AI Chatbot Button */}
+      {hasChatbotAccess && onChatbotToggle && (
+        <div className="border-t border-gray-200 p-2">
+          <button
+            onClick={onChatbotToggle}
+            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs font-medium transition-all ${
+              isChatbotOpen
+                ? 'bg-accent text-primary shadow-sm'
+                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+            } ${isCollapsed ? 'justify-center' : ''}`}
+            title={isCollapsed ? 'AI 챗봇' : undefined}
+          >
+            <span className="text-sm flex-shrink-0">🤖</span>
+            {!isCollapsed && <span>AI 챗봇</span>}
+          </button>
+        </div>
+      )}
 
       {/* Sidebar Footer - Optional */}
       {!isCollapsed && (

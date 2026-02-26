@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Trash2, Bot } from 'lucide-react';
+import { Trash2, Bot, X } from 'lucide-react';
 import type { ChatMessage as ChatMessageType } from '../../types/chatbot';
 import ChatMessageBubble from './ChatMessage';
 import ChatInput from './ChatInput';
@@ -10,6 +10,7 @@ interface ChatbotPanelProps {
   isOpen: boolean;
   onSend: (message: string) => void;
   onClear: () => void;
+  onClose: () => void;
 }
 
 const ChatbotPanel: React.FC<ChatbotPanelProps> = ({
@@ -18,6 +19,7 @@ const ChatbotPanel: React.FC<ChatbotPanelProps> = ({
   isOpen,
   onSend,
   onClear,
+  onClose,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -29,7 +31,7 @@ const ChatbotPanel: React.FC<ChatbotPanelProps> = ({
 
   return (
     <div className="
-      fixed bottom-24 right-6 z-[90]
+      fixed bottom-6 right-6 z-[90]
       w-[360px] max-w-[calc(100vw-3rem)]
       h-[500px] max-h-[calc(100vh-8rem)]
       bg-white rounded-lg shadow-2xl
@@ -42,14 +44,24 @@ const ChatbotPanel: React.FC<ChatbotPanelProps> = ({
           <Bot size={18} className="text-[#fdb813]" />
           <span className="text-sm font-bold">AI 어시스턴트</span>
         </div>
-        <button
-          onClick={onClear}
-          className="p-1 rounded hover:bg-white/10 transition-colors"
-          aria-label="대화 내역 초기화"
-          title="대화 내역 초기화"
-        >
-          <Trash2 size={16} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onClear}
+            className="p-1 rounded hover:bg-white/10 transition-colors"
+            aria-label="대화 내역 초기화"
+            title="대화 내역 초기화"
+          >
+            <Trash2 size={16} />
+          </button>
+          <button
+            onClick={onClose}
+            className="p-1 rounded hover:bg-white/10 transition-colors"
+            aria-label="챗봇 닫기"
+            title="닫기"
+          >
+            <X size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Messages */}

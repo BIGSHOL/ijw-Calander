@@ -6,13 +6,12 @@ import { ChatbotService } from '../services/chatbotService';
 interface UseChatbotParams {
   userProfile: UserProfile | null;
   hasPermission: (p: PermissionId) => boolean;
+  isOpen?: boolean;
 }
 
 interface UseChatbotReturn {
   messages: ChatMessage[];
   isLoading: boolean;
-  isOpen: boolean;
-  setIsOpen: (open: boolean) => void;
   sendMessage: (content: string) => Promise<void>;
   clearHistory: () => void;
 }
@@ -22,10 +21,9 @@ function generateMessageId(): string {
   return `msg_${Date.now()}_${++messageIdCounter}`;
 }
 
-export function useChatbot({ userProfile }: UseChatbotParams): UseChatbotReturn {
+export function useChatbot({ userProfile, isOpen }: UseChatbotParams): UseChatbotReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
 
   const serviceRef = useRef<ChatbotService | null>(null);
   const isInitializedRef = useRef(false);
@@ -103,8 +101,6 @@ export function useChatbot({ userProfile }: UseChatbotParams): UseChatbotReturn 
   return {
     messages,
     isLoading,
-    isOpen,
-    setIsOpen,
     sendMessage,
     clearHistory,
   };
