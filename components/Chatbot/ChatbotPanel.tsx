@@ -1,8 +1,15 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Trash2, Bot, X } from 'lucide-react';
 import type { ChatMessage as ChatMessageType } from '../../types/chatbot';
 import ChatMessageBubble from './ChatMessage';
 import ChatInput from './ChatInput';
+
+const MIN_WIDTH = 320;
+const MIN_HEIGHT = 400;
+const MAX_WIDTH = 800;
+const MAX_HEIGHT = 900;
+const DEFAULT_WIDTH = 360;
+const DEFAULT_HEIGHT = 500;
 
 interface ChatbotPanelProps {
   messages: ChatMessageType[];
@@ -22,22 +29,62 @@ const ChatbotPanel: React.FC<ChatbotPanelProps> = ({
   onClose,
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT });
+  const resizingRef = useRef<{ startX: number; startY: number; startW: number; startH: number } | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
+  const handleResizeMove = useCallback((e: MouseEvent) => {
+    if (!resizingRef.current) return;
+    const { startX, startY, startW, startH } = resizingRef.current;
+    const newW = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startW + (startX - e.clientX)));
+    const newH = Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, startH + (startY - e.clientY)));
+    setSize({ width: newW, height: newH });
+  }, []);
+
+  const handleResizeEnd = useCallback(() => {
+    resizingRef.current = null;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    window.removeEventListener('mousemove', handleResizeMove);
+    window.removeEventListener('mouseup', handleResizeEnd);
+  }, [handleResizeMove]);
+
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    resizingRef.current = { startX: e.clientX, startY: e.clientY, startW: size.width, startH: size.height };
+    document.body.style.cursor = 'nw-resize';
+    document.body.style.userSelect = 'none';
+    window.addEventListener('mousemove', handleResizeMove);
+    window.addEventListener('mouseup', handleResizeEnd);
+  }, [size, handleResizeMove, handleResizeEnd]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="
-      fixed bottom-6 right-6 z-[90]
-      w-[360px] max-w-[calc(100vw-3rem)]
-      h-[500px] max-h-[calc(100vh-8rem)]
-      bg-white rounded-lg shadow-2xl
-      flex flex-col overflow-hidden
-      border border-gray-200
-    ">
+    <div
+      ref={panelRef}
+      style={{ width: size.width, height: size.height }}
+      className="
+        fixed bottom-6 right-6 z-[90]
+        max-w-[calc(100vw-3rem)]
+        max-h-[calc(100vh-8rem)]
+        bg-white rounded-lg shadow-2xl
+        flex flex-col overflow-hidden
+        border border-gray-200
+      "
+    >
+      {/* 좌상단 리사이즈 핸들 */}
+      <div
+        onMouseDown={handleResizeStart}
+        className="absolute top-0 left-0 w-4 h-4 cursor-nw-resize z-10 group"
+        title="드래그하여 크기 조절"
+      >
+        <div className="absolute top-1 left-1 w-2 h-2 border-t-2 border-l-2 border-gray-300 group-hover:border-gray-500 rounded-tl transition-colors" />
+      </div>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-[#081429] text-white">
         <div className="flex items-center gap-2">
