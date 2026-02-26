@@ -7,6 +7,7 @@ import { EN_PERIODS, EN_WEEKDAYS, getContrastColor, formatClassNameWithBreaks } 
 import { ClassKeywordColor, Teacher } from '../../../types';
 import PortalTooltip from '../../Common/PortalTooltip';
 import { useClassStudents } from './hooks/useClassStudents';
+import { getWeekReferenceDate } from '../../../utils/dateUtils';
 
 interface MergedClass {
     className: string;
@@ -160,16 +161,10 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
         return Array.from(classNameSet);
     }, [roomScheduleData, labRooms]);
 
-    // 주차 기준일: 현재/과거 주 → 오늘, 미래 주 → 해당 주 월요일
+    // 주차 기준일: 미래 주 → weekStart, 이번 주 → today, 과거 주 → weekEnd(일요일)
     const referenceDate = useMemo(() => {
         if (!currentWeekStart) return undefined;
-        const y = currentWeekStart.getFullYear();
-        const m = String(currentWeekStart.getMonth() + 1).padStart(2, '0');
-        const d = String(currentWeekStart.getDate()).padStart(2, '0');
-        const weekStartStr = `${y}-${m}-${d}`;
-        const now = new Date();
-        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        return weekStartStr > todayStr ? weekStartStr : todayStr;
+        return getWeekReferenceDate(currentWeekStart);
     }, [currentWeekStart]);
 
     // LAB실 학생수 조회

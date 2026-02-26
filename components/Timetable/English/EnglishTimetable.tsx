@@ -7,6 +7,7 @@ import { Teacher, ClassKeywordColor } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useClasses } from '../../../hooks/useClasses';
 import { storage, STORAGE_KEYS } from '../../../utils/localStorage';
+import { getWeekReferenceDate } from '../../../utils/dateUtils';
 import EnglishTeacherTab from './EnglishTeacherTab';
 import EnglishClassTab from './EnglishClassTab';
 import EnglishRoomTab from './EnglishRoomTab';
@@ -106,16 +107,10 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     const simulation = useSimulation();
     const { isScenarioMode: isSimulationMode, currentScenarioName, enterScenarioMode: enterSimulationMode, exitScenarioMode: exitSimulationMode, loadFromLive, publishToLive, setCurrentScenarioName, canUndo, canRedo, undo, redo, history, historyIndex, getHistoryDescription } = simulation;
 
-    // 주차 기준일: 현재/과거 주 → 오늘, 미래 주 → 해당 주 월요일
+    // 주차 기준일: 미래 주 → weekStart, 이번 주 → today, 과거 주 → weekEnd(일요일)
     const referenceDate = useMemo(() => {
         if (!currentWeekStart) return undefined;
-        const y = currentWeekStart.getFullYear();
-        const m = String(currentWeekStart.getMonth() + 1).padStart(2, '0');
-        const d = String(currentWeekStart.getDate()).padStart(2, '0');
-        const weekStartStr = `${y}-${m}-${d}`;
-        const now = new Date();
-        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        return weekStartStr > todayStr ? weekStartStr : todayStr;
+        return getWeekReferenceDate(currentWeekStart);
     }, [currentWeekStart]);
 
     // 학생 통계

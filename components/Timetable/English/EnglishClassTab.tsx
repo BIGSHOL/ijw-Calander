@@ -4,6 +4,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Settings, ArrowRightLeft, Copy, Upload, Save, GraduationCap, RotateCcw, Download } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../../utils/localStorage';
+import { getWeekReferenceDate } from '../../../utils/dateUtils';
 import { EN_PERIODS, EN_WEEKDAYS, getTeacherColor, INJAE_PERIODS, isInjaeClass, numberLevelUp, classLevelUp, isMaxLevel, isValidLevel, DEFAULT_ENGLISH_LEVELS, CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { Teacher, TimetableStudent, ClassKeywordColor, EnglishLevel } from '../../../types';
@@ -202,16 +203,10 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
         }
     }, [isSimulationMode, scenario, updateLiveSettings]);
 
-    // 주차 기준일: 현재/과거 주 → 오늘, 미래 주 → 해당 주 월요일
+    // 주차 기준일: 미래 주 → weekStart, 이번 주 → today, 과거 주 → weekEnd(일요일)
     const referenceDate = useMemo(() => {
         if (!currentWeekStart) return undefined;
-        const y = currentWeekStart.getFullYear();
-        const m = String(currentWeekStart.getMonth() + 1).padStart(2, '0');
-        const d = String(currentWeekStart.getDate()).padStart(2, '0');
-        const weekStartStr = `${y}-${m}-${d}`;
-        const now = new Date();
-        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        return weekStartStr > todayStr ? weekStartStr : todayStr;
+        return getWeekReferenceDate(currentWeekStart);
     }, [currentWeekStart]);
 
     // 5. Student Statistics (now uses enrollments + studentMap)

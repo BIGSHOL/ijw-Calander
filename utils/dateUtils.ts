@@ -254,3 +254,37 @@ export function isDateInRange(
   }
   return true;
 }
+
+/**
+ * 주차 기준일 계산 유틸리티
+ *
+ * 시간표에서 주차 이동 시 학생 상태(대기/퇴원 예정 등)를 올바르게 판정하기 위한 기준일.
+ * - 미래 주 → weekStart (해당 주 월요일 기준으로 미래 상태 미리보기)
+ * - 이번 주 → today (현재 상태 정확히 반영)
+ * - 과거 주 → weekEnd/일요일 (해당 주 마지막 날 기준으로 과거 상태 복원)
+ *
+ * @param weekStart - 주의 시작일 (월요일) Date 객체
+ * @returns 'YYYY-MM-DD' 형식 기준일 문자열
+ */
+export const getWeekReferenceDate = (weekStart: Date): string => {
+  const weekStartStr = formatDateKey(weekStart);
+  const todayStr = getTodayKST();
+
+  // 미래 주: 해당 주 월요일 기준
+  if (weekStartStr > todayStr) {
+    return weekStartStr;
+  }
+
+  // 주 끝(일요일) 계산
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  const weekEndStr = formatDateKey(weekEnd);
+
+  // 이번 주: 오늘 기준
+  if (todayStr <= weekEndStr) {
+    return todayStr;
+  }
+
+  // 과거 주: 해당 주 일요일 기준
+  return weekEndStr;
+};
