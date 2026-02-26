@@ -2,6 +2,37 @@ import React from 'react';
 import { Bot, User } from 'lucide-react';
 import type { ChatMessage as ChatMessageType } from '../../types/chatbot';
 
+/** 간단한 마크다운 → React 변환 (bold, 줄바꿈) */
+function renderMarkdown(text: string): React.ReactNode[] {
+  return text.split('\n').map((line, i) => {
+    // **bold** 처리
+    const parts: React.ReactNode[] = [];
+    let remaining = line;
+    let key = 0;
+    while (remaining) {
+      const boldStart = remaining.indexOf('**');
+      if (boldStart === -1) {
+        parts.push(remaining);
+        break;
+      }
+      const boldEnd = remaining.indexOf('**', boldStart + 2);
+      if (boldEnd === -1) {
+        parts.push(remaining);
+        break;
+      }
+      if (boldStart > 0) parts.push(remaining.slice(0, boldStart));
+      parts.push(<strong key={key++} className="font-semibold">{remaining.slice(boldStart + 2, boldEnd)}</strong>);
+      remaining = remaining.slice(boldEnd + 2);
+    }
+    return (
+      <React.Fragment key={i}>
+        {i > 0 && <br />}
+        {parts}
+      </React.Fragment>
+    );
+  });
+}
+
 interface ChatMessageProps {
   message: ChatMessageType;
 }
@@ -23,7 +54,7 @@ const ChatMessageBubble: React.FC<ChatMessageProps> = ({ message }) => {
       </div>
 
       <div className={`
-        max-w-[80%] px-3 py-2 rounded-lg text-sm leading-relaxed whitespace-pre-wrap
+        max-w-[80%] px-3 py-2 rounded-lg text-sm leading-relaxed
         ${isUser
           ? 'bg-[#fdb813] text-[#081429] rounded-br-none'
           : message.isError
@@ -31,7 +62,7 @@ const ChatMessageBubble: React.FC<ChatMessageProps> = ({ message }) => {
             : 'bg-gray-100 text-gray-800 rounded-bl-none'
         }
       `}>
-        {message.content}
+        {isUser ? message.content : renderMarkdown(message.content)}
       </div>
     </div>
   );
