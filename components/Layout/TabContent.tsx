@@ -265,7 +265,7 @@ export const TabContent: React.FC<TabContentProps> = ({
         </Suspense>
       ) : appMode === 'gantt' && ganttProps ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto bg-[#f8f9fa]">
+          <div className="w-full flex-1 overflow-hidden bg-[#f8f9fa]">
             <GanttManager userProfile={effectiveProfile} allUsers={ganttProps.usersFromStaff} />
           </div>
         </Suspense>
@@ -308,7 +308,7 @@ export const TabContent: React.FC<TabContentProps> = ({
         </Suspense>
       ) : appMode === 'grades' && gradesProps ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto">
+          <div className="w-full flex-1 overflow-hidden">
             <GradesManager
               subjectFilter={gradesProps.gradesSubjectFilter as any}
               searchQuery={gradesProps.gradesSearchQuery}
@@ -338,25 +338,25 @@ export const TabContent: React.FC<TabContentProps> = ({
         </Suspense>
       ) : appMode === 'student-consultations' ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto">
+          <div className="w-full flex-1 overflow-hidden">
             <StudentConsultationTab currentUser={effectiveProfile} />
           </div>
         </Suspense>
       ) : appMode === 'billing' ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto">
+          <div className="w-full flex-1 overflow-hidden">
             <BillingManager userProfile={effectiveProfile} onNavigateToTextbooks={onNavigateToTab ? () => onNavigateToTab('textbooks') : undefined} />
           </div>
         </Suspense>
       ) : appMode === 'daily-attendance' ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto">
+          <div className="w-full flex-1 overflow-hidden">
             <DailyAttendanceManager userProfile={effectiveProfile} />
           </div>
         </Suspense>
       ) : appMode === 'staff' ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto">
+          <div className="w-full flex-1 overflow-hidden">
             <StaffManager currentUserProfile={effectiveProfile} />
           </div>
         </Suspense>
@@ -374,7 +374,7 @@ export const TabContent: React.FC<TabContentProps> = ({
         </Suspense>
       ) : appMode === 'withdrawal' ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto">
+          <div className="w-full flex-1 overflow-hidden">
             <WithdrawalManagementTab currentUser={effectiveProfile} />
           </div>
         </Suspense>
@@ -386,73 +386,73 @@ export const TabContent: React.FC<TabContentProps> = ({
         </Suspense>
       ) : appMode === 'notices' ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto">
+          <div className="w-full flex-1 overflow-hidden">
             <NoticesTab />
           </div>
         </Suspense>
       ) : appMode === 'parent-portal' ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto">
+          <div className="w-full flex-1 overflow-hidden">
             <ParentPortalTab />
           </div>
         </Suspense>
       ) : appMode === 'analytics' ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto bg-gray-50">
+          <div className="w-full flex-1 overflow-hidden bg-gray-50">
             <AnalyticsTab />
           </div>
         </Suspense>
       ) : appMode === 'payroll' ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto">
+          <div className="w-full flex-1 overflow-hidden">
             <PayrollTab />
           </div>
         </Suspense>
       ) : appMode === 'homework' ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto">
+          <div className="w-full flex-1 overflow-hidden">
             <HomeworkTab />
           </div>
         </Suspense>
       ) : appMode === 'sms-notifications' ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto">
+          <div className="w-full flex-1 overflow-hidden">
             <NotificationsTab />
           </div>
         </Suspense>
       ) : appMode === 'textbooks' ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto">
+          <div className="w-full flex-1 overflow-hidden">
             <TextbooksTab currentUser={effectiveProfile} />
           </div>
         </Suspense>
       ) : appMode === 'exams' ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto">
+          <div className="w-full flex-1 overflow-hidden">
             <ExamsTab />
           </div>
         </Suspense>
       ) : appMode === 'contracts' ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto">
+          <div className="w-full flex-1 overflow-hidden">
             <ContractsTab />
           </div>
         </Suspense>
       ) : appMode === 'reports' ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto">
+          <div className="w-full flex-1 overflow-hidden">
             <ReportsTab />
           </div>
         </Suspense>
       ) : appMode === 'shuttle' ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto">
+          <div className="w-full flex-1 overflow-hidden">
             <ShuttleTab />
           </div>
         </Suspense>
       ) : appMode === 'marketing' ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto">
+          <div className="w-full flex-1 overflow-hidden">
             <MarketingTab />
           </div>
         </Suspense>
