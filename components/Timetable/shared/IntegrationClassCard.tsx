@@ -115,7 +115,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
 
         // 반이동/신입생 정보
         if (student.isTransferredIn) {
-            parts.push('반이동 학생');
+            parts.push(student.enrollmentDate ? `반이동: ${student.enrollmentDate}` : '반이동 학생');
         } else if (isNewStudent && student.enrollmentDate) {
             parts.push(`입학일: ${student.enrollmentDate}`);
         }
