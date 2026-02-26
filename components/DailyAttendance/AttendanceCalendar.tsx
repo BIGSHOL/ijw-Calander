@@ -2,6 +2,7 @@
 // Mini calendar component for date selection
 import React, { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { getTodayKST, formatDateKST } from '../../utils/dateUtils';
 
 interface AttendanceCalendarProps {
   selectedDate: string;
@@ -39,7 +40,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
       const date = new Date(year, month, i);
       days.push({
         date,
-        dateString: date.toISOString().split('T')[0],
+        dateString: formatDateKST(date),
       });
     }
 
@@ -55,13 +56,16 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({
   };
 
   const handleToday = () => {
-    const today = new Date();
-    setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1));
-    onDateChange(today.toISOString().split('T')[0]);
+    setCurrentMonth(() => {
+      const t = getTodayKST();
+      const [y, m] = t.split('-').map(Number);
+      return new Date(y, m - 1, 1);
+    });
+    onDateChange(getTodayKST());
   };
 
   const isToday = (dateString: string) => {
-    return dateString === new Date().toISOString().split('T')[0];
+    return dateString === getTodayKST();
   };
 
   const isSelected = (dateString: string) => {

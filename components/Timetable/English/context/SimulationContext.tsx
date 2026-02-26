@@ -22,6 +22,7 @@ import { db } from '../../../../firebaseConfig';
 import { TimetableStudent } from '../../../../types';
 import { SCENARIO_COLLECTION } from '../englishUtils';
 import { IntegrationSettings, CustomGroup } from '../IntegrationViewSettings';
+import { convertTimestampToDate } from '../../../../utils/firestoreConverters';
 
 // ============ UTILITIES ============
 
@@ -471,17 +472,6 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       if (!scenarioEnrollments[className]) {
         scenarioEnrollments[className] = {};
       }
-
-      // Convert Firestore Timestamp to YYYY-MM-DD string
-      const convertTimestampToDate = (timestamp: any): string | undefined => {
-        if (!timestamp) return undefined;
-        if (typeof timestamp === 'string') return timestamp;
-        if (timestamp?.toDate) {
-          const date = timestamp.toDate();
-          return date.toISOString().split('T')[0];
-        }
-        return undefined;
-      };
 
       // withdrawalDate와 endDate 둘 다 체크 (실시간 모드와 동일)
       const withdrawalDate = convertTimestampToDate(data.withdrawalDate);

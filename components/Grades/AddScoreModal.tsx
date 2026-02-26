@@ -7,6 +7,7 @@ import { db } from '../../firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { getTodayKST } from '../../utils/dateUtils';
 
 interface AddScoreModalProps {
     onClose: () => void;
@@ -80,7 +81,7 @@ const AddScoreModal: React.FC<AddScoreModalProps> = ({
     // 새 시험 폼 상태
     const [newExam, setNewExam] = useState({
         title: '',
-        date: new Date().toISOString().split('T')[0],
+        date: getTodayKST(),
         type: 'mock' as Exam['type'],
         subject: 'math' as Exam['subject'],
         maxScore: '100',
@@ -198,7 +199,7 @@ const AddScoreModal: React.FC<AddScoreModalProps> = ({
 
         setNewExam({
             title: '',
-            date: new Date().toISOString().split('T')[0],
+            date: getTodayKST(),
             type: 'mock',
             subject: 'math',
             maxScore: '100',

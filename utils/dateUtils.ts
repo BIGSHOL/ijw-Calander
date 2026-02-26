@@ -53,6 +53,27 @@ export const formatDateKST = (date: Date): string => {
 };
 
 /**
+ * Firestore Timestamp 또는 문자열을 KST 기준 'YYYY-MM-DD'로 변환
+ * - Firestore Timestamp (.toDate() 메서드 보유) → KST 변환
+ * - 문자열 → 그대로 반환
+ * - null/undefined → null 반환
+ */
+export const toDateStringKST = (val: any): string | null => {
+  if (!val) return null;
+  if (val.toDate && typeof val.toDate === 'function') return formatDateKST(val.toDate());
+  if (typeof val === 'string') return val;
+  if (val instanceof Date) return formatDateKST(val);
+  return null;
+};
+
+/**
+ * 한국 시간 기준 현재 년-월을 'YYYY-MM' 형식으로 반환
+ */
+export const getCurrentMonthKST = (): string => {
+  return getTodayKST().substring(0, 7);
+};
+
+/**
  * 한국 시간 기준 이번 달의 시작일과 종료일 반환
  */
 export const getMonthRangeKST = (date?: Date): { start: string; end: string } => {

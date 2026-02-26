@@ -12,6 +12,7 @@ import { formatSchoolGrade } from '../../utils/studentUtils';
 import { useSimulationOptional } from '../Timetable/English/context/SimulationContext';
 import { ScenarioClass } from '../Timetable/English/context/SimulationContext';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { getTodayKST } from '../../utils/dateUtils';
 
 interface EditClassModalProps {
   classInfo: ClassInfo;
@@ -311,7 +312,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
       // 기본 시작일: 오늘
       setStudentStartDates(prev => ({
         ...prev,
-        [studentId]: new Date().toISOString().split('T')[0]
+        [studentId]: getTodayKST()
       }));
     }
     setStudentsToAdd(newSet);
@@ -1066,8 +1067,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                   </div>
                     <div className="max-h-40 overflow-y-auto">
                       {studentsToAddInfo.map(student => {
-                        const startDate = studentStartDates[student.id] || new Date().toISOString().split('T')[0];
-                        const today = new Date().toISOString().split('T')[0];
+                        const startDate = studentStartDates[student.id] || getTodayKST();
+                        const today = getTodayKST();
                         const isScheduled = startDate > today;
                         const isExpanded = expandedStudentId === student.id;
                         const attendanceDaysText = getAttendanceDaysText(student.id);

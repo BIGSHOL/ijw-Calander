@@ -5,6 +5,7 @@ import { db } from '../../../firebaseConfig';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEscapeClose } from '../../../hooks/useEscapeClose';
+import { getTodayKST } from '../../../utils/dateUtils';
 
 interface StudentInfo {
     id: string;
@@ -114,7 +115,7 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
         if (selectedStudentIds.size === 0) return;
 
         setIsSubmitting(true);
-        const today = new Date().toISOString().split('T')[0];
+        const today = getTodayKST();
 
         try {
             // Add enrollment to each selected student

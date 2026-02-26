@@ -8,6 +8,7 @@ import {
   ENGLISH_PERIOD_INFO,
   WEEKEND_PERIOD_INFO,
 } from '../../Timetable/constants';
+import { getTodayKST } from '../../../utils/dateUtils';
 
 interface AttendanceTabProps {
   student: UnifiedStudent;
@@ -483,7 +484,7 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
             const statusInfo = statusKey ? ATTENDANCE_STATUS[statusKey] : null;
             const dayOfWeek = idx % 7;
             const isToday =
-              day.dateKey === new Date().toISOString().slice(0, 10) &&
+              day.dateKey === getTodayKST() &&
               selectedMonth.getMonth() === new Date().getMonth() &&
               selectedMonth.getFullYear() === new Date().getFullYear();
 

@@ -14,17 +14,7 @@
  */
 
 import { useMemo } from 'react';
-
-// Helper to convert Firestore Timestamp to YYYY-MM-DD string
-const convertTimestampToDate = (timestamp: any): string | undefined => {
-    if (!timestamp) return undefined;
-    if (typeof timestamp === 'string') return timestamp;
-    if (timestamp?.toDate) {
-        const date = timestamp.toDate();
-        return date.toISOString().split('T')[0];
-    }
-    return undefined;
-};
+import { convertTimestampToDate } from '../../../../utils/firestoreConverters';
 
 interface ScheduleCell {
     className?: string;

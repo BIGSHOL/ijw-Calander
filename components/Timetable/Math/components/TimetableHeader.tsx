@@ -7,6 +7,7 @@ import {
 import { UnifiedStudent, TimetableClass } from '../../../../types';
 import { formatSchoolGrade } from '../../../../utils/studentUtils';
 import { formatDateKey } from '../../../../utils/dateUtils';
+import { getEndedSubjects } from '../../../../utils/enrollment';
 import { useMathConfig } from '../hooks/useMathConfig';
 import WithdrawalStudentDetail from '../../../WithdrawalManagement/WithdrawalStudentDetail';
 import { WithdrawalEntry } from '../../../../hooks/useWithdrawalFilters';
@@ -163,29 +164,6 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
             return;
         }
         console.log('[WithdrawalClick] Found student:', student.name);
-
-        // 과목별 수강종료 여부 판정
-        const getEndedSubjects = (s: UnifiedStudent): { subjects: string[]; enrollments: typeof s.enrollments } => {
-            const bySubject = new Map<string, typeof s.enrollments>();
-            for (const e of s.enrollments || []) {
-                const list = bySubject.get(e.subject) || [];
-                list.push(e);
-                bySubject.set(e.subject, list);
-            }
-
-            const endedSubjects: string[] = [];
-            const endedEnrollments: typeof s.enrollments = [];
-
-            for (const [subject, enrollments] of bySubject) {
-                const hasActive = enrollments.some(e => !e.withdrawalDate && !e.endDate);
-                if (!hasActive && enrollments.length > 0) {
-                    endedSubjects.push(subject);
-                    endedEnrollments.push(...enrollments);
-                }
-            }
-
-            return { subjects: endedSubjects, enrollments: endedEnrollments };
-        };
 
         // 학생 상태에 따라 type 결정
         const isWithdrawn = student.status === 'withdrawn';

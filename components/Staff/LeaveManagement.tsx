@@ -16,6 +16,7 @@ import {
   LEAVE_STATUS_LABELS,
 } from '../../types';
 import { useStaffLeaves } from '../../hooks/useStaffLeaves';
+import { getTodayKST } from '../../utils/dateUtils';
 
 interface LeaveManagementProps {
   staff: StaffMember[];
@@ -28,8 +29,8 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
   const [newLeave, setNewLeave] = useState({
     staffId: '',
     type: 'annual' as StaffLeave['type'],
-    startDate: new Date().toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
+    startDate: getTodayKST(),
+    endDate: getTodayKST(),
     reason: '',
   });
 
@@ -109,8 +110,8 @@ const LeaveManagement: React.FC<LeaveManagementProps> = ({ staff, leaves }) => {
       setNewLeave({
         staffId: '',
         type: 'annual',
-        startDate: new Date().toISOString().split('T')[0],
-        endDate: new Date().toISOString().split('T')[0],
+        startDate: getTodayKST(),
+        endDate: getTodayKST(),
         reason: '',
       });
     } catch (error) {

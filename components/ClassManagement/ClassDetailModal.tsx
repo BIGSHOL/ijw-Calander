@@ -14,6 +14,7 @@ import { formatSchoolGrade } from '../../utils/studentUtils';
 import { useSimulationOptional } from '../Timetable/English/context/SimulationContext';
 import { ScenarioClass } from '../Timetable/English/context/SimulationContext';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { getTodayKST } from '../../utils/dateUtils';
 
 interface ClassDetailModalProps {
   classInfo: ClassInfo;
@@ -252,7 +253,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
       setStudentStartDates(prev => { const { [studentId]: _, ...rest } = prev; return rest; });
     } else {
       newSet.add(studentId);
-      setStudentStartDates(prev => ({ ...prev, [studentId]: new Date().toISOString().split('T')[0] }));
+      setStudentStartDates(prev => ({ ...prev, [studentId]: getTodayKST() }));
     }
     setStudentsToAdd(newSet);
   };
@@ -746,8 +747,8 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                       </div>
                       <div className="max-h-32 overflow-y-auto">
                         {studentsToAddInfo.map(student => {
-                          const startDate = studentStartDates[student.id] || new Date().toISOString().split('T')[0];
-                          const today = new Date().toISOString().split('T')[0];
+                          const startDate = studentStartDates[student.id] || getTodayKST();
+                          const today = getTodayKST();
                           const isScheduled = startDate > today;
                           return (
                             <div key={student.id} className="px-2.5 py-1.5 text-sm bg-green-50/50 border-b border-green-100 last:border-b-0">

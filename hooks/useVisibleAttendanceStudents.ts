@@ -17,6 +17,7 @@
 
 import { useMemo } from 'react';
 import { Student } from '../components/Attendance/types';
+import { formatDateKST } from '../utils/dateUtils';
 
 /**
  * Filter students visible for the current month and expand by classes
@@ -36,8 +37,9 @@ export const useVisibleAttendanceStudents = (
   return useMemo(() => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-    const monthFirstDay = new Date(year, month, 1).toISOString().slice(0, 10);
-    const monthLastDay = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+    // KST 기준으로 월 첫날/마지막날 계산
+    const monthFirstDay = formatDateKST(new Date(year, month, 1));
+    const monthLastDay = formatDateKST(new Date(year, month + 1, 0));
 
 
     // Filter students active during current month

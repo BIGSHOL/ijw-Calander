@@ -1,4 +1,5 @@
 import { GanttProject, CalendarEvent } from '../types';
+import { formatDateKey } from './dateUtils';
 
 const GANTT_EVENT_COLOR = '#8b5cf6'; // Purple for Gantt distinction
 
@@ -22,9 +23,9 @@ export const convertGanttProjectsToCalendarEvents = (
             const taskEndDate = new Date(taskStartDate);
             taskEndDate.setDate(taskEndDate.getDate() + task.duration - 1); // Duration is inclusive
 
-            // Format dates as ISO strings (YYYY-MM-DD)
-            const startDateStr = taskStartDate.toISOString().split('T')[0];
-            const endDateStr = taskEndDate.toISOString().split('T')[0];
+            // Format dates as local timezone strings (YYYY-MM-DD)
+            const startDateStr = formatDateKey(taskStartDate);
+            const endDateStr = formatDateKey(taskEndDate);
 
             const calendarEvent: CalendarEvent = {
                 id: `gantt-${project.id}-${task.id}`,

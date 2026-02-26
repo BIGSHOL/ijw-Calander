@@ -3,6 +3,7 @@ import { collection, collectionGroup, query, where, getDocs } from 'firebase/fir
 import { db } from '../../../../firebaseConfig';
 import { TimetableClass, TimetableStudent } from '../../../../types';
 import { convertToLegacyPeriodId } from '../../constants';
+import { getTodayKST, toDateStringKST } from '../../../../utils/dateUtils';
 
 const COL_CLASSES = 'classes';
 
@@ -36,7 +37,7 @@ export const useTimetableClasses = () => {
 
             // enrollment 기반 수업별 학생 ID 집계 (퇴원/미래배정 제외)
             const classStudentIds = new Map<string, Set<string>>();
-            const today = new Date().toISOString().split('T')[0];
+            const today = getTodayKST();
 
             enrollmentsSnapshot.docs.forEach(doc => {
                 const data = doc.data();
@@ -46,21 +47,12 @@ export const useTimetableClasses = () => {
                 if (!className || !studentId) return;
 
                 // 퇴원/종료 학생 제외
-                const withdrawalDate = data.withdrawalDate?.toDate?.()
-                    ? data.withdrawalDate.toDate().toISOString().split('T')[0]
-                    : (typeof data.withdrawalDate === 'string' ? data.withdrawalDate : null);
-                const endDate = data.endDate?.toDate?.()
-                    ? data.endDate.toDate().toISOString().split('T')[0]
-                    : (typeof data.endDate === 'string' ? data.endDate : null);
+                const withdrawalDate = toDateStringKST(data.withdrawalDate);
+                const endDate = toDateStringKST(data.endDate);
                 if (withdrawalDate || endDate) return;
 
                 // 미래 배정 학생 제외
-                const startDate = data.enrollmentDate?.toDate?.()
-                    ? data.enrollmentDate.toDate().toISOString().split('T')[0]
-                    : (typeof data.enrollmentDate === 'string' ? data.enrollmentDate
-                        : data.startDate?.toDate?.()
-                            ? data.startDate.toDate().toISOString().split('T')[0]
-                            : (typeof data.startDate === 'string' ? data.startDate : null));
+                const startDate = toDateStringKST(data.enrollmentDate) ?? toDateStringKST(data.startDate);
                 if (startDate && startDate > today) return;
 
                 if (!classStudentIds.has(className)) {

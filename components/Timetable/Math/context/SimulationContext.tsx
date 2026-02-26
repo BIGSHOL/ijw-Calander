@@ -20,6 +20,7 @@ import React, { createContext, useContext, useState, useCallback, useMemo, useRe
 import { collection, collectionGroup, query, where, getDocs, getDoc, writeBatch, doc, setDoc } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 import { TimetableStudent } from '../../../../types';
+import { convertTimestampToDate } from '../../../../utils/firestoreConverters';
 
 const SCENARIO_COLLECTION = 'math_scenarios';
 
@@ -189,17 +190,6 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
       if (!scenarioEnrollments[className]) {
         scenarioEnrollments[className] = {};
       }
-
-      // Convert Firestore Timestamp to YYYY-MM-DD string
-      const convertTimestampToDate = (timestamp: any): string | undefined => {
-        if (!timestamp) return undefined;
-        if (typeof timestamp === 'string') return timestamp;
-        if (timestamp?.toDate) {
-          const date = timestamp.toDate();
-          return date.toISOString().split('T')[0];
-        }
-        return undefined;
-      };
 
       scenarioEnrollments[className][studentId] = {
         studentId,

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense } from
 import { TimetableClass, Teacher, ClassKeywordColor, SubjectType } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
 import { VideoLoading } from '../Common/VideoLoading';
+import { getTodayKST } from '../../utils/dateUtils';
 import { format, addDays, startOfWeek, addWeeks, subWeeks, getMonth, getYear } from 'date-fns';
 import { ko } from 'date-fns/locale';
 // Performance: bundle-dynamic-imports - EnglishTimetable lazy load (초기 번들 ~150KB 절감)
@@ -629,8 +630,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     title={viewType === 'class' ? "수학 통합 시간표 저장" : "수학 강사별 시간표 저장"}
                     subtitle={viewType === 'class' ? "저장할 행을 선택하세요" : undefined}
                     fileName={viewType === 'class'
-                        ? `수학_통합시간표_${new Date().toISOString().split('T')[0]}`
-                        : `수학_강사별시간표_${new Date().toISOString().split('T')[0]}`}
+                        ? `수학_통합시간표_${getTodayKST()}`
+                        : `수학_강사별시간표_${getTodayKST()}`}
                     groups={viewType === 'class' ? exportGroups : undefined}
                     onGroupsChanged={viewType === 'class' ? handleExportGroupsChanged : undefined}
                 />
