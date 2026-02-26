@@ -243,7 +243,7 @@ export const TabContent: React.FC<TabContentProps> = ({
         </div>
       ) : appMode === 'timetable' && timetableProps ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-auto">
+          <div className="w-full flex-1 overflow-hidden">
             <TimetableManager
               subjectTab={timetableProps.timetableSubject}
               onSubjectChange={timetableProps.setTimetableSubject}
