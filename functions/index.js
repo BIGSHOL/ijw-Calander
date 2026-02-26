@@ -1473,6 +1473,31 @@ async function toolGetStudentEnrollments(args) {
     });
     const active = enrollments.filter(e => !e.endDate);
     const ended = enrollments.filter(e => !!e.endDate);
+
+    // 활성 수강의 수업 스케줄(요일/시간) 조회
+    if (active.length > 0) {
+        const classNames = active.map(e => e.className).filter(Boolean);
+        if (classNames.length > 0) {
+            const classSnap = await db.collection("classes").where("isActive", "==", true).get();
+            const classMap = {};
+            classSnap.docs.forEach(d => {
+                const data = d.data();
+                classMap[data.className] = data;
+            });
+            for (const enrollment of active) {
+                const cls = classMap[enrollment.className];
+                if (cls) {
+                    if (Array.isArray(cls.schedule) && cls.schedule.length > 0) {
+                        enrollment.schedule = cls.schedule.map(s => `${s.day} ${s.period || ''}교시 ${s.startTime || ''}`).join(', ');
+                    } else if (Array.isArray(cls.legacySchedule) && cls.legacySchedule.length > 0) {
+                        enrollment.schedule = cls.legacySchedule.join(', ');
+                    }
+                    enrollment.room = cls.room || null;
+                }
+            }
+        }
+    }
+
     return { active, ended, totalActive: active.length, totalEnded: ended.length };
 }
 
