@@ -90,7 +90,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
                     : isWithdrawalScheduled && withdrawalScheduledDate
                         ? `${displayText}\n퇴원예정: ${withdrawalScheduledDate}`
                     : enrollmentStyle && student.enrollmentDate
-                        ? `${displayText}\n입학일: ${student.enrollmentDate}`
+                        ? `${displayText}\n${student.isTransferredIn ? '반이동' : '입학일'}: ${student.enrollmentDate}`
                         : displayText
                 ) + (textbookInfo ? `\n${textbookInfo.month} ${textbookInfo.textbookName}` : '')
             }
