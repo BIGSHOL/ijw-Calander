@@ -475,7 +475,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
         <div className="bg-white shadow-xl border border-gray-200 h-full flex flex-col overflow-hidden">
             {/* 통합뷰: 수학 시간표와 동일한 1행 헤더 */}
             {viewType === 'class' && (
-                <div className={`bg-gray-50 min-h-[2.5rem] flex items-center justify-between px-4 border-b border-gray-200 flex-shrink-0 text-xs relative transition-colors duration-300 overflow-x-auto ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
+                <div className={`bg-gray-50 min-h-[2.5rem] flex items-center justify-between px-4 border-b border-gray-200 flex-shrink-0 text-xs transition-colors duration-300 overflow-x-auto ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
                     {/* Left: 주차 네비게이션 + 학생 통계 */}
                     <div className="flex items-center gap-3 flex-shrink-0">
                         {weekLabel && goToPrevWeek && goToNextWeek && goToThisWeek && (
@@ -577,7 +577,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                     </div>
 
                     {/* Center: 시간표 제목 */}
-                    <h1 className="absolute left-1/2 -translate-x-1/2 text-sm font-black text-gray-800 tracking-tight flex items-center gap-2">
+                    <h1 className="flex-1 min-w-0 text-center text-sm font-black text-gray-800 tracking-tight flex items-center justify-center gap-2 truncate">
                         <span>
                             {isSimulationMode && currentScenarioName
                                 ? currentScenarioName
@@ -743,7 +743,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
 
             {/* 강사뷰: 통합뷰와 동일한 1행 헤더 */}
             {viewType === 'teacher' && (
-                <div className={`bg-gray-50 min-h-[2.5rem] flex items-center justify-between px-4 border-b border-gray-200 flex-shrink-0 text-xs relative transition-colors duration-300 overflow-x-auto ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
+                <div className={`bg-gray-50 min-h-[2.5rem] flex items-center justify-between px-4 border-b border-gray-200 flex-shrink-0 text-xs transition-colors duration-300 overflow-x-auto ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
                     {/* Left: 주차 네비게이션 + 학생 통계 */}
                     <div className="flex items-center gap-3 flex-shrink-0">
                         {weekLabel && goToPrevWeek && goToNextWeek && goToThisWeek && (
@@ -845,7 +845,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                     </div>
 
                     {/* Center: 시간표 제목 */}
-                    <h1 className="absolute left-1/2 -translate-x-1/2 text-sm font-black text-gray-800 tracking-tight flex items-center gap-2">
+                    <h1 className="flex-1 min-w-0 text-center text-sm font-black text-gray-800 tracking-tight flex items-center justify-center gap-2 truncate">
                         <span>
                             {isSimulationMode && currentScenarioName
                                 ? currentScenarioName
@@ -954,7 +954,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
 
             {/* 강의실뷰: 통합뷰/강사뷰와 동일한 1행 헤더 */}
             {viewType === 'room' && (
-                <div className={`bg-gray-50 min-h-[2.5rem] flex items-center justify-between px-4 border-b border-gray-200 flex-shrink-0 text-xs relative transition-colors duration-300 overflow-x-auto ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
+                <div className={`bg-gray-50 min-h-[2.5rem] flex items-center justify-between px-4 border-b border-gray-200 flex-shrink-0 text-xs transition-colors duration-300 overflow-x-auto ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
                     {/* Left: 주차 네비게이션 + 학생 통계 */}
                     <div className="flex items-center gap-3 flex-shrink-0">
                         {weekLabel && goToPrevWeek && goToNextWeek && goToThisWeek && (
@@ -1056,7 +1056,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                     </div>
 
                     {/* Center: 시간표 제목 */}
-                    <h1 className="absolute left-1/2 -translate-x-1/2 text-sm font-black text-gray-800 tracking-tight flex items-center gap-2">
+                    <h1 className="flex-1 min-w-0 text-center text-sm font-black text-gray-800 tracking-tight flex items-center justify-center gap-2 truncate">
                         <span>
                             {isSimulationMode && currentScenarioName
                                 ? currentScenarioName

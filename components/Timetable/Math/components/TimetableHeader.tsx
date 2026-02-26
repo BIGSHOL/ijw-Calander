@@ -330,7 +330,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     return (
         <div className="flex flex-col flex-shrink-0">
             {/* Main Header Row */}
-            <div className={`bg-gray-50 min-h-[2.5rem] flex items-center justify-between px-4 border-b border-gray-200 text-xs relative overflow-x-auto ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
+            <div className={`bg-gray-50 min-h-[2.5rem] flex items-center justify-between px-4 border-b border-gray-200 text-xs overflow-x-auto ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
             {/* Left: Week Info */}
             <div className="flex items-center gap-3 flex-shrink-0">
                 <span className="text-gray-600 font-medium">{weekLabel}</span>
@@ -456,7 +456,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
             </div>
 
             {/* Center: 시간표 제목 */}
-            <h1 className="absolute left-1/2 -translate-x-1/2 text-sm font-black text-gray-800 tracking-tight flex items-center gap-2">
+            <h1 className="flex-1 min-w-0 text-center text-sm font-black text-gray-800 tracking-tight flex items-center justify-center gap-2 truncate">
                 <span>
                     {isSimulationMode && currentScenarioName
                         ? currentScenarioName
