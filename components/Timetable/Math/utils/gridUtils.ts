@@ -1,20 +1,26 @@
 import { TimetableClass } from '../../../../types';
 import { convertLegacyPeriodId } from '../../constants';
 
-// Subject Theme Colors
+/**
+ * 과목별 테마 색상 (styleUtils.ts SUBJECT_COLORS 기반)
+ * - 수학: 골드 (#fdb813)
+ * - 영어: 네이비 (#081429)
+ * - 국어: 레드 (#ef4444)
+ * - 과학: 에메랄드 (#10b981)
+ *
+ * Tailwind JIT는 동적 클래스를 지원하지 않으므로 정적 매핑 사용
+ */
+const SUBJECT_THEMES: Record<string, { bg: string; text: string; studentText: string; border: string; header: string }> = {
+    '수학': { bg: 'bg-[#fef9e7]', text: 'text-[#fdb813]', studentText: 'text-gray-800', border: 'border-[#e5a60f]', header: 'bg-[#fdb813] text-[#081429]' },
+    '영어': { bg: 'bg-[#f0f4f8]', text: 'text-[#081429]', studentText: 'text-gray-800', border: 'border-[#1a2845]', header: 'bg-[#081429] text-white' },
+    '국어': { bg: 'bg-[#fef2f2]', text: 'text-[#ef4444]', studentText: 'text-gray-800', border: 'border-[#dc2626]', header: 'bg-[#ef4444] text-white' },
+    '과학': { bg: 'bg-[#ecfdf5]', text: 'text-[#10b981]', studentText: 'text-gray-800', border: 'border-[#059669]', header: 'bg-[#10b981] text-white' },
+};
+
+const DEFAULT_THEME = { bg: 'bg-[#f9fafb]', text: 'text-[#6b7280]', studentText: 'text-gray-800', border: 'border-[#4b5563]', header: 'bg-[#6b7280] text-white' };
+
 export const getSubjectTheme = (subject: string) => {
-    switch (subject) {
-        case '수학':
-            return { bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-200', header: 'bg-blue-600 text-white' };
-        case '영어':
-            return { bg: 'bg-rose-100', text: 'text-rose-800', border: 'border-rose-200', header: 'bg-rose-600 text-white' };
-        case '국어':
-            return { bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-200', header: 'bg-green-600 text-white' };
-        case '과학':
-            return { bg: 'bg-purple-100', text: 'text-purple-800', border: 'border-purple-200', header: 'bg-purple-600 text-white' };
-        default:
-            return { bg: 'bg-gray-100', text: 'text-gray-800', border: 'border-gray-200', header: 'bg-gray-600 text-white' };
-    }
+    return SUBJECT_THEMES[subject] || DEFAULT_THEME;
 };
 
 // Get classes for cell
