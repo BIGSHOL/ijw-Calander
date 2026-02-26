@@ -1132,25 +1132,12 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
                       />
                     </div>
 
-                    {/* 학생수 */}
-                    <div className="w-10 shrink-0 flex items-center justify-center gap-0.5">
-                      <Users className="w-3 h-3 text-gray-400" />
-                      <span className="text-xxs font-medium text-primary">
-                        {actualClass?.studentCount || 0}
+                    {/* 시작일 */}
+                    <div className="shrink-0 flex items-center gap-1">
+                      <span className="text-xxs text-blue-600 font-medium whitespace-nowrap">
+                        시작일 {group.startDate ? formatDate(group.startDate) : '-'}
                       </span>
                     </div>
-
-                    {/* 시작 예정일 (compact 모드가 아닐 때만) */}
-                    {!compact && (
-                      <>
-                        <span className="w-16 shrink-0 text-xxs text-primary-700 font-medium text-center">
-                          {formatDate(group.startDate)}
-                        </span>
-                        <span className="w-14 shrink-0 text-xxs font-bold text-blue-600 text-center">
-                          예정
-                        </span>
-                      </>
-                    )}
 
                     {/* 삭제 버튼 - readOnly 모드에서는 숨김 */}
                     {!readOnly && (
