@@ -4,6 +4,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Settings, ArrowRightLeft, Copy, Upload, Save, GraduationCap, RotateCcw, Download } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../../utils/localStorage';
+import { formatDateKey } from '../../../utils/dateUtils';
 import { EN_PERIODS, EN_WEEKDAYS, getTeacherColor, INJAE_PERIODS, isInjaeClass, numberLevelUp, classLevelUp, isMaxLevel, isValidLevel, DEFAULT_ENGLISH_LEVELS, CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { Teacher, TimetableStudent, ClassKeywordColor, EnglishLevel } from '../../../types';
@@ -684,7 +685,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                 targetRef={gridRef}
                 title="영어 통합 시간표 저장"
                 subtitle="저장할 행을 선택하세요"
-                fileName={`영어_통합시간표_${new Date().toISOString().split('T')[0]}`}
+                fileName={`영어_통합시간표_${formatDateKey(new Date())}`}
                 groups={exportGroups}
                 onGroupsChanged={handleExportGroupsChanged}
             />

@@ -5,6 +5,7 @@ import { TimetableStudent } from '../../../../types';
 import { CLASS_COLLECTION } from '../englishUtils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSimulationOptional } from '../context/SimulationContext';
+import { formatDateKey } from '../../../../utils/dateUtils';
 
 export interface MoveChange {
     student: TimetableStudent;
@@ -70,7 +71,7 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
             }
 
             // === 실시간 모드: Firebase 업데이트 ===
-            const today = new Date().toISOString().split('T')[0];
+            const today = formatDateKey(new Date());
 
             // === 0. 대상 수업들의 teacher 정보 조회 (staffId 연동용) ===
             const targetClassNames = [...new Set(Array.from(moveChanges.values()).map(c => c.toClass))];

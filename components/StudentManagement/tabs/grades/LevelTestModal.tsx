@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { LevelTest, UserProfile } from '../../../../types';
 import { Zap, Loader2, X, FileText, Calendar } from 'lucide-react';
 import { useEscapeClose } from '../../../../hooks/useEscapeClose';
+import { formatDateKey } from '../../../../utils/dateUtils';
 
 interface LevelTestModalProps {
     onClose: () => void;
@@ -13,7 +14,7 @@ interface LevelTestModalProps {
 
 const LevelTestModal: React.FC<LevelTestModalProps> = ({ onClose, studentId, studentName, onAdd, currentUser }) => {
     const [subject, setSubject] = useState<'math' | 'english'>('math');
-    const [testDate, setTestDate] = useState(new Date().toISOString().split('T')[0]);
+    const [testDate, setTestDate] = useState(formatDateKey(new Date()));
     const [testType, setTestType] = useState<'placement' | 'promotion' | 'diagnostic'>('placement');
     const [isSubmitting, setIsSubmitting] = useState(false);
 

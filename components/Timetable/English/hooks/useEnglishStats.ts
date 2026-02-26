@@ -15,6 +15,7 @@
 
 import { useMemo } from 'react';
 import { convertTimestampToDate } from '../../../../utils/firestoreConverters';
+import { formatDateKey } from '../../../../utils/dateUtils';
 
 interface ScheduleCell {
     className?: string;
@@ -71,7 +72,7 @@ export const useEnglishStats = (
             return { active: 0, new1: 0, new2: 0, withdrawn: 0, withdrawnFuture: 0, waiting: 0, waitingStudents: [], withdrawnStudents: [], withdrawnFutureStudents: [] };
         }
 
-        const refDate = referenceDate || new Date().toISOString().split('T')[0];
+        const refDate = referenceDate || formatDateKey(new Date());
         const now = new Date(refDate);
         const today = refDate;
         let active = 0, new1 = 0, new2 = 0, withdrawn = 0, withdrawnFuture = 0, waiting = 0;

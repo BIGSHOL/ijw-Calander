@@ -11,6 +11,7 @@ import { doc, getDoc, getDocs, collection, query, where, updateDoc, deleteDoc } 
 import { db } from '../../../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePermissions } from '../../../hooks/usePermissions';
+import { formatDateKey } from '../../../utils/dateUtils';
 import {
   SubjectForSchedule,
   MATH_PERIOD_INFO,
@@ -248,7 +249,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
   };
 
   // 오늘 날짜 (미래 수업 구분용)
-  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const today = useMemo(() => formatDateKey(new Date()), []);
 
   // enrollment 시작일 추출 (enrollmentDate 또는 startDate 필드 사용)
   const getStartDate = (enrollment: any): string | undefined =>
@@ -529,7 +530,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
     try {
       const now = new Date();
-      const endDate = now.toISOString().split('T')[0]; // YYYY-MM-DD 형식
+      const endDate = formatDateKey(now); // YYYY-MM-DD 형식
 
       // 1. 저장된 enrollmentIds가 있으면 사용
       if (group.enrollmentIds.length > 0) {

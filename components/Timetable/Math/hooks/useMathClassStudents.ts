@@ -11,11 +11,13 @@ export type { ClassStudentData } from '../../../../hooks/useSubjectClassStudents
 
 export const useMathClassStudents = (
     classNames: string[],
-    studentMap: Record<string, any> = {}
+    studentMap: Record<string, any> = {},
+    referenceDate?: string
 ) => {
     return useSubjectClassStudents({
         subject: 'math',
         classNames,
         studentMap,
+        referenceDate,
     });
 };

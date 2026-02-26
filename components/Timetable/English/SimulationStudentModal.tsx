@@ -6,6 +6,7 @@ import { X, Search, UserPlus, UserMinus, Users, ArrowRight, FlaskConical, Save, 
 import { useScenario, ScenarioEnrollment } from './context/SimulationContext';
 import { UnifiedStudent } from '../../../types';
 import { useEscapeClose } from '../../../hooks/useEscapeClose';
+import { formatDateKey } from '../../../utils/dateUtils';
 
 interface SimulationStudentModalProps {
     className: string;
@@ -100,7 +101,7 @@ const SimulationStudentModal: React.FC<SimulationStudentModalProps> = ({
 
     const handleAddStudent = (studentId: string, studentName: string) => {
         scenario.addStudentToClass(className, studentId, {
-            enrollmentDate: new Date().toISOString().split('T')[0],
+            enrollmentDate: formatDateKey(new Date()),
         }, studentName);
     };
 

@@ -10,6 +10,7 @@ import { usePermissions } from '../../../hooks/usePermissions';
 import { useSimulationOptional } from './context/SimulationContext';
 import ScenarioCompareModal from './ScenarioCompareModal';
 import { useEscapeClose } from '../../../hooks/useEscapeClose';
+import { formatDateKey } from '../../../utils/dateUtils';
 
 /**
  * Firebase에 저장 전 undefined 값을 제거합니다.
@@ -914,7 +915,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                             type="date"
                                             value={scheduledApplyDate}
                                             onChange={e => setScheduledApplyDate(e.target.value)}
-                                            min={new Date().toISOString().split('T')[0]}
+                                            min={formatDateKey(new Date())}
                                             className="w-full px-3 py-2 border rounded-sm text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                                         />
                                         <p className="text-xs text-gray-400 mt-1">

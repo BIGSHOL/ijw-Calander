@@ -1,7 +1,7 @@
 // Math Class Integration Tab
 // 수학 통합 시간표 탭 - 수업별 컬럼 뷰 (영어 통합뷰와 동일한 디자인)
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { Settings } from 'lucide-react';
 import { doc, collection, query, where, getDocs, updateDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
@@ -115,7 +115,20 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     const { settings, settingsLoading, updateSettings } = useMathSettings();
     const mathClasses = useMathIntegrationClasses(classes, settings, teachersData);
     const classNames = useMemo(() => mathClasses.map(c => c.name), [mathClasses]);
-    const { classDataMap, isLoading: studentsLoading, refetch: refetchClassStudents } = useMathClassStudents(classNames, studentMap);
+
+    // 주차 기준일: 현재/과거 주 → 오늘, 미래 주 → 해당 주 월요일
+    const referenceDate = useMemo(() => {
+        if (!currentWeekStart) return undefined;
+        const y = currentWeekStart.getFullYear();
+        const m = String(currentWeekStart.getMonth() + 1).padStart(2, '0');
+        const d = String(currentWeekStart.getDate()).padStart(2, '0');
+        const weekStartStr = `${y}-${m}-${d}`;
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        return weekStartStr > todayStr ? weekStartStr : todayStr;
+    }, [currentWeekStart]);
+
+    const { classDataMap, isLoading: studentsLoading, refetch: refetchClassStudents } = useMathClassStudents(classNames, studentMap, referenceDate);
 
     // Filter by search term (통합 검색: TimetableHeader의 searchQuery 사용)
     const filteredClasses = useMemo(() => {

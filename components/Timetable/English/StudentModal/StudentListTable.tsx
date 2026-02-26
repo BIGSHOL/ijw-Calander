@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Check, X, Underline } from 'lucide-react';
 import { TimetableStudent } from '../../../../types';
 import { formatSchoolGrade } from '../../../../utils/studentUtils';
+import { formatDateKey } from '../../../../utils/dateUtils';
 
 interface StudentListTableProps {
     students: TimetableStudent[];
@@ -160,7 +161,7 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                                             onClick={() => {
                                                 let nextDate: string | undefined = undefined;
                                                 if (!student.enrollmentDate) {
-                                                    nextDate = new Date().toISOString().split('T')[0];
+                                                    nextDate = formatDateKey(new Date());
                                                 } else {
                                                     const start = new Date(student.enrollmentDate);
                                                     const today = new Date();
@@ -181,7 +182,7 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                                                         */
                                                         const pastDate = new Date();
                                                         pastDate.setDate(pastDate.getDate() - 35);
-                                                        nextDate = pastDate.toISOString().split('T')[0];
+                                                        nextDate = formatDateKey(pastDate);
                                                     } else {
                                                         nextDate = undefined;
                                                     }
@@ -237,7 +238,7 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                                                     return;
                                                 }
                                                 if (window.confirm("퇴원 처리 하시겠습니까?")) {
-                                                    onUpdate(student.id, { withdrawalDate: new Date().toISOString().split('T')[0], onHold: false, enrollmentDate: undefined, isMoved: false });
+                                                    onUpdate(student.id, { withdrawalDate: formatDateKey(new Date()), onHold: false, enrollmentDate: undefined, isMoved: false });
                                                 }
                                             }}
                                             className="px-2 py-0.5 text-xxs rounded-sm border border-gray-200 text-gray-400 hover:bg-gray-800 hover:text-white hover:border-gray-800 transition-colors"
