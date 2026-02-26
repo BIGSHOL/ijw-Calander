@@ -98,7 +98,9 @@ export type PermissionId =
   // Shuttle (셔틀관리)
   | 'shuttle.view' | 'shuttle.edit'
   // Marketing (마케팅)
-  | 'marketing.view' | 'marketing.edit';
+  | 'marketing.view' | 'marketing.edit'
+  // AI Chatbot (AI 챗봇)
+  | 'chatbot.access';
 
 // Role-based permission configuration (stored in Firestore)
 export type RolePermissions = {

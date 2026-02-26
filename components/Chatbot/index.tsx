@@ -20,6 +20,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ userProfile, hasPermission }) => {
   } = useChatbot({ userProfile, hasPermission });
 
   if (!userProfile) return null;
+  if (!hasPermission('chatbot.access')) return null;
 
   return (
     <>

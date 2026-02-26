@@ -333,6 +333,12 @@ const PERMISSION_GROUPS: { id: string; label: string; icon: string; categories: 
           { id: 'settings.manage_categories' as PermissionId, label: '카테고리' },
         ]
       },
+      {
+        id: 'chatbot', label: 'AI 챗봇', icon: '🤖',
+        permissions: [
+          { id: 'chatbot.access' as PermissionId, label: '사용' },
+        ]
+      },
     ]
   },
 ];
