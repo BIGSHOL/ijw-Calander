@@ -424,10 +424,13 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     }, [classStudentData]);
 
     // 학생 목록 업데이트 (moveChanges 반영)
-    // currentWeekStart가 있으면 해당 주의 시작일 기준, 없으면 오늘 기준 (KST)
+    // 현재/과거 주 → 오늘 날짜 기준, 미래 주 → 해당 주 월요일 기준
+    // 이유: 이번 주를 볼 때 월요일 기준이면, 오늘 반이동/퇴원인 학생이 여전히 '예정'으로 표시됨
     const referenceDate = useMemo(() => {
         if (currentWeekStart) {
-            return formatDateKey(currentWeekStart);
+            const weekStartStr = formatDateKey(currentWeekStart);
+            const todayStr = formatDateKey(new Date());
+            return weekStartStr > todayStr ? weekStartStr : todayStr;
         }
         return formatDateKey(new Date());
     }, [currentWeekStart]);
@@ -435,13 +438,20 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     useEffect(() => {
         let currentList = [...students];
 
-        // 배정 예정 학생 마킹 (enrollmentDate > referenceDate)
-        // 퇴원 예정 학생 마킹 (withdrawalDate가 있고 referenceDate보다 이후)
-        currentList = currentList.map(s => ({
-            ...s,
-            isScheduled: s.enrollmentDate ? s.enrollmentDate > referenceDate : false,
-            isWithdrawalScheduled: s.withdrawalDate ? s.withdrawalDate > referenceDate : false
-        }));
+        // 주차 기준일(referenceDate) 기준으로 isScheduled/isWithdrawalScheduled/onHold 재계산
+        // 훅에서는 실제 오늘 기준으로 설정하지만, 미래 주 미리보기 시 기준일이 다름
+        currentList = currentList.map(s => {
+            const recalcIsScheduled = s.enrollmentDate ? s.enrollmentDate > referenceDate : false;
+            const isWithdrawalScheduled = s.withdrawalDate ? s.withdrawalDate > referenceDate : false;
+            // isScheduled(배정 예정)로 인한 onHold는 기준일 기준으로 재계산, 명시적 onHold는 유지
+            const recalcOnHold = (s as any).isScheduled ? recalcIsScheduled : s.onHold;
+            return {
+                ...s,
+                isScheduled: recalcIsScheduled,
+                isWithdrawalScheduled,
+                onHold: recalcOnHold,
+            };
+        });
 
         if (moveChanges) {
             // 이동 나간 학생 제거

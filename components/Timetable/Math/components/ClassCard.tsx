@@ -395,6 +395,18 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 return s.enrollmentDate <= today;
             });
 
+            // 주차 기준일(refDateStr) 기준으로 isScheduled/onHold 재계산
+            // 훅에서는 실제 오늘 기준으로 설정하지만, 미래 주 미리보기 시 기준일이 다름
+            students = students.map(s => {
+                const recalcIsScheduled = s.enrollmentDate ? s.enrollmentDate > today : false;
+                // isScheduled(배정 예정)로 인한 onHold는 기준일 기준으로 재계산, 명시적 onHold는 유지
+                const recalcOnHold = s.isScheduled ? recalcIsScheduled : s.onHold;
+                if (recalcIsScheduled !== s.isScheduled || recalcOnHold !== s.onHold) {
+                    return { ...s, isScheduled: recalcIsScheduled, onHold: recalcOnHold };
+                }
+                return s;
+            });
+
             // 합반수업일 때 classLabel 태깅 - 번호 인덱스 사용
             // 두 수업 모두 등록된 학생은 라벨을 합침 (예: "1,2")
             const labelIdx = classNameToIndex.get(targetCls.className) || 0;
@@ -771,8 +783,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             themeText={theme.text}
                                             isPendingMoved={pendingMovedStudentIds?.has(s.id)}
                                             pendingScheduledDate={pendingMoveSchedules?.get(s.id) || undefined}
-                                            isTransferScheduled={!!(s.isTransferred && s.withdrawalDate)}
-                                            transferScheduledDate={s.isTransferred ? s.withdrawalDate : undefined}
+                                            isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
+                                            transferScheduledDate={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
                                             classLabel={isMergedClass ? s._classLabel : undefined}
                                             textbookInfo={studentTextbookMap?.get(s.name) || null}
                                         />
@@ -826,8 +838,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                 themeText={theme.text}
                                                                 isPendingMoved={pendingMovedStudentIds?.has(s.id)}
                                                                 pendingScheduledDate={pendingMoveSchedules?.get(s.id) || undefined}
-                                                                isTransferScheduled={!!(s.isTransferred && s.withdrawalDate)}
-                                                                transferScheduledDate={s.isTransferred ? s.withdrawalDate : undefined}
+                                                                isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
+                                                                transferScheduledDate={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
                                                                 classLabel={isMergedClass ? s._classLabel : undefined}
                                                                 textbookInfo={studentTextbookMap?.get(s.name) || null}
                                                             />
@@ -878,7 +890,21 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     if (sg && sg !== '-') text += `/${sg}`;
                                                 }
                                                 const tooltipText = s.enrollmentDate ? `예정일: ${s.enrollmentDate}` : undefined;
-                                                return <li key={s.id} className={`${fontSizeClass} leading-[1.3] bg-amber-50 text-amber-800 px-0.5 py-0 overflow-hidden whitespace-nowrap cursor-pointer`} title={tooltipText}>{text}</li>;
+                                                return (
+                                                    <li
+                                                        key={s.id}
+                                                        className={`${fontSizeClass} leading-[1.3] bg-amber-50 text-amber-800 px-0.5 py-0 overflow-hidden whitespace-nowrap cursor-pointer hover:bg-amber-100 transition-colors`}
+                                                        title={tooltipText}
+                                                        onClick={(e) => {
+                                                            if (onStudentClick) {
+                                                                e.stopPropagation();
+                                                                onStudentClick(s.id);
+                                                            }
+                                                        }}
+                                                    >
+                                                        {text}
+                                                    </li>
+                                                );
                                             })}
                                         </ul>
                                     </div>
@@ -978,8 +1004,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             themeText={theme.text}
                                             isPendingMoved={pendingMovedStudentIds?.has(s.id)}
                                             pendingScheduledDate={pendingMoveSchedules?.get(s.id) || undefined}
-                                            isTransferScheduled={!!(s.isTransferred && s.withdrawalDate)}
-                                            transferScheduledDate={s.isTransferred ? s.withdrawalDate : undefined}
+                                            isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
+                                            transferScheduledDate={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
                                             classLabel={isMergedClass ? s._classLabel : undefined}
                                             textbookInfo={studentTextbookMap?.get(s.name) || null}
                                         />
@@ -1006,8 +1032,19 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     const sg = formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null);
                                                     if (sg && sg !== '-') text += `/${sg}`;
                                                 }
+                                                const tooltipText = s.enrollmentDate ? `예정일: ${s.enrollmentDate}` : undefined;
                                                 return (
-                                                    <li key={s.id} className={`${fontSizeClass} leading-[1.3] bg-amber-50 text-amber-800 px-0.5 py-0 overflow-hidden whitespace-nowrap`} title={text}>
+                                                    <li
+                                                        key={s.id}
+                                                        className={`${fontSizeClass} leading-[1.3] bg-amber-50 text-amber-800 px-0.5 py-0 overflow-hidden whitespace-nowrap cursor-pointer hover:bg-amber-100 transition-colors`}
+                                                        title={tooltipText}
+                                                        onClick={(e) => {
+                                                            if (onStudentClick) {
+                                                                e.stopPropagation();
+                                                                onStudentClick(s.id);
+                                                            }
+                                                        }}
+                                                    >
                                                         {text}
                                                     </li>
                                                 );

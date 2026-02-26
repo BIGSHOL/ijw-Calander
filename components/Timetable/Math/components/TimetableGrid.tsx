@@ -96,11 +96,16 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     pendingMovedStudentIds,
     pendingMoveSchedules
 }) => {
-    // 주차 기준일: weekDates의 첫 번째 요일 날짜를 YYYY-MM-DD로 변환
+    // 주차 기준일: 현재/과거 주 → 오늘 날짜, 미래 주 → 해당 주 월요일
+    // 이유: 이번 주를 볼 때 월요일 기준이면, 오늘 반이동/퇴원인 학생이 여전히 '예정'으로 표시됨
     const referenceDate = useMemo(() => {
         const firstDay = orderedSelectedDays[0];
         const dateInfo = firstDay && weekDates[firstDay];
-        if (dateInfo?.date) return formatDateKey(dateInfo.date);
+        if (dateInfo?.date) {
+            const weekDateStr = formatDateKey(dateInfo.date);
+            const todayStr = formatDateKey(new Date());
+            return weekDateStr > todayStr ? weekDateStr : todayStr;
+        }
         return formatDateKey(new Date());
     }, [weekDates, orderedSelectedDays]);
 

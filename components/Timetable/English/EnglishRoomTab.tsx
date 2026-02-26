@@ -160,13 +160,16 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
         return Array.from(classNameSet);
     }, [roomScheduleData, labRooms]);
 
-    // 주차 기준일 (YYYY-MM-DD)
+    // 주차 기준일: 현재/과거 주 → 오늘, 미래 주 → 해당 주 월요일
     const referenceDate = useMemo(() => {
         if (!currentWeekStart) return undefined;
         const y = currentWeekStart.getFullYear();
         const m = String(currentWeekStart.getMonth() + 1).padStart(2, '0');
         const d = String(currentWeekStart.getDate()).padStart(2, '0');
-        return `${y}-${m}-${d}`;
+        const weekStartStr = `${y}-${m}-${d}`;
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        return weekStartStr > todayStr ? weekStartStr : todayStr;
     }, [currentWeekStart]);
 
     // LAB실 학생수 조회
