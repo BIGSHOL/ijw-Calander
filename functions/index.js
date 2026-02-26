@@ -1814,8 +1814,10 @@ exports.chatWithAI = functions.region("asia-northeast3").https.onCall(async (dat
         });
 
         // 5. Tool execution loop (max 5 iterations)
+        const hasFunctionCalls = (resp) => { try { return resp.functionCalls && resp.functionCalls.length > 0; } catch { return false; } };
+        logger.info("[chatWithAI] Initial response", { hasText: !!response.text, hasCalls: hasFunctionCalls(response), finishReason: response.candidates?.[0]?.finishReason });
         let iterations = 0;
-        while (response.functionCalls && response.functionCalls.length > 0 && iterations < 5) {
+        while (hasFunctionCalls(response) && iterations < 5) {
             iterations++;
 
             const toolResults = [];
@@ -1863,7 +1865,25 @@ exports.chatWithAI = functions.region("asia-northeast3").https.onCall(async (dat
             }
         }
 
-        const text = response.text || "응답을 생성할 수 없습니다.";
+        // 응답 텍스트 추출 (여러 방법으로 시도)
+        let text = "";
+        try {
+            text = response.text || "";
+        } catch (e) {
+            // response.text getter가 throw할 수 있음 (safety filter 등)
+            logger.warn("[chatWithAI] response.text threw:", e.message);
+        }
+        if (!text) {
+            // candidates에서 직접 추출 시도
+            const parts = response.candidates?.[0]?.content?.parts || [];
+            text = parts.filter(p => p.text).map(p => p.text).join("");
+        }
+        if (!text) {
+            const finishReason = response.candidates?.[0]?.finishReason;
+            logger.warn("[chatWithAI] Empty response", { finishReason, candidateCount: response.candidates?.length });
+            text = "죄송합니다. 응답을 생성하지 못했습니다. 질문을 다시 입력해주세요.";
+        }
+        logger.info("[chatWithAI] Final response length:", text.length);
         return { response: text };
 
     } catch (error) {
