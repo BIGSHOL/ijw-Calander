@@ -1069,7 +1069,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             <span className="w-52 shrink-0">수업명</span>
             <span className="w-14 shrink-0">강사</span>
             <span className="w-40">스케줄</span>
-            <span className="w-24 shrink-0">시작</span>
+            <span className="w-10 shrink-0"></span>{/* 인원 자리 (수강중과 정렬) */}
+            <span className="w-16 shrink-0 text-center">시작</span>
             <span className="w-5 shrink-0"></span>
           </div>
 
@@ -1126,8 +1127,11 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
                       />
                     </div>
 
+                    {/* 인원 자리 (수강중과 정렬) */}
+                    <span className="w-10 shrink-0"></span>
+
                     {/* 시작일 */}
-                    <span className="w-24 shrink-0 text-xxs text-blue-600 font-medium">
+                    <span className="w-16 shrink-0 text-xxs text-blue-600 font-medium text-center">
                       {group.startDate ? formatDate(group.startDate) : '-'}
                     </span>
 
