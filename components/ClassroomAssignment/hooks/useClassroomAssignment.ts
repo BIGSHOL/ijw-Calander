@@ -46,20 +46,40 @@ export function useClassroomAssignment(selectedDay: string) {
   const [enrollmentCounts, setEnrollmentCounts] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
 
-  // enrollments 기반 학생 수 조회 (1회)
+  // enrollments 기반 학생 수 조회 (1회, 퇴원/미래배정 제외)
   useEffect(() => {
     const fetchEnrollments = async () => {
       try {
         const enrollmentsSnapshot = await getDocs(collectionGroup(db, 'enrollments'));
         const counts = new Map<string, Set<string>>();
+        const today = new Date().toISOString().split('T')[0];
+
         enrollmentsSnapshot.docs.forEach(doc => {
           const data = doc.data();
           const className = data.className as string;
           const studentId = doc.ref.parent.parent?.id;
-          if (className && studentId) {
-            if (!counts.has(className)) counts.set(className, new Set());
-            counts.get(className)!.add(studentId);
-          }
+          if (!className || !studentId) return;
+
+          // 퇴원/종료 학생 제외
+          const withdrawalDate = data.withdrawalDate?.toDate?.()
+            ? data.withdrawalDate.toDate().toISOString().split('T')[0]
+            : (typeof data.withdrawalDate === 'string' ? data.withdrawalDate : null);
+          const endDate = data.endDate?.toDate?.()
+            ? data.endDate.toDate().toISOString().split('T')[0]
+            : (typeof data.endDate === 'string' ? data.endDate : null);
+          if (withdrawalDate || endDate) return;
+
+          // 미래 배정 학생 제외
+          const startDate = data.enrollmentDate?.toDate?.()
+            ? data.enrollmentDate.toDate().toISOString().split('T')[0]
+            : (typeof data.enrollmentDate === 'string' ? data.enrollmentDate
+              : data.startDate?.toDate?.()
+                ? data.startDate.toDate().toISOString().split('T')[0]
+                : (typeof data.startDate === 'string' ? data.startDate : null));
+          if (startDate && startDate > today) return;
+
+          if (!counts.has(className)) counts.set(className, new Set());
+          counts.get(className)!.add(studentId);
         });
         const result = new Map<string, number>();
         for (const [name, students] of counts) {

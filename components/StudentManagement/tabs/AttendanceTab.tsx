@@ -25,13 +25,22 @@ const DAY_COLORS: Record<string, { bg: string; text: string }> = {
   '일': { bg: '#f3e8ff', text: '#6b21a8' },
 };
 
-// 출석 상태별 색상 및 라벨 (출석부와 동일)
-const ATTENDANCE_STATUS = {
-  1: { label: '출석', bg: '#10b981', text: '#ffffff', icon: CheckCircle2 },
-  0: { label: '결석', bg: '#ef4444', text: '#ffffff', icon: XCircle },
-  0.5: { label: '지각', bg: '#f59e0b', text: '#ffffff', icon: CheckCircle2 },
-  '-0.5': { label: '조퇴', bg: '#f59e0b', text: '#ffffff', icon: CheckCircle2 },
-} as const;
+// 출석 상태별 색상 및 라벨 (출석부 시간 단위 기반)
+// 출석부는 시간 단위(0.5=1시간, 1=2시간 등)를 사용하므로 양수=출석, 0=결석
+const ATTENDANCE_STATUS: Record<string, { label: string; bg: string; text: string; icon: typeof CheckCircle2 }> = {
+  'present': { label: '출석', bg: '#10b981', text: '#ffffff', icon: CheckCircle2 },
+  'partial': { label: '부분출석', bg: '#f59e0b', text: '#ffffff', icon: CheckCircle2 },
+  'absent': { label: '결석', bg: '#ef4444', text: '#ffffff', icon: XCircle },
+};
+
+// 출석부 숫자값을 상태키로 변환
+function getStatusKey(value: number | undefined): string {
+  if (value === undefined || value === null) return '';
+  if (value === 0) return 'absent';
+  if (value >= 1) return 'present';
+  if (value > 0) return 'partial'; // 0.5 등 부분 출석
+  return 'absent';
+}
 
 // 요일 배열
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -316,20 +325,19 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
     const values = Object.values(filteredAttendance);
 
     const totalDays = values.length;
-    const presentCount = values.filter(v => v === 1).length;
+    const presentCount = values.filter(v => typeof v === 'number' && v >= 1).length;
+    const partialCount = values.filter(v => typeof v === 'number' && v > 0 && v < 1).length;
     const absentCount = values.filter(v => v === 0).length;
-    const lateCount = values.filter(v => v === 0.5).length;
-    const earlyLeaveCount = values.filter(v => v === -0.5).length;
 
-    const attendanceRate = totalDays > 0 ? Math.round((presentCount / totalDays) * 100) : 0;
+    const totalPresent = presentCount + partialCount;
+    const attendanceRate = totalDays > 0 ? Math.round((totalPresent / totalDays) * 100) : 0;
     const absentRate = totalDays > 0 ? Math.round((absentCount / totalDays) * 100) : 0;
 
     return {
       totalDays,
-      presentCount,
+      presentCount: totalPresent,
       absentCount,
-      lateCount,
-      earlyLeaveCount,
+      partialCount,
       attendanceRate,
       absentRate,
     };
@@ -414,9 +422,9 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
         <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showStats ? '' : 'rotate-180'}`} />
       </div>
 
-      {/* 통계 카드 - 컴팩트 (1행 4열) */}
+      {/* 통계 카드 - 컴팩트 (1행 3열) */}
       {showStats && (
-      <div className="grid grid-cols-4 gap-1.5">
+      <div className="grid grid-cols-3 gap-1.5">
         <div className="bg-white border border-green-200 rounded-sm p-1.5">
           <p className="text-micro text-gray-500">출석률</p>
           <p className="text-base font-bold text-green-600">{stats.attendanceRate}%</p>
@@ -429,15 +437,9 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
           <p className="text-xxs text-gray-400">{stats.absentCount}일</p>
         </div>
 
-        <div className="bg-white border border-orange-200 rounded-sm p-1.5">
-          <p className="text-micro text-gray-500">지각</p>
-          <p className="text-base font-bold text-orange-600">{stats.lateCount}</p>
-          <p className="text-xxs text-gray-400">일</p>
-        </div>
-
-        <div className="bg-white border border-orange-200 rounded-sm p-1.5">
-          <p className="text-micro text-gray-500">조퇴</p>
-          <p className="text-base font-bold text-orange-600">{stats.earlyLeaveCount}</p>
+        <div className="bg-white border border-amber-200 rounded-sm p-1.5">
+          <p className="text-micro text-gray-500">부분출석</p>
+          <p className="text-base font-bold text-amber-600">{stats.partialCount}</p>
           <p className="text-xxs text-gray-400">일</p>
         </div>
       </div>
@@ -477,7 +479,8 @@ const AttendanceTab: React.FC<AttendanceTabProps> = ({ student, readOnly = false
               return <div key={`empty-${idx}`} className="aspect-square border-b border-r border-gray-100" />;
             }
 
-            const statusInfo = day.status !== undefined ? ATTENDANCE_STATUS[day.status as keyof typeof ATTENDANCE_STATUS] : null;
+            const statusKey = day.status !== undefined ? getStatusKey(day.status) : '';
+            const statusInfo = statusKey ? ATTENDANCE_STATUS[statusKey] : null;
             const dayOfWeek = idx % 7;
             const isToday =
               day.dateKey === new Date().toISOString().slice(0, 10) &&

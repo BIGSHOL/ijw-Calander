@@ -7,31 +7,38 @@ import {
 
 describe('attendanceSync', () => {
   describe('mapAttendanceValueToStatus', () => {
-    it('숫자 값을 문자열 상태로 변환', () => {
+    it('양수 값은 모두 present 반환 (시간 단위)', () => {
       expect(mapAttendanceValueToStatus(1)).toBe('present');
+      expect(mapAttendanceValueToStatus(0.5)).toBe('present');
+      expect(mapAttendanceValueToStatus(1.5)).toBe('present');
+      expect(mapAttendanceValueToStatus(2)).toBe('present');
+      expect(mapAttendanceValueToStatus(2.5)).toBe('present');
+      expect(mapAttendanceValueToStatus(3)).toBe('present');
+    });
+
+    it('0은 absent 반환', () => {
       expect(mapAttendanceValueToStatus(0)).toBe('absent');
-      expect(mapAttendanceValueToStatus(2)).toBe('late');
-      expect(mapAttendanceValueToStatus(3)).toBe('early_leave');
-      expect(mapAttendanceValueToStatus(4)).toBe('excused');
     });
 
     it('null은 absent 반환', () => {
       expect(mapAttendanceValueToStatus(null)).toBe('absent');
     });
 
-    it('알 수 없는 값은 absent 반환', () => {
-      expect(mapAttendanceValueToStatus(99)).toBe('absent');
+    it('음수 값은 absent 반환', () => {
       expect(mapAttendanceValueToStatus(-1)).toBe('absent');
     });
   });
 
   describe('mapAttendanceStatusToValue', () => {
-    it('문자열 상태를 숫자 값으로 변환', () => {
+    it('출석 관련 상태는 1 반환 (등원함)', () => {
       expect(mapAttendanceStatusToValue('present')).toBe(1);
+      expect(mapAttendanceStatusToValue('late')).toBe(1);
+      expect(mapAttendanceStatusToValue('early_leave')).toBe(1);
+    });
+
+    it('결석 관련 상태는 0 반환 (미등원)', () => {
       expect(mapAttendanceStatusToValue('absent')).toBe(0);
-      expect(mapAttendanceStatusToValue('late')).toBe(2);
-      expect(mapAttendanceStatusToValue('early_leave')).toBe(3);
-      expect(mapAttendanceStatusToValue('excused')).toBe(4);
+      expect(mapAttendanceStatusToValue('excused')).toBe(0);
     });
 
     it('알 수 없는 상태는 0 반환', () => {
@@ -67,13 +74,17 @@ describe('attendanceSync', () => {
     });
   });
 
-  describe('양방향 변환 일관성', () => {
-    it('값 → 상태 → 값 왕복 변환 일치', () => {
-      for (const val of [0, 1, 2, 3, 4]) {
-        const status = mapAttendanceValueToStatus(val);
-        const backToVal = mapAttendanceStatusToValue(status);
-        expect(backToVal).toBe(val);
-      }
+  describe('변환 일관성', () => {
+    it('출석(1) → present → 1 왕복 일치', () => {
+      const status = mapAttendanceValueToStatus(1);
+      expect(status).toBe('present');
+      expect(mapAttendanceStatusToValue(status)).toBe(1);
+    });
+
+    it('결석(0) → absent → 0 왕복 일치', () => {
+      const status = mapAttendanceValueToStatus(0);
+      expect(status).toBe('absent');
+      expect(mapAttendanceStatusToValue(status)).toBe(0);
     });
   });
 });

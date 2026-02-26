@@ -15,24 +15,26 @@ import { AttendanceStatus } from '../types';
 /**
  * 출석부 숫자 값을 출결 관리 문자열 상태로 변환
  *
- * @param value - 출석부의 숫자 값 (1=출석, 0=결석, 2=지각, 3=조퇴, 4=사유결석)
+ * 출석부는 시간 단위(0.5=1시간, 1=2시간, 1.5=3시간, 2.0=4시간, 2.5=5시간, 3.0=6시간)를 사용.
+ * 시간 기반 시스템에서는 지각/조퇴 등 세부 상태 구분이 불가하므로,
+ * 양수 값은 모두 'present', 0은 'absent'로 매핑.
+ *
+ * @param value - 출석부의 숫자 값 (양수=출석, 0=결석)
  * @returns 출결 관리의 AttendanceStatus
  */
 export function mapAttendanceValueToStatus(value: number | null): AttendanceStatus {
   if (value === null) return 'absent';
-
-  switch (value) {
-    case 1: return 'present';      // 출석
-    case 0: return 'absent';        // 결석
-    case 2: return 'late';          // 지각
-    case 3: return 'early_leave';   // 조퇴
-    case 4: return 'excused';       // 사유결석
-    default: return 'absent';
-  }
+  if (value > 0) return 'present';
+  return 'absent';
 }
 
 /**
  * 출결 관리 문자열 상태를 출석부 숫자 값으로 변환
+ *
+ * 출석부는 시간 단위를 사용하므로, 상세 상태는 이진값(출석/결석)으로 변환.
+ * - present/late/early_leave → 1 (출석 처리: 등원함)
+ * - absent/excused → 0 (결석 처리: 미등원)
+ * 세부 상태(지각/조퇴/사유결석)는 DailyAttendance에서 관리.
  *
  * @param status - 출결 관리의 AttendanceStatus
  * @returns 출석부의 숫자 값
@@ -40,10 +42,10 @@ export function mapAttendanceValueToStatus(value: number | null): AttendanceStat
 export function mapAttendanceStatusToValue(status: AttendanceStatus): number {
   switch (status) {
     case 'present': return 1;       // 출석
+    case 'late': return 1;          // 지각 → 출석 (등원함)
+    case 'early_leave': return 1;   // 조퇴 → 출석 (등원함)
     case 'absent': return 0;        // 결석
-    case 'late': return 2;          // 지각
-    case 'early_leave': return 3;   // 조퇴
-    case 'excused': return 4;       // 사유결석
+    case 'excused': return 0;       // 사유결석 → 결석 (미등원)
     default: return 0;
   }
 }
