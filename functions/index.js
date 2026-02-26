@@ -6,6 +6,7 @@ const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const { getFirestore } = require("firebase-admin/firestore");
 const CryptoJS = require("crypto-js");
+const { GoogleGenAI, createPartFromFunctionResponse } = require("@google/genai");
 const logger = functions.logger;
 
 admin.initializeApp();
@@ -1331,4 +1332,358 @@ exports.submitConsultationDraft = functions
             throw new functions.https.HttpsError("internal", "서버 오류가 발생했습니다.");
         }
     });
+
+// ============================================================
+// Cloud Function: AI Chatbot (Gemini 2.0 Flash + Function Calling)
+// ============================================================
+
+const CHATBOT_TOOL_DEFS = [
+    {
+        name: "search_students",
+        description: "학생을 검색합니다. 이름, 상태, 학년으로 필터링 가능. 재원생 수를 알려면 status='active'로 호출. 파라미터 없이 호출하면 전체 학생 목록 반환. '고등학생 몇명?' 같은 질문에는 grade 필터 사용.",
+        parameters: { type: "object", properties: {
+            name: { type: "string", description: "학생 이름 (부분 일치 검색)" },
+            status: { type: "string", description: "학생 상태. active=재원생, withdrawn=퇴원생, on_hold=휴원, prospect=상담예정", enum: ["active", "withdrawn", "on_hold", "prospect"] },
+            grade: { type: "string", description: "학년. 예: 초1, 초2, 중1, 중2, 중3, 고1, 고2, 고3" },
+        }, required: [] },
+    },
+    {
+        name: "get_student_enrollments",
+        description: "특정 학생이 수강 중인 과목/반 목록을 조회합니다. '영어를 수강하는 학생'을 찾으려면 이 도구 대신 get_enrollments_by_subject를 사용하세요.",
+        parameters: { type: "object", properties: {
+            studentId: { type: "string", description: "학생 문서 ID (search_students 결과에서 획득)" },
+        }, required: ["studentId"] },
+    },
+    {
+        name: "get_enrollments_by_subject",
+        description: "특정 과목을 수강하는 학생 목록을 조회합니다. '영어 수강생', '수학 듣는 학생 수', '고등학생 중 영어 수강생' 같은 질문에 사용.",
+        parameters: { type: "object", properties: {
+            subject: { type: "string", description: "과목", enum: ["math", "english", "science", "korean"] },
+            grade: { type: "string", description: "학년 필터 (선택). 예: 초1, 중2, 고3" },
+        }, required: ["subject"] },
+    },
+    {
+        name: "get_student_scores",
+        description: "학생의 시험 성적과 성적 추이를 조회합니다. 평균 점수와 상승/하락 추세를 반환합니다.",
+        parameters: { type: "object", properties: {
+            studentId: { type: "string", description: "학생 문서 ID (search_students 결과에서 획득)" },
+            subject: { type: "string", description: "과목 필터 (선택)", enum: ["math", "english", "science", "korean"] },
+        }, required: ["studentId"] },
+    },
+    {
+        name: "get_student_attendance",
+        description: "학생의 출결 기록을 기간별로 조회합니다. 출석률, 지각, 결석 횟수를 반환합니다.",
+        parameters: { type: "object", properties: {
+            studentId: { type: "string", description: "학생 문서 ID (search_students 결과에서 획득)" },
+            startDate: { type: "string", description: "시작일 (YYYY-MM-DD)" },
+            endDate: { type: "string", description: "종료일 (YYYY-MM-DD)" },
+        }, required: ["studentId", "startDate", "endDate"] },
+    },
+    {
+        name: "get_class_info",
+        description: "수업(반) 목록을 조회합니다. 과목별 반 목록, 담당 선생님, 강의실 정보를 반환합니다. '수학 반 목록', '영어 수업' 같은 질문에 사용.",
+        parameters: { type: "object", properties: {
+            className: { type: "string", description: "수업명 (부분 일치 검색)" },
+            subject: { type: "string", description: "과목 필터", enum: ["math", "english", "science", "korean"] },
+        }, required: [] },
+    },
+    {
+        name: "get_staff_info",
+        description: "선생님/직원 정보를 조회합니다. 이름, 담당 과목(subjects), 직책 정보를 반환합니다. '수학 선생님 몇명?', '영어 선생님 목록' 같은 질문에 subject 파라미터 사용.",
+        parameters: { type: "object", properties: {
+            name: { type: "string", description: "이름 (부분 일치 검색)" },
+            subject: { type: "string", description: "담당 과목 필터", enum: ["math", "english", "science", "korean"] },
+        }, required: [] },
+    },
+    {
+        name: "get_billing_summary",
+        description: "특정 월의 수납 현황을 조회합니다. 총 청구액, 납부액, 미납액, 수납률을 반환합니다.",
+        parameters: { type: "object", properties: {
+            month: { type: "string", description: "조회할 월 (YYYY-MM 형식, 예: 2026-02)" },
+        }, required: ["month"] },
+    },
+    {
+        name: "get_withdrawal_stats",
+        description: "기간별 신규 등록/퇴원 통계를 조회합니다. 재원생 수, 신규 등록 수, 퇴원 수, 순증감을 반환합니다.",
+        parameters: { type: "object", properties: {
+            startDate: { type: "string", description: "시작일 (YYYY-MM-DD)" },
+            endDate: { type: "string", description: "종료일 (YYYY-MM-DD)" },
+        }, required: ["startDate", "endDate"] },
+    },
+    {
+        name: "get_teacher_enrollment_stats",
+        description: "담임 선생님별 신입생/퇴원생 통계를 조회합니다. 각 선생님의 신규 등록, 종료, 순증감 수를 반환합니다.",
+        parameters: { type: "object", properties: {
+            staffName: { type: "string", description: "선생님 이름 (생략 시 전체 선생님)" },
+            startDate: { type: "string", description: "시작일 (YYYY-MM-DD)" },
+            endDate: { type: "string", description: "종료일 (YYYY-MM-DD)" },
+        }, required: ["startDate", "endDate"] },
+    },
+];
+
+// Tool executor functions (server-side, using firebase-admin)
+async function toolSearchStudents(args) {
+    let query = db.collection("students");
+    if (args.status) query = query.where("status", "==", args.status);
+    const snap = await query.get();
+    let students = snap.docs.map(d => ({ id: d.id, name: d.data().name, grade: d.data().grade, status: d.data().status, school: d.data().school, startDate: d.data().startDate, withdrawalDate: d.data().withdrawalDate }));
+    if (args.name) { const s = args.name.toLowerCase(); students = students.filter(st => st.name?.toLowerCase().includes(s)); }
+    if (args.grade) students = students.filter(st => st.grade?.includes(args.grade));
+    const totalCount = students.length;
+    return { totalCount, students: students.slice(0, 30) };
+}
+
+async function toolGetStudentEnrollments(args) {
+    const snap = await db.collection("students").doc(args.studentId).collection("enrollments").get();
+    const enrollments = snap.docs.map(d => {
+        const data = d.data();
+        return { subject: data.subject, className: data.className, teacher: data.teacher, startDate: data.startDate || data.enrollmentDate, endDate: data.endDate || data.withdrawalDate, onHold: data.onHold };
+    });
+    const active = enrollments.filter(e => !e.endDate);
+    const ended = enrollments.filter(e => !!e.endDate);
+    return { active, ended, totalActive: active.length, totalEnded: ended.length };
+}
+
+async function toolGetStudentScores(args) {
+    const snap = await db.collection("student_scores").where("studentId", "==", args.studentId).get();
+    let scores = snap.docs.map(d => {
+        const data = d.data();
+        return { subject: data.subject, score: data.score, maxScore: data.maxScore, percentage: data.percentage, grade: data.grade, createdAt: data.createdAt };
+    });
+    if (args.subject) scores = scores.filter(s => s.subject === args.subject);
+    scores.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    scores = scores.slice(0, 10);
+    const avg = scores.length > 0 ? scores.reduce((sum, s) => sum + (s.percentage || 0), 0) / scores.length : 0;
+    let trend = "stable";
+    if (scores.length >= 2) { const diff = (scores[0].percentage || 0) - (scores[scores.length - 1].percentage || 0); if (diff > 5) trend = "improving"; else if (diff < -5) trend = "declining"; }
+    return { totalExams: scores.length, averagePercentage: Math.round(avg * 10) / 10, trend, recentScores: scores };
+}
+
+async function toolGetStudentAttendance(args) {
+    const dates = [];
+    const start = new Date(args.startDate);
+    const end = new Date(args.endDate);
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) dates.push(d.toISOString().split("T")[0]);
+    const limitedDates = dates.slice(0, 31);
+    let present = 0, late = 0, absent = 0, excused = 0, earlyLeave = 0, total = 0;
+    for (let i = 0; i < limitedDates.length; i += 7) {
+        const batch = limitedDates.slice(i, i + 7);
+        const results = await Promise.all(batch.map(date => db.collection("daily_attendance").doc(date).collection("records").where("studentId", "==", args.studentId).get()));
+        for (const snap of results) { for (const doc of snap.docs) { const st = doc.data().status; total++; if (st === "present") present++; else if (st === "late") late++; else if (st === "absent") absent++; else if (st === "excused") excused++; else if (st === "early_leave") earlyLeave++; } }
+    }
+    const rate = total > 0 ? Math.round(((present + late) / total) * 1000) / 10 : 0;
+    return { period: `${args.startDate} ~ ${args.endDate}`, totalRecords: total, present, late, absent, excused, earlyLeave, attendanceRate: `${rate}%` };
+}
+
+async function toolGetClassInfo(args) {
+    let query = db.collection("classes").where("isActive", "==", true);
+    if (args.subject) query = query.where("subject", "==", args.subject);
+    const snap = await query.get();
+    let classes = snap.docs.map(d => {
+        const data = d.data();
+        return { id: d.id, className: data.className, subject: data.subject, teacher: data.mainTeacher || data.teacher, room: data.room };
+    });
+    if (args.className) { const s = args.className.toLowerCase(); classes = classes.filter(c => c.className?.toLowerCase().includes(s)); }
+    return { count: classes.length, classes };
+}
+
+async function toolGetStaffInfo(args) {
+    const snap = await db.collection("staff").orderBy("name").get();
+    let staff = snap.docs.map(d => ({ id: d.id, name: d.data().name, englishName: d.data().englishName, role: d.data().role, subjects: d.data().subjects, jobTitle: d.data().jobTitle, isNative: d.data().isNative }));
+    if (args.name) { const s = args.name.toLowerCase(); staff = staff.filter(st => st.name?.toLowerCase().includes(s) || st.englishName?.toLowerCase().includes(s)); }
+    if (args.subject) staff = staff.filter(st => Array.isArray(st.subjects) && st.subjects.includes(args.subject));
+    return { totalCount: staff.length, staff };
+}
+
+async function toolGetEnrollmentsBySubject(args) {
+    const snap = await db.collectionGroup("enrollments").where("subject", "==", args.subject).get();
+    const studentIds = new Set();
+    const enrollments = [];
+    snap.docs.forEach(d => {
+        const data = d.data();
+        if (data.endDate || data.withdrawalDate) return; // 종료된 수강 제외
+        const sid = d.ref.parent.parent?.id;
+        if (sid && !studentIds.has(sid)) {
+            studentIds.add(sid);
+            enrollments.push({ studentId: sid, className: data.className, teacher: data.teacher || data.staffId });
+        }
+    });
+    // grade 필터가 있으면 학생 정보 조회
+    let result = enrollments;
+    if (args.grade && studentIds.size > 0) {
+        const studentSnap = await db.collection("students").where("status", "==", "active").get();
+        const gradeMap = {};
+        studentSnap.docs.forEach(d => { gradeMap[d.id] = d.data().grade; });
+        result = enrollments.filter(e => gradeMap[e.studentId]?.includes(args.grade));
+    }
+    const subjectNames = { math: "수학", english: "영어", science: "과학", korean: "국어" };
+    return { subject: subjectNames[args.subject] || args.subject, totalCount: result.length, students: result.slice(0, 30) };
+}
+
+async function toolGetBillingSummary(args) {
+    const snap = await db.collection("billing").where("month", "==", args.month).get();
+    let totalBilled = 0, totalPaid = 0, totalUnpaid = 0, paidCount = 0, pendingCount = 0;
+    snap.docs.forEach(d => { const data = d.data(); totalBilled += data.billedAmount || 0; totalPaid += data.paidAmount || 0; totalUnpaid += data.unpaidAmount || 0; if (data.status === "paid") paidCount++; else pendingCount++; });
+    const rate = totalBilled > 0 ? Math.round((totalPaid / totalBilled) * 1000) / 10 : 0;
+    return { month: args.month, totalRecords: snap.size, totalBilled, totalPaid, totalUnpaid, paidCount, pendingCount, collectionRate: `${rate}%` };
+}
+
+async function toolGetWithdrawalStats(args) {
+    const snap = await db.collection("students").get();
+    let newEnrollments = 0, withdrawals = 0, totalActive = 0;
+    const reasons = {};
+    snap.docs.forEach(d => { const data = d.data(); if (data.status === "active") totalActive++; if (data.startDate && data.startDate >= args.startDate && data.startDate <= args.endDate) newEnrollments++; const wDate = data.withdrawalDate || data.endDate; if (data.status === "withdrawn" && wDate && wDate >= args.startDate && wDate <= args.endDate) { withdrawals++; const r = data.withdrawalReason || "미입력"; reasons[r] = (reasons[r] || 0) + 1; } });
+    return { period: `${args.startDate} ~ ${args.endDate}`, totalActive, newEnrollments, withdrawals, netChange: newEnrollments - withdrawals, withdrawalReasons: reasons };
+}
+
+async function toolGetTeacherEnrollmentStats(args) {
+    const snap = await db.collectionGroup("enrollments").get();
+    const stats = {};
+    snap.docs.forEach(d => { const data = d.data(); const teacher = data.teacher || data.staffId || "unknown"; if (!stats[teacher]) stats[teacher] = { newCount: 0, endedCount: 0, totalActive: 0 }; if (!data.endDate && !data.withdrawalDate) stats[teacher].totalActive++; const sd = data.startDate || data.enrollmentDate; if (sd && sd >= args.startDate && sd <= args.endDate) stats[teacher].newCount++; const ed = data.endDate || data.withdrawalDate; if (ed && ed >= args.startDate && ed <= args.endDate) stats[teacher].endedCount++; });
+    let result = Object.entries(stats).map(([name, s]) => ({ teacher: name, ...s, netChange: s.newCount - s.endedCount }));
+    if (args.staffName) { const s = args.staffName.toLowerCase(); result = result.filter(r => r.teacher.toLowerCase().includes(s)); }
+    result.sort((a, b) => b.netChange - a.netChange);
+    return { period: `${args.startDate} ~ ${args.endDate}`, teacherStats: result };
+}
+
+const TOOL_EXECUTOR_MAP = {
+    search_students: toolSearchStudents,
+    get_student_enrollments: toolGetStudentEnrollments,
+    get_enrollments_by_subject: toolGetEnrollmentsBySubject,
+    get_student_scores: toolGetStudentScores,
+    get_student_attendance: toolGetStudentAttendance,
+    get_class_info: toolGetClassInfo,
+    get_staff_info: toolGetStaffInfo,
+    get_billing_summary: toolGetBillingSummary,
+    get_withdrawal_stats: toolGetWithdrawalStats,
+    get_teacher_enrollment_stats: toolGetTeacherEnrollmentStats,
+};
+
+exports.chatWithAI = functions.region("asia-northeast3").https.onCall(async (data, context) => {
+    // 1. Auth check
+    if (!context.auth) {
+        throw new functions.https.HttpsError("unauthenticated", "로그인이 필요합니다.");
+    }
+
+    const { message, history, userName, userRole } = data;
+    if (!message || typeof message !== "string") {
+        throw new functions.https.HttpsError("invalid-argument", "메시지가 필요합니다.");
+    }
+
+    // 2. Get API key from environment
+    const geminiApiKey = process.env.GEMINI_API_KEY;
+    if (!geminiApiKey) {
+        logger.error("[chatWithAI] GEMINI_API_KEY not set in functions/.env");
+        throw new functions.https.HttpsError("failed-precondition", "AI 서비스가 설정되지 않았습니다.");
+    }
+
+    try {
+        const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+        const today = new Date().toISOString().split("T")[0];
+        const currentMonth = today.slice(0, 7);
+
+        const systemPrompt = `당신은 인재원 학원 관리 시스템의 AI 어시스턴트입니다.
+사용자: ${userName || "사용자"} (${userRole || "user"})
+오늘 날짜: ${today}, 현재 월: ${currentMonth}
+
+중요 규칙:
+1. 반드시 한국어로만 답변하세요. 영어, 기술 용어, 도구 이름을 절대 노출하지 마세요.
+2. 질문에 답하려면 반드시 도구를 호출하여 실제 데이터를 조회하세요. 추측 금지.
+3. 도구 호출 결과가 없거나 0건이면 "데이터가 없습니다"라고 정직하게 답하세요.
+4. 답변은 간결하고 자연스러운 한국어로 작성하세요. 목록은 번호를 매겨주세요.
+
+도구 활용 가이드:
+- "재원생 몇명?" → search_students(status="active") 호출
+- "고등학생 중 영어 수강생" → get_enrollments_by_subject(subject="english", grade="고1") 등 호출
+- "김민수 출석률" → 먼저 search_students(name="김민수")로 ID 획득 → get_student_attendance 호출
+- "수학 선생님" → get_staff_info(subject="math") 호출
+- "이번 달 수납률" → get_billing_summary(month="${currentMonth}") 호출
+- 기간 미지정 통계 → 최근 1개월 (${today.slice(0,8)}01 ~ ${today}) 사용
+
+과목 코드: math=수학, english=영어, science=과학, korean=국어
+학년 형식: 초1~초6, 중1~중3, 고1~고3`;
+
+        // 3. Build conversation history for Gemini
+        const contents = [];
+        if (Array.isArray(history)) {
+            for (const msg of history.slice(-20)) { // Keep last 20 messages
+                contents.push({
+                    role: msg.role === "assistant" ? "model" : "user",
+                    parts: [{ text: msg.content }],
+                });
+            }
+        }
+        contents.push({ role: "user", parts: [{ text: message }] });
+
+        // 4. Call Gemini with tools
+        let response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents,
+            config: {
+                systemInstruction: systemPrompt,
+                temperature: 0.3,
+                maxOutputTokens: 1024,
+                tools: [{ functionDeclarations: CHATBOT_TOOL_DEFS }],
+            },
+        });
+
+        // 5. Tool execution loop (max 5 iterations)
+        let iterations = 0;
+        while (response.functionCalls && response.functionCalls.length > 0 && iterations < 5) {
+            iterations++;
+
+            const toolResults = [];
+            for (const fc of response.functionCalls) {
+                logger.info(`[chatWithAI] Tool call: ${fc.name}`, { args: fc.args });
+                const executor = TOOL_EXECUTOR_MAP[fc.name];
+                let result;
+                if (executor) {
+                    try {
+                        result = await executor(fc.args || {});
+                        logger.info(`[chatWithAI] Tool result: ${fc.name}`, { resultKeys: Object.keys(result), count: result.totalCount || result.count });
+                    } catch (err) {
+                        logger.error(`[chatWithAI] Tool error: ${fc.name}`, { error: err.message });
+                        result = { error: `조회 중 오류가 발생했습니다: ${err.message}` };
+                    }
+                } else {
+                    result = { error: `알 수 없는 도구: ${fc.name}` };
+                }
+                toolResults.push(createPartFromFunctionResponse(fc.id || `call_${Date.now()}`, fc.name, result));
+            }
+
+            // Build new contents with function responses
+            const updatedContents = [...contents];
+            // Add model's function call
+            updatedContents.push({ role: "model", parts: response.candidates?.[0]?.content?.parts || [] });
+            // Add function responses
+            updatedContents.push({ role: "user", parts: toolResults });
+
+            response = await ai.models.generateContent({
+                model: "gemini-2.5-flash",
+                contents: updatedContents,
+                config: {
+                    systemInstruction: systemPrompt,
+                    temperature: 0.3,
+                    maxOutputTokens: 1024,
+                    tools: [{ functionDeclarations: CHATBOT_TOOL_DEFS }],
+                },
+            });
+
+            // Update contents for potential next iteration
+            contents.length = 0;
+            contents.push(...updatedContents);
+            if (response.functionCalls && response.functionCalls.length > 0) {
+                contents.push({ role: "model", parts: response.candidates?.[0]?.content?.parts || [] });
+            }
+        }
+
+        const text = response.text || "응답을 생성할 수 없습니다.";
+        return { response: text };
+
+    } catch (error) {
+        logger.error("[chatWithAI] Error:", error);
+        if (error.code) throw error;
+        throw new functions.https.HttpsError("internal", "AI 응답 생성 중 오류가 발생했습니다.");
+    }
+});
 

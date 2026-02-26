@@ -42,6 +42,7 @@ import { HeaderCollapseProvider } from './contexts/HeaderCollapseContext';
 import { INJAEWON_LOGO } from './utils/styleUtils';
 import { VideoLoading } from './components/Common/VideoLoading';
 import VersionUpdateToast from './components/Common/VersionUpdateToast';
+import Chatbot from './components/Chatbot';
 
 // Embed Mode Support
 import EmbedRouter, { isEmbedMode } from './components/Embed/EmbedRouter';
@@ -905,6 +906,10 @@ const App: React.FC = () => {
           handleDeleteMemo={handleDeleteMemo}
         />
       </div>
+      <Chatbot
+        userProfile={effectiveProfile || null}
+        hasPermission={hasPermission}
+      />
     </RoleSimulationProvider>
   );
 };
