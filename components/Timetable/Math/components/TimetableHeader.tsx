@@ -328,9 +328,9 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     }, [filteredClasses, studentMap, currentWeekStart]);
 
     return (
-        <div className="flex flex-col flex-shrink-0">
+        <div className="flex flex-col flex-shrink-0 min-w-0">
             {/* Main Header Row */}
-            <div className={`bg-gray-50 min-h-[2.5rem] flex items-center gap-3 pl-4 border-b border-gray-200 text-xs overflow-x-auto ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
+            <div className={`bg-gray-50 min-h-[2.5rem] flex items-center gap-3 pl-4 border-b border-gray-200 text-xs min-w-0 overflow-x-auto ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
             {/* Left: Week Info */}
             <div className="flex items-center gap-3 flex-shrink-0">
                 <span className="text-gray-600 font-medium">{weekLabel}</span>
