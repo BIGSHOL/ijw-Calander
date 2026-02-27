@@ -57,6 +57,10 @@ export function extractTeacherFromClassName(className: string | null): string | 
  * 특정 날짜의 보고서 목록을 조회합니다.
  */
 export async function fetchReportsByDate(date: string): Promise<EdutrixReport[]> {
+    if (!supabase) {
+        console.warn('[Supabase] 클라이언트가 초기화되지 않았습니다. 빈 결과를 반환합니다.');
+        return [];
+    }
     const { data, error } = await supabase
         .from('reports')
         .select(`
@@ -101,6 +105,10 @@ export async function fetchReportsByDate(date: string): Promise<EdutrixReport[]>
  * @param yearMonth - "YYYY-MM" 형식 (예: "2026-02")
  */
 export async function fetchReportsByMonth(yearMonth: string): Promise<EdutrixReport[]> {
+    if (!supabase) {
+        console.warn('[Supabase] 클라이언트가 초기화되지 않았습니다. 빈 결과를 반환합니다.');
+        return [];
+    }
     const startDate = `${yearMonth}-01`;
     const [year, month] = yearMonth.split('-').map(Number);
     const lastDay = new Date(year, month, 0).getDate();
