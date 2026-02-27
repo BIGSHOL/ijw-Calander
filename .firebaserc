@@ -1,5 +1,18 @@
 {
   "projects": {
     "default": "ijw-calander"
-  }
+  },
+  "targets": {
+    "ijw-calander": {
+      "hosting": {
+        "prod": [
+          "ijw-calander"
+        ],
+        "dev": [
+          "ijw-calander-dev"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

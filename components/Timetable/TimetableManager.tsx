@@ -48,7 +48,7 @@ interface MathTimetableContentProps {
     goToThisWeek: () => void;
     searchQuery: string;
     setSearchQuery: (q: string) => void;
-    viewType: 'teacher' | 'room' | 'class';
+    viewType: 'teacher' | 'room' | 'class' | 'excel';
     setIsTeacherOrderModalOpen: (open: boolean) => void;
     setIsViewSettingsOpen: (open: boolean) => void;
     pendingMovesCount: number;
@@ -213,6 +213,9 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     const { settings: mathIntegrationSettings, updateSettings: updateMathIntegrationSettings } = useMathSettings();
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const gridRef = React.useRef<HTMLDivElement>(null);
+    // 엑셀뷰용 셀 선택 + 학생 등록
+    const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+    const { enrollExistingStudent } = useClassOperations();
     // 이미지 내보내기용 그룹 상태
     const [exportGroups, setExportGroups] = useState<ExportGroup[]>([]);
     const [exportVisibleGroups, setExportVisibleGroups] = useState<number[] | undefined>(undefined);
@@ -495,6 +498,51 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                 </div>
                 )}
 
+                {/* Excel Mode - 강사뷰 변형 (셀 선택, 텍스트 복사, 자동완성) */}
+                {viewType === 'excel' && (
+                <div ref={gridRef} className="flex-1 overflow-hidden border-t border-gray-200 p-4">
+                    <TimetableGrid
+                        filteredClasses={filteredClasses}
+                        allResources={allResources}
+                        orderedSelectedDays={orderedSelectedDays}
+                        weekDates={weekDates}
+                        viewType="teacher"
+                        currentPeriods={currentPeriods}
+                        teachers={teachers}
+                        searchQuery={searchQuery}
+                        canEdit={canEditMath}
+                        mode={isScenarioMode ? 'edit' : mode}
+                        columnWidth={columnWidth}
+                        rowHeight={rowHeight}
+                        fontSize={fontSize}
+                        showClassName={showClassName}
+                        showSchool={showSchool}
+                        showGrade={showGrade}
+                        showEmptyRooms={showEmptyRooms}
+                        showStudents={showStudents}
+                        showHoldStudents={showHoldStudents}
+                        showWithdrawnStudents={showWithdrawnStudents}
+                        dragOverClassId={dragOverClassId}
+                        onClassClick={handleClassClick}
+                        onDragStart={handleGridDragStart}
+                        onDragOver={handleGridDragOver}
+                        onDragLeave={handleGridDragLeave}
+                        onDrop={handleGridDrop}
+                        currentSubjectFilter={currentSubjectFilter}
+                        studentMap={studentMap}
+                        timetableViewMode={timetableViewMode}
+                        classKeywords={classKeywords}
+                        onStudentClick={handleStudentClick}
+                        pendingMovedStudentIds={pendingMovedStudentIds}
+                        pendingMoveSchedules={pendingMoveSchedules}
+                        isExcelMode={true}
+                        selectedClassId={selectedClassId}
+                        onCellSelect={setSelectedClassId}
+                        onEnrollStudent={enrollExistingStudent}
+                    />
+                </div>
+                )}
+
                 {/* Math Class Tab - 통합뷰 */}
                 {viewType === 'class' && (
                     <div ref={gridRef} className="flex-1 overflow-hidden border-t border-gray-200">
@@ -657,8 +705,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
 interface TimetableManagerProps {
     subjectTab?: SubjectType;
     onSubjectChange?: (subject: SubjectType) => void;
-    viewType?: 'teacher' | 'room' | 'class';
-    onViewTypeChange?: (viewType: 'teacher' | 'room' | 'class') => void;
+    viewType?: 'teacher' | 'room' | 'class' | 'excel';
+    onViewTypeChange?: (viewType: 'teacher' | 'room' | 'class' | 'excel') => void;
     showStudents?: boolean;
     onShowStudentsChange?: (show: boolean) => void;
     selectedDays?: string[];
@@ -741,6 +789,7 @@ const TimetableManager = ({
         updateClass,
         deleteClass,
         addStudent,
+        enrollExistingStudent,
         removeStudent,
         withdrawStudent,
         restoreStudent
@@ -813,7 +862,7 @@ const TimetableManager = ({
     const selectedDays = externalSelectedDays ?? internalSelectedDays;
     const setSelectedDays = onSelectedDaysChange ?? setInternalSelectedDays;
 
-    const [internalViewType, setInternalViewType] = useState<'teacher' | 'room' | 'class'>('teacher');
+    const [internalViewType, setInternalViewType] = useState<'teacher' | 'room' | 'class' | 'excel'>('teacher');
     const viewType = externalViewType ?? internalViewType;
     const setViewType = onViewTypeChange ?? setInternalViewType;
 
