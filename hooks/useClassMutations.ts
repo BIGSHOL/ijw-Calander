@@ -10,6 +10,7 @@ import {
   where,
   collectionGroup,
   setDoc,
+  deleteField,
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { SubjectType } from '../types';
@@ -114,6 +115,10 @@ export interface UpdateClassData {
   slotTeachers?: Record<string, string>;  // { "월-4": "부담임명", ... }
   slotRooms?: Record<string, string>;  // { "월-4": "301", ... }
   memo?: string;  // 수업 메모
+  // 스케줄 변경 예정
+  pendingSchedule?: string[];       // 예정 스케줄 (레거시 형식)
+  pendingScheduleDate?: string;     // 적용 예정일
+  clearPending?: boolean;           // 즉시 적용 시 pending 필드 삭제
 }
 
 export const useUpdateClass = () => {
@@ -121,13 +126,20 @@ export const useUpdateClass = () => {
 
   return useMutation({
     mutationFn: async (updateData: UpdateClassData) => {
-      const { originalClassName, originalSubject, newClassName, newTeacher, newSchedule = [], newRoom, slotTeachers, slotRooms, memo } = updateData;
+      const { originalClassName, originalSubject, newClassName, newTeacher, newSchedule = [], newRoom, slotTeachers, slotRooms, memo, pendingSchedule, pendingScheduleDate, clearPending } = updateData;
 
       let classesUpdated = 0;
       let enrollmentsUpdated = 0;
+      const hasPendingSchedule = !!(pendingSchedule && pendingScheduleDate);
 
       // 스케줄을 ScheduleSlot[] 형식으로 변환
       const scheduleSlots = newSchedule.map(s => {
+        const parts = s.split(' ');
+        return { day: parts[0], periodId: parts[1] || '' };
+      });
+
+      // pendingSchedule도 ScheduleSlot[] 형식으로 변환
+      const pendingScheduleSlots = pendingSchedule?.map(s => {
         const parts = s.split(' ');
         return { day: parts[0], periodId: parts[1] || '' };
       });
@@ -165,6 +177,18 @@ export const useUpdateClass = () => {
           if (memo !== undefined) {
             updatePayload.memo = memo;
           }
+          // 스케줄 변경 예정 저장
+          if (hasPendingSchedule) {
+            updatePayload.pendingSchedule = pendingScheduleSlots;
+            updatePayload.pendingLegacySchedule = pendingSchedule;
+            updatePayload.pendingScheduleDate = pendingScheduleDate;
+          }
+          // 즉시 적용 시 기존 pending 필드 삭제
+          if (clearPending) {
+            updatePayload.pendingSchedule = deleteField();
+            updatePayload.pendingLegacySchedule = deleteField();
+            updatePayload.pendingScheduleDate = deleteField();
+          }
           await updateDoc(docSnap.ref, updatePayload);
         });
 
@@ -175,6 +199,7 @@ export const useUpdateClass = () => {
       }
 
       // 2. enrollments도 업데이트 (레거시 호환 - 인덱스 없으면 스킵)
+      // pendingSchedule이 있으면 enrollment schedule은 아직 업데이트하지 않음
       try {
         const enrollmentsQuery = query(
           collectionGroup(db, 'enrollments'),
@@ -186,13 +211,17 @@ export const useUpdateClass = () => {
 
         // 각 enrollment 업데이트
         const enrollmentPromises = enrollmentsSnapshot.docs.map(async (docSnap) => {
-          await updateDoc(docSnap.ref, {
+          const enrollUpdate: Record<string, any> = {
             className: newClassName,
-            staffId: newTeacher, // newTeacher는 이제 staffId
-            teacher: newTeacher,  // 호환성을 위해 유지
-            schedule: newSchedule,
+            staffId: newTeacher,
+            teacher: newTeacher,
             updatedAt: new Date().toISOString(),
-          });
+          };
+          // pendingSchedule이 없으면 (즉시 적용) enrollment schedule도 업데이트
+          if (!hasPendingSchedule) {
+            enrollUpdate.schedule = newSchedule;
+          }
+          await updateDoc(docSnap.ref, enrollUpdate);
         });
 
         await Promise.all(enrollmentPromises);

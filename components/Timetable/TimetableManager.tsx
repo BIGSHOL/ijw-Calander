@@ -36,7 +36,7 @@ import type { ExportGroupInfo } from './Math/MathClassTab';
 import WithdrawalStudentDetail from '../WithdrawalManagement/WithdrawalStudentDetail';
 import { WithdrawalEntry } from '../../hooks/useWithdrawalFilters';
 import ScheduledDateModal from './Math/components/ScheduledDateModal';
-import { doc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+import { doc, collection, collectionGroup, query, where, getDocs, deleteDoc, updateDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -128,6 +128,8 @@ interface MathTimetableContentProps {
     setSelectedWithdrawalEntry: (entry: WithdrawalEntry | null) => void;
     // 배정 예정 취소
     onCancelScheduledEnrollment?: (studentId: string, className: string) => void;
+    // 퇴원 드롭존
+    onWithdrawalDrop?: (studentId: string, classId: string, className: string) => void;
 }
 
 const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
@@ -209,6 +211,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     selectedWithdrawalEntry,
     setSelectedWithdrawalEntry,
     onCancelScheduledEnrollment,
+    onWithdrawalDrop,
 }) => {
     const simulation = useMathSimulation();
     const { isScenarioMode, currentScenarioName, enterScenarioMode, exitScenarioMode, loadFromLive, publishToLive } = simulation;
@@ -504,6 +507,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         pendingMovedStudentIds={pendingMovedStudentIds}
                         pendingMoveSchedules={pendingMoveSchedules}
                         onCancelScheduledEnrollment={!isScenarioMode ? onCancelScheduledEnrollment : undefined}
+                        onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
                     />
                 </div>
                 )}
@@ -549,6 +553,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         selectedClassId={selectedClassId}
                         onCellSelect={setSelectedClassId}
                         onEnrollStudent={enrollExistingStudent}
+                        onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
                     />
                 </div>
                 )}
@@ -1033,6 +1038,38 @@ const TimetableManager = ({
         }
     }, [queryClient]);
 
+    // 퇴원 드롭존 모달 상태
+    const [withdrawalModalInfo, setWithdrawalModalInfo] = useState<{
+        studentId: string; studentName: string; classId: string; className: string;
+    } | null>(null);
+
+    const handleWithdrawalDrop = useCallback((studentId: string, classId: string, className: string) => {
+        const student = studentMap[studentId];
+        setWithdrawalModalInfo({
+            studentId,
+            studentName: student?.name || studentId,
+            classId,
+            className,
+        });
+    }, [studentMap]);
+
+    const handleWithdrawalConfirm = useCallback(async (scheduledDate?: string) => {
+        if (!withdrawalModalInfo) return;
+        const { studentId, className } = withdrawalModalInfo;
+        try {
+            const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
+            const effectiveDate = scheduledDate || getTodayKST();
+            await updateDoc(enrollmentRef, { withdrawalDate: effectiveDate });
+            queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
+            queryClient.invalidateQueries({ queryKey: ['students'] });
+            queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
+        } catch (error) {
+            console.error('퇴원 처리 오류:', error);
+            alert('퇴원 처리에 실패했습니다.');
+        }
+        setWithdrawalModalInfo(null);
+    }, [withdrawalModalInfo, queryClient]);
+
     // Current periods based on subject tab
     const currentPeriods = subjectTab === 'math' ? MATH_PERIODS : ENGLISH_PERIODS;
     const currentSubjectFilter = subjectTab === 'math' ? '수학' : '영어';
@@ -1084,9 +1121,95 @@ const TimetableManager = ({
     // NOTE: Teachers list is now passed as props from App.tsx (centralized subscription)
 
     // Filter classes by current subject (localClasses already has enrollment data merged)
+    // + 스케줄 변경 예정 고스트 블록 추가
     const filteredClasses = useMemo(() => {
-        return localClasses.filter(c => c.subject === currentSubjectFilter);
+        const base = localClasses.filter(c => c.subject === currentSubjectFilter);
+        const ghosts: TimetableClass[] = [];
+        base.forEach(cls => {
+            if (cls.pendingSchedule && cls.pendingScheduleDate) {
+                // 현재 schedule에 없는 새 슬롯만 고스트로 추가
+                const currentSet = new Set(cls.schedule || []);
+                const newSlots = cls.pendingSchedule.filter(s => !currentSet.has(s));
+                if (newSlots.length > 0) {
+                    ghosts.push({
+                        ...cls,
+                        id: `${cls.id}_pending`,
+                        schedule: newSlots,
+                        isPendingSchedule: true,
+                        studentList: [],
+                        studentIds: [],
+                    });
+                }
+            }
+        });
+        return [...base, ...ghosts];
     }, [localClasses, currentSubjectFilter]);
+
+    // 스케줄 변경 예정 자동 적용 (마운트 시 1회)
+    useEffect(() => {
+        const todayStr = getTodayKST();
+        const pendingClasses = classesWithEnrollments.filter(
+            cls => cls.pendingSchedule && cls.pendingScheduleDate && cls.pendingScheduleDate <= todayStr
+        );
+        if (pendingClasses.length === 0) return;
+
+        const applyPendingSchedules = async () => {
+            for (const cls of pendingClasses) {
+                try {
+                    // 1. class doc 업데이트: schedule → pendingSchedule, pending 필드 삭제
+                    const classesQuery = query(
+                        collection(db, 'classes'),
+                        where('subject', '==', cls.subject),
+                        where('className', '==', cls.className)
+                    );
+                    const classSnapshot = await getDocs(classesQuery);
+
+                    // pending 스케줄을 ScheduleSlot[] 형식으로 변환
+                    const pendingSlots = (cls.pendingSchedule || []).map((s: string) => {
+                        const parts = s.split(' ');
+                        return { day: parts[0], periodId: parts[1] || '' };
+                    });
+
+                    for (const docSnap of classSnapshot.docs) {
+                        await updateDoc(docSnap.ref, {
+                            schedule: pendingSlots,
+                            legacySchedule: cls.pendingSchedule,
+                            pendingSchedule: deleteField(),
+                            pendingLegacySchedule: deleteField(),
+                            pendingScheduleDate: deleteField(),
+                            updatedAt: new Date().toISOString(),
+                        });
+                    }
+
+                    // 2. enrollments 업데이트: schedule → pendingLegacySchedule
+                    const enrollmentsQuery = query(
+                        collectionGroup(db, 'enrollments'),
+                        where('subject', '==', cls.subject),
+                        where('className', '==', cls.className)
+                    );
+                    const enrollSnapshot = await getDocs(enrollmentsQuery);
+                    for (const docSnap of enrollSnapshot.docs) {
+                        await updateDoc(docSnap.ref, {
+                            schedule: cls.pendingSchedule,
+                            updatedAt: new Date().toISOString(),
+                        });
+                    }
+
+                    console.log(`[자동적용] ${cls.className} 스케줄 변경 적용 완료`);
+                } catch (error) {
+                    console.error(`[자동적용] ${cls.className} 스케줄 변경 실패:`, error);
+                }
+            }
+
+            // 캐시 무효화
+            queryClient.invalidateQueries({ queryKey: ['classes'] });
+            queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
+            queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
+        };
+
+        applyPendingSchedules();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // 마운트 시 1회만 실행
 
     // Compute resources (all teachers from state, filtered by hidden)
     const allResources = useMemo(() => {
@@ -1342,6 +1465,7 @@ const TimetableManager = ({
                 selectedWithdrawalEntry={selectedWithdrawalEntry}
                 setSelectedWithdrawalEntry={setSelectedWithdrawalEntry}
                 onCancelScheduledEnrollment={handleCancelScheduledEnrollment}
+                onWithdrawalDrop={handleWithdrawalDrop}
             />
             {/* 드래그 예정일 선택 모달 */}
             {dateModalInfo && (
@@ -1353,6 +1477,25 @@ const TimetableManager = ({
                     onClose={handleDateModalClose}
                     weekStart={currentMonday}
                     targetClassSchedule={dateModalInfo.targetClassSchedule}
+                />
+            )}
+            {/* 퇴원 날짜 선택 모달 */}
+            {withdrawalModalInfo && (
+                <ScheduledDateModal
+                    title="퇴원 날짜 설정"
+                    description={
+                        <p className="text-xs text-gray-600 text-center">
+                            <span className="font-bold text-gray-800">{withdrawalModalInfo.studentName}</span>
+                            <br />
+                            <span className="text-gray-400">{withdrawalModalInfo.className}</span>
+                        </p>
+                    }
+                    customImmediateLabel="즉시 퇴원 (오늘)"
+                    studentName={withdrawalModalInfo.studentName}
+                    fromClassName={withdrawalModalInfo.className}
+                    toClassName=""
+                    onConfirm={handleWithdrawalConfirm}
+                    onClose={() => setWithdrawalModalInfo(null)}
                 />
             )}
         </MathSimulationProvider>

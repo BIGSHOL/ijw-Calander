@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { X, Edit, ChevronDown, ChevronUp, Users, UserMinus, Calendar, User, FileText, BookOpen } from 'lucide-react';
 import { useUpdateClass, UpdateClassData, useManageClassStudents } from '../../hooks/useClassMutations';
+import ScheduledDateModal from '../Timetable/Math/components/ScheduledDateModal';
 import { ClassInfo, useClasses } from '../../hooks/useClasses';
 import { useClassDetail, ClassStudent } from '../../hooks/useClassDetail';
 import { useStudents } from '../../hooks/useStudents';
@@ -53,6 +54,15 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
   const [studentStartDates, setStudentStartDates] = useState<Record<string, string>>({});  // 학생별 시작일 (YYYY-MM-DD)
 
   const [error, setError] = useState('');
+
+  // 스케줄 변경 예정일 모달
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const pendingSaveDataRef = useRef<{
+    schedule: string[];
+    filteredSlotTeachers: Record<string, string>;
+    filteredSlotRooms: Record<string, string>;
+    trimmedClassName: string;
+  } | null>(null);
 
   const updateClassMutation = useUpdateClass();
   const manageStudentsMutation = useManageClassStudents();
@@ -400,6 +410,78 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     }));
   };
 
+  // 실시간 모드 저장 실행 (즉시 적용 / 예정일 지정 공통)
+  const executeRealSave = async (
+    schedule: string[],
+    filteredSlotTeachers: Record<string, string>,
+    filteredSlotRooms: Record<string, string>,
+    trimmedClassName: string,
+    pendingScheduleOpt?: string[],
+    pendingScheduleDateOpt?: string,
+  ) => {
+    // pendingSchedule이 있으면: 원래 스케줄 유지, pending 필드 저장
+    const saveSchedule = pendingScheduleOpt ? (classInfo.schedule || []) : schedule;
+
+    const updateData: UpdateClassData = {
+      originalClassName: classInfo.className,
+      originalSubject: classInfo.subject,
+      newClassName: trimmedClassName,
+      newTeacher: teacher.trim(),
+      newSchedule: saveSchedule,
+      newRoom: room.trim(),
+      slotTeachers: filteredSlotTeachers,
+      slotRooms: filteredSlotRooms,
+      memo: memo.trim(),
+      ...(pendingScheduleOpt ? {
+        pendingSchedule: pendingScheduleOpt,
+        pendingScheduleDate: pendingScheduleDateOpt,
+      } : {
+        clearPending: true,  // 즉시 적용 시 기존 pending 삭제
+      }),
+    };
+
+    await updateClassMutation.mutateAsync(updateData);
+
+    const hasStudentChanges = studentsToAdd.size > 0 || studentsToRemove.size > 0 || Object.keys(studentAttendanceDays).length > 0 || Object.keys(studentUnderlines).length > 0 || Object.keys(studentSlotTeachers).length > 0;
+    if (hasStudentChanges) {
+      await manageStudentsMutation.mutateAsync({
+        className: trimmedClassName,
+        teacher: teacher.trim(),
+        subject: classInfo.subject,
+        schedule: pendingScheduleOpt ? (classInfo.schedule || []) : schedule,
+        addStudentIds: Array.from(studentsToAdd),
+        removeStudentIds: Array.from(studentsToRemove),
+        studentAttendanceDays,
+        studentUnderlines,
+        studentSlotTeachers,
+        studentStartDates,
+      });
+    }
+
+    const classNameChanged = trimmedClassName !== classInfo.className;
+    onClose(true, classNameChanged ? trimmedClassName : undefined);
+  };
+
+  // 스케줄 변경 예정일 모달 확인
+  const handleScheduleModalConfirm = useCallback(async (scheduledDate?: string) => {
+    setShowScheduleModal(false);
+    const data = pendingSaveDataRef.current;
+    if (!data) return;
+    try {
+      if (scheduledDate) {
+        // 예정일 지정 → pending으로 저장
+        await executeRealSave(data.schedule, data.filteredSlotTeachers, data.filteredSlotRooms, data.trimmedClassName, data.schedule, scheduledDate);
+      } else {
+        // 즉시 적용 → 정상 저장
+        await executeRealSave(data.schedule, data.filteredSlotTeachers, data.filteredSlotRooms, data.trimmedClassName);
+      }
+    } catch (err) {
+      console.error('[EditClassModal] Error saving with schedule modal:', err);
+      setError(err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.');
+    }
+    pendingSaveDataRef.current = null;
+  }, [classInfo, teacher, room, memo, studentsToAdd, studentsToRemove, studentAttendanceDays, studentUnderlines, studentSlotTeachers, studentStartDates]);
+
   // 저장
   const handleSave = async () => {
     if (!className.trim()) {
@@ -485,41 +567,27 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
         onClose(true);
       } else {
         // 실시간 모드: Firebase에 저장
-        const updateData: UpdateClassData = {
-          originalClassName: classInfo.className,
-          originalSubject: classInfo.subject,
-          newClassName: className.trim(),
-          newTeacher: teacher.trim(),
-          newSchedule: schedule,
-          newRoom: room.trim(),
-          slotTeachers: filteredSlotTeachers,
-          slotRooms: filteredSlotRooms,
-          memo: memo.trim(),
-        };
 
-        // 1. 수업 정보 업데이트
-        await updateClassMutation.mutateAsync(updateData);
+        // 스케줄 변경 여부 확인
+        const originalScheduleSet = new Set(classInfo.schedule || []);
+        const newScheduleSet = new Set(schedule);
+        const scheduleChanged = originalScheduleSet.size !== newScheduleSet.size ||
+          [...newScheduleSet].some(s => !originalScheduleSet.has(s));
 
-        // 2. 학생 추가/제거/등원요일/밑줄/부담임 변경이 있으면 처리
-        const hasStudentChanges = studentsToAdd.size > 0 || studentsToRemove.size > 0 || Object.keys(studentAttendanceDays).length > 0 || Object.keys(studentUnderlines).length > 0 || Object.keys(studentSlotTeachers).length > 0;
-        if (hasStudentChanges) {
-          await manageStudentsMutation.mutateAsync({
-            className: className.trim(),
-            teacher: teacher.trim(),
-            subject: classInfo.subject,
+        // 스케줄이 변경되었으면 예정일 모달 표시
+        if (scheduleChanged) {
+          pendingSaveDataRef.current = {
             schedule,
-            addStudentIds: Array.from(studentsToAdd),
-            removeStudentIds: Array.from(studentsToRemove),
-            studentAttendanceDays,
-            studentUnderlines,
-            studentSlotTeachers,
-            studentStartDates,  // 학생별 시작일 전달
-          });
+            filteredSlotTeachers,
+            filteredSlotRooms,
+            trimmedClassName: className.trim(),
+          };
+          setShowScheduleModal(true);
+          return;
         }
 
-        // 수업명이 변경되었으면 새 수업명 전달
-        const classNameChanged = className.trim() !== classInfo.className;
-        onClose(true, classNameChanged ? className.trim() : undefined);
+        // 스케줄 미변경 → 즉시 저장
+        await executeRealSave(schedule, filteredSlotTeachers, filteredSlotRooms, className.trim());
       }
     } catch (err) {
       console.error('[EditClassModal] Error updating class:', err);
@@ -1247,6 +1315,25 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
           )}
         </div>
       </div>
+      {/* 스케줄 변경 예정일 모달 */}
+      {showScheduleModal && (
+        <ScheduledDateModal
+          title="스케줄 변경 날짜 설정"
+          description={
+            <p className="text-xs text-gray-600 text-center">
+              <span className="font-bold text-gray-800">{classInfo.className}</span>
+              <br />
+              <span className="text-gray-400">스케줄 변경</span>
+            </p>
+          }
+          customImmediateLabel="즉시 적용 (오늘)"
+          studentName={classInfo.className}
+          fromClassName=""
+          toClassName=""
+          onConfirm={handleScheduleModalConfirm}
+          onClose={() => { setShowScheduleModal(false); pendingSaveDataRef.current = null; }}
+        />
+      )}
     </div>
   );
 };

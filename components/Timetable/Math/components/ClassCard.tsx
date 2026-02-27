@@ -174,6 +174,7 @@ interface ClassCardProps {
     onEnrollStudent?: (studentId: string, className: string) => void;
     mode?: 'view' | 'edit';
     onCancelScheduledEnrollment?: (studentId: string, className: string) => void;  // 배정 예정 취소
+    onWithdrawalDrop?: (studentId: string, classId: string, className: string) => void;  // 퇴원 드롭존
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -214,7 +215,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
     onCellSelect,
     onEnrollStudent,
     mode,
-    onCancelScheduledEnrollment
+    onCancelScheduledEnrollment,
+    onWithdrawalDrop
 }) => {
     // 주차 기준일: referenceDate가 있으면 해당 날짜, 없으면 오늘
     const refDateStr = referenceDate || formatDateKey(new Date());
@@ -683,6 +685,43 @@ const ClassCard: React.FC<ClassCardProps> = ({
     // 병합 셀 내 zone 드래그 오버 상태 (로컬)
     const [dragOverZone, setDragOverZone] = useState<string | null>(null);
 
+    // 고스트 카드 (스케줄 변경 예정)
+    if (cls.isPendingSchedule) {
+        return (
+            <div
+                className="flex flex-col h-full overflow-hidden w-full max-w-full bg-gray-200 border border-dashed border-gray-400"
+                style={{
+                    ...(fixedCardHeight ? { height: `${fixedCardHeight}px`, maxHeight: `${fixedCardHeight}px` } : {}),
+                    ...(compactMaxHeight ? { maxHeight: `${compactMaxHeight}px` } : {})
+                }}
+                title={`스케줄 변경 예정: ${cls.pendingScheduleDate}`}
+            >
+                {showClassName && (
+                    <div
+                        className="text-center font-bold px-0.5 mx-auto flex flex-col items-center justify-center shrink-0 overflow-hidden opacity-50"
+                        style={{
+                            width: `${cellSizePx}px`,
+                            maxWidth: `${cellSizePx}px`,
+                            height: `${cellSizePx}px`,
+                        }}
+                    >
+                        <div className="min-w-0 w-full">
+                            {classNameLines.map((line, i) => (
+                                <span key={i} className={`block leading-tight ${titleFontSizeClass} whitespace-nowrap overflow-hidden text-gray-500`}>{line}</span>
+                            ))}
+                        </div>
+                        <span className="text-xxs text-gray-500 font-normal">(예정)</span>
+                    </div>
+                )}
+                {showStudents && (
+                    <div className="flex-1 flex items-center justify-center">
+                        <span className="text-xxs text-gray-400">{cls.pendingScheduleDate}</span>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     return (
         <div
             onDragOver={(e) => canEdit && onDragOver(e, cls.id)}
@@ -987,6 +1026,30 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         })()}
                         </div>
 
+                        {/* 퇴원 드롭존 (병합 셀) */}
+                        {canEdit && onWithdrawalDrop && (
+                            <div
+                                className={`flex-shrink-0 border-t border-red-300 flex items-center justify-center transition-all cursor-default ${
+                                    dragOverZone === 'withdrawal'
+                                        ? 'bg-red-200 ring-2 ring-inset ring-red-400 text-red-700 font-bold'
+                                        : 'bg-red-50 text-red-400'
+                                }`}
+                                style={{ minHeight: '24px' }}
+                                onDragOver={(e) => { if (!canEdit) return; e.preventDefault(); e.stopPropagation(); setDragOverZone('withdrawal'); }}
+                                onDragLeave={(e) => { if (e.currentTarget.contains(e.relatedTarget as Node)) return; setDragOverZone(null); }}
+                                onDrop={(e) => {
+                                    if (!canEdit) return;
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setDragOverZone(null);
+                                    const studentId = e.dataTransfer.getData('studentId');
+                                    if (studentId) onWithdrawalDrop(studentId, cls.id, cls.className);
+                                }}
+                            >
+                                <span className="text-xxs">{dragOverZone === 'withdrawal' ? '▼ 퇴원' : '퇴원'}</span>
+                            </div>
+                        )}
+
                         {/* 대기 + 퇴원 (토글에 따라 조건부 렌더링) */}
                         {(showHoldStudents || showWithdrawnStudents) && (
                             <div className="flex-shrink overflow-y-auto no-scrollbar min-h-0" style={{ maxHeight: `${Math.max(60, 3 * activeItemH + 20)}px` }}>
@@ -1134,6 +1197,30 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 ))}
                             </ul>
                         </div>
+
+                        {/* 퇴원 드롭존 (단일 셀) */}
+                        {canEdit && onWithdrawalDrop && (
+                            <div
+                                className={`flex-shrink-0 border-t border-red-300 flex items-center justify-center transition-all cursor-default ${
+                                    dragOverZone === 'withdrawal'
+                                        ? 'bg-red-200 ring-2 ring-inset ring-red-400 text-red-700 font-bold'
+                                        : 'bg-red-50 text-red-400'
+                                }`}
+                                style={{ minHeight: '24px' }}
+                                onDragOver={(e) => { if (!canEdit) return; e.preventDefault(); e.stopPropagation(); setDragOverZone('withdrawal'); }}
+                                onDragLeave={(e) => { if (e.currentTarget.contains(e.relatedTarget as Node)) return; setDragOverZone(null); }}
+                                onDrop={(e) => {
+                                    if (!canEdit) return;
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setDragOverZone(null);
+                                    const studentId = e.dataTransfer.getData('studentId');
+                                    if (studentId) onWithdrawalDrop(studentId, cls.id, cls.className);
+                                }}
+                            >
+                                <span className="text-xxs">{dragOverZone === 'withdrawal' ? '▼ 퇴원' : '퇴원'}</span>
+                            </div>
+                        )}
 
                         {/* 하단 고정 영역: 대기 + 퇴원 (토글에 따라 조건부 렌더링) */}
                         {(showHoldStudents || showWithdrawnStudents) && (

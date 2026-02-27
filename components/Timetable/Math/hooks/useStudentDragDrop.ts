@@ -67,6 +67,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
         draggingStudentRef.current = dragInfo;  // 동기적 ref 업데이트 (stale closure 방지)
         setDraggingStudent(dragInfo);
         e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('studentId', studentId);  // 퇴원 드롭존 등 외부 핸들러용
     }, []);
 
     const handleDragOver = useCallback((e: React.DragEvent, classId: string) => {
