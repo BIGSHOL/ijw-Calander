@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { formatDateKey } from '../../../../utils/dateUtils';
-import { addDays } from 'date-fns';
+import { formatDateKey, getTodayKST, getFirstClassDayOfWeek } from '../../../../utils/dateUtils';
+import { addDays, format } from 'date-fns';
 import { useEscapeClose } from '../../../../hooks/useEscapeClose';
 
 interface ScheduledDateModalProps {
@@ -9,6 +9,9 @@ interface ScheduledDateModalProps {
     toClassName: string;
     onConfirm: (scheduledDate?: string) => void;
     onClose: () => void;
+    // 미래 주차 자동 날짜 설정용
+    weekStart?: Date;
+    targetClassSchedule?: string[];
 }
 
 const ScheduledDateModal: React.FC<ScheduledDateModalProps> = ({
@@ -17,19 +20,36 @@ const ScheduledDateModal: React.FC<ScheduledDateModalProps> = ({
     toClassName,
     onConfirm,
     onClose,
+    weekStart,
+    targetClassSchedule,
 }) => {
     const [mode, setMode] = useState<'immediate' | 'scheduled'>('immediate');
     const [selectedDate, setSelectedDate] = useState('');
 
     useEscapeClose(onClose);
 
+    const todayStr = getTodayKST();
     const tomorrow = formatDateKey(addDays(new Date(), 1));
+
+    // 미래 주차 판별 및 첫 수업일 계산
+    const isFutureWeek = weekStart ? formatDateKey(weekStart) > todayStr : false;
+    const futureFirstClassDay = (isFutureWeek && weekStart && targetClassSchedule?.length)
+        ? getFirstClassDayOfWeek(weekStart, targetClassSchedule)
+        : null;
+
+    // "즉시이동" 시 사용할 날짜
+    const immediateDate = futureFirstClassDay || undefined;
+
+    // "즉시이동" 라벨
+    const immediateLabel = futureFirstClassDay
+        ? `즉시 이동 (${format(new Date(futureFirstClassDay), 'M/d')})`
+        : '즉시 이동 (오늘)';
 
     const handleConfirm = () => {
         if (mode === 'scheduled' && selectedDate) {
             onConfirm(selectedDate);
         } else {
-            onConfirm(undefined);
+            onConfirm(immediateDate);
         }
     };
 
@@ -72,7 +92,7 @@ const ScheduledDateModal: React.FC<ScheduledDateModalProps> = ({
                                 onChange={() => setMode('immediate')}
                                 className="accent-primary"
                             />
-                            <span className="text-sm font-bold text-gray-700">즉시 이동 (오늘)</span>
+                            <span className="text-sm font-bold text-gray-700">{immediateLabel}</span>
                         </label>
 
                         {/* 예정일 지정 */}

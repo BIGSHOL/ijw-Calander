@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Settings } from 'lucide-react';
-import { doc, collection, query, where, getDocs, updateDoc, deleteField } from 'firebase/firestore';
+import { doc, collection, query, where, getDocs, updateDoc, deleteField, deleteDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { Teacher, TimetableStudent, ClassKeywordColor, TimetableClass } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -275,6 +275,33 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
         }
     };
 
+    // 배정 예정 취소
+    const handleCancelScheduledEnrollment = async (studentId: string, className: string) => {
+        try {
+            const enrollmentsQuery = query(
+                collection(db, 'students', studentId, 'enrollments'),
+                where('subject', '==', 'math'),
+                where('className', '==', className)
+            );
+            const snapshot = await getDocs(enrollmentsQuery);
+
+            if (snapshot.empty) {
+                alert('해당 수강 정보를 찾을 수 없습니다.');
+                return;
+            }
+
+            for (const docSnap of snapshot.docs) {
+                await deleteDoc(docSnap.ref);
+            }
+
+            await refetchClassStudents();
+            alert('배정 예정이 취소되었습니다.');
+        } catch (error) {
+            console.error('배정 예정 취소 오류:', error);
+            alert('배정 예정 취소에 실패했습니다.');
+        }
+    };
+
     // 수업 종료 취소 (퇴원생 복구)
     const handleRestoreEnrollment = async (studentId: string, className: string) => {
         try {
@@ -428,6 +455,7 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                                                 onClassClick={mode === 'edit' && !isSimulationMode ? () => handleClassClick(cls) : undefined}
                                                 onStudentClick={handleStudentClick}
                                                 onRestoreEnrollment={!isSimulationMode ? handleRestoreEnrollment : undefined}
+                                                onCancelScheduledEnrollment={!isSimulationMode ? handleCancelScheduledEnrollment : undefined}
                                                 currentWeekStart={currentWeekStart}
                                             />
                                         ))}

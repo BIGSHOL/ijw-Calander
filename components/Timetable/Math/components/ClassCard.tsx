@@ -165,6 +165,7 @@ interface ClassCardProps {
     onCellSelect?: (classId: string) => void;
     onEnrollStudent?: (studentId: string, className: string) => void;
     mode?: 'view' | 'edit';
+    onCancelScheduledEnrollment?: (studentId: string, className: string) => void;  // 배정 예정 취소
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -205,6 +206,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
     onCellSelect,
     onEnrollStudent,
     mode,
+    onCancelScheduledEnrollment
 }) => {
     // 주차 기준일: referenceDate가 있으면 해당 날짜, 없으면 오늘
     const refDateStr = referenceDate || formatDateKey(new Date());
@@ -1137,10 +1139,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     if (sg && sg !== '-') text += `/${sg}`;
                                                 }
                                                 const tooltipText = s.enrollmentDate ? `예정일: ${s.enrollmentDate}` : undefined;
+                                                const isScheduledStudent = !!(s as any).isScheduled;
                                                 return (
                                                     <li
                                                         key={s.id}
-                                                        className={`${fontSizeClass} leading-[1.3] bg-amber-50 text-amber-800 px-0.5 py-0 overflow-hidden whitespace-nowrap cursor-pointer hover:bg-amber-100 transition-colors`}
+                                                        className={`${fontSizeClass} leading-[1.3] bg-amber-50 text-amber-800 px-0.5 py-0 overflow-hidden whitespace-nowrap cursor-pointer hover:bg-amber-100 transition-colors flex items-center group`}
                                                         title={tooltipText}
                                                         onClick={(e) => {
                                                             if (onStudentClick) {
@@ -1149,7 +1152,21 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                             }
                                                         }}
                                                     >
-                                                        {text}
+                                                        <span className="flex-1 truncate">{text}</span>
+                                                        {isScheduledStudent && canEdit && onCancelScheduledEnrollment && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    if (window.confirm(`${s.name} 학생의 배정 예정을 취소하시겠습니까?`)) {
+                                                                        onCancelScheduledEnrollment(s.id, cls.className);
+                                                                    }
+                                                                }}
+                                                                className="ml-0.5 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                                                                title="배정 예정 취소"
+                                                            >
+                                                                &times;
+                                                            </button>
+                                                        )}
                                                     </li>
                                                 );
                                             })}
@@ -1299,6 +1316,7 @@ export default React.memo(ClassCard, (prevProps, nextProps) => {
         prevProps.studentTextbookMap === nextProps.studentTextbookMap &&
         prevProps.isExcelMode === nextProps.isExcelMode &&
         prevProps.isSelected === nextProps.isSelected &&
+        prevProps.referenceDate === nextProps.referenceDate &&
         prevProps.mode === nextProps.mode
     );
 });

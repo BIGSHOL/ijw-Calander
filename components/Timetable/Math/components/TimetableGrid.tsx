@@ -63,6 +63,8 @@ interface TimetableGridProps {
     selectedClassId?: string | null;
     onCellSelect?: (classId: string) => void;
     onEnrollStudent?: (studentId: string, className: string) => void;
+    // 배정 예정 취소
+    onCancelScheduledEnrollment?: (studentId: string, className: string) => void;
 }
 
 const TimetableGrid: React.FC<TimetableGridProps> = ({
@@ -104,6 +106,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     selectedClassId,
     onCellSelect,
     onEnrollStudent,
+    onCancelScheduledEnrollment
 }) => {
     // 주차 기준일: 미래 주 → weekStart, 이번 주 → today, 과거 주 → weekEnd(일요일)
     const referenceDate = useMemo(() => {
@@ -409,6 +412,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     onCellSelect={onCellSelect}
                     onEnrollStudent={onEnrollStudent}
                     mode={mode}
+                    onCancelScheduledEnrollment={onCancelScheduledEnrollment}
                 />
             );
         };
@@ -1313,6 +1317,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             onCellSelect={onCellSelect}
                                                                             onEnrollStudent={onEnrollStudent}
                                                                             mode={mode}
+                                                                            onCancelScheduledEnrollment={onCancelScheduledEnrollment}
                                                                         />
                                                                     ))
                                                                 )}
@@ -1405,6 +1410,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             onCellSelect={onCellSelect}
                                                                             onEnrollStudent={onEnrollStudent}
                                                                             mode={mode}
+                                                                            onCancelScheduledEnrollment={onCancelScheduledEnrollment}
                                                                         />
                                                                     ))
                                                                 )}
@@ -1513,6 +1519,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 onCellSelect={onCellSelect}
                                                                                 onEnrollStudent={onEnrollStudent}
                                                                                 mode={mode}
+                                                                            onCancelScheduledEnrollment={onCancelScheduledEnrollment}
                                                                             />
                                                                         ))
                                                                     )}
@@ -1631,6 +1638,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         onCellSelect={onCellSelect}
                                                                         onEnrollStudent={onEnrollStudent}
                                                                         mode={mode}
+                                                                    onCancelScheduledEnrollment={onCancelScheduledEnrollment}
                                                                     />
                                                                 ))
                                                             )}

@@ -136,7 +136,7 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
             // === 2. React Query 캐시 무효화 (학생관리/수업관리 즉시 반영) ===
             queryClient.invalidateQueries({ queryKey: ['students'] });
             queryClient.invalidateQueries({ queryKey: ['classes'] });
-            queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
+            queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
 
             setMoveChanges(new Map());
             alert('저장되었습니다.');

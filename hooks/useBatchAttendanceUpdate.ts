@@ -109,7 +109,9 @@ export function useBatchAttendanceUpdate() {
     onSuccess: (data) => {
       // Query 캐시 무효화
       queryClient.invalidateQueries({ queryKey: ['dailyAttendance', data.date] });
-      queryClient.invalidateQueries({ queryKey: ['attendance'] });
+      queryClient.invalidateQueries({ queryKey: ['attendanceStudents'] });
+      queryClient.invalidateQueries({ queryKey: ['attendanceRecords'] });
+      queryClient.invalidateQueries({ queryKey: ['attendanceConfig'] });
     },
     onError: (error) => {
       console.error('Batch attendance update failed:', error);

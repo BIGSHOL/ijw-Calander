@@ -197,6 +197,7 @@ interface IntegrationClassCardProps {
     hiddenTeacherList?: string[];
     useInjaePeriod?: boolean;
     onRestoreEnrollment?: (studentId: string, className: string) => void;  // 수업 종료 취소
+    onCancelScheduledEnrollment?: (studentId: string, className: string) => void;  // 배정 예정 취소
     onEditClass?: (classId: string) => void;  // 시뮬레이션 모드 수업 편집
     // 주차 이동 시 배정 예정/퇴원 예정 미리보기용
     currentWeekStart?: Date;  // 현재 보고 있는 주의 시작일 (월요일)
@@ -237,6 +238,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     hiddenTeacherList = [],
     useInjaePeriod = false,
     onRestoreEnrollment,
+    onCancelScheduledEnrollment,
     onEditClass,
     currentWeekStart,
 }) => {
@@ -932,7 +934,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                             {scheduledStudents.slice(0, 3).map((student) => (
                                                 <div
                                                     key={student.id}
-                                                    className="flex items-center text-[12px] py-0.5 px-1 bg-amber-50 text-amber-800 mb-0.5 cursor-pointer hover:bg-amber-100"
+                                                    className="flex items-center text-[12px] py-0.5 px-1 bg-amber-50 text-amber-800 mb-0.5 cursor-pointer hover:bg-amber-100 group"
                                                     title={student.enrollmentDate ? `수업시작: ${student.enrollmentDate}` : '배정 예정'}
                                                     onClick={() => onStudentClick?.(student.id)}
                                                 >
@@ -944,6 +946,20 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                         <span className="text-xxs shrink-0 text-amber-600 text-right leading-none ml-1">
                                                             {formatSchoolGrade(displayOptions?.showSchool !== false ? student.school : undefined, displayOptions?.showGrade !== false ? student.grade : undefined)}
                                                         </span>
+                                                    )}
+                                                    {mode === 'edit' && onCancelScheduledEnrollment && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (window.confirm(`${student.name} 학생의 배정 예정을 취소하시겠습니까?\n\n수업: ${classInfo.name}\n시작 예정일: ${student.enrollmentDate || '미정'}`)) {
+                                                                    onCancelScheduledEnrollment(student.id, classInfo.name);
+                                                                }
+                                                            }}
+                                                            className="ml-1 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 text-xs leading-none"
+                                                            title="배정 예정 취소"
+                                                        >
+                                                            &times;
+                                                        </button>
                                                     )}
                                                 </div>
                                             ))}
