@@ -91,6 +91,7 @@ export interface UnifiedStudent {
   birthDate?: string;            // 생년월일 (YYYY-MM-DD)
   nickname?: string;             // 닉네임
   attendanceNumber?: string;     // 출결번호 (고유 식별자, 자동 생성: 학부모전화 뒤 4자리 + 중복방지)
+  studentCode?: string;          // 학생 고유번호 (6자리 영숫자, 자동 생성, 수정 불가)
   studentEmail?: string;         // 원생 이메일
   emailDomain?: string;          // 이메일 도메인
   enrollmentReason?: string;     // 입학동기

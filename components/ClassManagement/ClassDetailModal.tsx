@@ -148,10 +148,16 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
   const [showScheduled, setShowScheduled] = useState(false);
   const [showWithdrawn, setShowWithdrawn] = useState(false);
 
+  // 학생 추가 시 제외 대상: 재원생 + 배정 예정만 (퇴원생은 재배정 가능)
+  const enrolledStudentIds = useMemo(() =>
+    currentStudents.filter(s => !s.isWithdrawn).map(s => s.id),
+    [currentStudents]
+  );
+
   const availableStudents = useMemo(() => {
     if (!allStudents) return [];
     return allStudents
-      .filter(s => s.status === 'active' && !currentStudentIds.includes(s.id) && !studentsToAdd.has(s.id))
+      .filter(s => s.status === 'active' && !enrolledStudentIds.includes(s.id) && !studentsToAdd.has(s.id))
       .filter(s => {
         if (!studentSearch.trim()) return true;
         const search = studentSearch.toLowerCase();

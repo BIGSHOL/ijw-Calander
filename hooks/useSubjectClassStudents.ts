@@ -24,6 +24,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { TimetableStudent } from '../types';
 import { formatDateKey } from '../utils/dateUtils';
 import { convertTimestampToDate } from '../utils/firestoreConverters';
+import { formatScheduleCompact } from '../components/Timetable/constants';
 
 export interface ClassStudentData {
     studentList: TimetableStudent[];
@@ -59,6 +60,9 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
         // 1단계: 반이동 감지용 활성/종료 등록 수업 수집
         const studentActiveClasses: Record<string, Set<string>> = {};
         const studentEndedClasses: Record<string, Set<string>> = {};
+        // 활성 수업의 스케줄/강사 정보 (반이동예정 툴팁용)
+        const studentActiveClassSchedule: Record<string, Record<string, string[]>> = {};
+        const studentActiveClassTeacher: Record<string, Record<string, string>> = {};
 
         Object.entries(studentMap).forEach(([studentId, student]) => {
             if (!student.enrollments) return;
@@ -78,6 +82,15 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                         studentActiveClasses[studentId] = new Set();
                     }
                     studentActiveClasses[studentId].add(className);
+                    // 스케줄/강사 저장
+                    if (enrollment.schedule) {
+                        if (!studentActiveClassSchedule[studentId]) studentActiveClassSchedule[studentId] = {};
+                        studentActiveClassSchedule[studentId][className] = enrollment.schedule;
+                    }
+                    if (enrollment.teacher || enrollment.staffId) {
+                        if (!studentActiveClassTeacher[studentId]) studentActiveClassTeacher[studentId] = {};
+                        studentActiveClassTeacher[studentId][className] = enrollment.teacher || enrollment.staffId;
+                    }
                 } else {
                     if (!studentEndedClasses[studentId]) {
                         studentEndedClasses[studentId] = new Set();
@@ -132,6 +145,20 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                 // isTransferred: 이 수업에서 종료됐지만 다른 수업에 활성 등록이 있음
                 const hasActiveInOtherClass = hasEndDate &&
                     Array.from(activeClasses).some(c => c !== className);
+                // transferTo: 반이동 대상 반 정보 (담당/반이름/스케줄)
+                let transferToClass: string | undefined;
+                if (hasActiveInOtherClass) {
+                    const targetClass = Array.from(activeClasses).find(c => c !== className);
+                    if (targetClass) {
+                        const teacher = studentActiveClassTeacher[studentId]?.[targetClass];
+                        const targetSchedule = studentActiveClassSchedule[studentId]?.[targetClass];
+                        const scheduleStr = targetSchedule?.length ? formatScheduleCompact(targetSchedule, subject as any) : '';
+                        const parts: string[] = [];
+                        if (teacher) parts.push(`담당: ${teacher}`);
+                        parts.push(scheduleStr ? `${targetClass} (${scheduleStr})` : targetClass);
+                        transferToClass = parts.join('\n');
+                    }
+                }
 
                 // isTransferredIn: 이 수업에 활성 등록이 있고, 다른 수업에서 종료된 기록이 있음
                 const hasEndedInOtherClass = !hasEndDate &&
@@ -150,6 +177,7 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                     isTransferred: hasActiveInOtherClass,
                     isTransferredIn: hasEndedInOtherClass,
                     isSlotTeacher: enrollment.isSlotTeacher || false,
+                    transferTo: transferToClass,
                 };
             });
         });
@@ -187,6 +215,7 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                         isScheduled: enrollmentData.isScheduled || false,
                         isTransferred: enrollmentData.isTransferred || false,
                         isTransferredIn: enrollmentData.isTransferredIn || false,
+                        transferTo: enrollmentData.transferTo,
                         enrollmentDocId: enrollmentData.enrollmentDocId,
                         isSlotTeacher: enrollmentData.isSlotTeacher || false,
                     } as TimetableStudent;

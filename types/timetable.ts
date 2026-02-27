@@ -53,6 +53,7 @@ export interface TimetableStudent {
   isScheduled?: boolean; // 배정 예정 (미래 시작일)
   isTransferred?: boolean; // 반이동으로 종료 (다른 반에 활성 등록이 있음 - 퇴원 섹션에서 제외)
   isTransferredIn?: boolean; // 반이동으로 들어옴 (다른 반에서 이동해 온 학생 - 초록 배경으로 상단 표시)
+  transferTo?: string; // 반이동 대상 반 이름
   personalSchedule?: { day: string; period: string }[];
   attendanceDays?: string[]; // 등원 요일 (비어있으면 모든 수업 요일에 등원)
   enrollmentDocId?: string; // Firestore enrollment 문서 ID (실제 문서 참조용)

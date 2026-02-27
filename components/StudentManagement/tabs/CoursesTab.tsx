@@ -1,6 +1,8 @@
-﻿import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo, lazy, Suspense } from 'react';
 import { UnifiedStudent, UserProfile } from '../../../types';
-import { BookOpen, Plus, User, X, Loader2, Users, Trash2, ChevronDown } from 'lucide-react';
+import { BookOpen, Plus, User, X, Loader2, Users, Trash2, ChevronDown, Calendar } from 'lucide-react';
+
+const StudentTimetableModal = lazy(() => import('../StudentTimetableModal'));
 import AssignClassModal from '../AssignClassModal';
 import { useStudents } from '../../../hooks/useStudents';
 import { useTeachers } from '../../../hooks/useFirebaseQueries';
@@ -219,6 +221,9 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
   const [deletingClass, setDeletingClass] = useState<string | null>(null);
+
+  // 학생 시간표 모달
+  const [showTimetable, setShowTimetable] = useState(false);
 
   // 섹션 접기/펼치기 상태
   const [showCurrentClasses, setShowCurrentClasses] = useState(true);
@@ -989,15 +994,26 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showCurrentClasses ? '' : 'rotate-180'}`} />
           <span className="text-[10px] text-gray-400 ml-1">실제 학생이 등원하는 요일만 표기됩니다</span>
         </div>
-        {!readOnly && (
-          <button
-            onClick={() => setIsAssignModalOpen(true)}
-            className="bg-accent text-primary px-2 py-1 rounded-sm text-xs font-semibold hover:bg-[#e5a711] transition-colors flex items-center gap-1"
-          >
-            <Plus className="w-3 h-3" />
-            배정
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          {groupedEnrollments.length > 0 && (
+            <button
+              onClick={() => setShowTimetable(true)}
+              className="bg-primary/10 text-primary border border-primary/30 px-2 py-1 rounded-sm text-xs font-semibold hover:bg-primary/20 transition-colors flex items-center gap-1"
+            >
+              <Calendar className="w-3 h-3" />
+              시간표
+            </button>
+          )}
+          {!readOnly && (
+            <button
+              onClick={() => setIsAssignModalOpen(true)}
+              className="bg-accent text-primary px-2 py-1 rounded-sm text-xs font-semibold hover:bg-[#e5a711] transition-colors flex items-center gap-1"
+            >
+              <Plus className="w-3 h-3" />
+              배정
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 수업 목록 - 행 스타일 */}
@@ -1219,6 +1235,16 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           classInfo={selectedClass}
           onClose={() => setSelectedClass(null)}
         />
+      )}
+
+      {/* 학생 시간표 모달 */}
+      {showTimetable && (
+        <Suspense fallback={null}>
+          <StudentTimetableModal
+            student={student}
+            onClose={() => setShowTimetable(false)}
+          />
+        </Suspense>
       )}
     </div>
   );
