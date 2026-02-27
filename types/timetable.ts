@@ -73,6 +73,10 @@ export interface TimetableClass {
   order?: number;
   slotTeachers?: Record<string, string>;  // 교시별 담당강사 (key: "월-1-1", value: 강사명)
   slotRooms?: Record<string, string>;     // 교시별 강의실 (key: "월-1-1", value: 강의실)
+  // 스케줄 변경 예정
+  pendingSchedule?: string[];      // 변경 예정 스케줄 (레거시 형식)
+  pendingScheduleDate?: string;    // 적용 예정일 (YYYY-MM-DD)
+  isPendingSchedule?: boolean;     // 고스트 블록 여부 (런타임 전용)
 }
 
 export interface Teacher {

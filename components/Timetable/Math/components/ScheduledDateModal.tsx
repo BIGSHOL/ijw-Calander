@@ -12,6 +12,10 @@ interface ScheduledDateModalProps {
     // 미래 주차 자동 날짜 설정용
     weekStart?: Date;
     targetClassSchedule?: string[];
+    // 일반화 props (퇴원/스케줄변경 등 다양한 모드 지원)
+    title?: string;
+    description?: React.ReactNode;
+    customImmediateLabel?: string;
 }
 
 const ScheduledDateModal: React.FC<ScheduledDateModalProps> = ({
@@ -22,6 +26,9 @@ const ScheduledDateModal: React.FC<ScheduledDateModalProps> = ({
     onClose,
     weekStart,
     targetClassSchedule,
+    title,
+    description,
+    customImmediateLabel,
 }) => {
     const [mode, setMode] = useState<'immediate' | 'scheduled'>('immediate');
     const [selectedDate, setSelectedDate] = useState('');
@@ -41,9 +48,10 @@ const ScheduledDateModal: React.FC<ScheduledDateModalProps> = ({
     const immediateDate = futureFirstClassDay || undefined;
 
     // "즉시이동" 라벨
-    const immediateLabel = futureFirstClassDay
+    const defaultImmediateLabel = futureFirstClassDay
         ? `즉시 이동 (${format(new Date(futureFirstClassDay), 'M/d')})`
         : '즉시 이동 (오늘)';
+    const immediateLabel = customImmediateLabel || defaultImmediateLabel;
 
     const handleConfirm = () => {
         if (mode === 'scheduled' && selectedDate) {
@@ -62,19 +70,23 @@ const ScheduledDateModal: React.FC<ScheduledDateModalProps> = ({
             >
                 {/* Header */}
                 <div className="bg-primary text-white p-3 font-bold text-sm flex justify-between items-center">
-                    <span>반 이동 날짜 설정</span>
+                    <span>{title || '반 이동 날짜 설정'}</span>
                     <button onClick={onClose} className="text-white hover:text-gray-200">&times;</button>
                 </div>
 
                 {/* Content */}
                 <div className="p-4 bg-gray-50">
-                    <p className="text-xs text-gray-600 mb-3 text-center">
-                        <span className="font-bold text-gray-800">{studentName}</span>
-                        <br />
-                        <span className="text-gray-400">{fromClassName}</span>
-                        <span className="mx-1">&rarr;</span>
-                        <span className="font-bold text-primary">{toClassName}</span>
-                    </p>
+                    {description ? (
+                        <div className="text-xs text-gray-600 mb-3 text-center">{description}</div>
+                    ) : (
+                        <p className="text-xs text-gray-600 mb-3 text-center">
+                            <span className="font-bold text-gray-800">{studentName}</span>
+                            <br />
+                            <span className="text-gray-400">{fromClassName}</span>
+                            <span className="mx-1">&rarr;</span>
+                            <span className="font-bold text-primary">{toClassName}</span>
+                        </p>
+                    )}
 
                     <div className="space-y-2">
                         {/* 즉시 이동 */}
