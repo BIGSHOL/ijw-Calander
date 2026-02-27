@@ -117,16 +117,16 @@ grep -n "ExamCreateModal\|ScoreInputView\|ExamListView" components/Grades/Grades
 **PASS 기준:** 3개 뷰/모달이 GradesManager에서 참조됨
 **FAIL 기준:** 성적 관리 흐름 단절
 
-### Step 6: 퇴원 관리 통계/필터 훅 연결 검증
+### Step 6: 퇴원 관리 필터 훅 연결 검증
 
-**검사:** WithdrawalManagementTab에서 통계 및 필터링 훅이 사용되는지 확인합니다.
+**검사:** WithdrawalManagementTab에서 필터링 훅이 사용되는지 확인합니다.
 
 ```bash
-grep -n "useWithdrawalStats\|useWithdrawalFilters" components/WithdrawalManagement/WithdrawalManagementTab.tsx | head -5
+grep -n "useWithdrawalFilters" components/WithdrawalManagement/WithdrawalManagementTab.tsx | head -5
 ```
 
-**PASS 기준:** 통계 및 필터 훅 사용 확인
-**FAIL 기준:** 훅 연결 누락
+**PASS 기준:** useWithdrawalFilters 훅 사용 확인
+**FAIL 기준:** 필터 훅 연결 누락
 
 ### Step 7: 학생 필터링 훅 연결 검증
 

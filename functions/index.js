@@ -661,6 +661,158 @@ exports.setUserPassword = functions
     });
 
 /**
+ * Cloud Function: 직원 이메일 변경
+ * Firebase Auth + Firestore staff + staffIndex 3곳 동시 업데이트
+ *
+ * @param {string} uid - 대상 사용자 UID
+ * @param {string} newEmail - 변경할 이메일
+ * @param {string} staffDocId - staff 문서 ID
+ * @returns {{ success: boolean, message: string }}
+ */
+exports.updateStaffEmail = functions
+    .region("asia-northeast3")
+    .https.onCall(async (data, context) => {
+        const logger = functions.logger;
+
+        // 1. Authentication check
+        if (!context.auth) {
+            throw new functions.https.HttpsError(
+                "unauthenticated",
+                "로그인이 필요합니다."
+            );
+        }
+
+        const callerUid = context.auth.uid;
+
+        // 2. Get caller's role
+        const callerSnap = await db.collection("staff")
+            .where("uid", "==", callerUid)
+            .limit(1)
+            .get();
+        if (callerSnap.empty) {
+            throw new functions.https.HttpsError(
+                "permission-denied",
+                "사용자 정보를 찾을 수 없습니다."
+            );
+        }
+
+        const callerData = callerSnap.docs[0].data();
+        const callerRole = callerData.systemRole || callerData.role;
+        const allowedRoles = ["master", "admin"];
+
+        if (!allowedRoles.includes(callerRole)) {
+            throw new functions.https.HttpsError(
+                "permission-denied",
+                "이메일 변경 권한이 없습니다. (관리자만 가능)"
+            );
+        }
+
+        // 3. Validate input
+        const { uid, newEmail, staffDocId } = data;
+
+        if (!uid || typeof uid !== "string") {
+            throw new functions.https.HttpsError(
+                "invalid-argument",
+                "대상 사용자 UID가 필요합니다."
+            );
+        }
+
+        if (!newEmail || typeof newEmail !== "string") {
+            throw new functions.https.HttpsError(
+                "invalid-argument",
+                "새 이메일을 입력해주세요."
+            );
+        }
+
+        // 이메일 형식 검증
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(newEmail)) {
+            throw new functions.https.HttpsError(
+                "invalid-argument",
+                "올바른 이메일 형식이 아닙니다."
+            );
+        }
+
+        if (!staffDocId || typeof staffDocId !== "string") {
+            throw new functions.https.HttpsError(
+                "invalid-argument",
+                "직원 문서 ID가 필요합니다."
+            );
+        }
+
+        // 4. 대상 역할 검사 (master 이메일은 master만 변경 가능)
+        const targetSnap = await db.collection("staff")
+            .where("uid", "==", uid)
+            .limit(1)
+            .get();
+        if (!targetSnap.empty) {
+            const targetData = targetSnap.docs[0].data();
+            const targetRole = targetData.systemRole || targetData.role;
+            if (targetRole === "master" && callerRole !== "master") {
+                throw new functions.https.HttpsError(
+                    "permission-denied",
+                    "MASTER 계정의 이메일은 변경할 수 없습니다."
+                );
+            }
+        }
+
+        // 5. 중복 이메일 체크
+        try {
+            await admin.auth().getUserByEmail(newEmail);
+            throw new functions.https.HttpsError(
+                "already-exists",
+                "이미 사용 중인 이메일입니다."
+            );
+        } catch (error) {
+            if (error.code === "functions/already-exists") {
+                throw error;
+            }
+            // auth/user-not-found → 사용 가능한 이메일
+        }
+
+        // 6. Firebase Auth 이메일 업데이트
+        try {
+            await admin.auth().updateUser(uid, { email: newEmail });
+            logger.info(`[updateStaffEmail] Auth email updated for ${uid} to ${newEmail}`);
+        } catch (error) {
+            logger.error(`[updateStaffEmail] Auth update failed:`, error);
+            throw new functions.https.HttpsError(
+                "internal",
+                "Firebase 인증 이메일 변경에 실패했습니다."
+            );
+        }
+
+        // 7. Firestore staff 문서 업데이트
+        try {
+            await db.collection("staff").doc(staffDocId).update({
+                email: newEmail,
+                updatedAt: new Date().toISOString(),
+            });
+            logger.info(`[updateStaffEmail] Staff doc updated: ${staffDocId}`);
+        } catch (error) {
+            logger.error(`[updateStaffEmail] Staff doc update failed:`, error);
+            // Auth는 이미 변경됨 - 로그만 남김
+        }
+
+        // 8. staffIndex 문서 업데이트 (있으면)
+        try {
+            const indexRef = db.collection("staffIndex").doc(uid);
+            const indexSnap = await indexRef.get();
+            if (indexSnap.exists) {
+                await indexRef.update({
+                    email: newEmail,
+                    updatedAt: new Date().toISOString(),
+                });
+                logger.info(`[updateStaffEmail] staffIndex updated: ${uid}`);
+            }
+        } catch (error) {
+            logger.error(`[updateStaffEmail] staffIndex update failed:`, error);
+        }
+
+        return { success: true, message: "이메일이 변경되었습니다." };
+    });
+
+/**
  * Cloud Function: 미연동 직원 계정 연결/생성
  * 이메일로 기존 Firebase Auth 계정이 있으면 uid를 반환하고 비밀번호를 재설정,
  * 없으면 새 계정을 생성하여 uid를 반환합니다.

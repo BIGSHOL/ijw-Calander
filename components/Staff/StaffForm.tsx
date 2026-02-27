@@ -293,7 +293,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
               />
               {staff && staff.uid && formData.email && (
                 <p className="text-xxs text-gray-400 mt-0.5">
-                  시스템 계정과 연동된 이메일은 변경할 수 없습니다.
+                  이메일 변경은 직원 상세보기 &gt; 계정 관리에서 가능합니다.
                 </p>
               )}
               {staff && !staff.uid && (

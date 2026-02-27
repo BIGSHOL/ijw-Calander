@@ -133,13 +133,24 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
         setLoading(true);
 
         try {
+            // 가입된 이메일인지 Firestore staff 컬렉션에서 먼저 확인
+            const staffQuery = query(
+                collection(db, 'staff'),
+                where('email', '==', email.trim())
+            );
+            const staffSnapshot = await getDocs(staffQuery);
+
+            if (staffSnapshot.empty) {
+                setError('등록되지 않은 이메일입니다. 관리자에게 문의해주세요.');
+                setLoading(false);
+                return;
+            }
+
             await sendPasswordResetEmail(auth, email);
             setError('비밀번호 재설정 링크가 이메일로 전송되었습니다.');
         } catch (err: any) {
             console.error(err);
-            if (err.code === 'auth/user-not-found') {
-                setError('등록되지 않은 이메일입니다.');
-            } else if (err.code === 'auth/invalid-email') {
+            if (err.code === 'auth/invalid-email') {
                 setError('올바른 이메일 주소를 입력해주세요.');
             } else {
                 setError('오류가 발생했습니다: ' + err.message);
