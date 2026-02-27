@@ -30,7 +30,7 @@ argument-hint: "[선택사항: 특정 스킬 이름 또는 집중할 영역]"
 
 | 스킬 | 설명 | 커버 파일 패턴 |
 |------|------|---------------|
-| `verify-timetable` | 시간표 도메인(Math/English/Generic/shared) 패턴 검증 (React.memo, stale closure 방지, writeBatch, createPortal, getWeekReferenceDate, 퇴원예정 가로줄, 통합 훅) | `components/Timetable/**/*.{ts,tsx}`, `utils/dateUtils.ts`, `hooks/useSubjectClassStudents.ts`, `utils/firestoreConverters.ts`, `utils/enrollment.ts`, `tests/**/*{DragDrop,ClassCard,Simulation,ScheduledDate}*` |
+| `verify-timetable` | 시간표 도메인(Math/English/Generic/shared) 패턴 검증 (React.memo, stale closure 방지, writeBatch, createPortal, getWeekReferenceDate, 퇴원예정 가로줄, 고스트 카드, 퇴원 드롭존, 스케줄 자동 적용, 통합 훅) | `components/Timetable/**/*.{ts,tsx}`, `types/timetable.ts`, `hooks/useClassMutations.ts`, `components/ClassManagement/EditClassModal.tsx`, `utils/dateUtils.ts`, `hooks/useSubjectClassStudents.ts`, `utils/firestoreConverters.ts`, `utils/enrollment.ts`, `tests/**/*{DragDrop,ClassCard,Simulation,ScheduledDate}*` |
 | `verify-lazy-loading` | 탭/모달/서브매니저의 React.lazy + Suspense + ErrorBoundary 패턴 검증 | `components/Layout/TabContent.tsx`, `components/Layout/ModalManager.tsx`, `components/Timetable/TimetableManager.tsx`, 서브매니저 5개 |
 | `verify-test-coverage` | hooks/utils 테스트 파일 존재 검증 (100% 커버리지 유지) | `hooks/**/*.ts`, `utils/**/*.ts`, `tests/hooks/`, `tests/utils/` |
 | `verify-firebase-mutations` | Firebase mutation 훅의 invalidateQueries/에러처리 패턴 검증 | `hooks/use*Mutations.ts`, `hooks/use*.(ts|tsx)` (useMutation 사용 32개 훅) |

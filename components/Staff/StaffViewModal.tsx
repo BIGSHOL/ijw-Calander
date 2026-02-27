@@ -53,6 +53,11 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
   const [newPassword, setNewPassword] = useState('');
   const [isSendingReset, setIsSendingReset] = useState(false);
   const [resetResult, setResetResult] = useState<{ success: boolean; message: string } | null>(null);
+  // 이메일 변경 관련 상태
+  const [showEmailChangeModal, setShowEmailChangeModal] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [isChangingEmail, setIsChangingEmail] = useState(false);
+  const [emailChangeResult, setEmailChangeResult] = useState<{ success: boolean; message: string } | null>(null);
   // 탭 상태 (강사만 사용)
   const [activeTab, setActiveTab] = useState<'basic' | 'history'>('basic');
 
@@ -145,6 +150,50 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
     } finally {
       setIsSendingReset(false);
     }
+  };
+
+  // 이메일 변경 (Cloud Function 호출)
+  const handleChangeEmail = async () => {
+    if (!staff.uid) {
+      setEmailChangeResult({ success: false, message: '연동된 계정이 없습니다.' });
+      return;
+    }
+
+    if (!newEmail || !newEmail.includes('@')) {
+      setEmailChangeResult({ success: false, message: '올바른 이메일을 입력해주세요.' });
+      return;
+    }
+
+    if (newEmail === staff.email) {
+      setEmailChangeResult({ success: false, message: '현재 이메일과 동일합니다.' });
+      return;
+    }
+
+    setIsChangingEmail(true);
+    setEmailChangeResult(null);
+
+    try {
+      const functions = getFunctions(undefined, 'asia-northeast3');
+      const updateStaffEmail = httpsCallable(functions, 'updateStaffEmail');
+      await updateStaffEmail({ uid: staff.uid, newEmail, staffDocId: staff.id });
+      setEmailChangeResult({ success: true, message: `이메일이 ${newEmail}로 변경되었습니다.` });
+      setNewEmail('');
+    } catch (error: any) {
+      console.error('Email change error:', error);
+      const message = error.message?.includes('이미 사용 중')
+        ? '이미 사용 중인 이메일입니다.'
+        : error.message || '이메일 변경에 실패했습니다.';
+      setEmailChangeResult({ success: false, message });
+    } finally {
+      setIsChangingEmail(false);
+    }
+  };
+
+  // 이메일 변경 모달 초기화
+  const openEmailChangeModal = () => {
+    setShowEmailChangeModal(true);
+    setNewEmail('');
+    setEmailChangeResult(null);
   };
 
   // 비밀번호 재설정 모달 초기화
@@ -475,6 +524,13 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
                     <Lock className="w-4 h-4" />
                     비밀번호 재설정
                   </button>
+                  <button
+                    onClick={openEmailChangeModal}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-sm transition-colors mt-1.5"
+                  >
+                    <Mail className="w-4 h-4" />
+                    이메일 변경
+                  </button>
                 </div>
               )}
 
@@ -741,6 +797,103 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
             <div className="px-5 py-3 bg-gray-50 border-t border-gray-200">
               <button
                 onClick={() => setShowPasswordResetModal(false)}
+                className="w-full py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-sm transition-colors"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 이메일 변경 모달 */}
+      {showEmailChangeModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-start justify-center pt-[8vh] z-[60]">
+          <div className="bg-white rounded-sm shadow-2xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* 헤더 */}
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-5 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-sm bg-white/20 flex items-center justify-center">
+                    <Mail className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">이메일 변경</h3>
+                    <p className="text-xs text-blue-100">{staff.name} ({staff.email})</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowEmailChangeModal(false)}
+                  className="p-1 hover:bg-white/20 rounded-sm transition-colors text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* 컨텐츠 */}
+            <div className="p-5 space-y-4 flex-1 overflow-y-auto">
+              <div className="bg-blue-50 rounded-sm p-4">
+                <p className="text-sm text-blue-800">
+                  현재 이메일: <strong>{staff.email}</strong>
+                </p>
+                <p className="text-xs text-blue-600 mt-2">
+                  변경 후 새 이메일로 로그인해야 합니다. (uid는 유지됩니다)
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">
+                  새 이메일 주소
+                </label>
+                <input
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="새 이메일 입력"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <button
+                onClick={handleChangeEmail}
+                disabled={isChangingEmail || !newEmail || !newEmail.includes('@')}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isChangingEmail ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    변경 중...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="w-4 h-4" />
+                    이메일 변경
+                  </>
+                )}
+              </button>
+
+              {/* 결과 메시지 */}
+              {emailChangeResult && (
+                <div className={`rounded-sm p-4 ${emailChangeResult.success ? 'bg-emerald-50' : 'bg-red-50'}`}>
+                  <div className="flex items-start gap-3">
+                    {emailChangeResult.success ? (
+                      <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                    ) : (
+                      <XCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                    )}
+                    <p className={`text-sm ${emailChangeResult.success ? 'text-emerald-800' : 'text-red-800'}`}>
+                      {emailChangeResult.message}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 푸터 */}
+            <div className="px-5 py-3 bg-gray-50 border-t border-gray-200">
+              <button
+                onClick={() => setShowEmailChangeModal(false)}
                 className="w-full py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-sm transition-colors"
               >
                 닫기
