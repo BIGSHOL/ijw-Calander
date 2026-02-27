@@ -16,6 +16,7 @@ import {
   Bell,
   CheckSquare,
   ChevronDown,
+  Copy,
 } from 'lucide-react';
 import { useStudents } from '../../../hooks/useStudents';
 
@@ -343,6 +344,21 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student, readOnly = false }
         <div className="divide-y divide-gray-100">
           <InputField label="이름" value={formData.name} onChange={(v) => handleChange('name', v)} isEditing={isEditing} />
           <InputField label="영어 이름" value={formData.englishName ?? ''} onChange={(v) => handleChange('englishName', v)} isEditing={isEditing} />
+          <div className="flex items-center gap-2 px-2 py-1 bg-blue-50">
+            <label className="w-20 shrink-0 text-xs font-medium text-primary-700">고유번호</label>
+            <span className="flex-1 text-xs font-mono font-bold text-blue-700 tracking-wider">
+              {student.studentCode || '-'}
+            </span>
+            {student.studentCode && (
+              <button
+                onClick={() => navigator.clipboard.writeText(student.studentCode!)}
+                className="p-0.5 text-gray-400 hover:text-blue-600 transition-colors"
+                title="고유번호 복사"
+              >
+                <Copy className="w-3 h-3" />
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-2 px-2 py-1 bg-yellow-50">
             <label className="w-20 shrink-0 text-xs font-medium text-primary-700">출결번호</label>
             {isEditing ? (

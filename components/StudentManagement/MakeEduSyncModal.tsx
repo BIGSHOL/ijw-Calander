@@ -6,6 +6,7 @@ import { doc, setDoc, getDoc, Timestamp, collection, getDocs, updateDoc } from '
 import Modal from '../Common/Modal';
 import { UnifiedStudent } from '../../types';
 import { generateAttendanceNumber } from '../../utils/attendanceNumberGenerator';
+import { generateStudentCode } from '../../utils/studentCodeGenerator';
 import { parseClassName, DEFAULT_ENGLISH_LEVELS } from '../Timetable/English/englishUtils';
 
 interface MakeEduStudent {
@@ -161,6 +162,14 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
     });
     return set;
   }, [existingStudents]);
+  // 일괄 등록 시 고유번호 중복 방지용
+  const usedStudentCodes = useMemo(() => {
+    const set = new Set<string>();
+    existingStudents.forEach(s => {
+      if ((s as any).studentCode) set.add((s as any).studentCode);
+    });
+    return set;
+  }, [existingStudents]);
 
   const fetchAndCompare = async () => {
     setLoading(true);
@@ -256,6 +265,10 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
       }
       usedAttendanceNumbers.add(attendanceNumber);
 
+      // 학생 고유번호 생성
+      const studentCode = generateStudentCode(usedStudentCodes);
+      usedStudentCodes.add(studentCode);
+
       const formattedStudentPhone = formatPhoneNumber(student.phone);
       const formattedParentPhone = formatPhoneNumber(student.parentPhone);
 
@@ -265,7 +278,7 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
       await setDoc(doc(db, 'students', studentId), {
         name, englishName: null, gender,
         school: normalizedSchool || null, grade: grade || null, graduationYear: null,
-        attendanceNumber,
+        attendanceNumber, studentCode,
         studentPhone: formattedStudentPhone || null,
         homePhone: null,
         parentPhone: formattedParentPhone || null,

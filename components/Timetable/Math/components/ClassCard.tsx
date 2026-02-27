@@ -25,6 +25,7 @@ interface StudentItemProps {
     pendingScheduledDate?: string;  // 예정일 (있으면 툴팁에 표시)
     isTransferScheduled?: boolean;  // 반이동예정 (미래 withdrawalDate + isTransferred)
     transferScheduledDate?: string;  // 반이동예정일
+    transferTo?: string;  // 반이동 대상 반
     isWithdrawalScheduled?: boolean;  // 퇴원예정 (미래 withdrawalDate, 재원생 섹션에 가로줄로 표시)
     withdrawalScheduledDate?: string;  // 퇴원예정일
     classLabel?: string;  // 합반수업 시 소속 수업 라벨
@@ -50,6 +51,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
     pendingScheduledDate,
     isTransferScheduled = false,
     transferScheduledDate,
+    transferTo,
     isWithdrawalScheduled = false,
     withdrawalScheduledDate,
     classLabel,
@@ -101,18 +103,24 @@ const StudentItem: React.FC<StudentItemProps> = ({
             ${!isPendingMoved && !isTransferScheduled && !isWithdrawalScheduled && !isHighlighted && !enrollmentStyle ? 'opacity-80' : ''}`}
             style={hoverStyle}
             title={
-                (isPendingMoved && pendingScheduledDate
-                    ? `${displayText}\n이동 예정일: ${pendingScheduledDate}`
-                    : isPendingMoved
-                        ? `${displayText}\n즉시 이동 (저장 대기)`
-                    : isTransferScheduled && transferScheduledDate
-                        ? `${displayText}\n반이동예정: ${transferScheduledDate}`
-                    : isWithdrawalScheduled && withdrawalScheduledDate
-                        ? `${displayText}\n퇴원예정: ${withdrawalScheduledDate}`
-                    : enrollmentStyle && student.enrollmentDate
-                        ? `${displayText}\n${student.isTransferredIn ? '반이동' : '입학일'}: ${student.enrollmentDate}`
-                        : displayText
-                ) + (textbookInfo ? `\n${textbookInfo.month} ${textbookInfo.textbookName}` : '')
+                (() => {
+                    let lines = displayText;
+                    // 상태 정보
+                    const statusInfo = isPendingMoved && pendingScheduledDate
+                        ? `이동 예정일: ${pendingScheduledDate}`
+                        : isPendingMoved
+                            ? '즉시 이동 (저장 대기)'
+                        : isTransferScheduled
+                            ? `반이동예정: ${transferScheduledDate || '미정'}${transferTo ? `\n${transferTo}` : ''}`
+                        : isWithdrawalScheduled && withdrawalScheduledDate
+                            ? `퇴원예정: ${withdrawalScheduledDate}`
+                        : enrollmentStyle && student.enrollmentDate
+                            ? `${student.isTransferredIn ? '반이동' : '입학일'}: ${student.enrollmentDate}`
+                        : '';
+                    if (statusInfo) lines += `\n────────\n${statusInfo}`;
+                    if (textbookInfo) lines += `\n────────\n${textbookInfo.month} ${textbookInfo.textbookName}`;
+                    return lines;
+                })()
             }
         >
             {classLabel && (
@@ -876,6 +884,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             pendingScheduledDate={pendingMoveSchedules?.get(s.id) || undefined}
                                             isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
                                             transferScheduledDate={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
+                                            transferTo={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.transferTo : undefined}
                                             isWithdrawalScheduled={!!(!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
                                             withdrawalScheduledDate={!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
                                             classLabel={isMergedClass ? s._classLabel : undefined}
@@ -936,6 +945,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                 pendingScheduledDate={pendingMoveSchedules?.get(s.id) || undefined}
                                                                 isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
                                                                 transferScheduledDate={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
+                                                                transferTo={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.transferTo : undefined}
                                                                 isWithdrawalScheduled={!!(!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
                                                                 withdrawalScheduledDate={!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
                                                                 classLabel={isMergedClass ? s._classLabel : undefined}
@@ -1107,6 +1117,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             pendingScheduledDate={pendingMoveSchedules?.get(s.id) || undefined}
                                             isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
                                             transferScheduledDate={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
+                                            transferTo={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.transferTo : undefined}
                                             isWithdrawalScheduled={!!(!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
                                             withdrawalScheduledDate={!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
                                             classLabel={isMergedClass ? s._classLabel : undefined}

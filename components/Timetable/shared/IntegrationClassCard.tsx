@@ -109,29 +109,31 @@ const StudentItem: React.FC<StudentItemProps> = ({
         return false;
     }, [student.enrollmentDate, student.isTransferredIn]);
 
-    // 툴팁 메시지 (수학 시간표와 통일)
+    // 반이동예정 여부 (isTransferred + isWithdrawalScheduled)
+    const isTransferScheduled = !!(student.isTransferred && (student as any).isWithdrawalScheduled);
+
+    // 툴팁 메시지 (강사뷰와 통일 - 구분선으로 섹션 분리)
     const tooltipMessage = useMemo(() => {
-        const parts: string[] = [];
+        const sections: string[] = [];
 
-        // 반이동/신입생 정보
-        if (student.isTransferredIn) {
-            parts.push(student.enrollmentDate ? `반이동: ${student.enrollmentDate}` : '반이동 학생');
+        // 1섹션: 이름 (영어이름 포함)
+        let nameSection = student.name;
+        if (student.englishName) nameSection += ` (${student.englishName})`;
+        sections.push(nameSection);
+
+        // 2섹션: 상태 정보
+        if (isTransferScheduled) {
+            let statusInfo = `반이동예정: ${student.withdrawalDate || '미정'}`;
+            if (student.transferTo) statusInfo += `\n${student.transferTo}`;
+            sections.push(statusInfo);
+        } else if (student.isTransferredIn) {
+            sections.push(student.enrollmentDate ? `반이동: ${student.enrollmentDate}` : '반이동 학생');
         } else if (isNewStudent && student.enrollmentDate) {
-            parts.push(`입학일: ${student.enrollmentDate}`);
+            sections.push(`입학일: ${student.enrollmentDate}`);
         }
 
-        // 영어이름 (화면에서 잘릴 수 있으므로 항상 표시)
-        if (student.englishName) {
-            parts.push(student.englishName);
-        }
-
-        // 클릭 안내 메시지 (클릭 가능할 때만)
-        if (isClickable) {
-            parts.push('(클릭하여 상세정보 보기)');
-        }
-
-        return parts.length > 0 ? parts.join('\n') : undefined;
-    }, [student.isTransferredIn, isNewStudent, student.enrollmentDate, student.englishName, isClickable]);
+        return sections.length > 1 ? sections.join('\n────────\n') : (sections[0] || undefined);
+    }, [student.name, student.isTransferredIn, isTransferScheduled, isNewStudent, student.enrollmentDate, student.englishName, student.withdrawalDate, student.transferTo]);
 
     return (
         <div
@@ -550,6 +552,8 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
         if (student.isTempMoved) return { className: 'bg-purple-400 ring-1 ring-purple-500', textClass: 'text-white font-bold', subTextClass: 'text-white/80', englishTextClass: 'text-white/80' };
         if (student.isMoved && student.underline) return { className: 'bg-green-50 ring-1 ring-green-300', textClass: 'underline decoration-blue-600 text-green-800 font-bold underline-offset-2', subTextClass: 'text-green-600', englishTextClass: 'text-green-700' };
         if (student.isMoved) return { className: 'bg-green-100 ring-1 ring-green-300', textClass: 'text-green-800 font-bold', subTextClass: 'text-green-600', englishTextClass: 'text-green-700' };
+        // 반이동 예정 학생 (다른 반으로 이동 예정) - 연보라색 배경
+        if ((student as any).isWithdrawalScheduled && student.isTransferred) return { className: 'bg-purple-200 ring-1 ring-purple-300', textClass: 'text-purple-800 font-bold', subTextClass: 'text-purple-600', englishTextClass: 'text-purple-600' };
         // 퇴원 예정 학생 - 주황색 배경에 취소선
         if ((student as any).isWithdrawalScheduled) return { className: 'bg-orange-100 ring-1 ring-orange-300', textClass: 'text-orange-800 line-through', subTextClass: 'text-orange-600', englishTextClass: 'text-orange-600' };
         // 반이동 학생 (다른 반에서 이동해 온 학생) - 초록 배경에 검은 글씨

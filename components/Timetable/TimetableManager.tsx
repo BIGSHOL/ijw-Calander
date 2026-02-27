@@ -1090,7 +1090,7 @@ const TimetableManager = ({
 
     // Compute resources (all teachers from state, filtered by hidden)
     const allResources = useMemo(() => {
-        if (viewType === 'teacher') {
+        if (viewType === 'teacher' || viewType === 'excel') {
             // Show all visible teachers in saved order
             return sortedTeachers;
         }

@@ -27,15 +27,15 @@ interface ClassBlock {
   periodCount: number;
 }
 
-// 요일별 색상
+// 요일별 색상 (눈에 편한 부드러운 톤)
 const DAY_HEADER_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  '월': { bg: 'bg-amber-50', text: 'text-amber-800', border: 'border-amber-200' },
-  '화': { bg: 'bg-pink-50', text: 'text-pink-800', border: 'border-pink-200' },
-  '수': { bg: 'bg-blue-50', text: 'text-blue-800', border: 'border-blue-200' },
-  '목': { bg: 'bg-emerald-50', text: 'text-emerald-800', border: 'border-emerald-200' },
-  '금': { bg: 'bg-indigo-50', text: 'text-indigo-800', border: 'border-indigo-200' },
-  '토': { bg: 'bg-red-50', text: 'text-red-800', border: 'border-red-200' },
-  '일': { bg: 'bg-purple-50', text: 'text-purple-800', border: 'border-purple-200' },
+  '일': { bg: 'bg-rose-50', text: 'text-rose-500', border: 'border-rose-200' },
+  '월': { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' },
+  '화': { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' },
+  '수': { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' },
+  '목': { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' },
+  '금': { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' },
+  '토': { bg: 'bg-sky-50', text: 'text-sky-500', border: 'border-sky-200' },
 };
 
 // 시간 → 분 변환
@@ -51,8 +51,8 @@ const minutesToTime = (minutes: number): string => {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 };
 
-// 1분 = 1px (13:00~23:00 = 600분 = 600px)
-const PIXELS_PER_MINUTE = 1;
+// 5분 = 3px (13:00~23:00 = 600분 = 360px)
+const PIXELS_PER_MINUTE = 0.6;
 
 const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, onClose }) => {
   const { data: allClasses = [] } = useClasses();
@@ -214,9 +214,9 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
     return changes;
   }, [dayBlocks]);
 
-  const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
-  const sortedDays = dayOrder.filter(d => activeDays.has(d));
-  const hasClasses = sortedDays.length > 0;
+  const dayOrder = ['일', '월', '화', '수', '목', '금', '토'];
+  const sortedDays = dayOrder; // 모든 요일 항상 표시
+  const hasClasses = activeDays.size > 0; // 실제 수업이 있는 요일이 있을 때만
 
   // 시간 범위 계산 (30분 단위로 반올림/반내림)
   const { rangeStartMin, timeLabels, totalHeight } = useMemo(() => {
@@ -275,7 +275,11 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                 <span className="text-xxs font-bold text-gray-500">시간</span>
               </div>
               {sortedDays.map(day => {
-                const colors = DAY_HEADER_COLORS[day] || { bg: 'bg-gray-50', text: 'text-gray-800', border: 'border-gray-200' };
+                let colors = DAY_HEADER_COLORS[day] || { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' };
+                // 토요일: 수업이 있으면 평일과 동일한 색상
+                if (day === '토' && activeDays.has('토')) {
+                  colors = { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' };
+                }
                 return (
                   <div
                     key={day}
@@ -314,11 +318,16 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
               {/* 요일 컬럼 */}
               {sortedDays.map(day => {
                 const blocks = dayBlocks[day] || [];
+                const hasBlocks = activeDays.has(day);
+                // 일요일: 항상 진한 회색, 토요일: 수업 없을 때만 진한 회색
+                const columnBg = day === '일' ? 'bg-gray-200/70'
+                  : day === '토' && !hasBlocks ? 'bg-gray-200/70'
+                  : '';
 
                 return (
                   <div
                     key={day}
-                    className="flex-1 relative border-r last:border-r-0 border-gray-200"
+                    className={`flex-1 relative border-r last:border-r-0 border-gray-200 ${columnBg}`}
                   >
                     {/* 시간선 (가로) */}
                     {timeLabels.map(label => {

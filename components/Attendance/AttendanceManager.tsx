@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { Users, UserMinus, UserPlus, Settings, Calendar, Image, CalendarOff, LayoutList, SortAsc, Receipt } from 'lucide-react';
+import { Users, UserMinus, UserPlus, Settings, Calendar, Image, CalendarOff, LayoutList, SortAsc, Receipt, RefreshCw } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import { VideoLoading } from '../Common/VideoLoading';
 import { Student, SalaryConfig, SalarySettingItem, MonthlySettlement, AttendanceSubject, AttendanceViewMode, SessionPeriod } from './types';
@@ -37,6 +37,7 @@ import { UserProfile, Teacher, UnifiedStudent } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
 import { mapAttendanceValueToStatus } from '../../utils/attendanceSync';
 import { secureLog, secureWarn } from '../../utils/secureLog';
+import { useEdutrixSync, SyncResult } from '../../hooks/useEdutrixSync';
 
 // Default salary config for new setups
 const INITIAL_SALARY_CONFIG: SalaryConfig = {
@@ -357,6 +358,35 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   // Monthly Settlement from Firebase (cost-optimized: only current month)
   const { data: currentMonthSettlement, isLoading: isLoadingSettlement } = useMonthlySettlement(currentYearMonth, !!userProfile);
   const saveSettlementMutation = useSaveMonthlySettlement();
+
+  // Edutrix 보고서 동기화
+  const { syncFromEdutrix, resetSync, isSyncing, isResetting, lastResult: syncResult } = useEdutrixSync();
+  const [showSyncResult, setShowSyncResult] = useState(false);
+
+  const handleEdutrixSync = useCallback(async () => {
+    console.log('[AttendanceManager] handleEdutrixSync:', currentYearMonth);
+    try {
+      const result = await syncFromEdutrix(currentYearMonth, filterStaffId);
+      console.log('[AttendanceManager] 동기화 결과:', result);
+      setShowSyncResult(true);
+      setTimeout(() => setShowSyncResult(false), 15000);
+    } catch (err) {
+      console.error('[AttendanceManager] Edutrix 동기화 실패:', err);
+      alert('Edutrix 동기화에 실패했습니다. 콘솔을 확인해주세요.');
+    }
+  }, [syncFromEdutrix, currentYearMonth, filterStaffId]);
+
+  const handleEdutrixReset = useCallback(async () => {
+    if (!confirm(`${currentYearMonth} 월의 전체 출석 데이터를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+    try {
+      const count = await resetSync(currentYearMonth);
+      alert(`${count}건의 출석 데이터가 초기화되었습니다.`);
+      setShowSyncResult(false);
+    } catch (err) {
+      console.error('[AttendanceManager] 초기화 실패:', err);
+      alert('초기화에 실패했습니다. 콘솔을 확인해주세요.');
+    }
+  }, [resetSync, currentYearMonth]);
 
   // 이미지 내보내기 상태 (MOVED: early return 전에 모든 hooks 호출)
   const [isExporting, setIsExporting] = useState(false);
@@ -777,6 +807,50 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
 
         {/* Settings Buttons - same row */}
         <div className="flex-1"></div>
+
+        {/* Edutrix 보고서 → 출석 동기화 버튼 */}
+        <button
+          onClick={handleEdutrixSync}
+          disabled={isSyncing || isResetting}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm font-bold text-xs transition-colors shadow-sm flex-shrink-0 ${
+            isSyncing
+              ? 'bg-gray-400 text-white cursor-wait'
+              : 'bg-indigo-600 text-white hover:bg-indigo-700'
+          }`}
+          title={`${currentYearMonth} 월 Edutrix 보고서를 기반으로 출석을 자동 처리합니다`}
+        >
+          <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
+          {isSyncing ? '동기화 중...' : 'Edutrix 동기화'}
+        </button>
+
+        {/* 출석 초기화 버튼 */}
+        <button
+          onClick={handleEdutrixReset}
+          disabled={isResetting || isSyncing}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm font-bold text-xs transition-colors shadow-sm flex-shrink-0 ${
+            isResetting
+              ? 'bg-gray-400 text-white cursor-wait'
+              : 'bg-red-500 text-white hover:bg-red-600'
+          }`}
+          title={`${currentYearMonth} 월 전체 출석 데이터를 초기화합니다`}
+        >
+          <CalendarOff size={14} />
+          {isResetting ? '초기화 중...' : '출석 초기화'}
+        </button>
+
+        {/* 동기화 결과 표시 */}
+        {showSyncResult && syncResult && (
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-sm text-xs flex-shrink-0">
+            <span className="font-bold text-indigo-700">
+              총 {syncResult.totalReports}건
+            </span>
+            <span className="text-emerald-600">출석 {syncResult.matched}</span>
+            <span className="text-gray-500">스킵 {syncResult.skipped}</span>
+            {syncResult.errors > 0 && (
+              <span className="text-red-500">오류 {syncResult.errors}</span>
+            )}
+          </div>
+        )}
 
         {/* 세션 설정 버튼 - 관리자 전용 */}
         {canManageSessions && (

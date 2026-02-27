@@ -127,7 +127,14 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student: studentProp, com
       {/* 헤더: 학생 이름 + 퇴원/재원 버튼 */}
       <div className={`px-3 py-2 border-b border-gray-200 bg-white ${compact ? 'pr-10' : ''}`}>
         <div className="flex items-center justify-between">
-          <span className="text-sm font-bold text-primary">{student.name}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-primary">{student.name}</span>
+            {student.studentCode && (
+              <span className="text-xs font-mono text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-sm">
+                {student.studentCode}
+              </span>
+            )}
+          </div>
 
           {/* 퇴원/재원/삭제 버튼 - compact 모드(모달)에서는 항상 숨김, 학생관리에서만 표시 */}
           {!compact && (
