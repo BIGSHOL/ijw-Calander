@@ -36,6 +36,9 @@ import type { ExportGroupInfo } from './Math/MathClassTab';
 import WithdrawalStudentDetail from '../WithdrawalManagement/WithdrawalStudentDetail';
 import { WithdrawalEntry } from '../../hooks/useWithdrawalFilters';
 import ScheduledDateModal from './Math/components/ScheduledDateModal';
+import { doc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Performance Note (bundle-dynamic-imports): Lazy load Generic Timetable
 const GenericTimetable = lazy(() => import('./Generic/GenericTimetable'));
@@ -123,6 +126,8 @@ interface MathTimetableContentProps {
     // 퇴원생 모달
     selectedWithdrawalEntry: WithdrawalEntry | null;
     setSelectedWithdrawalEntry: (entry: WithdrawalEntry | null) => void;
+    // 배정 예정 취소
+    onCancelScheduledEnrollment?: (studentId: string, className: string) => void;
 }
 
 const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
@@ -203,6 +208,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     canReactivateWithdrawal,
     selectedWithdrawalEntry,
     setSelectedWithdrawalEntry,
+    onCancelScheduledEnrollment,
 }) => {
     const simulation = useMathSimulation();
     const { isScenarioMode, currentScenarioName, enterScenarioMode, exitScenarioMode, loadFromLive, publishToLive } = simulation;
@@ -335,6 +341,9 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
             setSelectedStudentForModal(student);
         }
     }, [studentMap, setSelectedStudentForModal, setSelectedWithdrawalEntry]);
+
+    // 배정 예정 취소 - onCancelScheduledEnrollment prop을 사용
+    // (handleCancelScheduledEnrollment는 TimetableManager에서 정의하여 prop으로 전달)
 
     const handleGridDragStart = useCallback((e: React.DragEvent, sId: string, cId: string, zone?: string) => {
         if (isScenarioMode) {
@@ -494,6 +503,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         onStudentClick={handleStudentClick}
                         pendingMovedStudentIds={pendingMovedStudentIds}
                         pendingMoveSchedules={pendingMoveSchedules}
+                        onCancelScheduledEnrollment={!isScenarioMode ? onCancelScheduledEnrollment : undefined}
                     />
                 </div>
                 )}
@@ -734,6 +744,7 @@ const TimetableManager = ({
     mathViewMode: externalMathViewMode,
     onMathViewModeChange,
 }: TimetableManagerProps) => {
+    const queryClient = useQueryClient();
     const { hasPermission } = usePermissions(currentUser);
     const canEditMath = hasPermission('timetable.math.edit');
     const canEditEnglish = hasPermission('timetable.english.edit');
@@ -883,6 +894,7 @@ const TimetableManager = ({
         studentName: string;
         fromClassName: string;
         toClassName: string;
+        targetClassSchedule?: string[];
     } | null>(null);
     const prevPendingMovesLengthRef = React.useRef(0);
 
@@ -949,7 +961,7 @@ const TimetableManager = ({
         return getWeekReferenceDate(currentMonday);
     }, [currentMonday]);
 
-    const { classDataMap: mathClassDataMap } = useMathClassStudents(mathClassNamesFromRaw, studentMap, mathReferenceDate);
+    const { classDataMap: mathClassDataMap, refetch: refetchMathClassStudents } = useMathClassStudents(mathClassNamesFromRaw, studentMap, mathReferenceDate);
 
     const classesWithEnrollments = useMemo(() => {
         return classes.map(cls => {
@@ -992,6 +1004,34 @@ const TimetableManager = ({
             setViewType('teacher');
         }
     }, [subjectTab, viewType, setViewType]);
+
+    // 배정 예정 취소
+    const handleCancelScheduledEnrollment = useCallback(async (studentId: string, className: string) => {
+        try {
+            const enrollmentsQuery = query(
+                collection(db, 'students', studentId, 'enrollments'),
+                where('subject', '==', 'math'),
+                where('className', '==', className)
+            );
+            const snapshot = await getDocs(enrollmentsQuery);
+
+            if (snapshot.empty) {
+                alert('해당 수강 정보를 찾을 수 없습니다.');
+                return;
+            }
+
+            for (const docSnap of snapshot.docs) {
+                await deleteDoc(docSnap.ref);
+            }
+
+            await queryClient.invalidateQueries({ queryKey: ['students'] });
+            await queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
+            alert('배정 예정이 취소되었습니다.');
+        } catch (error) {
+            console.error('배정 예정 취소 오류:', error);
+            alert('배정 예정 취소에 실패했습니다.');
+        }
+    }, [queryClient]);
 
     // Current periods based on subject tab
     const currentPeriods = subjectTab === 'math' ? MATH_PERIODS : ENGLISH_PERIODS;
@@ -1099,6 +1139,7 @@ const TimetableManager = ({
                     studentName: student?.name || lastMove.studentId,
                     fromClassName: fromClass?.className || '',
                     toClassName: toClass?.className || '',
+                    targetClassSchedule: toClass?.schedule,
                 });
             }
         }
@@ -1174,7 +1215,7 @@ const TimetableManager = ({
             <Suspense fallback={<VideoLoading className="flex-1 h-full" />}>
                 <EnglishTimetable
                     onSwitchToMath={() => setSubjectTab('math')}
-                    viewType={viewType}
+                    viewType={viewType === 'excel' ? 'class' : viewType}
                     teachers={propsTeachers}
                     classKeywords={classKeywords}
                     currentUser={currentUser}
@@ -1196,7 +1237,7 @@ const TimetableManager = ({
                 <GenericTimetable
                     subject="science"
                     currentUser={currentUser}
-                    viewType={viewType}
+                    viewType={viewType === 'excel' ? 'class' : viewType}
                     onStudentsUpdated={() => {
                         // Refresh logic if needed
                     }}
@@ -1211,7 +1252,7 @@ const TimetableManager = ({
                 <GenericTimetable
                     subject="korean"
                     currentUser={currentUser}
-                    viewType={viewType}
+                    viewType={viewType === 'excel' ? 'class' : viewType}
                     onStudentsUpdated={() => {
                         // Refresh logic if needed
                     }}
@@ -1300,6 +1341,7 @@ const TimetableManager = ({
                 canReactivateWithdrawal={canReactivateWithdrawal}
                 selectedWithdrawalEntry={selectedWithdrawalEntry}
                 setSelectedWithdrawalEntry={setSelectedWithdrawalEntry}
+                onCancelScheduledEnrollment={handleCancelScheduledEnrollment}
             />
             {/* 드래그 예정일 선택 모달 */}
             {dateModalInfo && (
@@ -1309,6 +1351,8 @@ const TimetableManager = ({
                     toClassName={dateModalInfo.toClassName}
                     onConfirm={handleDateModalConfirm}
                     onClose={handleDateModalClose}
+                    weekStart={currentMonday}
+                    targetClassSchedule={dateModalInfo.targetClassSchedule}
                 />
             )}
         </MathSimulationProvider>

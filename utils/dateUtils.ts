@@ -288,3 +288,23 @@ export const getWeekReferenceDate = (weekStart: Date): string => {
   // 과거 주: 해당 주 일요일 기준
   return weekEndStr;
 };
+
+/**
+ * 주어진 주의 시작일(월요일)로부터 수업 스케줄의 첫 수업일을 계산
+ *
+ * @param weekStart - 주의 시작일 (월요일) Date 객체
+ * @param schedule - 수업 스케줄 배열 (예: ["월 1교시", "목 2교시"])
+ * @returns 'YYYY-MM-DD' 형식의 첫 수업일, 스케줄이 없으면 weekStart 반환
+ */
+export const getFirstClassDayOfWeek = (weekStart: Date, schedule: string[]): string => {
+  const dayOrder: Record<string, number> = { '월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5, '일': 6 };
+
+  const offsets = schedule
+    .map(slot => dayOrder[slot.split(' ')[0]])
+    .filter(offset => offset !== undefined);
+
+  if (offsets.length === 0) return formatDateKey(weekStart);
+
+  const minOffset = Math.min(...offsets);
+  return formatDateKey(addDays(weekStart, minOffset));
+};

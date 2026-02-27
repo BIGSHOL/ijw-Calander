@@ -308,8 +308,8 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
             await batch.commit();
 
             // React Query 캐시 무효화 - 실시간 반영
-            queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
             queryClient.invalidateQueries({ queryKey: ['students'] });
+            queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
 
             setPendingMoves([]);
         } catch (e) {

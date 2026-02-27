@@ -488,14 +488,14 @@ export const useAttendanceStudents = (options?: {
                                         const orphanRecord = orphanRecordsMap.get(docSnap.id);
                                         merged.push({
                                             id: docSnap.id,
-                                            ...docSnap.data(),
+                                            ...docSnap.data() as Student,
                                             group: orphanRecord?.className ? `[삭제됨] ${orphanRecord.className}` : '[수업 삭제됨]',
                                             days: [],
                                             attendance: orphanRecord?.attendance || {},
                                             memos: orphanRecord?.memos || {},
                                             cellColors: orphanRecord?.cellColors || {},
                                             salarySettingOverrides: orphanRecord?.salarySettingOverrides || {},
-                                        } as Student);
+                                        });
                                     });
                                 }
                             });
