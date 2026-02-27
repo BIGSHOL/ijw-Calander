@@ -29,6 +29,9 @@ interface StudentItemProps {
     withdrawalScheduledDate?: string;  // 퇴원예정일
     classLabel?: string;  // 합반수업 시 소속 수업 라벨
     textbookInfo?: { month: string; textbookName: string } | null;
+    isExcelMode?: boolean;
+    mode?: 'view' | 'edit';
+    onCellSelect?: (classId: string) => void;
 }
 
 const StudentItem: React.FC<StudentItemProps> = ({
@@ -50,11 +53,16 @@ const StudentItem: React.FC<StudentItemProps> = ({
     isWithdrawalScheduled = false,
     withdrawalScheduledDate,
     classLabel,
-    textbookInfo
+    textbookInfo,
+    isExcelMode,
+    mode,
+    onCellSelect,
 }) => {
     const [isHovered, setIsHovered] = useState(false);
-    // 조회 모드/수정 모드 모두에서 학생 클릭 가능 (영어 시간표와 동일)
-    const isClickable = !!onStudentClick;
+    // 엑셀 모드에서는 싱글클릭으로 모달을 열지 않음
+    const isClickable = !isExcelMode && !!onStudentClick;
+    // 엑셀 모드 view에서는 draggable 비활성 → 텍스트 선택 가능
+    const isDraggable = isExcelMode ? (canEdit && mode === 'edit') : canEdit;
 
     // hover 시 적용할 스타일 (자연스럽게)
     const hoverStyle: React.CSSProperties = isClickable && isHovered ? {
@@ -65,10 +73,22 @@ const StudentItem: React.FC<StudentItemProps> = ({
 
     return (
         <li
-            draggable={canEdit}
-            onDragStart={(e) => canEdit && onDragStart(e, student.id, classId, zone)}
+            draggable={isDraggable}
+            onDragStart={(e) => isDraggable && onDragStart(e, student.id, classId, zone)}
             onClick={(e) => {
+                if (isExcelMode) {
+                    // 엑셀 모드: 셀 선택만, 모달 열지 않음
+                    onCellSelect?.(classId);
+                    return;
+                }
                 if (isClickable) {
+                    e.stopPropagation();
+                    onStudentClick!(student.id);
+                }
+            }}
+            onDoubleClick={(e) => {
+                // 엑셀 모드: 더블클릭 시 기존 모달 열기
+                if (isExcelMode && onStudentClick) {
                     e.stopPropagation();
                     onStudentClick(student.id);
                 }
@@ -76,7 +96,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             className={`py-0 px-0.5 list-none ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap min-w-0 font-normal transition-all duration-150
-            ${canEdit ? 'cursor-grab' : ''} ${isClickable ? 'cursor-pointer' : ''}
+            ${isDraggable ? 'cursor-grab' : ''} ${isClickable ? 'cursor-pointer' : ''} ${isExcelMode && !isDraggable ? 'select-text cursor-text' : ''}
             ${isPendingMoved ? 'bg-purple-400 text-white font-bold' : isTransferScheduled ? 'bg-purple-200 text-purple-800 font-bold' : isWithdrawalScheduled ? 'bg-orange-100 text-orange-800 line-through' : isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText}
             ${!isPendingMoved && !isTransferScheduled && !isWithdrawalScheduled && !isHighlighted && !enrollmentStyle ? 'opacity-80' : ''}`}
             style={hoverStyle}
@@ -139,6 +159,12 @@ interface ClassCardProps {
     latestTextbook?: { textbookName: string; distributedAt: string } | null;
     studentTextbookMap?: Map<string, { month: string; textbookName: string }>;
     referenceDate?: string;  // 주차 기준일 (YYYY-MM-DD), 없으면 오늘
+    // 엑셀 모드 (강사뷰 변형)
+    isExcelMode?: boolean;
+    isSelected?: boolean;
+    onCellSelect?: (classId: string) => void;
+    onEnrollStudent?: (studentId: string, className: string) => void;
+    mode?: 'view' | 'edit';
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -173,7 +199,12 @@ const ClassCard: React.FC<ClassCardProps> = ({
     isAssistantTeacher = false,
     latestTextbook,
     studentTextbookMap,
-    referenceDate
+    referenceDate,
+    isExcelMode,
+    isSelected,
+    onCellSelect,
+    onEnrollStudent,
+    mode,
 }) => {
     // 주차 기준일: referenceDate가 있으면 해당 날짜, 없으면 오늘
     const refDateStr = referenceDate || formatDateKey(new Date());
@@ -589,6 +620,12 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
     // 수정 모드에서 수업명 헤더 클릭 핸들러
     const handleClassHeaderClick = (e: React.MouseEvent) => {
+        if (isExcelMode) {
+            // 엑셀 모드: 싱글클릭 → 셀 선택만
+            e.stopPropagation();
+            onCellSelect?.(cls.id);
+            return;
+        }
         if (canEdit) {
             // 합반 수업에서는 각 수업 영역에서 개별 클릭 처리하므로 전체 헤더 클릭은 무시
             if (isMergedClass && uniqueMergedNames.length > 1) return;
@@ -596,6 +633,42 @@ const ClassCard: React.FC<ClassCardProps> = ({
             onClick(cls);
         }
     };
+
+    // 엑셀 모드: 더블클릭 시 기존 모달 열기
+    const handleClassHeaderDoubleClick = (e: React.MouseEvent) => {
+        if (isExcelMode && canEdit) {
+            if (isMergedClass && uniqueMergedNames.length > 1) return;
+            e.stopPropagation();
+            onClick(cls);
+        }
+    };
+
+    // 엑셀 모드: 학생 자동완성 상태
+    const [autoCompleteQuery, setAutoCompleteQuery] = useState('');
+    const [showAutoComplete, setShowAutoComplete] = useState(false);
+    const autoCompleteRef = useRef<HTMLInputElement>(null);
+
+    // 자동완성 후보 학생 목록
+    const autoCompleteResults = useMemo(() => {
+        if (!isExcelMode || !autoCompleteQuery.trim() || !studentMap) return [];
+        const query = autoCompleteQuery.trim().toLowerCase();
+        const existingIds = new Set(
+            (cls.studentIds || cls.studentList?.map((s: any) => s.id) || [])
+        );
+        return Object.values(studentMap)
+            .filter((s: any) =>
+                s.name?.toLowerCase().includes(query) &&
+                !existingIds.has(s.id) &&
+                s.status !== 'withdrawn'
+            )
+            .slice(0, 8);
+    }, [autoCompleteQuery, studentMap, cls, isExcelMode]);
+
+    const handleEnrollStudent = useCallback((studentId: string) => {
+        onEnrollStudent?.(studentId, cls.className);
+        setAutoCompleteQuery('');
+        setShowAutoComplete(false);
+    }, [onEnrollStudent, cls.className]);
 
     // 병합 셀 내 zone 드래그 오버 상태 (로컬)
     const [dragOverZone, setDragOverZone] = useState<string | null>(null);
@@ -610,7 +683,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 }
             }}
             onDrop={(e) => canEdit && onDrop(e, cls.id, 'common')}
-            className={`flex flex-col ${fixedCardHeight ? '' : 'h-full '}overflow-hidden transition-all w-full max-w-full ${isDragOver ? 'ring-2 ring-indigo-400 shadow-lg shadow-indigo-200' : ''} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''}`}
+            onDoubleClick={isExcelMode ? handleClassHeaderDoubleClick : undefined}
+            className={`flex flex-col ${fixedCardHeight ? '' : 'h-full '}overflow-hidden transition-all w-full max-w-full ${isDragOver ? 'ring-2 ring-indigo-400 shadow-lg shadow-indigo-200' : ''} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''} ${isExcelMode && isSelected ? 'ring-2 ring-blue-500 shadow-md' : ''}`}
             style={{
                 ...cardBgStyle,
                 ...(fixedCardHeight ? { height: `${fixedCardHeight}px`, maxHeight: `${fixedCardHeight}px` } : {}),
@@ -804,6 +878,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             withdrawalScheduledDate={!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
                                             classLabel={isMergedClass ? s._classLabel : undefined}
                                             textbookInfo={studentTextbookMap?.get(s.name) || null}
+                                            isExcelMode={isExcelMode}
+                                            mode={mode}
+                                            onCellSelect={onCellSelect}
                                         />
                                     );
                                 })}
@@ -861,6 +938,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                 withdrawalScheduledDate={!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
                                                                 classLabel={isMergedClass ? s._classLabel : undefined}
                                                                 textbookInfo={studentTextbookMap?.get(s.name) || null}
+                                                                isExcelMode={isExcelMode}
+                                                                mode={mode}
+                                                                onCellSelect={onCellSelect}
                                                             />
                                                         )}
                                                     </div>
@@ -1029,6 +1109,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             withdrawalScheduledDate={!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
                                             classLabel={isMergedClass ? s._classLabel : undefined}
                                             textbookInfo={studentTextbookMap?.get(s.name) || null}
+                                            isExcelMode={isExcelMode}
+                                            mode={mode}
+                                            onCellSelect={onCellSelect}
                                         />
                                     );
                                 })}
@@ -1140,6 +1223,48 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     </div>
                 )
             )}
+            {/* 엑셀 모드: 학생 자동완성 입력 */}
+            {isExcelMode && isSelected && canEdit && mode === 'edit' && (
+                <div className="flex-shrink-0 border-t border-gray-300 p-1 bg-blue-50" onClick={(e) => e.stopPropagation()}>
+                    <div className="relative">
+                        <input
+                            ref={autoCompleteRef}
+                            type="text"
+                            value={autoCompleteQuery}
+                            onChange={(e) => {
+                                setAutoCompleteQuery(e.target.value);
+                                setShowAutoComplete(true);
+                            }}
+                            onFocus={() => setShowAutoComplete(true)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Escape') {
+                                    setShowAutoComplete(false);
+                                    setAutoCompleteQuery('');
+                                }
+                                if (e.key === 'Enter' && autoCompleteResults.length > 0) {
+                                    handleEnrollStudent((autoCompleteResults[0] as any).id);
+                                }
+                            }}
+                            placeholder="학생 검색..."
+                            className="w-full px-1.5 py-0.5 text-xxs border border-gray-300 rounded focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
+                        />
+                        {showAutoComplete && autoCompleteResults.length > 0 && (
+                            <ul className="absolute z-50 left-0 right-0 bottom-full mb-0.5 bg-white border border-gray-300 rounded shadow-lg max-h-40 overflow-y-auto">
+                                {autoCompleteResults.map((s: any) => (
+                                    <li
+                                        key={s.id}
+                                        onClick={() => handleEnrollStudent(s.id)}
+                                        className="px-1.5 py-0.5 text-xxs hover:bg-blue-100 cursor-pointer flex justify-between"
+                                    >
+                                        <span className="font-medium">{s.name}</span>
+                                        <span className="text-gray-400">{formatSchoolGrade(s.school, s.grade)}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -1171,6 +1296,9 @@ export default React.memo(ClassCard, (prevProps, nextProps) => {
         prevProps.isAssistantTeacher === nextProps.isAssistantTeacher &&
         prevProps.pendingMoveSchedules === nextProps.pendingMoveSchedules &&
         prevProps.latestTextbook === nextProps.latestTextbook &&
-        prevProps.studentTextbookMap === nextProps.studentTextbookMap
+        prevProps.studentTextbookMap === nextProps.studentTextbookMap &&
+        prevProps.isExcelMode === nextProps.isExcelMode &&
+        prevProps.isSelected === nextProps.isSelected &&
+        prevProps.mode === nextProps.mode
     );
 });

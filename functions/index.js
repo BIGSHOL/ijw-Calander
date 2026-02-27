@@ -1523,6 +1523,59 @@ async function toolGetStudentEnrollments(args) {
                     }
                     enrollment.room = cls.room || null;
                 }
+
+                cells.each((j, cell) => {
+                    const link = $(cell).find("a");
+                    const text = link.length > 0 ? link.text().trim() : $(cell).text().trim();
+                    const headerIdx = j - offset;
+                    if (headerIdx >= 0 && headers[headerIdx]) {
+                        rowData[headers[headerIdx]] = text;
+                    } else {
+                        rowData[`col_${j}`] = text;
+                    }
+                });
+
+                // MakeEdu 컬럼: 원생명, 학교, 학년, 수업, 담임강사, 입학일 등
+                const name = rowData["원생명"] || rowData["이름"] || rowData["학생명"] || rowData["성명"] || "";
+                // 비학생 행 필터: 이름이 너무 길거나, 필터 UI 행 제외
+                if (name.length > 20) return;
+                if (/종강수업|수업포함/.test(name)) return;
+                if (/초중고|유치원생|초등학생|중학생|고등학생/.test(name)) return;
+                if (/합계|전체|선택/.test(name)) return;
+                if (!name || name.length === 0 || /^\d+$/.test(name)) return;
+                if (name) {
+                    students.push({
+                        name,
+                        school: rowData["학교"] || rowData["학교명"] || "",
+                        grade: rowData["학년"] || "",
+                        phone: rowData["전화번호"] || rowData["연락처"]
+                            || rowData["휴대폰"] || rowData["핸드폰"]
+                            || rowData["원생연락처"] || "",
+                        parentPhone: rowData["보호자전화"] || rowData["보호자연락처"] || "",
+                        registrationDate: rowData["입학일"] || rowData["등록일"] || "",
+                        className: rowData["수업"] || rowData["반"] || rowData["반명"] || rowData["수강반"] || "",
+                        teacher: rowData["담임강사"] || "",
+                        siblings: rowData["형제"] || "",
+                        memo: rowData["메모"] || "",
+                        status: rowData["상태"] || rowData["수강상태"] || "",
+                        // 추가 필드 (화면설정에서 컬럼 추가 시)
+                        attendanceNumber: rowData["출결번호"] || "",
+                        customField1: rowData["기타항목1"] || "",
+                        customField2: rowData["기타항목2"] || "",
+                        gender: rowData["성별"] || "",
+                        parentName: rowData["보호자이름"] || rowData["보호자명"] || "",
+                        birthDate: rowData["생일"] || rowData["생년월일"] || "",
+                        address: rowData["주소1"] || rowData["주소"] || "",
+                        addressDetail: rowData["주소2"] || "",
+                        _raw: rowData,
+                    });
+                }
+            });
+
+            logger.info(`[scrapeMakeEdu] Parsed ${students.length} new students`);
+
+            if (students.length > 0) {
+                logger.info(`[scrapeMakeEdu] Sample raw: ${JSON.stringify(students[0]._raw)}`);
             }
         }
     }

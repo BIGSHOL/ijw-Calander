@@ -256,12 +256,25 @@ export const useClassOperations = () => {
         invalidateMathCaches();
     };
 
+    const enrollExistingStudent = async (studentId: string, className: string) => {
+        const now = new Date().toISOString();
+        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
+        await setDoc(enrollmentRef, {
+            className,
+            subject: 'math',
+            enrollmentDate: now.split('T')[0],
+            createdAt: now,
+        });
+        invalidateMathCaches();
+    };
+
     return {
         checkConsecutiveSchedule,
         addClass,
         updateClass,
         deleteClass,
         addStudent,
+        enrollExistingStudent,
         removeStudent,
         withdrawStudent,
         restoreStudent

@@ -19,7 +19,7 @@ interface TimetableHeaderProps {
     goToThisWeek: () => void;
     searchQuery: string;
     setSearchQuery: (query: string) => void;
-    viewType: 'teacher' | 'room' | 'class';
+    viewType: 'teacher' | 'room' | 'class' | 'excel';
     setIsTeacherOrderModalOpen: (isOpen: boolean) => void;
     setIsViewSettingsOpen: (isOpen: boolean) => void;
     pendingMovesCount: number;
@@ -462,6 +462,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                         ? currentScenarioName
                         : viewType === 'teacher' ? '인재원 수학 강사 시간표'
                         : viewType === 'room' ? '인재원 수학 강의실 시간표'
+                        : viewType === 'excel' ? '인재원 수학 엑셀 시간표'
                         : '인재원 수학 통합 시간표'
                     }
                 </span>

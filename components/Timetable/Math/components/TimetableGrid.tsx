@@ -58,6 +58,11 @@ interface TimetableGridProps {
     // Pending Moved Students (드래그 이동 대기 중)
     pendingMovedStudentIds?: Set<string>;
     pendingMoveSchedules?: Map<string, string | undefined>;
+    // 엑셀 모드 (강사뷰 변형: 셀 선택, 텍스트 복사, 자동완성)
+    isExcelMode?: boolean;
+    selectedClassId?: string | null;
+    onCellSelect?: (classId: string) => void;
+    onEnrollStudent?: (studentId: string, className: string) => void;
 }
 
 const TimetableGrid: React.FC<TimetableGridProps> = ({
@@ -94,7 +99,11 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     classKeywords = [],
     onStudentClick,
     pendingMovedStudentIds,
-    pendingMoveSchedules
+    pendingMoveSchedules,
+    isExcelMode,
+    selectedClassId,
+    onCellSelect,
+    onEnrollStudent,
 }) => {
     // 주차 기준일: 미래 주 → weekStart, 이번 주 → today, 과거 주 → weekEnd(일요일)
     const referenceDate = useMemo(() => {
@@ -395,6 +404,11 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     latestTextbook={getLatestTextbook(cls)}
                     studentTextbookMap={byStudentName}
                     referenceDate={referenceDate}
+                    isExcelMode={isExcelMode}
+                    isSelected={selectedClassId === cls.id}
+                    onCellSelect={onCellSelect}
+                    onEnrollStudent={onEnrollStudent}
+                    mode={mode}
                 />
             );
         };
@@ -1294,6 +1308,11 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             latestTextbook={getLatestTextbook(cls)}
                     studentTextbookMap={byStudentName}
                                                                             referenceDate={referenceDate}
+                                                                            isExcelMode={isExcelMode}
+                                                                            isSelected={selectedClassId === cls.id}
+                                                                            onCellSelect={onCellSelect}
+                                                                            onEnrollStudent={onEnrollStudent}
+                                                                            mode={mode}
                                                                         />
                                                                     ))
                                                                 )}
@@ -1381,6 +1400,11 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             latestTextbook={getLatestTextbook(cls)}
                     studentTextbookMap={byStudentName}
                                                                             referenceDate={referenceDate}
+                                                                            isExcelMode={isExcelMode}
+                                                                            isSelected={selectedClassId === cls.id}
+                                                                            onCellSelect={onCellSelect}
+                                                                            onEnrollStudent={onEnrollStudent}
+                                                                            mode={mode}
                                                                         />
                                                                     ))
                                                                 )}
@@ -1484,6 +1508,11 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 pendingMoveSchedules={pendingMoveSchedules}
                                                                                 latestTextbook={getLatestTextbook(cls)}
                     studentTextbookMap={byStudentName}
+                                                                                isExcelMode={isExcelMode}
+                                                                                isSelected={selectedClassId === cls.id}
+                                                                                onCellSelect={onCellSelect}
+                                                                                onEnrollStudent={onEnrollStudent}
+                                                                                mode={mode}
                                                                             />
                                                                         ))
                                                                     )}
@@ -1597,6 +1626,11 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         pendingMoveSchedules={pendingMoveSchedules}
                                                                         latestTextbook={getLatestTextbook(cls)}
                     studentTextbookMap={byStudentName}
+                                                                        isExcelMode={isExcelMode}
+                                                                        isSelected={selectedClassId === cls.id}
+                                                                        onCellSelect={onCellSelect}
+                                                                        onEnrollStudent={onEnrollStudent}
+                                                                        mode={mode}
                                                                     />
                                                                 ))
                                                             )}

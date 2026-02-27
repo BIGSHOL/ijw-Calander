@@ -4,14 +4,14 @@
  */
 
 import React from 'react';
-import { Settings, ClipboardList, User as UserIcon, Building, Calendar as CalendarIcon } from 'lucide-react';
+import { Settings, ClipboardList, User as UserIcon, Building, Calendar as CalendarIcon, Table2 } from 'lucide-react';
 import { SubjectType } from '../../types';
 
 interface TimetableNavBarProps {
   timetableSubject: SubjectType;
   setTimetableSubject: (value: SubjectType) => void;
-  timetableViewType: 'teacher' | 'room' | 'class';
-  setTimetableViewType: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class'>>;
+  timetableViewType: 'teacher' | 'room' | 'class' | 'excel';
+  setTimetableViewType: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>;
   mathViewMode: 'day-based' | 'teacher-based';
   setMathViewMode: (value: 'day-based' | 'teacher-based') => void;
   hasPermission: (perm: string) => boolean;
@@ -79,17 +79,19 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
           </button>
         )}
 
-        {/* Math View Mode Toggle Button - 수학: 통합 → 강사 → 날짜 */}
+        {/* Math View Mode Toggle Button - 수학: 통합 → 강사 → 날짜 → 엑셀 */}
         {timetableSubject === 'math' && (
           <button
             onClick={() => {
               if (timetableViewType === 'class') {
                 setTimetableViewType('teacher');
                 setMathViewMode('teacher-based');
+              } else if (timetableViewType === 'excel') {
+                setTimetableViewType('class');
               } else if (mathViewMode === 'teacher-based') {
                 setMathViewMode('day-based');
               } else {
-                setTimetableViewType('class');
+                setTimetableViewType('excel');
               }
             }}
             className="px-2 py-0.5 rounded bg-primary border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
@@ -97,9 +99,11 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
           >
             {timetableViewType === 'class'
               ? <><ClipboardList size={12} className="inline" /> 통합뷰</>
-              : mathViewMode === 'teacher-based'
-                ? <><UserIcon size={12} className="inline" /> 강사</>
-                : <><CalendarIcon size={12} className="inline" /> 날짜</>}
+              : timetableViewType === 'excel'
+                ? <><Table2 size={12} className="inline" /> 엑셀</>
+                : mathViewMode === 'teacher-based'
+                  ? <><UserIcon size={12} className="inline" /> 강사</>
+                  : <><CalendarIcon size={12} className="inline" /> 날짜</>}
           </button>
         )}
 

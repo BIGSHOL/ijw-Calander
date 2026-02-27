@@ -236,7 +236,7 @@ export function useModalState() {
 // ============================================
 export function useTimetableState() {
   const [timetableSubject, setTimetableSubject] = useState<SubjectType>('math');
-  const [timetableViewType, setTimetableViewType] = useState<'teacher' | 'room' | 'class'>('teacher');
+  const [timetableViewType, setTimetableViewType] = useState<'teacher' | 'room' | 'class' | 'excel'>('teacher');
   const [mathViewMode, setMathViewMode] = useState<'day-based' | 'teacher-based'>('teacher-based');
 
   return {
