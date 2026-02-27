@@ -14,6 +14,23 @@ const SUBJECT_LABELS: Record<string, string> = {
   other: '기타',
 };
 
+// ISO timestamp/날짜 문자열 → KST 날짜(YY.MM.DD) 변환
+const formatDateKST = (dateStr?: string) => {
+  if (!dateStr) return '-';
+  // YYYY-MM-DD 형식이면 그대로 포맷
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [y, m, d] = dateStr.split('-');
+    return `${y}.${m}.${d}`;
+  }
+  // ISO timestamp → UTC+9 (KST) 변환
+  const utc = new Date(dateStr);
+  const kst = new Date(utc.getTime() + 9 * 60 * 60 * 1000);
+  const y = String(kst.getUTCFullYear());
+  const m = String(kst.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(kst.getUTCDate()).padStart(2, '0');
+  return `${y}.${m}.${d}`;
+};
+
 const StaffClassHistory: React.FC<StaffClassHistoryProps> = ({ staffName }) => {
   const { data: classes, isLoading } = useTeacherClasses(staffName);
 
@@ -47,18 +64,18 @@ const StaffClassHistory: React.FC<StaffClassHistoryProps> = ({ staffName }) => {
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
               <th className="text-left px-2 py-1.5 font-bold text-primary-700">수업명</th>
-              <th className="text-left px-2 py-1.5 font-bold text-primary-700">과목</th>
+              <th className="text-center px-2 py-1.5 font-bold text-primary-700">과목</th>
               <th className="text-center px-2 py-1.5 font-bold text-primary-700">역할</th>
               <th className="text-center px-2 py-1.5 font-bold text-primary-700">상태</th>
-              <th className="text-left px-2 py-1.5 font-bold text-primary-700">시작일</th>
-              <th className="text-left px-2 py-1.5 font-bold text-primary-700">종료일</th>
+              <th className="text-center px-2 py-1.5 font-bold text-primary-700">시작일</th>
+              <th className="text-center px-2 py-1.5 font-bold text-primary-700">종료일</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {classes.map((cls) => (
               <tr key={cls.id} className="hover:bg-gray-50 transition-colors">
                 <td className="px-2 py-1.5 font-medium text-primary">{cls.className}</td>
-                <td className="px-2 py-1.5 text-gray-600">
+                <td className="px-2 py-1.5 text-center text-gray-600">
                   {SUBJECT_LABELS[cls.subject] || cls.subject}
                 </td>
                 <td className="px-2 py-1.5 text-center">
@@ -79,8 +96,8 @@ const StaffClassHistory: React.FC<StaffClassHistoryProps> = ({ staffName }) => {
                     {cls.isActive ? '진행중' : '종료'}
                   </span>
                 </td>
-                <td className="px-2 py-1.5 text-gray-500">{cls.startDate || '-'}</td>
-                <td className="px-2 py-1.5 text-gray-500">{cls.endDate || '-'}</td>
+                <td className="px-2 py-1.5 text-center text-gray-500">{formatDateKST(cls.startDate)}</td>
+                <td className="px-2 py-1.5 text-center text-gray-500">{formatDateKST(cls.endDate)}</td>
               </tr>
             ))}
           </tbody>
