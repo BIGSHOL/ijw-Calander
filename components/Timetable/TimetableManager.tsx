@@ -254,19 +254,14 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                 if (!copiedStudent || !selectedClassId) return;
                 e.preventDefault();
 
-                // 같은 반에 붙여넣기 시도 → 경고
+                // 대상 반 찾기
                 const targetClass = filteredClasses.find(c => c.id === selectedClassId);
                 if (!targetClass) return;
 
-                if (copiedStudent.className === targetClass.className) {
-                    alert('이미 추가된 수업입니다');
-                    return;
-                }
-
-                // 이미 해당 반에 등록된 학생인지 확인
+                // 이미 해당 반에 소속된 학생인지 확인
                 const existingIds = new Set(targetClass.studentIds || targetClass.studentList?.map((s: any) => s.id) || []);
                 if (existingIds.has(copiedStudent.studentId)) {
-                    alert('이미 추가된 수업입니다');
+                    alert('이미 소속된 수업입니다');
                     return;
                 }
 
