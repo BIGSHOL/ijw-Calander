@@ -58,11 +58,14 @@ interface TimetableGridProps {
     // Pending Moved Students (드래그 이동 대기 중)
     pendingMovedStudentIds?: Set<string>;
     pendingMoveSchedules?: Map<string, string | undefined>;
-    // 엑셀 모드 (강사뷰 변형: 셀 선택, 텍스트 복사, 자동완성)
+    // 엑셀 모드 (강사뷰 변형: 셀 선택, 텍스트 복사, 자동완성, 복사/붙여넣기)
     isExcelMode?: boolean;
     selectedClassId?: string | null;
     onCellSelect?: (classId: string) => void;
     onEnrollStudent?: (studentId: string, className: string) => void;
+    selectedStudentId?: string | null;
+    copiedStudentId?: string | null;
+    onStudentSelect?: (studentId: string, className: string) => void;
     // 배정 예정 취소
     onCancelScheduledEnrollment?: (studentId: string, className: string) => void;
     // 퇴원 드롭존
@@ -108,6 +111,9 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     selectedClassId,
     onCellSelect,
     onEnrollStudent,
+    selectedStudentId,
+    copiedStudentId,
+    onStudentSelect,
     onCancelScheduledEnrollment,
     onWithdrawalDrop
 }) => {
@@ -414,6 +420,9 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     isSelected={selectedClassId === cls.id}
                     onCellSelect={onCellSelect}
                     onEnrollStudent={onEnrollStudent}
+                    selectedStudentId={selectedStudentId}
+                    copiedStudentId={copiedStudentId}
+                    onStudentSelect={onStudentSelect}
                     mode={mode}
                     onCancelScheduledEnrollment={onCancelScheduledEnrollment}
                     onWithdrawalDrop={onWithdrawalDrop}

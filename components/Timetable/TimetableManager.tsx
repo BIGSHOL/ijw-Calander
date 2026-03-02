@@ -222,9 +222,62 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     const { settings: mathIntegrationSettings, updateSettings: updateMathIntegrationSettings } = useMathSettings();
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const gridRef = React.useRef<HTMLDivElement>(null);
-    // 엑셀뷰용 셀 선택 + 학생 등록
+    // 엑셀뷰용 셀 선택 + 학생 등록 + 복사/붙여넣기
     const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+    const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+    const [selectedStudentClassName, setSelectedStudentClassName] = useState<string | null>(null);
+    const [copiedStudent, setCopiedStudent] = useState<{ studentId: string; className: string } | null>(null);
     const { enrollExistingStudent } = useClassOperations();
+
+    // 엑셀 모드 학생 선택 핸들러
+    const handleExcelStudentSelect = useCallback((studentId: string, className: string) => {
+        setSelectedStudentId(studentId);
+        setSelectedStudentClassName(className);
+    }, []);
+
+    // 엑셀 모드 Ctrl+C / Ctrl+V 키보드 이벤트
+    useEffect(() => {
+        if (viewType !== 'excel') return;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (!e.ctrlKey && !e.metaKey) return;
+
+            if (e.key === 'c') {
+                // Ctrl+C: 선택된 학생 복사
+                if (selectedStudentId && selectedStudentClassName) {
+                    setCopiedStudent({ studentId: selectedStudentId, className: selectedStudentClassName });
+                }
+            }
+
+            if (e.key === 'v') {
+                // Ctrl+V: 선택된 셀에 붙여넣기
+                if (!copiedStudent || !selectedClassId) return;
+                e.preventDefault();
+
+                // 같은 반에 붙여넣기 시도 → 경고
+                const targetClass = filteredClasses.find(c => c.id === selectedClassId);
+                if (!targetClass) return;
+
+                if (copiedStudent.className === targetClass.className) {
+                    alert('이미 추가된 수업입니다');
+                    return;
+                }
+
+                // 이미 해당 반에 등록된 학생인지 확인
+                const existingIds = new Set(targetClass.studentIds || targetClass.studentList?.map((s: any) => s.id) || []);
+                if (existingIds.has(copiedStudent.studentId)) {
+                    alert('이미 추가된 수업입니다');
+                    return;
+                }
+
+                enrollExistingStudent(copiedStudent.studentId, targetClass.className);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [viewType, selectedStudentId, selectedStudentClassName, copiedStudent, selectedClassId, filteredClasses, enrollExistingStudent]);
+
     // 이미지 내보내기용 그룹 상태
     const [exportGroups, setExportGroups] = useState<ExportGroup[]>([]);
     const [exportVisibleGroups, setExportVisibleGroups] = useState<number[] | undefined>(undefined);
@@ -553,6 +606,9 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         selectedClassId={selectedClassId}
                         onCellSelect={setSelectedClassId}
                         onEnrollStudent={enrollExistingStudent}
+                        selectedStudentId={selectedStudentId}
+                        copiedStudentId={copiedStudent?.studentId || null}
+                        onStudentSelect={handleExcelStudentSelect}
                         onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
                     />
                 </div>
