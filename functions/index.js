@@ -2074,3 +2074,202 @@ exports.chatWithAI = functions.region("asia-northeast3").runWith({ timeoutSecond
     }
 });
 
+// ===== MakeEdu 버스 데이터 크롤링 =====
+const cheerio = require("cheerio");
+
+/**
+ * MakeEdu 버스 등록 페이지 크롤링하여 Firestore에 저장
+ * Firestore settings/makeedu 문서에서 로그인 정보를 읽음
+ * { userId: string, userPwd: string, schoolUrl: string }
+ */
+exports.scrapeMakeEduBusData = functions
+    .region("asia-northeast3")
+    .runWith({ timeoutSeconds: 60, memory: "256MB" })
+    .https.onCall(async (data, context) => {
+        logger.info("[scrapeMakeEduBusData] Start");
+
+        try {
+            // 1. MakeEdu 로그인 정보 가져오기
+            const settingsDoc = await db.collection("settings").doc("makeedu").get();
+            if (!settingsDoc.exists) {
+                throw new functions.https.HttpsError("not-found",
+                    "MakeEdu 설정이 없습니다. 설정 > MakeEdu에서 로그인 정보를 입력하세요.");
+            }
+
+            const settings = settingsDoc.data();
+            const { userId, userPwd, schoolUrl } = settings;
+            if (!userId || !userPwd) {
+                throw new functions.https.HttpsError("invalid-argument",
+                    "MakeEdu 로그인 정보가 불완전합니다.");
+            }
+
+            const baseUrl = schoolUrl || "https://school.makeedu.co.kr";
+
+            // 2. MakeEdu 로그인
+            logger.info("[scrapeMakeEduBusData] Logging in...");
+            const loginRes = await fetch(`${baseUrl}/member/loginChk.do`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                },
+                body: `userId=${encodeURIComponent(userId)}&userPwd=${encodeURIComponent(userPwd)}`,
+                redirect: "manual",
+            });
+
+            // 쿠키 추출
+            const cookies = [];
+            const setCookieHeaders = loginRes.headers.getSetCookie?.() || [];
+            for (const h of setCookieHeaders) {
+                const cookie = h.split(";")[0];
+                if (cookie) cookies.push(cookie);
+            }
+            // raw headers 방식도 시도
+            if (cookies.length === 0) {
+                const rawSet = loginRes.headers.raw?.()?.["set-cookie"] || [];
+                for (const h of rawSet) {
+                    const cookie = h.split(";")[0];
+                    if (cookie) cookies.push(cookie);
+                }
+            }
+
+            const cookieStr = cookies.join("; ");
+            logger.info("[scrapeMakeEduBusData] Got cookies:", cookies.length);
+
+            if (cookies.length === 0) {
+                // 로그인 실패 시에도 쿠키가 없을 수 있음
+                const loginBody = await loginRes.text();
+                logger.warn("[scrapeMakeEduBusData] No cookies. Status:", loginRes.status, "Body:", loginBody.substring(0, 200));
+                throw new functions.https.HttpsError("unauthenticated",
+                    "MakeEdu 로그인 실패. 아이디/비밀번호를 확인하세요.");
+            }
+
+            // 3. 버스 등록 페이지 가져오기
+            logger.info("[scrapeMakeEduBusData] Fetching bus page...");
+            const busRes = await fetch(`${baseUrl}/bus/busRegist.do`, {
+                headers: {
+                    "Cookie": cookieStr,
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                },
+            });
+
+            if (!busRes.ok) {
+                throw new functions.https.HttpsError("internal",
+                    `버스 페이지 접근 실패: HTTP ${busRes.status}`);
+            }
+
+            const html = await busRes.text();
+            logger.info("[scrapeMakeEduBusData] Got HTML, length:", html.length);
+
+            // 4. HTML 파싱
+            const busRoutes = parseBusHtml(html);
+            logger.info("[scrapeMakeEduBusData] Parsed routes:", busRoutes.length);
+
+            if (busRoutes.length === 0) {
+                throw new functions.https.HttpsError("not-found",
+                    "버스 노선 데이터를 찾을 수 없습니다. 로그인 상태를 확인하세요.");
+            }
+
+            // 5. Firestore에 저장 (기존 데이터 삭제 후 새로 저장)
+            const batch = db.batch();
+
+            const existingSnap = await db.collection("bus_routes").get();
+            existingSnap.docs.forEach(d => batch.delete(d.ref));
+
+            const now = new Date().toISOString();
+            busRoutes.forEach(route => {
+                const ref = db.collection("bus_routes").doc();
+                batch.set(ref, {
+                    ...route,
+                    syncedAt: now,
+                    source: "makeedu",
+                });
+            });
+
+            await batch.commit();
+            logger.info("[scrapeMakeEduBusData] Saved to Firestore");
+
+            return {
+                success: true,
+                count: busRoutes.length,
+                routes: busRoutes.map(r => ({
+                    busName: r.busName,
+                    stopCount: r.stops.length,
+                    totalBoardingCount: r.totalBoardingCount,
+                    totalAlightingCount: r.totalAlightingCount,
+                })),
+            };
+        } catch (error) {
+            logger.error("[scrapeMakeEduBusData] Error:", error);
+            if (error.code) throw error;
+            throw new functions.https.HttpsError("internal", error.message || "버스 데이터 크롤링 실패");
+        }
+    });
+
+/**
+ * 버스 페이지 HTML 파싱
+ */
+function parseBusHtml(html) {
+    const $ = cheerio.load(html);
+    const busRoutes = [];
+
+    $(".msrItem").each((_, item) => {
+        const busName = $(item).find("h4").first().text().trim();
+        if (!busName) return;
+
+        const stops = [];
+
+        $(item).find("table tbody tr").each((__, row) => {
+            const cells = $(row).find("td");
+            if (cells.length < 5) return;
+
+            const order = parseInt($(cells[0]).text().trim()) || 0;
+            const destination = $(cells[1]).text().trim().replace(/\s+/g, " ");
+            const time = $(cells[2]).text().trim();
+
+            const boardingStudents = extractStudentsFromCell($, cells[3]);
+            const alightingStudents = extractStudentsFromCell($, cells[4]);
+
+            stops.push({
+                order,
+                destination,
+                time,
+                boardingStudents,
+                alightingStudents,
+            });
+        });
+
+        const totalBoardingCount = stops.reduce((sum, s) => sum + s.boardingStudents.length, 0);
+        const totalAlightingCount = stops.reduce((sum, s) => sum + s.alightingStudents.length, 0);
+
+        busRoutes.push({
+            busName,
+            stops,
+            totalBoardingCount,
+            totalAlightingCount,
+        });
+    });
+
+    return busRoutes;
+}
+
+/**
+ * 셀에서 학생 목록 추출
+ */
+function extractStudentsFromCell($, cell) {
+    const students = [];
+    $(cell).find(".bus_stname_list").each((_, span) => {
+        const weekbox = $(span).find(".weekbox");
+        const days = weekbox.text().replace(/[()]/g, "").trim();
+        // weekbox 제거 후 이름만 추출
+        const cloned = $(span).clone();
+        cloned.find(".weekbox").remove();
+        const name = cloned.text().trim();
+
+        if (name) {
+            students.push({ name, days });
+        }
+    });
+    return students;
+}
+
