@@ -2079,8 +2079,7 @@ const cheerio = require("cheerio");
 
 /**
  * MakeEdu 버스 등록 페이지 크롤링하여 Firestore에 저장
- * Firestore settings/makeedu 문서에서 로그인 정보를 읽음
- * { userId: string, userPwd: string, schoolUrl: string }
+ * .env 파일의 MAKEEDU_USERNAME / MAKEEDU_PASSWORD 사용
  */
 exports.scrapeMakeEduBusData = functions
     .region("asia-northeast3")
@@ -2089,21 +2088,15 @@ exports.scrapeMakeEduBusData = functions
         logger.info("[scrapeMakeEduBusData] Start");
 
         try {
-            // 1. MakeEdu 로그인 정보 가져오기
-            const settingsDoc = await db.collection("settings").doc("makeedu").get();
-            if (!settingsDoc.exists) {
-                throw new functions.https.HttpsError("not-found",
-                    "MakeEdu 설정이 없습니다. 설정 > MakeEdu에서 로그인 정보를 입력하세요.");
-            }
-
-            const settings = settingsDoc.data();
-            const { userId, userPwd, schoolUrl } = settings;
+            // 1. .env에서 MakeEdu 로그인 정보 가져오기
+            const userId = process.env.MAKEEDU_USERNAME;
+            const userPwd = process.env.MAKEEDU_PASSWORD;
             if (!userId || !userPwd) {
-                throw new functions.https.HttpsError("invalid-argument",
-                    "MakeEdu 로그인 정보가 불완전합니다.");
+                throw new functions.https.HttpsError("not-found",
+                    "MakeEdu 로그인 정보가 .env에 설정되지 않았습니다.");
             }
 
-            const baseUrl = schoolUrl || "https://school.makeedu.co.kr";
+            const baseUrl = "https://school.makeedu.co.kr";
 
             // 2. MakeEdu 로그인
             logger.info("[scrapeMakeEduBusData] Logging in...");

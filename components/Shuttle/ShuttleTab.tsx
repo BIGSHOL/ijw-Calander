@@ -1,16 +1,13 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useShuttle, BusRoute, BusStop } from '../../hooks/useShuttle';
-import { Search, Bus, Users, ChevronDown, ChevronRight, RefreshCw, ArrowUp, ArrowDown, Settings, Loader2, X } from 'lucide-react';
+import { Search, Bus, Users, ChevronDown, ChevronRight, RefreshCw, ArrowUp, ArrowDown, Loader2, X } from 'lucide-react';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { db } from '../../firebaseConfig';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export default function ShuttleTab() {
   const { busRoutes, isBusLoading } = useShuttle();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedRoutes, setExpandedRoutes] = useState<Set<string>>(new Set());
   const [expandedStops, setExpandedStops] = useState<Set<string>>(new Set());
-  const [showSettings, setShowSettings] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -102,13 +99,6 @@ export default function ShuttleTab() {
             <span className="flex items-center gap-1"><Users size={12} /> {totalStats.uniqueStudents}명</span>
           </div>
           <button
-            onClick={() => setShowSettings(true)}
-            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded"
-            title="MakeEdu 설정"
-          >
-            <Settings size={16} />
-          </button>
-          <button
             onClick={handleSync}
             disabled={syncing}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 disabled:opacity-50"
@@ -187,113 +177,6 @@ export default function ShuttleTab() {
         )}
       </div>
 
-      {/* MakeEdu 설정 모달 */}
-      {showSettings && <MakeEduSettingsModal onClose={() => setShowSettings(false)} />}
-    </div>
-  );
-}
-
-/** MakeEdu 로그인 설정 모달 */
-function MakeEduSettingsModal({ onClose }: { onClose: () => void }) {
-  const [userId, setUserId] = useState('');
-  const [userPwd, setUserPwd] = useState('');
-  const [schoolUrl, setSchoolUrl] = useState('https://school.makeedu.co.kr');
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-
-  // 기존 설정 로드
-  React.useEffect(() => {
-    (async () => {
-      try {
-        const snap = await getDoc(doc(db, 'settings', 'makeedu'));
-        if (snap.exists()) {
-          const data = snap.data();
-          setUserId(data.userId || '');
-          setUserPwd(data.userPwd || '');
-          setSchoolUrl(data.schoolUrl || 'https://school.makeedu.co.kr');
-        }
-      } catch (e) {
-        console.error('Failed to load MakeEdu settings:', e);
-      }
-      setLoading(false);
-    })();
-  }, []);
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await setDoc(doc(db, 'settings', 'makeedu'), {
-        userId,
-        userPwd,
-        schoolUrl,
-        updatedAt: new Date().toISOString(),
-      });
-      onClose();
-    } catch (e: any) {
-      alert('저장 실패: ' + (e.message || e));
-    }
-    setSaving(false);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b">
-          <h2 className="text-sm font-bold text-gray-900">MakeEdu 로그인 설정</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
-        </div>
-        <div className="px-5 py-4 space-y-3">
-          {loading ? (
-            <div className="text-center py-4"><Loader2 size={20} className="mx-auto animate-spin text-gray-400" /></div>
-          ) : (
-            <>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">아이디</label>
-                <input
-                  type="text"
-                  value={userId}
-                  onChange={e => setUserId(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="MakeEdu 아이디"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">비밀번호</label>
-                <input
-                  type="password"
-                  value={userPwd}
-                  onChange={e => setUserPwd(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="MakeEdu 비밀번호"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">학원 URL</label>
-                <input
-                  type="text"
-                  value={schoolUrl}
-                  onChange={e => setSchoolUrl(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  placeholder="https://school.makeedu.co.kr"
-                />
-              </div>
-              <p className="text-[10px] text-gray-400">
-                * 입력한 정보는 Firestore settings/makeedu에 저장되며, Cloud Function에서 자동 로그인에 사용됩니다.
-              </p>
-            </>
-          )}
-        </div>
-        <div className="flex gap-2 px-5 py-3 border-t bg-gray-50 rounded-b-xl">
-          <button onClick={onClose} className="flex-1 py-2 text-xs text-gray-600 border rounded hover:bg-gray-100">취소</button>
-          <button
-            onClick={handleSave}
-            disabled={saving || !userId || !userPwd}
-            className="flex-1 py-2 text-xs text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50"
-          >
-            {saving ? '저장 중...' : '저장'}
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
