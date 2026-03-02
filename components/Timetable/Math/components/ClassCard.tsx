@@ -749,10 +749,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 }
             }}
             onDrop={(e) => canEdit && onDrop(e, cls.id, 'common')}
+            onClick={isExcelMode ? (e) => { e.stopPropagation(); onCellSelect?.(cls.id); } : undefined}
             onDoubleClick={isExcelMode ? handleClassHeaderDoubleClick : undefined}
-            className={`flex flex-col ${fixedCardHeight ? '' : 'h-full '}overflow-hidden transition-all w-full max-w-full ${isDragOver ? 'ring-2 ring-indigo-400 shadow-lg shadow-indigo-200' : ''} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''} ${isExcelMode && isSelected ? 'ring-2 ring-blue-500 shadow-md' : ''}`}
+            className={`flex flex-col ${fixedCardHeight ? '' : 'h-full '}overflow-hidden transition-all w-full max-w-full ${isDragOver ? 'ring-2 ring-indigo-400 shadow-lg shadow-indigo-200' : ''} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''} ${isExcelMode && isSelected ? 'ring-[3px] ring-blue-500 shadow-lg shadow-blue-200' : ''} ${isExcelMode ? 'cursor-pointer' : ''}`}
             style={{
-                ...cardBgStyle,
+                ...(isExcelMode && isSelected ? { backgroundColor: '#eff6ff' } : cardBgStyle),
                 ...(fixedCardHeight ? { height: `${fixedCardHeight}px`, maxHeight: `${fixedCardHeight}px` } : {}),
                 ...(compactMaxHeight ? { maxHeight: `${compactMaxHeight}px` } : {})
             }}
