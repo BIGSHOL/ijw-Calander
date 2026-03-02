@@ -427,6 +427,12 @@ service cloud.firestore {
       allow write: if hasRole(['master', 'admin']);
     }
 
+    // === Bus Routes (버스 노선 - MakeEdu 동기화) ===
+    match /bus_routes/{docId} {
+      allow read: if true;
+      allow create, update, delete: if true; // 크롬 확장프로그램에서 REST API로 접근
+    }
+
     // === Textbook Requests (교재 신청) ===
     match /textbook_requests/{docId} {
       allow read: if isAuthenticated();
