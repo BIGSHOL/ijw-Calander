@@ -1389,7 +1389,7 @@ const TimetableManager = ({
             <Suspense fallback={<VideoLoading className="flex-1 h-full" />}>
                 <EnglishTimetable
                     onSwitchToMath={() => setSubjectTab('math')}
-                    viewType={viewType === 'excel' ? 'class' : viewType}
+                    viewType={viewType}
                     teachers={propsTeachers}
                     classKeywords={classKeywords}
                     currentUser={currentUser}

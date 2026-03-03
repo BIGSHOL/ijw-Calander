@@ -731,6 +731,13 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
       { title: '주요 기능', items: ['유입 채널별 전환율 분석', '체험 수업 스케줄 관리', '프로모션 등록/관리'] },
     ],
   },
+  'timetable-distribution': {
+    title: '시간표 배포',
+    overview: '학생 시간표를 클래스노트로 배포합니다.',
+    sections: [
+      { title: '주요 기능', items: ['학생 시간표 이미지 생성', '클래스노트 자동 업로드', '배포 현황 확인'] },
+    ],
+  },
 };
 
 // 탭별 HelpEntry 생성 함수

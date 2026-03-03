@@ -37,6 +37,7 @@ const ContractsTab = React.lazy(() => import('../Contracts').then(m => ({ defaul
 const ReportsTab = React.lazy(() => import('../Reports').then(m => ({ default: m.ReportsTab })));
 const ShuttleTab = React.lazy(() => import('../Shuttle').then(m => ({ default: m.ShuttleTab })));
 const MarketingTab = React.lazy(() => import('../Marketing').then(m => ({ default: m.MarketingTab })));
+const TimetableDistributionTab = React.lazy(() => import('../TimetableDistribution').then(m => ({ default: m.TimetableDistributionTab })));
 
 // Loading fallback
 const TabLoadingFallback = () => <VideoLoading className="flex-1 h-full" />;
@@ -454,6 +455,12 @@ export const TabContent: React.FC<TabContentProps> = ({
         <Suspense fallback={<TabLoadingFallback />}>
           <div className="w-full flex-1 overflow-hidden">
             <MarketingTab />
+          </div>
+        </Suspense>
+      ) : appMode === 'timetable-distribution' ? (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <div className="w-full flex-1 overflow-hidden">
+            <TimetableDistributionTab />
           </div>
         </Suspense>
       ) : null}

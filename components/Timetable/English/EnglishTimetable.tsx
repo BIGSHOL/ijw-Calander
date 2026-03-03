@@ -6,6 +6,7 @@ import { CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
 import { Teacher, ClassKeywordColor } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useClasses } from '../../../hooks/useClasses';
+import { useQueryClient } from '@tanstack/react-query';
 import { storage, STORAGE_KEYS } from '../../../utils/localStorage';
 import { getWeekReferenceDate } from '../../../utils/dateUtils';
 import EnglishTeacherTab from './EnglishTeacherTab';
@@ -24,7 +25,7 @@ import { formatSchoolGrade } from '../../../utils/studentUtils';
 interface EnglishTimetableProps {
     onClose?: () => void;
     onSwitchToMath?: () => void;
-    viewType: 'teacher' | 'class' | 'room';
+    viewType: 'teacher' | 'class' | 'room' | 'excel';
     teachers?: Teacher[];
     classKeywords?: ClassKeywordColor[];
     currentUser: any;
@@ -103,6 +104,31 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     // 통합뷰용 이미지 저장 모달 상태
     const [isClassExportModalOpen, setIsClassExportModalOpen] = useState(false);
 
+    // 엑셀뷰 상태
+    const queryClient = useQueryClient();
+    const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+    const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+    const [selectedStudentClassName, setSelectedStudentClassName] = useState<string | null>(null);
+    const [copiedStudent, setCopiedStudent] = useState<{ studentId: string; className: string } | null>(null);
+
+    const handleExcelStudentSelect = useCallback((studentId: string, className: string) => {
+        setSelectedStudentId(studentId);
+        setSelectedStudentClassName(className);
+    }, []);
+
+    const enrollStudentToEnglishClass = useCallback(async (studentId: string, className: string) => {
+        const now = new Date().toISOString();
+        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `english_${className}`);
+        await setDoc(enrollmentRef, {
+            className,
+            subject: 'english',
+            enrollmentDate: now.split('T')[0],
+            createdAt: now,
+        });
+        queryClient.invalidateQueries({ queryKey: ['classStudents'] });
+        queryClient.invalidateQueries({ queryKey: ['students'] });
+    }, [queryClient]);
+
     // SimulationContext 사용
     const simulation = useSimulation();
     const { isScenarioMode: isSimulationMode, currentScenarioName, enterScenarioMode: enterSimulationMode, exitScenarioMode: exitSimulationMode, loadFromLive, publishToLive, setCurrentScenarioName, canUndo, canRedo, undo, redo, history, historyIndex, getHistoryDescription } = simulation;
@@ -163,6 +189,29 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
 
     // Fetch classes data for mainTeacher (담임) information
     const { data: classesData } = useClasses('english');
+
+    // 엑셀뷰 Ctrl+C/V 키보드 핸들러
+    useEffect(() => {
+        if (viewType !== 'excel') return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (!e.ctrlKey && !e.metaKey) return;
+            if (e.key === 'c') {
+                if (selectedStudentId && selectedStudentClassName) {
+                    setCopiedStudent({ studentId: selectedStudentId, className: selectedStudentClassName });
+                }
+            }
+            if (e.key === 'v') {
+                if (!copiedStudent || !selectedClassId) return;
+                e.preventDefault();
+                // selectedClassId는 classId이므로 classesData에서 className 찾기
+                const targetClass = classesData?.find(c => c.id === selectedClassId);
+                if (!targetClass) return;
+                enrollStudentToEnglishClass(copiedStudent.studentId, targetClass.className);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [viewType, selectedStudentId, selectedStudentClassName, copiedStudent, selectedClassId, classesData, enrollStudentToEnglishClass]);
 
     // Performance: js-index-maps - O(1) 교사 조회를 위한 Map 생성
     const teacherMap = useMemo(() => {
@@ -473,8 +522,8 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
 
     return (
         <div className="bg-white shadow-xl border border-gray-200 h-full flex flex-col overflow-hidden">
-            {/* 통합뷰: 수학 시간표와 동일한 1행 헤더 */}
-            {viewType === 'class' && (
+            {/* 통합뷰/엑셀뷰: 수학 시간표와 동일한 1행 헤더 */}
+            {(viewType === 'class' || viewType === 'excel') && (
                 <div className={`bg-gray-50 min-h-[2.5rem] flex items-center gap-3 pl-4 border-b border-gray-200 flex-shrink-0 text-xs transition-colors duration-300 min-w-0 overflow-x-auto ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
                     {/* Left: 주차 네비게이션 + 학생 통계 */}
                     <div className="flex items-center gap-3 flex-shrink-0">
@@ -1268,6 +1317,43 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 setIsLevelSettingsOpen={setIsLevelSettingsOpen}
                                 isExportModalOpen={isClassExportModalOpen}
                                 setIsExportModalOpen={setIsClassExportModalOpen}
+                            />
+                        )}
+                        {viewType === 'excel' && (
+                            <EnglishClassTab
+                                teachers={teachers}
+                                teachersData={teachersData}
+                                scheduleData={scheduleData}
+                                classKeywords={classKeywords}
+                                currentUser={currentUser}
+                                isSimulationMode={isSimulationMode}
+                                studentMap={studentMap}
+                                classesData={classesData}
+                                canSimulation={canSimulation}
+                                onToggleSimulation={handleToggleSimulationMode}
+                                onCopyLiveToDraft={handleCopyLiveToDraft}
+                                onPublishToLive={handlePublishDraftToLive}
+                                onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
+                                canPublish={canSimulation}
+                                onSimulationLevelUp={isSimulationMode ? handleSimulationLevelUp : undefined}
+                                currentWeekStart={currentWeekStart}
+                                mode={mode}
+                                setMode={setMode}
+                                searchTerm={searchQuery}
+                                setSearchTerm={setSearchQuery}
+                                isSettingsOpen={isSettingsOpen}
+                                setIsSettingsOpen={setIsSettingsOpen}
+                                isLevelSettingsOpen={isLevelSettingsOpen}
+                                setIsLevelSettingsOpen={setIsLevelSettingsOpen}
+                                isExportModalOpen={isClassExportModalOpen}
+                                setIsExportModalOpen={setIsClassExportModalOpen}
+                                isExcelMode={true}
+                                selectedClassId={selectedClassId}
+                                onCellSelect={setSelectedClassId}
+                                selectedStudentId={selectedStudentId}
+                                copiedStudentId={copiedStudent?.studentId || null}
+                                onStudentSelect={handleExcelStudentSelect}
+                                onEnrollStudent={enrollStudentToEnglishClass}
                             />
                         )}
                         {viewType === 'room' && (

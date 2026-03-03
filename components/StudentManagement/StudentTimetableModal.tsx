@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { AlertTriangle, ArrowRight } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Bus } from 'lucide-react';
 import Modal from '../Common/Modal';
 import { UnifiedStudent } from '../../types';
 import { useClasses } from '../../hooks/useClasses';
+import { useShuttle } from '../../hooks/useShuttle';
 import {
   MATH_PERIOD_INFO,
   ENGLISH_PERIOD_INFO,
@@ -56,6 +57,32 @@ const PIXELS_PER_MINUTE = 0.6;
 
 const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, onClose }) => {
   const { data: allClasses = [] } = useClasses();
+  const { busRoutes } = useShuttle();
+
+  // 학생의 셔틀버스 승차 정보 추출
+  const shuttleEvents = useMemo(() => {
+    const events: Array<{
+      day: string;
+      time: string;
+      busName: string;
+      destination: string;
+    }> = [];
+
+    busRoutes.forEach(route => {
+      route.stops.forEach(stop => {
+        stop.boardingStudents.forEach(s => {
+          if (s.name === student.name) {
+            const days = s.days ? s.days.replace(/[,\s]/g, '').split('') : [];
+            days.forEach(day => {
+              events.push({ day, time: stop.time, busName: route.busName, destination: stop.destination });
+            });
+          }
+        });
+      });
+    });
+
+    return events;
+  }, [busRoutes, student.name]);
 
   // 요일별 수업 블록 (연속 교시 합침)
   const { dayBlocks, activeDays } = useMemo(() => {
@@ -178,7 +205,7 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
     return { dayBlocks, activeDays };
   }, [student.enrollments, allClasses]);
 
-  // 강의실 이동 감지 (블록 기반)
+  // 강의실 이동 감지 (블록 기반, 1시간 갭까지 허용)
   const roomChanges = useMemo(() => {
     const changes: Array<{
       day: string;
@@ -191,13 +218,14 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
     }> = [];
 
     for (const [day, blocks] of Object.entries(dayBlocks)) {
-      const sorted = [...blocks].sort((a, b) => a.endTime.localeCompare(b.endTime) || a.startTime.localeCompare(b.startTime));
+      const sorted = [...blocks].sort((a, b) => a.startTime.localeCompare(b.startTime));
       for (let i = 0; i < sorted.length - 1; i++) {
         const curr = sorted[i];
         const next = sorted[i + 1];
 
-        if (curr.className !== next.className && curr.room && next.room && curr.room !== next.room) {
-          const actualToStart = curr.endTime > next.startTime ? curr.endTime : next.startTime;
+        // 다른 반 + 다른 강의실 + 갭이 60분 이내
+        const gap = timeToMinutes(next.startTime) - timeToMinutes(curr.endTime);
+        if (curr.className !== next.className && curr.room && next.room && curr.room !== next.room && gap <= 60) {
           changes.push({
             day,
             fromClass: curr.className,
@@ -205,7 +233,7 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
             fromEndTime: curr.endTime,
             toClass: next.className,
             toRoom: next.room,
-            toStartTime: actualToStart,
+            toStartTime: next.startTime,
           });
         }
       }
@@ -395,6 +423,26 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                         </div>
                       );
                     })}
+
+                    {/* 셔틀버스 승하차 표시 */}
+                    {shuttleEvents
+                      .filter(e => e.day === day)
+                      .map((e, ei) => {
+                        const eventMin = timeToMinutes(e.time);
+                        const top = (eventMin - rangeStartMin) * PIXELS_PER_MINUTE;
+                        return (
+                          <div
+                            key={`shuttle-${ei}`}
+                            className="absolute left-0 right-0 z-20 flex items-center justify-center"
+                            style={{ top: `${top - 10}px` }}
+                          >
+                            <div className="bg-blue-500 text-white text-micro px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shadow-sm">
+                              <Bus size={8} />
+                              <span>승차 {e.time}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
                   </div>
                 );
               })}
@@ -462,6 +510,25 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                   <span className="text-amber-500 ml-auto">
                     {change.fromEndTime} → {change.toStartTime}
                   </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 셔틀버스 이용 안내 */}
+          {shuttleEvents.length > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-sm p-2 space-y-1.5">
+              <div className="flex items-center gap-1 text-xs font-bold text-blue-700">
+                <Bus className="w-3.5 h-3.5" />
+                셔틀버스 이용
+              </div>
+              {[...shuttleEvents].sort((a, b) => dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day)).map((e, i) => (
+                <div key={i} className="flex items-center gap-1.5 text-xxs text-blue-800">
+                  <span className="font-bold px-1 py-0.5 bg-blue-100 rounded-sm">{e.day}</span>
+                  <span className="px-1 py-0.5 rounded-sm text-white text-micro font-bold bg-blue-500">승차</span>
+                  <span className="font-bold">{e.time}</span>
+                  <span className="text-blue-500">{e.busName}</span>
+                  {e.destination && <span className="text-blue-400">· {e.destination}</span>}
                 </div>
               ))}
             </div>
