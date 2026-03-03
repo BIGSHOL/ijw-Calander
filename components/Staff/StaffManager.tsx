@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Search, Filter, RefreshCw, Calendar, Briefcase, AlertCircle } from 'lucide-react';
+import { Plus, Search, Filter, RefreshCw, Calendar, Briefcase, AlertCircle, GitMerge } from 'lucide-react';
 import { initializeApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -13,6 +13,7 @@ import StaffForm from './StaffForm';
 import StaffViewModal from './StaffViewModal';
 import StaffSchedule from './StaffSchedule';
 import LeaveManagement from './LeaveManagement';
+import StaffMergeModal from './StaffMergeModal';
 
 type ViewMode = 'list' | 'schedule' | 'leave';
 
@@ -36,6 +37,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
   const [viewingStaff, setViewingStaff] = useState<StaffMember | null>(null); // 조회 모달용
+  const [showMergeModal, setShowMergeModal] = useState(false);
 
   // Hooks
   const { staff, loading, error, refreshStaff, addStaff, updateStaff, deleteStaff } = useStaff();
@@ -279,6 +281,15 @@ const StaffManager: React.FC<StaffManagerProps> = ({
                 <RefreshCw className="w-4 h-4" />
               </button>
             )}
+            {isMaster && (
+              <button
+                onClick={() => setShowMergeModal(true)}
+                className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-600 rounded text-xs hover:bg-gray-200 transition-colors"
+              >
+                <GitMerge className="w-3 h-3" />
+                <span>중복 병합</span>
+              </button>
+            )}
             <button
               onClick={handleAddNew}
               className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded text-xs font-bold hover:bg-primary-800 transition-colors"
@@ -434,6 +445,13 @@ const StaffManager: React.FC<StaffManagerProps> = ({
         />
       )}
 
+      {/* Staff Merge Modal (중복 병합) */}
+      {showMergeModal && (
+        <StaffMergeModal
+          staff={staff}
+          onClose={() => setShowMergeModal(false)}
+        />
+      )}
 
     </div>
   );
