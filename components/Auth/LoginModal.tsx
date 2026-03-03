@@ -42,6 +42,35 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
         try {
             if (isSignUp) {
                 // Sign Up Logic
+
+                // 1. 이메일 중복 체크 (staff 컬렉션에서 이미 uid가 연동된 같은 이메일)
+                const emailCheckQuery = query(
+                    collection(db, 'staff'),
+                    where('email', '==', email.trim())
+                );
+                const emailCheckSnap = await getDocs(emailCheckQuery);
+                const alreadyLinked = emailCheckSnap.docs.find(d => d.data().uid);
+                if (alreadyLinked) {
+                    setError('이미 계정이 연동된 이메일입니다. 로그인해주세요.');
+                    setLoading(false);
+                    return;
+                }
+
+                // 2. 이름 중복 체크 (같은 이름의 staff가 이미 uid 연동되어 있으면 차단)
+                if (displayName.trim()) {
+                    const nameCheckQuery = query(
+                        collection(db, 'staff'),
+                        where('name', '==', displayName.trim())
+                    );
+                    const nameCheckSnap = await getDocs(nameCheckQuery);
+                    const nameWithUid = nameCheckSnap.docs.find(d => d.data().uid);
+                    if (nameWithUid) {
+                        setError('같은 이름으로 이미 가입된 직원이 있습니다. 관리자에게 문의해주세요.');
+                        setLoading(false);
+                        return;
+                    }
+                }
+
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
