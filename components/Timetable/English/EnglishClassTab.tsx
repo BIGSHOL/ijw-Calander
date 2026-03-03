@@ -67,6 +67,14 @@ interface EnglishClassTabProps {
     // 이미지 저장 모달 (상위 컴포넌트에서 관리)
     isExportModalOpen?: boolean;
     setIsExportModalOpen?: (open: boolean) => void;
+    // 엑셀뷰 props
+    isExcelMode?: boolean;
+    selectedClassId?: string | null;
+    onCellSelect?: (classId: string) => void;
+    selectedStudentId?: string | null;
+    copiedStudentId?: string | null;
+    onStudentSelect?: (studentId: string, className: string) => void;
+    onEnrollStudent?: (studentId: string, className: string) => void;
 }
 
 // ClassInfo removed (imported from hooks)
@@ -100,6 +108,13 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     setIsLevelSettingsOpen: setIsLevelSettingsOpenProp,
     isExportModalOpen: isExportModalOpenProp,
     setIsExportModalOpen: setIsExportModalOpenProp,
+    isExcelMode = false,
+    selectedClassId: excelSelectedClassId,
+    onCellSelect: excelOnCellSelect,
+    selectedStudentId: excelSelectedStudentId,
+    copiedStudentId: excelCopiedStudentId,
+    onStudentSelect: excelOnStudentSelect,
+    onEnrollStudent: excelOnEnrollStudent,
 }) => {
     const { hasPermission } = usePermissions(currentUser);
     const canEditEnglish = hasPermission('timetable.english.edit');
@@ -601,6 +616,13 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 onRestoreEnrollment={!isSimulationMode ? handleRestoreEnrollment : undefined}
                                                 onEditClass={isSimulationMode ? (classId) => setEditingClassId(classId) : undefined}
                                                 currentWeekStart={currentWeekStart}
+                                                isExcelMode={isExcelMode}
+                                                isSelected={isExcelMode && excelSelectedClassId === cls.classId}
+                                                onCellSelect={isExcelMode ? () => excelOnCellSelect?.(cls.classId) : undefined}
+                                                selectedStudentId={isExcelMode ? excelSelectedStudentId : undefined}
+                                                copiedStudentId={isExcelMode ? excelCopiedStudentId : undefined}
+                                                onStudentSelect={isExcelMode ? excelOnStudentSelect : undefined}
+                                                onEnrollStudent={isExcelMode ? excelOnEnrollStudent : undefined}
                                             />
                                         ))}
                                     </div>

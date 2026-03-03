@@ -34,7 +34,7 @@ export type AppTab =
   // Phase 4: 기능 완성
   | 'contracts' | 'reports'
   // Phase 5: 확장
-  | 'shuttle' | 'marketing';
+  | 'shuttle' | 'marketing' | 'timetable-distribution';
 
 // Tab Metadata - 각 탭의 메타정보 (확장 가능)
 export interface TabMetadata {
@@ -82,6 +82,7 @@ export const TAB_META: Record<AppTab, Omit<TabMetadata, 'id'>> = {
   // 마케팅
   marketing: { label: '마케팅', icon: '📣' },
   shuttle: { label: '셔틀 관리', icon: '🚌' },
+  'timetable-distribution': { label: '시간표 배포', icon: '📤' },
   // 지원
   help: { label: '도움말', icon: '❓' },
 };
@@ -143,7 +144,7 @@ export const TAB_GROUPS: TabGroup[] = [
     id: 'marketing',
     label: '마케팅',
     icon: '📣',
-    tabs: ['marketing', 'shuttle'],
+    tabs: ['marketing', 'shuttle', 'timetable-distribution'],
     order: 6,
   },
   {
@@ -175,14 +176,14 @@ export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
     'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment',
     'student-consultations', 'staff', 'billing', 'role-management', 'resources', 'withdrawal',
     'homework', 'exams', 'textbooks', 'contracts', 'reports', 'payroll', 'analytics',
-    'parent-portal', 'sms-notifications', 'marketing', 'shuttle', 'help',
+    'parent-portal', 'sms-notifications', 'marketing', 'shuttle', 'timetable-distribution', 'help',
   ],
   admin: [
     'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt',
     'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment',
     'student-consultations', 'staff', 'billing', 'role-management', 'resources', 'withdrawal',
     'homework', 'exams', 'textbooks', 'contracts', 'reports', 'payroll', 'analytics',
-    'parent-portal', 'sms-notifications', 'marketing', 'shuttle', 'help',
+    'parent-portal', 'sms-notifications', 'marketing', 'shuttle', 'timetable-distribution', 'help',
   ],
   manager: [
     'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'daily-attendance',

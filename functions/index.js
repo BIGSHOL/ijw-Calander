@@ -2083,7 +2083,7 @@ const cheerio = require("cheerio");
  */
 exports.scrapeMakeEduBusData = functions
     .region("asia-northeast3")
-    .runWith({ timeoutSeconds: 60, memory: "256MB" })
+    .runWith({ timeoutSeconds: 300, memory: "512MB" })
     .https.onCall(async (data, context) => {
         logger.info("[scrapeMakeEduBusData] Start");
 
@@ -2097,52 +2097,64 @@ exports.scrapeMakeEduBusData = functions
             }
 
             const baseUrl = "https://school.makeedu.co.kr";
+            const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
 
-            // 2. MakeEdu 로그인
-            logger.info("[scrapeMakeEduBusData] Logging in...");
-            const loginRes = await fetch(`${baseUrl}/member/loginChk.do`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                },
-                body: `userId=${encodeURIComponent(userId)}&userPwd=${encodeURIComponent(userPwd)}`,
+            // 2. 먼저 로그인 페이지 접근하여 JSESSIONID 쿠키 획득
+            logger.info("[scrapeMakeEduBusData] Getting session...");
+            const sessionRes = await fetch(`${baseUrl}/login.do`, {
+                headers: { "User-Agent": UA },
                 redirect: "manual",
             });
 
-            // 쿠키 추출
-            const cookies = [];
-            const setCookieHeaders = loginRes.headers.getSetCookie?.() || [];
-            for (const h of setCookieHeaders) {
+            const sessionCookies = [];
+            const sessionSetCookies = sessionRes.headers.getSetCookie?.() || [];
+            for (const h of sessionSetCookies) {
                 const cookie = h.split(";")[0];
-                if (cookie) cookies.push(cookie);
+                if (cookie) sessionCookies.push(cookie);
             }
-            // raw headers 방식도 시도
-            if (cookies.length === 0) {
-                const rawSet = loginRes.headers.raw?.()?.["set-cookie"] || [];
-                for (const h of rawSet) {
-                    const cookie = h.split(";")[0];
-                    if (cookie) cookies.push(cookie);
-                }
+            let cookieStr = sessionCookies.join("; ");
+            logger.info("[scrapeMakeEduBusData] Session cookies:", sessionCookies.length, cookieStr);
+
+            // 3. MakeEdu 로그인 (membId, password)
+            logger.info("[scrapeMakeEduBusData] Logging in...");
+            const loginRes = await fetch(`${baseUrl}/loginPopProc.do`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "User-Agent": UA,
+                    "Cookie": cookieStr,
+                    "Referer": `${baseUrl}/login.do`,
+                },
+                body: `membId=${encodeURIComponent(userId)}&password=${encodeURIComponent(userPwd)}`,
+                redirect: "manual",
+            });
+
+            // 로그인 응답에서 추가 쿠키 수집
+            const loginSetCookies = loginRes.headers.getSetCookie?.() || [];
+            for (const h of loginSetCookies) {
+                const cookie = h.split(";")[0];
+                if (cookie) sessionCookies.push(cookie);
             }
+            cookieStr = sessionCookies.join("; ");
 
-            const cookieStr = cookies.join("; ");
-            logger.info("[scrapeMakeEduBusData] Got cookies:", cookies.length);
+            const loginBody = await loginRes.text();
+            logger.info("[scrapeMakeEduBusData] Login status:", loginRes.status, "Body:", loginBody.substring(0, 300));
+            logger.info("[scrapeMakeEduBusData] All cookies:", cookieStr);
 
-            if (cookies.length === 0) {
-                // 로그인 실패 시에도 쿠키가 없을 수 있음
-                const loginBody = await loginRes.text();
-                logger.warn("[scrapeMakeEduBusData] No cookies. Status:", loginRes.status, "Body:", loginBody.substring(0, 200));
+            // 로그인 성공 여부 확인 (OK 응답 또는 302 리다이렉트)
+            const loginOk = loginBody.includes("OK") || loginRes.status === 302 || loginRes.status === 200;
+            if (!loginOk && sessionCookies.length === 0) {
                 throw new functions.https.HttpsError("unauthenticated",
-                    "MakeEdu 로그인 실패. 아이디/비밀번호를 확인하세요.");
+                    `MakeEdu 로그인 실패 (status: ${loginRes.status})`);
             }
 
-            // 3. 버스 등록 페이지 가져오기
+            // 4. 버스 등록 페이지 가져오기
             logger.info("[scrapeMakeEduBusData] Fetching bus page...");
             const busRes = await fetch(`${baseUrl}/bus/busRegist.do`, {
                 headers: {
                     "Cookie": cookieStr,
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                    "User-Agent": UA,
+                    "Referer": `${baseUrl}/main.do`,
                 },
             });
 
@@ -2154,13 +2166,69 @@ exports.scrapeMakeEduBusData = functions
             const html = await busRes.text();
             logger.info("[scrapeMakeEduBusData] Got HTML, length:", html.length);
 
-            // 4. HTML 파싱
-            const busRoutes = parseBusHtml(html);
-            logger.info("[scrapeMakeEduBusData] Parsed routes:", busRoutes.length);
+            // 4. "전체출력" 호출: POST busRegist.do with srchType=A
+            // (btnSrchAll 핸들러: $('#srchType').val("A"); $('#srchForm').submit())
+            logger.info("[scrapeMakeEduBusData] Calling 전체출력 (srchType=A)...");
+            const printRes = await fetch(`${baseUrl}/bus/busRegist.do`, {
+                method: "POST",
+                headers: {
+                    "Cookie": cookieStr,
+                    "User-Agent": UA,
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Referer": `${baseUrl}/bus/busRegist.do`,
+                },
+                body: "srchType=A",
+            });
+            let printHtml = await printRes.text();
+            let hasStudents = printHtml.includes("bus_stname_list");
+            logger.info(`[scrapeMakeEduBusData] 전체출력 result: status:${printRes.status} len:${printHtml.length} hasStudents:${hasStudents} hasMsrItem:${printHtml.includes("msrItem")}`);
+
+            // 학생 데이터가 없으면 엑셀 endpoint 시도 (busRegist_excel.do도 bus_stname_list 포함)
+            if (!hasStudents) {
+                logger.info("[scrapeMakeEduBusData] Trying excel endpoint...");
+                const excelRes = await fetch(`${baseUrl}/bus/busRegist_excel.do`, {
+                    headers: { "Cookie": cookieStr, "User-Agent": UA, "Referer": `${baseUrl}/bus/busRegist.do` },
+                });
+                const excelHtml = await excelRes.text();
+                if (excelHtml.includes("bus_stname_list")) {
+                    logger.info(`[scrapeMakeEduBusData] Excel endpoint has students! len:${excelHtml.length}`);
+                    printHtml = excelHtml;
+                    hasStudents = true;
+                }
+            }
+
+            // studAllList endpoint도 시도
+            if (!hasStudents) {
+                logger.info("[scrapeMakeEduBusData] Trying studAllList endpoint...");
+                const studRes = await fetch(`${baseUrl}/bus/busRegist_studAllList.do`, {
+                    headers: { "Cookie": cookieStr, "User-Agent": UA, "Referer": `${baseUrl}/bus/busRegist.do` },
+                });
+                const studHtml = await studRes.text();
+                if (studHtml.includes("bus_stname_list") || studHtml.includes("msrItem")) {
+                    logger.info(`[scrapeMakeEduBusData] studAllList has data! len:${studHtml.length}`);
+                    printHtml = studHtml;
+                    hasStudents = studHtml.includes("bus_stname_list");
+                }
+            }
+
+            // 5. printHtml 파싱
+            const busRoutes = [];
+            const routes = parseBusHtml(printHtml);
+            logger.info("[scrapeMakeEduBusData] Parsed routes:", routes.length, "totalStudents:", routes.reduce((s, r) => s + r.totalBoardingCount + r.totalAlightingCount, 0));
+
+            // 원하는 버스만 필터링 (호차만, 방학중/박학중 제외)
+            for (const route of routes) {
+                if (route.busName.includes("호차") && !route.busName.includes("방학중") && !route.busName.includes("박학중")) {
+                    busRoutes.push(route);
+                }
+            }
+            logger.info("[scrapeMakeEduBusData] Filtered routes:", busRoutes.length);
+
+            logger.info("[scrapeMakeEduBusData] Total parsed routes:", busRoutes.length);
 
             if (busRoutes.length === 0) {
                 throw new functions.https.HttpsError("not-found",
-                    "버스 노선 데이터를 찾을 수 없습니다. 로그인 상태를 확인하세요.");
+                    `파싱 실패. busCodes: ${busCodes.map(b => b.code).join(",")}`);
             }
 
             // 5. Firestore에 저장 (기존 데이터 삭제 후 새로 저장)
@@ -2247,22 +2315,448 @@ function parseBusHtml(html) {
 }
 
 /**
- * 셀에서 학생 목록 추출
+ * AJAX 응답 (subBusList) HTML 파싱 - msrItem 없이 table 직접 파싱
+ */
+function parseSubBusHtml(html, busName) {
+    const $ = cheerio.load(html);
+    const stops = [];
+
+    // table tbody tr 직접 파싱
+    $("table tbody tr, tr").each((_, row) => {
+        const cells = $(row).find("td");
+        if (cells.length < 5) return;
+
+        const order = parseInt($(cells[0]).text().trim()) || 0;
+        const destination = $(cells[1]).text().trim().replace(/\s+/g, " ");
+        const time = $(cells[2]).text().trim();
+
+        const boardingStudents = extractStudentsFromCell($, cells[3]);
+        const alightingStudents = extractStudentsFromCell($, cells[4]);
+
+        stops.push({ order, destination, time, boardingStudents, alightingStudents });
+    });
+
+    if (stops.length === 0) return [];
+
+    const totalBoardingCount = stops.reduce((sum, s) => sum + s.boardingStudents.length, 0);
+    const totalAlightingCount = stops.reduce((sum, s) => sum + s.alightingStudents.length, 0);
+
+    return [{
+        busName: busName || "버스",
+        stops,
+        totalBoardingCount,
+        totalAlightingCount,
+    }];
+}
+
+/**
+ * 셀에서 학생 목록 추출 (다중 전략)
  */
 function extractStudentsFromCell($, cell) {
     const students = [];
+
+    // 전략 1: .bus_stname_list span
     $(cell).find(".bus_stname_list").each((_, span) => {
         const weekbox = $(span).find(".weekbox");
         const days = weekbox.text().replace(/[()]/g, "").trim();
-        // weekbox 제거 후 이름만 추출
         const cloned = $(span).clone();
         cloned.find(".weekbox").remove();
         const name = cloned.text().trim();
+        if (name) students.push({ name, days });
+    });
+    if (students.length > 0) return students;
 
-        if (name) {
+    // 전략 2: span 태그들 (클래스 무관)
+    $(cell).find("span").each((_, span) => {
+        const text = $(span).text().trim();
+        if (!text || text.length > 20) return; // 이름이 아닌 긴 텍스트 제외
+        // 요일 패턴 추출 (월화수목금 등)
+        const daysMatch = text.match(/\(([월화수목금토일,\s]+)\)/);
+        const days = daysMatch ? daysMatch[1].trim() : "";
+        const name = text.replace(/\([^)]*\)/g, "").trim();
+        if (name && name.length >= 2 && name.length <= 10) {
             students.push({ name, days });
         }
     });
+    if (students.length > 0) return students;
+
+    // 전략 3: <br> 또는 줄바꿈으로 구분된 텍스트
+    const cellHtml = $(cell).html() || "";
+    if (cellHtml.includes("<br")) {
+        const parts = cellHtml.split(/<br\s*\/?>/i);
+        for (const part of parts) {
+            const $part = cheerio.load(`<span>${part}</span>`);
+            const text = $part("span").text().trim();
+            if (!text || text.length < 2) continue;
+            const daysMatch = text.match(/\(([월화수목금토일,\s]+)\)/);
+            const days = daysMatch ? daysMatch[1].trim() : "";
+            const name = text.replace(/\([^)]*\)/g, "").trim();
+            if (name && name.length >= 2 && name.length <= 10) {
+                students.push({ name, days });
+            }
+        }
+    }
+    if (students.length > 0) return students;
+
+    // 전략 4: div 안의 텍스트
+    $(cell).find("div").each((_, div) => {
+        const text = $(div).text().trim();
+        if (!text || text.length < 2 || text.length > 20) return;
+        const daysMatch = text.match(/\(([월화수목금토일,\s]+)\)/);
+        const days = daysMatch ? daysMatch[1].trim() : "";
+        const name = text.replace(/\([^)]*\)/g, "").trim();
+        if (name && name.length >= 2 && name.length <= 10) {
+            students.push({ name, days });
+        }
+    });
+    if (students.length > 0) return students;
+
+    // 전략 5: 셀의 전체 텍스트를 줄바꿈/쉼표로 분리
+    const fullText = $(cell).text().trim();
+    if (fullText && fullText.length >= 2) {
+        const names = fullText.split(/[,\n\r]+/).map(s => s.trim()).filter(s => s.length >= 2 && s.length <= 10);
+        for (const raw of names) {
+            const daysMatch = raw.match(/\(([월화수목금토일,\s]+)\)/);
+            const days = daysMatch ? daysMatch[1].trim() : "";
+            const name = raw.replace(/\([^)]*\)/g, "").trim();
+            if (name) students.push({ name, days });
+        }
+    }
+
     return students;
 }
+
+// ============================================================
+// 시간표 배포 → 클래스노트 자동 업로드 (Puppeteer)
+// ============================================================
+exports.submitTimetableToClassNote = functions
+    .runWith({ memory: "2GB", timeoutSeconds: 540 })
+    .region("asia-northeast3")
+    .https.onCall(async (data, context) => {
+        const puppeteer = require("puppeteer-core");
+        const chromium = require("@sparticuz/chromium");
+        const fs = require("fs");
+        const path = require("path");
+        const os = require("os");
+
+        const { reports } = data;
+
+        // 하드코딩된 클래스노트 로그인 정보
+        const loginId = "injaewonpremium";
+        const loginPw = "mbplaza2*";
+
+        if (!reports || !Array.isArray(reports) || reports.length === 0) {
+            throw new functions.https.HttpsError("invalid-argument", "보고서 데이터가 없습니다.");
+        }
+
+        logger.info(`시간표 배포 시작: ${reports.length}명`);
+
+        let browser = null;
+        try {
+            browser = await puppeteer.launch({
+                args: chromium.args,
+                defaultViewport: chromium.defaultViewport,
+                executablePath: await chromium.executablePath(),
+                headless: chromium.headless,
+            });
+
+            const page = await browser.newPage();
+            await page.setViewport({ width: 1280, height: 720 });
+
+            // 클래스노트 로그인
+            logger.info("로그인 시도...");
+            await page.goto("https://www.classnote.com/login", { waitUntil: "networkidle2", timeout: 60000 });
+
+            const idInput = await page.$('input[type="text"], input[type="email"]');
+            if (idInput) {
+                await idInput.click({ clickCount: 3 });
+                await idInput.type(loginId, { delay: 80 });
+            }
+            const pwInput = await page.$('input[type="password"]');
+            if (pwInput) {
+                await pwInput.click({ clickCount: 3 });
+                await pwInput.type(loginPw, { delay: 80 });
+            }
+
+            const loginButton = await page.evaluateHandle(() => {
+                const buttons = Array.from(document.querySelectorAll("button, input[type='submit']"));
+                return buttons.find(btn => {
+                    const text = btn.textContent || btn.value || "";
+                    return text.includes("로그인") || text.includes("Login") || btn.type === "submit";
+                });
+            });
+
+            if (loginButton && loginButton.asElement()) {
+                await Promise.all([
+                    page.waitForNavigation({ waitUntil: "networkidle2", timeout: 30000 }),
+                    loginButton.asElement().click(),
+                ]);
+            } else {
+                await Promise.all([
+                    page.waitForNavigation({ waitUntil: "networkidle2", timeout: 30000 }),
+                    page.keyboard.press("Enter"),
+                ]);
+            }
+            logger.info("로그인 완료");
+
+            const results = [];
+
+            for (let i = 0; i < reports.length; i++) {
+                const report = reports[i];
+                const { studentName, reportDate, imageBase64 } = report;
+
+                if (!studentName || !reportDate || !imageBase64) {
+                    results.push({ success: false, studentName: studentName || "알 수 없음", status: "error", message: "필수 데이터 누락" });
+                    continue;
+                }
+
+                logger.info(`처리 중 (${i + 1}/${reports.length}): ${studentName}`);
+
+                try {
+                    // 보고서 작성 페이지 이동
+                    await page.goto("https://www.classnote.com/service/report/add", { waitUntil: "domcontentloaded", timeout: 30000 });
+                    await page.waitForTimeout(2000);
+
+                    // 호칭 설정 (관리자)
+                    const titleSelected = await page.evaluate(() => {
+                        const radios = document.querySelectorAll('input[type="radio"]');
+                        for (let i = 0; i < radios.length; i++) {
+                            const radio = radios[i];
+                            const label = document.querySelector('label[for="' + radio.id + '"]');
+                            const parent = radio.parentElement;
+                            const text = (label ? label.textContent : "") + " " + (parent ? parent.textContent : "");
+                            if (text.includes("관리자")) { radio.click(); return true; }
+                        }
+                        if (radios.length > 0) { radios[0].click(); return true; }
+                        return false;
+                    });
+
+                    if (titleSelected) {
+                        await page.waitForTimeout(500);
+                        const confirmBtn = await page.evaluateHandle(() => {
+                            const buttons = Array.from(document.querySelectorAll("button"));
+                            return buttons.find(btn => (btn.textContent || "").includes("확인"));
+                        });
+                        if (confirmBtn && confirmBtn.asElement()) {
+                            await confirmBtn.asElement().click();
+                            await page.waitForTimeout(2000);
+                        }
+                    }
+
+                    // 날짜 선택
+                    const dateParts = reportDate.split("T")[0].split("-");
+                    const year = parseInt(dateParts[0]);
+                    const month = parseInt(dateParts[1]);
+                    const day = parseInt(dateParts[2]);
+
+                    let dateButton = null;
+                    try {
+                        await page.waitForSelector("button.e1a4g8se4", { timeout: 5000 });
+                        dateButton = await page.$("button.e1a4g8se4");
+                    } catch (e) {
+                        dateButton = await page.evaluateHandle(() => {
+                            const buttons = Array.from(document.querySelectorAll("button"));
+                            return buttons.find(btn => (btn.className || "").includes("e1a4g8se4"));
+                        });
+                    }
+
+                    if (dateButton && (dateButton.asElement ? dateButton.asElement() : dateButton)) {
+                        const btnEl = dateButton.asElement ? dateButton.asElement() : dateButton;
+                        await btnEl.click();
+                        await page.waitForTimeout(1000);
+
+                        const targetYearMonth = `${year}년 ${month}월`;
+                        for (let attempt = 0; attempt < 12; attempt++) {
+                            const currentYM = await page.evaluate(() => {
+                                const el = document.querySelector("div.css-7vdbjr.e1a4g8se9");
+                                return el ? el.textContent.trim() : null;
+                            });
+                            if (!currentYM || currentYM === targetYearMonth) break;
+
+                            const prevBtn = await page.evaluateHandle(() => {
+                                const buttons = Array.from(document.querySelectorAll("button"));
+                                return buttons.find(btn => {
+                                    const cn = btn.className || "";
+                                    return cn.includes("css-7t0053") && cn.includes("e1a4g8se10");
+                                });
+                            });
+                            if (prevBtn && (prevBtn.asElement ? prevBtn.asElement() : prevBtn)) {
+                                const el = prevBtn.asElement ? prevBtn.asElement() : prevBtn;
+                                await el.click();
+                                await page.waitForTimeout(500);
+                            } else break;
+                        }
+
+                        const dateClicked = await page.evaluate((targetDay) => {
+                            const links = Array.from(document.querySelectorAll("a"));
+                            for (const link of links) {
+                                if (link.textContent.trim() === String(targetDay)) { link.click(); return true; }
+                            }
+                            return false;
+                        }, day);
+
+                        if (dateClicked) {
+                            await page.waitForTimeout(1000);
+                            const okBtn = await page.evaluateHandle(() => {
+                                const buttons = Array.from(document.querySelectorAll("button"));
+                                return buttons.find(btn => {
+                                    if (btn.offsetParent === null) return false;
+                                    return (btn.textContent || "").includes("확인");
+                                });
+                            });
+                            if (okBtn && (okBtn.asElement ? okBtn.asElement() : okBtn)) {
+                                const el = okBtn.asElement ? okBtn.asElement() : okBtn;
+                                await el.click();
+                                await page.waitForTimeout(1000);
+                            }
+                        }
+                    }
+
+                    // 원아 선택 (항상 "인재원 전체반"에서 검색)
+                    await page.waitForTimeout(1000);
+                    let studentSelectBtn = null;
+                    try {
+                        await page.waitForSelector("button[data-testid='auto-report-child-select-button']", { timeout: 5000 });
+                        studentSelectBtn = await page.$("button[data-testid='auto-report-child-select-button']");
+                    } catch (e) {
+                        studentSelectBtn = await page.evaluateHandle(() => {
+                            const els = Array.from(document.querySelectorAll("button, a, div"));
+                            return els.find(el => {
+                                const text = el.textContent || "";
+                                return text.includes("원아 선택") || text.includes("원아선택") || text.includes("학생선택");
+                            });
+                        });
+                    }
+
+                    if (studentSelectBtn && (studentSelectBtn.asElement ? studentSelectBtn.asElement() : studentSelectBtn)) {
+                        const btnEl = studentSelectBtn.asElement ? studentSelectBtn.asElement() : studentSelectBtn;
+                        await btnEl.click();
+                        await page.waitForTimeout(2000);
+
+                        // Step 1: "인재원 전체반" 아코디언 열기
+                        const classAccordion = await page.evaluateHandle(() => {
+                            const accordionBtns = Array.from(document.querySelectorAll("button[data-testid^='report-class-accordion']"));
+                            for (const btn of accordionBtns) {
+                                const text = (btn.textContent || btn.innerText || "").trim();
+                                if (text.includes("인재원 전체반")) return btn;
+                            }
+                            // fallback: 모든 버튼에서 검색
+                            const allBtns = Array.from(document.querySelectorAll("button"));
+                            for (const btn of allBtns) {
+                                if (btn.offsetParent === null) continue;
+                                const text = (btn.textContent || btn.innerText || "").trim();
+                                if (text.includes("인재원 전체반")) return btn;
+                            }
+                            return null;
+                        });
+
+                        if (classAccordion && (classAccordion.asElement ? classAccordion.asElement() : classAccordion)) {
+                            const accEl = classAccordion.asElement ? classAccordion.asElement() : classAccordion;
+                            await accEl.click();
+                            await page.waitForTimeout(1500);
+                            logger.info(`"인재원 전체반" 아코디언 열림`);
+                        } else {
+                            logger.warn(`"인재원 전체반" 아코디언을 찾을 수 없음, 전체에서 학생 검색`);
+                        }
+
+                        // Step 2: 학생 이름으로 검색
+                        const studentItem = await page.evaluateHandle((name) => {
+                            const normalize = (t) => (t || "").trim();
+                            // 아코디언 내부 학생 버튼 우선
+                            const studentBtns = Array.from(document.querySelectorAll("button"));
+                            for (const btn of studentBtns) {
+                                if (btn.offsetParent === null) continue;
+                                const btnText = normalize(btn.textContent || btn.innerText);
+                                if (btnText === name) return btn;
+                            }
+                            return null;
+                        }, studentName);
+
+                        if (studentItem && (studentItem.asElement ? studentItem.asElement() : studentItem)) {
+                            const sEl = studentItem.asElement ? studentItem.asElement() : studentItem;
+                            await sEl.click();
+                            await page.waitForTimeout(1000);
+
+                            const completeBtn = await page.evaluateHandle(() => {
+                                const buttons = Array.from(document.querySelectorAll("button"));
+                                return buttons.find(btn => {
+                                    if (btn.offsetParent === null) return false;
+                                    return (btn.textContent || btn.innerText || "").includes("선택완료");
+                                });
+                            });
+                            if (completeBtn && (completeBtn.asElement ? completeBtn.asElement() : completeBtn)) {
+                                const cEl = completeBtn.asElement ? completeBtn.asElement() : completeBtn;
+                                await cEl.click();
+                                await page.waitForTimeout(1000);
+                            }
+                        } else {
+                            throw new Error(`학생 '${studentName}'을 '인재원 전체반'에서 찾을 수 없습니다.`);
+                        }
+                    }
+
+                    // 이미지 업로드
+                    const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
+                    const imageBuffer = Buffer.from(base64Data, "base64");
+                    const tempFilePath = path.join(os.tmpdir(), `timetable_${studentName}_${Date.now()}.jpg`);
+                    fs.writeFileSync(tempFilePath, imageBuffer);
+
+                    try {
+                        let fileInput = null;
+                        try {
+                            await page.waitForSelector("input[data-testid='media-attachment-add-input']", { timeout: 5000 });
+                            fileInput = await page.$("input[data-testid='media-attachment-add-input']");
+                        } catch (e) {
+                            try {
+                                await page.waitForSelector("input[type='file']", { timeout: 5000 });
+                                fileInput = await page.$("input[type='file']");
+                            } catch (e2) {
+                                const inputs = await page.$$("input[type='file']");
+                                if (inputs && inputs.length > 0) fileInput = inputs[0];
+                            }
+                        }
+
+                        if (!fileInput) throw new Error("파일 업로드 input을 찾을 수 없습니다.");
+
+                        await fileInput.uploadFile(tempFilePath);
+                        await page.waitForTimeout(3000);
+                    } finally {
+                        if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+                    }
+
+                    // 임시저장
+                    const saveBtn = await page.evaluateHandle(() => {
+                        const buttons = Array.from(document.querySelectorAll("button"));
+                        return buttons.find(btn => {
+                            const text = btn.textContent || "";
+                            return text.includes("임시저장") || text.includes("저장") || text.includes("등록");
+                        });
+                    });
+                    if (saveBtn && saveBtn.asElement()) {
+                        await saveBtn.asElement().click();
+                        await page.waitForTimeout(2000);
+                    }
+
+                    results.push({ success: true, studentName, status: "success" });
+                    logger.info(`완료: ${studentName}`);
+                } catch (innerError) {
+                    logger.error(`실패: ${studentName}`, innerError);
+                    results.push({ success: false, studentName, status: "error", message: innerError.message });
+                }
+            }
+
+            if (browser) await browser.close();
+
+            const successCount = results.filter(r => r.success).length;
+            const failCount = results.filter(r => !r.success).length;
+            logger.info(`배포 완료: 성공 ${successCount}, 실패 ${failCount}`);
+
+            return { success: true, message: `성공 ${successCount}개, 실패 ${failCount}개`, results };
+        } catch (error) {
+            if (browser) {
+                try { await browser.close(); } catch (e) { /* ignore */ }
+            }
+            logger.error("전체 오류:", error);
+            throw new functions.https.HttpsError("internal", error.message || "알 수 없는 오류");
+        }
+    });
 

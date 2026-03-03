@@ -1,15 +1,133 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useShuttle, BusRoute, BusStop } from '../../hooks/useShuttle';
-import { Search, Bus, Users, ChevronDown, ChevronRight, RefreshCw, ArrowUp, ArrowDown, Loader2, X } from 'lucide-react';
+import { useStudents } from '../../hooks/useStudents';
+import { useClasses } from '../../hooks/useClasses';
+import { MATH_PERIOD_INFO, ENGLISH_PERIOD_INFO, WEEKEND_PERIOD_INFO, PeriodInfo } from '../Timetable/constants';
+import { Search, Bus, Users, ChevronDown, ChevronRight, RefreshCw, ArrowUp, ArrowDown, Loader2, X, ArrowLeftRight, ArrowRight } from 'lucide-react';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
 export default function ShuttleTab() {
   const { busRoutes, isBusLoading } = useShuttle();
+  const { students } = useStudents();
+  const { data: allClasses = [] } = useClasses();
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedRoutes, setExpandedRoutes] = useState<Set<string>>(new Set());
   const [expandedStops, setExpandedStops] = useState<Set<string>>(new Set());
+  const [showTransitSection, setShowTransitSection] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // 강의실 이름으로 BS 여부 판별 (bs로 시작 또는 프리미엄/바른2 포함)
+  const isBsRoom = useCallback((room: string) =>
+    room.toLowerCase().startsWith('bs') || room.includes('프리미엄') || room.includes('바른2')
+  , []);
+
+  const [transitFilter, setTransitFilter] = useState<'all' | '본원→BS' | 'BS→본원'>('all');
+  const DAY_ORDER = ['월', '화', '수', '목', '금', '토', '일'];
+
+  // BS반 이동: 요일 + 시간대 + 방향별 학생 묶음 (셔틀 탑승 학생만)
+  const transitByDay = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    // day → hour → direction → Set<name>
+    const map: Record<string, Record<string, Record<string, Set<string>>>> = {};
+
+    students.forEach(student => {
+      const isOnShuttle = busRoutes.some(route =>
+        route.stops.some(stop =>
+          stop.boardingStudents.some(s => s.name === student.name)
+        )
+      );
+      if (!isOnShuttle) return;
+
+      const active = (student.enrollments || []).filter(e => {
+        const hasEnded = !!e.endDate;
+        const hasStarted = !e.startDate || e.startDate <= today;
+        return !hasEnded && hasStarted && !e.onHold;
+      });
+
+      const dayBlocks: Record<string, Array<{ className: string; room: string; startTime: string; endTime: string }>> = {};
+
+      active.forEach(enrollment => {
+        const actualClass = allClasses.find(c => c.className === enrollment.className && c.subject === enrollment.subject);
+        if (!actualClass?.schedule) return;
+        const room = actualClass.room || '';
+        const studentDays = (enrollment as any).attendanceDays?.length > 0
+          ? (enrollment as any).attendanceDays as string[] : null;
+
+        actualClass.schedule.forEach(slot => {
+          const parts = slot.split(' ');
+          const day = parts[0], periodId = parts[1];
+          if (!day || !periodId) return;
+          if (studentDays && !studentDays.includes(day)) return;
+
+          const isWeekend = day === '토' || day === '일';
+          const periodInfo: Record<string, PeriodInfo> = isWeekend
+            ? WEEKEND_PERIOD_INFO
+            : enrollment.subject === 'english' ? ENGLISH_PERIOD_INFO : MATH_PERIOD_INFO;
+          const period = periodInfo[periodId];
+          if (!period) return;
+
+          if (!dayBlocks[day]) dayBlocks[day] = [];
+          dayBlocks[day].push({ className: enrollment.className, room, startTime: period.startTime, endTime: period.endTime });
+        });
+      });
+
+      for (const [day, blocks] of Object.entries(dayBlocks)) {
+        const sorted = [...blocks].sort((a, b) => a.startTime.localeCompare(b.startTime));
+        const merged: typeof blocks = [];
+        for (const block of sorted) {
+          const last = merged[merged.length - 1];
+          if (last && last.className === block.className && last.room === block.room) {
+            if (block.endTime > last.endTime) last.endTime = block.endTime;
+          } else {
+            merged.push({ ...block });
+          }
+        }
+
+        for (let i = 0; i < merged.length - 1; i++) {
+          const curr = merged[i], next = merged[i + 1];
+          if (!curr.room || !next.room) continue;
+          const currIsBs = isBsRoom(curr.room), nextIsBs = isBsRoom(next.room);
+          if (currIsBs === nextIsBs) continue;
+
+          const direction = currIsBs ? 'BS→본원' : '본원→BS';
+          const endHour = parseInt(curr.endTime.split(':')[0]);
+          const hourKey = String(endHour);
+
+          if (!map[day]) map[day] = {};
+          if (!map[day][hourKey]) map[day][hourKey] = {};
+          if (!map[day][hourKey][direction]) map[day][hourKey][direction] = new Set();
+          map[day][hourKey][direction].add(student.name);
+        }
+      }
+    });
+
+    // 구조화
+    return DAY_ORDER
+      .filter(day => map[day])
+      .map(day => {
+        const hourGroups = Object.entries(map[day])
+          .flatMap(([hourKey, dirs]) =>
+            Object.entries(dirs).map(([direction, names]) => {
+              const h = parseInt(hourKey);
+              return {
+                hour: h,
+                hourLabel: `${h > 12 ? h - 12 : h}시 이동`,
+                direction,
+                students: [...names].sort((a, b) => a.localeCompare(b, 'ko')),
+              };
+            })
+          )
+          .sort((a, b) => a.hour - b.hour || a.direction.localeCompare(b.direction));
+        return { day, groups: hourGroups };
+      });
+  }, [students, busRoutes, allClasses, isBsRoom]);
+
+  const totalTransitStudents = useMemo(() => {
+    const names = new Set<string>();
+    transitByDay.forEach(d => d.groups.forEach(g => g.students.forEach(n => names.add(n))));
+    return names.size;
+  }, [transitByDay]);
 
   const filteredRoutes = useMemo(() => {
     if (!busRoutes || busRoutes.length === 0) return [];
@@ -162,6 +280,94 @@ export default function ShuttleTab() {
           </div>
         ) : (
           <div className="space-y-3">
+            {/* BS반 이동 학생 섹션 */}
+            {transitByDay.length > 0 && (
+              <div className="bg-white rounded-lg border border-blue-200 overflow-hidden">
+                <div
+                  className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-blue-50/50 transition-colors"
+                  onClick={() => setShowTransitSection(!showTransitSection)}
+                >
+                  <div className="flex items-center gap-3">
+                    {showTransitSection ? <ChevronDown size={16} className="text-blue-400" /> : <ChevronRight size={16} className="text-blue-400" />}
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <ArrowLeftRight size={16} className="text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-gray-900">BS반 이동 학생</h3>
+                      <p className="text-[10px] text-gray-400">셔틀버스 탑승 학생 중 BS↔본원 이동</p>
+                    </div>
+                  </div>
+                  <span className="text-blue-600 font-bold text-xs">{totalTransitStudents}명</span>
+                </div>
+
+                {showTransitSection && (
+                  <div className="border-t">
+                    {/* 방향 필터 탭 */}
+                    <div className="flex border-b bg-gray-50 px-4 py-1.5 gap-1">
+                      {(['all', '본원→BS', 'BS→본원'] as const).map(filter => (
+                        <button
+                          key={filter}
+                          onClick={() => setTransitFilter(filter)}
+                          className={`px-3 py-1 rounded-full text-[11px] font-medium transition-colors ${
+                            transitFilter === filter
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white text-gray-500 hover:bg-gray-100 border border-gray-200'
+                          }`}
+                        >
+                          {filter === 'all' ? '전체' : filter === '본원→BS' ? '본원 → BS' : 'BS → 본원'}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* 요일별 그룹 */}
+                    <div className="divide-y divide-gray-100">
+                      {transitByDay.map(({ day, groups }) => {
+                        const filtered = transitFilter === 'all'
+                          ? groups
+                          : groups.filter(g => g.direction === transitFilter);
+                        if (filtered.length === 0) return null;
+
+                        const dayStudentCount = new Set(filtered.flatMap(g => g.students)).size;
+                        return (
+                          <div key={day} className="px-4 py-2.5">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-[11px] font-bold">{day}</span>
+                              <span className="text-[10px] text-gray-400">{dayStudentCount}명</span>
+                            </div>
+                            <div className="space-y-2 ml-2">
+                              {filtered.map((group, gi) => (
+                                <div key={gi}>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-[11px] font-bold text-blue-700">{group.hourLabel}</span>
+                                    <span className="text-[10px] text-gray-300">·</span>
+                                    <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium ${
+                                      group.direction === '본원→BS' ? 'text-indigo-600' : 'text-emerald-600'
+                                    }`}>
+                                      {group.direction === '본원→BS' ? '본원' : 'BS'}
+                                      <ArrowRight size={10} />
+                                      {group.direction === '본원→BS' ? 'BS' : '본원'}
+                                    </span>
+                                    <span className="text-[10px] text-gray-400 ml-auto">{group.students.length}명</span>
+                                  </div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {group.students.map((name, ni) => (
+                                      <span key={ni} className="px-1.5 py-0.5 bg-blue-50 text-blue-800 rounded text-[10px]">
+                                        {name}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {filteredRoutes.map(route => (
               <BusRouteCard
                 key={route.id}

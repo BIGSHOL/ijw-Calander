@@ -14,6 +14,7 @@ import { collection, getDocs, writeBatch, doc, query, where, collectionGroup } f
 import { db } from '../../../firebaseConfig';
 import { CLASS_COLLECTION } from '../English/englishUtils';
 import { useQueryClient } from '@tanstack/react-query';
+import { useStudents } from '../../../hooks/useStudents';
 
 // 공용 클래스 정보 타입
 export interface IntegrationClassInfo {
@@ -57,6 +58,11 @@ interface StudentItemProps {
     classDays?: string[];  // 수업의 모든 요일 (수학 부분등원 뱃지용)
     showSchool?: boolean;  // 학교 표시 여부
     showGrade?: boolean;   // 학년 표시 여부
+    // 엑셀뷰 props
+    isExcelMode?: boolean;
+    isExcelSelected?: boolean;
+    isExcelCopied?: boolean;
+    onExcelSelect?: () => void;
 }
 
 const StudentItem: React.FC<StudentItemProps> = ({
@@ -68,7 +74,11 @@ const StudentItem: React.FC<StudentItemProps> = ({
     onDragStart,
     classDays = [],
     showSchool = true,
-    showGrade = true
+    showGrade = true,
+    isExcelMode = false,
+    isExcelSelected = false,
+    isExcelCopied = false,
+    onExcelSelect,
 }) => {
     const [isHovered, setIsHovered] = useState(false);
     const isClickable = !!onStudentClick;
@@ -135,20 +145,39 @@ const StudentItem: React.FC<StudentItemProps> = ({
         return sections.length > 1 ? sections.join('\n────────\n') : (sections[0] || undefined);
     }, [student.name, student.isTransferredIn, isTransferScheduled, isNewStudent, student.enrollmentDate, student.englishName, student.withdrawalDate, student.transferTo]);
 
+    // 엑셀 모드 스타일 오버라이드
+    const excelStyle: React.CSSProperties = isExcelCopied
+        ? { backgroundColor: '#dcfce7', outline: '2px solid #4ade80' }
+        : isExcelSelected
+            ? { backgroundColor: '#bfdbfe', outline: '2px solid #60a5fa' }
+            : {};
+
     return (
         <div
             draggable={isDraggable}
             onDragStart={(e) => isDraggable && onDragStart?.(e, student)}
             onClick={(e) => {
+                if (isExcelMode && onExcelSelect) {
+                    e.stopPropagation();
+                    onExcelSelect();
+                    return;
+                }
                 if (isClickable) {
+                    e.stopPropagation();
+                    onStudentClick(student.id);
+                }
+            }}
+            onDoubleClick={(e) => {
+                // 엑셀 모드에서 더블클릭 시 학생 상세 모달
+                if (isExcelMode && isClickable) {
                     e.stopPropagation();
                     onStudentClick(student.id);
                 }
             }}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
-            className={`flex items-center justify-between text-[12px] py-0.5 px-1 transition-all duration-200 animate-in fade-in ${style.className} ${isClickable ? 'cursor-pointer' : ''}`}
-            style={hoverStyle}
+            className={`flex items-center justify-between text-[12px] py-0.5 px-1 transition-all duration-200 animate-in fade-in ${style.className} ${isClickable || isExcelMode ? 'cursor-pointer' : ''}`}
+            style={isExcelMode ? { ...hoverStyle, ...excelStyle } : hoverStyle}
             title={tooltipMessage}
         >
             <span className={`font-normal truncate flex items-center gap-0.5 opacity-80 ${isHovered && isClickable ? '' : style.textClass}`}>
@@ -203,6 +232,14 @@ interface IntegrationClassCardProps {
     onEditClass?: (classId: string) => void;  // 시뮬레이션 모드 수업 편집
     // 주차 이동 시 배정 예정/퇴원 예정 미리보기용
     currentWeekStart?: Date;  // 현재 보고 있는 주의 시작일 (월요일)
+    // 엑셀뷰 props
+    isExcelMode?: boolean;
+    isSelected?: boolean;
+    onCellSelect?: () => void;
+    selectedStudentId?: string | null;
+    copiedStudentId?: string | null;
+    onStudentSelect?: (studentId: string, className: string) => void;
+    onEnrollStudent?: (studentId: string, className: string) => void;
 }
 
 // 주말 실제 시간대 (영어용)
@@ -243,6 +280,13 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     onCancelScheduledEnrollment,
     onEditClass,
     currentWeekStart,
+    isExcelMode = false,
+    isSelected = false,
+    onCellSelect,
+    selectedStudentId: excelSelectedStudentId,
+    copiedStudentId: excelCopiedStudentId,
+    onStudentSelect: excelOnStudentSelect,
+    onEnrollStudent: excelOnEnrollStudent,
 }) => {
     const cardWidthClass = isTimeColumnOnly ? 'w-[49px]' : (hideTime ? 'w-[160px]' : 'w-[190px]');
     const isEnglish = subject === 'english';
@@ -256,6 +300,11 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     const [showScheduleTooltip, setShowScheduleTooltip] = useState(false);
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
     const headerRef = useRef<HTMLDivElement>(null);
+
+    // 엑셀뷰 자동완성 상태
+    const [autoCompleteQuery, setAutoCompleteQuery] = useState('');
+    const [showAutoComplete, setShowAutoComplete] = useState(false);
+    const autoCompleteRef = useRef<HTMLDivElement>(null);
 
     // 툴팁 위치 업데이트
     useEffect(() => {
@@ -616,7 +665,8 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                 data-class-name={classInfo.name}
                 onDragOver={isTimeColumnOnly ? undefined : handleDragOver}
                 onDrop={isTimeColumnOnly ? undefined : handleDrop}
-                className={`${cardWidthClass} h-full flex flex-col border-r border-gray-300 shrink-0 bg-white transition-all overflow-hidden`}
+                onClick={isExcelMode && !isTimeColumnOnly ? (e) => { e.stopPropagation(); onCellSelect?.(); } : undefined}
+                className={`${cardWidthClass} h-full flex flex-col border-r border-gray-300 shrink-0 bg-white transition-all overflow-hidden ${isExcelMode && !isTimeColumnOnly ? 'cursor-pointer' : ''} ${isSelected ? 'ring-2 ring-blue-500 shadow-lg z-10' : ''}`}
             >
                 {/* 수업 상세 클릭 영역 */}
                 <div
@@ -916,15 +966,55 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                 style={getRowStyle(student)}
                                                 mode={mode}
                                                 showEnglishName={isEnglish}
-                                                onStudentClick={onStudentClick}
+                                                onStudentClick={isExcelMode ? undefined : onStudentClick}
                                                 onDragStart={onMoveStudent ? handleDragStart : undefined}
                                                 classDays={!isEnglish ? classInfo.finalDays : undefined}
                                                 showSchool={displayOptions?.showSchool !== false}
                                                 showGrade={displayOptions?.showGrade !== false}
+                                                isExcelMode={isExcelMode}
+                                                isExcelSelected={isExcelMode && excelSelectedStudentId === student.id}
+                                                isExcelCopied={isExcelMode && excelCopiedStudentId === student.id}
+                                                onExcelSelect={isExcelMode ? () => {
+                                                    excelOnStudentSelect?.(student.id, classInfo.name);
+                                                    onCellSelect?.();
+                                                } : undefined}
                                             />
                                         ))
                                     )}
                                 </div>
+
+                                {/* 엑셀뷰 자동완성 학생 추가 */}
+                                {isExcelMode && excelOnEnrollStudent && (
+                                    <div ref={autoCompleteRef} className="px-2 py-1 border-t border-blue-200 bg-blue-50 relative">
+                                        <input
+                                            type="text"
+                                            placeholder="학생 검색..."
+                                            value={autoCompleteQuery}
+                                            onChange={(e) => {
+                                                setAutoCompleteQuery(e.target.value);
+                                                setShowAutoComplete(e.target.value.trim().length > 0);
+                                            }}
+                                            onFocus={() => {
+                                                if (autoCompleteQuery.trim()) setShowAutoComplete(true);
+                                                onCellSelect?.();
+                                            }}
+                                            className="w-full px-2 py-1 text-[11px] border border-blue-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                            onClick={(e) => e.stopPropagation()}
+                                        />
+                                        {showAutoComplete && autoCompleteQuery.trim() && (
+                                            <AutoCompleteDropdown
+                                                query={autoCompleteQuery}
+                                                existingStudentIds={new Set(classStudentData?.studentIds || [])}
+                                                onSelect={(studentId) => {
+                                                    excelOnEnrollStudent(studentId, classInfo.name);
+                                                    setAutoCompleteQuery('');
+                                                    setShowAutoComplete(false);
+                                                }}
+                                                onClose={() => setShowAutoComplete(false)}
+                                            />
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             {/* 대기 Section (배정 예정 + 휴원) - showHoldStudents 옵션 적용 */}
@@ -1063,6 +1153,58 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                 />
             )}
         </>
+    );
+};
+
+// 엑셀뷰 자동완성 드롭다운
+const AutoCompleteDropdown: React.FC<{
+    query: string;
+    existingStudentIds: Set<string>;
+    onSelect: (studentId: string) => void;
+    onClose: () => void;
+}> = ({ query, existingStudentIds, onSelect, onClose }) => {
+    const { students } = useStudents();
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    const results = useMemo(() => {
+        if (!query.trim()) return [];
+        const q = query.trim().toLowerCase();
+        return students
+            .filter(s =>
+                s.name?.toLowerCase().includes(q) &&
+                !existingStudentIds.has(s.id) &&
+                s.status !== 'withdrawn'
+            )
+            .slice(0, 8);
+    }, [query, students, existingStudentIds]);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                onClose();
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [onClose]);
+
+    if (results.length === 0) return null;
+
+    return (
+        <div ref={dropdownRef} className="absolute left-2 right-2 top-full mt-0.5 bg-white border border-gray-200 rounded shadow-lg z-50 max-h-[200px] overflow-y-auto">
+            {results.map(s => (
+                <div
+                    key={s.id}
+                    className="px-2 py-1.5 text-[11px] hover:bg-blue-50 cursor-pointer flex items-center justify-between"
+                    onClick={(e) => { e.stopPropagation(); onSelect(s.id); }}
+                >
+                    <span className="font-medium text-gray-800">{s.name}</span>
+                    <span className="text-[10px] text-gray-400">
+                        {formatSchoolGrade(s.school, s.grade)}
+                    </span>
+                </div>
+            ))}
+        </div>
     );
 };
 

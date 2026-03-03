@@ -28,6 +28,18 @@ function getScheduledDays(enrollment: { days?: string[]; schedule?: string[] }):
     return days;
 }
 
+/** Edutrix 클래스명에서 요일 추출 (예: "김윤하_월_3교시" → "월") */
+function extractDayFromEdutrixClassName(className: string | null): string | null {
+    if (!className) return null;
+    const tokens = className.split(/[\s_]+/);
+    // 두 번째 토큰이 요일명이면 반환
+    if (tokens.length >= 2) {
+        const dayToken = tokens[1];
+        if (DAY_NAMES.includes(dayToken)) return dayToken;
+    }
+    return null;
+}
+
 /** 과제 점수 → 제출 여부 (0%만 미제출, 비어있거나 나머지 = 제출) */
 function isHomeworkSubmitted(assignmentScore: string | null | undefined): boolean {
     if (assignmentScore === null || assignmentScore === undefined || assignmentScore === '') return true;
@@ -230,9 +242,21 @@ export function useEdutrixSync() {
                     : undefined;
 
                 if (matchedStaffId) {
-                    const teacherEnrollment = enrollments.find(e => e.staffId === matchedStaffId);
-                    if (teacherEnrollment) {
-                        className = teacherEnrollment.className;
+                    const teacherEnrollments = enrollments.filter(e => e.staffId === matchedStaffId);
+                    if (teacherEnrollments.length === 1) {
+                        // 해당 선생님 수업이 1개면 바로 매칭
+                        className = teacherEnrollments[0].className;
+                    } else if (teacherEnrollments.length > 1) {
+                        // 같은 선생님 수업이 여러 개면 요일로 구분
+                        const reportDayName = getKoreanDayName(dateKey);
+                        const edutrixDay = extractDayFromEdutrixClassName(report.class_name);
+                        const dayToMatch = edutrixDay || reportDayName;
+
+                        const dayMatchedEnrollment = teacherEnrollments.find(e => {
+                            const days = getScheduledDays(e);
+                            return days.has(dayToMatch);
+                        });
+                        className = dayMatchedEnrollment?.className || teacherEnrollments[0].className;
                     }
                 }
 

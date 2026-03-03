@@ -57,7 +57,7 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
           )}
         </select>
 
-        {/* View Type Toggle Button - 영어: 통합 → 강사뷰 → 강의실뷰 */}
+        {/* View Type Toggle Button - 영어: 통합 → 강사 → 강의실 → 엑셀 */}
         {timetableSubject === 'english' && (
           <button
             onClick={() => {
@@ -65,7 +65,8 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
               setTimetableViewType(prev => {
                 if (prev === 'class') return 'teacher';
                 if (prev === 'teacher') return 'room';
-                return canViewIntegrated ? 'class' : 'teacher';
+                if (prev === 'room') return canViewIntegrated ? 'excel' : 'teacher';
+                return canViewIntegrated ? 'class' : 'teacher'; // excel → class
               });
             }}
             className="px-2 py-0.5 rounded bg-primary border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
@@ -73,9 +74,11 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
           >
             {timetableViewType === 'class'
               ? <><ClipboardList size={12} className="inline" /> 통합뷰</>
-              : timetableViewType === 'teacher'
-                ? <><UserIcon size={12} className="inline" /> 강사</>
-                : <><Building size={12} className="inline" /> 강의실</>}
+              : timetableViewType === 'excel'
+                ? <><Table2 size={12} className="inline" /> 엑셀</>
+                : timetableViewType === 'teacher'
+                  ? <><UserIcon size={12} className="inline" /> 강사</>
+                  : <><Building size={12} className="inline" /> 강의실</>}
           </button>
         )}
 
