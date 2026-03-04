@@ -84,6 +84,15 @@ const getClassColor = (className: string) => {
   return CLASS_COLORS[Math.abs(hash) % CLASS_COLORS.length];
 };
 
+// 오후 12시간제 표시 (13→1, 14→2, ..., 21→9)
+const formatHourLabel = (minutes: number): number => {
+  const h = Math.floor(minutes / 60);
+  return h > 12 ? h - 12 : h;
+};
+
+// 그리드 상단 여백 (첫 번째 시간 라벨 잘림 방지)
+const GRID_PAD_TOP = 18;
+
 /** 같은 요일 내 시간이 겹치는 블록을 가로 서브컬럼으로 배치 */
 function computeOverlapColumns(blocks: ClassBlock[]) {
   if (blocks.length === 0) {
@@ -420,11 +429,11 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                 </div>
 
                 {/* 시간축 + 수업 블록 */}
-                <div className="flex relative" style={{ height: `${totalHeight}px` }}>
+                <div className="flex relative" style={{ height: `${totalHeight + GRID_PAD_TOP}px` }}>
                   {/* 시간 열 */}
                   <div className="w-16 flex-shrink-0 relative bg-gray-50 border-r border-gray-200">
                     {timeLabels.map(label => {
-                      const top = (label.minutes - rangeStartMin) * PIXELS_PER_MINUTE;
+                      const top = (label.minutes - rangeStartMin) * PIXELS_PER_MINUTE + GRID_PAD_TOP;
                       return (
                         <div
                           key={label.time}
@@ -432,11 +441,11 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                           style={{ top: `${top}px` }}
                         >
                           <span
-                            className={`text-base px-1.5 -translate-y-1/2 ${
+                            className={`text-base px-1.5 -translate-y-1/2 bg-gray-50 leading-none ${
                               label.isHour ? 'font-bold text-gray-700' : 'text-gray-400'
                             }`}
                           >
-                            {Math.floor(label.minutes / 60)}
+                            {formatHourLabel(label.minutes)}
                           </span>
                         </div>
                       );
@@ -458,7 +467,7 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                       >
                         {/* 시간선 (가로) */}
                         {timeLabels.map(label => {
-                          const top = (label.minutes - rangeStartMin) * PIXELS_PER_MINUTE;
+                          const top = (label.minutes - rangeStartMin) * PIXELS_PER_MINUTE + GRID_PAD_TOP;
                           return (
                             <div
                               key={label.time}
@@ -474,7 +483,7 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                         {blocks.map((block, idx) => {
                           const startMin = timeToMinutes(block.startTime);
                           const endMin = timeToMinutes(block.endTime);
-                          const top = (startMin - rangeStartMin) * PIXELS_PER_MINUTE;
+                          const top = (startMin - rangeStartMin) * PIXELS_PER_MINUTE + GRID_PAD_TOP;
                           const height = (endMin - startMin) * PIXELS_PER_MINUTE;
                           const classColor = getClassColor(block.className);
                           const isShort = height < 55;
@@ -534,12 +543,12 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                           .filter(e => e.day === day)
                           .map((e, ei) => {
                             const eventMin = timeToMinutes(e.time);
-                            const top = (eventMin - rangeStartMin) * PIXELS_PER_MINUTE;
+                            const top = (eventMin - rangeStartMin) * PIXELS_PER_MINUTE + GRID_PAD_TOP;
                             return (
                               <div
                                 key={`shuttle-${ei}`}
                                 className="absolute left-0 right-0 z-20 flex items-center justify-center"
-                                style={{ top: `${top - 10}px` }}
+                                style={{ top: `${top - 12}px` }}
                               >
                                 <div className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm font-bold">
                                   <Bus size={12} />
