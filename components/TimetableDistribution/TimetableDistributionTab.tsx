@@ -36,8 +36,8 @@ interface StudentDistResult {
 }
 
 // ─── Constants ───────────────────────────────────────────
-const DAY_ORDER = ['일', '월', '화', '수', '목', '금', '토'];
-const PIXELS_PER_MINUTE_IMG = 0.6;
+const WEEKDAY_ORDER = ['월', '화', '수', '목', '금'];
+const PIXELS_PER_MINUTE_IMG = 1.2;
 const BATCH_SIZE = 15;
 
 const timeToMinutes = (time: string): number => {
@@ -221,8 +221,40 @@ const TimetableImageRenderer: React.FC<{
 
   const hasClasses = activeDays.size > 0;
 
-  const rangeStartMin = 13 * 60;
-  const rangeEndMin = 23 * 60;
+  // 동적 DAY_ORDER: 토요일 수업이 있으면 토요일 추가, 일요일은 항상 제외
+  const dayOrder = useMemo(() => {
+    const days = [...WEEKDAY_ORDER];
+    if (activeDays.has('토')) days.push('토');
+    return days;
+  }, [activeDays]);
+
+  // 시간 범위 자동 계산 (수업 있는 시간 기준, 위아래 30분 여유)
+  const { rangeStartMin, rangeEndMin } = useMemo(() => {
+    let minStart = 23 * 60;
+    let maxEnd = 0;
+    for (const blocks of Object.values(dayBlocks)) {
+      for (const b of blocks) {
+        const s = timeToMinutes(b.startTime);
+        const e = timeToMinutes(b.endTime);
+        if (s < minStart) minStart = s;
+        if (e > maxEnd) maxEnd = e;
+      }
+    }
+    // 셔틀 이벤트도 고려
+    shuttleEvents.forEach(e => {
+      const m = timeToMinutes(e.time);
+      if (m < minStart) minStart = m;
+      if (m + 30 > maxEnd) maxEnd = m + 30;
+    });
+    // 시간 단위로 맞추기 (내림/올림) + 30분 여유
+    const start = Math.floor((minStart - 30) / 60) * 60;
+    const end = Math.ceil((maxEnd + 30) / 60) * 60;
+    return {
+      rangeStartMin: Math.max(start, 0),
+      rangeEndMin: Math.min(end, 24 * 60),
+    };
+  }, [dayBlocks, shuttleEvents]);
+
   const totalHeight = (rangeEndMin - rangeStartMin) * PIXELS_PER_MINUTE_IMG;
 
   const timeLabels = useMemo(() => {
@@ -231,63 +263,63 @@ const TimetableImageRenderer: React.FC<{
       labels.push({ time: minutesToTime(m), minutes: m });
     }
     return labels;
-  }, []);
+  }, [rangeStartMin, rangeEndMin]);
 
   if (!hasClasses) return null;
 
   // Use inline styles for reliable html-to-image capture
+  // 모바일 최적화: 세로로 긴 이미지, 큰 글자, 최소 여백
+  const imgWidth = dayOrder.length <= 5 ? 720 : 840;
+
   return (
-    <div style={{ width: '800px', backgroundColor: 'white', padding: '24px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      {/* Header */}
-      <div style={{ marginBottom: '16px', borderBottom: '2px solid #e5e7eb', paddingBottom: '12px' }}>
-        <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>
+    <div style={{ width: `${imgWidth}px`, backgroundColor: 'white', padding: '12px 8px 8px 8px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+      {/* Header - 간결하게 */}
+      <div style={{ marginBottom: '8px', paddingBottom: '6px', borderBottom: '2px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#111827' }}>
           {student.name} 시간표
         </div>
-        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
-          배포일: {reportDate} | 인재원 프리미엄
+        <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+          {reportDate}
         </div>
       </div>
 
       {/* Timetable Grid */}
       <div style={{ border: '1px solid #d1d5db', borderRadius: '4px', overflow: 'hidden' }}>
         {/* Day Headers */}
-        <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb' }}>
+        <div style={{ display: 'flex', borderBottom: '2px solid #d1d5db' }}>
           <div style={{
-            width: '56px', flexShrink: 0, backgroundColor: '#f9fafb',
-            borderRight: '1px solid #e5e7eb', padding: '6px 4px', textAlign: 'center',
+            width: '48px', flexShrink: 0, backgroundColor: '#f9fafb',
+            borderRight: '1px solid #e5e7eb', padding: '8px 2px', textAlign: 'center',
           }}>
-            <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#6b7280' }}>시간</span>
+            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#6b7280' }}>시간</span>
           </div>
-          {DAY_ORDER.map((day, i) => {
-            const isWeekend = day === '일' || (day === '토' && !activeDays.has('토'));
-            return (
-              <div
-                key={day}
-                style={{
-                  flex: 1, padding: '6px 8px', textAlign: 'center',
-                  fontWeight: 'bold', fontSize: '12px',
-                  backgroundColor: day === '일' ? '#fef2f2' : day === '토' ? '#f0f9ff' : '#f9fafb',
-                  color: day === '일' ? '#ef4444' : day === '토' ? '#0ea5e9' : '#4b5563',
-                  borderRight: i < DAY_ORDER.length - 1 ? '1px solid #e5e7eb' : 'none',
-                }}
-              >
-                {day}
-              </div>
-            );
-          })}
+          {dayOrder.map((day, i) => (
+            <div
+              key={day}
+              style={{
+                flex: 1, padding: '8px 4px', textAlign: 'center',
+                fontWeight: 'bold', fontSize: '14px',
+                backgroundColor: day === '토' ? '#f0f9ff' : '#f9fafb',
+                color: day === '토' ? '#0ea5e9' : '#374151',
+                borderRight: i < dayOrder.length - 1 ? '1px solid #e5e7eb' : 'none',
+              }}
+            >
+              {day}
+            </div>
+          ))}
         </div>
 
         {/* Time axis + blocks */}
         <div style={{ display: 'flex', position: 'relative', height: `${totalHeight}px` }}>
           {/* Time column */}
-          <div style={{ width: '56px', flexShrink: 0, position: 'relative', backgroundColor: '#f9fafb', borderRight: '1px solid #e5e7eb' }}>
+          <div style={{ width: '48px', flexShrink: 0, position: 'relative', backgroundColor: '#f9fafb', borderRight: '1px solid #e5e7eb' }}>
             {timeLabels.map(label => {
               const top = (label.minutes - rangeStartMin) * PIXELS_PER_MINUTE_IMG;
               return (
                 <div key={label.time} style={{ position: 'absolute', left: 0, right: 0, top: `${top}px` }}>
                   <span style={{
-                    fontSize: '10px', fontWeight: 'bold', color: '#374151',
-                    padding: '0 4px', transform: 'translateY(-50%)', display: 'inline-block',
+                    fontSize: '11px', fontWeight: 'bold', color: '#374151',
+                    padding: '0 3px', transform: 'translateY(-50%)', display: 'inline-block',
                   }}>
                     {label.time}
                   </span>
@@ -297,18 +329,14 @@ const TimetableImageRenderer: React.FC<{
           </div>
 
           {/* Day columns */}
-          {DAY_ORDER.map((day, di) => {
+          {dayOrder.map((day, di) => {
             const blocks = dayBlocks[day] || [];
-            const hasBlocks = activeDays.has(day);
-            const columnBg = day === '일' ? 'rgba(229,231,235,0.7)'
-              : day === '토' && !hasBlocks ? 'rgba(229,231,235,0.7)'
-              : 'transparent';
 
             return (
               <div key={day} style={{
                 flex: 1, position: 'relative',
-                borderRight: di < DAY_ORDER.length - 1 ? '1px solid #e5e7eb' : 'none',
-                backgroundColor: columnBg,
+                borderRight: di < dayOrder.length - 1 ? '1px solid #e5e7eb' : 'none',
+                backgroundColor: day === '토' ? '#fafcff' : 'transparent',
               }}>
                 {/* Time lines */}
                 {timeLabels.map(label => {
@@ -328,25 +356,25 @@ const TimetableImageRenderer: React.FC<{
                   const top = (startMin - rangeStartMin) * PIXELS_PER_MINUTE_IMG;
                   const height = (endMin - startMin) * PIXELS_PER_MINUTE_IMG;
                   const sc = SUBJECT_COLORS[block.subject as keyof typeof SUBJECT_COLORS] || SUBJECT_COLORS.other;
-                  const isShort = height < 60;
+                  const isShort = height < 50;
 
                   return (
                     <div
                       key={`${block.className}-${idx}`}
                       style={{
-                        position: 'absolute', left: '2px', right: '2px', borderRadius: '2px',
+                        position: 'absolute', left: '2px', right: '2px', borderRadius: '3px',
                         overflow: 'hidden', zIndex: 10,
                         top: `${top}px`, height: `${height}px`,
-                        backgroundColor: sc.light, borderLeft: `3px solid ${sc.bg}`,
+                        backgroundColor: sc.light, borderLeft: `4px solid ${sc.bg}`,
                       }}
                     >
                       <div style={{
-                        padding: isShort ? '0 6px' : '4px 6px', height: '100%',
+                        padding: isShort ? '2px 6px' : '6px 8px', height: '100%',
                         display: 'flex', flexDirection: 'column',
                         justifyContent: isShort ? 'center' : 'flex-start',
                       }}>
                         <div style={{
-                          fontWeight: 'bold', fontSize: '10px',
+                          fontWeight: 'bold', fontSize: '13px',
                           color: sc.text === '#ffffff' ? sc.border : sc.text,
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
@@ -354,17 +382,17 @@ const TimetableImageRenderer: React.FC<{
                         </div>
                         {!isShort && (
                           <>
-                            <div style={{ fontSize: '9px', fontWeight: 500, color: '#6b7280', marginTop: '2px' }}>
+                            <div style={{ fontSize: '11px', fontWeight: 500, color: '#6b7280', marginTop: '3px' }}>
                               {block.startTime} ~ {block.endTime}
                             </div>
-                            <div style={{ fontSize: '9px', color: '#9ca3af', marginTop: '2px' }}>
+                            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>
                               {block.room && `${block.room}`}
                               {block.teacher && ` | ${block.teacher}`}
                             </div>
                           </>
                         )}
                         {isShort && (
-                          <div style={{ fontSize: '9px', color: '#9ca3af' }}>
+                          <div style={{ fontSize: '10px', color: '#9ca3af' }}>
                             {block.startTime}~{block.endTime}{block.room && ` · ${block.room}`}
                           </div>
                         )}
@@ -404,7 +432,7 @@ const TimetableImageRenderer: React.FC<{
       </div>
 
       {/* Class Summary */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '12px' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
         {Object.entries(
           (student.enrollments || [])
             .filter(e => {
@@ -423,17 +451,17 @@ const TimetableImageRenderer: React.FC<{
           const sc = SUBJECT_COLORS[info.subject as keyof typeof SUBJECT_COLORS] || SUBJECT_COLORS.other;
           return (
             <div key={key} style={{
-              display: 'flex', alignItems: 'center', gap: '4px',
-              padding: '4px 8px', borderRadius: '2px',
-              border: `1px solid ${sc.border}`, backgroundColor: sc.light, fontSize: '10px',
+              display: 'flex', alignItems: 'center', gap: '5px',
+              padding: '5px 10px', borderRadius: '3px',
+              border: `1px solid ${sc.border}`, backgroundColor: sc.light, fontSize: '12px',
             }}>
               <span style={{
-                padding: '2px 4px', borderRadius: '2px', fontWeight: 'bold', fontSize: '9px',
+                padding: '2px 6px', borderRadius: '3px', fontWeight: 'bold', fontSize: '10px',
                 backgroundColor: sc.bg, color: sc.text,
               }}>
                 {SUBJECT_LABELS[info.subject as keyof typeof SUBJECT_LABELS] || info.subject}
               </span>
-              <span style={{ fontWeight: 500 }}>{info.className}</span>
+              <span style={{ fontWeight: 600 }}>{info.className}</span>
               {info.teacher && <span style={{ color: '#9ca3af' }}>| {info.teacher}</span>}
               {info.room && <span style={{ color: '#9ca3af' }}>| {info.room}</span>}
             </div>
@@ -444,15 +472,15 @@ const TimetableImageRenderer: React.FC<{
       {/* 강의실 이동 안내 */}
       {roomChanges.length > 0 && (
         <div style={{
-          marginTop: '12px', backgroundColor: '#fffbeb', border: '1px solid #fde68a',
+          marginTop: '8px', backgroundColor: '#fffbeb', border: '1px solid #fde68a',
           borderRadius: '4px', padding: '10px',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 'bold', color: '#b45309', marginBottom: '6px' }}>
-            ⚠️ 강의실 이동 안내
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 'bold', color: '#b45309', marginBottom: '6px' }}>
+            강의실 이동 안내
           </div>
           {roomChanges.map((change, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: '#92400e', marginBottom: '4px' }}>
-              <span style={{ fontWeight: 'bold', padding: '2px 6px', backgroundColor: '#fef3c7', borderRadius: '2px' }}>{change.day}</span>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#92400e', marginBottom: '4px' }}>
+              <span style={{ fontWeight: 'bold', padding: '2px 6px', backgroundColor: '#fef3c7', borderRadius: '3px' }}>{change.day}</span>
               <span>{change.fromClass}</span>
               <span style={{ color: '#d97706' }}>({change.fromRoom})</span>
               <span style={{ color: '#d97706' }}>→</span>
@@ -467,18 +495,18 @@ const TimetableImageRenderer: React.FC<{
       {/* 셔틀버스 이용 안내 */}
       {shuttleEvents.length > 0 && (
         <div style={{
-          marginTop: '12px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe',
+          marginTop: '8px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe',
           borderRadius: '4px', padding: '10px',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 'bold', color: '#1d4ed8', marginBottom: '6px' }}>
-            🚌 셔틀버스 이용
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 'bold', color: '#1d4ed8', marginBottom: '6px' }}>
+            셔틀버스 이용
           </div>
           {[...shuttleEvents]
-            .sort((a, b) => DAY_ORDER.indexOf(a.day) - DAY_ORDER.indexOf(b.day))
+            .sort((a, b) => WEEKDAY_ORDER.indexOf(a.day) - WEEKDAY_ORDER.indexOf(b.day))
             .map((e, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: '#1e40af', marginBottom: '4px' }}>
-              <span style={{ fontWeight: 'bold', padding: '2px 6px', backgroundColor: '#dbeafe', borderRadius: '2px' }}>{e.day}</span>
-              <span style={{ padding: '2px 6px', borderRadius: '2px', color: 'white', fontSize: '9px', fontWeight: 'bold', backgroundColor: '#3b82f6' }}>승차</span>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#1e40af', marginBottom: '4px' }}>
+              <span style={{ fontWeight: 'bold', padding: '2px 6px', backgroundColor: '#dbeafe', borderRadius: '3px' }}>{e.day}</span>
+              <span style={{ padding: '2px 6px', borderRadius: '3px', color: 'white', fontSize: '10px', fontWeight: 'bold', backgroundColor: '#3b82f6' }}>승차</span>
               <span style={{ fontWeight: 'bold' }}>{e.time}</span>
               <span style={{ color: '#3b82f6' }}>{e.busName}</span>
               {e.destination && <span style={{ color: '#60a5fa' }}>· {e.destination}</span>}
@@ -639,6 +667,8 @@ const TimetableDistributionTab: React.FC = () => {
           cacheBust: true,
           quality: 0.9,
           pixelRatio: 2,
+          skipFonts: true,
+          fontEmbedCSS: '',
         });
         reports.push({
           studentId: student.id,

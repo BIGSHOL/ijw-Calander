@@ -16,6 +16,7 @@ interface ScheduledDateModalProps {
     title?: string;
     description?: React.ReactNode;
     customImmediateLabel?: string;
+    actionVerb?: string; // 기본 '이동', '삽입' 등으로 변경 가능
 }
 
 const ScheduledDateModal: React.FC<ScheduledDateModalProps> = ({
@@ -29,6 +30,7 @@ const ScheduledDateModal: React.FC<ScheduledDateModalProps> = ({
     title,
     description,
     customImmediateLabel,
+    actionVerb,
 }) => {
     const [mode, setMode] = useState<'immediate' | 'scheduled'>('immediate');
     const [selectedDate, setSelectedDate] = useState('');
@@ -47,10 +49,11 @@ const ScheduledDateModal: React.FC<ScheduledDateModalProps> = ({
     // "즉시이동" 시 사용할 날짜
     const immediateDate = futureFirstClassDay || undefined;
 
-    // "즉시이동" 라벨
+    // "즉시이동/삽입" 라벨
+    const verb = actionVerb || '이동';
     const defaultImmediateLabel = futureFirstClassDay
-        ? `즉시 이동 (${format(new Date(futureFirstClassDay), 'M/d')})`
-        : '즉시 이동 (오늘)';
+        ? `즉시 ${verb} (${format(new Date(futureFirstClassDay), 'M/d')})`
+        : `즉시 ${verb} (오늘)`;
     const immediateLabel = customImmediateLabel || defaultImmediateLabel;
 
     const handleConfirm = () => {

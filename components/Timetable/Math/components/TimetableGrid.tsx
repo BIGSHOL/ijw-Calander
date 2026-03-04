@@ -63,9 +63,10 @@ interface TimetableGridProps {
     selectedClassId?: string | null;
     onCellSelect?: (classId: string) => void;
     onEnrollStudent?: (studentId: string, className: string) => void;
-    selectedStudentId?: string | null;
-    copiedStudentId?: string | null;
+    selectedStudentIds?: Set<string>;
+    copiedStudentIds?: string[] | null;
     onStudentSelect?: (studentId: string, className: string) => void;
+    onStudentMultiSelect?: (studentIds: Set<string>, className: string) => void;
     // 배정 예정 취소
     onCancelScheduledEnrollment?: (studentId: string, className: string) => void;
     // 퇴원 드롭존
@@ -111,9 +112,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     selectedClassId,
     onCellSelect,
     onEnrollStudent,
-    selectedStudentId,
-    copiedStudentId,
+    selectedStudentIds,
+    copiedStudentIds,
     onStudentSelect,
+    onStudentMultiSelect,
     onCancelScheduledEnrollment,
     onWithdrawalDrop
 }) => {
@@ -420,9 +422,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     isSelected={selectedClassId === cls.id}
                     onCellSelect={onCellSelect}
                     onEnrollStudent={onEnrollStudent}
-                    selectedStudentId={selectedStudentId}
-                    copiedStudentId={copiedStudentId}
+                    selectedStudentIds={selectedStudentIds}
+                    copiedStudentIds={copiedStudentIds}
                     onStudentSelect={onStudentSelect}
+                    onStudentMultiSelect={onStudentMultiSelect}
                     mode={mode}
                     onCancelScheduledEnrollment={onCancelScheduledEnrollment}
                     onWithdrawalDrop={onWithdrawalDrop}
@@ -1329,6 +1332,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             isSelected={selectedClassId === cls.id}
                                                                             onCellSelect={onCellSelect}
                                                                             onEnrollStudent={onEnrollStudent}
+                                                                            selectedStudentIds={selectedStudentIds}
+                                                                            copiedStudentIds={copiedStudentIds}
+                                                                            onStudentSelect={onStudentSelect}
+                                                                            onStudentMultiSelect={onStudentMultiSelect}
                                                                             mode={mode}
                                                                             onCancelScheduledEnrollment={onCancelScheduledEnrollment}
                     onWithdrawalDrop={onWithdrawalDrop}
@@ -1423,6 +1430,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             isSelected={selectedClassId === cls.id}
                                                                             onCellSelect={onCellSelect}
                                                                             onEnrollStudent={onEnrollStudent}
+                                                                            selectedStudentIds={selectedStudentIds}
+                                                                            copiedStudentIds={copiedStudentIds}
+                                                                            onStudentSelect={onStudentSelect}
+                                                                            onStudentMultiSelect={onStudentMultiSelect}
                                                                             mode={mode}
                                                                             onCancelScheduledEnrollment={onCancelScheduledEnrollment}
                     onWithdrawalDrop={onWithdrawalDrop}
@@ -1653,6 +1664,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         isSelected={selectedClassId === cls.id}
                                                                         onCellSelect={onCellSelect}
                                                                         onEnrollStudent={onEnrollStudent}
+                                                                        selectedStudentIds={selectedStudentIds}
+                                                                        copiedStudentIds={copiedStudentIds}
+                                                                        onStudentSelect={onStudentSelect}
+                                                                        onStudentMultiSelect={onStudentMultiSelect}
                                                                         mode={mode}
                                                                     onCancelScheduledEnrollment={onCancelScheduledEnrollment}
                     onWithdrawalDrop={onWithdrawalDrop}

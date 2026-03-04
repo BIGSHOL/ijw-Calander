@@ -95,6 +95,7 @@ interface MathTimetableContentProps {
     handleDragOver: (e: React.DragEvent, classId: string) => void;
     handleDragLeave: () => void;
     handleDrop: (e: React.DragEvent, classId: string, zone?: string) => void;
+    handleMultiDrop: (studentIds: string[], fromClassId: string, toClassId: string, toZone?: string) => void;
     currentSubjectFilter: string;
     studentMap: Record<string, UnifiedStudent>;
     timetableViewMode: 'day-based' | 'teacher-based';
@@ -183,6 +184,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     handleDragOver,
     handleDragLeave,
     handleDrop,
+    handleMultiDrop,
     currentSubjectFilter,
     studentMap,
     timetableViewMode,
@@ -224,54 +226,118 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     const gridRef = React.useRef<HTMLDivElement>(null);
     // 엑셀뷰용 셀 선택 + 학생 등록 + 복사/붙여넣기
     const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
-    const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+    const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
     const [selectedStudentClassName, setSelectedStudentClassName] = useState<string | null>(null);
-    const [copiedStudent, setCopiedStudent] = useState<{ studentId: string; className: string } | null>(null);
-    const { enrollExistingStudent } = useClassOperations();
+    const [copiedStudent, setCopiedStudent] = useState<{ studentIds: string[]; className: string } | null>(null);
+    const { enrollExistingStudent, smartRemoveStudent, deleteEnrollmentRecord } = useClassOperations();
+    // 붙여넣기 등록일 선택 모달 상태
+    const [pasteModalInfo, setPasteModalInfo] = useState<{
+        studentIds: string[];
+        targetClassName: string;
+        targetClassSchedule?: string[];
+    } | null>(null);
 
-    // 엑셀 모드 학생 선택 핸들러
+    // 엑셀 모드 학생 선택 핸들러 (단일)
     const handleExcelStudentSelect = useCallback((studentId: string, className: string) => {
-        setSelectedStudentId(studentId);
+        setSelectedStudentIds(new Set([studentId]));
         setSelectedStudentClassName(className);
     }, []);
 
-    // 엑셀 모드 Ctrl+C / Ctrl+V 키보드 이벤트
+    // 엑셀 모드 멀티선택 핸들러
+    const handleExcelStudentMultiSelect = useCallback((studentIds: Set<string>, className: string) => {
+        setSelectedStudentIds(studentIds);
+        setSelectedStudentClassName(className);
+    }, []);
+
+    // 엑셀 모드 키보드 이벤트 (Ctrl+C/V, Del)
     useEffect(() => {
         if (viewType !== 'excel') return;
 
-        const handleKeyDown = (e: KeyboardEvent) => {
+        const handleKeyDown = async (e: KeyboardEvent) => {
+            // Del 키: 선택된 학생 삭제
+            if (e.key === 'Delete') {
+                if (selectedStudentIds.size === 0 || !selectedStudentClassName) return;
+                e.preventDefault();
+
+                const className = selectedStudentClassName;
+                const targetClass = filteredClasses.find(c => c.className === className);
+                if (!targetClass) return;
+
+                const allStudents: any[] = targetClass.studentList || [];
+                const today = getTodayKST();
+                const selectedList = allStudents.filter((s: any) => selectedStudentIds.has(s.id));
+                const withdrawnSelected = selectedList.filter((s: any) => s.withdrawalDate && s.withdrawalDate <= today);
+                const activeSelected = selectedList.filter((s: any) => !s.withdrawalDate || s.withdrawalDate > today);
+
+                const studentNames = selectedList.map((s: any) => s.name || s.id).join(', ');
+
+                try {
+                    if (withdrawnSelected.length > 0 && activeSelected.length === 0) {
+                        // 퇴원생만 선택: 수업 기록 완전 삭제
+                        if (!confirm(`${studentNames}의 수업 기록을 완전히 삭제하시겠습니까?`)) return;
+                        for (const s of withdrawnSelected) {
+                            await deleteEnrollmentRecord(className, s.id);
+                        }
+                    } else if (activeSelected.length > 0) {
+                        // 재원생 포함: 수업에서 제거
+                        if (!confirm(`${studentNames}을(를) ${className}에서 삭제하시겠습니까?`)) return;
+                        for (const s of activeSelected) {
+                            await smartRemoveStudent(className, s.id);
+                        }
+                        // 퇴원생도 같이 선택되었으면 기록 삭제
+                        for (const s of withdrawnSelected) {
+                            await deleteEnrollmentRecord(className, s.id);
+                        }
+                    }
+                } catch (error) {
+                    console.error('학생 삭제 오류:', error);
+                    alert('학생 삭제에 실패했습니다.');
+                }
+
+                setSelectedStudentIds(new Set());
+                setSelectedStudentClassName(null);
+                return;
+            }
+
             if (!e.ctrlKey && !e.metaKey) return;
 
             if (e.key === 'c') {
                 // Ctrl+C: 선택된 학생 복사
-                if (selectedStudentId && selectedStudentClassName) {
-                    setCopiedStudent({ studentId: selectedStudentId, className: selectedStudentClassName });
+                if (selectedStudentIds.size > 0 && selectedStudentClassName) {
+                    setCopiedStudent({ studentIds: [...selectedStudentIds], className: selectedStudentClassName });
                 }
             }
 
             if (e.key === 'v') {
-                // Ctrl+V: 선택된 셀에 붙여넣기
+                // Ctrl+V: 선택된 셀에 붙여넣기 (등록일 선택 모달 표시)
                 if (!copiedStudent || !selectedClassId) return;
                 e.preventDefault();
 
-                // 대상 반 찾기
                 const targetClass = filteredClasses.find(c => c.id === selectedClassId);
                 if (!targetClass) return;
 
-                // 이미 해당 반에 소속된 학생인지 확인
                 const existingIds = new Set(targetClass.studentIds || targetClass.studentList?.map((s: any) => s.id) || []);
-                if (existingIds.has(copiedStudent.studentId)) {
-                    alert('이미 소속된 수업입니다');
+                const newStudentIds = copiedStudent.studentIds.filter(sid => !existingIds.has(sid));
+                const skipped = copiedStudent.studentIds.length - newStudentIds.length;
+
+                if (newStudentIds.length === 0) {
+                    if (skipped > 0) alert(`${skipped}명은 이미 소속된 학생입니다.`);
                     return;
                 }
 
-                enrollExistingStudent(copiedStudent.studentId, targetClass.className);
+                // 등록일 선택 모달 표시
+                setPasteModalInfo({
+                    studentIds: newStudentIds,
+                    targetClassName: targetClass.className,
+                    targetClassSchedule: targetClass.schedule,
+                });
+                if (skipped > 0) alert(`${skipped}명은 이미 소속되어 제외됩니다.`);
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [viewType, selectedStudentId, selectedStudentClassName, copiedStudent, selectedClassId, filteredClasses, enrollExistingStudent]);
+    }, [viewType, selectedStudentIds, selectedStudentClassName, copiedStudent, selectedClassId, filteredClasses, enrollExistingStudent, smartRemoveStudent, deleteEnrollmentRecord]);
 
     // 이미지 내보내기용 그룹 상태
     const [exportGroups, setExportGroups] = useState<ExportGroup[]>([]);
@@ -444,9 +510,22 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                 simulation.moveStudent(fromClass.className, toClass.className, studentId);
             }
         } else {
+            // 멀티 학생 드롭 처리
+            const multiData = e.dataTransfer.getData('multiStudentIds');
+            if (multiData) {
+                e.preventDefault();
+                try {
+                    const studentIds: string[] = JSON.parse(multiData);
+                    const fromClassId = e.dataTransfer.getData('fromClassId');
+                    if (fromClassId && studentIds.length > 0) {
+                        handleMultiDrop(studentIds, fromClassId, toClassId, toZone);
+                    }
+                } catch { /* ignore */ }
+                return;
+            }
             handleDrop(e, toClassId, toZone);
         }
-    }, [isScenarioMode, simulation, handleDrop]);
+    }, [isScenarioMode, simulation, handleDrop, handleMultiDrop]);
 
     if (loading) {
         return (
@@ -601,9 +680,10 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         selectedClassId={selectedClassId}
                         onCellSelect={setSelectedClassId}
                         onEnrollStudent={enrollExistingStudent}
-                        selectedStudentId={selectedStudentId}
-                        copiedStudentId={copiedStudent?.studentId || null}
+                        selectedStudentIds={selectedStudentIds}
+                        copiedStudentIds={copiedStudent?.studentIds || null}
                         onStudentSelect={handleExcelStudentSelect}
+                        onStudentMultiSelect={handleExcelStudentMultiSelect}
                         onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
                     />
                 </div>
@@ -749,6 +829,35 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     groups={viewType === 'class' ? exportGroups : undefined}
                     onGroupsChanged={viewType === 'class' ? handleExportGroupsChanged : undefined}
                 />
+
+                {/* 붙여넣기 등록일 선택 모달 */}
+                {pasteModalInfo && (
+                    <ScheduledDateModal
+                        studentName={(() => {
+                            const names = pasteModalInfo.studentIds.map(id => studentMap[id]?.name || id);
+                            return names.length <= 3 ? names.join(', ') : `${names.slice(0, 3).join(', ')} 외 ${names.length - 3}명`;
+                        })()}
+                        fromClassName={copiedStudent?.className || ''}
+                        toClassName={pasteModalInfo.targetClassName}
+                        title="등록일 설정"
+                        actionVerb="삽입"
+                        weekStart={currentMonday}
+                        targetClassSchedule={pasteModalInfo.targetClassSchedule}
+                        onConfirm={async (enrollmentDate?: string) => {
+                            const { studentIds, targetClassName } = pasteModalInfo;
+                            setPasteModalInfo(null);
+                            try {
+                                for (const sid of studentIds) {
+                                    await enrollExistingStudent(sid, targetClassName, enrollmentDate);
+                                }
+                            } catch (error) {
+                                console.error('학생 등록 오류:', error);
+                                alert('학생 등록에 실패했습니다.');
+                            }
+                        }}
+                        onClose={() => setPasteModalInfo(null)}
+                    />
+                )}
 
                 {/* Scenario Management Modal */}
                 {isScenarioModalOpen && (
@@ -1046,6 +1155,7 @@ const TimetableManager = ({
         handleDragOver,
         handleDragLeave,
         handleDrop,
+        handleMultiDrop,
         handleSavePendingMoves,
         handleCancelPendingMoves,
         updatePendingMoveDate
@@ -1488,6 +1598,7 @@ const TimetableManager = ({
                 handleDragOver={handleDragOver}
                 handleDragLeave={handleDragLeave}
                 handleDrop={handleDrop}
+                handleMultiDrop={handleMultiDrop}
                 currentSubjectFilter={currentSubjectFilter}
                 studentMap={studentMap}
                 timetableViewMode={timetableViewMode}
