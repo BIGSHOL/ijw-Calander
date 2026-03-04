@@ -2,11 +2,11 @@ import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   Send, Search, Loader2, AlertCircle,
   CheckCircle, Calendar, Eye, X,
-  Bus, Square, CheckSquare,
+  Square, CheckSquare,
 } from 'lucide-react';
 import { useStudents } from '../../hooks/useStudents';
 import { useClasses } from '../../hooks/useClasses';
-import { useShuttle } from '../../hooks/useShuttle';
+import { useShuttle, BusRoute } from '../../hooks/useShuttle';
 import { UnifiedStudent } from '../../types';
 import {
   MATH_PERIOD_INFO,
@@ -39,7 +39,7 @@ interface StudentDistResult {
 const WEEKDAY_ORDER = ['월', '화', '수', '목', '금'];
 const PIXELS_PER_MINUTE_IMG = 1.5;
 const BATCH_SIZE = 15;
-const DEFAULT_START_MIN = 13 * 60; // 13:00
+const DEFAULT_START_MIN = 12 * 60; // 12:00
 const DEFAULT_END_MIN = 21 * 60;   // 21:00
 
 const timeToMinutes = (time: string): number => {
@@ -69,12 +69,12 @@ const CLASS_COLORS = [
   { bg: '#d946ef', light: '#fdf4ff', text: '#86198f', border: '#e879f9' },
 ];
 
-const getClassColor = (className: string) => {
-  let hash = 0;
-  for (let i = 0; i < className.length; i++) {
-    hash = className.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return CLASS_COLORS[Math.abs(hash) % CLASS_COLORS.length];
+/** 학생의 고유 수업 목록에서 인덱스 기반 색상 맵 생성 (충돌 없음) */
+const buildClassColorMap = (classNames: string[]): Map<string, typeof CLASS_COLORS[0]> => {
+  const unique = [...new Set(classNames)];
+  const map = new Map<string, typeof CLASS_COLORS[0]>();
+  unique.forEach((name, i) => map.set(name, CLASS_COLORS[i % CLASS_COLORS.length]));
+  return map;
 };
 
 // 오후 12시간제 표시 (13→1, 14→2, ..., 21→9)
@@ -84,7 +84,7 @@ const formatHourLabel = (minutes: number): number => {
 };
 
 // 그리드 상단 여백 (첫 번째 시간 라벨 잘림 방지)
-const GRID_PAD_TOP = 18;
+const GRID_PAD_TOP = 30;
 
 // ─── Build timetable data (from StudentTimetableModal) ───
 function buildStudentTimetable(student: UnifiedStudent, allClasses: any[]) {
@@ -194,30 +194,13 @@ function buildStudentTimetable(student: UnifiedStudent, allClasses: any[]) {
 const TimetableImageRenderer: React.FC<{
   student: UnifiedStudent;
   allClasses: any[];
-  busRoutes: any[];
+  busRoutes: BusRoute[];
   reportDate: string;
 }> = ({ student, allClasses, busRoutes, reportDate }) => {
   const { dayBlocks, activeDays } = useMemo(
     () => buildStudentTimetable(student, allClasses),
     [student, allClasses]
   );
-
-  const shuttleEvents = useMemo(() => {
-    const events: Array<{ day: string; time: string; busName: string; destination: string }> = [];
-    busRoutes.forEach((route: any) => {
-      route.stops?.forEach((stop: any) => {
-        stop.boardingStudents?.forEach((s: any) => {
-          if (s.name === student.name) {
-            const days = s.days ? s.days.replace(/[,\s]/g, '').split('') : [];
-            days.forEach((day: string) => {
-              events.push({ day, time: stop.time, busName: route.busName, destination: stop.destination });
-            });
-          }
-        });
-      });
-    });
-    return events;
-  }, [busRoutes, student.name]);
 
   // 강의실 이동 감지 (블록 기반, 1시간 갭까지 허용)
   const roomChanges = useMemo(() => {
@@ -254,7 +237,46 @@ const TimetableImageRenderer: React.FC<{
     return changes;
   }, [dayBlocks]);
 
+  // 수업별 고유 색상 맵 (인덱스 기반, 충돌 없음)
+  const classColorMap = useMemo(() => {
+    const allClassNames: string[] = [];
+    for (const blocks of Object.values(dayBlocks)) {
+      for (const block of blocks) {
+        if (!allClassNames.includes(block.className)) {
+          allClassNames.push(block.className);
+        }
+      }
+    }
+    return buildClassColorMap(allClassNames);
+  }, [dayBlocks]);
+
   const hasClasses = activeDays.size > 0;
+
+  // 셔틀버스 승하차 이벤트 추출
+  const shuttleEvents = useMemo(() => {
+    const events: Array<{ day: string; time: string; busName: string; destination: string; type: 'boarding' | 'alighting' }> = [];
+    busRoutes.forEach(route => {
+      route.stops.forEach(stop => {
+        stop.boardingStudents.forEach(s => {
+          if (s.name === student.name) {
+            const days = s.days ? s.days.replace(/[,\s]/g, '').split('') : [];
+            days.forEach(day => {
+              events.push({ day, time: stop.time, busName: route.busName, destination: stop.destination, type: 'boarding' });
+            });
+          }
+        });
+        stop.alightingStudents.forEach(s => {
+          if (s.name === student.name) {
+            const days = s.days ? s.days.replace(/[,\s]/g, '').split('') : [];
+            days.forEach(day => {
+              events.push({ day, time: stop.time, busName: route.busName, destination: stop.destination, type: 'alighting' });
+            });
+          }
+        });
+      });
+    });
+    return events;
+  }, [busRoutes, student.name]);
 
   // 동적 DAY_ORDER: 토요일 수업이 있으면 토요일 추가, 일요일은 항상 제외
   const dayOrder = useMemo(() => {
@@ -275,12 +297,6 @@ const TimetableImageRenderer: React.FC<{
         if (e > maxEnd) maxEnd = e;
       }
     }
-    // 셔틀 이벤트도 고려
-    shuttleEvents.forEach(e => {
-      const m = timeToMinutes(e.time);
-      if (m < minStart) minStart = m;
-      if (m + 30 > maxEnd) maxEnd = m + 30;
-    });
     // 시간 단위로 맞추기 (내림/올림) + 30분 여유
     const start = Math.floor((minStart - 30) / 60) * 60;
     const end = Math.ceil((maxEnd + 30) / 60) * 60;
@@ -289,7 +305,7 @@ const TimetableImageRenderer: React.FC<{
       rangeStartMin: Math.min(DEFAULT_START_MIN, Math.max(start, 0)),
       rangeEndMin: Math.max(DEFAULT_END_MIN, Math.min(end, 24 * 60)),
     };
-  }, [dayBlocks, shuttleEvents]);
+  }, [dayBlocks]);
 
   const totalHeight = (rangeEndMin - rangeStartMin) * PIXELS_PER_MINUTE_IMG;
 
@@ -392,7 +408,7 @@ const TimetableImageRenderer: React.FC<{
                   const endMin = timeToMinutes(block.endTime);
                   const top = (startMin - rangeStartMin) * PIXELS_PER_MINUTE_IMG + GRID_PAD_TOP;
                   const height = (endMin - startMin) * PIXELS_PER_MINUTE_IMG;
-                  const sc = getClassColor(block.className);
+                  const sc = classColorMap.get(block.className) || CLASS_COLORS[0];
                   const isShort = height < 60;
 
                   return (
@@ -406,31 +422,30 @@ const TimetableImageRenderer: React.FC<{
                       }}
                     >
                       <div style={{
-                        padding: isShort ? '3px 8px' : '8px 10px', height: '100%',
+                        padding: isShort ? '2px 6px' : '6px 8px', height: '100%',
                         display: 'flex', flexDirection: 'column',
                         justifyContent: isShort ? 'center' : 'flex-start',
                       }}>
                         <div style={{
-                          fontWeight: 'bold', fontSize: '20px',
+                          fontWeight: 'bold', fontSize: '13px',
                           color: sc.text,
-                          lineHeight: '1.2', wordBreak: 'break-word',
+                          lineHeight: '1.2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                         }}>
-                          {block.className}
+                          {SUBJECT_LABELS[block.subject as keyof typeof SUBJECT_LABELS] || block.subject}-{block.teacher || ''}
                         </div>
                         {!isShort && (
                           <>
-                            <div style={{ fontSize: '16px', fontWeight: 500, color: '#6b7280', marginTop: '3px' }}>
-                              {block.startTime} ~ {block.endTime}
+                            <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {block.room ? `${block.room}-인재원` : '인재원'}
                             </div>
-                            <div style={{ fontSize: '15px', color: '#9ca3af', marginTop: '2px' }}>
-                              {block.room && `${block.room}`}
-                              {block.teacher && ` | ${block.teacher}`}
+                            <div style={{ fontSize: '11px', color: '#9ca3af', whiteSpace: 'nowrap' }}>
+                              {block.startTime}~{block.endTime}
                             </div>
                           </>
                         )}
                         {isShort && (
-                          <div style={{ fontSize: '14px', color: '#9ca3af' }}>
-                            {block.startTime}~{block.endTime}{block.room && ` · ${block.room}`}
+                          <div style={{ fontSize: '10px', color: '#9ca3af', whiteSpace: 'nowrap' }}>
+                            {block.room ? `${block.room}-인재원` : '인재원'} {block.startTime}~{block.endTime}
                           </div>
                         )}
                       </div>
@@ -438,12 +453,13 @@ const TimetableImageRenderer: React.FC<{
                   );
                 })}
 
-                {/* Shuttle events */}
+                {/* 셔틀버스 승하차 표시 */}
                 {shuttleEvents
                   .filter(e => e.day === day)
                   .map((e, ei) => {
                     const eventMin = timeToMinutes(e.time);
                     const top = (eventMin - rangeStartMin) * PIXELS_PER_MINUTE_IMG + GRID_PAD_TOP;
+                    const isBoarding = e.type === 'boarding';
                     return (
                       <div
                         key={`shuttle-${ei}`}
@@ -454,14 +470,15 @@ const TimetableImageRenderer: React.FC<{
                         }}
                       >
                         <span style={{
-                          backgroundColor: '#3b82f6', color: 'white', fontSize: '13px',
-                          padding: '3px 8px', borderRadius: '9999px', fontWeight: 'bold',
+                          backgroundColor: isBoarding ? '#3b82f6' : '#f97316', color: 'white', fontSize: '11px',
+                          padding: '2px 8px', borderRadius: '9999px', fontWeight: 'bold',
                         }}>
-                          🚌 {e.time}
+                          {isBoarding ? '승차' : '하차'} {e.time}
                         </span>
                       </div>
                     );
                   })}
+
               </div>
             );
           })}
@@ -485,7 +502,7 @@ const TimetableImageRenderer: React.FC<{
               return acc;
             }, {} as Record<string, { className: string; subject: string; teacher: string; room: string }>)
         ).map(([key, info]) => {
-          const sc = getClassColor(info.className);
+          const sc = classColorMap.get(info.className) || CLASS_COLORS[0];
           return (
             <div key={key} style={{
               display: 'flex', alignItems: 'center', gap: '6px',
@@ -535,22 +552,25 @@ const TimetableImageRenderer: React.FC<{
           marginTop: '8px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe',
           borderRadius: '4px', padding: '10px',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '16px', fontWeight: 'bold', color: '#1d4ed8', marginBottom: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '18px', fontWeight: 'bold', color: '#1d4ed8', marginBottom: '6px' }}>
             셔틀버스 이용
           </div>
           {[...shuttleEvents]
-            .sort((a, b) => WEEKDAY_ORDER.indexOf(a.day) - WEEKDAY_ORDER.indexOf(b.day))
+            .sort((a, b) => WEEKDAY_ORDER.indexOf(a.day) - WEEKDAY_ORDER.indexOf(b.day) || a.time.localeCompare(b.time))
             .map((e, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: '#1e40af', marginBottom: '4px' }}>
-              <span style={{ fontWeight: 'bold', padding: '2px 8px', backgroundColor: '#dbeafe', borderRadius: '3px' }}>{e.day}</span>
-              <span style={{ padding: '2px 8px', borderRadius: '3px', color: 'white', fontSize: '12px', fontWeight: 'bold', backgroundColor: '#3b82f6' }}>승차</span>
-              <span style={{ fontWeight: 'bold' }}>{e.time}</span>
-              <span style={{ color: '#3b82f6' }}>{e.busName}</span>
-              {e.destination && <span style={{ color: '#60a5fa' }}>· {e.destination}</span>}
-            </div>
-          ))}
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '15px', color: '#1e40af', marginBottom: '4px' }}>
+                <span style={{ fontWeight: 'bold', padding: '2px 6px', backgroundColor: '#dbeafe', borderRadius: '3px' }}>{e.day}</span>
+                <span style={{ padding: '2px 8px', borderRadius: '3px', color: 'white', fontSize: '13px', fontWeight: 'bold', backgroundColor: e.type === 'boarding' ? '#3b82f6' : '#f97316' }}>
+                  {e.type === 'boarding' ? '승차' : '하차'}
+                </span>
+                <span style={{ fontWeight: 'bold' }}>{e.time}</span>
+                <span style={{ color: '#3b82f6' }}>{e.busName}</span>
+                {e.destination && <span style={{ color: '#60a5fa' }}>· {e.destination}</span>}
+              </div>
+            ))}
         </div>
       )}
+
     </div>
   );
 };
@@ -559,7 +579,7 @@ const TimetableImageRenderer: React.FC<{
 const PreviewModal: React.FC<{
   student: UnifiedStudent;
   allClasses: any[];
-  busRoutes: any[];
+  busRoutes: BusRoute[];
   reportDate: string;
   onClose: () => void;
 }> = ({ student, allClasses, busRoutes, reportDate, onClose }) => (
@@ -586,7 +606,6 @@ const TimetableDistributionTab: React.FC = () => {
   const { students, loading: studentsLoading } = useStudents();
   const { data: allClasses = [] } = useClasses();
   const { busRoutes } = useShuttle();
-
   // Settings (클래스노트 로그인 정보 하드코딩)
   const loginId = 'injaewonpremium';
   const loginPw = 'mbplaza2*';

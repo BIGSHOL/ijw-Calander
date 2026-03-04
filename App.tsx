@@ -786,6 +786,8 @@ const App: React.FC = () => {
                   classKeywords,
                   mathViewMode,
                   setMathViewMode: setMathViewMode as any,
+                  hasPermission,
+                  setIsTimetableSettingsOpen,
                 } : undefined}
                 ganttProps={appMode === 'gantt' ? {
                   usersFromStaff,

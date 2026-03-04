@@ -86,6 +86,8 @@ interface TabContentProps {
     classKeywords: any[];
     mathViewMode: string;
     setMathViewMode: (mode: string) => void;
+    hasPermission: (perm: string) => boolean;
+    setIsTimetableSettingsOpen: (open: boolean) => void;
   };
 
   // Gantt props
@@ -244,7 +246,7 @@ export const TabContent: React.FC<TabContentProps> = ({
         </div>
       ) : appMode === 'timetable' && timetableProps ? (
         <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-hidden">
+          <div className="w-full flex-1 min-h-0">
             <TimetableManager
               subjectTab={timetableProps.timetableSubject}
               onSubjectChange={timetableProps.setTimetableSubject}
@@ -255,6 +257,8 @@ export const TabContent: React.FC<TabContentProps> = ({
               classKeywords={timetableProps.classKeywords}
               mathViewMode={timetableProps.mathViewMode as any}
               onMathViewModeChange={timetableProps.setMathViewMode}
+              hasPermissionFn={timetableProps.hasPermission}
+              setIsTimetableSettingsOpen={timetableProps.setIsTimetableSettingsOpen}
             />
           </div>
         </Suspense>

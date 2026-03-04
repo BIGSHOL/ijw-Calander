@@ -131,6 +131,14 @@ interface MathTimetableContentProps {
     onCancelScheduledEnrollment?: (studentId: string, className: string) => void;
     // 퇴원 드롭존
     onWithdrawalDrop?: (studentId: string, classId: string, className: string) => void;
+    // 과목/뷰 전환 (TimetableNavBar 통합)
+    timetableSubject?: SubjectType;
+    setTimetableSubject?: (value: SubjectType) => void;
+    setTimetableViewType?: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>;
+    mathViewMode?: 'day-based' | 'teacher-based';
+    setMathViewMode?: (value: string) => void;
+    hasPermissionFn?: (perm: string) => boolean;
+    setIsTimetableSettingsOpen?: (value: boolean) => void;
 }
 
 const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
@@ -214,6 +222,14 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     setSelectedWithdrawalEntry,
     onCancelScheduledEnrollment,
     onWithdrawalDrop,
+    // 과목/뷰 전환 (TimetableNavBar 통합)
+    timetableSubject,
+    setTimetableSubject,
+    setTimetableViewType,
+    mathViewMode,
+    setMathViewMode,
+    hasPermissionFn,
+    setIsTimetableSettingsOpen,
 }) => {
     const simulation = useMathSimulation();
     const { isScenarioMode, currentScenarioName, enterScenarioMode, exitScenarioMode, loadFromLive, publishToLive } = simulation;
@@ -537,7 +553,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
 
     return (
         <>
-            <div className="bg-white shadow-xl border border-gray-200 h-full flex flex-col overflow-hidden">
+            <div className="bg-white shadow-xl border border-gray-200 h-full flex flex-col overflow-visible relative">
                 {/* Header Component */}
                 <TimetableHeader
                     weekLabel={weekLabel}
@@ -594,6 +610,14 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     // 퇴원 관리 권한
                     canEditWithdrawal={canEditWithdrawal}
                     canReactivateWithdrawal={canReactivateWithdrawal}
+                    // 과목/뷰 전환 (TimetableNavBar 통합)
+                    timetableSubject={timetableSubject}
+                    setTimetableSubject={setTimetableSubject}
+                    setTimetableViewType={setTimetableViewType}
+                    mathViewMode={mathViewMode}
+                    setMathViewMode={setMathViewMode}
+                    hasPermission={hasPermissionFn}
+                    setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
                 />
 
                 {/* Timetable Content - viewType에 따라 분기 */}
@@ -892,6 +916,9 @@ interface TimetableManagerProps {
     // 수학 뷰 모드 (날짜별/강사별)
     mathViewMode?: 'day-based' | 'teacher-based';
     onMathViewModeChange?: (mode: 'day-based' | 'teacher-based') => void;
+    // TimetableNavBar 통합용
+    hasPermissionFn?: (perm: string) => boolean;
+    setIsTimetableSettingsOpen?: (value: boolean) => void;
 }
 
 const TimetableManager = ({
@@ -908,6 +935,8 @@ const TimetableManager = ({
     currentUser,
     mathViewMode: externalMathViewMode,
     onMathViewModeChange,
+    hasPermissionFn: externalHasPermission,
+    setIsTimetableSettingsOpen: externalSetIsTimetableSettingsOpen,
 }: TimetableManagerProps) => {
     const queryClient = useQueryClient();
     const { hasPermission } = usePermissions(currentUser);
@@ -1628,6 +1657,14 @@ const TimetableManager = ({
                 setSelectedWithdrawalEntry={setSelectedWithdrawalEntry}
                 onCancelScheduledEnrollment={handleCancelScheduledEnrollment}
                 onWithdrawalDrop={handleWithdrawalDrop}
+                // 과목/뷰 전환 (TimetableNavBar 통합)
+                timetableSubject={subjectTab}
+                setTimetableSubject={setSubjectTab}
+                setTimetableViewType={setViewType as React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>}
+                mathViewMode={timetableViewMode}
+                setMathViewMode={setTimetableViewMode}
+                hasPermissionFn={externalHasPermission || hasPermission}
+                setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
             />
             {/* 드래그 예정일 선택 모달 */}
             {dateModalInfo && (

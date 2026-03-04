@@ -1147,9 +1147,38 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
                     <span className="w-10 shrink-0"></span>
 
                     {/* 시작일 */}
-                    <span className="w-16 shrink-0 text-xxs text-blue-600 font-medium text-center">
-                      {group.startDate ? formatDate(group.startDate) : '-'}
-                    </span>
+                    {canEditEnrollmentDates && !readOnly && editingDate?.key === `scheduled_${group.subject}_${group.className}` && editingDate?.field === 'startDate' ? (
+                      <input
+                        type="date"
+                        className="w-24 shrink-0 text-xxs text-blue-600 text-center border border-blue-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+                        defaultValue={group.startDate || ''}
+                        autoFocus
+                        onBlur={(e) => {
+                          if (e.target.value && e.target.value !== group.startDate) {
+                            handleDateChange(group, 'startDate', e.target.value);
+                          } else {
+                            setEditingDate(null);
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                          if (e.key === 'Escape') setEditingDate(null);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    ) : (
+                      <span
+                        className={`w-16 shrink-0 text-xxs text-blue-600 font-medium text-center ${canEditEnrollmentDates && !readOnly ? 'cursor-pointer hover:underline' : ''}`}
+                        onClick={(e) => {
+                          if (canEditEnrollmentDates && !readOnly) {
+                            e.stopPropagation();
+                            setEditingDate({ key: `scheduled_${group.subject}_${group.className}`, field: 'startDate' });
+                          }
+                        }}
+                      >
+                        {group.startDate ? formatDate(group.startDate) : '-'}
+                      </span>
+                    )}
 
                     {/* 삭제 버튼 - readOnly 모드에서는 숨김 */}
                     {!readOnly && (

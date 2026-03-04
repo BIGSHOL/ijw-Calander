@@ -2,9 +2,10 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { addDays } from 'date-fns';
 import {
     ChevronLeft, ChevronRight, Search, X, Settings, Eye, Edit, SlidersHorizontal,
-    ArrowRightLeft, Copy, Upload, Save, Link2, Users, ChevronUp, ChevronDown, GripVertical, Download
+    ArrowRightLeft, Copy, Upload, Save, Link2, Users, ChevronUp, ChevronDown, GripVertical, Download,
+    ClipboardList, User as UserIcon, Building, Calendar as CalendarIcon, Table2
 } from 'lucide-react';
-import { UnifiedStudent, TimetableClass } from '../../../../types';
+import { UnifiedStudent, TimetableClass, SubjectType } from '../../../../types';
 import { formatSchoolGrade } from '../../../../utils/studentUtils';
 import { formatDateKey } from '../../../../utils/dateUtils';
 import { getEndedSubjects } from '../../../../utils/enrollment';
@@ -81,6 +82,14 @@ interface TimetableHeaderProps {
     // 퇴원 관리 권한 (퇴원생 클릭 시 상세 모달용)
     canEditWithdrawal?: boolean;
     canReactivateWithdrawal?: boolean;
+    // 과목/뷰 전환 (TimetableNavBar 통합)
+    timetableSubject?: SubjectType;
+    setTimetableSubject?: (value: SubjectType) => void;
+    setTimetableViewType?: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>;
+    mathViewMode?: 'day-based' | 'teacher-based';
+    setMathViewMode?: (value: string) => void;
+    hasPermission?: (perm: string) => boolean;
+    setIsTimetableSettingsOpen?: (value: boolean) => void;
 }
 
 const TimetableHeader: React.FC<TimetableHeaderProps> = ({
@@ -137,7 +146,15 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     onIntegrationDisplayOptionsChange,
     // 퇴원 관리 권한
     canEditWithdrawal = false,
-    canReactivateWithdrawal = false
+    canReactivateWithdrawal = false,
+    // 과목/뷰 전환 (TimetableNavBar 통합)
+    timetableSubject,
+    setTimetableSubject,
+    setTimetableViewType,
+    mathViewMode,
+    setMathViewMode,
+    hasPermission,
+    setIsTimetableSettingsOpen,
 }) => {
     // 드롭다운 상태
     const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
@@ -331,8 +348,85 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
         <div className="flex flex-col flex-shrink-0 min-w-0">
             {/* Main Header Row */}
             <div className={`bg-gray-50 min-h-[2.5rem] flex items-center gap-3 pl-4 border-b border-gray-200 text-xs min-w-0 overflow-x-auto ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
-            {/* Left: Week Info */}
+            {/* Left: Subject/View controls (from TimetableNavBar) + Week Info */}
             <div className="flex items-center gap-3 flex-shrink-0">
+                {/* 과목 선택 + 뷰 전환 */}
+                {timetableSubject && setTimetableSubject && hasPermission && (
+                    <div className="flex items-center gap-1.5">
+                        <select
+                            value={timetableSubject}
+                            onChange={(e) => setTimetableSubject(e.target.value as SubjectType)}
+                            className="px-2 py-0.5 rounded-sm bg-white text-gray-700 font-bold text-xs border border-gray-300 hover:bg-gray-100 transition-all cursor-pointer outline-none"
+                            title="과목 선택"
+                        >
+                            {hasPermission('timetable.math.view') && <option value="math">수학</option>}
+                            {hasPermission('timetable.english.view') && <option value="english">영어</option>}
+                            {hasPermission('timetable.science.view') && <option value="science">과학</option>}
+                            {hasPermission('timetable.korean.view') && <option value="korean">국어</option>}
+                        </select>
+
+                        {/* 영어 뷰 전환 */}
+                        {timetableSubject === 'english' && setTimetableViewType && (
+                            <button
+                                onClick={() => {
+                                    const canViewIntegrated = hasPermission('timetable.integrated.view') || hasPermission('timetable.english.view');
+                                    setTimetableViewType(prev => {
+                                        if (prev === 'class') return 'teacher';
+                                        if (prev === 'teacher') return 'room';
+                                        if (prev === 'room') return canViewIntegrated ? 'excel' : 'teacher';
+                                        return canViewIntegrated ? 'class' : 'teacher';
+                                    });
+                                }}
+                                className="px-2 py-0.5 rounded-sm bg-white border border-gray-300 text-gray-700 font-bold text-xs hover:bg-gray-100 active:scale-95 transition-all cursor-pointer"
+                                title="보기방식 전환"
+                            >
+                                {viewType === 'class' ? <><ClipboardList size={12} className="inline" /> 통합뷰</>
+                                    : viewType === 'excel' ? <><Table2 size={12} className="inline" /> 엑셀</>
+                                    : viewType === 'teacher' ? <><UserIcon size={12} className="inline" /> 강사</>
+                                    : <><Building size={12} className="inline" /> 강의실</>}
+                            </button>
+                        )}
+
+                        {/* 수학 뷰 전환 */}
+                        {timetableSubject === 'math' && setTimetableViewType && setMathViewMode && (
+                            <button
+                                onClick={() => {
+                                    if (viewType === 'class') {
+                                        setTimetableViewType('teacher');
+                                        setMathViewMode('teacher-based');
+                                    } else if (viewType === 'excel') {
+                                        setTimetableViewType('class');
+                                    } else if (mathViewMode === 'teacher-based') {
+                                        setMathViewMode('day-based');
+                                    } else {
+                                        setTimetableViewType('excel');
+                                    }
+                                }}
+                                className="px-2 py-0.5 rounded-sm bg-white border border-gray-300 text-gray-700 font-bold text-xs hover:bg-gray-100 active:scale-95 transition-all cursor-pointer"
+                                title="보기방식 전환"
+                            >
+                                {viewType === 'class' ? <><ClipboardList size={12} className="inline" /> 통합뷰</>
+                                    : viewType === 'excel' ? <><Table2 size={12} className="inline" /> 엑셀</>
+                                    : mathViewMode === 'teacher-based' ? <><UserIcon size={12} className="inline" /> 강사</>
+                                    : <><CalendarIcon size={12} className="inline" /> 날짜</>}
+                            </button>
+                        )}
+
+                        {/* 수업 설정 버튼 */}
+                        {setIsTimetableSettingsOpen && (
+                            <button
+                                onClick={() => setIsTimetableSettingsOpen(true)}
+                                className="p-1 rounded-sm bg-white border border-gray-300 text-gray-600 hover:bg-gray-100 active:scale-95 transition-all cursor-pointer"
+                                title="수업 설정"
+                            >
+                                <Settings size={14} />
+                            </button>
+                        )}
+
+                        <div className="w-px h-4 bg-gray-300 mx-0.5"></div>
+                    </div>
+                )}
+
                 <span className="text-gray-600 font-medium">{weekLabel}</span>
                 <div className="flex items-center gap-1">
                     <button
