@@ -54,7 +54,7 @@ const minutesToTime = (minutes: number): string => {
 
 // 1분 = 1.5px
 const PIXELS_PER_MINUTE = 1.5;
-const DEFAULT_START_MIN = 13 * 60; // 13:00
+const DEFAULT_START_MIN = 12 * 60; // 12:00
 const DEFAULT_END_MIN = 21 * 60;   // 21:00
 
 // 서브컬럼당 최소 너비(px)
@@ -76,12 +76,12 @@ const CLASS_COLORS = [
   { bg: '#d946ef', light: '#fdf4ff', text: '#86198f', border: '#e879f9' },
 ];
 
-const getClassColor = (className: string) => {
-  let hash = 0;
-  for (let i = 0; i < className.length; i++) {
-    hash = className.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return CLASS_COLORS[Math.abs(hash) % CLASS_COLORS.length];
+/** 학생의 고유 수업 목록에서 인덱스 기반 색상 맵 생성 (충돌 없음) */
+const buildClassColorMap = (classNames: string[]): Map<string, typeof CLASS_COLORS[0]> => {
+  const unique = [...new Set(classNames)];
+  const map = new Map<string, typeof CLASS_COLORS[0]>();
+  unique.forEach((name, i) => map.set(name, CLASS_COLORS[i % CLASS_COLORS.length]));
+  return map;
 };
 
 // 오후 12시간제 표시 (13→1, 14→2, ..., 21→9)
@@ -91,7 +91,7 @@ const formatHourLabel = (minutes: number): number => {
 };
 
 // 그리드 상단 여백 (첫 번째 시간 라벨 잘림 방지)
-const GRID_PAD_TOP = 18;
+const GRID_PAD_TOP = 30;
 
 /** 같은 요일 내 시간이 겹치는 블록을 가로 서브컬럼으로 배치 */
 function computeOverlapColumns(blocks: ClassBlock[]) {
@@ -138,28 +138,29 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
   const { data: allClasses = [] } = useClasses();
   const { busRoutes } = useShuttle();
 
-  // 학생의 셔틀버스 승차 정보 추출
+  // 셔틀버스 승하차 이벤트 추출
   const shuttleEvents = useMemo(() => {
-    const events: Array<{
-      day: string;
-      time: string;
-      busName: string;
-      destination: string;
-    }> = [];
-
+    const events: Array<{ day: string; time: string; busName: string; destination: string; type: 'boarding' | 'alighting' }> = [];
     busRoutes.forEach(route => {
       route.stops.forEach(stop => {
         stop.boardingStudents.forEach(s => {
           if (s.name === student.name) {
             const days = s.days ? s.days.replace(/[,\s]/g, '').split('') : [];
             days.forEach(day => {
-              events.push({ day, time: stop.time, busName: route.busName, destination: stop.destination });
+              events.push({ day, time: stop.time, busName: route.busName, destination: stop.destination, type: 'boarding' });
+            });
+          }
+        });
+        stop.alightingStudents.forEach(s => {
+          if (s.name === student.name) {
+            const days = s.days ? s.days.replace(/[,\s]/g, '').split('') : [];
+            days.forEach(day => {
+              events.push({ day, time: stop.time, busName: route.busName, destination: stop.destination, type: 'alighting' });
             });
           }
         });
       });
     });
-
     return events;
   }, [busRoutes, student.name]);
 
@@ -284,6 +285,19 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
     return { dayBlocks, activeDays };
   }, [student.enrollments, allClasses]);
 
+  // 수업별 고유 색상 맵 (인덱스 기반, 충돌 없음)
+  const classColorMap = useMemo(() => {
+    const allClassNames: string[] = [];
+    for (const blocks of Object.values(dayBlocks)) {
+      for (const block of blocks) {
+        if (!allClassNames.includes(block.className)) {
+          allClassNames.push(block.className);
+        }
+      }
+    }
+    return buildClassColorMap(allClassNames);
+  }, [dayBlocks]);
+
   // 강의실 이동 감지 (블록 기반, 1시간 갭까지 허용)
   const roomChanges = useMemo(() => {
     const changes: Array<{
@@ -355,13 +369,6 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
       }
     }
 
-    // 셔틀 이벤트도 범위에 포함
-    for (const e of shuttleEvents) {
-      const t = timeToMinutes(e.time);
-      if (t < minStart) minStart = t;
-      if (t > maxEnd) maxEnd = t;
-    }
-
     // 1시간 단위로 내림/올림 (여유 30분), 기본 13~21시
     const rawStart = Math.floor((minStart - 30) / 60) * 60;
     const rawEnd = Math.ceil((maxEnd + 30) / 60) * 60;
@@ -381,7 +388,7 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
     const totalHeight = (rangeEndMin - rangeStartMin) * PIXELS_PER_MINUTE;
 
     return { rangeStartMin, rangeEndMin, timeLabels, totalHeight };
-  }, [dayBlocks, shuttleEvents, hasClasses]);
+  }, [dayBlocks, hasClasses]);
 
   // 그리드 최소 너비 (시간열 + 요일별 서브컬럼 너비 합)
   const totalGridMinWidth = useMemo(() => {
@@ -485,7 +492,7 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                           const endMin = timeToMinutes(block.endTime);
                           const top = (startMin - rangeStartMin) * PIXELS_PER_MINUTE + GRID_PAD_TOP;
                           const height = (endMin - startMin) * PIXELS_PER_MINUTE;
-                          const classColor = getClassColor(block.className);
+                          const classColor = classColorMap.get(block.className) || CLASS_COLORS[0];
                           const isShort = height < 55;
 
                           const overlap = blockLayout.get(idx) || { col: 0, totalCols: 1 };
@@ -505,32 +512,26 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                                 borderLeft: `4px solid ${classColor.bg}`,
                               }}
                             >
-                              <div className={`px-2 h-full flex flex-col ${isShort ? 'py-0 justify-center' : 'py-1.5'}`}>
+                              <div className={`px-1.5 h-full flex flex-col ${isShort ? 'py-0 justify-center' : 'py-1'}`}>
                                 <div
-                                  className="font-bold text-base leading-tight break-words"
+                                  className="font-bold text-xs leading-tight truncate"
                                   style={{ color: classColor.text }}
                                 >
-                                  {block.className}
+                                  {SUBJECT_LABELS[block.subject as keyof typeof SUBJECT_LABELS] || block.subject}-{block.teacher || ''}
                                 </div>
                                 {!isShort && (
                                   <>
-                                    <div className="text-sm font-medium text-gray-500 mt-0.5">
-                                      {block.startTime} ~ {block.endTime}
+                                    <div className="text-xxs text-gray-500 mt-0.5 truncate">
+                                      {block.room ? `${block.room}-인재원` : '인재원'}
                                     </div>
-                                    <div className="flex items-center gap-1 mt-0.5">
-                                      {block.room && (
-                                        <span className="text-sm text-gray-400">{block.room}</span>
-                                      )}
-                                      {block.teacher && (
-                                        <span className="text-sm text-gray-400">| {block.teacher}</span>
-                                      )}
+                                    <div className="text-xxs text-gray-400 truncate">
+                                      {block.startTime}~{block.endTime}
                                     </div>
                                   </>
                                 )}
                                 {isShort && (
-                                  <div className="text-sm text-gray-400 break-words">
-                                    {block.startTime}~{block.endTime}
-                                    {block.room && ` · ${block.room}`}
+                                  <div className="text-micro text-gray-400 truncate">
+                                    {block.room ? `${block.room}-인재원` : '인재원'} {block.startTime}~{block.endTime}
                                   </div>
                                 )}
                               </div>
@@ -544,19 +545,21 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                           .map((e, ei) => {
                             const eventMin = timeToMinutes(e.time);
                             const top = (eventMin - rangeStartMin) * PIXELS_PER_MINUTE + GRID_PAD_TOP;
+                            const isBoarding = e.type === 'boarding';
                             return (
                               <div
                                 key={`shuttle-${ei}`}
                                 className="absolute left-0 right-0 z-20 flex items-center justify-center"
                                 style={{ top: `${top - 12}px` }}
                               >
-                                <div className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm font-bold">
-                                  <Bus size={12} />
-                                  <span>🚌 {e.time}</span>
+                                <div className={`${isBoarding ? 'bg-blue-500' : 'bg-orange-500'} text-white text-xxs px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm`}>
+                                  <Bus size={10} />
+                                  <span>{isBoarding ? '승차' : '하차'} {e.time}</span>
                                 </div>
                               </div>
                             );
                           })}
+
                       </div>
                     );
                   })}
@@ -585,7 +588,7 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                   return acc;
                 }, {} as Record<string, { className: string; subject: string; teacher: string; room: string }>)
             ).map(([key, info]) => {
-              const classColor = getClassColor(info.className);
+              const classColor = classColorMap.get(info.className) || CLASS_COLORS[0];
               return (
                 <div
                   key={key}
@@ -631,22 +634,27 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
 
           {/* 셔틀버스 이용 안내 */}
           {shuttleEvents.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-sm p-2 space-y-1.5">
+            <div className="bg-blue-50 border border-blue-200 rounded-sm p-2.5 space-y-1.5">
               <div className="flex items-center gap-1.5 text-sm font-bold text-blue-700">
                 <Bus className="w-4 h-4" />
                 셔틀버스 이용
               </div>
-              {[...shuttleEvents].sort((a, b) => dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day)).map((e, i) => (
-                <div key={i} className="flex items-center gap-1.5 text-xs text-blue-800">
-                  <span className="font-bold px-1.5 py-0.5 bg-blue-100 rounded-sm">{e.day}</span>
-                  <span className="px-1.5 py-0.5 rounded-sm text-white text-xs font-bold bg-blue-500">승차</span>
-                  <span className="font-bold">{e.time}</span>
-                  <span className="text-blue-500">{e.busName}</span>
-                  {e.destination && <span className="text-blue-400">· {e.destination}</span>}
-                </div>
-              ))}
+              {[...shuttleEvents]
+                .sort((a, b) => dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day) || a.time.localeCompare(b.time))
+                .map((e, i) => (
+                  <div key={i} className="flex items-center gap-1.5 text-sm text-blue-800">
+                    <span className="font-bold px-1.5 py-0.5 bg-blue-100 rounded-sm">{e.day}</span>
+                    <span className={`px-1.5 py-0.5 rounded-sm text-white text-xs font-bold ${e.type === 'boarding' ? 'bg-blue-500' : 'bg-orange-500'}`}>
+                      {e.type === 'boarding' ? '승차' : '하차'}
+                    </span>
+                    <span className="font-bold">{e.time}</span>
+                    <span className="text-blue-500">{e.busName}</span>
+                    {e.destination && <span className="text-blue-400">· {e.destination}</span>}
+                  </div>
+                ))}
             </div>
           )}
+
         </div>
       )}
     </Modal>

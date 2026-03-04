@@ -145,7 +145,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       {/* Row 1: Primary Header (Navy) */}
       <div
         className={`bg-[#081429] flex items-center justify-between px-4 md:px-6 z-50 relative transition-all duration-300 ${
-          isHeaderCollapsed ? 'h-10 border-b-0' : 'h-16 border-b border-white/10'
+          isHeaderCollapsed ? 'h-8 border-b-0' : 'h-10 border-b border-white/10'
         }`}
       >
         {/* Left: Breadcrumb Navigation */}
@@ -336,19 +336,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         />
       )}
 
-      {/* Row 2: Timetable Filter Bar */}
-      {appMode === 'timetable' && !isHeaderCollapsed && timetableProps && (
-        <TimetableNavBar
-          timetableSubject={timetableProps.timetableSubject}
-          setTimetableSubject={timetableProps.setTimetableSubject}
-          timetableViewType={timetableProps.timetableViewType as any}
-          setTimetableViewType={timetableProps.setTimetableViewType as any}
-          mathViewMode={timetableProps.mathViewMode as any}
-          setMathViewMode={timetableProps.setMathViewMode}
-          hasPermission={timetableProps.hasPermission}
-          setIsTimetableSettingsOpen={timetableProps.setIsTimetableSettingsOpen}
-        />
-      )}
+      {/* TimetableNavBar removed - integrated into TimetableHeader */}
     </header>
   );
 };

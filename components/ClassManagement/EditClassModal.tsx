@@ -13,6 +13,7 @@ import { formatSchoolGrade } from '../../utils/studentUtils';
 import { useSimulationOptional } from '../Timetable/English/context/SimulationContext';
 import { ScenarioClass } from '../Timetable/English/context/SimulationContext';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useRooms } from '../../hooks/useRooms';
 import { getTodayKST } from '../../utils/dateUtils';
 
 interface EditClassModalProps {
@@ -32,6 +33,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
   const [teacher, setTeacher] = useState(classInfo.teacher);
   const [room, setRoom] = useState(classInfo.room || '');
   const [memo, setMemo] = useState('');
+  const { data: roomsList = [] } = useRooms();
 
   // 스케줄 그리드
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
@@ -727,13 +729,38 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                   )}
                   <div className="flex items-center gap-2 px-2 py-1">
                     <span className="w-16 shrink-0 text-xs font-medium text-primary-700">강의실</span>
-                    <input
-                      type="text"
-                      value={room}
-                      onChange={(e) => setRoom(e.target.value)}
-                      placeholder="예: 302"
-                      className="flex-1 px-2 py-0.5 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none"
-                    />
+                    <select value={room} onChange={(e) => setRoom(e.target.value)} className="flex-1 px-2 py-0.5 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none bg-white">
+                      <option value="">선택 안 함</option>
+                      {roomsList.length > 0 ? (
+                        (() => {
+                          const grouped = new Map<string, typeof roomsList>();
+                          roomsList.forEach(r => {
+                            const key = r.building || r.floor || '기타';
+                            if (!grouped.has(key)) grouped.set(key, []);
+                            grouped.get(key)!.push(r);
+                          });
+                          const allNames = roomsList.map(r => r.name);
+                          const extraOption = room && !allNames.includes(room) ? <option key="current" value={room}>{room} (기존값)</option> : null;
+                          return (
+                            <>
+                              {extraOption}
+                              {[...grouped.entries()].map(([building, rms]) => (
+                                <optgroup key={building} label={building}>
+                                  {rms.map(r => (
+                                    <option key={r.id} value={r.name}>{r.name} ({r.capacity}명)</option>
+                                  ))}
+                                </optgroup>
+                              ))}
+                            </>
+                          );
+                        })()
+                      ) : (
+                        <>
+                          {room && <option value={room}>{room}</option>}
+                          <option disabled>강의실 데이터 없음</option>
+                        </>
+                      )}
+                    </select>
                   </div>
                 </div>
               </div>

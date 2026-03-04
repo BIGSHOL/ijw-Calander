@@ -11,6 +11,7 @@ import { ApplyConfirmModal } from './components/ApplyConfirmModal';
 import { StrategySettingsPanel } from './components/StrategySettingsPanel';
 import { AssignmentSlot, AssignmentResult, MergeSuggestion, RoomAssignmentUpdate, AssignmentStats, AssignmentWeights, AssignmentConstraints, StrategyPreset } from './types';
 import { DEFAULT_WEIGHTS, DEFAULT_CONSTRAINTS, STRATEGY_PRESETS } from './constants';
+import { migrateRoomNames } from '../../hooks/useRooms';
 
 const EXCLUDED_ROOMS_KEY = 'classroom_assignment_excluded_rooms';
 
@@ -37,6 +38,10 @@ const ClassroomAssignmentTab: React.FC = () => {
 
   // 뷰 모드: 'preview'=자동배정 결과, 'original'=원본
   const [viewMode, setViewMode] = useState<'preview' | 'original'>('preview');
+
+  // 강의실 데이터 마이그레이션
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [migrationDone, setMigrationDone] = useState(false);
 
   // 토스트 알림
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' | 'error' } | null>(null);
@@ -451,6 +456,32 @@ const ClassroomAssignmentTab: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* 강의실 데이터 마이그레이션 (1회성) */}
+      {!migrationDone && (
+        <div className="absolute bottom-3 right-3 z-40">
+          <button
+            onClick={async () => {
+              if (!confirm('강의실 데이터를 마이그레이션합니다.\n- classes/staff의 room 필드에 "본원" 접두사 추가\n- rooms 컬렉션 생성\n\n진행하시겠습니까?')) return;
+              setIsMigrating(true);
+              try {
+                const result = await migrateRoomNames();
+                showToast(`마이그레이션 완료: 수업 ${result.classesUpdated}개, 직원 ${result.staffUpdated}개 업데이트, 강의실 ${result.roomsCreated}개 생성`, 'success');
+                setMigrationDone(true);
+              } catch (err) {
+                console.error('마이그레이션 오류:', err);
+                showToast('마이그레이션 실패', 'error');
+              } finally {
+                setIsMigrating(false);
+              }
+            }}
+            disabled={isMigrating}
+            className="px-3 py-1.5 text-xs bg-orange-500 text-white rounded-sm hover:bg-orange-600 disabled:opacity-50 shadow-lg"
+          >
+            {isMigrating ? '마이그레이션 중...' : '🔄 강의실 데이터 마이그레이션'}
+          </button>
+        </div>
+      )}
 
       {/* 토스트 알림 */}
       {toast && (

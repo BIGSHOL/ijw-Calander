@@ -1,27 +1,27 @@
 import { SubjectType } from '../../types';
 import { RoomConfig, AssignmentWeights, AssignmentConstraints, StrategyPreset } from './types';
 
-// 강의실-층 매핑 및 기본 수용 인원
+// 강의실-층 매핑 및 기본 수용 인원 (DB 미연결 시 폴백)
 export const ROOM_CONFIGS: RoomConfig[] = [
-  // 2층 (수학 위주)
-  { name: 'SKY', floor: '2층', capacity: 25, preferredSubjects: ['math', 'science'] },
-  { name: '201', floor: '2층', capacity: 20, preferredSubjects: ['math', 'science'] },
-  { name: '202', floor: '2층', capacity: 20, preferredSubjects: ['math', 'science'] },
-  { name: '203', floor: '2층', capacity: 20, preferredSubjects: ['math', 'science'] },
-  { name: '204', floor: '2층', capacity: 20, preferredSubjects: ['math', 'science'] },
-  { name: '205', floor: '2층', capacity: 15, preferredSubjects: ['math', 'science'] },
-  { name: '206', floor: '2층', capacity: 15, preferredSubjects: ['math', 'science'] },
-  // 3층 (영어 위주)
-  { name: '301', floor: '3층', capacity: 20, preferredSubjects: ['english'] },
-  { name: '302', floor: '3층', capacity: 20, preferredSubjects: ['english'] },
-  { name: '303', floor: '3층', capacity: 15, preferredSubjects: ['english'] },
-  { name: '304', floor: '3층', capacity: 15, preferredSubjects: ['english'] },
-  { name: '305', floor: '3층', capacity: 15, preferredSubjects: ['english'] },
-  { name: '306', floor: '3층', capacity: 15, preferredSubjects: ['english'] },
-  // 6층
-  { name: '601', floor: '6층', capacity: 25, preferredSubjects: ['math', 'korean'] },
-  { name: '602', floor: '6층', capacity: 25, preferredSubjects: ['math', 'korean'] },
-  { name: '603', floor: '6층', capacity: 20, preferredSubjects: ['math', 'korean'] },
+  // 본원 2층 (수학 위주)
+  { name: '본원SKY', floor: '2층', capacity: 25, preferredSubjects: ['math', 'science'] },
+  { name: '본원201', floor: '2층', capacity: 20, preferredSubjects: ['math', 'science'] },
+  { name: '본원202', floor: '2층', capacity: 20, preferredSubjects: ['math', 'science'] },
+  { name: '본원203', floor: '2층', capacity: 20, preferredSubjects: ['math', 'science'] },
+  { name: '본원204', floor: '2층', capacity: 20, preferredSubjects: ['math', 'science'] },
+  { name: '본원205', floor: '2층', capacity: 15, preferredSubjects: ['math', 'science'] },
+  { name: '본원206', floor: '2층', capacity: 15, preferredSubjects: ['math', 'science'] },
+  // 본원 3층 (영어 위주)
+  { name: '본원301', floor: '3층', capacity: 20, preferredSubjects: ['english'] },
+  { name: '본원302', floor: '3층', capacity: 20, preferredSubjects: ['english'] },
+  { name: '본원303', floor: '3층', capacity: 15, preferredSubjects: ['english'] },
+  { name: '본원304', floor: '3층', capacity: 15, preferredSubjects: ['english'] },
+  { name: '본원305', floor: '3층', capacity: 15, preferredSubjects: ['english'] },
+  { name: '본원306', floor: '3층', capacity: 15, preferredSubjects: ['english'] },
+  // 본원 6층
+  { name: '본원601', floor: '6층', capacity: 25, preferredSubjects: ['math', 'korean'] },
+  { name: '본원602', floor: '6층', capacity: 25, preferredSubjects: ['math', 'korean'] },
+  { name: '본원603', floor: '6층', capacity: 20, preferredSubjects: ['math', 'korean'] },
   // 프리미엄관
   { name: '프리미엄1', floor: '프리미엄관', capacity: 12, preferredSubjects: ['english'] },
   { name: '프리미엄2', floor: '프리미엄관', capacity: 12, preferredSubjects: ['english'] },
@@ -81,16 +81,16 @@ export function getRoomConfig(roomName: string): RoomConfig {
   // 동적 매핑
   let floor = '기타';
   const preferredSubjects: SubjectType[] = [];
-  if (/^2\d{2}/.test(roomName) || roomName.includes('SKY')) {
+  if (/^본원?2\d{2}/.test(roomName) || /sky/i.test(roomName)) {
     floor = '2층';
     preferredSubjects.push('math', 'science');
-  } else if (/^3\d{2}/.test(roomName)) {
+  } else if (/^본원?3\d{2}/.test(roomName)) {
     floor = '3층';
     preferredSubjects.push('english');
-  } else if (/^6\d{2}/.test(roomName)) {
+  } else if (/^본원?6\d{2}/.test(roomName)) {
     floor = '6층';
     preferredSubjects.push('math', 'korean');
-  } else if (roomName.includes('프리미엄') || roomName.includes('LAB')) {
+  } else if (roomName.includes('프리미엄') || /lab/i.test(roomName)) {
     floor = '프리미엄관';
     preferredSubjects.push('english');
   }

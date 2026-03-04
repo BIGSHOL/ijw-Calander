@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
-import { Users, UserMinus, UserPlus, Settings, Calendar, Image, CalendarOff, LayoutList, SortAsc, Receipt, RefreshCw } from 'lucide-react';
+import { Users, UserMinus, UserPlus, Settings, Calendar, Image, CalendarOff, LayoutList, SortAsc, Receipt, RefreshCw, X, ChevronDown, ChevronUp, FileText } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import { VideoLoading } from '../Common/VideoLoading';
 import { Student, SalaryConfig, SalarySettingItem, MonthlySettlement, AttendanceSubject, AttendanceViewMode, SessionPeriod } from './types';
@@ -37,7 +37,7 @@ import { UserProfile, Teacher, UnifiedStudent } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
 import { mapAttendanceValueToStatus } from '../../utils/attendanceSync';
 import { secureLog, secureWarn } from '../../utils/secureLog';
-import { useEdutrixSync, SyncResult } from '../../hooks/useEdutrixSync';
+import { useEdutrixSync, SyncResult, SyncDetail } from '../../hooks/useEdutrixSync';
 
 // Default salary config for new setups
 const INITIAL_SALARY_CONFIG: SalaryConfig = {
@@ -362,6 +362,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   // Edutrix 보고서 동기화
   const { syncFromEdutrix, resetSync, isSyncing, isResetting, lastResult: syncResult } = useEdutrixSync();
   const [showSyncResult, setShowSyncResult] = useState(false);
+  const [showSyncLogModal, setShowSyncLogModal] = useState(false);
 
   const handleEdutrixSync = useCallback(async () => {
     console.log('[AttendanceManager] handleEdutrixSync:', currentYearMonth);
@@ -369,7 +370,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
       const result = await syncFromEdutrix(currentYearMonth, filterStaffId);
       console.log('[AttendanceManager] 동기화 결과:', result);
       setShowSyncResult(true);
-      setTimeout(() => setShowSyncResult(false), 15000);
+      setShowSyncLogModal(true);
     } catch (err) {
       console.error('[AttendanceManager] Edutrix 동기화 실패:', err);
       alert('Edutrix 동기화에 실패했습니다. 콘솔을 확인해주세요.');
@@ -838,9 +839,13 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
           {isResetting ? '초기화 중...' : '출석 초기화'}
         </button>
 
-        {/* 동기화 결과 표시 */}
+        {/* 동기화 결과 표시 - 클릭 시 상세 로그 모달 */}
         {showSyncResult && syncResult && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-sm text-xs flex-shrink-0">
+          <button
+            onClick={() => setShowSyncLogModal(true)}
+            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-200 rounded-sm text-xs flex-shrink-0 hover:bg-indigo-100 transition-colors cursor-pointer"
+            title="클릭하면 상세 로그를 볼 수 있습니다"
+          >
             <span className="font-bold text-indigo-700">
               총 {syncResult.totalReports}건
             </span>
@@ -849,7 +854,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             {syncResult.errors > 0 && (
               <span className="text-red-500">오류 {syncResult.errors}</span>
             )}
-          </div>
+            <span className="text-indigo-400 text-xxs">[상세]</span>
+          </button>
         )}
 
         {/* 세션 설정 버튼 - 관리자 전용 */}
@@ -1016,8 +1022,203 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         />
       )}
 
+      {/* 동기화 상세 로그 모달 */}
+      {showSyncLogModal && syncResult && (
+        <SyncLogModal result={syncResult} onClose={() => setShowSyncLogModal(false)} />
+      )}
+
     </div>
   );
 }
+
+// ─── 동기화 상세 로그 모달 ───
+const SYNC_STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
+  synced: { label: '성공', color: 'text-emerald-700', bgColor: 'bg-emerald-50' },
+  skipped_no_match: { label: '매칭실패', color: 'text-red-700', bgColor: 'bg-red-50' },
+  skipped_not_scheduled: { label: '스킵', color: 'text-amber-700', bgColor: 'bg-amber-50' },
+  skipped_absent: { label: '결석스킵', color: 'text-gray-600', bgColor: 'bg-gray-50' },
+  already_marked: { label: '이미처리', color: 'text-blue-600', bgColor: 'bg-blue-50' },
+  error: { label: '오류', color: 'text-red-700', bgColor: 'bg-red-50' },
+};
+
+type LogFilter = 'all' | 'synced' | 'skipped_no_match' | 'skipped_not_scheduled' | 'error';
+
+const SyncLogModal: React.FC<{ result: SyncResult; onClose: () => void }> = ({ result, onClose }) => {
+  const [filter, setFilter] = useState<LogFilter>('all');
+  const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set());
+
+  // 학생별로 그룹화
+  const groupedByStudent = useMemo(() => {
+    const map = new Map<string, SyncDetail[]>();
+    for (const d of result.details) {
+      const key = d.studentName;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(d);
+    }
+    return map;
+  }, [result.details]);
+
+  // 필터별 카운트
+  const counts = useMemo(() => {
+    const c = { synced: 0, skipped_no_match: 0, skipped_not_scheduled: 0, error: 0, other: 0 };
+    for (const d of result.details) {
+      if (d.status === 'synced') c.synced++;
+      else if (d.status === 'skipped_no_match') c.skipped_no_match++;
+      else if (d.status === 'skipped_not_scheduled') c.skipped_not_scheduled++;
+      else if (d.status === 'error') c.error++;
+      else c.other++;
+    }
+    return c;
+  }, [result.details]);
+
+  // 필터 적용된 details
+  const filteredDetails = useMemo(() => {
+    if (filter === 'all') return result.details;
+    return result.details.filter(d => d.status === filter);
+  }, [result.details, filter]);
+
+  // 필터된 학생별 그룹
+  const filteredGrouped = useMemo(() => {
+    const map = new Map<string, SyncDetail[]>();
+    for (const d of filteredDetails) {
+      const key = d.studentName;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(d);
+    }
+    return map;
+  }, [filteredDetails]);
+
+  const toggleStudent = (name: string) => {
+    setExpandedStudents(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      return next;
+    });
+  };
+
+  const filterButtons: { key: LogFilter; label: string; count: number; color: string }[] = [
+    { key: 'all', label: '전체', count: result.details.length, color: 'bg-gray-100 text-gray-700' },
+    { key: 'synced', label: '성공', count: counts.synced, color: 'bg-emerald-100 text-emerald-700' },
+    { key: 'skipped_no_match', label: '매칭실패', count: counts.skipped_no_match, color: 'bg-red-100 text-red-700' },
+    { key: 'skipped_not_scheduled', label: '스킵', count: counts.skipped_not_scheduled, color: 'bg-amber-100 text-amber-700' },
+    { key: 'error', label: '오류', count: counts.error, color: 'bg-red-100 text-red-700' },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div
+        className="bg-white rounded-lg shadow-xl w-[700px] max-h-[80vh] flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* 헤더 */}
+        <div className="flex items-center justify-between px-5 py-3 border-b bg-indigo-50">
+          <div className="flex items-center gap-2">
+            <FileText size={18} className="text-indigo-600" />
+            <h2 className="font-bold text-sm text-indigo-900">동기화 로그</h2>
+            <span className="text-xs text-indigo-500">{result.yearMonth}</span>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-indigo-100 rounded"><X size={16} /></button>
+        </div>
+
+        {/* 요약 */}
+        <div className="px-5 py-3 border-b bg-gray-50 flex items-center gap-4 text-xs">
+          <span className="text-gray-500">Edutrix 보고서: <b className="text-gray-800">{result.totalReports}건</b></span>
+          <span className="text-emerald-600">출석 반영: <b>{result.matched}</b></span>
+          <span className="text-amber-600">스킵: <b>{result.skipped}</b></span>
+          {result.errors > 0 && <span className="text-red-600">오류: <b>{result.errors}</b></span>}
+        </div>
+
+        {/* 필터 버튼 */}
+        <div className="px-5 py-2 border-b flex items-center gap-1.5 flex-wrap">
+          {filterButtons.map(fb => (
+            <button
+              key={fb.key}
+              onClick={() => setFilter(fb.key)}
+              className={`px-2 py-0.5 rounded text-xxs font-medium transition-colors ${
+                filter === fb.key
+                  ? `${fb.color} ring-1 ring-current`
+                  : 'bg-gray-50 text-gray-400 hover:bg-gray-100'
+              }`}
+            >
+              {fb.label} ({fb.count})
+            </button>
+          ))}
+        </div>
+
+        {/* 로그 목록 */}
+        <div className="flex-1 overflow-auto px-5 py-2">
+          {filteredGrouped.size === 0 ? (
+            <div className="text-center py-8 text-gray-400 text-sm">해당 항목이 없습니다.</div>
+          ) : (
+            [...filteredGrouped.entries()]
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([studentName, details]) => {
+                const isExpanded = expandedStudents.has(studentName);
+                const syncedCount = details.filter(d => d.status === 'synced').length;
+                const skippedCount = details.filter(d => d.status !== 'synced').length;
+                const mainStatus = syncedCount > 0
+                  ? (skippedCount > 0 ? 'partial' : 'synced')
+                  : 'failed';
+
+                return (
+                  <div key={studentName} className="border-b border-gray-100 last:border-0">
+                    <button
+                      onClick={() => toggleStudent(studentName)}
+                      className="w-full flex items-center gap-2 py-1.5 hover:bg-gray-50 text-left"
+                    >
+                      {isExpanded
+                        ? <ChevronUp size={12} className="text-gray-400 flex-shrink-0" />
+                        : <ChevronDown size={12} className="text-gray-400 flex-shrink-0" />
+                      }
+                      <span className="font-bold text-xs text-gray-800 w-20 flex-shrink-0">{studentName}</span>
+                      <span className="text-xxs text-gray-400">{details[0]?.className}</span>
+                      <span className="flex-1" />
+                      {syncedCount > 0 && (
+                        <span className="text-xxs px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded">
+                          반영 {syncedCount}
+                        </span>
+                      )}
+                      {skippedCount > 0 && (
+                        <span className="text-xxs px-1.5 py-0.5 bg-red-50 text-red-500 rounded">
+                          스킵 {skippedCount}
+                        </span>
+                      )}
+                    </button>
+                    {isExpanded && (
+                      <div className="ml-5 mb-2 space-y-0.5">
+                        {details
+                          .sort((a, b) => a.date.localeCompare(b.date))
+                          .map((d, i) => {
+                            const cfg = SYNC_STATUS_CONFIG[d.status] || SYNC_STATUS_CONFIG.error;
+                            return (
+                              <div key={i} className={`flex items-center gap-2 px-2 py-1 rounded text-xxs ${cfg.bgColor}`}>
+                                <span className="text-gray-500 w-20 flex-shrink-0">{d.date}</span>
+                                <span className={`font-bold w-14 flex-shrink-0 ${cfg.color}`}>{cfg.label}</span>
+                                <span className="text-gray-600 truncate">{d.message || ''}</span>
+                              </div>
+                            );
+                          })
+                        }
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+          )}
+        </div>
+
+        {/* 푸터 */}
+        <div className="px-5 py-2 border-t bg-gray-50 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-1.5 bg-indigo-600 text-white rounded text-xs font-bold hover:bg-indigo-700"
+          >
+            닫기
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default AttendanceManager;

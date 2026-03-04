@@ -9,6 +9,7 @@ import { useTeachers } from '../../hooks/useFirebaseQueries';
 import { useStaff } from '../../hooks/useStaff';
 import { SubjectType } from '../../types';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useRooms } from '../../hooks/useRooms';
 
 interface AddClassModalProps {
   onClose: () => void;
@@ -57,6 +58,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
   const { data: teachersData } = useTeachers();
   const { staff } = useStaff();
   const { data: existingClasses } = useClasses(subject); // 해당 과목의 기존 수업 목록
+  const { data: rooms = [] } = useRooms();
 
   // Map을 사용해 O(1) 강사 검색 최적화 (js-optimize-map-lookups)
   const staffMap = useMemo(() => {
@@ -389,13 +391,32 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
               {/* 강의실 */}
               <div className="flex items-center gap-2 px-1.5 py-1">
                 <span className="w-14 shrink-0 text-xs font-medium text-primary-700">강의실</span>
-                <input
-                  type="text"
+                <select
                   value={room}
                   onChange={(e) => setRoom(e.target.value)}
-                  placeholder="예: 302"
-                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
-                />
+                  className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none bg-white"
+                >
+                  <option value="">선택 안 함</option>
+                  {rooms.length > 0 ? (
+                    (() => {
+                      const grouped = new Map<string, typeof rooms>();
+                      rooms.forEach(r => {
+                        const key = r.building || r.floor || '기타';
+                        if (!grouped.has(key)) grouped.set(key, []);
+                        grouped.get(key)!.push(r);
+                      });
+                      return [...grouped.entries()].map(([building, rms]) => (
+                        <optgroup key={building} label={building}>
+                          {rms.map(r => (
+                            <option key={r.id} value={r.name}>{r.name} ({r.capacity}명)</option>
+                          ))}
+                        </optgroup>
+                      ));
+                    })()
+                  ) : (
+                    <option disabled>강의실 데이터 없음</option>
+                  )}
+                </select>
               </div>
             </div>
           </div>

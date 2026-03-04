@@ -16,6 +16,7 @@ import { ScenarioClass } from '../Timetable/English/context/SimulationContext';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { getTodayKST } from '../../utils/dateUtils';
 import { useClassOperations } from '../Timetable/Math/hooks/useClassOperations';
+import { useRooms } from '../../hooks/useRooms';
 
 interface ClassDetailModalProps {
   classInfo: ClassInfo;
@@ -71,6 +72,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
   const { staff } = useStaff();
   const { students: allStudents, loading: studentsLoading } = useStudents(false);
   const { data: existingClasses } = useClasses(classInfo.subject);
+  const { data: roomsList = [] } = useRooms();
 
   // ==================== 편집 모드 상태 ====================
   const [className, setClassName] = useState(classInfo.className);
@@ -91,6 +93,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
   const [studentUnderlines, setStudentUnderlines] = useState<Record<string, boolean>>({});
   const [studentSlotTeachers, setStudentSlotTeachers] = useState<Record<string, boolean>>({});
   const [studentStartDates, setStudentStartDates] = useState<Record<string, string>>({});
+  const [studentEnrollmentDates, setStudentEnrollmentDates] = useState<Record<string, string>>({});
   const [showEditWithdrawn, setShowEditWithdrawn] = useState(false);
   const { deleteEnrollmentRecord } = useClassOperations();
 
@@ -223,14 +226,17 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
       const existingDays: Record<string, string[]> = {};
       const existingUnderlines: Record<string, boolean> = {};
       const existingSlotTeachers: Record<string, boolean> = {};
+      const existingEnrollmentDates: Record<string, string> = {};
       classDetail.students.forEach(student => {
         if (student.attendanceDays && student.attendanceDays.length > 0) existingDays[student.id] = student.attendanceDays;
         if (student.underline) existingUnderlines[student.id] = student.underline;
         if (student.isSlotTeacher) existingSlotTeachers[student.id] = student.isSlotTeacher;
+        if (student.enrollmentDate) existingEnrollmentDates[student.id] = student.enrollmentDate;
       });
       setStudentAttendanceDays(existingDays);
       setStudentUnderlines(existingUnderlines);
       setStudentSlotTeachers(existingSlotTeachers);
+      setStudentEnrollmentDates(existingEnrollmentDates);
     }
   }, [classDetail?.students]);
 
@@ -379,7 +385,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
 
         await updateClassMutation.mutateAsync(updateData);
 
-        const hasStudentChanges = studentsToAdd.size > 0 || studentsToRemove.size > 0 || Object.keys(studentAttendanceDays).length > 0 || Object.keys(studentUnderlines).length > 0 || Object.keys(studentSlotTeachers).length > 0;
+        const hasStudentChanges = studentsToAdd.size > 0 || studentsToRemove.size > 0 || Object.keys(studentAttendanceDays).length > 0 || Object.keys(studentUnderlines).length > 0 || Object.keys(studentSlotTeachers).length > 0 || Object.keys(studentEnrollmentDates).length > 0;
         if (hasStudentChanges) {
           await manageStudentsMutation.mutateAsync({
             className: className.trim(),
@@ -392,6 +398,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
             studentUnderlines,
             studentSlotTeachers,
             studentStartDates,
+            studentEnrollmentDates,
           });
         }
 
@@ -558,7 +565,39 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                       {availableTeachers.length === 0 && <div className="px-1.5 py-0.5"><p className="text-xxs text-amber-600">⚠️ {SUBJECT_LABELS[classInfo.subject as SubjectType]} 과목 강사가 없습니다.</p></div>}
                       <div className="flex items-center gap-2 px-1.5 py-0.5">
                         <span className="w-16 shrink-0 text-xs font-medium text-primary-700">강의실</span>
-                        <input type="text" value={room} onChange={(e) => setRoom(e.target.value)} placeholder="예: 302" className="flex-1 px-2 py-0.5 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none" />
+                        <select value={room} onChange={(e) => setRoom(e.target.value)} className="flex-1 px-2 py-0.5 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none bg-white">
+                          <option value="">선택 안 함</option>
+                          {roomsList.length > 0 ? (
+                            (() => {
+                              const grouped = new Map<string, typeof roomsList>();
+                              roomsList.forEach(r => {
+                                const key = r.building || r.floor || '기타';
+                                if (!grouped.has(key)) grouped.set(key, []);
+                                grouped.get(key)!.push(r);
+                              });
+                              // 현재 room 값이 목록에 없으면 추가
+                              const allNames = roomsList.map(r => r.name);
+                              const extraOption = room && !allNames.includes(room) ? <option key="current" value={room}>{room} (기존값)</option> : null;
+                              return (
+                                <>
+                                  {extraOption}
+                                  {[...grouped.entries()].map(([building, rms]) => (
+                                    <optgroup key={building} label={building}>
+                                      {rms.map(r => (
+                                        <option key={r.id} value={r.name}>{r.name} ({r.capacity}명)</option>
+                                      ))}
+                                    </optgroup>
+                                  ))}
+                                </>
+                              );
+                            })()
+                          ) : (
+                            <>
+                              {room && <option value={room}>{room}</option>}
+                              <option disabled>강의실 데이터 없음</option>
+                            </>
+                          )}
+                        </select>
                       </div>
                     </div>
                   </div>
@@ -692,9 +731,9 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                       <Users className="w-3 h-3 text-primary" />
                       <h3 className="text-primary font-bold text-xs">현재 등록된 학생</h3>
                       <span className="text-xxs text-gray-500 ml-1">({activeStudents.length - studentsToRemove.size}명)</span>
-                      {classInfo.subject === 'math' && classDays.length > 1 && <span className="text-xxs text-blue-500 ml-auto">클릭: 등원요일 · 체크박스: 부담임</span>}
-                      {classInfo.subject === 'math' && classDays.length <= 1 && <span className="text-xxs text-blue-500 ml-auto">체크박스: 부담임</span>}
-                      {classInfo.subject === 'english' && <span className="text-xxs text-blue-500 ml-auto">U: 밑줄 강조</span>}
+                      {classInfo.subject === 'math' && classDays.length > 1 && <span className="text-xxs text-blue-500 ml-auto">클릭: 등원일/요일 · 체크박스: 부담임</span>}
+                      {classInfo.subject === 'math' && classDays.length <= 1 && <span className="text-xxs text-blue-500 ml-auto">클릭: 등원일 · 체크박스: 부담임</span>}
+                      {classInfo.subject === 'english' && <span className="text-xxs text-blue-500 ml-auto">클릭: 등원일 · U: 밑줄 강조</span>}
                     </div>
                     <div className="max-h-40 overflow-y-auto">
                       {activeStudents.length === 0 ? (
@@ -707,13 +746,13 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                           const hasUnderline = studentUnderlines[student.id] || false;
                           const isMath = classInfo.subject === 'math';
                           const isEnglish = classInfo.subject === 'english';
-                          const canExpandForDays = isMath && classDays.length > 1 && !isMarkedForRemoval;
+                          const canExpandForDays = !isMarkedForRemoval;
 
                           return (
                             <div key={student.id} className={isMarkedForRemoval ? 'bg-red-50' : ''}>
                               <div className={`flex items-center justify-between px-2.5 py-1.5 text-sm ${isMarkedForRemoval ? 'line-through text-gray-400' : 'hover:bg-gray-50'} ${canExpandForDays ? 'cursor-pointer' : ''}`} onClick={() => { if (canExpandForDays) setExpandedStudentId(isExpanded ? null : student.id); }}>
                                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  {isMath && classDays.length > 1 && !isMarkedForRemoval && <Calendar size={12} className="text-gray-400 flex-shrink-0" />}
+                                  {!isMarkedForRemoval && <Calendar size={12} className="text-gray-400 flex-shrink-0" />}
                                   {isMath && !isMarkedForRemoval && (
                                     <input type="checkbox" checked={studentSlotTeachers[student.id] || false} onChange={(e) => { e.stopPropagation(); setStudentSlotTeachers(prev => ({ ...prev, [student.id]: e.target.checked })); }} onClick={(e) => e.stopPropagation()} className="w-3.5 h-3.5 text-accent rounded focus:ring-accent flex-shrink-0" title="부담임으로 지정" />
                                   )}
@@ -728,15 +767,37 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                                   {isMarkedForRemoval ? <span className="text-xs font-medium">취소</span> : <UserMinus size={14} />}
                                 </button>
                               </div>
-                              {isMath && isExpanded && classDays.length > 1 && (
-                                <div className="px-2.5 py-2 bg-gray-50 border-t border-gray-100">
-                                  <div className="text-[10px] text-gray-500 mb-1.5">등원 요일 선택 (체크 해제하면 해당 요일 미등원)</div>
-                                  <div className="flex gap-1 flex-wrap">
-                                    {classDays.map(day => {
-                                      const isAttending = isStudentAttendingDay(student.id, day);
-                                      return <button key={day} type="button" onClick={(e) => { e.stopPropagation(); toggleStudentDay(student.id, day); }} className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${isAttending ? 'bg-accent text-primary' : 'bg-gray-200 text-gray-400 line-through'}`}>{day}</button>;
-                                    })}
+                              {isExpanded && (
+                                <div className="px-2.5 py-2 bg-gray-50 border-t border-gray-100 space-y-2">
+                                  {/* 등원일 변경 */}
+                                  <div>
+                                    <div className="text-[10px] text-gray-500 mb-1">등원일</div>
+                                    <div className="flex items-center gap-2">
+                                      <Calendar size={12} className="text-gray-400" />
+                                      <input
+                                        type="date"
+                                        value={studentEnrollmentDates[student.id] || ''}
+                                        onChange={(e) => { e.stopPropagation(); setStudentEnrollmentDates(prev => ({ ...prev, [student.id]: e.target.value })); }}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="px-2 py-0.5 text-xs border border-gray-200 rounded focus:ring-1 focus:ring-accent outline-none"
+                                      />
+                                      {studentEnrollmentDates[student.id] && (
+                                        <span className="text-[10px] text-gray-500">{studentEnrollmentDates[student.id]}~</span>
+                                      )}
+                                    </div>
                                   </div>
+                                  {/* 등원 요일 선택 (수학, 다중 요일일 때만) */}
+                                  {isMath && classDays.length > 1 && (
+                                    <div>
+                                      <div className="text-[10px] text-gray-500 mb-1">등원 요일 (체크 해제하면 해당 요일 미등원)</div>
+                                      <div className="flex gap-1 flex-wrap">
+                                        {classDays.map(day => {
+                                          const isAttending = isStudentAttendingDay(student.id, day);
+                                          return <button key={day} type="button" onClick={(e) => { e.stopPropagation(); toggleStudentDay(student.id, day); }} className={`px-2.5 py-1 text-xs font-medium rounded transition-colors ${isAttending ? 'bg-accent text-primary' : 'bg-gray-200 text-gray-400 line-through'}`}>{day}</button>;
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>

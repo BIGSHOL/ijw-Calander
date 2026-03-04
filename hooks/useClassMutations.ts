@@ -333,6 +333,7 @@ export interface ManageClassStudentsData {
   studentSlotTeachers?: Record<string, boolean>;  // { studentId: true } 학생별 부담임 여부 (수학용)
   studentStartDates?: Record<string, string>;  // { studentId: 'YYYY-MM-DD' } 학생별 시작일 (미지정시 오늘)
   studentEndDates?: Record<string, string>;  // { studentId: 'YYYY-MM-DD' } 학생별 종료 예정일
+  studentEnrollmentDates?: Record<string, string>;  // { studentId: 'YYYY-MM-DD' } 기존 학생 등원일 변경
   // 반이동 관련
   transferMode?: Record<string, 'add' | 'transfer'>;  // 학생별 추가/반이동 선택
   transferFromClass?: Record<string, string>;  // 반이동 시 이전 수업명
@@ -355,6 +356,7 @@ export const useManageClassStudents = () => {
         studentSlotTeachers = {},
         studentStartDates = {},
         studentEndDates = {},
+        studentEnrollmentDates = {},
         transferMode = {},
         transferFromClass = {}
       } = data;
@@ -571,6 +573,36 @@ export const useManageClassStudents = () => {
           await Promise.all(updateOps);
         });
         await Promise.all(endDatePromises);
+      }
+
+      // 기존 학생 등원일(enrollmentDate) 변경 (추가/제거 대상이 아닌 학생들)
+      const enrollmentDateStudentIds = Object.keys(studentEnrollmentDates).filter(
+        id => !addStudentIds.includes(id) && !removeStudentIds.includes(id)
+      );
+
+      if (enrollmentDateStudentIds.length > 0) {
+        const enrollmentDatePromises = enrollmentDateStudentIds.map(async (studentId) => {
+          const enrollmentsQuery = query(
+            collection(db, COL_STUDENTS, studentId, 'enrollments'),
+            where('subject', '==', subject),
+            where('className', '==', className)
+          );
+          const snapshot = await getDocs(enrollmentsQuery);
+
+          const updateOps = snapshot.docs.map(async (docSnap) => {
+            const newDate = studentEnrollmentDates[studentId];
+            if (newDate) {
+              await updateDoc(docSnap.ref, {
+                startDate: newDate,
+                enrollmentDate: newDate,
+                updatedAt: new Date().toISOString()
+              });
+            }
+          });
+
+          await Promise.all(updateOps);
+        });
+        await Promise.all(enrollmentDatePromises);
       }
     },
     onSuccess: () => {

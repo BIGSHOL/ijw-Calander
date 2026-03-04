@@ -101,12 +101,12 @@ export function useEdutrixSync() {
     const queryClient = useQueryClient();
 
     const fetchIjwStudents = useCallback(async () => {
-        const studentsSnap = await getDocs(
-            query(collection(db, 'students'), where('status', '==', 'active'))
-        );
+        // 퇴원생 포함 전체 학생 조회 (퇴원생도 과거 출석 동기화 필요)
+        const studentsSnap = await getDocs(collection(db, 'students'));
         return studentsSnap.docs.map(d => ({
             id: d.id,
             name: (d.data().name || '') as string,
+            status: (d.data().status || 'active') as string,
         }));
     }, []);
 
@@ -131,6 +131,7 @@ export function useEdutrixSync() {
                 classId: (data.classId || '') as string,
                 staffId: (data.staffId || '') as string,
                 teacher: (data.teacher || '') as string,
+                subject: (data.subject || '') as string,
                 days: (data.days || []) as string[],
                 schedule: (data.schedule || []) as string[],
             };
@@ -198,7 +199,7 @@ export function useEdutrixSync() {
 
             const holidaySet = await fetchHolidays();
 
-            const enrollmentCache = new Map<string, { className: string; classId: string; staffId: string; teacher: string; days: string[]; schedule: string[] }[]>();
+            const enrollmentCache = new Map<string, { className: string; classId: string; staffId: string; teacher: string; subject: string; days: string[]; schedule: string[] }[]>();
 
             const attendanceBatch = new Map<string, {
                 studentId: string;
@@ -235,44 +236,66 @@ export function useEdutrixSync() {
                 }
                 const enrollments = enrollmentCache.get(ijwStudent.id)!;
 
+                const reportDayName = getKoreanDayName(dateKey);
+                const isHoliday = holidaySet.has(dateKey);
+
+                // 휴일 체크 (수업 매칭 전에)
+                if (isHoliday) {
+                    result.skipped++;
+                    result.details.push({
+                        studentName: report.student_name || '',
+                        className: report.class_name || '',
+                        date: dateKey,
+                        status: 'skipped_not_scheduled',
+                        message: `휴일 (${dateKey})`,
+                    });
+                    continue;
+                }
+
+                // ── 수업 매칭: 같은 과목 + 같은 선생님 + 보고서 요일 ──
                 let className = '';
-                const edutrixTeacherName = report.teacher_name;
+                const edutrixTeacherName = report.teacher_name?.trim().replace(/\s+/g, '') || '';
                 const matchedStaffId = edutrixTeacherName
                     ? teacherNameToStaffId.get(edutrixTeacherName)
                     : undefined;
 
-                if (matchedStaffId) {
-                    const teacherEnrollments = enrollments.filter(e => e.staffId === matchedStaffId);
-                    if (teacherEnrollments.length === 1) {
-                        // 해당 선생님 수업이 1개면 바로 매칭
-                        className = teacherEnrollments[0].className;
-                    } else if (teacherEnrollments.length > 1) {
-                        // 같은 선생님 수업이 여러 개면 요일로 구분
-                        const reportDayName = getKoreanDayName(dateKey);
-                        const edutrixDay = extractDayFromEdutrixClassName(report.class_name);
-                        const dayToMatch = edutrixDay || reportDayName;
+                // 수학 enrollment만 대상 (Edutrix = 수학 보고서)
+                const mathEnrollments = enrollments.filter(e => e.subject === 'math');
 
-                        const dayMatchedEnrollment = teacherEnrollments.find(e => {
-                            const days = getScheduledDays(e);
-                            return days.has(dayToMatch);
-                        });
-                        className = dayMatchedEnrollment?.className || teacherEnrollments[0].className;
+                // 선생님 매칭: staffId 또는 teacher 필드 (이름 포함)
+                const isTeacherMatch = (e: typeof enrollments[0]): boolean => {
+                    if (matchedStaffId && e.staffId === matchedStaffId) return true;
+                    if (edutrixTeacherName && e.teacher) {
+                        const normalized = e.teacher.trim().replace(/\s+/g, '');
+                        if (normalized === edutrixTeacherName) return true;
+                        // teacher 필드가 staffId인 경우
+                        if (matchedStaffId && normalized === matchedStaffId) return true;
                     }
+                    if (matchedStaffId && e.staffId && e.staffId === matchedStaffId) return true;
+                    return false;
+                };
+
+                // 요일 매칭
+                const enrollmentMatchesDay = (e: typeof enrollments[0]): boolean => {
+                    const days = getScheduledDays(e);
+                    return days.size === 0 || days.has(reportDayName);
+                };
+
+                // 같은 선생님의 수학 enrollment
+                const teacherMathEnrollments = mathEnrollments.filter(isTeacherMatch);
+
+                // 1차: 같은 선생님 + 같은 과목 + 요일 매칭
+                const bestMatch = teacherMathEnrollments.find(enrollmentMatchesDay);
+                if (bestMatch) {
+                    className = bestMatch.className;
                 }
 
-                if (!className && report.class_name) {
-                    const matchedEnrollment = enrollments.find(e =>
-                        e.className === report.class_name ||
-                        e.className.includes(report.class_name!) ||
-                        report.class_name!.includes(e.className)
-                    );
-                    className = matchedEnrollment?.className || enrollments[0]?.className || report.class_name;
+                // 2차: 같은 선생님 + 같은 과목 (요일 무시 - 수업이 1개면)
+                if (!className && teacherMathEnrollments.length === 1) {
+                    className = teacherMathEnrollments[0].className;
                 }
 
-                if (!className) {
-                    className = enrollments[0]?.className || '';
-                }
-
+                // 선생님 매칭 실패 → 스킵
                 if (!className) {
                     result.skipped++;
                     result.details.push({
@@ -280,38 +303,27 @@ export function useEdutrixSync() {
                         className: report.class_name || '',
                         date: dateKey,
                         status: 'skipped_no_match',
-                        message: 'IJW에서 수업을 찾을 수 없음',
+                        message: `선생님 매칭 실패 (edutrix: ${edutrixTeacherName || '없음'}, math enrollment ${mathEnrollments.length}개, teacher매칭 ${teacherMathEnrollments.length}개)`,
                     });
                     continue;
                 }
 
-                const dayFilterEnrollment = enrollments.find(e => e.className === className);
-                if (dayFilterEnrollment) {
-                    const scheduledDays = getScheduledDays(dayFilterEnrollment);
-                    if (scheduledDays.size > 0) {
-                        const reportDayName = getKoreanDayName(dateKey);
-                        const isHoliday = holidaySet.has(dateKey);
-
-                        if (isHoliday) {
+                // 최종 요일 검증 (같은 선생님의 다른 수학 수업에서 재시도)
+                const finalEnrollment = enrollments.find(e => e.className === className);
+                if (finalEnrollment) {
+                    const scheduledDays = getScheduledDays(finalEnrollment);
+                    if (scheduledDays.size > 0 && !scheduledDays.has(reportDayName)) {
+                        const fallback = teacherMathEnrollments.find(e => e.className !== className && enrollmentMatchesDay(e));
+                        if (fallback) {
+                            className = fallback.className;
+                        } else {
                             result.skipped++;
                             result.details.push({
                                 studentName: report.student_name || '',
                                 className,
                                 date: dateKey,
                                 status: 'skipped_not_scheduled',
-                                message: `휴일 (${dateKey})`,
-                            });
-                            continue;
-                        }
-
-                        if (!scheduledDays.has(reportDayName)) {
-                            result.skipped++;
-                            result.details.push({
-                                studentName: report.student_name || '',
-                                className,
-                                date: dateKey,
-                                status: 'skipped_not_scheduled',
-                                message: `수업 요일 아님 (${reportDayName}요일, 수업: ${[...scheduledDays].join(',')})`,
+                                message: `수업 요일 아님 (${reportDayName}요일, 수업: ${[...scheduledDays].join(',')}), 같은 선생님 다른 수학수업 없음`,
                             });
                             continue;
                         }
