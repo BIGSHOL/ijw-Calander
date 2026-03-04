@@ -286,8 +286,13 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
     return changes;
   }, [dayBlocks]);
 
-  const dayOrder = ['일', '월', '화', '수', '목', '금', '토'];
-  const sortedDays = dayOrder; // 모든 요일 항상 표시
+  // 토요일 수업 있으면 토 추가, 일요일은 항상 제외
+  const dayOrder = useMemo(() => {
+    const days = ['월', '화', '수', '목', '금'];
+    if (activeDays.has('토')) days.push('토');
+    return days;
+  }, [activeDays]);
+  const sortedDays = dayOrder;
   const hasClasses = activeDays.size > 0; // 실제 수업이 있는 요일이 있을 때만
 
   // 요일별 겹치는 블록 서브컬럼 레이아웃 계산
@@ -415,10 +420,7 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                     const blocks = dayBlocks[day] || [];
                     const hasBlocks = activeDays.has(day);
                     const { maxCols, layout: blockLayout } = dayOverlapData[day] || { maxCols: 1, layout: new Map() };
-                    // 일요일: 항상 진한 회색, 토요일: 수업 없을 때만 진한 회색
-                    const columnBg = day === '일' ? 'bg-gray-200/70'
-                      : day === '토' && !hasBlocks ? 'bg-gray-200/70'
-                      : '';
+                    const columnBg = '';
 
                     return (
                       <div
