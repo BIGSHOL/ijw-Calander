@@ -52,8 +52,52 @@ const minutesToTime = (minutes: number): string => {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 };
 
-// 5분 = 3px (13:00~23:00 = 600분 = 360px)
-const PIXELS_PER_MINUTE = 0.6;
+// 1분 = 1px (13:00~23:00 = 600분 = 600px)
+const PIXELS_PER_MINUTE = 1;
+
+// 서브컬럼당 최소 너비(px)
+const DAY_COL_MIN_WIDTH = 80;
+
+/** 같은 요일 내 시간이 겹치는 블록을 가로 서브컬럼으로 배치 */
+function computeOverlapColumns(blocks: ClassBlock[]) {
+  if (blocks.length === 0) {
+    return { maxCols: 1, layout: new Map<number, { col: number; totalCols: number }>() };
+  }
+
+  const sorted = blocks
+    .map((b, i) => ({
+      startMin: timeToMinutes(b.startTime),
+      endMin: timeToMinutes(b.endTime),
+      origIdx: i,
+    }))
+    .sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
+
+  const columnEnds: number[] = [];
+  const layout = new Map<number, { col: number; totalCols: number }>();
+
+  for (const item of sorted) {
+    let col = -1;
+    for (let c = 0; c < columnEnds.length; c++) {
+      if (columnEnds[c] <= item.startMin) {
+        col = c;
+        break;
+      }
+    }
+    if (col === -1) {
+      col = columnEnds.length;
+      columnEnds.push(0);
+    }
+    columnEnds[col] = item.endMin;
+    layout.set(item.origIdx, { col, totalCols: 0 });
+  }
+
+  const maxCols = Math.max(1, columnEnds.length);
+  for (const val of layout.values()) {
+    val.totalCols = maxCols;
+  }
+
+  return { maxCols, layout };
+}
 
 const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, onClose }) => {
   const { data: allClasses = [] } = useClasses();
@@ -246,7 +290,16 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
   const sortedDays = dayOrder; // 모든 요일 항상 표시
   const hasClasses = activeDays.size > 0; // 실제 수업이 있는 요일이 있을 때만
 
-  // 시간 범위 계산 (30분 단위로 반올림/반내림)
+  // 요일별 겹치는 블록 서브컬럼 레이아웃 계산
+  const dayOverlapData = useMemo(() => {
+    const data: Record<string, { maxCols: number; layout: Map<number, { col: number; totalCols: number }> }> = {};
+    for (const day of dayOrder) {
+      data[day] = computeOverlapColumns(dayBlocks[day] || []);
+    }
+    return data;
+  }, [dayBlocks]);
+
+  // 시간 범위 계산 (실제 수업 기준, 1시간 단위 정렬)
   const { rangeStartMin, timeLabels, totalHeight } = useMemo(() => {
     if (!hasClasses) return { rangeStartMin: 0, timeLabels: [], totalHeight: 0 };
 
@@ -262,9 +315,16 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
       }
     }
 
-    // 고정 범위: 13:00 ~ 23:00
-    const rangeStartMin = 13 * 60; // 780
-    const rangeEndMin = 23 * 60;   // 1380
+    // 셔틀 이벤트도 범위에 포함
+    for (const e of shuttleEvents) {
+      const t = timeToMinutes(e.time);
+      if (t < minStart) minStart = t;
+      if (t > maxEnd) maxEnd = t;
+    }
+
+    // 1시간 단위로 내림/올림 (여유 30분)
+    const rangeStartMin = Math.floor((minStart - 30) / 60) * 60;
+    const rangeEndMin = Math.ceil((maxEnd + 30) / 60) * 60;
 
     // 시간 라벨 생성 (1시간 간격)
     const timeLabels: Array<{ time: string; minutes: number; isHour: boolean }> = [];
@@ -279,14 +339,19 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
     const totalHeight = (rangeEndMin - rangeStartMin) * PIXELS_PER_MINUTE;
 
     return { rangeStartMin, rangeEndMin, timeLabels, totalHeight };
-  }, [dayBlocks, hasClasses]);
+  }, [dayBlocks, shuttleEvents, hasClasses]);
+
+  // 그리드 최소 너비 (시간열 + 요일별 서브컬럼 너비 합)
+  const totalGridMinWidth = useMemo(() => {
+    return 56 + dayOrder.reduce((sum, day) => sum + (dayOverlapData[day]?.maxCols || 1) * DAY_COL_MIN_WIDTH, 0);
+  }, [dayOverlapData]);
 
   return (
     <Modal
       isOpen={true}
       onClose={onClose}
       title={`${student.name} 시간표`}
-      size="lg"
+      size="xl"
       compact
     >
       {!hasClasses ? (
@@ -296,157 +361,167 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
       ) : (
         <div className="space-y-3">
           {/* 시간표 그리드 - 시간 기반 */}
-          <div className="border rounded-sm overflow-hidden">
-            {/* 요일 헤더 */}
-            <div className="flex border-b border-gray-200">
-              <div className="w-14 flex-shrink-0 bg-gray-50 border-r border-gray-200 px-1 py-1.5 text-center">
-                <span className="text-xxs font-bold text-gray-500">시간</span>
-              </div>
-              {sortedDays.map(day => {
-                let colors = DAY_HEADER_COLORS[day] || { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' };
-                // 토요일: 수업이 있으면 평일과 동일한 색상
-                if (day === '토' && activeDays.has('토')) {
-                  colors = { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' };
-                }
-                return (
-                  <div
-                    key={day}
-                    className={`flex-1 ${colors.bg} ${colors.text} px-2 py-1.5 text-center font-bold text-xs border-r last:border-r-0 border-gray-200`}
-                  >
-                    {day}
+          <div className="border rounded-sm" style={{ minWidth: `${totalGridMinWidth}px` }}>
+                {/* 요일 헤더 */}
+                <div className="flex border-b border-gray-200">
+                  <div className="w-14 flex-shrink-0 bg-gray-50 border-r border-gray-200 px-1 py-1.5 text-center">
+                    <span className="text-xxs font-bold text-gray-500">시간</span>
                   </div>
-                );
-              })}
-            </div>
-
-            {/* 시간축 + 수업 블록 */}
-            <div className="flex relative" style={{ height: `${totalHeight}px` }}>
-              {/* 시간 열 */}
-              <div className="w-14 flex-shrink-0 relative bg-gray-50 border-r border-gray-200">
-                {timeLabels.map(label => {
-                  const top = (label.minutes - rangeStartMin) * PIXELS_PER_MINUTE;
-                  return (
-                    <div
-                      key={label.time}
-                      className="absolute left-0 right-0 flex items-start"
-                      style={{ top: `${top}px` }}
-                    >
-                      <span
-                        className={`text-xxs px-1 -translate-y-1/2 ${
-                          label.isHour ? 'font-bold text-gray-700' : 'text-gray-400'
-                        }`}
+                  {sortedDays.map(day => {
+                    const { maxCols } = dayOverlapData[day] || { maxCols: 1 };
+                    let colors = DAY_HEADER_COLORS[day] || { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' };
+                    // 토요일: 수업이 있으면 평일과 동일한 색상
+                    if (day === '토' && activeDays.has('토')) {
+                      colors = { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' };
+                    }
+                    return (
+                      <div
+                        key={day}
+                        className={`${colors.bg} ${colors.text} px-2 py-1.5 text-center font-bold text-xs border-r last:border-r-0 border-gray-200`}
+                        style={{ flex: maxCols, minWidth: `${maxCols * DAY_COL_MIN_WIDTH}px` }}
                       >
-                        {label.time}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+                        {day}
+                      </div>
+                    );
+                  })}
+                </div>
 
-              {/* 요일 컬럼 */}
-              {sortedDays.map(day => {
-                const blocks = dayBlocks[day] || [];
-                const hasBlocks = activeDays.has(day);
-                // 일요일: 항상 진한 회색, 토요일: 수업 없을 때만 진한 회색
-                const columnBg = day === '일' ? 'bg-gray-200/70'
-                  : day === '토' && !hasBlocks ? 'bg-gray-200/70'
-                  : '';
-
-                return (
-                  <div
-                    key={day}
-                    className={`flex-1 relative border-r last:border-r-0 border-gray-200 ${columnBg}`}
-                  >
-                    {/* 시간선 (가로) */}
+                {/* 시간축 + 수업 블록 */}
+                <div className="flex relative" style={{ height: `${totalHeight}px` }}>
+                  {/* 시간 열 */}
+                  <div className="w-14 flex-shrink-0 relative bg-gray-50 border-r border-gray-200">
                     {timeLabels.map(label => {
                       const top = (label.minutes - rangeStartMin) * PIXELS_PER_MINUTE;
                       return (
                         <div
                           key={label.time}
-                          className={`absolute left-0 right-0 ${
-                            label.isHour ? 'border-t border-gray-200' : 'border-t border-gray-100 border-dashed'
-                          }`}
+                          className="absolute left-0 right-0 flex items-start"
                           style={{ top: `${top}px` }}
-                        />
-                      );
-                    })}
-
-                    {/* 수업 블록 */}
-                    {blocks.map((block, idx) => {
-                      const startMin = timeToMinutes(block.startTime);
-                      const endMin = timeToMinutes(block.endTime);
-                      const top = (startMin - rangeStartMin) * PIXELS_PER_MINUTE;
-                      const height = (endMin - startMin) * PIXELS_PER_MINUTE;
-                      const subjectColor = SUBJECT_COLORS[block.subject as keyof typeof SUBJECT_COLORS] || SUBJECT_COLORS.other;
-                      const isShort = height < 60;
-
-                      return (
-                        <div
-                          key={`${block.className}-${idx}`}
-                          className="absolute left-0.5 right-0.5 rounded-sm overflow-hidden z-10 shadow-sm"
-                          style={{
-                            top: `${top}px`,
-                            height: `${height}px`,
-                            backgroundColor: subjectColor.light,
-                            borderLeft: `3px solid ${subjectColor.bg}`,
-                          }}
                         >
-                          <div className={`px-1.5 h-full flex flex-col ${isShort ? 'py-0 justify-center' : 'py-1'}`}>
-                            <div
-                              className="font-bold text-xxs truncate leading-tight"
-                              style={{ color: subjectColor.text === '#ffffff' ? subjectColor.border : subjectColor.text }}
-                            >
-                              {block.className}
-                            </div>
-                            {!isShort && (
-                              <>
-                                <div className="text-micro font-medium text-gray-500 mt-0.5">
-                                  {block.startTime} ~ {block.endTime}
-                                </div>
-                                <div className="flex items-center gap-1 mt-0.5">
-                                  {block.room && (
-                                    <span className="text-micro text-gray-400">{block.room}</span>
-                                  )}
-                                  {block.teacher && (
-                                    <span className="text-micro text-gray-400">| {block.teacher}</span>
-                                  )}
-                                </div>
-                              </>
-                            )}
-                            {isShort && (
-                              <div className="text-micro text-gray-400 truncate">
-                                {block.startTime}~{block.endTime}
-                                {block.room && ` · ${block.room}`}
-                              </div>
-                            )}
-                          </div>
+                          <span
+                            className={`text-xxs px-1 -translate-y-1/2 ${
+                              label.isHour ? 'font-bold text-gray-700' : 'text-gray-400'
+                            }`}
+                          >
+                            {label.time}
+                          </span>
                         </div>
                       );
                     })}
-
-                    {/* 셔틀버스 승하차 표시 */}
-                    {shuttleEvents
-                      .filter(e => e.day === day)
-                      .map((e, ei) => {
-                        const eventMin = timeToMinutes(e.time);
-                        const top = (eventMin - rangeStartMin) * PIXELS_PER_MINUTE;
-                        return (
-                          <div
-                            key={`shuttle-${ei}`}
-                            className="absolute left-0 right-0 z-20 flex items-center justify-center"
-                            style={{ top: `${top - 10}px` }}
-                          >
-                            <div className="bg-blue-500 text-white text-micro px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shadow-sm">
-                              <Bus size={8} />
-                              <span>승차 {e.time}</span>
-                            </div>
-                          </div>
-                        );
-                      })}
                   </div>
-                );
-              })}
-            </div>
+
+                  {/* 요일 컬럼 */}
+                  {sortedDays.map(day => {
+                    const blocks = dayBlocks[day] || [];
+                    const hasBlocks = activeDays.has(day);
+                    const { maxCols, layout: blockLayout } = dayOverlapData[day] || { maxCols: 1, layout: new Map() };
+                    // 일요일: 항상 진한 회색, 토요일: 수업 없을 때만 진한 회색
+                    const columnBg = day === '일' ? 'bg-gray-200/70'
+                      : day === '토' && !hasBlocks ? 'bg-gray-200/70'
+                      : '';
+
+                    return (
+                      <div
+                        key={day}
+                        className={`relative border-r last:border-r-0 border-gray-200 ${columnBg}`}
+                        style={{ flex: maxCols, minWidth: `${maxCols * DAY_COL_MIN_WIDTH}px` }}
+                      >
+                        {/* 시간선 (가로) */}
+                        {timeLabels.map(label => {
+                          const top = (label.minutes - rangeStartMin) * PIXELS_PER_MINUTE;
+                          return (
+                            <div
+                              key={label.time}
+                              className={`absolute left-0 right-0 ${
+                                label.isHour ? 'border-t border-gray-200' : 'border-t border-gray-100 border-dashed'
+                              }`}
+                              style={{ top: `${top}px` }}
+                            />
+                          );
+                        })}
+
+                        {/* 수업 블록 - 겹치면 서브컬럼으로 분리 */}
+                        {blocks.map((block, idx) => {
+                          const startMin = timeToMinutes(block.startTime);
+                          const endMin = timeToMinutes(block.endTime);
+                          const top = (startMin - rangeStartMin) * PIXELS_PER_MINUTE;
+                          const height = (endMin - startMin) * PIXELS_PER_MINUTE;
+                          const subjectColor = SUBJECT_COLORS[block.subject as keyof typeof SUBJECT_COLORS] || SUBJECT_COLORS.other;
+                          const isShort = height < 40;
+
+                          const overlap = blockLayout.get(idx) || { col: 0, totalCols: 1 };
+                          const leftPct = (overlap.col / overlap.totalCols) * 100;
+                          const widthPct = (1 / overlap.totalCols) * 100;
+
+                          return (
+                            <div
+                              key={`${block.className}-${idx}`}
+                              className="absolute rounded-sm overflow-hidden z-10 shadow-sm"
+                              style={{
+                                top: `${top}px`,
+                                height: `${height}px`,
+                                left: `calc(${leftPct}% + 2px)`,
+                                width: `calc(${widthPct}% - 4px)`,
+                                backgroundColor: subjectColor.light,
+                                borderLeft: `3px solid ${subjectColor.bg}`,
+                              }}
+                            >
+                              <div className={`px-1.5 h-full flex flex-col ${isShort ? 'py-0 justify-center' : 'py-1'}`}>
+                                <div
+                                  className="font-bold text-xxs truncate leading-tight"
+                                  style={{ color: subjectColor.text === '#ffffff' ? subjectColor.border : subjectColor.text }}
+                                >
+                                  {block.className}
+                                </div>
+                                {!isShort && (
+                                  <>
+                                    <div className="text-micro font-medium text-gray-500 mt-0.5">
+                                      {block.startTime} ~ {block.endTime}
+                                    </div>
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                      {block.room && (
+                                        <span className="text-micro text-gray-400">{block.room}</span>
+                                      )}
+                                      {block.teacher && (
+                                        <span className="text-micro text-gray-400">| {block.teacher}</span>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
+                                {isShort && (
+                                  <div className="text-micro text-gray-400 truncate">
+                                    {block.startTime}~{block.endTime}
+                                    {block.room && ` · ${block.room}`}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* 셔틀버스 승하차 표시 */}
+                        {shuttleEvents
+                          .filter(e => e.day === day)
+                          .map((e, ei) => {
+                            const eventMin = timeToMinutes(e.time);
+                            const top = (eventMin - rangeStartMin) * PIXELS_PER_MINUTE;
+                            return (
+                              <div
+                                key={`shuttle-${ei}`}
+                                className="absolute left-0 right-0 z-20 flex items-center justify-center"
+                                style={{ top: `${top - 10}px` }}
+                              >
+                                <div className="bg-blue-500 text-white text-micro px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shadow-sm">
+                                  <Bus size={8} />
+                                  <span>승차 {e.time}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                      </div>
+                    );
+                  })}
+                </div>
           </div>
 
           {/* 수업 요약 */}

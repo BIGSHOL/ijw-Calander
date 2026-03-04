@@ -1,4 +1,4 @@
-import { doc, setDoc, deleteDoc, updateDoc, collection } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, updateDoc, collection, getDocs, query, where } from 'firebase/firestore';
 import { useQueryClient } from '@tanstack/react-query';
 import { db } from '../../../../firebaseConfig';
 import { TimetableClass } from '../../../../types';
@@ -256,15 +256,48 @@ export const useClassOperations = () => {
         invalidateMathCaches();
     };
 
-    const enrollExistingStudent = async (studentId: string, className: string) => {
+    const enrollExistingStudent = async (studentId: string, className: string, enrollmentDate?: string) => {
         const now = new Date().toISOString();
         const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
         await setDoc(enrollmentRef, {
             className,
             subject: 'math',
-            enrollmentDate: now.split('T')[0],
+            enrollmentDate: enrollmentDate || now.split('T')[0],
             createdAt: now,
         });
+        invalidateMathCaches();
+    };
+
+    // 스마트 삭제: 다른 활성 수학수업이 있으면 enrollment만 삭제, 없으면 퇴원 처리
+    const smartRemoveStudent = async (className: string, studentId: string): Promise<'removed' | 'withdrawn'> => {
+        const enrollmentsRef = collection(db, 'students', studentId, 'enrollments');
+        const q = query(enrollmentsRef, where('subject', '==', 'math'));
+        const snapshot = await getDocs(q);
+
+        // 현재 반을 제외한 다른 활성 수학수업 수
+        const otherActiveMath = snapshot.docs.filter(d => {
+            const data = d.data();
+            return data.className !== className && !data.withdrawalDate && !data.endDate;
+        }).length;
+
+        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
+
+        if (otherActiveMath >= 1) {
+            await deleteDoc(enrollmentRef);
+            invalidateMathCaches();
+            return 'removed';
+        } else {
+            const today = new Date().toISOString().split('T')[0];
+            await updateDoc(enrollmentRef, { withdrawalDate: today });
+            invalidateMathCaches();
+            return 'withdrawn';
+        }
+    };
+
+    // 퇴원생 수업기록 완전 삭제
+    const deleteEnrollmentRecord = async (className: string, studentId: string) => {
+        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
+        await deleteDoc(enrollmentRef);
         invalidateMathCaches();
     };
 
@@ -277,6 +310,8 @@ export const useClassOperations = () => {
         enrollExistingStudent,
         removeStudent,
         withdrawStudent,
-        restoreStudent
+        restoreStudent,
+        smartRemoveStudent,
+        deleteEnrollmentRecord
     };
 };

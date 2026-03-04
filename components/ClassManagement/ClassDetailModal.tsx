@@ -15,6 +15,7 @@ import { useSimulationOptional } from '../Timetable/English/context/SimulationCo
 import { ScenarioClass } from '../Timetable/English/context/SimulationContext';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { getTodayKST } from '../../utils/dateUtils';
+import { useClassOperations } from '../Timetable/Math/hooks/useClassOperations';
 
 interface ClassDetailModalProps {
   classInfo: ClassInfo;
@@ -90,6 +91,8 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
   const [studentUnderlines, setStudentUnderlines] = useState<Record<string, boolean>>({});
   const [studentSlotTeachers, setStudentSlotTeachers] = useState<Record<string, boolean>>({});
   const [studentStartDates, setStudentStartDates] = useState<Record<string, string>>({});
+  const [showEditWithdrawn, setShowEditWithdrawn] = useState(false);
+  const { deleteEnrollmentRecord } = useClassOperations();
 
   const [error, setError] = useState('');
 
@@ -481,7 +484,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
             ) : (
               <>
                 {canEdit && (
-                  <button onClick={() => setIsEditMode(true)} disabled={isPending} className="bg-accent hover:bg-[#e5a60f] text-primary px-1.5 py-0.5 text-xs font-semibold disabled:opacity-50 transition-colors flex items-center gap-1">
+                  <button onClick={() => { setActiveEditTab(activeViewTab === 'students' ? 'students' : 'info'); setIsEditMode(true); }} disabled={isPending} className="bg-accent hover:bg-[#e5a60f] text-primary px-1.5 py-0.5 text-xs font-semibold disabled:opacity-50 transition-colors flex items-center gap-1">
                     <Edit className="w-3 h-3" />수정
                   </button>
                 )}
@@ -781,6 +784,47 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                           );
                         })}
                       </div>
+                    </div>
+                  )}
+
+                  {/* 퇴원생 - 접이식 (편집 모드) */}
+                  {withdrawnStudents.length > 0 && (
+                    <div className="bg-white border border-gray-200 overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setShowEditWithdrawn(!showEditWithdrawn)}
+                        className="flex items-center gap-1 px-2 py-1 bg-gray-100 border-b border-gray-200 w-full text-left hover:bg-gray-200 transition-colors"
+                      >
+                        {showEditWithdrawn ? <ChevronUp className="w-3 h-3 text-gray-500" /> : <ChevronDown className="w-3 h-3 text-gray-500" />}
+                        <UserMinus className="w-3 h-3 text-gray-500" />
+                        <h3 className="text-gray-600 font-bold text-xs">퇴원생</h3>
+                        <span className="text-xxs text-gray-500 ml-1">({withdrawnStudents.length}명)</span>
+                      </button>
+                      {showEditWithdrawn && (
+                        <div className="max-h-32 overflow-y-auto divide-y divide-gray-100">
+                          {withdrawnStudents.map(student => (
+                            <div key={student.id} className="flex items-center justify-between px-2.5 py-1.5 text-sm hover:bg-gray-50">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-400 line-through">{student.name}</span>
+                                <span className="text-[10px] text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
+                                {student.withdrawalDate && <span className="text-xxs text-gray-400">~{student.withdrawalDate}</span>}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  if (window.confirm(`${student.name}의 수업 기록을 완전히 삭제하시겠습니까?`)) {
+                                    await deleteEnrollmentRecord(classInfo.className, student.id);
+                                  }
+                                }}
+                                className="text-red-400 hover:text-red-600 p-1 transition-colors"
+                                title="수업 기록 삭제"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
 

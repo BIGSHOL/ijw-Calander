@@ -2428,6 +2428,7 @@ function extractStudentsFromCell($, cell) {
 
 // ============================================================
 // 시간표 배포 → 클래스노트 자동 업로드 (Puppeteer)
+// Edutrix submitToClassNote_v2 로직 그대로 복사 + puppeteer-core/chromium 적용
 // ============================================================
 exports.submitTimetableToClassNote = functions
     .runWith({ memory: "2GB", timeoutSeconds: 540 })
@@ -2438,6 +2439,7 @@ exports.submitTimetableToClassNote = functions
         const fs = require("fs");
         const path = require("path");
         const os = require("os");
+        const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
         const { reports } = data;
 
@@ -2449,13 +2451,26 @@ exports.submitTimetableToClassNote = functions
             throw new functions.https.HttpsError("invalid-argument", "보고서 데이터가 없습니다.");
         }
 
+        logger.info(`=== submitTimetableToClassNote 함수 호출 시작 ===`);
         logger.info(`시간표 배포 시작: ${reports.length}명`);
 
         let browser = null;
         try {
+            // Puppeteer 실행 (puppeteer-core + @sparticuz/chromium)
             browser = await puppeteer.launch({
-                args: chromium.args,
-                defaultViewport: chromium.defaultViewport,
+                args: [
+                    ...chromium.args,
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--single-process',
+                    '--disable-gpu',
+                    '--lang=ko-KR',
+                ],
+                defaultViewport: { width: 1280, height: 720 },
                 executablePath: await chromium.executablePath(),
                 headless: chromium.headless,
             });
@@ -2463,88 +2478,206 @@ exports.submitTimetableToClassNote = functions
             const page = await browser.newPage();
             await page.setViewport({ width: 1280, height: 720 });
 
+            // User Agent + 한국어 설정
+            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+            await page.setExtraHTTPHeaders({ 'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7' });
+
             // 클래스노트 로그인
-            logger.info("로그인 시도...");
-            await page.goto("https://www.classnote.com/login", { waitUntil: "networkidle2", timeout: 60000 });
+            logger.info('로그인 페이지로 이동...');
+            try {
+                await page.goto('https://www.classnote.com/login', {
+                    waitUntil: 'networkidle2',
+                    timeout: 60000
+                });
+                logger.info('로그인 페이지 로드 완료');
+            } catch (gotoError) {
+                logger.error('페이지 로드 오류:', gotoError);
+                throw new Error(`로그인 페이지 로드 실패: ${gotoError.message}`);
+            }
+
+            // 로그인 정보 입력
+            logger.info('로그인 정보 입력...');
+            await page.waitForSelector('input[type="text"], input[type="email"]', { timeout: 10000 });
 
             const idInput = await page.$('input[type="text"], input[type="email"]');
             if (idInput) {
                 await idInput.click({ clickCount: 3 });
-                await idInput.type(loginId, { delay: 80 });
+                await idInput.type(loginId, { delay: 100 });
             }
+
             const pwInput = await page.$('input[type="password"]');
             if (pwInput) {
                 await pwInput.click({ clickCount: 3 });
-                await pwInput.type(loginPw, { delay: 80 });
+                await pwInput.type(loginPw, { delay: 100 });
             }
 
+            // 로그인 버튼 클릭
+            logger.info('로그인 버튼 클릭...');
             const loginButton = await page.evaluateHandle(() => {
-                const buttons = Array.from(document.querySelectorAll("button, input[type='submit']"));
+                const buttons = Array.from(document.querySelectorAll('button, input[type="submit"]'));
                 return buttons.find(btn => {
-                    const text = btn.textContent || btn.value || "";
-                    return text.includes("로그인") || text.includes("Login") || btn.type === "submit";
+                    const text = btn.textContent || btn.value || '';
+                    return text.includes('로그인') ||
+                        text.includes('Login') ||
+                        btn.type === 'submit';
                 });
             });
 
             if (loginButton && loginButton.asElement()) {
                 await Promise.all([
-                    page.waitForNavigation({ waitUntil: "networkidle2", timeout: 30000 }),
-                    loginButton.asElement().click(),
+                    page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }),
+                    loginButton.asElement().click()
                 ]);
             } else {
                 await Promise.all([
-                    page.waitForNavigation({ waitUntil: "networkidle2", timeout: 30000 }),
-                    page.keyboard.press("Enter"),
+                    page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }),
+                    page.keyboard.press('Enter')
                 ]);
             }
-            logger.info("로그인 완료");
+            logger.info('로그인 완료');
 
             const results = [];
 
+            // 각 보고서 처리
             for (let i = 0; i < reports.length; i++) {
                 const report = reports[i];
                 const { studentName, reportDate, imageBase64 } = report;
 
                 if (!studentName || !reportDate || !imageBase64) {
-                    results.push({ success: false, studentName: studentName || "알 수 없음", status: "error", message: "필수 데이터 누락" });
+                    logger.info(`보고서 ${i + 1} 데이터 불완전: studentName=${studentName}, reportDate=${reportDate}, hasImage=${!!imageBase64}`);
+                    results.push({
+                        success: false,
+                        studentName: studentName || '알 수 없음',
+                        reportDate: reportDate || '알 수 없음',
+                        status: 'error',
+                        message: '필수 데이터가 없습니다. (학생이름, 날짜, 이미지 필요)'
+                    });
                     continue;
                 }
 
-                logger.info(`처리 중 (${i + 1}/${reports.length}): ${studentName}`);
+                logger.info(`보고서 처리 중 (${i + 1}/${reports.length}): ${studentName} - ${reportDate}`);
 
                 try {
-                    // 보고서 작성 페이지 이동
-                    await page.goto("https://www.classnote.com/service/report/add", { waitUntil: "domcontentloaded", timeout: 30000 });
-                    await page.waitForTimeout(2000);
-
-                    // 호칭 설정 (관리자)
-                    const titleSelected = await page.evaluate(() => {
-                        const radios = document.querySelectorAll('input[type="radio"]');
-                        for (let i = 0; i < radios.length; i++) {
-                            const radio = radios[i];
-                            const label = document.querySelector('label[for="' + radio.id + '"]');
-                            const parent = radio.parentElement;
-                            const text = (label ? label.textContent : "") + " " + (parent ? parent.textContent : "");
-                            if (text.includes("관리자")) { radio.click(); return true; }
-                        }
-                        if (radios.length > 0) { radios[0].click(); return true; }
-                        return false;
+                    // 보고서 작성 페이지 이동 (domcontentloaded + flat wait)
+                    await page.goto('https://www.classnote.com/service/report/add', {
+                        waitUntil: 'domcontentloaded',
+                        timeout: 30000
                     });
+                    await delay(2000);
 
-                    if (titleSelected) {
-                        await page.waitForTimeout(500);
-                        const confirmBtn = await page.evaluateHandle(() => {
-                            const buttons = Array.from(document.querySelectorAll("button"));
-                            return buttons.find(btn => (btn.textContent || "").includes("확인"));
+                    // 호칭 설정 (관리자) - 항상 대기 후 체크 + 모달 닫힘 검증
+                    logger.info(`[${studentName}] 호칭 설정 중...`);
+                    await delay(3000);
+
+                    // 호칭 모달 처리 (최대 3번 시도)
+                    for (let hoChingAttempt = 0; hoChingAttempt < 3; hoChingAttempt++) {
+                        const hoChingResult = await page.evaluate(() => {
+                            // 호칭 모달이 있는지 확인 ("해당 호칭을 기본 호칭으로 저장" 텍스트)
+                            const bodyText = document.body?.innerText || '';
+                            const hasModal = bodyText.includes('호칭') || bodyText.includes('기본 호칭');
+                            const radios = document.querySelectorAll('input[type="radio"]');
+
+                            if (radios.length === 0 && !hasModal) {
+                                return { status: 'no-modal' };
+                            }
+
+                            // 라디오 버튼 클릭
+                            let selected = null;
+                            for (let i = 0; i < radios.length; i++) {
+                                const radio = radios[i];
+                                const label = document.querySelector('label[for="' + radio.id + '"]');
+                                const parent = radio.parentElement;
+                                const text = (label ? label.textContent : '') + ' ' + (parent ? parent.textContent : '');
+                                if (text.includes('관리자')) {
+                                    radio.click();
+                                    selected = '관리자';
+                                    break;
+                                }
+                            }
+                            if (!selected && radios.length > 0) {
+                                radios[0].click();
+                                selected = '첫번째';
+                            }
+
+                            return { status: 'modal-found', selected, radioCount: radios.length };
                         });
-                        if (confirmBtn && confirmBtn.asElement()) {
-                            await confirmBtn.asElement().click();
-                            await page.waitForTimeout(2000);
+                        logger.info(`[${studentName}] 호칭 시도 ${hoChingAttempt + 1}: ${JSON.stringify(hoChingResult)}`);
+
+                        if (hoChingResult.status === 'no-modal') {
+                            logger.info(`[${studentName}] 호칭 모달 없음, 진행`);
+                            break;
                         }
+
+                        // 라디오 클릭 후 확인 버튼 JS 클릭 (모든 "확인" 중 호칭 모달의 것)
+                        await delay(500);
+                        const confirmResult = await page.evaluate(() => {
+                            const buttons = Array.from(document.querySelectorAll('button'))
+                                .filter(btn => btn.offsetParent !== null);
+                            // 호칭 모달의 확인 버튼 찾기
+                            const confirmBtn = buttons.find(btn => {
+                                const t = (btn.textContent || '').trim();
+                                return t === '확인' || t === 'OK';
+                            });
+                            if (confirmBtn) {
+                                const btnText = (confirmBtn.textContent || '').trim();
+                                // mousedown → mouseup → click 시퀀스 (React 호환)
+                                confirmBtn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+                                confirmBtn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+                                confirmBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+                                return 'clicked: ' + btnText;
+                            }
+                            return 'not-found';
+                        });
+                        logger.info(`[${studentName}] 호칭 확인 JS 클릭: ${confirmResult}`);
+                        await delay(2000);
+
+                        // 호칭 모달이 닫혔는지 확인
+                        const stillOpen = await page.evaluate(() => {
+                            const bodyText = document.body?.innerText || '';
+                            return bodyText.includes('해당 호칭을 기본 호칭으로 저장');
+                        });
+                        if (!stillOpen) {
+                            logger.info(`[${studentName}] 호칭 모달 닫힘 확인!`);
+                            break;
+                        }
+                        logger.warn(`[${studentName}] 호칭 모달 아직 열림, 재시도...`);
+                        await delay(1000);
                     }
 
+                    // 최종 확인: 호칭 모달이 아직 열려있으면 강제 닫기
+                    const finalHoChingCheck = await page.evaluate(() => {
+                        const bodyText = document.body?.innerText || '';
+                        if (bodyText.includes('해당 호칭을 기본 호칭으로 저장')) {
+                            // 취소 버튼 클릭으로 강제 닫기
+                            const buttons = Array.from(document.querySelectorAll('button'))
+                                .filter(btn => btn.offsetParent !== null);
+                            // 마지막 "취소" 버튼이 호칭 모달의 것
+                            const cancelBtns = buttons.filter(btn => {
+                                const text = (btn.textContent || '').trim();
+                                return text === '취소' || text === 'Cancel';
+                            });
+                            if (cancelBtns.length > 0) {
+                                const lastCancel = cancelBtns[cancelBtns.length - 1];
+                                lastCancel.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+                                lastCancel.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+                                lastCancel.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+                                return 'force-cancelled';
+                            }
+                            // ESC 키로도 시도
+                            return 'still-open';
+                        }
+                        return 'closed';
+                    });
+                    logger.info(`[${studentName}] 호칭 최종 상태: ${finalHoChingCheck}`);
+                    if (finalHoChingCheck === 'still-open') {
+                        await page.keyboard.press('Escape');
+                        await delay(1000);
+                    }
+                    await delay(1000);
+
                     // 날짜 선택
-                    const dateParts = reportDate.split("T")[0].split("-");
+                    logger.info(`[${studentName}] 날짜 선택 중...`);
+                    const dateParts = reportDate.split("T")[0].split('-');
                     const year = parseInt(dateParts[0]);
                     const month = parseInt(dateParts[1]);
                     const day = parseInt(dateParts[2]);
@@ -2555,149 +2688,379 @@ exports.submitTimetableToClassNote = functions
                         dateButton = await page.$("button.e1a4g8se4");
                     } catch (e) {
                         dateButton = await page.evaluateHandle(() => {
-                            const buttons = Array.from(document.querySelectorAll("button"));
-                            return buttons.find(btn => (btn.className || "").includes("e1a4g8se4"));
+                            const buttons = Array.from(document.querySelectorAll('button'));
+                            for (let i = 0; i < buttons.length; i++) {
+                                const btn = buttons[i];
+                                const className = btn.className || '';
+                                if (className.includes('e1a4g8se4')) {
+                                    return btn;
+                                }
+                            }
+                            // 날짜 패턴이 포함된 버튼 (fallback)
+                            for (const b of buttons) {
+                                if (b.offsetParent === null) continue;
+                                const text = (b.textContent || '').trim();
+                                if (/\d{4}[년.\-\/]\s*\d{1,2}[월.\-\/]/.test(text)) return b;
+                                if (/\d{1,2}월\s*\d{1,2}일/.test(text)) return b;
+                            }
+                            return null;
                         });
                     }
 
                     if (dateButton && (dateButton.asElement ? dateButton.asElement() : dateButton)) {
-                        const btnEl = dateButton.asElement ? dateButton.asElement() : dateButton;
-                        await btnEl.click();
-                        await page.waitForTimeout(1000);
+                        const btnElement = dateButton.asElement ? dateButton.asElement() : dateButton;
+                        await page.evaluate(el => el.click(), btnElement);
+                        await delay(1000);
 
+                        // 년월 조정
                         const targetYearMonth = `${year}년 ${month}월`;
-                        for (let attempt = 0; attempt < 12; attempt++) {
-                            const currentYM = await page.evaluate(() => {
-                                const el = document.querySelector("div.css-7vdbjr.e1a4g8se9");
-                                return el ? el.textContent.trim() : null;
-                            });
-                            if (!currentYM || currentYM === targetYearMonth) break;
+                        const maxAttempts = 24;
 
-                            const prevBtn = await page.evaluateHandle(() => {
-                                const buttons = Array.from(document.querySelectorAll("button"));
-                                return buttons.find(btn => {
-                                    const cn = btn.className || "";
-                                    return cn.includes("css-7t0053") && cn.includes("e1a4g8se10");
-                                });
+                        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                            const currentYearMonth = await page.evaluate(() => {
+                                const yearMonthElement = document.querySelector('div.css-7vdbjr.e1a4g8se9');
+                                if (yearMonthElement) return yearMonthElement.textContent.trim();
+                                // fallback: "YYYY년 M월" 패턴을 가진 요소
+                                const allEls = Array.from(document.querySelectorAll('div, span, h1, h2, h3, p'));
+                                for (const e of allEls) {
+                                    if (e.children.length > 2) continue;
+                                    const text = (e.textContent || '').trim();
+                                    if (/^\d{4}년\s*\d{1,2}월$/.test(text)) return text;
+                                }
+                                return null;
                             });
-                            if (prevBtn && (prevBtn.asElement ? prevBtn.asElement() : prevBtn)) {
-                                const el = prevBtn.asElement ? prevBtn.asElement() : prevBtn;
-                                await el.click();
-                                await page.waitForTimeout(500);
-                            } else break;
+
+                            if (!currentYearMonth) break;
+                            logger.info(`[${studentName}] 달력 현재: "${currentYearMonth}", 목표: "${targetYearMonth}"`);
+                            if (currentYearMonth === targetYearMonth) break;
+
+                            // 방향 결정
+                            const currentParts = currentYearMonth.match(/(\d{4})년\s*(\d{1,2})월/);
+                            const targetParts = targetYearMonth.match(/(\d{4})년\s*(\d{1,2})월/);
+                            const goForward = currentParts && targetParts &&
+                                (parseInt(currentParts[1]) * 12 + parseInt(currentParts[2])) <
+                                (parseInt(targetParts[1]) * 12 + parseInt(targetParts[2]));
+
+                            const navButton = await page.evaluateHandle((forward) => {
+                                const buttons = Array.from(document.querySelectorAll('button'));
+                                // CSS 클래스 기반
+                                for (let i = 0; i < buttons.length; i++) {
+                                    const btn = buttons[i];
+                                    const className = btn.className || '';
+                                    if (forward && className.includes('e1a4g8se11')) return btn;
+                                    if (!forward && className.includes('css-7t0053') && className.includes('e1a4g8se10')) return btn;
+                                }
+                                // SVG 화살표 fallback
+                                const arrowBtns = buttons.filter(btn => {
+                                    if (btn.offsetParent === null) return false;
+                                    const svg = btn.querySelector('svg');
+                                    if (!svg) return false;
+                                    return (btn.textContent || '').trim().length < 3;
+                                });
+                                if (arrowBtns.length >= 2) {
+                                    return forward ? arrowBtns[arrowBtns.length - 1] : arrowBtns[0];
+                                }
+                                return null;
+                            }, goForward);
+
+                            if (navButton && (navButton.asElement ? navButton.asElement() : navButton)) {
+                                const navBtnElement = navButton.asElement ? navButton.asElement() : navButton;
+                                await page.evaluate(el => el.click(), navBtnElement);
+                                await delay(500);
+                            } else {
+                                break;
+                            }
                         }
 
+                        // 날짜 클릭
                         const dateClicked = await page.evaluate((targetDay) => {
-                            const links = Array.from(document.querySelectorAll("a"));
-                            for (const link of links) {
-                                if (link.textContent.trim() === String(targetDay)) { link.click(); return true; }
+                            const dateLinks = Array.from(document.querySelectorAll('a'));
+                            for (let i = 0; i < dateLinks.length; i++) {
+                                const link = dateLinks[i];
+                                if (link.textContent.trim() === String(targetDay)) {
+                                    link.click();
+                                    return true;
+                                }
+                            }
+                            // button/td fallback
+                            const btns = Array.from(document.querySelectorAll('button, td, div[role="button"]'));
+                            for (const el of btns) {
+                                if (el.offsetParent === null) continue;
+                                if (el.textContent.trim() === String(targetDay)) { el.click(); return true; }
                             }
                             return false;
                         }, day);
 
                         if (dateClicked) {
-                            await page.waitForTimeout(1000);
-                            const okBtn = await page.evaluateHandle(() => {
-                                const buttons = Array.from(document.querySelectorAll("button"));
-                                return buttons.find(btn => {
-                                    if (btn.offsetParent === null) return false;
-                                    return (btn.textContent || "").includes("확인");
+                            logger.info(`[${studentName}] 날짜 ${day}일 클릭 완료`);
+                            await delay(1000);
+                            const confirmBtn = await page.evaluateHandle(() => {
+                                const buttons = Array.from(document.querySelectorAll('button'));
+                                for (let i = 0; i < buttons.length; i++) {
+                                    const btn = buttons[i];
+                                    if (btn.offsetParent === null) continue;
+                                    const text = btn.textContent || '';
+                                    if (text.includes('확인') || text.includes('OK')) {
+                                        return btn;
+                                    }
+                                }
+                                return null;
+                            });
+
+                            if (confirmBtn && (confirmBtn.asElement ? confirmBtn.asElement() : confirmBtn)) {
+                                const confirmElement = confirmBtn.asElement ? confirmBtn.asElement() : confirmBtn;
+                                await page.evaluate(el => el.click(), confirmElement);
+                                logger.info(`[${studentName}] 날짜 확인 클릭`);
+                                await delay(1000);
+                            }
+                        }
+                    } else {
+                        logger.warn(`[${studentName}] 날짜 버튼을 찾을 수 없음, 기본 날짜 사용`);
+                    }
+
+                    // 원아 선택
+                    logger.info(`[${studentName}] 원아 선택 중...`);
+                    await delay(1000);
+
+                    // 원아 선택 버튼 찾기 + 디버그 로그
+                    const studentSelectInfo = await page.evaluate(() => {
+                        // 방법1: data-testid
+                        const byTestId = document.querySelector("button[data-testid='auto-report-child-select-button']");
+                        if (byTestId) {
+                            return {
+                                found: true,
+                                method: 'data-testid',
+                                text: (byTestId.textContent || '').trim().substring(0, 50),
+                                tagName: byTestId.tagName,
+                                visible: byTestId.offsetParent !== null,
+                                rect: JSON.stringify(byTestId.getBoundingClientRect()),
+                            };
+                        }
+                        // 방법2: 텍스트 기반
+                        const allEls = Array.from(document.querySelectorAll('button, a, div'));
+                        const textBtn = allEls.find(el => {
+                            const text = (el.textContent || '').trim();
+                            return text === '원아 선택' || text === '원아선택' || text === 'Choose Student';
+                        });
+                        if (textBtn) {
+                            return {
+                                found: true,
+                                method: 'text-exact',
+                                text: (textBtn.textContent || '').trim().substring(0, 50),
+                                tagName: textBtn.tagName,
+                                visible: textBtn.offsetParent !== null,
+                                rect: JSON.stringify(textBtn.getBoundingClientRect()),
+                            };
+                        }
+                        // 방법3: includes 텍스트
+                        const includeBtn = allEls.find(el => {
+                            const text = (el.textContent || '').trim();
+                            return text.includes('원아 선택') || text.includes('원아선택') || text.includes('Choose Student');
+                        });
+                        if (includeBtn) {
+                            return {
+                                found: true,
+                                method: 'text-includes',
+                                text: (includeBtn.textContent || '').trim().substring(0, 50),
+                                tagName: includeBtn.tagName,
+                                visible: includeBtn.offsetParent !== null,
+                                rect: JSON.stringify(includeBtn.getBoundingClientRect()),
+                            };
+                        }
+                        return { found: false };
+                    });
+                    logger.info(`[${studentName}] 원아 선택 버튼 정보: ${JSON.stringify(studentSelectInfo)}`);
+
+                    if (!studentSelectInfo.found) {
+                        const fullText = await page.evaluate(() => document.body?.innerText?.substring(0, 1000) || '');
+                        logger.error(`[${studentName}] 원아 선택 버튼 없음! 페이지 텍스트: ${fullText}`);
+                        throw new Error(`원아 선택 버튼을 찾을 수 없습니다.`);
+                    }
+
+                    // JavaScript click으로 원아 선택 버튼 클릭 (React SPA 호환)
+                    const clickResult = await page.evaluate(() => {
+                        // data-testid 우선
+                        let btn = document.querySelector("button[data-testid='auto-report-child-select-button']");
+                        if (!btn) {
+                            const allBtns = Array.from(document.querySelectorAll('button'));
+                            btn = allBtns.find(b => {
+                                const t = (b.textContent || '').trim();
+                                return t === '원아 선택' || t === '원아선택' || t === 'Choose Student';
+                            });
+                        }
+                        if (btn) {
+                            btn.click();
+                            return 'clicked';
+                        }
+                        return 'not-found';
+                    });
+                    logger.info(`[${studentName}] 원아 선택 JS click 결과: ${clickResult}`);
+                    await delay(2000);
+
+                    // 클릭 후 모달이 열렸는지 확인
+                    const afterClickBtns = await page.evaluate(() => {
+                        return Array.from(document.querySelectorAll('button'))
+                            .filter(btn => btn.offsetParent !== null)
+                            .map(btn => (btn.textContent || '').trim().substring(0, 40));
+                    });
+                    logger.info(`[${studentName}] 원아 선택 클릭 후 버튼들: ${JSON.stringify(afterClickBtns.slice(0, 20))}`);
+
+                    // 모달이 안 열렸으면 Puppeteer native click 재시도
+                    const hasStudentList = afterClickBtns.some(t => t.includes('선택완료') || t.includes('Complete'));
+                    if (!hasStudentList) {
+                        logger.info(`[${studentName}] 모달 미열림, Puppeteer click 재시도...`);
+                        try {
+                            await page.click("button[data-testid='auto-report-child-select-button']");
+                        } catch (e) {
+                            // data-testid 없으면 텍스트 기반으로 찾아서 클릭
+                            const retryBtn = await page.evaluateHandle(() => {
+                                const allBtns = Array.from(document.querySelectorAll('button'));
+                                return allBtns.find(b => {
+                                    const t = (b.textContent || '').trim();
+                                    return t === '원아 선택' || t === '원아선택';
                                 });
                             });
-                            if (okBtn && (okBtn.asElement ? okBtn.asElement() : okBtn)) {
-                                const el = okBtn.asElement ? okBtn.asElement() : okBtn;
-                                await el.click();
-                                await page.waitForTimeout(1000);
+                            if (retryBtn && retryBtn.asElement()) {
+                                await retryBtn.asElement().click();
                             }
+                        }
+                        await delay(2000);
+
+                        // 두 번째 시도 후 확인
+                        const afterRetryBtns = await page.evaluate(() => {
+                            return Array.from(document.querySelectorAll('button'))
+                                .filter(btn => btn.offsetParent !== null)
+                                .map(btn => (btn.textContent || '').trim().substring(0, 40));
+                        });
+                        logger.info(`[${studentName}] 재시도 후 버튼들: ${JSON.stringify(afterRetryBtns.slice(0, 20))}`);
+
+                        // 3차: dispatchEvent로 시도
+                        const hasStudentListRetry = afterRetryBtns.some(t => t.includes('선택완료') || t.includes('Complete'));
+                        if (!hasStudentListRetry) {
+                            logger.info(`[${studentName}] 모달 여전히 미열림, dispatchEvent 시도...`);
+                            await page.evaluate(() => {
+                                let btn = document.querySelector("button[data-testid='auto-report-child-select-button']");
+                                if (!btn) {
+                                    const allBtns = Array.from(document.querySelectorAll('button'));
+                                    btn = allBtns.find(b => (b.textContent || '').trim() === '원아 선택');
+                                }
+                                if (btn) {
+                                    // mousedown → mouseup → click 시퀀스 (React 이벤트 호환)
+                                    btn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+                                    btn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+                                    btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+                                }
+                            });
+                            await delay(3000);
+
+                            const afterDispatchBtns = await page.evaluate(() => {
+                                return Array.from(document.querySelectorAll('button'))
+                                    .filter(btn => btn.offsetParent !== null)
+                                    .map(btn => (btn.textContent || '').trim().substring(0, 40));
+                            });
+                            logger.info(`[${studentName}] dispatchEvent 후 버튼들: ${JSON.stringify(afterDispatchBtns.slice(0, 25))}`);
                         }
                     }
 
-                    // 원아 선택 (항상 "인재원 전체반"에서 검색)
-                    await page.waitForTimeout(1000);
-                    let studentSelectBtn = null;
-                    try {
-                        await page.waitForSelector("button[data-testid='auto-report-child-select-button']", { timeout: 5000 });
-                        studentSelectBtn = await page.$("button[data-testid='auto-report-child-select-button']");
-                    } catch (e) {
-                        studentSelectBtn = await page.evaluateHandle(() => {
-                            const els = Array.from(document.querySelectorAll("button, a, div"));
-                            return els.find(el => {
-                                const text = el.textContent || "";
-                                return text.includes("원아 선택") || text.includes("원아선택") || text.includes("학생선택");
-                            });
-                        });
-                    }
-
-                    if (studentSelectBtn && (studentSelectBtn.asElement ? studentSelectBtn.asElement() : studentSelectBtn)) {
-                        const btnEl = studentSelectBtn.asElement ? studentSelectBtn.asElement() : studentSelectBtn;
-                        await btnEl.click();
-                        await page.waitForTimeout(2000);
-
-                        // Step 1: "인재원 전체반" 아코디언 열기
+                    // "[ALL] 회원가입 후 반배정 필요" 아코디언 열기
                         const classAccordion = await page.evaluateHandle(() => {
+                            const target = "[ALL] 회원가입 후 반배정 필요";
+                            // data-testid 기반
                             const accordionBtns = Array.from(document.querySelectorAll("button[data-testid^='report-class-accordion']"));
                             for (const btn of accordionBtns) {
-                                const text = (btn.textContent || btn.innerText || "").trim();
-                                if (text.includes("인재원 전체반")) return btn;
+                                const text = (btn.textContent || btn.innerText || '').trim();
+                                if (text.includes(target)) return btn;
                             }
-                            // fallback: 모든 버튼에서 검색
-                            const allBtns = Array.from(document.querySelectorAll("button"));
+                            // 모든 보이는 버튼에서 검색
+                            const allBtns = Array.from(document.querySelectorAll('button'))
+                                .filter(btn => btn.offsetParent !== null);
                             for (const btn of allBtns) {
-                                if (btn.offsetParent === null) continue;
-                                const text = (btn.textContent || btn.innerText || "").trim();
-                                if (text.includes("인재원 전체반")) return btn;
+                                const text = (btn.textContent || btn.innerText || '').trim();
+                                if (text.includes(target)) return btn;
+                            }
+                            // "ALL" 또는 "반배정" 키워드로 검색 (대체)
+                            for (const btn of allBtns) {
+                                const text = (btn.textContent || btn.innerText || '').trim();
+                                if (text.includes('[ALL]') || text.includes('반배정')) return btn;
                             }
                             return null;
                         });
 
                         if (classAccordion && (classAccordion.asElement ? classAccordion.asElement() : classAccordion)) {
-                            const accEl = classAccordion.asElement ? classAccordion.asElement() : classAccordion;
-                            await accEl.click();
-                            await page.waitForTimeout(1500);
-                            logger.info(`"인재원 전체반" 아코디언 열림`);
+                            const accElement = classAccordion.asElement ? classAccordion.asElement() : classAccordion;
+                            const accText = await page.evaluate(el => (el.textContent || '').trim().substring(0, 50), accElement);
+                            logger.info(`[${studentName}] 아코디언 클릭: "${accText}"`);
+                            await page.evaluate(el => el.click(), accElement);
+                            await delay(1500);
                         } else {
-                            logger.warn(`"인재원 전체반" 아코디언을 찾을 수 없음, 전체에서 학생 검색`);
+                            logger.warn(`[${studentName}] "[ALL]" 아코디언을 찾을 수 없음, 전체에서 학생 검색`);
                         }
 
-                        // Step 2: 학생 이름으로 검색
-                        const studentItem = await page.evaluateHandle((name) => {
-                            const normalize = (t) => (t || "").trim();
-                            // 아코디언 내부 학생 버튼 우선
-                            const studentBtns = Array.from(document.querySelectorAll("button"));
-                            for (const btn of studentBtns) {
+                        // 학생 선택 (정확한 이름 매칭)
+                        const studentItem = await page.evaluateHandle((sName) => {
+                            const normalize = (text) => (text || '').trim();
+
+                            // 1. Accordion Buttons (Priority)
+                            const studentButtons = Array.from(document.querySelectorAll("button[data-testid^='report-class-accordion']"));
+                            for (let i = 0; i < studentButtons.length; i++) {
+                                const btn = studentButtons[i];
+                                const btnText = normalize(btn.textContent || btn.innerText);
+                                if (btnText === sName) return btn;
+                            }
+
+                            // 2. All visible buttons fallback
+                            const allButtons = Array.from(document.querySelectorAll('button'));
+                            for (let i = 0; i < allButtons.length; i++) {
+                                const btn = allButtons[i];
                                 if (btn.offsetParent === null) continue;
                                 const btnText = normalize(btn.textContent || btn.innerText);
-                                if (btnText === name) return btn;
+                                if (btnText === sName) return btn;
                             }
                             return null;
                         }, studentName);
 
                         if (studentItem && (studentItem.asElement ? studentItem.asElement() : studentItem)) {
-                            const sEl = studentItem.asElement ? studentItem.asElement() : studentItem;
-                            await sEl.click();
-                            await page.waitForTimeout(1000);
+                            const studentElement = studentItem.asElement ? studentItem.asElement() : studentItem;
+                            await page.evaluate(el => el.click(), studentElement);
+                            logger.info(`[${studentName}] 학생 버튼 클릭`);
+                            await delay(1000);
 
                             const completeBtn = await page.evaluateHandle(() => {
-                                const buttons = Array.from(document.querySelectorAll("button"));
-                                return buttons.find(btn => {
-                                    if (btn.offsetParent === null) return false;
-                                    return (btn.textContent || btn.innerText || "").includes("선택완료");
-                                });
+                                const buttons = Array.from(document.querySelectorAll('button'));
+                                for (let i = 0; i < buttons.length; i++) {
+                                    const btn = buttons[i];
+                                    if (btn.offsetParent === null) continue;
+                                    const text = btn.textContent || btn.innerText || '';
+                                    if (text.includes('선택완료') || text.includes('Complete selection')) {
+                                        return btn;
+                                    }
+                                }
+                                return null;
                             });
+
                             if (completeBtn && (completeBtn.asElement ? completeBtn.asElement() : completeBtn)) {
-                                const cEl = completeBtn.asElement ? completeBtn.asElement() : completeBtn;
-                                await cEl.click();
-                                await page.waitForTimeout(1000);
+                                const completeElement = completeBtn.asElement ? completeBtn.asElement() : completeBtn;
+                                await page.evaluate(el => el.click(), completeElement);
+                                logger.info(`[${studentName}] 선택완료 버튼 클릭`);
+                                await delay(1000);
                             }
                         } else {
-                            throw new Error(`학생 '${studentName}'을 '인재원 전체반'에서 찾을 수 없습니다.`);
+                            // 디버그: 보이는 학생 목록 로그
+                            const visibleStudents = await page.evaluate(() => {
+                                return Array.from(document.querySelectorAll('button'))
+                                    .filter(btn => btn.offsetParent !== null)
+                                    .map(btn => (btn.textContent || '').trim())
+                                    .filter(text => text.length >= 2 && text.length <= 10);
+                            });
+                            logger.error(`[${studentName}] 학생을 찾을 수 없음. 보이는 이름들: ${JSON.stringify(visibleStudents.slice(0, 30))}`);
+                            throw new Error(`학생 '${studentName}'을 찾을 수 없습니다.`);
                         }
-                    }
 
                     // 이미지 업로드
+                    logger.info(`[${studentName}] 이미지 업로드 중...`);
                     const base64Data = imageBase64.replace(/^data:image\/\w+;base64,/, "");
-                    const imageBuffer = Buffer.from(base64Data, "base64");
-                    const tempFilePath = path.join(os.tmpdir(), `timetable_${studentName}_${Date.now()}.jpg`);
+                    const imageBuffer = Buffer.from(base64Data, 'base64');
+                    const tempFilePath = path.join(os.tmpdir(), `report_${studentName}_${Date.now()}.jpg`);
                     fs.writeFileSync(tempFilePath, imageBuffer);
 
                     try {
@@ -2710,41 +3073,114 @@ exports.submitTimetableToClassNote = functions
                                 await page.waitForSelector("input[type='file']", { timeout: 5000 });
                                 fileInput = await page.$("input[type='file']");
                             } catch (e2) {
-                                const inputs = await page.$$("input[type='file']");
-                                if (inputs && inputs.length > 0) fileInput = inputs[0];
+                                const fileInputs = await page.$$("input[type='file']");
+                                if (fileInputs && fileInputs.length > 0) {
+                                    fileInput = fileInputs[0];
+                                }
                             }
                         }
 
-                        if (!fileInput) throw new Error("파일 업로드 input을 찾을 수 없습니다.");
+                        if (!fileInput) {
+                            throw new Error('파일 업로드 input을 찾을 수 없습니다.');
+                        }
 
                         await fileInput.uploadFile(tempFilePath);
-                        await page.waitForTimeout(3000);
+                        logger.info(`[${studentName}] 파일 업로드 완료`);
+                        await delay(3000);
                     } finally {
-                        if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+                        if (fs.existsSync(tempFilePath)) {
+                            fs.unlinkSync(tempFilePath);
+                        }
                     }
 
                     // 임시저장
+                    logger.info(`[${studentName}] 임시저장 중...`);
                     const saveBtn = await page.evaluateHandle(() => {
-                        const buttons = Array.from(document.querySelectorAll("button"));
-                        return buttons.find(btn => {
-                            const text = btn.textContent || "";
-                            return text.includes("임시저장") || text.includes("저장") || text.includes("등록");
+                        const buttons = Array.from(document.querySelectorAll('button'))
+                            .filter(btn => btn.offsetParent !== null);
+
+                        // 1순위: "지금전송" / "보내기"
+                        let found = buttons.find(btn => {
+                            const text = (btn.textContent || '').trim();
+                            return text === '지금전송' || text === '보내기' || text === 'Send now' || text === 'Send';
                         });
+                        if (found) return found;
+
+                        // 2순위: "임시저장"
+                        found = buttons.find(btn => {
+                            const text = (btn.textContent || '').trim();
+                            return text.includes('임시저장') || text === 'Draft' || text === 'Save draft';
+                        });
+                        if (found) return found;
+
+                        // 3순위: "저장" / "등록"
+                        found = buttons.find(btn => {
+                            const text = (btn.textContent || '').trim();
+                            return text.includes('저장') || text.includes('등록') || text === 'Save' || text === 'Submit';
+                        });
+                        if (found) return found;
+
+                        return null;
                     });
-                    if (saveBtn && saveBtn.asElement()) {
-                        await saveBtn.asElement().click();
-                        await page.waitForTimeout(2000);
+
+                    if (saveBtn && (saveBtn.asElement ? saveBtn.asElement() : saveBtn)) {
+                        const saveBtnElement = saveBtn.asElement ? saveBtn.asElement() : saveBtn;
+                        const saveBtnText = await page.evaluate(el => (el.textContent || '').trim(), saveBtnElement);
+                        logger.info(`[${studentName}] "${saveBtnText}" 버튼 클릭`);
+                        await page.evaluate(el => el.click(), saveBtnElement);
+                        await delay(3000);
+
+                        // 저장 후 확인 다이얼로그 처리 (JS click)
+                        for (let confirmAttempt = 0; confirmAttempt < 3; confirmAttempt++) {
+                            const confirmClicked = await page.evaluate(() => {
+                                const buttons = Array.from(document.querySelectorAll('button')).filter(btn => btn.offsetParent !== null);
+                                const btn = buttons.find(b => {
+                                    const text = (b.textContent || '').trim();
+                                    return text === '확인' || text === '네' || text === 'OK' || text === 'Yes'
+                                        || text === 'Confirm' || text === '보내기' || text === 'Send';
+                                });
+                                if (btn) {
+                                    btn.click();
+                                    return (btn.textContent || '').trim();
+                                }
+                                return null;
+                            });
+                            if (confirmClicked) {
+                                logger.info(`[${studentName}] 확인 다이얼로그 ${confirmAttempt + 1} "${confirmClicked}" 클릭`);
+                                await delay(2000);
+                            } else {
+                                break;
+                            }
+                        }
+                    } else {
+                        logger.warn(`[${studentName}] 저장 버튼을 찾을 수 없음`);
                     }
 
-                    results.push({ success: true, studentName, status: "success" });
-                    logger.info(`완료: ${studentName}`);
+                    results.push({
+                        success: true,
+                        studentName: studentName,
+                        reportDate: reportDate,
+                        status: 'success'
+                    });
+
+                    logger.info(`보고서 업로드 완료: ${studentName}`);
+
                 } catch (innerError) {
-                    logger.error(`실패: ${studentName}`, innerError);
-                    results.push({ success: false, studentName, status: "error", message: innerError.message });
+                    logger.error(`보고서 ${studentName} 처리 중 오류:`, innerError);
+                    results.push({
+                        success: false,
+                        studentName: studentName || '알 수 없음',
+                        reportDate: reportDate || '알 수 없음',
+                        status: 'error',
+                        message: innerError.message
+                    });
                 }
             }
 
-            if (browser) await browser.close();
+            // 브라우저 종료
+            if (browser) {
+                await browser.close();
+            }
 
             const successCount = results.filter(r => r.success).length;
             const failCount = results.filter(r => !r.success).length;
@@ -2752,10 +3188,12 @@ exports.submitTimetableToClassNote = functions
 
             return { success: true, message: `성공 ${successCount}개, 실패 ${failCount}개`, results };
         } catch (error) {
+            logger.error('전체 로직 오류:', error);
+
             if (browser) {
                 try { await browser.close(); } catch (e) { /* ignore */ }
             }
-            logger.error("전체 오류:", error);
+
             throw new functions.https.HttpsError("internal", error.message || "알 수 없는 오류");
         }
     });

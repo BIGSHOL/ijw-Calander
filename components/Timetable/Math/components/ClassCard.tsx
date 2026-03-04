@@ -36,6 +36,8 @@ interface StudentItemProps {
     isStudentSelected?: boolean;
     isCopiedStudent?: boolean;
     onStudentSelect?: (studentId: string, className: string) => void;
+    onStudentMultiSelect?: (studentIds: Set<string>, className: string) => void;
+    selectedStudentIds?: Set<string>;
     className?: string;
 }
 
@@ -66,6 +68,8 @@ const StudentItem: React.FC<StudentItemProps> = ({
     isStudentSelected,
     isCopiedStudent,
     onStudentSelect,
+    onStudentMultiSelect,
+    selectedStudentIds,
     className: clsName,
 }) => {
     const [isHovered, setIsHovered] = useState(false);
@@ -83,13 +87,23 @@ const StudentItem: React.FC<StudentItemProps> = ({
 
     return (
         <li
-            draggable={isDraggable}
-            onDragStart={(e) => isDraggable && onDragStart(e, student.id, classId, zone)}
+            draggable={isExcelMode ? false : isDraggable}
+            onDragStart={(e) => {
+                if (!isExcelMode && isDraggable) onDragStart(e, student.id, classId, zone);
+            }}
             onClick={(e) => {
                 if (isExcelMode) {
                     e.stopPropagation();
-                    // 학생 선택 + 셀 선택
-                    onStudentSelect?.(student.id, clsName || '');
+                    if (e.ctrlKey || e.metaKey) {
+                        // Ctrl+클릭: 토글 추가/제거
+                        const newSet = new Set(selectedStudentIds);
+                        if (newSet.has(student.id)) newSet.delete(student.id);
+                        else newSet.add(student.id);
+                        onStudentMultiSelect?.(newSet, clsName || '');
+                    } else {
+                        // 일반 클릭: 단일 선택
+                        onStudentSelect?.(student.id, clsName || '');
+                    }
                     onCellSelect?.(classId);
                     return;
                 }
@@ -105,10 +119,26 @@ const StudentItem: React.FC<StudentItemProps> = ({
                     onStudentClick(student.id);
                 }
             }}
-            onMouseEnter={() => setIsHovered(true)}
+            onMouseDown={(e) => {
+                if (isExcelMode && e.button === 0 && !e.ctrlKey && !e.metaKey) {
+                    // 드래그 선택 시작: dataset으로 전파
+                    (e.currentTarget.closest('[data-excel-card]') as HTMLElement)?.dispatchEvent(
+                        new CustomEvent('excel-drag-start', { detail: { studentId: student.id, className: clsName } })
+                    );
+                }
+            }}
+            onMouseEnter={(e) => {
+                setIsHovered(true);
+                if (isExcelMode && e.buttons === 1) {
+                    // 드래그 중: 범위 확장
+                    (e.currentTarget.closest('[data-excel-card]') as HTMLElement)?.dispatchEvent(
+                        new CustomEvent('excel-drag-extend', { detail: { studentId: student.id } })
+                    );
+                }
+            }}
             onMouseLeave={() => setIsHovered(false)}
             className={`py-0 px-0.5 list-none ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap min-w-0 font-normal transition-all duration-150
-            ${isDraggable ? 'cursor-grab' : ''} ${isClickable ? 'cursor-pointer' : ''} ${isExcelMode ? 'cursor-pointer' : ''}
+            ${isExcelMode ? 'cursor-pointer select-none' : isDraggable ? 'cursor-grab' : isClickable ? 'cursor-pointer' : ''}
             ${isStudentSelected ? '!bg-blue-200 !text-blue-900 font-bold ring-1 ring-blue-400' : isCopiedStudent ? '!bg-green-100 !text-green-800 ring-1 ring-green-400' : ''}
             ${!isStudentSelected && !isCopiedStudent ? (isPendingMoved ? 'bg-purple-400 text-white font-bold' : isTransferScheduled ? 'bg-purple-200 text-purple-800 font-bold' : isWithdrawalScheduled ? 'bg-orange-100 text-orange-800 line-through' : isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText) : ''}
             ${!isStudentSelected && !isCopiedStudent && !isPendingMoved && !isTransferScheduled && !isWithdrawalScheduled && !isHighlighted && !enrollmentStyle ? 'opacity-80' : ''}`}
@@ -183,9 +213,10 @@ interface ClassCardProps {
     isSelected?: boolean;
     onCellSelect?: (classId: string) => void;
     onEnrollStudent?: (studentId: string, className: string) => void;
-    selectedStudentId?: string | null;
-    copiedStudentId?: string | null;
+    selectedStudentIds?: Set<string>;
+    copiedStudentIds?: string[] | null;
     onStudentSelect?: (studentId: string, className: string) => void;
+    onStudentMultiSelect?: (studentIds: Set<string>, className: string) => void;
     mode?: 'view' | 'edit';
     onCancelScheduledEnrollment?: (studentId: string, className: string) => void;  // 배정 예정 취소
     onWithdrawalDrop?: (studentId: string, classId: string, className: string) => void;  // 퇴원 드롭존
@@ -228,9 +259,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
     isSelected,
     onCellSelect,
     onEnrollStudent,
-    selectedStudentId,
-    copiedStudentId,
+    selectedStudentIds,
+    copiedStudentIds,
     onStudentSelect,
+    onStudentMultiSelect,
     mode,
     onCancelScheduledEnrollment,
     onWithdrawalDrop
@@ -290,6 +322,47 @@ const ClassCard: React.FC<ClassCardProps> = ({
     const [showScheduleTooltip, setShowScheduleTooltip] = useState(false);
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
     const headerRef = useRef<HTMLDivElement>(null);
+    const cardRef = useRef<HTMLDivElement>(null);
+
+    // 드래그 선택 + 테두리 드래그 이동 (엑셀 모드)
+    const dragSelectStartId = useRef<string | null>(null);
+    const dragSelectIds = useRef<Set<string>>(new Set());
+
+    useEffect(() => {
+        if (!isExcelMode || !cardRef.current) return;
+        const el = cardRef.current;
+
+        const handleDragStart = (e: Event) => {
+            const { studentId, className: cn } = (e as CustomEvent).detail;
+            dragSelectStartId.current = studentId;
+            dragSelectIds.current = new Set([studentId]);
+            onStudentSelect?.(studentId, cn || '');
+            onCellSelect?.(cls.id);
+        };
+
+        const handleDragExtend = (e: Event) => {
+            const { studentId } = (e as CustomEvent).detail;
+            if (!dragSelectStartId.current) return;
+            dragSelectIds.current.add(studentId);
+            onStudentMultiSelect?.(new Set(dragSelectIds.current), cls.className);
+        };
+
+        const handleMouseUp = () => {
+            if (dragSelectStartId.current && dragSelectIds.current.size > 1) {
+                onStudentMultiSelect?.(new Set(dragSelectIds.current), cls.className);
+            }
+            dragSelectStartId.current = null;
+        };
+
+        el.addEventListener('excel-drag-start', handleDragStart);
+        el.addEventListener('excel-drag-extend', handleDragExtend);
+        window.addEventListener('mouseup', handleMouseUp);
+        return () => {
+            el.removeEventListener('excel-drag-start', handleDragStart);
+            el.removeEventListener('excel-drag-extend', handleDragExtend);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isExcelMode, cls.id, cls.className, onStudentSelect, onStudentMultiSelect, onCellSelect]);
 
     // 툴팁 위치 업데이트
     useEffect(() => {
@@ -392,6 +465,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
         return classKeywords.find(kw => cls.className?.includes(kw.keyword));
     }, [cls.className, classKeywords]);
     const hasSearchMatch = searchQuery && cls.studentList?.some(s => s.name.includes(searchQuery));
+
+    // 엑셀 모드: 이 카드에 선택된 학생이 있는지 확인 (테두리 드래그용)
+    const hasSelectedInThisCard = isExcelMode && selectedStudentIds && selectedStudentIds.size > 0 &&
+        (cls.studentList || []).some(s => selectedStudentIds.has(s.id));
 
     // 학생이 특정 요일에 등원하는지 확인
     const isStudentAttendingDay = (student: any, day: string): boolean => {
@@ -719,7 +796,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         style={{
                             width: `${cellSizePx}px`,
                             maxWidth: `${cellSizePx}px`,
-                            height: `${cellSizePx}px`,
+                            padding: '2px 2px',
                         }}
                     >
                         <div className="min-w-0 w-full">
@@ -741,6 +818,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
     return (
         <div
+            ref={cardRef}
+            data-excel-card=""
             onDragOver={(e) => canEdit && onDragOver(e, cls.id)}
             onDragLeave={(e) => {
                 if (canEdit) {
@@ -751,13 +830,31 @@ const ClassCard: React.FC<ClassCardProps> = ({
             onDrop={(e) => canEdit && onDrop(e, cls.id, 'common')}
             onClick={isExcelMode ? (e) => { e.stopPropagation(); onCellSelect?.(cls.id); } : undefined}
             onDoubleClick={isExcelMode ? handleClassHeaderDoubleClick : undefined}
-            className={`flex flex-col ${fixedCardHeight ? '' : 'h-full '}overflow-hidden transition-all w-full max-w-full ${isDragOver ? 'ring-2 ring-indigo-400 shadow-lg shadow-indigo-200' : ''} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''} ${isExcelMode && isSelected ? 'ring-[3px] ring-blue-500 shadow-lg shadow-blue-200' : ''} ${isExcelMode ? 'cursor-pointer' : ''}`}
+            className={`relative flex flex-col ${fixedCardHeight ? '' : 'h-full '}overflow-hidden transition-all w-full max-w-full ${isDragOver ? 'ring-2 ring-indigo-400 shadow-lg shadow-indigo-200' : ''} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''} ${isExcelMode && isSelected ? 'ring-[3px] ring-blue-500 shadow-lg shadow-blue-200' : ''} ${isExcelMode ? 'cursor-pointer' : ''}`}
             style={{
                 ...(isExcelMode && isSelected ? { backgroundColor: '#eff6ff' } : cardBgStyle),
                 ...(fixedCardHeight ? { height: `${fixedCardHeight}px`, maxHeight: `${fixedCardHeight}px` } : {}),
                 ...(compactMaxHeight ? { maxHeight: `${compactMaxHeight}px` } : {})
             }}
         >
+            {/* 엑셀 모드: 선택된 학생이 있을 때 테두리 드래그 오버레이 */}
+            {hasSelectedInThisCard && (() => {
+                const handleBorderDrag = (e: React.DragEvent) => {
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('multiStudentIds', JSON.stringify([...selectedStudentIds!]));
+                    e.dataTransfer.setData('fromClassId', cls.id);
+                    e.dataTransfer.setData('studentId', [...selectedStudentIds!][0]);
+                };
+                return (
+                    <div className="absolute inset-0 pointer-events-none z-20 ring-2 ring-blue-500 rounded-sm">
+                        <div className="absolute top-0 left-0 right-0 h-[5px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
+                        <div className="absolute bottom-0 left-0 right-0 h-[5px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
+                        <div className="absolute top-0 left-0 bottom-0 w-[5px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
+                        <div className="absolute top-0 right-0 bottom-0 w-[5px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
+                    </div>
+                );
+            })()}
+
             {/* Class Name Header - 수정 모드에서 클릭 시 수업 상세 모달, 조회 모드에서 마우스 오버시 스케줄 툴팁 */}
             {showClassName && (
                 <div
@@ -767,7 +864,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     style={{
                         width: `${cellSizePx}px`,
                         maxWidth: `${cellSizePx}px`,
-                        height: `${cellSizePx}px`,
+                        padding: '2px 2px',
                         color: matchedKeyword ? matchedKeyword.textColor : '#111827'
                     }}
                     title={`${cls.className}${cls.room ? `\n${cls.room}` : ''}`}
@@ -949,9 +1046,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             isExcelMode={isExcelMode}
                                             mode={mode}
                                             onCellSelect={onCellSelect}
-                                            isStudentSelected={isExcelMode && selectedStudentId === s.id}
-                                            isCopiedStudent={isExcelMode && copiedStudentId === s.id}
+                                            isStudentSelected={isExcelMode && !!selectedStudentIds?.has(s.id)}
+                                            isCopiedStudent={isExcelMode && !!copiedStudentIds?.includes(s.id)}
                                             onStudentSelect={onStudentSelect}
+                                            onStudentMultiSelect={onStudentMultiSelect}
+                                            selectedStudentIds={selectedStudentIds}
                                             className={cls.className}
                                         />
                                     );
@@ -1014,9 +1113,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                 isExcelMode={isExcelMode}
                                                                 mode={mode}
                                                                 onCellSelect={onCellSelect}
-                                                                isStudentSelected={isExcelMode && selectedStudentId === s.id}
-                                                                isCopiedStudent={isExcelMode && copiedStudentId === s.id}
+                                                                isStudentSelected={isExcelMode && !!selectedStudentIds?.has(s.id)}
+                                                                isCopiedStudent={isExcelMode && !!copiedStudentIds?.includes(s.id)}
                                                                 onStudentSelect={onStudentSelect}
+                                                                onStudentMultiSelect={onStudentMultiSelect}
+                                                                selectedStudentIds={selectedStudentIds}
                                                                 className={cls.className}
                                                             />
                                                         )}
@@ -1214,9 +1315,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             isExcelMode={isExcelMode}
                                             mode={mode}
                                             onCellSelect={onCellSelect}
-                                            isStudentSelected={isExcelMode && selectedStudentId === s.id}
-                                            isCopiedStudent={isExcelMode && copiedStudentId === s.id}
+                                            isStudentSelected={isExcelMode && !!selectedStudentIds?.has(s.id)}
+                                            isCopiedStudent={isExcelMode && !!copiedStudentIds?.includes(s.id)}
                                             onStudentSelect={onStudentSelect}
+                                            onStudentMultiSelect={onStudentMultiSelect}
+                                            selectedStudentIds={selectedStudentIds}
                                             className={cls.className}
                                         />
                                     );
@@ -1444,8 +1547,8 @@ export default React.memo(ClassCard, (prevProps, nextProps) => {
         prevProps.studentTextbookMap === nextProps.studentTextbookMap &&
         prevProps.isExcelMode === nextProps.isExcelMode &&
         prevProps.isSelected === nextProps.isSelected &&
-        prevProps.selectedStudentId === nextProps.selectedStudentId &&
-        prevProps.copiedStudentId === nextProps.copiedStudentId &&
+        prevProps.selectedStudentIds === nextProps.selectedStudentIds &&
+        prevProps.copiedStudentIds === nextProps.copiedStudentIds &&
         prevProps.referenceDate === nextProps.referenceDate &&
         prevProps.mode === nextProps.mode
     );

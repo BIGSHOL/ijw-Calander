@@ -321,6 +321,60 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
         }
     };
 
+    // 멀티 학생 드롭 (엑셀 모드: 여러 학생을 한 번에 다른 반으로 이동)
+    const handleMultiDrop = useCallback((studentIds: string[], fromClassId: string, toClassId: string, toZone: DragZone = 'common') => {
+        if (fromClassId === toClassId) return;
+
+        const currentLocalClasses = localClassesRef.current;
+        const fromClass = currentLocalClasses.find(c => c.id === fromClassId);
+        const toClass = currentLocalClasses.find(c => c.id === toClassId);
+        if (!fromClass || !toClass) return;
+
+        const newAttendanceDays = toZone === 'common' ? [] : [toZone];
+
+        // 이동할 학생들 필터링
+        const movingStudents = studentIds
+            .map(sid => fromClass.studentList?.find(s => s.id === sid))
+            .filter(Boolean) as any[];
+        if (movingStudents.length === 0) return;
+
+        // Optimistic UI 업데이트
+        setLocalClasses(prev => prev.map(cls => {
+            if (cls.id === fromClassId) {
+                const newIds = (cls.studentIds || []).filter(id => !studentIds.includes(id));
+                const newStudentList = (cls.studentList || []).filter(s => !studentIds.includes(s.id));
+                return { ...cls, studentIds: newIds, studentList: newStudentList };
+            }
+            if (cls.id === toClassId) {
+                const newIds = [...(cls.studentIds || [])];
+                const newStudentList = [...(cls.studentList || [])];
+                movingStudents.forEach(ms => {
+                    if (!newIds.includes(ms.id)) newIds.push(ms.id);
+                    if (!newStudentList.some((s: any) => s.id === ms.id)) {
+                        newStudentList.push({ ...ms, attendanceDays: newAttendanceDays });
+                    }
+                });
+                return { ...cls, studentIds: newIds, studentList: newStudentList };
+            }
+            return cls;
+        }));
+
+        // 각 학생에 대해 pendingMove 추가
+        setPendingMoves(prev => [
+            ...prev,
+            ...movingStudents.map(ms => ({
+                studentId: ms.id,
+                fromClassId,
+                toClassId,
+                fromZone: 'common' as DragZone,
+                toZone,
+                student: { id: ms.id } as TimetableStudent
+            }))
+        ]);
+
+        setDragOverClassId(null);
+    }, []);
+
     const handleCancelPendingMoves = useCallback(() => {
         setPendingMoves([]);
         setLocalClasses(initialClasses); // Reset to Firebase state
@@ -343,6 +397,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
         handleDragOver,
         handleDragLeave,
         handleDrop,
+        handleMultiDrop,
         handleSavePendingMoves,
         handleCancelPendingMoves,
         updatePendingMoveDate
