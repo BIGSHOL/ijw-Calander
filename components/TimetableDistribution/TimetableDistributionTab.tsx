@@ -77,6 +77,15 @@ const getClassColor = (className: string) => {
   return CLASS_COLORS[Math.abs(hash) % CLASS_COLORS.length];
 };
 
+// 오후 12시간제 표시 (13→1, 14→2, ..., 21→9)
+const formatHourLabel = (minutes: number): number => {
+  const h = Math.floor(minutes / 60);
+  return h > 12 ? h - 12 : h;
+};
+
+// 그리드 상단 여백 (첫 번째 시간 라벨 잘림 방지)
+const GRID_PAD_TOP = 18;
+
 // ─── Build timetable data (from StudentTimetableModal) ───
 function buildStudentTimetable(student: UnifiedStudent, allClasses: any[]) {
   const today = new Date().toISOString().split('T')[0];
@@ -311,7 +320,7 @@ const TimetableImageRenderer: React.FC<{
       </div>
 
       {/* Timetable Grid */}
-      <div style={{ border: '1px solid #d1d5db', borderRadius: '4px', overflow: 'hidden' }}>
+      <div style={{ border: '1px solid #d1d5db', borderRadius: '4px' }}>
         {/* Day Headers */}
         <div style={{ display: 'flex', borderBottom: '2px solid #d1d5db' }}>
           <div style={{
@@ -337,18 +346,19 @@ const TimetableImageRenderer: React.FC<{
         </div>
 
         {/* Time axis + blocks */}
-        <div style={{ display: 'flex', position: 'relative', height: `${totalHeight}px` }}>
+        <div style={{ display: 'flex', position: 'relative', height: `${totalHeight + GRID_PAD_TOP}px` }}>
           {/* Time column */}
           <div style={{ width: '60px', flexShrink: 0, position: 'relative', backgroundColor: '#f9fafb', borderRight: '1px solid #e5e7eb' }}>
             {timeLabels.map(label => {
-              const top = (label.minutes - rangeStartMin) * PIXELS_PER_MINUTE_IMG;
+              const top = (label.minutes - rangeStartMin) * PIXELS_PER_MINUTE_IMG + GRID_PAD_TOP;
               return (
                 <div key={label.time} style={{ position: 'absolute', left: 0, right: 0, top: `${top}px` }}>
                   <span style={{
                     fontSize: '18px', fontWeight: 'bold', color: '#374151',
-                    padding: '0 6px', transform: 'translateY(-50%)', display: 'inline-block',
+                    padding: '2px 6px', transform: 'translateY(-50%)', display: 'inline-block',
+                    backgroundColor: '#f9fafb', lineHeight: '1',
                   }}>
-                    {Math.floor(label.minutes / 60)}
+                    {formatHourLabel(label.minutes)}
                   </span>
                 </div>
               );
@@ -367,7 +377,7 @@ const TimetableImageRenderer: React.FC<{
               }}>
                 {/* Time lines */}
                 {timeLabels.map(label => {
-                  const top = (label.minutes - rangeStartMin) * PIXELS_PER_MINUTE_IMG;
+                  const top = (label.minutes - rangeStartMin) * PIXELS_PER_MINUTE_IMG + GRID_PAD_TOP;
                   return (
                     <div key={label.time} style={{
                       position: 'absolute', left: 0, right: 0, top: `${top}px`,
@@ -380,7 +390,7 @@ const TimetableImageRenderer: React.FC<{
                 {blocks.map((block, idx) => {
                   const startMin = timeToMinutes(block.startTime);
                   const endMin = timeToMinutes(block.endTime);
-                  const top = (startMin - rangeStartMin) * PIXELS_PER_MINUTE_IMG;
+                  const top = (startMin - rangeStartMin) * PIXELS_PER_MINUTE_IMG + GRID_PAD_TOP;
                   const height = (endMin - startMin) * PIXELS_PER_MINUTE_IMG;
                   const sc = getClassColor(block.className);
                   const isShort = height < 60;
@@ -433,14 +443,14 @@ const TimetableImageRenderer: React.FC<{
                   .filter(e => e.day === day)
                   .map((e, ei) => {
                     const eventMin = timeToMinutes(e.time);
-                    const top = (eventMin - rangeStartMin) * PIXELS_PER_MINUTE_IMG;
+                    const top = (eventMin - rangeStartMin) * PIXELS_PER_MINUTE_IMG + GRID_PAD_TOP;
                     return (
                       <div
                         key={`shuttle-${ei}`}
                         style={{
                           position: 'absolute', left: 0, right: 0, zIndex: 20,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          top: `${top - 10}px`,
+                          top: `${top - 12}px`,
                         }}
                       >
                         <span style={{
