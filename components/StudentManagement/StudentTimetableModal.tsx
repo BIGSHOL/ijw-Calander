@@ -376,7 +376,7 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
 
   // 그리드 최소 너비 (시간열 + 요일별 서브컬럼 너비 합)
   const totalGridMinWidth = useMemo(() => {
-    return 56 + dayOrder.reduce((sum, day) => sum + (dayOverlapData[day]?.maxCols || 1) * DAY_COL_MIN_WIDTH, 0);
+    return 64 + dayOrder.reduce((sum, day) => sum + (dayOverlapData[day]?.maxCols || 1) * DAY_COL_MIN_WIDTH, 0);
   }, [dayOverlapData]);
 
   return (
@@ -397,8 +397,8 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
           <div className="border rounded-sm" style={{ minWidth: `${totalGridMinWidth}px` }}>
                 {/* 요일 헤더 */}
                 <div className="flex border-b border-gray-200">
-                  <div className="w-14 flex-shrink-0 bg-gray-50 border-r border-gray-200 px-1 py-2 text-center">
-                    <span className="text-sm font-bold text-gray-500">시간</span>
+                  <div className="w-16 flex-shrink-0 bg-gray-50 border-r border-gray-200 px-1 py-2 text-center">
+                    <span className="text-base font-bold text-gray-500">시간</span>
                   </div>
                   {sortedDays.map(day => {
                     const { maxCols } = dayOverlapData[day] || { maxCols: 1 };
@@ -422,7 +422,7 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                 {/* 시간축 + 수업 블록 */}
                 <div className="flex relative" style={{ height: `${totalHeight}px` }}>
                   {/* 시간 열 */}
-                  <div className="w-14 flex-shrink-0 relative bg-gray-50 border-r border-gray-200">
+                  <div className="w-16 flex-shrink-0 relative bg-gray-50 border-r border-gray-200">
                     {timeLabels.map(label => {
                       const top = (label.minutes - rangeStartMin) * PIXELS_PER_MINUTE;
                       return (
@@ -432,7 +432,7 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                           style={{ top: `${top}px` }}
                         >
                           <span
-                            className={`text-sm px-1 -translate-y-1/2 ${
+                            className={`text-base px-1.5 -translate-y-1/2 ${
                               label.isHour ? 'font-bold text-gray-700' : 'text-gray-400'
                             }`}
                           >
@@ -498,28 +498,28 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                             >
                               <div className={`px-2 h-full flex flex-col ${isShort ? 'py-0 justify-center' : 'py-1.5'}`}>
                                 <div
-                                  className="font-bold text-sm truncate leading-tight"
+                                  className="font-bold text-base leading-tight break-words"
                                   style={{ color: classColor.text }}
                                 >
                                   {block.className}
                                 </div>
                                 {!isShort && (
                                   <>
-                                    <div className="text-xs font-medium text-gray-500 mt-0.5">
+                                    <div className="text-sm font-medium text-gray-500 mt-0.5">
                                       {block.startTime} ~ {block.endTime}
                                     </div>
                                     <div className="flex items-center gap-1 mt-0.5">
                                       {block.room && (
-                                        <span className="text-xs text-gray-400">{block.room}</span>
+                                        <span className="text-sm text-gray-400">{block.room}</span>
                                       )}
                                       {block.teacher && (
-                                        <span className="text-xs text-gray-400">| {block.teacher}</span>
+                                        <span className="text-sm text-gray-400">| {block.teacher}</span>
                                       )}
                                     </div>
                                   </>
                                 )}
                                 {isShort && (
-                                  <div className="text-xs text-gray-400 truncate">
+                                  <div className="text-sm text-gray-400 break-words">
                                     {block.startTime}~{block.endTime}
                                     {block.room && ` · ${block.room}`}
                                   </div>
@@ -541,9 +541,9 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                                 className="absolute left-0 right-0 z-20 flex items-center justify-center"
                                 style={{ top: `${top - 10}px` }}
                               >
-                                <div className="bg-blue-500 text-white text-micro px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shadow-sm">
-                                  <Bus size={8} />
-                                  <span>승차 {e.time}</span>
+                                <div className="bg-blue-500 text-white text-xs px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm font-bold">
+                                  <Bus size={12} />
+                                  <span>🚌 {e.time}</span>
                                 </div>
                               </div>
                             );
@@ -555,7 +555,7 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
           </div>
 
           {/* 수업 요약 */}
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap gap-2">
             {Object.entries(
               (student.enrollments || [])
                 .filter(e => {
@@ -580,11 +580,11 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
               return (
                 <div
                   key={key}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm border text-xs"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-sm border text-sm"
                   style={{ borderColor: classColor.border, backgroundColor: classColor.light }}
                 >
                   <span
-                    className="px-1.5 py-0.5 rounded-sm font-bold text-xxs text-white"
+                    className="px-2 py-0.5 rounded-sm font-bold text-xs text-white"
                     style={{ backgroundColor: classColor.bg }}
                   >
                     {SUBJECT_LABELS[info.subject as keyof typeof SUBJECT_LABELS] || info.subject}
@@ -600,12 +600,12 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
           {/* 강의실 이동 알림 */}
           {roomChanges.length > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-sm p-2 space-y-1.5">
-              <div className="flex items-center gap-1 text-xs font-bold text-amber-700">
-                <AlertTriangle className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-1.5 text-sm font-bold text-amber-700">
+                <AlertTriangle className="w-4 h-4" />
                 강의실 이동 안내
               </div>
               {roomChanges.map((change, i) => (
-                <div key={i} className="flex items-center gap-1.5 text-xxs text-amber-800">
+                <div key={i} className="flex items-center gap-1.5 text-xs text-amber-800">
                   <span className="font-bold px-1 py-0.5 bg-amber-100 rounded-sm">{change.day}</span>
                   <span>{change.fromClass}</span>
                   <span className="font-mono text-amber-600">({change.fromRoom})</span>
@@ -623,14 +623,14 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
           {/* 셔틀버스 이용 안내 */}
           {shuttleEvents.length > 0 && (
             <div className="bg-blue-50 border border-blue-200 rounded-sm p-2 space-y-1.5">
-              <div className="flex items-center gap-1 text-xs font-bold text-blue-700">
-                <Bus className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-1.5 text-sm font-bold text-blue-700">
+                <Bus className="w-4 h-4" />
                 셔틀버스 이용
               </div>
               {[...shuttleEvents].sort((a, b) => dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day)).map((e, i) => (
-                <div key={i} className="flex items-center gap-1.5 text-xxs text-blue-800">
-                  <span className="font-bold px-1 py-0.5 bg-blue-100 rounded-sm">{e.day}</span>
-                  <span className="px-1 py-0.5 rounded-sm text-white text-micro font-bold bg-blue-500">승차</span>
+                <div key={i} className="flex items-center gap-1.5 text-xs text-blue-800">
+                  <span className="font-bold px-1.5 py-0.5 bg-blue-100 rounded-sm">{e.day}</span>
+                  <span className="px-1.5 py-0.5 rounded-sm text-white text-xs font-bold bg-blue-500">승차</span>
                   <span className="font-bold">{e.time}</span>
                   <span className="text-blue-500">{e.busName}</span>
                   {e.destination && <span className="text-blue-400">· {e.destination}</span>}

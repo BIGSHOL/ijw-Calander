@@ -315,10 +315,10 @@ const TimetableImageRenderer: React.FC<{
         {/* Day Headers */}
         <div style={{ display: 'flex', borderBottom: '2px solid #d1d5db' }}>
           <div style={{
-            width: '48px', flexShrink: 0, backgroundColor: '#f9fafb',
+            width: '60px', flexShrink: 0, backgroundColor: '#f9fafb',
             borderRight: '1px solid #e5e7eb', padding: '8px 2px', textAlign: 'center',
           }}>
-            <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#6b7280' }}>시간</span>
+            <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#6b7280' }}>시간</span>
           </div>
           {dayOrder.map((day, i) => (
             <div
@@ -339,14 +339,14 @@ const TimetableImageRenderer: React.FC<{
         {/* Time axis + blocks */}
         <div style={{ display: 'flex', position: 'relative', height: `${totalHeight}px` }}>
           {/* Time column */}
-          <div style={{ width: '48px', flexShrink: 0, position: 'relative', backgroundColor: '#f9fafb', borderRight: '1px solid #e5e7eb' }}>
+          <div style={{ width: '60px', flexShrink: 0, position: 'relative', backgroundColor: '#f9fafb', borderRight: '1px solid #e5e7eb' }}>
             {timeLabels.map(label => {
               const top = (label.minutes - rangeStartMin) * PIXELS_PER_MINUTE_IMG;
               return (
                 <div key={label.time} style={{ position: 'absolute', left: 0, right: 0, top: `${top}px` }}>
                   <span style={{
-                    fontSize: '15px', fontWeight: 'bold', color: '#374151',
-                    padding: '0 4px', transform: 'translateY(-50%)', display: 'inline-block',
+                    fontSize: '18px', fontWeight: 'bold', color: '#374151',
+                    padding: '0 6px', transform: 'translateY(-50%)', display: 'inline-block',
                   }}>
                     {Math.floor(label.minutes / 60)}
                   </span>
@@ -401,25 +401,25 @@ const TimetableImageRenderer: React.FC<{
                         justifyContent: isShort ? 'center' : 'flex-start',
                       }}>
                         <div style={{
-                          fontWeight: 'bold', fontSize: '17px',
+                          fontWeight: 'bold', fontSize: '20px',
                           color: sc.text,
-                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          lineHeight: '1.2', wordBreak: 'break-word',
                         }}>
                           {block.className}
                         </div>
                         {!isShort && (
                           <>
-                            <div style={{ fontSize: '14px', fontWeight: 500, color: '#6b7280', marginTop: '3px' }}>
+                            <div style={{ fontSize: '16px', fontWeight: 500, color: '#6b7280', marginTop: '3px' }}>
                               {block.startTime} ~ {block.endTime}
                             </div>
-                            <div style={{ fontSize: '13px', color: '#9ca3af', marginTop: '2px' }}>
+                            <div style={{ fontSize: '15px', color: '#9ca3af', marginTop: '2px' }}>
                               {block.room && `${block.room}`}
                               {block.teacher && ` | ${block.teacher}`}
                             </div>
                           </>
                         )}
                         {isShort && (
-                          <div style={{ fontSize: '12px', color: '#9ca3af' }}>
+                          <div style={{ fontSize: '14px', color: '#9ca3af' }}>
                             {block.startTime}~{block.endTime}{block.room && ` · ${block.room}`}
                           </div>
                         )}
@@ -444,10 +444,10 @@ const TimetableImageRenderer: React.FC<{
                         }}
                       >
                         <span style={{
-                          backgroundColor: '#3b82f6', color: 'white', fontSize: '9px',
-                          padding: '2px 6px', borderRadius: '9999px',
+                          backgroundColor: '#3b82f6', color: 'white', fontSize: '13px',
+                          padding: '3px 8px', borderRadius: '9999px', fontWeight: 'bold',
                         }}>
-                          Bus {e.time}
+                          🚌 {e.time}
                         </span>
                       </div>
                     );
@@ -480,10 +480,10 @@ const TimetableImageRenderer: React.FC<{
             <div key={key} style={{
               display: 'flex', alignItems: 'center', gap: '6px',
               padding: '6px 12px', borderRadius: '4px',
-              border: `1px solid ${sc.border}`, backgroundColor: sc.light, fontSize: '14px',
+              border: `1px solid ${sc.border}`, backgroundColor: sc.light, fontSize: '16px',
             }}>
               <span style={{
-                padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px',
+                padding: '3px 10px', borderRadius: '4px', fontWeight: 'bold', fontSize: '14px',
                 backgroundColor: sc.bg, color: '#ffffff',
               }}>
                 {SUBJECT_LABELS[info.subject as keyof typeof SUBJECT_LABELS] || info.subject}
@@ -502,11 +502,11 @@ const TimetableImageRenderer: React.FC<{
           marginTop: '8px', backgroundColor: '#fffbeb', border: '1px solid #fde68a',
           borderRadius: '4px', padding: '10px',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 'bold', color: '#b45309', marginBottom: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '16px', fontWeight: 'bold', color: '#b45309', marginBottom: '6px' }}>
             강의실 이동 안내
           </div>
           {roomChanges.map((change, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#92400e', marginBottom: '4px' }}>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: '#92400e', marginBottom: '4px' }}>
               <span style={{ fontWeight: 'bold', padding: '2px 6px', backgroundColor: '#fef3c7', borderRadius: '3px' }}>{change.day}</span>
               <span>{change.fromClass}</span>
               <span style={{ color: '#d97706' }}>({change.fromRoom})</span>
@@ -525,15 +525,15 @@ const TimetableImageRenderer: React.FC<{
           marginTop: '8px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe',
           borderRadius: '4px', padding: '10px',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 'bold', color: '#1d4ed8', marginBottom: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '16px', fontWeight: 'bold', color: '#1d4ed8', marginBottom: '6px' }}>
             셔틀버스 이용
           </div>
           {[...shuttleEvents]
             .sort((a, b) => WEEKDAY_ORDER.indexOf(a.day) - WEEKDAY_ORDER.indexOf(b.day))
             .map((e, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#1e40af', marginBottom: '4px' }}>
-              <span style={{ fontWeight: 'bold', padding: '2px 6px', backgroundColor: '#dbeafe', borderRadius: '3px' }}>{e.day}</span>
-              <span style={{ padding: '2px 6px', borderRadius: '3px', color: 'white', fontSize: '10px', fontWeight: 'bold', backgroundColor: '#3b82f6' }}>승차</span>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: '#1e40af', marginBottom: '4px' }}>
+              <span style={{ fontWeight: 'bold', padding: '2px 8px', backgroundColor: '#dbeafe', borderRadius: '3px' }}>{e.day}</span>
+              <span style={{ padding: '2px 8px', borderRadius: '3px', color: 'white', fontSize: '12px', fontWeight: 'bold', backgroundColor: '#3b82f6' }}>승차</span>
               <span style={{ fontWeight: 'bold' }}>{e.time}</span>
               <span style={{ color: '#3b82f6' }}>{e.busName}</span>
               {e.destination && <span style={{ color: '#60a5fa' }}>· {e.destination}</span>}
