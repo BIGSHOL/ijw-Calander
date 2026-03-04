@@ -52,11 +52,37 @@ const minutesToTime = (minutes: number): string => {
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 };
 
-// 1분 = 1px (13:00~23:00 = 600분 = 600px)
-const PIXELS_PER_MINUTE = 1;
+// 1분 = 1.5px
+const PIXELS_PER_MINUTE = 1.5;
+const DEFAULT_START_MIN = 13 * 60; // 13:00
+const DEFAULT_END_MIN = 21 * 60;   // 21:00
 
 // 서브컬럼당 최소 너비(px)
 const DAY_COL_MIN_WIDTH = 80;
+
+// ─── 수업별 고유 색상 팔레트 ───
+const CLASS_COLORS = [
+  { bg: '#3b82f6', light: '#eff6ff', text: '#1e40af', border: '#93c5fd' },
+  { bg: '#f59e0b', light: '#fffbeb', text: '#92400e', border: '#fcd34d' },
+  { bg: '#10b981', light: '#ecfdf5', text: '#065f46', border: '#6ee7b7' },
+  { bg: '#ef4444', light: '#fef2f2', text: '#991b1b', border: '#fca5a5' },
+  { bg: '#8b5cf6', light: '#f5f3ff', text: '#5b21b6', border: '#c4b5fd' },
+  { bg: '#ec4899', light: '#fdf2f8', text: '#9d174d', border: '#f9a8d4' },
+  { bg: '#06b6d4', light: '#ecfeff', text: '#155e75', border: '#67e8f9' },
+  { bg: '#f97316', light: '#fff7ed', text: '#9a3412', border: '#fdba74' },
+  { bg: '#14b8a6', light: '#f0fdfa', text: '#134e4a', border: '#5eead4' },
+  { bg: '#6366f1', light: '#eef2ff', text: '#3730a3', border: '#a5b4fc' },
+  { bg: '#84cc16', light: '#f7fee7', text: '#3f6212', border: '#bef264' },
+  { bg: '#d946ef', light: '#fdf4ff', text: '#86198f', border: '#e879f9' },
+];
+
+const getClassColor = (className: string) => {
+  let hash = 0;
+  for (let i = 0; i < className.length; i++) {
+    hash = className.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return CLASS_COLORS[Math.abs(hash) % CLASS_COLORS.length];
+};
 
 /** 같은 요일 내 시간이 겹치는 블록을 가로 서브컬럼으로 배치 */
 function computeOverlapColumns(blocks: ClassBlock[]) {
@@ -327,9 +353,11 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
       if (t > maxEnd) maxEnd = t;
     }
 
-    // 1시간 단위로 내림/올림 (여유 30분)
-    const rangeStartMin = Math.floor((minStart - 30) / 60) * 60;
-    const rangeEndMin = Math.ceil((maxEnd + 30) / 60) * 60;
+    // 1시간 단위로 내림/올림 (여유 30분), 기본 13~21시
+    const rawStart = Math.floor((minStart - 30) / 60) * 60;
+    const rawEnd = Math.ceil((maxEnd + 30) / 60) * 60;
+    const rangeStartMin = Math.min(DEFAULT_START_MIN, Math.max(rawStart, 0));
+    const rangeEndMin = Math.max(DEFAULT_END_MIN, Math.min(rawEnd, 24 * 60));
 
     // 시간 라벨 생성 (1시간 간격)
     const timeLabels: Array<{ time: string; minutes: number; isHour: boolean }> = [];
@@ -369,8 +397,8 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
           <div className="border rounded-sm" style={{ minWidth: `${totalGridMinWidth}px` }}>
                 {/* 요일 헤더 */}
                 <div className="flex border-b border-gray-200">
-                  <div className="w-14 flex-shrink-0 bg-gray-50 border-r border-gray-200 px-1 py-1.5 text-center">
-                    <span className="text-xxs font-bold text-gray-500">시간</span>
+                  <div className="w-14 flex-shrink-0 bg-gray-50 border-r border-gray-200 px-1 py-2 text-center">
+                    <span className="text-sm font-bold text-gray-500">시간</span>
                   </div>
                   {sortedDays.map(day => {
                     const { maxCols } = dayOverlapData[day] || { maxCols: 1 };
@@ -382,7 +410,7 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                     return (
                       <div
                         key={day}
-                        className={`${colors.bg} ${colors.text} px-2 py-1.5 text-center font-bold text-xs border-r last:border-r-0 border-gray-200`}
+                        className={`${colors.bg} ${colors.text} px-2 py-2 text-center font-bold text-base border-r last:border-r-0 border-gray-200`}
                         style={{ flex: maxCols, minWidth: `${maxCols * DAY_COL_MIN_WIDTH}px` }}
                       >
                         {day}
@@ -404,11 +432,11 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                           style={{ top: `${top}px` }}
                         >
                           <span
-                            className={`text-xxs px-1 -translate-y-1/2 ${
+                            className={`text-sm px-1 -translate-y-1/2 ${
                               label.isHour ? 'font-bold text-gray-700' : 'text-gray-400'
                             }`}
                           >
-                            {label.time}
+                            {Math.floor(label.minutes / 60)}
                           </span>
                         </div>
                       );
@@ -448,8 +476,8 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                           const endMin = timeToMinutes(block.endTime);
                           const top = (startMin - rangeStartMin) * PIXELS_PER_MINUTE;
                           const height = (endMin - startMin) * PIXELS_PER_MINUTE;
-                          const subjectColor = SUBJECT_COLORS[block.subject as keyof typeof SUBJECT_COLORS] || SUBJECT_COLORS.other;
-                          const isShort = height < 40;
+                          const classColor = getClassColor(block.className);
+                          const isShort = height < 55;
 
                           const overlap = blockLayout.get(idx) || { col: 0, totalCols: 1 };
                           const leftPct = (overlap.col / overlap.totalCols) * 100;
@@ -464,34 +492,34 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                                 height: `${height}px`,
                                 left: `calc(${leftPct}% + 2px)`,
                                 width: `calc(${widthPct}% - 4px)`,
-                                backgroundColor: subjectColor.light,
-                                borderLeft: `3px solid ${subjectColor.bg}`,
+                                backgroundColor: classColor.light,
+                                borderLeft: `4px solid ${classColor.bg}`,
                               }}
                             >
-                              <div className={`px-1.5 h-full flex flex-col ${isShort ? 'py-0 justify-center' : 'py-1'}`}>
+                              <div className={`px-2 h-full flex flex-col ${isShort ? 'py-0 justify-center' : 'py-1.5'}`}>
                                 <div
-                                  className="font-bold text-xxs truncate leading-tight"
-                                  style={{ color: subjectColor.text === '#ffffff' ? subjectColor.border : subjectColor.text }}
+                                  className="font-bold text-sm truncate leading-tight"
+                                  style={{ color: classColor.text }}
                                 >
                                   {block.className}
                                 </div>
                                 {!isShort && (
                                   <>
-                                    <div className="text-micro font-medium text-gray-500 mt-0.5">
+                                    <div className="text-xs font-medium text-gray-500 mt-0.5">
                                       {block.startTime} ~ {block.endTime}
                                     </div>
                                     <div className="flex items-center gap-1 mt-0.5">
                                       {block.room && (
-                                        <span className="text-micro text-gray-400">{block.room}</span>
+                                        <span className="text-xs text-gray-400">{block.room}</span>
                                       )}
                                       {block.teacher && (
-                                        <span className="text-micro text-gray-400">| {block.teacher}</span>
+                                        <span className="text-xs text-gray-400">| {block.teacher}</span>
                                       )}
                                     </div>
                                   </>
                                 )}
                                 {isShort && (
-                                  <div className="text-micro text-gray-400 truncate">
+                                  <div className="text-xs text-gray-400 truncate">
                                     {block.startTime}~{block.endTime}
                                     {block.room && ` · ${block.room}`}
                                   </div>
@@ -548,16 +576,16 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                   return acc;
                 }, {} as Record<string, { className: string; subject: string; teacher: string; room: string }>)
             ).map(([key, info]) => {
-              const subjectColor = SUBJECT_COLORS[info.subject as keyof typeof SUBJECT_COLORS] || SUBJECT_COLORS.other;
+              const classColor = getClassColor(info.className);
               return (
                 <div
                   key={key}
-                  className="flex items-center gap-1 px-2 py-1 rounded-sm border text-xxs"
-                  style={{ borderColor: subjectColor.border, backgroundColor: subjectColor.light }}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-sm border text-xs"
+                  style={{ borderColor: classColor.border, backgroundColor: classColor.light }}
                 >
                   <span
-                    className="px-1 py-0.5 rounded-sm font-bold text-micro"
-                    style={{ backgroundColor: subjectColor.bg, color: subjectColor.text }}
+                    className="px-1.5 py-0.5 rounded-sm font-bold text-xxs text-white"
+                    style={{ backgroundColor: classColor.bg }}
                   >
                     {SUBJECT_LABELS[info.subject as keyof typeof SUBJECT_LABELS] || info.subject}
                   </span>
