@@ -37,8 +37,10 @@ interface StudentDistResult {
 
 // ─── Constants ───────────────────────────────────────────
 const WEEKDAY_ORDER = ['월', '화', '수', '목', '금'];
-const PIXELS_PER_MINUTE_IMG = 1.2;
+const PIXELS_PER_MINUTE_IMG = 1.5;
 const BATCH_SIZE = 15;
+const DEFAULT_START_MIN = 13 * 60; // 13:00
+const DEFAULT_END_MIN = 21 * 60;   // 21:00
 
 const timeToMinutes = (time: string): number => {
   const [h, m] = time.split(':').map(Number);
@@ -49,6 +51,30 @@ const minutesToTime = (minutes: number): string => {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+};
+
+// ─── 수업별 고유 색상 팔레트 ───
+const CLASS_COLORS = [
+  { bg: '#3b82f6', light: '#eff6ff', text: '#1e40af', border: '#93c5fd' },
+  { bg: '#f59e0b', light: '#fffbeb', text: '#92400e', border: '#fcd34d' },
+  { bg: '#10b981', light: '#ecfdf5', text: '#065f46', border: '#6ee7b7' },
+  { bg: '#ef4444', light: '#fef2f2', text: '#991b1b', border: '#fca5a5' },
+  { bg: '#8b5cf6', light: '#f5f3ff', text: '#5b21b6', border: '#c4b5fd' },
+  { bg: '#ec4899', light: '#fdf2f8', text: '#9d174d', border: '#f9a8d4' },
+  { bg: '#06b6d4', light: '#ecfeff', text: '#155e75', border: '#67e8f9' },
+  { bg: '#f97316', light: '#fff7ed', text: '#9a3412', border: '#fdba74' },
+  { bg: '#14b8a6', light: '#f0fdfa', text: '#134e4a', border: '#5eead4' },
+  { bg: '#6366f1', light: '#eef2ff', text: '#3730a3', border: '#a5b4fc' },
+  { bg: '#84cc16', light: '#f7fee7', text: '#3f6212', border: '#bef264' },
+  { bg: '#d946ef', light: '#fdf4ff', text: '#86198f', border: '#e879f9' },
+];
+
+const getClassColor = (className: string) => {
+  let hash = 0;
+  for (let i = 0; i < className.length; i++) {
+    hash = className.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return CLASS_COLORS[Math.abs(hash) % CLASS_COLORS.length];
 };
 
 // ─── Build timetable data (from StudentTimetableModal) ───
@@ -249,9 +275,10 @@ const TimetableImageRenderer: React.FC<{
     // 시간 단위로 맞추기 (내림/올림) + 30분 여유
     const start = Math.floor((minStart - 30) / 60) * 60;
     const end = Math.ceil((maxEnd + 30) / 60) * 60;
+    // 기본 13~21시, 벗어나면 확장
     return {
-      rangeStartMin: Math.max(start, 0),
-      rangeEndMin: Math.min(end, 24 * 60),
+      rangeStartMin: Math.min(DEFAULT_START_MIN, Math.max(start, 0)),
+      rangeEndMin: Math.max(DEFAULT_END_MIN, Math.min(end, 24 * 60)),
     };
   }, [dayBlocks, shuttleEvents]);
 
@@ -275,10 +302,10 @@ const TimetableImageRenderer: React.FC<{
     <div style={{ width: `${imgWidth}px`, backgroundColor: 'white', padding: '12px 8px 8px 8px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       {/* Header - 간결하게 */}
       <div style={{ marginBottom: '8px', paddingBottom: '6px', borderBottom: '2px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#111827' }}>
+        <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#111827' }}>
           {student.name} 시간표
         </div>
-        <div style={{ fontSize: '11px', color: '#9ca3af' }}>
+        <div style={{ fontSize: '14px', color: '#9ca3af' }}>
           {reportDate}
         </div>
       </div>
@@ -291,14 +318,14 @@ const TimetableImageRenderer: React.FC<{
             width: '48px', flexShrink: 0, backgroundColor: '#f9fafb',
             borderRight: '1px solid #e5e7eb', padding: '8px 2px', textAlign: 'center',
           }}>
-            <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#6b7280' }}>시간</span>
+            <span style={{ fontSize: '14px', fontWeight: 'bold', color: '#6b7280' }}>시간</span>
           </div>
           {dayOrder.map((day, i) => (
             <div
               key={day}
               style={{
                 flex: 1, padding: '8px 4px', textAlign: 'center',
-                fontWeight: 'bold', fontSize: '14px',
+                fontWeight: 'bold', fontSize: '18px',
                 backgroundColor: day === '토' ? '#f0f9ff' : '#f9fafb',
                 color: day === '토' ? '#0ea5e9' : '#374151',
                 borderRight: i < dayOrder.length - 1 ? '1px solid #e5e7eb' : 'none',
@@ -318,10 +345,10 @@ const TimetableImageRenderer: React.FC<{
               return (
                 <div key={label.time} style={{ position: 'absolute', left: 0, right: 0, top: `${top}px` }}>
                   <span style={{
-                    fontSize: '11px', fontWeight: 'bold', color: '#374151',
-                    padding: '0 3px', transform: 'translateY(-50%)', display: 'inline-block',
+                    fontSize: '15px', fontWeight: 'bold', color: '#374151',
+                    padding: '0 4px', transform: 'translateY(-50%)', display: 'inline-block',
                   }}>
-                    {label.time}
+                    {Math.floor(label.minutes / 60)}
                   </span>
                 </div>
               );
@@ -355,44 +382,44 @@ const TimetableImageRenderer: React.FC<{
                   const endMin = timeToMinutes(block.endTime);
                   const top = (startMin - rangeStartMin) * PIXELS_PER_MINUTE_IMG;
                   const height = (endMin - startMin) * PIXELS_PER_MINUTE_IMG;
-                  const sc = SUBJECT_COLORS[block.subject as keyof typeof SUBJECT_COLORS] || SUBJECT_COLORS.other;
-                  const isShort = height < 50;
+                  const sc = getClassColor(block.className);
+                  const isShort = height < 60;
 
                   return (
                     <div
                       key={`${block.className}-${idx}`}
                       style={{
-                        position: 'absolute', left: '2px', right: '2px', borderRadius: '3px',
+                        position: 'absolute', left: '2px', right: '2px', borderRadius: '4px',
                         overflow: 'hidden', zIndex: 10,
                         top: `${top}px`, height: `${height}px`,
-                        backgroundColor: sc.light, borderLeft: `4px solid ${sc.bg}`,
+                        backgroundColor: sc.light, borderLeft: `5px solid ${sc.bg}`,
                       }}
                     >
                       <div style={{
-                        padding: isShort ? '2px 6px' : '6px 8px', height: '100%',
+                        padding: isShort ? '3px 8px' : '8px 10px', height: '100%',
                         display: 'flex', flexDirection: 'column',
                         justifyContent: isShort ? 'center' : 'flex-start',
                       }}>
                         <div style={{
-                          fontWeight: 'bold', fontSize: '13px',
-                          color: sc.text === '#ffffff' ? sc.border : sc.text,
+                          fontWeight: 'bold', fontSize: '17px',
+                          color: sc.text,
                           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
                           {block.className}
                         </div>
                         {!isShort && (
                           <>
-                            <div style={{ fontSize: '11px', fontWeight: 500, color: '#6b7280', marginTop: '3px' }}>
+                            <div style={{ fontSize: '14px', fontWeight: 500, color: '#6b7280', marginTop: '3px' }}>
                               {block.startTime} ~ {block.endTime}
                             </div>
-                            <div style={{ fontSize: '11px', color: '#9ca3af', marginTop: '2px' }}>
+                            <div style={{ fontSize: '13px', color: '#9ca3af', marginTop: '2px' }}>
                               {block.room && `${block.room}`}
                               {block.teacher && ` | ${block.teacher}`}
                             </div>
                           </>
                         )}
                         {isShort && (
-                          <div style={{ fontSize: '10px', color: '#9ca3af' }}>
+                          <div style={{ fontSize: '12px', color: '#9ca3af' }}>
                             {block.startTime}~{block.endTime}{block.room && ` · ${block.room}`}
                           </div>
                         )}
@@ -448,16 +475,16 @@ const TimetableImageRenderer: React.FC<{
               return acc;
             }, {} as Record<string, { className: string; subject: string; teacher: string; room: string }>)
         ).map(([key, info]) => {
-          const sc = SUBJECT_COLORS[info.subject as keyof typeof SUBJECT_COLORS] || SUBJECT_COLORS.other;
+          const sc = getClassColor(info.className);
           return (
             <div key={key} style={{
-              display: 'flex', alignItems: 'center', gap: '5px',
-              padding: '5px 10px', borderRadius: '3px',
-              border: `1px solid ${sc.border}`, backgroundColor: sc.light, fontSize: '12px',
+              display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '6px 12px', borderRadius: '4px',
+              border: `1px solid ${sc.border}`, backgroundColor: sc.light, fontSize: '14px',
             }}>
               <span style={{
-                padding: '2px 6px', borderRadius: '3px', fontWeight: 'bold', fontSize: '10px',
-                backgroundColor: sc.bg, color: sc.text,
+                padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px',
+                backgroundColor: sc.bg, color: '#ffffff',
               }}>
                 {SUBJECT_LABELS[info.subject as keyof typeof SUBJECT_LABELS] || info.subject}
               </span>
