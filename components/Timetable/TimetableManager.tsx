@@ -308,8 +308,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                 return;
             }
 
-            // Ctrl+Z: 마지막 보류 작업 취소
-            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+            // Ctrl+Z: 마지막 보류 작업 취소 (한국어 IME에서 e.key가 'ㅋ'일 수 있으므로 e.code도 체크)
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z' || e.code === 'KeyZ')) {
                 e.preventDefault();
                 // 보류 등록이 있으면 마지막 등록 취소, 없으면 마지막 삭제 취소
                 if (pendingExcelEnrollments.length > 0) {
@@ -324,14 +324,14 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
 
             if (!e.ctrlKey && !e.metaKey) return;
 
-            if (e.key === 'c') {
+            if (e.key === 'c' || e.key === 'C' || e.code === 'KeyC') {
                 // Ctrl+C: 선택된 학생 복사
                 if (selectedStudentIds.size > 0 && selectedStudentClassName) {
                     setCopiedStudent({ studentIds: [...selectedStudentIds], className: selectedStudentClassName });
                 }
             }
 
-            if (e.key === 'v') {
+            if (e.key === 'v' || e.key === 'V' || e.code === 'KeyV') {
                 // Ctrl+V: 선택된 셀에 붙여넣기 (등록일 선택 모달 표시)
                 if (!copiedStudent || !selectedClassId) return;
                 e.preventDefault();
