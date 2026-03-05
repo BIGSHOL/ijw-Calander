@@ -249,6 +249,11 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     // 엑셀뷰 보류 작업 (저장 전까지 DB 미반영)
     const [pendingExcelDeletes, setPendingExcelDeletes] = useState<Array<{ studentId: string; className: string; type: 'active' | 'withdrawn' }>>([]);
     const [pendingExcelEnrollments, setPendingExcelEnrollments] = useState<Array<{ studentId: string; className: string; enrollmentDate?: string }>>([]);
+    // 메모이제이션: 복합키 Set (studentId_className)
+    const pendingExcelDeleteIds = useMemo(() =>
+        pendingExcelDeletes.length > 0 ? new Set(pendingExcelDeletes.map(d => `${d.studentId}_${d.className}`)) : undefined,
+        [pendingExcelDeletes]
+    );
     // 붙여넣기 등록일 선택 모달 상태
     const [pasteModalInfo, setPasteModalInfo] = useState<{
         studentIds: string[];
@@ -733,11 +738,13 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         onCellSelect={setSelectedClassId}
                         onEnrollStudent={enrollExistingStudent}
                         selectedStudentIds={selectedStudentIds}
+                        selectedStudentClassName={selectedStudentClassName}
                         copiedStudentIds={copiedStudent?.studentIds || null}
+                        copiedStudentClassName={copiedStudent?.className || null}
                         onStudentSelect={handleExcelStudentSelect}
                         onStudentMultiSelect={handleExcelStudentMultiSelect}
                         onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
-                        pendingExcelDeleteIds={pendingExcelDeletes.length > 0 ? new Set(pendingExcelDeletes.map(d => d.studentId)) : undefined}
+                        pendingExcelDeleteIds={pendingExcelDeleteIds}
                         pendingExcelEnrollments={pendingExcelEnrollments.length > 0 ? pendingExcelEnrollments : undefined}
                     />
                 </div>

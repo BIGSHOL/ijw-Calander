@@ -217,13 +217,15 @@ interface ClassCardProps {
     onCellSelect?: (classId: string) => void;
     onEnrollStudent?: (studentId: string, className: string) => void;
     selectedStudentIds?: Set<string>;
+    selectedStudentClassName?: string | null;
     copiedStudentIds?: string[] | null;
+    copiedStudentClassName?: string | null;
     onStudentSelect?: (studentId: string, className: string) => void;
     onStudentMultiSelect?: (studentIds: Set<string>, className: string) => void;
     mode?: 'view' | 'edit';
     onCancelScheduledEnrollment?: (studentId: string, className: string) => void;  // 배정 예정 취소
     onWithdrawalDrop?: (studentId: string, classId: string, className: string) => void;  // 퇴원 드롭존
-    // 엑셀 보류 삭제/등록 (시각적 표시)
+    // 엑셀 보류 삭제/등록 (시각적 표시) - pendingExcelDeleteIds: composite key "studentId_className"
     pendingExcelDeleteIds?: Set<string>;
     pendingExcelEnrollments?: Array<{ studentId: string; className: string; enrollmentDate?: string }>;
 }
@@ -266,7 +268,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
     onCellSelect,
     onEnrollStudent,
     selectedStudentIds,
+    selectedStudentClassName,
     copiedStudentIds,
+    copiedStudentClassName,
     onStudentSelect,
     onStudentMultiSelect,
     mode,
@@ -1083,13 +1087,13 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             isExcelMode={isExcelMode}
                                             mode={mode}
                                             onCellSelect={onCellSelect}
-                                            isStudentSelected={isExcelMode && !!selectedStudentIds?.has(s.id)}
-                                            isCopiedStudent={isExcelMode && !!copiedStudentIds?.includes(s.id)}
+                                            isStudentSelected={isExcelMode && !!selectedStudentIds?.has(s.id) && selectedStudentClassName === cls.className}
+                                            isCopiedStudent={isExcelMode && !!copiedStudentIds?.includes(s.id) && copiedStudentClassName === cls.className}
                                             onStudentSelect={onStudentSelect}
                                             onStudentMultiSelect={onStudentMultiSelect}
                                             selectedStudentIds={selectedStudentIds}
                                             className={cls.className}
-                                            isPendingExcelDelete={!!pendingExcelDeleteIds?.has(s.id)}
+                                            isPendingExcelDelete={!!pendingExcelDeleteIds?.has(`${s.id}_${cls.className}`)}
                                         />
                                     );
                                 })}
@@ -1161,13 +1165,13 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                 isExcelMode={isExcelMode}
                                                                 mode={mode}
                                                                 onCellSelect={onCellSelect}
-                                                                isStudentSelected={isExcelMode && !!selectedStudentIds?.has(s.id)}
-                                                                isCopiedStudent={isExcelMode && !!copiedStudentIds?.includes(s.id)}
+                                                                isStudentSelected={isExcelMode && !!selectedStudentIds?.has(s.id) && selectedStudentClassName === cls.className}
+                                                                isCopiedStudent={isExcelMode && !!copiedStudentIds?.includes(s.id) && copiedStudentClassName === cls.className}
                                                                 onStudentSelect={onStudentSelect}
                                                                 onStudentMultiSelect={onStudentMultiSelect}
                                                                 selectedStudentIds={selectedStudentIds}
                                                                 className={cls.className}
-                                                                isPendingExcelDelete={!!pendingExcelDeleteIds?.has(s.id)}
+                                                                isPendingExcelDelete={!!pendingExcelDeleteIds?.has(`${s.id}_${cls.className}`)}
                                                             />
                                                         )}
                                                     </div>
@@ -1364,13 +1368,13 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             isExcelMode={isExcelMode}
                                             mode={mode}
                                             onCellSelect={onCellSelect}
-                                            isStudentSelected={isExcelMode && !!selectedStudentIds?.has(s.id)}
-                                            isCopiedStudent={isExcelMode && !!copiedStudentIds?.includes(s.id)}
+                                            isStudentSelected={isExcelMode && !!selectedStudentIds?.has(s.id) && selectedStudentClassName === cls.className}
+                                            isCopiedStudent={isExcelMode && !!copiedStudentIds?.includes(s.id) && copiedStudentClassName === cls.className}
                                             onStudentSelect={onStudentSelect}
                                             onStudentMultiSelect={onStudentMultiSelect}
                                             selectedStudentIds={selectedStudentIds}
                                             className={cls.className}
-                                            isPendingExcelDelete={!!pendingExcelDeleteIds?.has(s.id)}
+                                            isPendingExcelDelete={!!pendingExcelDeleteIds?.has(`${s.id}_${cls.className}`)}
                                         />
                                     );
                                 })}
@@ -1608,7 +1612,11 @@ export default React.memo(ClassCard, (prevProps, nextProps) => {
         prevProps.isExcelMode === nextProps.isExcelMode &&
         prevProps.isSelected === nextProps.isSelected &&
         prevProps.selectedStudentIds === nextProps.selectedStudentIds &&
+        prevProps.selectedStudentClassName === nextProps.selectedStudentClassName &&
         prevProps.copiedStudentIds === nextProps.copiedStudentIds &&
+        prevProps.copiedStudentClassName === nextProps.copiedStudentClassName &&
+        prevProps.pendingExcelDeleteIds === nextProps.pendingExcelDeleteIds &&
+        prevProps.pendingExcelEnrollments === nextProps.pendingExcelEnrollments &&
         prevProps.referenceDate === nextProps.referenceDate &&
         prevProps.mode === nextProps.mode
     );
