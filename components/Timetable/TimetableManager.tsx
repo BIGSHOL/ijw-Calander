@@ -240,6 +240,15 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     const { settings: mathIntegrationSettings, updateSettings: updateMathIntegrationSettings } = useMathSettings();
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const gridRef = React.useRef<HTMLDivElement>(null);
+    // 엑셀뷰 토스트 알림 (Ctrl+Z, Del, Ctrl+C 등 피드백)
+    const [excelToast, setExcelToast] = useState<string | null>(null);
+    const excelToastTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    const showExcelToast = useCallback((msg: string) => {
+        setExcelToast(msg);
+        if (excelToastTimerRef.current) clearTimeout(excelToastTimerRef.current);
+        excelToastTimerRef.current = setTimeout(() => setExcelToast(null), 1800);
+    }, []);
+
     // 엑셀뷰용 셀 선택 + 학생 등록 + 복사/붙여넣기
     const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
     const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
@@ -303,6 +312,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                 }));
 
                 setPendingExcelDeletes(prev => [...prev, ...newPendingDeletes]);
+                const names = newDeletes.map((s: any) => s.name || s.id).join(', ');
+                showExcelToast(`삭제 대기: ${names}`);
                 setSelectedStudentIds(new Set());
                 setSelectedStudentClassName(null);
                 return;
@@ -313,11 +324,17 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                 e.preventDefault();
                 // 보류 등록이 있으면 마지막 등록 취소, 없으면 마지막 삭제 취소
                 if (pendingExcelEnrollments.length > 0) {
+                    const last = pendingExcelEnrollments[pendingExcelEnrollments.length - 1];
+                    const name = studentMap[last.studentId]?.name || last.studentId;
                     setPendingExcelEnrollments(prev => prev.slice(0, -1));
+                    showExcelToast(`취소: ${name} 등록`);
                 } else if (pendingExcelDeletes.length > 0) {
+                    const last = pendingExcelDeletes[pendingExcelDeletes.length - 1];
+                    const name = studentMap[last.studentId]?.name || last.studentId;
                     setPendingExcelDeletes(prev => prev.slice(0, -1));
+                    showExcelToast(`취소: ${name} 삭제`);
                 } else {
-                    // drag 이동의 마지막도 취소 (기존 handleCancelPendingMoves는 전체 취소이므로 여기서는 skip)
+                    showExcelToast('취소할 작업 없음');
                 }
                 return;
             }
@@ -328,6 +345,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                 // Ctrl+C: 선택된 학생 복사
                 if (selectedStudentIds.size > 0 && selectedStudentClassName) {
                     setCopiedStudent({ studentIds: [...selectedStudentIds], className: selectedStudentClassName });
+                    const names = [...selectedStudentIds].map(id => studentMap[id]?.name || id).join(', ');
+                    showExcelToast(`복사: ${names}`);
                 }
             }
 
@@ -360,7 +379,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [viewType, selectedStudentIds, selectedStudentClassName, copiedStudent, selectedClassId, filteredClasses, pendingExcelDeletes, pendingExcelEnrollments]);
+    }, [viewType, selectedStudentIds, selectedStudentClassName, copiedStudent, selectedClassId, filteredClasses, pendingExcelDeletes, pendingExcelEnrollments, showExcelToast, studentMap]);
 
     // 이미지 내보내기용 그룹 상태
     const [exportGroups, setExportGroups] = useState<ExportGroup[]>([]);
@@ -698,7 +717,13 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
 
                 {/* Excel Mode - 강사뷰 변형 (셀 선택, 텍스트 복사, 자동완성) */}
                 {viewType === 'excel' && (
-                <div ref={gridRef} className="flex-1 overflow-hidden border-t border-gray-200 p-4">
+                <div ref={gridRef} className="flex-1 overflow-hidden border-t border-gray-200 p-4 relative">
+                    {/* 엑셀 토스트 알림 */}
+                    {excelToast && (
+                        <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50 bg-gray-800 text-white text-xs px-3 py-1.5 rounded shadow-lg animate-fade-in whitespace-nowrap pointer-events-none">
+                            {excelToast}
+                        </div>
+                    )}
                     <TimetableGrid
                         filteredClasses={filteredClasses}
                         allResources={allResources}
