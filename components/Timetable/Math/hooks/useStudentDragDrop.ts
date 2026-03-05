@@ -68,6 +68,18 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
         setDraggingStudent(dragInfo);
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('studentId', studentId);  // 퇴원 드롭존 등 외부 핸들러용
+
+        // 커스텀 드래그 고스트: 학생 이름 표시
+        const target = e.currentTarget as HTMLElement;
+        const studentName = target?.textContent?.trim().split('/')[0]?.trim() || '';
+        if (studentName) {
+            const ghost = document.createElement('div');
+            ghost.style.cssText = 'position:fixed;top:-9999px;left:-9999px;background:#3b82f6;color:#fff;padding:4px 10px;border-radius:4px;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,0.3);white-space:nowrap;z-index:99999;pointer-events:none;';
+            ghost.textContent = `${studentName} 이동`;
+            document.body.appendChild(ghost);
+            e.dataTransfer.setDragImage(ghost, 10, 10);
+            requestAnimationFrame(() => document.body.removeChild(ghost));
+        }
     }, []);
 
     const handleDragOver = useCallback((e: React.DragEvent, classId: string) => {

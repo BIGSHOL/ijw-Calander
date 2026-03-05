@@ -39,6 +39,7 @@ interface StudentItemProps {
     onStudentMultiSelect?: (studentIds: Set<string>, className: string) => void;
     selectedStudentIds?: Set<string>;
     className?: string;
+    isPendingExcelDelete?: boolean;
 }
 
 const StudentItem: React.FC<StudentItemProps> = ({
@@ -71,6 +72,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
     onStudentMultiSelect,
     selectedStudentIds,
     className: clsName,
+    isPendingExcelDelete = false,
 }) => {
     const [isHovered, setIsHovered] = useState(false);
     // 엑셀 모드에서는 싱글클릭으로 모달을 열지 않음
@@ -138,10 +140,11 @@ const StudentItem: React.FC<StudentItemProps> = ({
             }}
             onMouseLeave={() => setIsHovered(false)}
             className={`py-0 px-0.5 list-none ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap min-w-0 font-normal transition-all duration-150
-            ${isExcelMode ? 'cursor-pointer select-none' : isDraggable ? 'cursor-grab' : isClickable ? 'cursor-pointer' : ''}
-            ${isStudentSelected ? '!bg-blue-200 !text-blue-900 font-bold ring-1 ring-blue-400' : isCopiedStudent ? '!bg-green-100 !text-green-800 ring-1 ring-green-400' : ''}
-            ${!isStudentSelected && !isCopiedStudent ? (isPendingMoved ? 'bg-purple-400 text-white font-bold' : isTransferScheduled ? 'bg-purple-200 text-purple-800 font-bold' : isWithdrawalScheduled ? 'bg-orange-100 text-orange-800 line-through' : isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText) : ''}
-            ${!isStudentSelected && !isCopiedStudent && !isPendingMoved && !isTransferScheduled && !isWithdrawalScheduled && !isHighlighted && !enrollmentStyle ? 'opacity-80' : ''}`}
+            ${isPendingExcelDelete ? '!bg-red-200 !text-red-500 line-through opacity-50' : ''}
+            ${isExcelMode && !isPendingExcelDelete ? 'cursor-pointer select-none' : isDraggable ? 'cursor-grab' : isClickable ? 'cursor-pointer' : ''}
+            ${!isPendingExcelDelete && isStudentSelected ? '!bg-blue-200 !text-blue-900 font-bold ring-1 ring-blue-400' : !isPendingExcelDelete && isCopiedStudent ? '!bg-green-100 !text-green-800 ring-1 ring-green-400' : ''}
+            ${!isPendingExcelDelete && !isStudentSelected && !isCopiedStudent ? (isPendingMoved ? 'bg-purple-400 text-white font-bold' : isTransferScheduled ? 'bg-purple-200 text-purple-800 font-bold' : isWithdrawalScheduled ? 'bg-orange-100 text-orange-800 line-through' : isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText) : ''}
+            ${!isPendingExcelDelete && !isStudentSelected && !isCopiedStudent && !isPendingMoved && !isTransferScheduled && !isWithdrawalScheduled && !isHighlighted && !enrollmentStyle ? 'opacity-80' : ''}`}
             style={hoverStyle}
             title={
                 (() => {
@@ -220,6 +223,9 @@ interface ClassCardProps {
     mode?: 'view' | 'edit';
     onCancelScheduledEnrollment?: (studentId: string, className: string) => void;  // 배정 예정 취소
     onWithdrawalDrop?: (studentId: string, classId: string, className: string) => void;  // 퇴원 드롭존
+    // 엑셀 보류 삭제/등록 (시각적 표시)
+    pendingExcelDeleteIds?: Set<string>;
+    pendingExcelEnrollments?: Array<{ studentId: string; className: string; enrollmentDate?: string }>;
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -265,7 +271,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
     onStudentMultiSelect,
     mode,
     onCancelScheduledEnrollment,
-    onWithdrawalDrop
+    onWithdrawalDrop,
+    pendingExcelDeleteIds,
+    pendingExcelEnrollments,
 }) => {
     // 주차 기준일: referenceDate가 있으면 해당 날짜, 없으면 오늘
     const refDateStr = referenceDate || formatDateKey(new Date());
@@ -770,6 +778,18 @@ const ClassCard: React.FC<ClassCardProps> = ({
             .slice(0, 8);
     }, [autoCompleteQuery, studentMap, cls, isExcelMode]);
 
+    // 이 반에 대한 보류 등록 학생 (저장 전 가상 표시)
+    const pendingEnrollmentStudents = useMemo(() => {
+        if (!pendingExcelEnrollments || pendingExcelEnrollments.length === 0) return [];
+        return pendingExcelEnrollments
+            .filter(e => e.className === cls.className)
+            .map(e => {
+                const s = studentMap[e.studentId];
+                return s ? { id: e.studentId, name: s.name, school: s.school, grade: s.grade } : null;
+            })
+            .filter(Boolean) as Array<{ id: string; name: string; school?: string; grade?: string }>;
+    }, [pendingExcelEnrollments, cls.className, studentMap]);
+
     const handleEnrollStudent = useCallback((studentId: string) => {
         onEnrollStudent?.(studentId, cls.className);
         setAutoCompleteQuery('');
@@ -841,16 +861,33 @@ const ClassCard: React.FC<ClassCardProps> = ({
             {hasSelectedInThisCard && (() => {
                 const handleBorderDrag = (e: React.DragEvent) => {
                     e.dataTransfer.effectAllowed = 'move';
-                    e.dataTransfer.setData('multiStudentIds', JSON.stringify([...selectedStudentIds!]));
+                    const ids = [...selectedStudentIds!];
+                    e.dataTransfer.setData('multiStudentIds', JSON.stringify(ids));
                     e.dataTransfer.setData('fromClassId', cls.id);
-                    e.dataTransfer.setData('studentId', [...selectedStudentIds!][0]);
+                    e.dataTransfer.setData('studentId', ids[0]);
+
+                    // 커스텀 드래그 고스트: 선택된 학생 이름 표시
+                    const ghost = document.createElement('div');
+                    ghost.style.cssText = 'position:fixed;top:-9999px;left:-9999px;background:#3b82f6;color:#fff;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,0.3);white-space:nowrap;z-index:99999;pointer-events:none;max-width:220px;';
+                    const names = ids.map(id => {
+                        const s = cls.studentList?.find(st => st.id === id) || studentMap[id];
+                        return s?.name || '';
+                    }).filter(Boolean);
+                    if (names.length <= 3) {
+                        ghost.textContent = `${names.join(', ')} 이동`;
+                    } else {
+                        ghost.textContent = `${names.slice(0, 2).join(', ')} 외 ${names.length - 2}명 이동`;
+                    }
+                    document.body.appendChild(ghost);
+                    e.dataTransfer.setDragImage(ghost, 10, 10);
+                    requestAnimationFrame(() => document.body.removeChild(ghost));
                 };
                 return (
                     <div className="absolute inset-0 pointer-events-none z-20 ring-2 ring-blue-500 rounded-sm">
-                        <div className="absolute top-0 left-0 right-0 h-[5px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
-                        <div className="absolute bottom-0 left-0 right-0 h-[5px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
-                        <div className="absolute top-0 left-0 bottom-0 w-[5px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
-                        <div className="absolute top-0 right-0 bottom-0 w-[5px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
+                        <div className="absolute top-0 left-0 right-0 h-[6px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
+                        <div className="absolute bottom-0 left-0 right-0 h-[6px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
+                        <div className="absolute top-0 left-0 bottom-0 w-[6px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
+                        <div className="absolute top-0 right-0 bottom-0 w-[6px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
                     </div>
                 );
             })()}
@@ -1052,9 +1089,20 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             onStudentMultiSelect={onStudentMultiSelect}
                                             selectedStudentIds={selectedStudentIds}
                                             className={cls.className}
+                                            isPendingExcelDelete={!!pendingExcelDeleteIds?.has(s.id)}
                                         />
                                     );
                                 })}
+                                {/* 보류 등록 학생 (저장 전 가상 표시) */}
+                                {pendingEnrollmentStudents.map(s => (
+                                    <li
+                                        key={`pending-enroll-${s.id}`}
+                                        className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap bg-green-100 text-green-700 border border-dashed border-green-400`}
+                                        title="저장 대기 중 (Ctrl+Z로 취소)"
+                                    >
+                                        + {s.name}{showSchool || showGrade ? `/${formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null)}` : ''}
+                                    </li>
+                                ))}
                             </ul>
 
                         {/* 부분 등원 학생 (행 단위 좌우 분할: 학생 쪽만 표시, 반대쪽 회색) - 재원생 바로 밑 */}
@@ -1119,6 +1167,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                 onStudentMultiSelect={onStudentMultiSelect}
                                                                 selectedStudentIds={selectedStudentIds}
                                                                 className={cls.className}
+                                                                isPendingExcelDelete={!!pendingExcelDeleteIds?.has(s.id)}
                                                             />
                                                         )}
                                                     </div>
@@ -1321,11 +1370,22 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             onStudentMultiSelect={onStudentMultiSelect}
                                             selectedStudentIds={selectedStudentIds}
                                             className={cls.className}
+                                            isPendingExcelDelete={!!pendingExcelDeleteIds?.has(s.id)}
                                         />
                                     );
                                 })}
+                                {/* 보류 등록 학생 (저장 전 가상 표시) */}
+                                {pendingEnrollmentStudents.map(s => (
+                                    <li
+                                        key={`pending-enroll-${s.id}`}
+                                        className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap bg-green-100 text-green-700 border border-dashed border-green-400`}
+                                        title="저장 대기 중 (Ctrl+Z로 취소)"
+                                    >
+                                        + {s.name}{showSchool || showGrade ? `/${formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null)}` : ''}
+                                    </li>
+                                ))}
                                 {/* 단일셀: 6명 기본 높이 - 빈 슬롯으로 공간 확보 */}
-                                {Array.from({ length: Math.max(0, SINGLE_BASE - activeStudents.length) }).map((_, i) => (
+                                {Array.from({ length: Math.max(0, SINGLE_BASE - activeStudents.length - pendingEnrollmentStudents.length) }).map((_, i) => (
                                     <li key={`pad-${i}`} className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] invisible select-none`}>&nbsp;</li>
                                 ))}
                             </ul>

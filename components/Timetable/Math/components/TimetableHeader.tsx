@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { addDays } from 'date-fns';
 import {
     ChevronLeft, ChevronRight, Search, X, Settings, Eye, Edit, SlidersHorizontal,
@@ -159,8 +160,30 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     // 드롭다운 상태
     const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
     const viewDropdownRef = useRef<HTMLDivElement>(null);
+    const viewDropdownContentRef = useRef<HTMLDivElement>(null);
     const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false);
     const moreDropdownRef = useRef<HTMLDivElement>(null);
+    const moreDropdownContentRef = useRef<HTMLDivElement>(null);
+
+    // 포탈 드롭다운 위치
+    const [moreDropdownPos, setMoreDropdownPos] = useState({ top: 0, right: 0 });
+    const [viewDropdownPos, setViewDropdownPos] = useState({ top: 0, right: 0 });
+
+    const openMoreDropdown = useCallback(() => {
+        if (moreDropdownRef.current) {
+            const rect = moreDropdownRef.current.getBoundingClientRect();
+            setMoreDropdownPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+        }
+        setIsMoreDropdownOpen(true);
+    }, []);
+
+    const openViewDropdown = useCallback(() => {
+        if (viewDropdownRef.current) {
+            const rect = viewDropdownRef.current.getBoundingClientRect();
+            setViewDropdownPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+        }
+        setIsViewDropdownOpen(true);
+    }, []);
 
     // 퇴원생 드롭다운 상태 (클릭 기반)
     const [isWithdrawnDropdownOpen, setIsWithdrawnDropdownOpen] = useState(false);
@@ -231,16 +254,21 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     useEffect(() => {
         if (!isViewDropdownOpen && !isMoreDropdownOpen && !isWithdrawnDropdownOpen && !isPendingDropdownOpen) return;
         const handleClickOutside = (event: MouseEvent) => {
-            if (viewDropdownRef.current && !viewDropdownRef.current.contains(event.target as Node)) {
+            const target = event.target as Node;
+            if (isViewDropdownOpen &&
+                viewDropdownRef.current && !viewDropdownRef.current.contains(target) &&
+                (!viewDropdownContentRef.current || !viewDropdownContentRef.current.contains(target))) {
                 setIsViewDropdownOpen(false);
             }
-            if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target as Node)) {
+            if (isMoreDropdownOpen &&
+                moreDropdownRef.current && !moreDropdownRef.current.contains(target) &&
+                (!moreDropdownContentRef.current || !moreDropdownContentRef.current.contains(target))) {
                 setIsMoreDropdownOpen(false);
             }
-            if (withdrawnDropdownRef.current && !withdrawnDropdownRef.current.contains(event.target as Node)) {
+            if (withdrawnDropdownRef.current && !withdrawnDropdownRef.current.contains(target)) {
                 setIsWithdrawnDropdownOpen(false);
             }
-            if (pendingDropdownRef.current && !pendingDropdownRef.current.contains(event.target as Node)) {
+            if (pendingDropdownRef.current && !pendingDropdownRef.current.contains(target)) {
                 setIsPendingDropdownOpen(false);
             }
         };
@@ -634,17 +662,17 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
 
                 {/* 더보기 드롭다운 (공유 + 저장 통합) */}
                 {(onExportImage || (isMaster && onOpenEmbedManager)) && (
-                    <div className="relative" ref={moreDropdownRef}>
+                    <div ref={moreDropdownRef}>
                         <button
-                            onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
+                            onClick={() => isMoreDropdownOpen ? setIsMoreDropdownOpen(false) : openMoreDropdown()}
                             className="px-2 py-1 border border-gray-300 rounded-sm text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-1"
                             title="더보기"
                         >
                             <Download size={12} />
                             내보내기
                         </button>
-                        {isMoreDropdownOpen && (
-                            <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-sm shadow-lg z-50 min-w-[140px]">
+                        {isMoreDropdownOpen && createPortal(
+                            <div ref={moreDropdownContentRef} className="bg-white border border-gray-200 rounded-sm shadow-lg min-w-[140px]" style={{ position: 'fixed', top: moreDropdownPos.top, right: moreDropdownPos.right, zIndex: 9999 }}>
                                 {onExportImage && (
                                     <button
                                         onClick={() => {
@@ -669,7 +697,8 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                         공유 링크 관리
                                     </button>
                                 )}
-                            </div>
+                            </div>,
+                            document.body
                         )}
                     </div>
                 )}
@@ -679,17 +708,17 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                     <>
                         {/* 통합뷰 보기 설정 드롭다운 */}
                         {integrationDisplayOptions && onIntegrationDisplayOptionsChange && (
-                            <div className="relative" ref={viewDropdownRef}>
+                            <div ref={viewDropdownRef}>
                                 <button
-                                    onClick={() => setIsViewDropdownOpen(!isViewDropdownOpen)}
+                                    onClick={() => isViewDropdownOpen ? setIsViewDropdownOpen(false) : openViewDropdown()}
                                     className="px-2 py-1 border border-gray-300 rounded-sm text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-1"
                                     title="보기 설정"
                                 >
                                     <SlidersHorizontal size={12} />
                                     보기
                                 </button>
-                                {isViewDropdownOpen && (
-                                    <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-sm shadow-lg z-50 w-[280px] max-h-[350px] overflow-y-auto">
+                                {isViewDropdownOpen && createPortal(
+                                    <div ref={viewDropdownContentRef} className="bg-white border border-gray-200 rounded-sm shadow-lg w-[280px] max-h-[350px] overflow-y-auto" style={{ position: 'fixed', top: viewDropdownPos.top, right: viewDropdownPos.right, zIndex: 9999 }}>
                                         {/* 표시 옵션 */}
                                         <div className="px-3 py-2 border-b border-gray-100">
                                             <div className="text-xxs font-bold text-gray-600 mb-2">표시 옵션</div>
@@ -766,7 +795,8 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                 </button>
                                             </div>
                                         </div>
-                                    </div>
+                                    </div>,
+                                    document.body
                                 )}
                             </div>
                         )}
@@ -775,17 +805,17 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
 
                 {/* View Settings - 인라인 드롭다운 (강사뷰/날짜뷰만) */}
                 {viewType !== 'class' && (
-                <div className="relative" ref={viewDropdownRef}>
+                <div ref={viewDropdownRef}>
                     <button
-                        onClick={() => setIsViewDropdownOpen(!isViewDropdownOpen)}
+                        onClick={() => isViewDropdownOpen ? setIsViewDropdownOpen(false) : openViewDropdown()}
                         className="px-2 py-1 border border-gray-300 rounded-sm text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-1"
                         title="보기 설정"
                     >
                         <SlidersHorizontal size={12} />
                         보기
                     </button>
-                    {isViewDropdownOpen && (
-                        <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-sm shadow-lg z-50 w-[320px] max-h-[400px] overflow-y-auto">
+                    {isViewDropdownOpen && createPortal(
+                        <div ref={viewDropdownContentRef} className="bg-white border border-gray-200 rounded-sm shadow-lg w-[320px] max-h-[400px] overflow-y-auto" style={{ position: 'fixed', top: viewDropdownPos.top, right: viewDropdownPos.right, zIndex: 9999 }}>
                             {/* 요일 표시 */}
                             {selectedDays && setSelectedDays && (
                                 <div className="px-3 py-2 border-b border-gray-100">
@@ -977,7 +1007,8 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                     </div>
                                 </div>
                             )}
-                        </div>
+                        </div>,
+                        document.body
                     )}
                 </div>
                 )}
