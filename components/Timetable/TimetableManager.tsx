@@ -246,6 +246,9 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     const [selectedStudentClassName, setSelectedStudentClassName] = useState<string | null>(null);
     const [copiedStudent, setCopiedStudent] = useState<{ studentIds: string[]; className: string } | null>(null);
     const { enrollExistingStudent, smartRemoveStudent, deleteEnrollmentRecord } = useClassOperations();
+    // 엑셀뷰 보류 작업 (저장 전까지 DB 미반영)
+    const [pendingExcelDeletes, setPendingExcelDeletes] = useState<Array<{ studentId: string; className: string; type: 'active' | 'withdrawn' }>>([]);
+    const [pendingExcelEnrollments, setPendingExcelEnrollments] = useState<Array<{ studentId: string; className: string; enrollmentDate?: string }>>([]);
     // 붙여넣기 등록일 선택 모달 상태
     const [pasteModalInfo, setPasteModalInfo] = useState<{
         studentIds: string[];
@@ -270,7 +273,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
         if (viewType !== 'excel') return;
 
         const handleKeyDown = async (e: KeyboardEvent) => {
-            // Del 키: 선택된 학생 삭제
+            // Del 키: 선택된 학생을 보류 삭제 목록에 추가 (저장 시 실행)
             if (e.key === 'Delete') {
                 if (selectedStudentIds.size === 0 || !selectedStudentClassName) return;
                 e.preventDefault();
@@ -282,36 +285,35 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                 const allStudents: any[] = targetClass.studentList || [];
                 const today = getTodayKST();
                 const selectedList = allStudents.filter((s: any) => selectedStudentIds.has(s.id));
-                const withdrawnSelected = selectedList.filter((s: any) => s.withdrawalDate && s.withdrawalDate <= today);
-                const activeSelected = selectedList.filter((s: any) => !s.withdrawalDate || s.withdrawalDate > today);
 
-                const studentNames = selectedList.map((s: any) => s.name || s.id).join(', ');
+                // 이미 보류 삭제 대상인 학생 제외
+                const existingDeleteIds = new Set(pendingExcelDeletes.map(d => d.studentId));
+                const newDeletes = selectedList.filter((s: any) => !existingDeleteIds.has(s.id));
+                if (newDeletes.length === 0) return;
 
-                try {
-                    if (withdrawnSelected.length > 0 && activeSelected.length === 0) {
-                        // 퇴원생만 선택: 수업 기록 완전 삭제
-                        if (!confirm(`${studentNames}의 수업 기록을 완전히 삭제하시겠습니까?`)) return;
-                        for (const s of withdrawnSelected) {
-                            await deleteEnrollmentRecord(className, s.id);
-                        }
-                    } else if (activeSelected.length > 0) {
-                        // 재원생 포함: 수업에서 제거
-                        if (!confirm(`${studentNames}을(를) ${className}에서 삭제하시겠습니까?`)) return;
-                        for (const s of activeSelected) {
-                            await smartRemoveStudent(className, s.id);
-                        }
-                        // 퇴원생도 같이 선택되었으면 기록 삭제
-                        for (const s of withdrawnSelected) {
-                            await deleteEnrollmentRecord(className, s.id);
-                        }
-                    }
-                } catch (error) {
-                    console.error('학생 삭제 오류:', error);
-                    alert('학생 삭제에 실패했습니다.');
-                }
+                const newPendingDeletes = newDeletes.map((s: any) => ({
+                    studentId: s.id,
+                    className,
+                    type: (s.withdrawalDate && s.withdrawalDate <= today ? 'withdrawn' : 'active') as 'active' | 'withdrawn',
+                }));
 
+                setPendingExcelDeletes(prev => [...prev, ...newPendingDeletes]);
                 setSelectedStudentIds(new Set());
                 setSelectedStudentClassName(null);
+                return;
+            }
+
+            // Ctrl+Z: 마지막 보류 작업 취소
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault();
+                // 보류 등록이 있으면 마지막 등록 취소, 없으면 마지막 삭제 취소
+                if (pendingExcelEnrollments.length > 0) {
+                    setPendingExcelEnrollments(prev => prev.slice(0, -1));
+                } else if (pendingExcelDeletes.length > 0) {
+                    setPendingExcelDeletes(prev => prev.slice(0, -1));
+                } else {
+                    // drag 이동의 마지막도 취소 (기존 handleCancelPendingMoves는 전체 취소이므로 여기서는 skip)
+                }
                 return;
             }
 
@@ -353,7 +355,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [viewType, selectedStudentIds, selectedStudentClassName, copiedStudent, selectedClassId, filteredClasses, enrollExistingStudent, smartRemoveStudent, deleteEnrollmentRecord]);
+    }, [viewType, selectedStudentIds, selectedStudentClassName, copiedStudent, selectedClassId, filteredClasses, pendingExcelDeletes, pendingExcelEnrollments]);
 
     // 이미지 내보내기용 그룹 상태
     const [exportGroups, setExportGroups] = useState<ExportGroup[]>([]);
@@ -565,10 +567,36 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     viewType={viewType}
                     setIsTeacherOrderModalOpen={setIsTeacherOrderModalOpen}
                     setIsViewSettingsOpen={setIsViewSettingsOpen}
-                    pendingMovesCount={pendingMovesCount}
+                    pendingMovesCount={pendingMovesCount + pendingExcelDeletes.length + pendingExcelEnrollments.length}
                     scheduledMovesCount={scheduledMovesCount}
-                    handleSavePendingMoves={handleSavePendingMoves}
-                    handleCancelPendingMoves={handleCancelPendingMoves}
+                    handleSavePendingMoves={async () => {
+                        // 1. 기존 드래그 이동 저장
+                        if (pendingMovesCount > 0) await handleSavePendingMoves();
+                        // 2. 보류 삭제 실행
+                        try {
+                            for (const del of pendingExcelDeletes) {
+                                if (del.type === 'withdrawn') {
+                                    await deleteEnrollmentRecord(del.className, del.studentId);
+                                } else {
+                                    await smartRemoveStudent(del.className, del.studentId);
+                                }
+                            }
+                            // 3. 보류 등록 실행
+                            for (const enr of pendingExcelEnrollments) {
+                                await enrollExistingStudent(enr.studentId, enr.className, enr.enrollmentDate);
+                            }
+                        } catch (error) {
+                            console.error('엑셀 보류 작업 저장 오류:', error);
+                            alert('일부 작업 저장에 실패했습니다.');
+                        }
+                        setPendingExcelDeletes([]);
+                        setPendingExcelEnrollments([]);
+                    }}
+                    handleCancelPendingMoves={() => {
+                        handleCancelPendingMoves();
+                        setPendingExcelDeletes([]);
+                        setPendingExcelEnrollments([]);
+                    }}
                     isSaving={isSaving}
                     mode={mode}
                     setMode={setMode}
@@ -709,6 +737,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         onStudentSelect={handleExcelStudentSelect}
                         onStudentMultiSelect={handleExcelStudentMultiSelect}
                         onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
+                        pendingExcelDeleteIds={pendingExcelDeletes.length > 0 ? new Set(pendingExcelDeletes.map(d => d.studentId)) : undefined}
+                        pendingExcelEnrollments={pendingExcelEnrollments.length > 0 ? pendingExcelEnrollments : undefined}
                     />
                 </div>
                 )}
@@ -867,17 +897,15 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         actionVerb="삽입"
                         weekStart={currentMonday}
                         targetClassSchedule={pasteModalInfo.targetClassSchedule}
-                        onConfirm={async (enrollmentDate?: string) => {
+                        onConfirm={(enrollmentDate?: string) => {
                             const { studentIds, targetClassName } = pasteModalInfo;
                             setPasteModalInfo(null);
-                            try {
-                                for (const sid of studentIds) {
-                                    await enrollExistingStudent(sid, targetClassName, enrollmentDate);
-                                }
-                            } catch (error) {
-                                console.error('학생 등록 오류:', error);
-                                alert('학생 등록에 실패했습니다.');
-                            }
+                            // 보류 등록 목록에 추가 (저장 시 실행)
+                            const existingEnrollIds = new Set(pendingExcelEnrollments.map(e => `${e.studentId}-${e.className}`));
+                            const newEnrollments = studentIds
+                                .filter(sid => !existingEnrollIds.has(`${sid}-${targetClassName}`))
+                                .map(sid => ({ studentId: sid, className: targetClassName, enrollmentDate }));
+                            setPendingExcelEnrollments(prev => [...prev, ...newEnrollments]);
                         }}
                         onClose={() => setPasteModalInfo(null)}
                     />

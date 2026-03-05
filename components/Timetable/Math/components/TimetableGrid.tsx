@@ -71,6 +71,9 @@ interface TimetableGridProps {
     onCancelScheduledEnrollment?: (studentId: string, className: string) => void;
     // 퇴원 드롭존
     onWithdrawalDrop?: (studentId: string, classId: string, className: string) => void;
+    // 엑셀 보류 삭제/등록 (시각적 표시)
+    pendingExcelDeleteIds?: Set<string>;
+    pendingExcelEnrollments?: Array<{ studentId: string; className: string; enrollmentDate?: string }>;
 }
 
 const TimetableGrid: React.FC<TimetableGridProps> = ({
@@ -117,7 +120,9 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     onStudentSelect,
     onStudentMultiSelect,
     onCancelScheduledEnrollment,
-    onWithdrawalDrop
+    onWithdrawalDrop,
+    pendingExcelDeleteIds,
+    pendingExcelEnrollments,
 }) => {
     // 주차 기준일: 미래 주 → weekStart, 이번 주 → today, 과거 주 → weekEnd(일요일)
     const referenceDate = useMemo(() => {
@@ -429,6 +434,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     mode={mode}
                     onCancelScheduledEnrollment={onCancelScheduledEnrollment}
                     onWithdrawalDrop={onWithdrawalDrop}
+                    pendingExcelDeleteIds={pendingExcelDeleteIds}
+                    pendingExcelEnrollments={pendingExcelEnrollments}
                 />
             );
         };
