@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Read(//d/ijw-calander/**)",
-      "Bash(npx firebase-tools deploy:*)"
+      "Bash(npx firebase-tools deploy:*)",
+      "Read(//tmp/ext/**)"
     ],
     "additionalDirectories": [
       "f:\\ijw-calander",
