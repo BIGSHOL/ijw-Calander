@@ -68,17 +68,20 @@
       const row = link.closest('tr');
       if (!row) return;
 
-      // title 속성 우선, 없으면 첫 번째 텍스트 노드만 추출 (하위 버튼 텍스트 제외)
-      let studentName = link.getAttribute('title') || '';
-      if (!studentName) {
-        for (const node of link.childNodes) {
-          if (node.nodeType === Node.TEXT_NODE) {
-            const text = node.textContent.trim();
-            if (text) { studentName = text; break; }
-          }
+      // 첫 번째 텍스트 노드에서 이름만 추출 (하위 버튼/링크 텍스트 제외)
+      let studentName = '';
+      for (const node of link.childNodes) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          const text = node.textContent.trim();
+          if (text) { studentName = text; break; }
         }
       }
-      studentName = studentName.trim();
+      // 텍스트 노드 실패 시 title 속성 폴백
+      if (!studentName) {
+        studentName = link.getAttribute('title') || '';
+      }
+      // 메이크에듀 UI 텍스트 제거 (상세수납발송, 자동결재 등)
+      studentName = studentName.replace(/\s*(상세수납발송|자동결재|수납발송|결재|발송)\s*/g, '').trim();
 
       // Find book/course name - a.btnPayName in the same row
       const bookLink = row.querySelector('a.btnPayName');
