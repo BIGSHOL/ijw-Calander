@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a90d9"/>
+      <stop offset="100%" style="stop-color:#357abd"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="url(#bg)"/>
+
+  <!-- Book icon -->
+  <path d="M32 30 L32 98 L64 88 L96 98 L96 30 L64 40 Z"
+        fill="none" stroke="white" stroke-width="4" stroke-linejoin="round"/>
+  <line x1="64" y1="40" x2="64" y2="88" stroke="white" stroke-width="4"/>
+
+  <!-- Sync arrows -->
+  <path d="M48 60 L40 52 L40 68 Z" fill="white"/>
+  <path d="M80 68 L88 76 L88 60 Z" fill="white"/>
+</svg>

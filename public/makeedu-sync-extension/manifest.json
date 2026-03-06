@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "교재 시스템 연동",
+  "version": "1.1.0",
+  "description": "메이크에듀 ↔ 교재 주문 시스템 자동 동기화",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "*://school.makeedu.co.kr/*",
+    "https://firestore.googleapis.com/*",
+    "https://identitytoolkit.googleapis.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [{
+    "matches": ["*://school.makeedu.co.kr/*"],
+    "js": ["content.js"],
+    "css": ["content.css"]
+  }],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
