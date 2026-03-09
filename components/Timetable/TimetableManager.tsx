@@ -294,8 +294,9 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
         if (viewType !== 'excel') return;
 
         const handleKeyDown = async (e: KeyboardEvent) => {
-            // Del 키: 선택된 학생을 보류 삭제 목록에 추가 (저장 시 실행)
+            // Del 키: 선택된 학생을 보류 삭제 목록에 추가 (저장 시 실행) - edit 모드에서만
             if (e.key === 'Delete') {
+                if (mode !== 'edit') return; // 조회 모드에서는 삭제 불가
                 if (selectedStudentIds.size === 0 || !selectedStudentClassName) return;
                 e.preventDefault();
 
@@ -354,8 +355,9 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
 
             if (!e.ctrlKey && !e.metaKey) return;
 
-            // Ctrl+X: 잘라내기 (이동 의도)
+            // Ctrl+X: 잘라내기 (이동 의도) - edit 모드에서만
             if (e.key === 'x' || e.key === 'X' || e.code === 'KeyX') {
+                if (mode !== 'edit') return;
                 if (selectedStudentIds.size > 0 && selectedStudentClassName) {
                     setCutStudent({ studentIds: [...selectedStudentIds], className: selectedStudentClassName });
                     setCopiedStudent(null);
@@ -377,7 +379,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
             }
 
             if (e.key === 'v' || e.key === 'V' || e.code === 'KeyV') {
-                // Ctrl+V: 잘라내기 상태면 이동
+                // Ctrl+V: 잘라내기 상태면 이동 - edit 모드에서만
+                if (mode !== 'edit') return;
                 if (cutStudent && selectedClassId) {
                     const targetClass = filteredClasses.find(c => c.id === selectedClassId);
                     if (!targetClass || targetClass.className === cutStudent.className) return;
@@ -420,7 +423,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [viewType, selectedStudentIds, selectedStudentClassName, copiedStudent, cutStudent, selectedClassId, filteredClasses, pendingExcelDeletes, pendingExcelEnrollments, showExcelToast, studentMap, undoLastMove, handleMultiDrop]);
+    }, [viewType, mode, selectedStudentIds, selectedStudentClassName, copiedStudent, cutStudent, selectedClassId, filteredClasses, pendingExcelDeletes, pendingExcelEnrollments, showExcelToast, studentMap, undoLastMove, handleMultiDrop]);
 
     // 이미지 내보내기용 그룹 상태
     const [exportGroups, setExportGroups] = useState<ExportGroup[]>([]);
