@@ -254,7 +254,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                     await deleteDoc(enrollmentRef);
                 } else {
                     const today = new Date().toISOString().split('T')[0];
-                    await updateDoc(enrollmentRef, { withdrawalDate: today });
+                    await setDoc(enrollmentRef, { withdrawalDate: today }, { merge: true });
                 }
             }
             for (const enr of pendingExcelEnrollments) {
