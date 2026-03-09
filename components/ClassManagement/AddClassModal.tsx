@@ -4,7 +4,7 @@ import { useCreateClass, CreateClassData } from '../../hooks/useClassMutations';
 import { useStudents } from '../../hooks/useStudents';
 import { useClasses } from '../../hooks/useClasses';
 import { SUBJECT_LABELS } from '../../utils/styleUtils';
-import { ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS, SCIENCE_UNIFIED_PERIODS, KOREAN_UNIFIED_PERIODS, convertLegacyPeriodId } from '../Timetable/constants';
+import { ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS, SCIENCE_UNIFIED_PERIODS, KOREAN_UNIFIED_PERIODS, SHUTTLE_UNIFIED_PERIODS, convertLegacyPeriodId } from '../Timetable/constants';
 import { useTeachers } from '../../hooks/useFirebaseQueries';
 import { useStaff } from '../../hooks/useStaff';
 import { SubjectType } from '../../types';
@@ -16,7 +16,7 @@ interface AddClassModalProps {
   defaultSubject?: SubjectType;
 }
 
-const AVAILABLE_SUBJECTS: SubjectType[] = ['math', 'english', 'science', 'korean'];
+const AVAILABLE_SUBJECTS: SubjectType[] = ['math', 'english', 'science', 'korean', 'shuttle'];
 
 const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 const WEEKDAY_ORDER: Record<string, number> = { '월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5, '일': 6 };
@@ -84,6 +84,9 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
 
   // 과목별 강사 필터링 (systemRole 또는 role='teacher' + subjects)
   const availableTeachers = useMemo(() => {
+    // 셔틀은 전체 직원 목록 표시 (운전기사 선택용)
+    if (subject === 'shuttle') return staff;
+
     return staff.filter(member => {
       // systemRole 기반 체크
       if (subject === 'math') {
@@ -134,6 +137,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
   const periods = subject === 'english' ? ENGLISH_UNIFIED_PERIODS
     : subject === 'math' ? MATH_UNIFIED_PERIODS
     : subject === 'science' ? SCIENCE_UNIFIED_PERIODS
+    : subject === 'shuttle' ? SHUTTLE_UNIFIED_PERIODS
     : KOREAN_UNIFIED_PERIODS;
 
   // 학생 필터링
@@ -227,12 +231,12 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
       setError('수업명을 입력해주세요.');
       return;
     }
-    if (!mainTeacher.trim()) {
+    if (!mainTeacher.trim() && subject !== 'shuttle') {
       setError('담임 강사를 입력해주세요.');
       return;
     }
     if (selectedSlots.size === 0) {
-      setError('최소 1개 이상의 교시를 선택해주세요.');
+      setError(subject === 'shuttle' ? '최소 1개 이상의 회차를 선택해주세요.' : '최소 1개 이상의 교시를 선택해주세요.');
       return;
     }
 
@@ -333,12 +337,12 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
             <div className="divide-y divide-gray-100">
               {/* 수업명 */}
               <div className="flex items-center gap-2 px-1.5 py-1">
-                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">수업명 <span className="text-red-500">*</span></span>
+                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">{subject === 'shuttle' ? '호차명' : '수업명'} <span className="text-red-500">*</span></span>
                 <input
                   type="text"
                   value={className}
                   onChange={(e) => setClassName(e.target.value)}
-                  placeholder="예: LT1a"
+                  placeholder={subject === 'shuttle' ? '예: 1호차' : '예: LT1a'}
                   className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none"
                 />
               </div>
@@ -362,7 +366,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
 
               {/* 담임 강사 */}
               <div className="flex items-center gap-2 px-1.5 py-1">
-                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">담임 강사 <span className="text-red-500">*</span></span>
+                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">{subject === 'shuttle' ? '운전기사' : '담임 강사'} {subject !== 'shuttle' && <span className="text-red-500">*</span>}</span>
                 <div className="flex-1">
                   <select
                     value={mainTeacher}
@@ -388,8 +392,8 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                 </div>
               </div>
 
-              {/* 강의실 */}
-              <div className="flex items-center gap-2 px-1.5 py-1">
+              {/* 강의실 (셔틀은 숨김) */}
+              {subject !== 'shuttle' && <div className="flex items-center gap-2 px-1.5 py-1">
                 <span className="w-14 shrink-0 text-xs font-medium text-primary-700">강의실</span>
                 <select
                   value={room}
@@ -417,7 +421,7 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                     <option disabled>강의실 데이터 없음</option>
                   )}
                 </select>
-              </div>
+              </div>}
             </div>
           </div>
 

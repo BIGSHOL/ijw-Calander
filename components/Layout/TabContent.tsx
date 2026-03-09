@@ -39,6 +39,8 @@ const ShuttleTab = React.lazy(() => import('../Shuttle').then(m => ({ default: m
 const MarketingTab = React.lazy(() => import('../Marketing').then(m => ({ default: m.MarketingTab })));
 const TimetableDistributionTab = React.lazy(() => import('../TimetableDistribution').then(m => ({ default: m.TimetableDistributionTab })));
 
+const LogsTab = React.lazy(() => import('../Logs/LogsTab'));
+
 // Loading fallback
 const TabLoadingFallback = () => <VideoLoading className="flex-1 h-full" />;
 
@@ -78,8 +80,8 @@ interface TabContentProps {
 
   // Timetable props
   timetableProps?: {
-    timetableSubject: 'math' | 'english' | 'science' | 'korean';
-    setTimetableSubject: (subject: 'math' | 'english' | 'science' | 'korean') => void;
+    timetableSubject: 'math' | 'english' | 'science' | 'korean' | 'shuttle';
+    setTimetableSubject: (subject: 'math' | 'english' | 'science' | 'korean' | 'shuttle') => void;
     timetableViewType: string;
     setTimetableViewType: (type: string) => void;
     teachers: any[];
@@ -387,6 +389,12 @@ export const TabContent: React.FC<TabContentProps> = ({
         <Suspense fallback={<TabLoadingFallback />}>
           <div className="w-full flex-1 overflow-hidden">
             <HelpTab currentUser={effectiveProfile} />
+          </div>
+        </Suspense>
+      ) : appMode === 'logs' ? (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <div className="w-full flex-1 overflow-hidden">
+            <LogsTab />
           </div>
         </Suspense>
       ) : appMode === 'notices' ? (

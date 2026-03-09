@@ -5,6 +5,7 @@ import { TimetableStudent } from '../../../../types';
 import { CLASS_COLLECTION } from '../englishUtils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSimulationOptional } from '../context/SimulationContext';
+import { logTimetableChange } from '../../../../hooks/useTimetableLog';
 
 export interface MoveChange {
     student: TimetableStudent;
@@ -132,6 +133,20 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
             });
 
             await Promise.all(enrollmentPromises);
+
+            // 로그 기록
+            moveChanges.forEach(({ student, fromClass, toClass }) => {
+                logTimetableChange({
+                    action: 'english_move',
+                    subject: 'english',
+                    className: toClass,
+                    studentId: student.id,
+                    studentName: student.name,
+                    details: `영어 반이동: ${student.name} ${fromClass} → ${toClass}`,
+                    before: { className: fromClass },
+                    after: { className: toClass },
+                });
+            });
 
             // === 2. React Query 캐시 무효화 (학생관리/수업관리 즉시 반영) ===
             queryClient.invalidateQueries({ queryKey: ['students'] });

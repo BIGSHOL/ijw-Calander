@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Loader2, UserCheck, RefreshCw, AlertCircle, UserPlus, CheckCircle2, PenLine } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Loader2, UserCheck, RefreshCw, AlertCircle, UserPlus, CheckCircle2, PenLine, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { db } from '../../firebaseConfig';
-import { doc, setDoc, getDoc, Timestamp, collection, getDocs, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, Timestamp, collection, getDocs, updateDoc, query, orderBy, limit } from 'firebase/firestore';
 import Modal from '../Common/Modal';
 import { UnifiedStudent } from '../../types';
 import { generateAttendanceNumber } from '../../utils/attendanceNumberGenerator';
@@ -38,6 +38,22 @@ interface ComparisonResult {
   ijwMatch: UnifiedStudent | null;
   matchType: 'exact' | 'none';
   updatableFields: string[]; // 업데이트 가능한 필드 목록
+}
+
+type SyncTab = 'compare' | 'logs';
+
+interface SyncLog {
+  id: string;
+  timestamp: any;
+  durationMs: number;
+  totalScraped: number;
+  registeredCount: number;
+  updatedCount: number;
+  errorCount: number;
+  skippedCount: number;
+  registered: { name: string; studentId?: string; enrollNote?: string }[];
+  updated: { name: string; fields: string[]; enrollNote?: string }[];
+  errors: { name: string; error: string }[];
 }
 
 interface MakeEduSyncModalProps {
@@ -141,7 +157,21 @@ const getUpdatableFields = (existing: UnifiedStudent, meStudent: MakeEduStudent)
   return fields;
 };
 
+/** 타임스탬프를 KST YYYY-MM-DD HH:mm 형식으로 변환 */
+const formatTimestamp = (ts: any): string => {
+  if (!ts) return '-';
+  const date = ts.toDate ? ts.toDate() : new Date(ts);
+  const kst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  const y = kst.getUTCFullYear();
+  const m = String(kst.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(kst.getUTCDate()).padStart(2, '0');
+  const h = String(kst.getUTCHours()).padStart(2, '0');
+  const min = String(kst.getUTCMinutes()).padStart(2, '0');
+  return `${y}-${m}-${d} ${h}:${min}`;
+};
+
 const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingStudents }) => {
+  const [activeTab, setActiveTab] = useState<SyncTab>('compare');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<ComparisonResult[]>([]);
@@ -154,6 +184,11 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
   const [bulkRegistering, setBulkRegistering] = useState(false);
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const [updated, setUpdated] = useState<Record<number, boolean>>({});
+  // 동기화 로그
+  const [logs, setLogs] = useState<SyncLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsLoaded, setLogsLoaded] = useState(false);
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   // 일괄 등록 시 출결번호 중복 방지용 (등록할 때마다 추가)
   const usedAttendanceNumbers = useMemo(() => {
     const set = new Set<string>();
@@ -228,9 +263,55 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
     }
   };
 
+  const fetchLogs = useCallback(async () => {
+    setLogsLoading(true);
+    try {
+      // 넉넉히 가져와서 중복/무변동 필터 후 20건 추출
+      const q = query(
+        collection(db, 'makeEduSyncLogs'),
+        orderBy('timestamp', 'desc'),
+        limit(100)
+      );
+      const snap = await getDocs(q);
+      const allLogs = snap.docs.map(d => ({ id: d.id, ...d.data() })) as SyncLog[];
+
+      // 로그 시그니처: 등록/업데이트/에러 학생 이름+필드를 정렬한 문자열
+      const getSignature = (log: SyncLog): string => {
+        const regNames = (log.registered || []).map(r => r.name).sort().join(',');
+        const updNames = (log.updated || []).map(u => `${u.name}:${(u.fields || []).sort().join('+')}`).sort().join(',');
+        const errNames = (log.errors || []).map(e => e.name).sort().join(',');
+        return `R[${regNames}]U[${updNames}]E[${errNames}]`;
+      };
+
+      const filtered: SyncLog[] = [];
+      let prevSig = '';
+      for (const log of allLogs) {
+        // 무변동 로그 (등록 0, 업데이트 0, 에러 0) 스킵
+        if (log.registeredCount === 0 && log.updatedCount === 0 && log.errorCount === 0) continue;
+        // 이전 로그와 동일한 내용(같은 학생들 반복 업데이트) 스킵
+        const sig = getSignature(log);
+        if (sig === prevSig) continue;
+        prevSig = sig;
+        filtered.push(log);
+        if (filtered.length >= 20) break;
+      }
+
+      setLogs(filtered);
+      setLogsLoaded(true);
+    } catch (err) {
+      console.error('Failed to fetch sync logs:', err);
+    } finally {
+      setLogsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchAndCompare();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'logs' && !logsLoaded) fetchLogs();
+  }, [activeTab, logsLoaded, fetchLogs]);
 
   /**
    * 개별 학생 등록 (신규)
@@ -527,11 +608,38 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
     <Modal
       isOpen={true}
       onClose={onClose}
-      title="메이크에듀 신규원생 비교"
+      title="메이크에듀 신규원생 동기화"
       size="xl"
       compact
     >
-      {loading ? (
+      {/* 탭 버튼 */}
+      <div className="flex border-b mb-3">
+        <button
+          onClick={() => setActiveTab('compare')}
+          className={`flex items-center gap-1 px-4 py-2 text-xs font-bold border-b-2 transition-colors ${
+            activeTab === 'compare'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-400 hover:text-gray-600'
+          }`}
+        >
+          <UserPlus className="w-3 h-3" />
+          신규원생 비교
+        </button>
+        <button
+          onClick={() => setActiveTab('logs')}
+          className={`flex items-center gap-1 px-4 py-2 text-xs font-bold border-b-2 transition-colors ${
+            activeTab === 'logs'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-400 hover:text-gray-600'
+          }`}
+        >
+          <Clock className="w-3 h-3" />
+          동기화 로그
+        </button>
+      </div>
+
+      {/* 비교 탭 */}
+      {activeTab === 'compare' && (loading ? (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
           <p className="text-sm text-gray-600">메이크에듀 신규원생 조회 중...</p>
@@ -770,6 +878,155 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
             <p>• 출결번호가 없는 학생은 자동 생성됩니다</p>
             <p>• 업데이트는 IJW 데이터와 다른 필드를 MakeEdu 데이터로 갱신합니다 (메모는 빈 경우만)</p>
           </div>
+        </div>
+      ))}
+
+      {/* 로그 탭 */}
+      {activeTab === 'logs' && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-500">30분마다 자동 동기화된 기록 (최근 20건)</p>
+            <button
+              onClick={() => { setLogsLoaded(false); fetchLogs(); }}
+              className="p-1 text-gray-400 hover:text-primary transition-colors"
+              title="새로고침"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${logsLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+
+          {logsLoading ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <Loader2 className="w-6 h-6 animate-spin text-cyan-500" />
+              <p className="text-xs text-gray-500">로그 불러오는 중...</p>
+            </div>
+          ) : logs.length === 0 ? (
+            <div className="text-center py-12 text-gray-400 text-sm">
+              동기화 로그가 없습니다.
+            </div>
+          ) : (
+            <div className="border rounded-sm overflow-hidden">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-primary text-white">
+                    <th className="px-2 py-1.5 text-left font-medium">시각</th>
+                    <th className="px-2 py-1.5 text-right font-medium">소요</th>
+                    <th className="px-2 py-1.5 text-right font-medium">조회</th>
+                    <th className="px-2 py-1.5 text-right font-medium">등록</th>
+                    <th className="px-2 py-1.5 text-right font-medium">업데이트</th>
+                    <th className="px-2 py-1.5 text-right font-medium">에러</th>
+                    <th className="px-2 py-1.5 text-center font-medium w-8"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {logs.map(log => {
+                    const isExpanded = expandedLogId === log.id;
+                    const hasDetails = (log.registered?.length > 0) || (log.updated?.length > 0) || (log.errors?.length > 0);
+                    return (
+                      <React.Fragment key={log.id}>
+                        <tr
+                          className={`border-t cursor-pointer transition-colors ${
+                            isExpanded ? 'bg-blue-50' : 'hover:bg-gray-50'
+                          } ${log.errorCount > 0 ? 'text-red-600' : ''}`}
+                          onClick={() => hasDetails && setExpandedLogId(isExpanded ? null : log.id)}
+                        >
+                          <td className="px-2 py-1.5 whitespace-nowrap font-mono">
+                            {formatTimestamp(log.timestamp)}
+                          </td>
+                          <td className="px-2 py-1.5 text-right text-gray-500">
+                            {log.durationMs ? `${(log.durationMs / 1000).toFixed(1)}s` : '-'}
+                          </td>
+                          <td className="px-2 py-1.5 text-right">{log.totalScraped ?? '-'}</td>
+                          <td className="px-2 py-1.5 text-right">
+                            {log.registeredCount > 0 ? (
+                              <span className="font-bold text-emerald-600">{log.registeredCount}</span>
+                            ) : '0'}
+                          </td>
+                          <td className="px-2 py-1.5 text-right">
+                            {log.updatedCount > 0 ? (
+                              <span className="font-bold text-blue-600">{log.updatedCount}</span>
+                            ) : '0'}
+                          </td>
+                          <td className="px-2 py-1.5 text-right">
+                            {log.errorCount > 0 ? (
+                              <span className="font-bold text-red-600">{log.errorCount}</span>
+                            ) : '0'}
+                          </td>
+                          <td className="px-2 py-1.5 text-center">
+                            {hasDetails && (
+                              isExpanded
+                                ? <ChevronUp className="w-3 h-3 inline text-gray-400" />
+                                : <ChevronDown className="w-3 h-3 inline text-gray-400" />
+                            )}
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr className="border-t bg-gray-50">
+                            <td colSpan={7} className="px-3 py-2">
+                              <div className="space-y-2 text-xs">
+                                {log.registered?.length > 0 && (
+                                  <div>
+                                    <p className="font-bold text-emerald-700 mb-1">
+                                      신규 등록 ({log.registered.length}명)
+                                    </p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {log.registered.map((r, i) => (
+                                        <span key={i} className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-sm">
+                                          {r.name}
+                                          {r.enrollNote && <span className="text-orange-500 ml-1">({r.enrollNote})</span>}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {log.updated?.length > 0 && (
+                                  <div>
+                                    <p className="font-bold text-blue-700 mb-1">
+                                      업데이트 ({log.updated.length}명)
+                                    </p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {log.updated.map((u, i) => (
+                                        <span key={i} className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-sm">
+                                          {u.name}
+                                          {u.fields?.length > 0 && (
+                                            <span className="text-blue-500 ml-1">
+                                              [{u.fields.join(', ')}]
+                                            </span>
+                                          )}
+                                          {u.enrollNote && <span className="text-orange-500 ml-1">({u.enrollNote})</span>}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {log.errors?.length > 0 && (
+                                  <div>
+                                    <p className="font-bold text-red-700 mb-1">
+                                      에러 ({log.errors.length}건)
+                                    </p>
+                                    <div className="space-y-0.5">
+                                      {log.errors.map((e, i) => (
+                                        <p key={i} className="text-red-600">
+                                          <span className="font-bold">{e.name}</span>: {e.error}
+                                        </p>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {log.skippedCount > 0 && (
+                                  <p className="text-gray-500">변경 없이 스킵: {log.skippedCount}명</p>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
     </Modal>

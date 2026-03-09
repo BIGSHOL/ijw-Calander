@@ -40,7 +40,7 @@ const WEEKDAY_ORDER = ['월', '화', '수', '목', '금'];
 const PIXELS_PER_MINUTE_IMG = 1.5;
 const BATCH_SIZE = 15;
 const DEFAULT_START_MIN = 12 * 60; // 12:00
-const DEFAULT_END_MIN = 21 * 60;   // 21:00
+const DEFAULT_END_MIN = 21 * 60 + 18; // 21:18 (9시 라벨이 잘리지 않도록 여유)
 
 const timeToMinutes = (time: string): number => {
   const [h, m] = time.split(':').map(Number);
@@ -415,36 +415,36 @@ const TimetableImageRenderer: React.FC<{
                     <div
                       key={`${block.className}-${idx}`}
                       style={{
-                        position: 'absolute', left: '2px', right: '2px', borderRadius: '4px',
+                        position: 'absolute', left: '0', right: '0',
                         overflow: 'hidden', zIndex: 10,
                         top: `${top}px`, height: `${height}px`,
-                        backgroundColor: sc.light, borderLeft: `5px solid ${sc.bg}`,
+                        backgroundColor: sc.bg,
                       }}
                     >
                       <div style={{
-                        padding: isShort ? '2px 6px' : '6px 8px', height: '100%',
+                        padding: isShort ? '1px 4px' : '3px 6px', height: '100%',
                         display: 'flex', flexDirection: 'column',
                         justifyContent: isShort ? 'center' : 'flex-start',
                       }}>
                         <div style={{
-                          fontWeight: 'bold', fontSize: '13px',
-                          color: sc.text,
+                          fontWeight: 'bold', fontSize: '17px',
+                          color: '#ffffff',
                           lineHeight: '1.2', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                         }}>
                           {SUBJECT_LABELS[block.subject as keyof typeof SUBJECT_LABELS] || block.subject}-{block.teacher || ''}
                         </div>
                         {!isShort && (
                           <>
-                            <div style={{ fontSize: '11px', color: '#6b7280', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <div style={{ fontSize: '15px', color: 'rgba(255,255,255,0.85)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {block.room ? `${block.room}-인재원` : '인재원'}
                             </div>
-                            <div style={{ fontSize: '11px', color: '#9ca3af', whiteSpace: 'nowrap' }}>
+                            <div style={{ fontSize: '15px', color: 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap' }}>
                               {block.startTime}~{block.endTime}
                             </div>
                           </>
                         )}
                         {isShort && (
-                          <div style={{ fontSize: '10px', color: '#9ca3af', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.7)', whiteSpace: 'nowrap' }}>
                             {block.room ? `${block.room}-인재원` : '인재원'} {block.startTime}~{block.endTime}
                           </div>
                         )}
@@ -453,9 +453,16 @@ const TimetableImageRenderer: React.FC<{
                   );
                 })}
 
-                {/* 셔틀버스 승하차 표시 */}
+                {/* 셔틀버스 승하차 표시 (10분 이내 겹치면 승차만) */}
                 {shuttleEvents
                   .filter(e => e.day === day)
+                  .filter((e, _i, arr) => {
+                    if (e.type === 'alighting') {
+                      const eMin = timeToMinutes(e.time);
+                      return !arr.some(b => b.type === 'boarding' && Math.abs(timeToMinutes(b.time) - eMin) <= 10);
+                    }
+                    return true;
+                  })
                   .map((e, ei) => {
                     const eventMin = timeToMinutes(e.time);
                     const top = (eventMin - rangeStartMin) * PIXELS_PER_MINUTE_IMG + GRID_PAD_TOP;
@@ -473,7 +480,7 @@ const TimetableImageRenderer: React.FC<{
                           backgroundColor: isBoarding ? '#3b82f6' : '#f97316', color: 'white', fontSize: '11px',
                           padding: '2px 8px', borderRadius: '9999px', fontWeight: 'bold',
                         }}>
-                          {isBoarding ? '승차' : '하차'} {e.time}
+                          {isBoarding ? '승차' : '하차'}
                         </span>
                       </div>
                     );

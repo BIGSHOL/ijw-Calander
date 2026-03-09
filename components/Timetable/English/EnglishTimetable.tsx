@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { collection, onSnapshot, getDocs, doc, setDoc, writeBatch, query, orderBy, where } from 'firebase/firestore';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { collection, onSnapshot, getDocs, doc, setDoc, updateDoc, deleteDoc, writeBatch, query, orderBy, where } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { listenerRegistry } from '../../../utils/firebaseCleanup';
 import { CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
-import { Teacher, ClassKeywordColor } from '../../../types';
+import { Teacher, ClassKeywordColor, TimetableStudent } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useClasses } from '../../../hooks/useClasses';
+import ScheduledDateModal from '../Math/components/ScheduledDateModal';
 import { useQueryClient } from '@tanstack/react-query';
 import { storage, STORAGE_KEYS } from '../../../utils/localStorage';
 import { getWeekReferenceDate } from '../../../utils/dateUtils';
@@ -21,6 +22,8 @@ import { useEnglishStats } from './hooks/useEnglishStats';
 import { useEnglishSettings } from './hooks/useEnglishSettings';
 import PortalTooltip from '../../Common/PortalTooltip';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
+import { SubjectType } from '../../../types';
+import SubjectControls from '../shared/SubjectControls';
 
 interface EnglishTimetableProps {
     onClose?: () => void;
@@ -37,6 +40,14 @@ interface EnglishTimetableProps {
     goToPrevWeek?: () => void;
     goToNextWeek?: () => void;
     goToThisWeek?: () => void;
+    // 과목/뷰 전환 (TimetableNavBar 통합)
+    timetableSubject?: SubjectType;
+    setTimetableSubject?: (value: SubjectType) => void;
+    setTimetableViewType?: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>;
+    mathViewMode?: 'day-based' | 'teacher-based';
+    setMathViewMode?: (value: string) => void;
+    hasPermissionFn?: (perm: string) => boolean;
+    setIsTimetableSettingsOpen?: (value: boolean) => void;
 }
 
 interface ScheduleCell {
@@ -53,7 +64,7 @@ interface ScheduleCell {
 type ScheduleData = Record<string, ScheduleCell>;
 
 // Inner component that uses SimulationContext
-const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [], classKeywords = [], currentUser, studentMap, currentWeekStart, weekLabel, goToPrevWeek, goToNextWeek, goToThisWeek }) => {
+const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [], classKeywords = [], currentUser, studentMap, currentWeekStart, weekLabel, goToPrevWeek, goToNextWeek, goToThisWeek, timetableSubject, setTimetableSubject, setTimetableViewType, mathViewMode, setMathViewMode, hasPermissionFn, setIsTimetableSettingsOpen }) => {
     // Removed local activeTab state, using viewType prop
     const [scheduleData, setScheduleData] = useState<ScheduleData>({});
     const [loading, setLoading] = useState(true);
@@ -104,30 +115,169 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     // 통합뷰용 이미지 저장 모달 상태
     const [isClassExportModalOpen, setIsClassExportModalOpen] = useState(false);
 
-    // 엑셀뷰 상태
+    // 엑셀뷰 상태 (수학 엑셀뷰와 동일 패턴)
     const queryClient = useQueryClient();
     const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
-    const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+    const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
     const [selectedStudentClassName, setSelectedStudentClassName] = useState<string | null>(null);
-    const [copiedStudent, setCopiedStudent] = useState<{ studentId: string; className: string } | null>(null);
+    const [copiedStudent, setCopiedStudent] = useState<{ studentIds: string[]; className: string } | null>(null);
+    const [cutStudent, setCutStudent] = useState<{ studentIds: string[]; className: string } | null>(null);
+    const [acHighlightStudentId, setAcHighlightStudentId] = useState<string | null>(null);
+
+    // 보류 작업 (저장/취소 패턴)
+    const [pendingExcelDeletes, setPendingExcelDeletes] = useState<Array<{ studentId: string; className: string; type: 'active' | 'withdrawn' }>>([]);
+    const [pendingExcelEnrollments, setPendingExcelEnrollments] = useState<Array<{ studentId: string; className: string; enrollmentDate?: string }>>([]);
+    const pendingExcelDeleteIds = useMemo(() =>
+        pendingExcelDeletes.length > 0 ? new Set(pendingExcelDeletes.map(d => `${d.studentId}_${d.className}`)) : undefined,
+        [pendingExcelDeletes]
+    );
+
+    // Ctrl+V 등록일 선택 모달
+    const [pasteModalInfo, setPasteModalInfo] = useState<{
+        studentIds: string[];
+        targetClassName: string;
+    } | null>(null);
+
+    // 드래그 이동 예정일 선택 모달
+    const [dragMoveModalInfo, setDragMoveModalInfo] = useState<{
+        studentId: string;
+        studentName: string;
+        fromClassName: string;
+        toClassName: string;
+    } | null>(null);
+
+    // 통합 undo 히스토리 (Ctrl+Z 순서 추적)
+    type UndoAction = { type: 'delete' | 'enroll' | 'move'; count: number };
+    const [undoHistory, setUndoHistory] = useState<UndoAction[]>([]);
+
+    // 토스트
+    const [excelToast, setExcelToast] = useState<string | null>(null);
+    const excelToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const showExcelToast = useCallback((msg: string) => {
+        setExcelToast(msg);
+        if (excelToastTimerRef.current) clearTimeout(excelToastTimerRef.current);
+        excelToastTimerRef.current = setTimeout(() => setExcelToast(null), 1800);
+    }, []);
 
     const handleExcelStudentSelect = useCallback((studentId: string, className: string) => {
-        setSelectedStudentId(studentId);
+        setSelectedStudentIds(new Set([studentId]));
         setSelectedStudentClassName(className);
     }, []);
 
-    const enrollStudentToEnglishClass = useCallback(async (studentId: string, className: string) => {
+    const handleExcelStudentMultiSelect = useCallback((studentIds: Set<string>, className: string) => {
+        setSelectedStudentIds(studentIds);
+        setSelectedStudentClassName(className);
+    }, []);
+
+    const enrollStudentToEnglishClass = useCallback(async (studentId: string, className: string, enrollmentDate?: string) => {
         const now = new Date().toISOString();
         const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `english_${className}`);
         await setDoc(enrollmentRef, {
             className,
             subject: 'english',
-            enrollmentDate: now.split('T')[0],
+            enrollmentDate: enrollmentDate || now.split('T')[0],
             createdAt: now,
         });
         queryClient.invalidateQueries({ queryKey: ['classStudents'] });
         queryClient.invalidateQueries({ queryKey: ['students'] });
     }, [queryClient]);
+
+    // 엑셀뷰: 보류등록 (AutoComplete에서 사용)
+    const handleEnrollStudentPending = useCallback((studentId: string, className: string) => {
+        if (pendingExcelEnrollments.some(e => e.studentId === studentId && e.className === className)) return;
+        setPendingExcelEnrollments(prev => [...prev, { studentId, className }]);
+        setUndoHistory(prev => [...prev, { type: 'enroll', count: 1 }]);
+        const name = studentMap[studentId]?.name || studentId;
+        showExcelToast(`등록 대기: ${name}`);
+    }, [pendingExcelEnrollments, studentMap, showExcelToast]);
+
+    // 엑셀뷰: 드래그 이동 (ScheduledDateModal 표시)
+    const handleExcelMoveStudent = useCallback((student: TimetableStudent, fromClass: string, toClass: string) => {
+        setDragMoveModalInfo({
+            studentId: student.id,
+            studentName: student.name,
+            fromClassName: fromClass,
+            toClassName: toClass,
+        });
+    }, []);
+
+    // 엑셀뷰: 멀티 학생 이동 (드래그 또는 Ctrl+X+V)
+    const handleExcelMultiMoveStudent = useCallback((studentIds: string[], fromClassName: string, toClassName: string) => {
+        const newDeletes = studentIds.map(sid => ({
+            studentId: sid, className: fromClassName, type: 'active' as const
+        }));
+        const newEnrollments = studentIds.map(sid => ({
+            studentId: sid, className: toClassName
+        }));
+        setPendingExcelDeletes(prev => [...prev, ...newDeletes]);
+        setPendingExcelEnrollments(prev => [...prev, ...newEnrollments]);
+        setUndoHistory(prev => [...prev, { type: 'move', count: studentIds.length }]);
+        const names = studentIds.map(id => studentMap[id]?.name || id);
+        const nameStr = names.length <= 3 ? names.join(', ') : `${names.slice(0, 2).join(', ')} 외 ${names.length - 2}명`;
+        showExcelToast(`이동 대기: ${nameStr} → ${toClassName}`);
+        setSelectedStudentIds(new Set());
+        setSelectedStudentClassName(null);
+    }, [studentMap, showExcelToast]);
+
+    // 드래그 이동 모달 확인
+    const handleDragMoveConfirm = useCallback((enrollmentDate?: string) => {
+        if (!dragMoveModalInfo) return;
+        const { studentId, fromClassName, toClassName } = dragMoveModalInfo;
+        setPendingExcelDeletes(prev => [...prev, { studentId, className: fromClassName, type: 'active' as const }]);
+        setPendingExcelEnrollments(prev => [...prev, { studentId, className: toClassName, enrollmentDate }]);
+        setUndoHistory(prev => [...prev, { type: 'move', count: 1 }]);
+        const name = studentMap[studentId]?.name || studentId;
+        showExcelToast(`이동 대기: ${name} → ${toClassName}`);
+        setDragMoveModalInfo(null);
+    }, [dragMoveModalInfo, studentMap, showExcelToast]);
+
+    // 붙여넣기 모달 확인
+    const handlePasteConfirm = useCallback((enrollmentDate?: string) => {
+        if (!pasteModalInfo) return;
+        const { studentIds, targetClassName } = pasteModalInfo;
+        const newEnrollments = studentIds.map(sid => ({
+            studentId: sid, className: targetClassName, enrollmentDate
+        }));
+        setPendingExcelEnrollments(prev => [...prev, ...newEnrollments]);
+        setUndoHistory(prev => [...prev, { type: 'enroll', count: studentIds.length }]);
+        const names = studentIds.map(id => studentMap[id]?.name || id).join(', ');
+        showExcelToast(`등록 대기: ${names}`);
+        setPasteModalInfo(null);
+    }, [pasteModalInfo, studentMap, showExcelToast]);
+
+    // 엑셀뷰: 저장
+    const handleExcelSave = useCallback(async () => {
+        try {
+            for (const del of pendingExcelDeletes) {
+                const enrollmentRef = doc(db, 'students', del.studentId, 'enrollments', `english_${del.className}`);
+                if (del.type === 'withdrawn') {
+                    await deleteDoc(enrollmentRef);
+                } else {
+                    const today = new Date().toISOString().split('T')[0];
+                    await updateDoc(enrollmentRef, { withdrawalDate: today });
+                }
+            }
+            for (const enr of pendingExcelEnrollments) {
+                await enrollStudentToEnglishClass(enr.studentId, enr.className, enr.enrollmentDate);
+            }
+        } catch (error) {
+            console.error('엑셀 보류 작업 저장 오류:', error);
+            alert('일부 작업 저장에 실패했습니다.');
+        }
+        setPendingExcelDeletes([]);
+        setPendingExcelEnrollments([]);
+        setUndoHistory([]);
+        queryClient.invalidateQueries({ queryKey: ['classStudents'] });
+        queryClient.invalidateQueries({ queryKey: ['students'] });
+    }, [pendingExcelDeletes, pendingExcelEnrollments, enrollStudentToEnglishClass, queryClient]);
+
+    // 엑셀뷰: 취소
+    const handleExcelCancel = useCallback(() => {
+        setPendingExcelDeletes([]);
+        setPendingExcelEnrollments([]);
+        setUndoHistory([]);
+        showExcelToast('모든 변경 취소');
+    }, [showExcelToast]);
 
     // SimulationContext 사용
     const simulation = useSimulation();
@@ -190,28 +340,119 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     // Fetch classes data for mainTeacher (담임) information
     const { data: classesData } = useClasses('english');
 
-    // 엑셀뷰 Ctrl+C/V 키보드 핸들러
+    // 엑셀뷰 키보드 핸들러 (Del, Ctrl+C/V/Z) — 한글 IME 대응 e.code fallback
     useEffect(() => {
         if (viewType !== 'excel') return;
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (!e.ctrlKey && !e.metaKey) return;
-            if (e.key === 'c') {
-                if (selectedStudentId && selectedStudentClassName) {
-                    setCopiedStudent({ studentId: selectedStudentId, className: selectedStudentClassName });
-                }
+            // input, textarea 등에서는 동작 안함
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable) return;
+
+            // Del: 보류삭제에 추가
+            if (e.key === 'Delete') {
+                if (selectedStudentIds.size === 0 || !selectedStudentClassName) return;
+                e.preventDefault();
+                const className = selectedStudentClassName;
+
+                const newDeletes = [...selectedStudentIds].map(sid => ({
+                    studentId: sid,
+                    className,
+                    type: 'active' as const,
+                }));
+                const filtered = newDeletes.filter(d => !pendingExcelDeletes.some(p => p.studentId === d.studentId && p.className === d.className));
+                if (filtered.length === 0) return;
+
+                setPendingExcelDeletes(prev => [...prev, ...filtered]);
+                setUndoHistory(prev => [...prev, { type: 'delete', count: filtered.length }]);
+                const names = filtered.map(d => studentMap[d.studentId]?.name || d.studentId).join(', ');
+                showExcelToast(`삭제 대기: ${names}`);
+                return;
             }
-            if (e.key === 'v') {
+
+            if (!e.ctrlKey && !e.metaKey) return;
+
+            // Ctrl+Z: undoHistory 기반 취소
+            if (e.key === 'z' || e.key === 'Z' || e.code === 'KeyZ') {
+                if (e.shiftKey) return;
+                e.preventDefault();
+                if (undoHistory.length === 0) {
+                    showExcelToast('취소할 작업 없음');
+                    return;
+                }
+                const lastAction = undoHistory[undoHistory.length - 1];
+                setUndoHistory(prev => prev.slice(0, -1));
+
+                if (lastAction.type === 'delete') {
+                    const removed = pendingExcelDeletes.slice(-lastAction.count);
+                    setPendingExcelDeletes(prev => prev.slice(0, -lastAction.count));
+                    const names = removed.map(d => studentMap[d.studentId]?.name || d.studentId).join(', ');
+                    showExcelToast(`취소: ${names} 삭제`);
+                } else if (lastAction.type === 'enroll') {
+                    const removed = pendingExcelEnrollments.slice(-lastAction.count);
+                    setPendingExcelEnrollments(prev => prev.slice(0, -lastAction.count));
+                    const names = removed.map(e => studentMap[e.studentId]?.name || e.studentId).join(', ');
+                    showExcelToast(`취소: ${names} 등록`);
+                } else if (lastAction.type === 'move') {
+                    const removedDel = pendingExcelDeletes.slice(-lastAction.count);
+                    setPendingExcelDeletes(prev => prev.slice(0, -lastAction.count));
+                    setPendingExcelEnrollments(prev => prev.slice(0, -lastAction.count));
+                    const names = removedDel.map(d => studentMap[d.studentId]?.name || d.studentId).join(', ');
+                    showExcelToast(`취소: ${names} 이동`);
+                }
+                return;
+            }
+
+            // Ctrl+X: 잘라내기 (이동 의도)
+            if (e.key === 'x' || e.key === 'X' || e.code === 'KeyX') {
+                if (selectedStudentIds.size > 0 && selectedStudentClassName) {
+                    setCutStudent({ studentIds: [...selectedStudentIds], className: selectedStudentClassName });
+                    setCopiedStudent(null);
+                    const names = [...selectedStudentIds].map(id => studentMap[id]?.name || id).join(', ');
+                    showExcelToast(`잘라내기: ${names}`);
+                }
+                return;
+            }
+
+            // Ctrl+C: 멀티 복사
+            if (e.key === 'c' || e.key === 'C' || e.code === 'KeyC') {
+                if (selectedStudentIds.size > 0 && selectedStudentClassName) {
+                    setCopiedStudent({ studentIds: [...selectedStudentIds], className: selectedStudentClassName });
+                    setCutStudent(null);
+                    const names = [...selectedStudentIds].map(id => studentMap[id]?.name || id).join(', ');
+                    showExcelToast(`복사: ${names}`);
+                }
+                return;
+            }
+
+            // Ctrl+V: 잘라내기 상태면 이동, 복사 상태면 등록
+            if (e.key === 'v' || e.key === 'V' || e.code === 'KeyV') {
+                // 잘라내기 → 이동
+                if (cutStudent && selectedClassId) {
+                    const targetClass = classesData?.find(c => c.id === selectedClassId);
+                    if (!targetClass || targetClass.className === cutStudent.className) return;
+                    e.preventDefault();
+                    handleExcelMultiMoveStudent(cutStudent.studentIds, cutStudent.className, targetClass.className);
+                    setCutStudent(null);
+                    return;
+                }
+                // 복사 → 등록
                 if (!copiedStudent || !selectedClassId) return;
                 e.preventDefault();
-                // selectedClassId는 classId이므로 classesData에서 className 찾기
                 const targetClass = classesData?.find(c => c.id === selectedClassId);
                 if (!targetClass) return;
-                enrollStudentToEnglishClass(copiedStudent.studentId, targetClass.className);
+                const pendingIds = new Set(pendingExcelEnrollments.filter(e => e.className === targetClass.className).map(e => e.studentId));
+                const newStudentIds = copiedStudent.studentIds.filter(sid => !pendingIds.has(sid));
+                if (newStudentIds.length === 0) {
+                    showExcelToast('이미 등록 대기 중');
+                    return;
+                }
+                setPasteModalInfo({ studentIds: newStudentIds, targetClassName: targetClass.className });
+                return;
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [viewType, selectedStudentId, selectedStudentClassName, copiedStudent, selectedClassId, classesData, enrollStudentToEnglishClass]);
+    }, [viewType, selectedStudentIds, selectedStudentClassName, copiedStudent, cutStudent, selectedClassId, classesData, pendingExcelDeletes, pendingExcelEnrollments, undoHistory, studentMap, showExcelToast, handleExcelMultiMoveStudent]);
 
     // Performance: js-index-maps - O(1) 교사 조회를 위한 Map 생성
     const teacherMap = useMemo(() => {
@@ -525,8 +766,20 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
             {/* 통합뷰/엑셀뷰: 수학 시간표와 동일한 1행 헤더 */}
             {(viewType === 'class' || viewType === 'excel') && (
                 <div className={`bg-gray-50 min-h-[2.5rem] flex items-center gap-3 pl-4 border-b border-gray-200 flex-shrink-0 text-xs transition-colors duration-300 min-w-0 overflow-x-auto ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
-                    {/* Left: 주차 네비게이션 + 학생 통계 */}
+                    {/* Left: 과목/뷰 전환 + 주차 네비게이션 + 학생 통계 */}
                     <div className="flex items-center gap-3 flex-shrink-0">
+                        {timetableSubject && setTimetableSubject && hasPermissionFn && (
+                            <SubjectControls
+                                timetableSubject={timetableSubject}
+                                setTimetableSubject={setTimetableSubject}
+                                viewType={viewType}
+                                setTimetableViewType={setTimetableViewType}
+                                mathViewMode={mathViewMode}
+                                setMathViewMode={setMathViewMode}
+                                hasPermission={hasPermissionFn}
+                                setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
+                            />
+                        )}
                         {weekLabel && goToPrevWeek && goToNextWeek && goToThisWeek && (
                             <>
                                 <span className="text-gray-600 font-medium">{weekLabel}</span>
@@ -786,6 +1039,30 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 </div>
                             )}
                         </div>
+
+                        {/* 엑셀뷰: 보류 작업 저장/취소 */}
+                        {viewType === 'excel' && (pendingExcelDeletes.length + pendingExcelEnrollments.length) > 0 && (
+                            <>
+                                <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                                <div className="flex items-center gap-1 bg-orange-50 border border-orange-200 rounded-sm px-2 py-1">
+                                    <span className="text-xs font-bold text-orange-600">
+                                        {pendingExcelDeletes.length + pendingExcelEnrollments.length}건 변경
+                                    </span>
+                                    <button
+                                        onClick={handleExcelSave}
+                                        className="px-2 py-0.5 bg-green-500 text-white rounded-sm text-xs font-bold hover:bg-green-600"
+                                    >
+                                        💾 저장
+                                    </button>
+                                    <button
+                                        onClick={handleExcelCancel}
+                                        className="px-2 py-0.5 bg-gray-500 text-white rounded-sm text-xs font-bold hover:bg-gray-600"
+                                    >
+                                        ↩ 취소
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
                     <div className="w-4 flex-shrink-0"></div>
                 </div>
@@ -794,8 +1071,20 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
             {/* 강사뷰: 통합뷰와 동일한 1행 헤더 */}
             {viewType === 'teacher' && (
                 <div className={`bg-gray-50 min-h-[2.5rem] flex items-center gap-3 pl-4 border-b border-gray-200 flex-shrink-0 text-xs transition-colors duration-300 min-w-0 overflow-x-auto ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
-                    {/* Left: 주차 네비게이션 + 학생 통계 */}
+                    {/* Left: 과목/뷰 전환 + 주차 네비게이션 + 학생 통계 */}
                     <div className="flex items-center gap-3 flex-shrink-0">
+                        {timetableSubject && setTimetableSubject && hasPermissionFn && (
+                            <SubjectControls
+                                timetableSubject={timetableSubject}
+                                setTimetableSubject={setTimetableSubject}
+                                viewType={viewType}
+                                setTimetableViewType={setTimetableViewType}
+                                mathViewMode={mathViewMode}
+                                setMathViewMode={setMathViewMode}
+                                hasPermission={hasPermissionFn}
+                                setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
+                            />
+                        )}
                         {weekLabel && goToPrevWeek && goToNextWeek && goToThisWeek && (
                             <>
                                 <span className="text-gray-600 font-medium">{weekLabel}</span>
@@ -1006,8 +1295,20 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
             {/* 강의실뷰: 통합뷰/강사뷰와 동일한 1행 헤더 */}
             {viewType === 'room' && (
                 <div className={`bg-gray-50 min-h-[2.5rem] flex items-center gap-3 pl-4 border-b border-gray-200 flex-shrink-0 text-xs transition-colors duration-300 min-w-0 overflow-x-auto ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
-                    {/* Left: 주차 네비게이션 + 학생 통계 */}
+                    {/* Left: 과목/뷰 전환 + 주차 네비게이션 + 학생 통계 */}
                     <div className="flex items-center gap-3 flex-shrink-0">
+                        {timetableSubject && setTimetableSubject && hasPermissionFn && (
+                            <SubjectControls
+                                timetableSubject={timetableSubject}
+                                setTimetableSubject={setTimetableSubject}
+                                viewType={viewType}
+                                setTimetableViewType={setTimetableViewType}
+                                mathViewMode={mathViewMode}
+                                setMathViewMode={setMathViewMode}
+                                hasPermission={hasPermissionFn}
+                                setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
+                            />
+                        )}
                         {weekLabel && goToPrevWeek && goToNextWeek && goToThisWeek && (
                             <>
                                 <span className="text-gray-600 font-medium">{weekLabel}</span>
@@ -1249,7 +1550,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
             )}
 
             {/* Content */}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
                 {loading && Object.keys(scheduleData).length === 0 ? (
                     <div className="flex items-center justify-center h-full text-gray-400 text-sm">
                         데이터 로딩 중...
@@ -1320,41 +1621,60 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                             />
                         )}
                         {viewType === 'excel' && (
-                            <EnglishClassTab
-                                teachers={teachers}
-                                teachersData={teachersData}
-                                scheduleData={scheduleData}
-                                classKeywords={classKeywords}
-                                currentUser={currentUser}
-                                isSimulationMode={isSimulationMode}
-                                studentMap={studentMap}
-                                classesData={classesData}
-                                canSimulation={canSimulation}
-                                onToggleSimulation={handleToggleSimulationMode}
-                                onCopyLiveToDraft={handleCopyLiveToDraft}
-                                onPublishToLive={handlePublishDraftToLive}
-                                onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
-                                canPublish={canSimulation}
-                                onSimulationLevelUp={isSimulationMode ? handleSimulationLevelUp : undefined}
-                                currentWeekStart={currentWeekStart}
-                                mode={mode}
-                                setMode={setMode}
-                                searchTerm={searchQuery}
-                                setSearchTerm={setSearchQuery}
-                                isSettingsOpen={isSettingsOpen}
-                                setIsSettingsOpen={setIsSettingsOpen}
-                                isLevelSettingsOpen={isLevelSettingsOpen}
-                                setIsLevelSettingsOpen={setIsLevelSettingsOpen}
-                                isExportModalOpen={isClassExportModalOpen}
-                                setIsExportModalOpen={setIsClassExportModalOpen}
-                                isExcelMode={true}
-                                selectedClassId={selectedClassId}
-                                onCellSelect={setSelectedClassId}
-                                selectedStudentId={selectedStudentId}
-                                copiedStudentId={copiedStudent?.studentId || null}
-                                onStudentSelect={handleExcelStudentSelect}
-                                onEnrollStudent={enrollStudentToEnglishClass}
-                            />
+                            <div className="relative flex-1 min-h-0 overflow-auto custom-scrollbar">
+                                {/* 토스트 알림 */}
+                                {excelToast && (
+                                    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50 bg-gray-800 text-white text-xs px-3 py-1.5 rounded shadow-lg animate-fade-in whitespace-nowrap pointer-events-none">
+                                        {excelToast}
+                                    </div>
+                                )}
+                                <EnglishClassTab
+                                    teachers={teachers}
+                                    teachersData={teachersData}
+                                    scheduleData={scheduleData}
+                                    classKeywords={classKeywords}
+                                    currentUser={currentUser}
+                                    isSimulationMode={isSimulationMode}
+                                    studentMap={studentMap}
+                                    classesData={classesData}
+                                    canSimulation={canSimulation}
+                                    onToggleSimulation={handleToggleSimulationMode}
+                                    onCopyLiveToDraft={handleCopyLiveToDraft}
+                                    onPublishToLive={handlePublishDraftToLive}
+                                    onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
+                                    canPublish={canSimulation}
+                                    onSimulationLevelUp={isSimulationMode ? handleSimulationLevelUp : undefined}
+                                    currentWeekStart={currentWeekStart}
+                                    mode={mode}
+                                    setMode={setMode}
+                                    searchTerm={searchQuery}
+                                    setSearchTerm={setSearchQuery}
+                                    isSettingsOpen={isSettingsOpen}
+                                    setIsSettingsOpen={setIsSettingsOpen}
+                                    isLevelSettingsOpen={isLevelSettingsOpen}
+                                    setIsLevelSettingsOpen={setIsLevelSettingsOpen}
+                                    isExportModalOpen={isClassExportModalOpen}
+                                    setIsExportModalOpen={setIsClassExportModalOpen}
+                                    isExcelMode={true}
+                                    selectedClassId={selectedClassId}
+                                    onCellSelect={setSelectedClassId}
+                                    selectedStudentIds={selectedStudentIds}
+                                    copiedStudentIds={copiedStudent?.studentIds || null}
+                                    selectedStudentClassName={selectedStudentClassName}
+                                    copiedStudentClassName={copiedStudent?.className || null}
+                                    onStudentSelect={handleExcelStudentSelect}
+                                    onStudentMultiSelect={handleExcelStudentMultiSelect}
+                                    onEnrollStudent={handleEnrollStudentPending}
+                                    onExcelMoveStudent={handleExcelMoveStudent}
+                                    onExcelMultiMoveStudent={handleExcelMultiMoveStudent}
+                                    cutStudentIds={cutStudent?.studentIds || null}
+                                    cutStudentClassName={cutStudent?.className || null}
+                                    acHighlightStudentId={acHighlightStudentId}
+                                    onAcHighlightChange={setAcHighlightStudentId}
+                                    pendingExcelDeleteIds={pendingExcelDeleteIds}
+                                    pendingExcelEnrollments={pendingExcelEnrollments}
+                                />
+                            </div>
                         )}
                         {viewType === 'room' && (
                             <EnglishRoomTab
@@ -1666,6 +1986,34 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         </div>
                     </div>
                 </div>
+            )}
+            {/* 붙여넣기 등록일 선택 모달 */}
+            {pasteModalInfo && (
+                <ScheduledDateModal
+                    studentName={(() => {
+                        const names = pasteModalInfo.studentIds.map(id => studentMap[id]?.name || id);
+                        return names.length <= 3 ? names.join(', ') : `${names.slice(0, 3).join(', ')} 외 ${names.length - 3}명`;
+                    })()}
+                    fromClassName={copiedStudent?.className || ''}
+                    toClassName={pasteModalInfo.targetClassName}
+                    title="등록일 설정"
+                    actionVerb="삽입"
+                    onConfirm={handlePasteConfirm}
+                    onClose={() => setPasteModalInfo(null)}
+                />
+            )}
+
+            {/* 드래그 이동 예정일 선택 모달 */}
+            {dragMoveModalInfo && (
+                <ScheduledDateModal
+                    studentName={dragMoveModalInfo.studentName}
+                    fromClassName={dragMoveModalInfo.fromClassName}
+                    toClassName={dragMoveModalInfo.toClassName}
+                    title="이동일 설정"
+                    actionVerb="이동"
+                    onConfirm={handleDragMoveConfirm}
+                    onClose={() => setDragMoveModalInfo(null)}
+                />
             )}
         </div>
     );

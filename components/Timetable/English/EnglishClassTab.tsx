@@ -14,7 +14,7 @@ import LevelUpConfirmModal from './LevelUpConfirmModal';
 import StudentModal from './StudentModal';
 import EditClassModal from '../../ClassManagement/EditClassModal';
 
-import { doc, onSnapshot, setDoc, collection, query, where, writeBatch, getDocs, updateDoc, deleteField } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, collection, query, where, writeBatch, getDocs, updateDoc, deleteField, deleteDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 
 // Hooks
@@ -71,10 +71,23 @@ interface EnglishClassTabProps {
     isExcelMode?: boolean;
     selectedClassId?: string | null;
     onCellSelect?: (classId: string) => void;
-    selectedStudentId?: string | null;
-    copiedStudentId?: string | null;
+    selectedStudentId?: string | null;   // deprecated: 하위호환
+    copiedStudentId?: string | null;     // deprecated: 하위호환
+    selectedStudentIds?: Set<string>;
+    copiedStudentIds?: string[] | null;
+    selectedStudentClassName?: string | null;
+    copiedStudentClassName?: string | null;
     onStudentSelect?: (studentId: string, className: string) => void;
+    onStudentMultiSelect?: (studentIds: Set<string>, className: string) => void;
     onEnrollStudent?: (studentId: string, className: string) => void;
+    onExcelMoveStudent?: (student: any, fromClass: string, toClass: string) => void;
+    onExcelMultiMoveStudent?: (studentIds: string[], fromClassName: string, toClassName: string) => void;
+    cutStudentIds?: string[] | null;
+    cutStudentClassName?: string | null;
+    acHighlightStudentId?: string | null;
+    onAcHighlightChange?: (studentId: string | null) => void;
+    pendingExcelDeleteIds?: Set<string>;
+    pendingExcelEnrollments?: Array<{ studentId: string; className: string; enrollmentDate?: string }>;
 }
 
 // ClassInfo removed (imported from hooks)
@@ -113,8 +126,21 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     onCellSelect: excelOnCellSelect,
     selectedStudentId: excelSelectedStudentId,
     copiedStudentId: excelCopiedStudentId,
+    selectedStudentIds: excelSelectedStudentIds,
+    copiedStudentIds: excelCopiedStudentIds,
+    selectedStudentClassName: excelSelectedStudentClassName,
+    copiedStudentClassName: excelCopiedStudentClassName,
     onStudentSelect: excelOnStudentSelect,
+    onStudentMultiSelect: excelOnStudentMultiSelect,
     onEnrollStudent: excelOnEnrollStudent,
+    onExcelMoveStudent: excelOnExcelMoveStudent,
+    onExcelMultiMoveStudent: excelOnExcelMultiMoveStudent,
+    cutStudentIds: excelCutStudentIds,
+    cutStudentClassName: excelCutStudentClassName,
+    acHighlightStudentId: excelAcHighlightStudentId,
+    onAcHighlightChange: excelOnAcHighlightChange,
+    pendingExcelDeleteIds: excelPendingExcelDeleteIds,
+    pendingExcelEnrollments: excelPendingExcelEnrollments,
 }) => {
     const { hasPermission } = usePermissions(currentUser);
     const canEditEnglish = hasPermission('timetable.english.edit');
@@ -372,11 +398,13 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                 return;
             }
 
-            // Remove endDate and withdrawalDate from the enrollment
+            // Remove endDate, withdrawalDate, isTransferred, transferTo from the enrollment
             for (const docSnap of snapshot.docs) {
                 await updateDoc(docSnap.ref, {
                     endDate: deleteField(),
                     withdrawalDate: deleteField(),
+                    isTransferred: deleteField(),
+                    transferTo: deleteField(),
                 });
             }
 
@@ -386,6 +414,32 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
         } catch (error) {
             console.error('수업 종료 취소 오류:', error);
             alert('수업 종료 취소에 실패했습니다.');
+        }
+    };
+
+    const handleDeleteEnrollment = async (studentId: string, className: string) => {
+        try {
+            const enrollmentsQuery = query(
+                collection(db, 'students', studentId, 'enrollments'),
+                where('subject', '==', 'english'),
+                where('className', '==', className)
+            );
+            const snapshot = await getDocs(enrollmentsQuery);
+
+            if (snapshot.empty) {
+                alert('해당 수강 정보를 찾을 수 없습니다.');
+                return;
+            }
+
+            for (const docSnap of snapshot.docs) {
+                await deleteDoc(docSnap.ref);
+            }
+
+            await refetchClassStudents();
+            alert('수강 기록이 삭제되었습니다.');
+        } catch (error) {
+            console.error('수강 기록 삭제 오류:', error);
+            alert('수강 기록 삭제에 실패했습니다.');
         }
     };
 
@@ -402,7 +456,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     }
 
     return (
-        <div className="flex flex-col h-full bg-white select-none">
+        <div className="flex flex-col h-full min-h-0 bg-white select-none">
             {/* Simulation Action Bar */}
             {isSimulationMode && canEditEnglish && (
                 <div className="flex items-center justify-center gap-2 px-4 py-1.5 bg-orange-50 border-b border-orange-200 flex-shrink-0">
@@ -576,7 +630,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                             <IntegrationClassCard
                                                 key={cls.name}
                                                 classInfo={cls}
-                                                mode={mode}
+                                                mode={isExcelMode ? 'edit' : mode}
                                                 subject="english"
                                                 isHidden={hiddenClasses.has(cls.name)}
                                                 onToggleHidden={() => toggleHidden(cls.name)}
@@ -587,8 +641,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 englishLevels={englishLevels}
                                                 isSimulationMode={isSimulationMode}
                                                 onSimulationLevelUp={onSimulationLevelUp}
-                                                moveChanges={moveChanges}
-                                                onMoveStudent={handleMoveStudent}
+                                                moveChanges={isExcelMode ? undefined : moveChanges}
+                                                onMoveStudent={isExcelMode && excelOnExcelMoveStudent ? excelOnExcelMoveStudent : handleMoveStudent}
                                                 classStudentData={classDataMap[cls.name]}
                                                 hideTime={true}
                                                 useInjaePeriod={group.useInjaePeriod}
@@ -596,6 +650,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 onClassClick={(mode === 'edit' && !isSimulationMode) ? () => {
                                                     // 실시간 모드에서만 수업 상세 모달 열기
                                                     // 시뮬레이션 모드에서는 학생 배정 변경 비활성화
+                                                    // classesData에서 schedule 포함한 전체 정보 가져오기
+                                                    const fullClassData = classesData?.find(c => c.id === cls.classId || c.className === cls.name);
                                                     const classDetail: ClassInfoFromHook = {
                                                         id: cls.classId,
                                                         className: cls.name,
@@ -603,6 +659,9 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                         teacher: cls.mainTeacher,
                                                         room: cls.mainRoom,
                                                         studentCount: classDataMap[cls.name]?.studentList?.filter((s: any) => !s.withdrawalDate && !s.onHold).length || 0,
+                                                        schedule: fullClassData?.schedule,
+                                                        slotTeachers: fullClassData?.slotTeachers,
+                                                        slotRooms: fullClassData?.slotRooms,
                                                     };
                                                     setSelectedClassDetail(classDetail);
                                                 } : undefined}
@@ -614,6 +673,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                     }
                                                 } : undefined}
                                                 onRestoreEnrollment={!isSimulationMode ? handleRestoreEnrollment : undefined}
+                                                onDeleteEnrollment={!isSimulationMode ? handleDeleteEnrollment : undefined}
                                                 onEditClass={isSimulationMode ? (classId) => setEditingClassId(classId) : undefined}
                                                 currentWeekStart={currentWeekStart}
                                                 isExcelMode={isExcelMode}
@@ -621,8 +681,20 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 onCellSelect={isExcelMode ? () => excelOnCellSelect?.(cls.classId) : undefined}
                                                 selectedStudentId={isExcelMode ? excelSelectedStudentId : undefined}
                                                 copiedStudentId={isExcelMode ? excelCopiedStudentId : undefined}
+                                                selectedStudentIds={isExcelMode ? excelSelectedStudentIds : undefined}
+                                                copiedStudentIds={isExcelMode ? excelCopiedStudentIds : undefined}
+                                                selectedStudentClassName={isExcelMode ? excelSelectedStudentClassName : undefined}
+                                                copiedStudentClassName={isExcelMode ? excelCopiedStudentClassName : undefined}
                                                 onStudentSelect={isExcelMode ? excelOnStudentSelect : undefined}
+                                                onStudentMultiSelect={isExcelMode ? excelOnStudentMultiSelect : undefined}
                                                 onEnrollStudent={isExcelMode ? excelOnEnrollStudent : undefined}
+                                                onMultiMoveStudent={isExcelMode ? excelOnExcelMultiMoveStudent : undefined}
+                                                cutStudentIds={isExcelMode ? excelCutStudentIds : undefined}
+                                                cutStudentClassName={isExcelMode ? excelCutStudentClassName : undefined}
+                                                acHighlightStudentId={isExcelMode ? excelAcHighlightStudentId : undefined}
+                                                onAcHighlightChange={isExcelMode ? excelOnAcHighlightChange : undefined}
+                                                pendingExcelDeleteIds={isExcelMode ? excelPendingExcelDeleteIds : undefined}
+                                                pendingExcelEnrollments={isExcelMode ? excelPendingExcelEnrollments : undefined}
                                             />
                                         ))}
                                     </div>

@@ -584,6 +584,21 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
       },
     ],
   },
+  logs: {
+    title: '로그보기',
+    overview: '시간표 변경 이력을 조회합니다. 수업 생성/수정/삭제, 학생 등록/이동 등의 기록을 확인할 수 있습니다.',
+    sections: [
+      {
+        title: '주요 기능',
+        items: [
+          '날짜별 변경 로그 조회',
+          '작업 유형별 필터링 (수업 생성, 학생 등록, 반이동 등)',
+          '수업명/학생명/변경자 검색',
+          '변경 전/후 상세 비교 (행 클릭)',
+        ],
+      },
+    ],
+  },
   'role-management': {
     title: '역할 관리',
     overview: '역할별 세부 권한과 탭 접근 권한을 설정합니다. Master 전용 기능입니다.',

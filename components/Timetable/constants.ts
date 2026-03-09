@@ -9,6 +9,7 @@ export const MATH_UNIFIED_PERIODS = ['1', '2', '3', '4', '5', '6', '7', '8'];
 export const ENGLISH_UNIFIED_PERIODS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 export const SCIENCE_UNIFIED_PERIODS = ['1', '2', '3', '4', '5', '6', '7', '8'];
 export const KOREAN_UNIFIED_PERIODS = ['1', '2', '3', '4', '5', '6', '7', '8'];
+export const SHUTTLE_UNIFIED_PERIODS = ['1', '2', '3', '4', '5', '6', '7'];
 
 export interface PeriodInfo {
     id: string;
@@ -68,6 +69,17 @@ export const KOREAN_PERIOD_INFO: Record<string, PeriodInfo> = {
     '8': { id: '8', label: '8교시', time: '21:05~22:00', startTime: '21:05', endTime: '22:00' },
 };
 
+// 셔틀 회차 정보 (7회차, 도착/출발 시간)
+export const SHUTTLE_PERIOD_INFO: Record<string, PeriodInfo> = {
+    '1': { id: '1', label: '1회차', time: '도착 14:10', startTime: '14:10', endTime: '14:10' },
+    '2': { id: '2', label: '2회차', time: '도착 14:50', startTime: '14:50', endTime: '14:50' },
+    '3': { id: '3', label: '3회차', time: '도착 16:10', startTime: '16:10', endTime: '16:10' },
+    '4': { id: '4', label: '4회차', time: '도착 16:50 / 출발 16:25', startTime: '16:25', endTime: '16:50' },
+    '5': { id: '5', label: '5회차', time: '도착 17:30 / 출발 17:05', startTime: '17:05', endTime: '17:30' },
+    '6': { id: '6', label: '6회차', time: '도착 18:10 / 출발 17:45', startTime: '17:45', endTime: '18:10' },
+    '7': { id: '7', label: '7회차', time: '도착 18:50 / 출발 18:25', startTime: '18:25', endTime: '18:50' },
+};
+
 // 기본 교시 정보 (수학 기준, 하위 호환용)
 export const PERIOD_INFO: Record<string, PeriodInfo> = MATH_PERIOD_INFO;
 
@@ -110,7 +122,7 @@ export const WEEKEND_PERIOD_TIMES: Record<string, string> = {
 };
 
 // periodId로 시간 정보 가져오기
-export const getPeriodTime = (periodId: string, subject?: 'math' | 'english' | 'science' | 'korean'): string => {
+export const getPeriodTime = (periodId: string, subject?: 'math' | 'english' | 'science' | 'korean' | 'shuttle'): string => {
     let info: Record<string, PeriodInfo>;
     if (subject === 'english') {
         info = ENGLISH_PERIOD_INFO;
@@ -118,6 +130,8 @@ export const getPeriodTime = (periodId: string, subject?: 'math' | 'english' | '
         info = SCIENCE_PERIOD_INFO;
     } else if (subject === 'korean') {
         info = KOREAN_PERIOD_INFO;
+    } else if (subject === 'shuttle') {
+        info = SHUTTLE_PERIOD_INFO;
     } else {
         info = MATH_PERIOD_INFO;
     }
@@ -130,7 +144,7 @@ export const getPeriodLabel = (periodId: string): string => {
 };
 
 // 과목별 PeriodInfo 가져오기
-export const getPeriodInfo = (periodId: string, subject?: 'math' | 'english' | 'science' | 'korean'): PeriodInfo | undefined => {
+export const getPeriodInfo = (periodId: string, subject?: 'math' | 'english' | 'science' | 'korean' | 'shuttle'): PeriodInfo | undefined => {
     let info: Record<string, PeriodInfo>;
     if (subject === 'english') {
         info = ENGLISH_PERIOD_INFO;
@@ -138,6 +152,8 @@ export const getPeriodInfo = (periodId: string, subject?: 'math' | 'english' | '
         info = SCIENCE_PERIOD_INFO;
     } else if (subject === 'korean') {
         info = KOREAN_PERIOD_INFO;
+    } else if (subject === 'shuttle') {
+        info = SHUTTLE_PERIOD_INFO;
     } else {
         info = MATH_PERIOD_INFO;
     }
@@ -255,7 +271,7 @@ interface ScheduleSlotParsed {
     position: 'first' | 'second';
 }
 
-export type SubjectForSchedule = 'math' | 'english' | 'science' | 'korean';
+export type SubjectForSchedule = 'math' | 'english' | 'science' | 'korean' | 'shuttle';
 
 /**
  * 스케줄 배열을 스마트하게 포맷팅
@@ -286,6 +302,8 @@ export const formatScheduleCompact = (
         weekdayPeriodInfo = ENGLISH_PERIOD_INFO;
     } else if (subject === 'science') {
         weekdayPeriodInfo = SCIENCE_PERIOD_INFO;
+    } else if (subject === 'shuttle') {
+        weekdayPeriodInfo = SHUTTLE_PERIOD_INFO;
     } else if (subject === 'korean') {
         weekdayPeriodInfo = KOREAN_PERIOD_INFO;
     } else {
@@ -331,6 +349,8 @@ export const formatScheduleCompact = (
             label = formatWeekendPeriodsToLabel(sortedPeriods, showTime);
         } else if (subject === 'english') {
             label = formatEnglishPeriodsToLabel(sortedPeriods, showTime);
+        } else if (subject === 'shuttle') {
+            label = sortedPeriods.map(p => `${p}회차`).join(', ');
         } else {
             label = formatMathPeriodsToLabel(sortedPeriods, showTime);
         }

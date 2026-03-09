@@ -10,7 +10,7 @@ export const INJAEWON_LOGO = "/logo.png";
  * - 과학: 그린 계열 (추후 확장)
  * - 국어: 레드/핑크 계열 (추후 확장)
  */
-export type SubjectType = 'math' | 'english' | 'science' | 'korean' | 'other';
+export type SubjectType = 'math' | 'english' | 'science' | 'korean' | 'shuttle' | 'other';
 
 export const SUBJECT_COLORS: Record<SubjectType, {
   bg: string;           // 배경색
@@ -52,6 +52,14 @@ export const SUBJECT_COLORS: Record<SubjectType, {
     badge: 'bg-red-500 text-white',
     badgeAlt: 'bg-red-50 text-red-700 border border-red-200',
   },
+  shuttle: {
+    bg: '#059669',
+    text: '#ffffff',
+    border: '#047857',
+    light: '#d1fae5',
+    badge: 'bg-emerald-600 text-white',
+    badgeAlt: 'bg-emerald-50 text-emerald-800 border border-emerald-200',
+  },
   other: {
     bg: '#6b7280',
     text: '#ffffff',
@@ -68,6 +76,7 @@ export const SUBJECT_LABELS: Record<SubjectType, string> = {
   english: '영어',
   science: '과학',
   korean: '국어',
+  shuttle: '셔틀버스',
   other: '기타',
 };
 

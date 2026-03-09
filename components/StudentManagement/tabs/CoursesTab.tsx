@@ -268,8 +268,9 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
     (student.enrollments || [])
       .filter(enrollment => {
-        // endDate가 없고, startDate가 오늘 이전이거나 없는 것만 = 현재 수강중
-        const hasEnded = !!getEndDate(enrollment);
+        // endDate가 없거나 오늘 이후이면 아직 수강중, startDate가 오늘 이전이거나 없는 것
+        const endDate = getEndDate(enrollment);
+        const hasEnded = endDate ? endDate < today : false; // 종료일이 오늘 이전이면 종료
         const startDate = getStartDate(enrollment);
         const hasStarted = !startDate || startDate <= today;
         return !hasEnded && hasStarted;
@@ -299,11 +300,20 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             existing.enrollmentIds.push((enrollment as any).id);
           }
           // startDate는 가장 빠른 날짜 사용
-          const existingStartDate = existing.startDate ? new Date(existing.startDate) : null;
+          const existingSD = existing.startDate ? new Date(existing.startDate) : null;
           const sd = getStartDate(enrollment);
-          const currentStartDate = sd ? new Date(sd) : null;
-          if (currentStartDate && (!existingStartDate || currentStartDate < existingStartDate)) {
+          const currentSD = sd ? new Date(sd) : null;
+          if (currentSD && (!existingSD || currentSD < existingSD)) {
             existing.startDate = sd;
+          }
+          // endDate는 가장 늦은 날짜 사용
+          const ed = getEndDate(enrollment);
+          if (ed) {
+            const existED = existing.endDate ? new Date(existing.endDate) : null;
+            const curED = new Date(ed);
+            if (!existED || curED > existED) {
+              existing.endDate = ed;
+            }
           }
         } else {
           const staffId = enrollment.staffId;
@@ -315,7 +325,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             attendanceDays: [...((enrollment as any).attendanceDays || [])],
             enrollmentIds: (enrollment as any).id ? [(enrollment as any).id] : [],
             startDate: getStartDate(enrollment),
-            endDate: undefined,
+            endDate: getEndDate(enrollment), // 종료 예정일 보존
           });
         }
       });
@@ -329,8 +339,9 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
     (student.enrollments || [])
       .filter(enrollment => {
-        // endDate가 없고, startDate가 미래인 것만
-        const hasEnded = !!getEndDate(enrollment);
+        // endDate가 없거나 오늘 이후이고, startDate가 미래인 것만
+        const endDate = getEndDate(enrollment);
+        const hasEnded = endDate ? endDate < today : false;
         const startDate = getStartDate(enrollment);
         const isFuture = startDate && startDate > today;
         return !hasEnded && isFuture;
@@ -609,8 +620,10 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         for (const enrollmentId of group.enrollmentIds) {
           const docRef = doc(db, `students/${student.id}/enrollments`, enrollmentId);
           const docSnap = await getDoc(docRef);
-          // 문서가 존재하는 경우에만 삭제
           if (docSnap.exists()) {
+            const data = docSnap.data();
+            // 활성 enrollment(endDate/withdrawalDate 없음)은 삭제하지 않음 — 현재 수강 보호
+            if (!data.endDate && !data.withdrawalDate) continue;
             await deleteDoc(docRef);
           }
         }
@@ -625,6 +638,9 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         const snapshot = await getDocs(q);
 
         for (const docSnap of snapshot.docs) {
+          const data = docSnap.data();
+          // 활성 enrollment(endDate/withdrawalDate 없음)은 삭제하지 않음 — 현재 수강 보호
+          if (!data.endDate && !data.withdrawalDate) continue;
           await deleteDoc(docSnap.ref);
         }
       }
@@ -679,6 +695,11 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           if (currentEndDate && (!existingEndDate || currentEndDate > existingEndDate)) {
             existing.endDate = ed;
           }
+
+          // schedule 정보도 수집 (enrollment에 저장된 스케줄)
+          if ((enrollment as any).schedule && !existing.schedule) {
+            existing.schedule = (enrollment as any).schedule;
+          }
         } else {
           const staffId = enrollment.staffId;
           groups.set(key, {
@@ -690,6 +711,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             enrollmentIds: [],
             startDate: getStartDate(enrollment),
             endDate: getEndDate(enrollment),
+            schedule: (enrollment as any).schedule, // 삭제 당시 저장된 스케줄 정보
           });
         }
       });
@@ -820,9 +842,18 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
                 {formatDate(group.startDate)}
               </span>
             )}
-            <span className="w-14 shrink-0 text-xxs font-bold text-emerald-600 text-center">
-              재원중
-            </span>
+            {group.endDate ? (
+              <span
+                className="w-14 shrink-0 text-xxs font-bold text-orange-500 text-center"
+                title={`종료예정: ${group.endDate}`}
+              >
+                ~{formatDate(group.endDate)}
+              </span>
+            ) : (
+              <span className="w-14 shrink-0 text-xxs font-bold text-emerald-600 text-center">
+                재원중
+              </span>
+            )}
           </>
         )}
 
@@ -854,6 +885,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
     const actualClass = allClasses.find(
       c => c.className === group.className && c.subject === group.subject
     );
+    const subjectForSchedule: SubjectForSchedule = group.subject === 'english' ? 'english' : 'math';
 
     return (
       <div
@@ -872,7 +904,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         </span>
 
         {/* 수업명 */}
-        <span className="w-52 shrink-0 text-xs text-primary-700 truncate">
+        <span className="flex-1 min-w-0 text-xs text-primary-700 truncate">
           {group.className}
         </span>
 
@@ -884,11 +916,13 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           </span>
         </div>
 
-        {/* 스케줄 자리 (빈 공간) */}
-        <span className="w-40"></span>
-
-        {/* 인원 자리 (빈 공간) */}
-        <span className="w-10 shrink-0"></span>
+        {/* 스케줄 (삭제 당시 저장된 스케줄 정보) */}
+        <div className="w-40 min-w-0 overflow-hidden">
+          <ScheduleBadge
+            schedule={group.schedule || actualClass?.schedule}
+            subject={subjectForSchedule}
+          />
+        </div>
 
         {/* 시작일 */}
         {canEditEnrollmentDates && !readOnly && !compact && editingDate?.key === `completed_${group.subject}_${group.className}` && editingDate?.field === 'startDate' ? (
@@ -1221,10 +1255,9 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           {/* 테이블 헤더 - 수강중인 수업과 열 위치 동일하게 */}
           <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-primary-700">
             <span className="w-8 shrink-0">과목</span>
-            <span className="w-52 shrink-0">수업명</span>
+            <span className="flex-1 min-w-0">수업명</span>
             <span className="w-14 shrink-0">강사</span>
-            <span className="w-40"></span>{/* 스케줄 자리 */}
-            <span className="w-10 shrink-0"></span>{/* 인원 자리 */}
+            <span className="w-40">스케줄</span>
             <span className="w-16 shrink-0 text-center">시작</span>
             <span className="w-16 shrink-0 text-center">종료</span>
             <span className="w-5 shrink-0"></span>

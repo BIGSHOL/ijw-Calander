@@ -26,6 +26,11 @@ export const CLASSROOM_COLORS: Record<SubjectType, {
     border: '#c4b5fd',   // violet-300
     light: '#f5f3ff',    // violet-50
   },
+  shuttle: {
+    bg: '#059669',       // emerald-600
+    border: '#6ee7b7',   // emerald-300
+    light: '#ecfdf5',    // emerald-50
+  },
   other: {
     bg: '#4b5563',       // gray-600
     border: '#d1d5db',   // gray-300

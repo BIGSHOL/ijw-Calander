@@ -67,6 +67,10 @@ interface TimetableGridProps {
     selectedStudentClassName?: string | null;
     copiedStudentIds?: string[] | null;
     copiedStudentClassName?: string | null;
+    cutStudentIds?: string[] | null;
+    cutStudentClassName?: string | null;
+    acHighlightStudentId?: string | null;
+    onAcHighlightChange?: (studentId: string | null) => void;
     onStudentSelect?: (studentId: string, className: string) => void;
     onStudentMultiSelect?: (studentIds: Set<string>, className: string) => void;
     // 배정 예정 취소
@@ -121,6 +125,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     selectedStudentClassName,
     copiedStudentIds,
     copiedStudentClassName,
+    cutStudentIds,
+    cutStudentClassName,
+    acHighlightStudentId,
+    onAcHighlightChange,
     onStudentSelect,
     onStudentMultiSelect,
     onCancelScheduledEnrollment,
@@ -435,6 +443,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     selectedStudentClassName={selectedStudentClassName}
                     copiedStudentIds={copiedStudentIds}
                     copiedStudentClassName={copiedStudentClassName}
+                    cutStudentIds={cutStudentIds}
+                    cutStudentClassName={cutStudentClassName}
+                    acHighlightStudentId={acHighlightStudentId}
+                    onAcHighlightChange={onAcHighlightChange}
                     onStudentSelect={onStudentSelect}
                     onStudentMultiSelect={onStudentMultiSelect}
                     mode={mode}

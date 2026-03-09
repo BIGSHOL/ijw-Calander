@@ -98,8 +98,8 @@ interface AppHeaderProps {
 
   // Timetable props
   timetableProps?: {
-    timetableSubject: 'math' | 'english' | 'science' | 'korean';
-    setTimetableSubject: (subject: 'math' | 'english' | 'science' | 'korean') => void;
+    timetableSubject: 'math' | 'english' | 'science' | 'korean' | 'shuttle';
+    setTimetableSubject: (subject: 'math' | 'english' | 'science' | 'korean' | 'shuttle') => void;
     timetableViewType: string;
     setTimetableViewType: (type: string) => void;
     mathViewMode: string;

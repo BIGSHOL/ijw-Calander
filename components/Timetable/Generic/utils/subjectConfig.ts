@@ -17,7 +17,9 @@ import {
   KOREAN_PERIOD_INFO,
   KOREAN_UNIFIED_PERIODS,
   ENGLISH_PERIOD_INFO,
-  ENGLISH_UNIFIED_PERIODS
+  ENGLISH_UNIFIED_PERIODS,
+  SHUTTLE_PERIOD_INFO,
+  SHUTTLE_UNIFIED_PERIODS,
 } from '../../constants';
 
 import { SUBJECT_COLORS, SUBJECT_LABELS } from '../../../../utils/styleUtils';
@@ -183,6 +185,39 @@ export const ENGLISH_CONFIG: SubjectConfiguration = {
 };
 
 /**
+ * Shuttle periods label formatter
+ */
+function formatShuttlePeriodsToLabel(periods: string[]): string {
+  if (!periods.length) return '';
+  const nums = periods.map(Number).sort((a, b) => a - b);
+  return nums.map(n => `${n}회차`).join(', ');
+}
+
+/**
+ * Shuttle Configuration
+ */
+export const SHUTTLE_CONFIG: SubjectConfiguration = {
+  subject: 'shuttle',
+  displayName: SUBJECT_LABELS.shuttle,
+
+  periodInfo: SHUTTLE_PERIOD_INFO,
+  periodIds: SHUTTLE_UNIFIED_PERIODS,
+  unifiedPeriodsCount: 7,
+
+  hasGrouping: false,
+
+  formatPeriodsToLabel: formatShuttlePeriodsToLabel,
+
+  firebaseSubjectKey: 'shuttle',
+  configDocPath: 'settings/shuttle_config',
+
+  viewPermission: 'shuttle.view',
+  editPermission: 'shuttle.edit',
+
+  colors: SUBJECT_COLORS.shuttle,
+};
+
+/**
  * Config lookup map
  *
  * Performance Note (js-index-maps):
@@ -194,6 +229,7 @@ const CONFIG_MAP = new Map<SubjectKey, SubjectConfiguration>([
   ['english', ENGLISH_CONFIG],
   ['science', SCIENCE_CONFIG],
   ['korean', KOREAN_CONFIG],
+  ['shuttle', SHUTTLE_CONFIG],
 ]);
 
 /**

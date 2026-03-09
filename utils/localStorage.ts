@@ -17,6 +17,9 @@ export const STORAGE_KEYS = {
 
   // Timetable
   TIMETABLE_VIEW_SETTINGS: 'ijw_timetable_view_settings',
+  TIMETABLE_SUBJECT: 'ijw_timetable_subject',
+  TIMETABLE_VIEW_TYPE: 'ijw_timetable_view_type',
+  TIMETABLE_MATH_VIEW_MODE: 'ijw_timetable_math_view_mode',
 
   // Consultation
   CONSULTATION_VIEW_MODE: 'ijw_consultation_view_mode',
