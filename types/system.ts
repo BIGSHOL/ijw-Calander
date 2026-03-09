@@ -34,7 +34,9 @@ export type AppTab =
   // Phase 4: 기능 완성
   | 'contracts' | 'reports'
   // Phase 5: 확장
-  | 'shuttle' | 'marketing' | 'timetable-distribution';
+  | 'shuttle' | 'marketing' | 'timetable-distribution'
+  // 지원
+  | 'logs';
 
 // Tab Metadata - 각 탭의 메타정보 (확장 가능)
 export interface TabMetadata {
@@ -85,6 +87,7 @@ export const TAB_META: Record<AppTab, Omit<TabMetadata, 'id'>> = {
   'timetable-distribution': { label: '시간표 배포', icon: '📤' },
   // 지원
   help: { label: '도움말', icon: '❓' },
+  logs: { label: '로그보기', icon: '📋' },
 };
 
 // Tab Group 구조 - 무한 확장 가능
@@ -151,7 +154,7 @@ export const TAB_GROUPS: TabGroup[] = [
     id: 'support',
     label: '지원',
     icon: '❓',
-    tabs: ['help'],
+    tabs: ['help', 'logs'],
     order: 7,
   },
 ];
@@ -176,14 +179,14 @@ export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
     'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment',
     'student-consultations', 'staff', 'billing', 'role-management', 'resources', 'withdrawal',
     'homework', 'exams', 'textbooks', 'contracts', 'reports', 'payroll', 'analytics',
-    'parent-portal', 'sms-notifications', 'marketing', 'shuttle', 'timetable-distribution', 'help',
+    'parent-portal', 'sms-notifications', 'marketing', 'shuttle', 'timetable-distribution', 'help', 'logs',
   ],
   admin: [
     'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt',
     'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment',
     'student-consultations', 'staff', 'billing', 'role-management', 'resources', 'withdrawal',
     'homework', 'exams', 'textbooks', 'contracts', 'reports', 'payroll', 'analytics',
-    'parent-portal', 'sms-notifications', 'marketing', 'shuttle', 'timetable-distribution', 'help',
+    'parent-portal', 'sms-notifications', 'marketing', 'shuttle', 'timetable-distribution', 'help', 'logs',
   ],
   manager: [
     'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'daily-attendance',

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import { useDraggable } from '../../hooks/useDraggable';
 
 export interface ModalProps {
   isOpen: boolean;
@@ -44,6 +45,7 @@ const Modal: React.FC<ModalProps> = ({
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const { handleMouseDown: handleDragStart, dragStyle } = useDraggable();
 
   // 모달 크기 클래스 (StudentDetailModal 기준: max-w-lg)
   const sizeClasses = {
@@ -138,11 +140,15 @@ const Modal: React.FC<ModalProps> = ({
           ${fixedHeight || 'max-h-[85vh]'} overflow-hidden flex flex-col
           ${className}
         `}
+        style={dragStyle}
         tabIndex={-1}
       >
         {/* Header - StudentDetailModal 기준: px-3 py-2, text-sm font-bold text-primary */}
         {(title || showCloseButton) && (
-          <div className={`flex items-center justify-between ${headerPadding} border-b border-gray-200`}>
+          <div
+            className={`flex items-center justify-between ${headerPadding} border-b border-gray-200 cursor-move select-none`}
+            onMouseDown={handleDragStart}
+          >
             {title && (
               <h2 id="modal-title" className={`${titleSize} font-bold text-primary`}>
                 {title}

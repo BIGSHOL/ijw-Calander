@@ -55,7 +55,7 @@ const minutesToTime = (minutes: number): string => {
 // 1분 = 1.5px
 const PIXELS_PER_MINUTE = 1.5;
 const DEFAULT_START_MIN = 12 * 60; // 12:00
-const DEFAULT_END_MIN = 21 * 60;   // 21:00
+const DEFAULT_END_MIN = 21 * 60 + 18; // 21:18 (9시 라벨이 잘리지 않도록 여유)
 
 // 서브컬럼당 최소 너비(px)
 const DAY_COL_MIN_WIDTH = 80;
@@ -395,6 +395,15 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
     return 64 + dayOrder.reduce((sum, day) => sum + (dayOverlapData[day]?.maxCols || 1) * DAY_COL_MIN_WIDTH, 0);
   }, [dayOverlapData]);
 
+  // 헤더 + 데이터 공용 grid-template-columns (열 너비 정확히 일치)
+  const gridTemplateColumns = useMemo(() => {
+    const cols = dayOrder.map(day => {
+      const maxCols = dayOverlapData[day]?.maxCols || 1;
+      return `minmax(${maxCols * DAY_COL_MIN_WIDTH}px, ${maxCols}fr)`;
+    });
+    return `64px ${cols.join(' ')}`;
+  }, [dayOverlapData, dayOrder]);
+
   return (
     <Modal
       isOpen={true}
@@ -412,22 +421,19 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
           {/* 시간표 그리드 - 시간 기반 */}
           <div className="border rounded-sm" style={{ minWidth: `${totalGridMinWidth}px` }}>
                 {/* 요일 헤더 */}
-                <div className="flex border-b border-gray-200">
-                  <div className="w-16 flex-shrink-0 bg-gray-50 border-r border-gray-200 px-1 py-2 text-center">
+                <div className="border-b border-gray-200" style={{ display: 'grid', gridTemplateColumns: gridTemplateColumns }}>
+                  <div className="bg-gray-50 border-r border-gray-200 px-1 py-2 text-center">
                     <span className="text-base font-bold text-gray-500">시간</span>
                   </div>
-                  {sortedDays.map(day => {
-                    const { maxCols } = dayOverlapData[day] || { maxCols: 1 };
+                  {sortedDays.map((day, i) => {
                     let colors = DAY_HEADER_COLORS[day] || { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' };
-                    // 토요일: 수업이 있으면 평일과 동일한 색상
                     if (day === '토' && activeDays.has('토')) {
                       colors = { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' };
                     }
                     return (
                       <div
                         key={day}
-                        className={`${colors.bg} ${colors.text} px-2 py-2 text-center font-bold text-base border-r last:border-r-0 border-gray-200`}
-                        style={{ flex: maxCols, minWidth: `${maxCols * DAY_COL_MIN_WIDTH}px` }}
+                        className={`${colors.bg} ${colors.text} px-2 py-2 text-center font-bold text-base ${i < sortedDays.length - 1 ? 'border-r border-gray-200' : ''}`}
                       >
                         {day}
                       </div>
@@ -436,9 +442,9 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                 </div>
 
                 {/* 시간축 + 수업 블록 */}
-                <div className="flex relative" style={{ height: `${totalHeight + GRID_PAD_TOP}px` }}>
+                <div style={{ display: 'grid', gridTemplateColumns: gridTemplateColumns, height: `${totalHeight + GRID_PAD_TOP}px` }}>
                   {/* 시간 열 */}
-                  <div className="w-16 flex-shrink-0 relative bg-gray-50 border-r border-gray-200">
+                  <div className="relative bg-gray-50 border-r border-gray-200">
                     {timeLabels.map(label => {
                       const top = (label.minutes - rangeStartMin) * PIXELS_PER_MINUTE + GRID_PAD_TOP;
                       return (
@@ -470,7 +476,6 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                       <div
                         key={day}
                         className={`relative border-r last:border-r-0 border-gray-200 ${columnBg}`}
-                        style={{ flex: maxCols, minWidth: `${maxCols * DAY_COL_MIN_WIDTH}px` }}
                       >
                         {/* 시간선 (가로) */}
                         {timeLabels.map(label => {
@@ -502,35 +507,34 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                           return (
                             <div
                               key={`${block.className}-${idx}`}
-                              className="absolute rounded-sm overflow-hidden z-10 shadow-sm"
+                              className="absolute overflow-hidden z-10"
                               style={{
                                 top: `${top}px`,
                                 height: `${height}px`,
-                                left: `calc(${leftPct}% + 2px)`,
-                                width: `calc(${widthPct}% - 4px)`,
-                                backgroundColor: classColor.light,
-                                borderLeft: `4px solid ${classColor.bg}`,
+                                left: `${leftPct}%`,
+                                width: `${widthPct}%`,
+                                backgroundColor: classColor.bg,
                               }}
                             >
-                              <div className={`px-1.5 h-full flex flex-col ${isShort ? 'py-0 justify-center' : 'py-1'}`}>
+                              <div className={`px-1 h-full flex flex-col ${isShort ? 'justify-center' : 'pt-0.5'}`}>
                                 <div
-                                  className="font-bold text-xs leading-tight truncate"
-                                  style={{ color: classColor.text }}
+                                  className="font-bold text-base leading-tight truncate"
+                                  style={{ color: '#ffffff' }}
                                 >
                                   {SUBJECT_LABELS[block.subject as keyof typeof SUBJECT_LABELS] || block.subject}-{block.teacher || ''}
                                 </div>
                                 {!isShort && (
                                   <>
-                                    <div className="text-xxs text-gray-500 mt-0.5 truncate">
+                                    <div className="text-sm truncate" style={{ color: 'rgba(255,255,255,0.85)' }}>
                                       {block.room ? `${block.room}-인재원` : '인재원'}
                                     </div>
-                                    <div className="text-xxs text-gray-400 truncate">
+                                    <div className="text-sm truncate" style={{ color: 'rgba(255,255,255,0.7)' }}>
                                       {block.startTime}~{block.endTime}
                                     </div>
                                   </>
                                 )}
                                 {isShort && (
-                                  <div className="text-micro text-gray-400 truncate">
+                                  <div className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.7)' }}>
                                     {block.room ? `${block.room}-인재원` : '인재원'} {block.startTime}~{block.endTime}
                                   </div>
                                 )}
@@ -539,9 +543,16 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                           );
                         })}
 
-                        {/* 셔틀버스 승하차 표시 */}
+                        {/* 셔틀버스 승하차 표시 (10분 이내 겹치면 승차만) */}
                         {shuttleEvents
                           .filter(e => e.day === day)
+                          .filter((e, _i, arr) => {
+                            if (e.type === 'alighting') {
+                              const eMin = timeToMinutes(e.time);
+                              return !arr.some(b => b.type === 'boarding' && Math.abs(timeToMinutes(b.time) - eMin) <= 10);
+                            }
+                            return true;
+                          })
                           .map((e, ei) => {
                             const eventMin = timeToMinutes(e.time);
                             const top = (eventMin - rangeStartMin) * PIXELS_PER_MINUTE + GRID_PAD_TOP;
@@ -554,7 +565,7 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
                               >
                                 <div className={`${isBoarding ? 'bg-blue-500' : 'bg-orange-500'} text-white text-xxs px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm`}>
                                   <Bus size={10} />
-                                  <span>{isBoarding ? '승차' : '하차'} {e.time}</span>
+                                  <span>{isBoarding ? '승차' : '하차'}</span>
                                 </div>
                               </div>
                             );

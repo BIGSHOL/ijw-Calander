@@ -1,7 +1,8 @@
-import { doc, setDoc, deleteDoc, updateDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, updateDoc, collection, getDocs, query, where, getDoc } from 'firebase/firestore';
 import { useQueryClient } from '@tanstack/react-query';
 import { db } from '../../../../firebaseConfig';
 import { TimetableClass } from '../../../../types';
+import { logTimetableChange } from '../../../../hooks/useTimetableLog';
 
 const COL_CLASSES = 'classes';
 
@@ -116,6 +117,12 @@ export const useClassOperations = () => {
 
         await setDoc(doc(db, COL_CLASSES, classId), newClass);
 
+        logTimetableChange({
+            action: 'class_create', subject: subjectKey, className: className.trim(),
+            details: `수업 생성: ${className.trim()} (${subjectKey})`,
+            after: { className: className.trim(), teacher: teacher.trim(), room: room.trim(), schedule },
+        });
+
         // 캐시 무효화 - 실시간 반영
         invalidateMathCaches();
 
@@ -147,6 +154,12 @@ export const useClassOperations = () => {
 
         await updateDoc(doc(db, COL_CLASSES, classId), updateData);
 
+        logTimetableChange({
+            action: 'class_update', subject: 'math', className: classId,
+            details: `수업 수정: ${classId}`,
+            after: updateData,
+        });
+
         // 캐시 무효화 - 실시간 반영
         invalidateMathCaches();
     };
@@ -154,6 +167,12 @@ export const useClassOperations = () => {
     const deleteClass = async (classId: string) => {
         // Soft delete - isActive를 false로 설정
         await updateDoc(doc(db, COL_CLASSES, classId), { isActive: false });
+
+        logTimetableChange({
+            action: 'class_delete', subject: 'math', className: classId,
+            details: `수업 비활성화: ${classId}`,
+            before: { isActive: true }, after: { isActive: false },
+        });
 
         // 캐시 무효화 - 실시간 반영
         invalidateMathCaches();
@@ -199,6 +218,13 @@ export const useClassOperations = () => {
             createdAt: now
         });
 
+        logTimetableChange({
+            action: 'student_enroll', subject: 'math', className,
+            studentId: newStudentId, studentName: studentData.name.trim(),
+            details: `신규 학생 등록: ${studentData.name.trim()} → ${className}`,
+            after: { className, studentName: studentData.name.trim() },
+        });
+
         // 캐시 무효화 - 실시간 반영
         invalidateMathCaches();
 
@@ -209,6 +235,12 @@ export const useClassOperations = () => {
         // enrollment 문서 삭제
         const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
         await deleteDoc(enrollmentRef);
+
+        logTimetableChange({
+            action: 'student_unenroll', subject: 'math', className, studentId,
+            details: `학생 제거: ${studentId} ← ${className}`,
+            before: { className },
+        });
 
         // 캐시 무효화 - 실시간 반영
         invalidateMathCaches();
@@ -230,6 +262,12 @@ export const useClassOperations = () => {
             withdrawalDate: now.split('T')[0]
         });
 
+        logTimetableChange({
+            action: 'student_withdraw', subject: 'math', className, studentId,
+            details: `퇴원 처리: ${studentId} ← ${className}`,
+            before: { status: 'active' }, after: { status: 'withdrawn', withdrawalDate: now.split('T')[0] },
+        });
+
         // 캐시 무효화 - 실시간 반영
         invalidateMathCaches();
     };
@@ -245,10 +283,11 @@ export const useClassOperations = () => {
             updatedAt: now
         });
 
-        // enrollment에서 withdrawalDate 제거
+        // enrollment에서 withdrawalDate/endDate 제거
         const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
         await updateDoc(enrollmentRef, {
             withdrawalDate: null,
+            endDate: null,
             onHold: false
         });
 
@@ -265,10 +304,17 @@ export const useClassOperations = () => {
             enrollmentDate: enrollmentDate || now.split('T')[0],
             createdAt: now,
         });
+
+        logTimetableChange({
+            action: 'student_enroll', subject: 'math', className, studentId,
+            details: `기존 학생 등록: ${studentId} → ${className}`,
+            after: { className, enrollmentDate: enrollmentDate || now.split('T')[0] },
+        });
+
         invalidateMathCaches();
     };
 
-    // 스마트 삭제: 다른 활성 수학수업이 있으면 enrollment만 삭제, 없으면 퇴원 처리
+    // 스마트 삭제: enrollment에 endDate 설정하고 스케줄 정보 저장 (지난수업 기록 유지)
     const smartRemoveStudent = async (className: string, studentId: string): Promise<'removed' | 'withdrawn'> => {
         const enrollmentsRef = collection(db, 'students', studentId, 'enrollments');
         const q = query(enrollmentsRef, where('subject', '==', 'math'));
@@ -281,24 +327,75 @@ export const useClassOperations = () => {
         }).length;
 
         const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
+        const today = new Date().toISOString().split('T')[0];
+
+        // 수업 스케줄 정보 조회하여 enrollment에 저장
+        try {
+            const classesRef = collection(db, COL_CLASSES);
+            const classQuery = query(classesRef,
+                where('className', '==', className),
+                where('subject', '==', 'math')
+            );
+            const classSnapshot = await getDocs(classQuery);
+
+            if (!classSnapshot.empty) {
+                const classData = classSnapshot.docs[0].data();
+                const schedule = classData.legacySchedule || classData.schedule?.map((s: any) =>
+                    typeof s === 'string' ? s : `${s.day} ${s.periodId}`
+                ) || [];
+
+                // enrollment 업데이트: endDate 설정 + 스케줄 정보 저장
+                await updateDoc(enrollmentRef, {
+                    endDate: today,
+                    withdrawalDate: today, // 호환성
+                    schedule, // 삭제 당시 스케줄 저장
+                    updatedAt: new Date().toISOString(),
+                });
+            } else {
+                // 수업 정보가 없으면 endDate만 설정
+                await updateDoc(enrollmentRef, {
+                    endDate: today,
+                    withdrawalDate: today,
+                    updatedAt: new Date().toISOString(),
+                });
+            }
+        } catch (error) {
+            console.error('enrollment 업데이트 오류:', error);
+            // 오류 발생 시 최소한 endDate는 설정
+            await updateDoc(enrollmentRef, {
+                endDate: today,
+                withdrawalDate: today,
+                updatedAt: new Date().toISOString(),
+            });
+        }
 
         if (otherActiveMath >= 1) {
-            await deleteDoc(enrollmentRef);
+            logTimetableChange({
+                action: 'student_unenroll', subject: 'math', className, studentId,
+                details: `학생 제거 (다른 수학수업 있음): ${studentId} ← ${className}`,
+                before: { className },
+            });
             invalidateMathCaches();
             return 'removed';
         } else {
-            const today = new Date().toISOString().split('T')[0];
-            await updateDoc(enrollmentRef, { withdrawalDate: today });
+            logTimetableChange({
+                action: 'student_unenroll', subject: 'math', className, studentId,
+                details: `학생 제거 (마지막 수학수업): ${studentId} ← ${className}`,
+                before: { className },
+            });
             invalidateMathCaches();
             return 'withdrawn';
         }
     };
 
     // 퇴원생 수업기록 완전 삭제
-    const deleteEnrollmentRecord = async (className: string, studentId: string) => {
-        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
+    const deleteEnrollmentRecord = async (className: string, studentId: string, subject?: string) => {
+        const prefix = subject === 'english' ? 'english' : 'math';
+        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `${prefix}_${className}`);
         await deleteDoc(enrollmentRef);
         invalidateMathCaches();
+        queryClient.invalidateQueries({ queryKey: ['classDetail'] });
+        queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
     };
 
     return {

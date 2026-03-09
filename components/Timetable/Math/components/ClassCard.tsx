@@ -35,6 +35,8 @@ interface StudentItemProps {
     onCellSelect?: (classId: string) => void;
     isStudentSelected?: boolean;
     isCopiedStudent?: boolean;
+    isCutStudent?: boolean;
+    isAcHighlighted?: boolean;
     onStudentSelect?: (studentId: string, className: string) => void;
     onStudentMultiSelect?: (studentIds: Set<string>, className: string) => void;
     selectedStudentIds?: Set<string>;
@@ -68,6 +70,8 @@ const StudentItem: React.FC<StudentItemProps> = ({
     onCellSelect,
     isStudentSelected,
     isCopiedStudent,
+    isCutStudent,
+    isAcHighlighted,
     onStudentSelect,
     onStudentMultiSelect,
     selectedStudentIds,
@@ -142,9 +146,9 @@ const StudentItem: React.FC<StudentItemProps> = ({
             className={`py-0 px-0.5 list-none ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap min-w-0 font-normal transition-all duration-150
             ${isPendingExcelDelete ? '!bg-red-200 !text-red-500 line-through opacity-50' : ''}
             ${isExcelMode && !isPendingExcelDelete ? 'cursor-pointer select-none' : isDraggable ? 'cursor-grab' : isClickable ? 'cursor-pointer' : ''}
-            ${!isPendingExcelDelete && isStudentSelected ? '!bg-blue-200 !text-blue-900 font-bold ring-1 ring-blue-400' : !isPendingExcelDelete && isCopiedStudent ? '!bg-green-100 !text-green-800 ring-1 ring-green-400' : ''}
-            ${!isPendingExcelDelete && !isStudentSelected && !isCopiedStudent ? (isPendingMoved ? 'bg-purple-400 text-white font-bold' : isTransferScheduled ? 'bg-purple-200 text-purple-800 font-bold' : isWithdrawalScheduled ? 'bg-orange-100 text-orange-800 line-through' : isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText) : ''}
-            ${!isPendingExcelDelete && !isStudentSelected && !isCopiedStudent && !isPendingMoved && !isTransferScheduled && !isWithdrawalScheduled && !isHighlighted && !enrollmentStyle ? 'opacity-80' : ''}`}
+            ${!isPendingExcelDelete && isStudentSelected ? '!bg-blue-200 !text-blue-900 font-bold ring-1 ring-blue-400' : !isPendingExcelDelete && isCutStudent ? '!bg-amber-100 !text-amber-800 ring-1 ring-dashed ring-amber-400 opacity-70' : !isPendingExcelDelete && isCopiedStudent ? '!bg-green-100 !text-green-800 ring-1 ring-green-400' : ''}
+            ${!isPendingExcelDelete && !isStudentSelected && !isCutStudent && !isCopiedStudent ? (isPendingMoved ? 'bg-purple-400 text-white font-bold' : isTransferScheduled ? 'bg-purple-200 text-purple-800 font-bold' : isWithdrawalScheduled ? 'bg-orange-100 text-orange-800 line-through' : isAcHighlighted ? '!bg-red-200 !text-red-700 font-bold ring-2 ring-red-400 animate-pulse' : isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText) : ''}
+            ${!isPendingExcelDelete && !isStudentSelected && !isCutStudent && !isCopiedStudent && !isPendingMoved && !isTransferScheduled && !isWithdrawalScheduled && !isHighlighted && !enrollmentStyle ? 'opacity-80' : ''}`}
             style={hoverStyle}
             title={
                 (() => {
@@ -220,6 +224,10 @@ interface ClassCardProps {
     selectedStudentClassName?: string | null;
     copiedStudentIds?: string[] | null;
     copiedStudentClassName?: string | null;
+    cutStudentIds?: string[] | null;
+    cutStudentClassName?: string | null;
+    acHighlightStudentId?: string | null;
+    onAcHighlightChange?: (studentId: string | null) => void;
     onStudentSelect?: (studentId: string, className: string) => void;
     onStudentMultiSelect?: (studentIds: Set<string>, className: string) => void;
     mode?: 'view' | 'edit';
@@ -271,6 +279,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
     selectedStudentClassName,
     copiedStudentIds,
     copiedStudentClassName,
+    cutStudentIds,
+    cutStudentClassName,
+    acHighlightStudentId,
+    onAcHighlightChange,
     onStudentSelect,
     onStudentMultiSelect,
     mode,
@@ -727,6 +739,23 @@ const ClassCard: React.FC<ClassCardProps> = ({
         ? new Set(mergedDays.flatMap(d => (partialStudentsByDay[d]?.active || []).map((s: any) => s.id))).size
         : 0;
 
+    // 병합 셀: 모든 대기 학생 (공통 + 부분등원 요일별) 통합
+    // 부분등원(특정 요일만) 대기 학생이 누락되지 않도록 통합
+    const allMergedHoldStudents = useMemo(() => {
+        if (!isMergedCell || !partialStudentsByDay) return commonStudents.hold;
+        const all = [...commonStudents.hold];
+        const ids = new Set(all.map((s: any) => s.id));
+        mergedDays.forEach(day => {
+            (partialStudentsByDay[day]?.hold || []).forEach((s: any) => {
+                if (!ids.has(s.id)) {
+                    ids.add(s.id);
+                    all.push(s);
+                }
+            });
+        });
+        return all.sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', 'ko'));
+    }, [isMergedCell, commonStudents.hold, partialStudentsByDay, mergedDays]);
+
     // 교시 수(span)에 따른 재원생 최대 높이 계산
     // 1교시당 4명 기준 (1명당 약 21px)
     const maxStudentHeight = span * 4 * 21; // span * 4명 * 21px
@@ -764,6 +793,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
     // 엑셀 모드: 학생 자동완성 상태
     const [autoCompleteQuery, setAutoCompleteQuery] = useState('');
     const [showAutoComplete, setShowAutoComplete] = useState(false);
+    const [acHighlightIndex, setAcHighlightIndex] = useState(0);
     const autoCompleteRef = useRef<HTMLInputElement>(null);
 
     // 자동완성 후보 학생 목록
@@ -887,11 +917,18 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     requestAnimationFrame(() => document.body.removeChild(ghost));
                 };
                 return (
-                    <div className="absolute inset-0 pointer-events-none z-20 ring-2 ring-blue-500 rounded-sm">
-                        <div className="absolute top-0 left-0 right-0 h-[6px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
-                        <div className="absolute bottom-0 left-0 right-0 h-[6px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
-                        <div className="absolute top-0 left-0 bottom-0 w-[6px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
-                        <div className="absolute top-0 right-0 bottom-0 w-[6px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
+                    <div
+                        className="absolute inset-0 pointer-events-none z-20"
+                        style={{ outline: '3px solid #3b82f6', outlineOffset: '-1px', borderRadius: '2px' }}
+                    >
+                        {/* 위 핸들 */}
+                        <div className="absolute top-0 left-0 right-0 h-[20px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
+                        {/* 아래 핸들 */}
+                        <div className="absolute bottom-0 left-0 right-0 h-[20px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
+                        {/* 왼쪽 핸들 */}
+                        <div className="absolute top-0 left-0 bottom-0 w-[20px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
+                        {/* 오른쪽 핸들 */}
+                        <div className="absolute top-0 right-0 bottom-0 w-[28px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
                     </div>
                 );
             })()}
@@ -1089,6 +1126,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             onCellSelect={onCellSelect}
                                             isStudentSelected={isExcelMode && !!selectedStudentIds?.has(s.id) && selectedStudentClassName === cls.className}
                                             isCopiedStudent={isExcelMode && !!copiedStudentIds?.includes(s.id) && copiedStudentClassName === cls.className}
+                                            isCutStudent={isExcelMode && !!cutStudentIds?.includes(s.id) && cutStudentClassName === cls.className}
+                                            isAcHighlighted={isExcelMode && acHighlightStudentId === s.id}
                                             onStudentSelect={onStudentSelect}
                                             onStudentMultiSelect={onStudentMultiSelect}
                                             selectedStudentIds={selectedStudentIds}
@@ -1167,6 +1206,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                 onCellSelect={onCellSelect}
                                                                 isStudentSelected={isExcelMode && !!selectedStudentIds?.has(s.id) && selectedStudentClassName === cls.className}
                                                                 isCopiedStudent={isExcelMode && !!copiedStudentIds?.includes(s.id) && copiedStudentClassName === cls.className}
+                                                                isCutStudent={isExcelMode && !!cutStudentIds?.includes(s.id) && cutStudentClassName === cls.className}
                                                                 onStudentSelect={onStudentSelect}
                                                                 onStudentMultiSelect={onStudentMultiSelect}
                                                                 selectedStudentIds={selectedStudentIds}
@@ -1233,11 +1273,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         {/* 대기 + 퇴원 (토글에 따라 조건부 렌더링) */}
                         {(showHoldStudents || showWithdrawnStudents) && (
                             <div className="flex-shrink overflow-y-auto no-scrollbar min-h-0" style={{ maxHeight: `${Math.max(60, 3 * activeItemH + 20)}px` }}>
-                                {showHoldStudents && commonStudents.hold.length > 0 && (
+                                {showHoldStudents && allMergedHoldStudents.length > 0 && (
                                     <div className="px-0.5 py-0 bg-pink-50 border-b border-pink-200">
-                                        <div className={`${fontSizeClass} font-bold text-pink-600 overflow-hidden whitespace-nowrap`}>{commonStudents.hold.length}명 - 대기</div>
+                                        <div className={`${fontSizeClass} font-bold text-pink-600 overflow-hidden whitespace-nowrap`}>{allMergedHoldStudents.length}명 - 대기</div>
                                         <ul className="flex flex-col gap-0 list-none">
-                                            {commonStudents.hold.map(s => {
+                                            {allMergedHoldStudents.map(s => {
                                                 let text = s.name;
                                                 if (showSchool || showGrade) {
                                                     const sg = formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null);
@@ -1370,6 +1410,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             onCellSelect={onCellSelect}
                                             isStudentSelected={isExcelMode && !!selectedStudentIds?.has(s.id) && selectedStudentClassName === cls.className}
                                             isCopiedStudent={isExcelMode && !!copiedStudentIds?.includes(s.id) && copiedStudentClassName === cls.className}
+                                            isCutStudent={isExcelMode && !!cutStudentIds?.includes(s.id) && cutStudentClassName === cls.className}
+                                            isAcHighlighted={isExcelMode && acHighlightStudentId === s.id}
                                             onStudentSelect={onStudentSelect}
                                             onStudentMultiSelect={onStudentMultiSelect}
                                             selectedStudentIds={selectedStudentIds}
@@ -1546,15 +1588,42 @@ const ClassCard: React.FC<ClassCardProps> = ({
                             onChange={(e) => {
                                 setAutoCompleteQuery(e.target.value);
                                 setShowAutoComplete(true);
+                                setAcHighlightIndex(0);
                             }}
                             onFocus={() => setShowAutoComplete(true)}
+                            onBlur={() => {
+                                // 딜레이: 클릭 이벤트 처리 후 닫기
+                                setTimeout(() => {
+                                    onAcHighlightChange?.(null);
+                                }, 200);
+                            }}
                             onKeyDown={(e) => {
                                 if (e.key === 'Escape') {
                                     setShowAutoComplete(false);
                                     setAutoCompleteQuery('');
+                                    onAcHighlightChange?.(null);
+                                }
+                                if (e.key === 'ArrowDown' && autoCompleteResults.length > 0) {
+                                    e.preventDefault();
+                                    setAcHighlightIndex(prev => {
+                                        const next = Math.min(prev + 1, autoCompleteResults.length - 1);
+                                        onAcHighlightChange?.((autoCompleteResults[next] as any).id);
+                                        return next;
+                                    });
+                                }
+                                if (e.key === 'ArrowUp' && autoCompleteResults.length > 0) {
+                                    e.preventDefault();
+                                    setAcHighlightIndex(prev => {
+                                        const next = Math.max(prev - 1, 0);
+                                        onAcHighlightChange?.((autoCompleteResults[next] as any).id);
+                                        return next;
+                                    });
                                 }
                                 if (e.key === 'Enter' && autoCompleteResults.length > 0) {
-                                    handleEnrollStudent((autoCompleteResults[0] as any).id);
+                                    const idx = Math.min(acHighlightIndex, autoCompleteResults.length - 1);
+                                    handleEnrollStudent((autoCompleteResults[idx] as any).id);
+                                    onAcHighlightChange?.(null);
+                                    setAcHighlightIndex(0);
                                 }
                             }}
                             placeholder="학생 검색..."
@@ -1562,11 +1631,22 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         />
                         {showAutoComplete && autoCompleteResults.length > 0 && (
                             <ul className="absolute z-50 left-0 right-0 bottom-full mb-0.5 bg-white border border-gray-300 rounded shadow-lg max-h-40 overflow-y-auto">
-                                {autoCompleteResults.map((s: any) => (
+                                {autoCompleteResults.map((s: any, idx: number) => (
                                     <li
                                         key={s.id}
-                                        onClick={() => handleEnrollStudent(s.id)}
-                                        className="px-1.5 py-0.5 text-xxs hover:bg-blue-100 cursor-pointer flex justify-between"
+                                        onClick={() => {
+                                            handleEnrollStudent(s.id);
+                                            onAcHighlightChange?.(null);
+                                            setAcHighlightIndex(0);
+                                        }}
+                                        onMouseEnter={() => {
+                                            setAcHighlightIndex(idx);
+                                            onAcHighlightChange?.(s.id);
+                                        }}
+                                        onMouseLeave={() => {
+                                            onAcHighlightChange?.(null);
+                                        }}
+                                        className={`px-1.5 py-0.5 text-xxs cursor-pointer flex justify-between ${idx === acHighlightIndex ? 'bg-blue-100' : 'hover:bg-blue-50'}`}
                                     >
                                         <span className="font-medium">{s.name}</span>
                                         <span className="text-gray-400">{formatSchoolGrade(s.school, s.grade)}</span>
@@ -1618,6 +1698,9 @@ export default React.memo(ClassCard, (prevProps, nextProps) => {
         prevProps.pendingExcelDeleteIds === nextProps.pendingExcelDeleteIds &&
         prevProps.pendingExcelEnrollments === nextProps.pendingExcelEnrollments &&
         prevProps.referenceDate === nextProps.referenceDate &&
-        prevProps.mode === nextProps.mode
+        prevProps.mode === nextProps.mode &&
+        prevProps.acHighlightStudentId === nextProps.acHighlightStudentId &&
+        prevProps.cutStudentIds === nextProps.cutStudentIds &&
+        prevProps.cutStudentClassName === nextProps.cutStudentClassName
     );
 });

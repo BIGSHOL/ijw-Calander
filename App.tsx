@@ -262,12 +262,14 @@ const App: React.FC = () => {
     const canViewEnglish = hasPermission('timetable.english.view') || hasPermission('timetable.english.edit');
     const canViewScience = hasPermission('timetable.science.view') || hasPermission('timetable.science.edit');
     const canViewKorean = hasPermission('timetable.korean.view') || hasPermission('timetable.korean.edit');
+    const canViewShuttle = hasPermission('shuttle.view');
 
     const canViewCurrent =
       (timetableSubject === 'math' && canViewMath) ||
       (timetableSubject === 'english' && canViewEnglish) ||
       (timetableSubject === 'science' && canViewScience) ||
-      (timetableSubject === 'korean' && canViewKorean);
+      (timetableSubject === 'korean' && canViewKorean) ||
+      (timetableSubject === 'shuttle' && canViewShuttle);
 
     if (!canViewCurrent) {
       if (canViewMath) {

@@ -217,6 +217,22 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
     if (classInfo.slotRooms) setSlotRooms(classInfo.slotRooms);
   }, [classInfo.schedule, classInfo.slotTeachers, classInfo.slotRooms]);
 
+  // classInfo에 schedule이 없는 경우 classDetail에서 fallback 로드
+  // (영어 통합뷰에서 반정보 클릭 시 classInfo에 schedule이 포함되지 않음)
+  useEffect(() => {
+    if (classInfo.schedule && classInfo.schedule.length > 0) return;
+    if (!classDetail?.schedule || classDetail.schedule.length === 0) return;
+
+    const slots = new Set<string>();
+    classDetail.schedule.forEach(item => {
+      const parts = item.split(' ');
+      if (parts.length >= 2) slots.add(`${parts[0]}-${convertLegacyPeriodId(parts[1])}`);
+    });
+    setSelectedSlots(slots);
+    if (classDetail.slotTeachers && !classInfo.slotTeachers) setSlotTeachers(classDetail.slotTeachers);
+    if (classDetail.slotRooms && !classInfo.slotRooms) setSlotRooms(classDetail.slotRooms);
+  }, [classDetail?.schedule, classDetail?.slotTeachers, classDetail?.slotRooms, classInfo.schedule, classInfo.slotTeachers, classInfo.slotRooms]);
+
   useEffect(() => {
     if (classDetail?.memo) setMemo(classDetail.memo);
   }, [classDetail?.memo]);
@@ -874,7 +890,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                                 type="button"
                                 onClick={async () => {
                                   if (window.confirm(`${student.name}의 수업 기록을 완전히 삭제하시겠습니까?`)) {
-                                    await deleteEnrollmentRecord(classInfo.className, student.id);
+                                    await deleteEnrollmentRecord(classInfo.className, student.id, classInfo.subject);
                                   }
                                 }}
                                 className="text-red-400 hover:text-red-600 p-1 transition-colors"

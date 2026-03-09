@@ -8,11 +8,13 @@
  * - async-suspense-boundaries: Suspense for code splitting
  */
 
-import { useState, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useMemo, lazy, Suspense } from 'react';
 import type { SubjectKey } from './types';
+import type { SubjectType } from '../../../types';
 import { getSubjectConfig } from './utils/subjectConfig';
 import { useTimetableClasses } from './hooks/useTimetableClasses';
 import { useClassStudents } from './hooks/useClassStudents';
+import SubjectControls from '../shared/SubjectControls';
 
 // Performance Note (bundle-dynamic-imports):
 // Lazy load TimetableGrid to reduce initial bundle size
@@ -23,6 +25,14 @@ interface GenericTimetableProps {
   currentUser: any;
   viewType?: 'teacher' | 'room' | 'class';
   onStudentsUpdated?: () => void;
+  // 과목/뷰 전환 (TimetableNavBar 통합)
+  timetableSubject?: SubjectType;
+  setTimetableSubject?: (value: SubjectType) => void;
+  setTimetableViewType?: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>;
+  mathViewMode?: 'day-based' | 'teacher-based';
+  setMathViewMode?: (value: string) => void;
+  hasPermissionFn?: (perm: string) => boolean;
+  setIsTimetableSettingsOpen?: (value: boolean) => void;
 }
 
 /**
@@ -41,6 +51,13 @@ function GenericTimetable({
   currentUser,
   viewType = 'teacher',
   onStudentsUpdated,
+  timetableSubject,
+  setTimetableSubject,
+  setTimetableViewType,
+  mathViewMode,
+  setMathViewMode,
+  hasPermissionFn,
+  setIsTimetableSettingsOpen,
 }: GenericTimetableProps) {
   // Performance Note (rerender-lazy-state-init):
   // Memoize config to avoid re-computation
@@ -108,6 +125,21 @@ function GenericTimetable({
 
   return (
     <div className="generic-timetable-container">
+      {/* 과목/뷰 전환 헤더 바 */}
+      {timetableSubject && setTimetableSubject && hasPermissionFn && (
+        <div className="bg-gray-50 min-h-[2.5rem] flex items-center gap-3 pl-4 border-b border-gray-200 flex-shrink-0 text-xs">
+          <SubjectControls
+            timetableSubject={timetableSubject}
+            setTimetableSubject={setTimetableSubject}
+            viewType={viewType as 'teacher' | 'room' | 'class' | 'excel'}
+            setTimetableViewType={setTimetableViewType}
+            mathViewMode={mathViewMode}
+            setMathViewMode={setMathViewMode}
+            hasPermission={hasPermissionFn}
+            setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
+          />
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between mb-4 px-4">
         <h2 className="text-2xl font-bold">

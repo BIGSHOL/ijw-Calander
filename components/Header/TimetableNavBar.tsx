@@ -55,18 +55,21 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
           {hasPermission('timetable.korean.view') && (
             <option value="korean">국어</option>
           )}
+          {hasPermission('shuttle.view') && (
+            <option value="shuttle">셔틀버스</option>
+          )}
         </select>
 
-        {/* View Type Toggle Button - 영어: 통합 → 강사 → 강의실 → 엑셀 */}
+        {/* View Type Toggle Button - 영어: 엑셀 → 통합 → 강사 → 강의실 */}
         {timetableSubject === 'english' && (
           <button
             onClick={() => {
               const canViewIntegrated = hasPermission('timetable.integrated.view') || hasPermission('timetable.english.view');
               setTimetableViewType(prev => {
+                if (prev === 'excel') return canViewIntegrated ? 'class' : 'teacher';
                 if (prev === 'class') return 'teacher';
                 if (prev === 'teacher') return 'room';
-                if (prev === 'room') return canViewIntegrated ? 'excel' : 'teacher';
-                return canViewIntegrated ? 'class' : 'teacher'; // excel → class
+                return 'excel'; // room → excel
               });
             }}
             className="px-2 py-0.5 rounded bg-primary border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"

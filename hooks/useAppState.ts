@@ -235,9 +235,43 @@ export function useModalState() {
 // 4. Timetable State Hook
 // ============================================
 export function useTimetableState() {
-  const [timetableSubject, setTimetableSubject] = useState<SubjectType>('math');
-  const [timetableViewType, setTimetableViewType] = useState<'teacher' | 'room' | 'class' | 'excel'>('teacher');
-  const [mathViewMode, setMathViewMode] = useState<'day-based' | 'teacher-based'>('teacher-based');
+  const [timetableSubject, _setTimetableSubject] = useState<SubjectType>(() => {
+    const saved = storage.getString(STORAGE_KEYS.TIMETABLE_SUBJECT);
+    return (saved as SubjectType) || 'math';
+  });
+  const [timetableViewType, _setTimetableViewType] = useState<'teacher' | 'room' | 'class' | 'excel'>(() => {
+    const saved = storage.getString(STORAGE_KEYS.TIMETABLE_VIEW_TYPE);
+    return (saved as 'teacher' | 'room' | 'class' | 'excel') || 'class';
+  });
+  const [mathViewMode, _setMathViewMode] = useState<'day-based' | 'teacher-based'>(() => {
+    const saved = storage.getString(STORAGE_KEYS.TIMETABLE_MATH_VIEW_MODE);
+    return (saved as 'day-based' | 'teacher-based') || 'teacher-based';
+  });
+
+  const setTimetableSubject = useCallback((value: SubjectType) => {
+    _setTimetableSubject(value);
+    storage.setString(STORAGE_KEYS.TIMETABLE_SUBJECT, value);
+    // subject별 기본 viewType 설정 (저장된 값이 없을 때)
+    const savedView = storage.getString(STORAGE_KEYS.TIMETABLE_VIEW_TYPE);
+    if (!savedView) {
+      const defaultView = value === 'english' ? 'excel' : 'class';
+      _setTimetableViewType(defaultView);
+      storage.setString(STORAGE_KEYS.TIMETABLE_VIEW_TYPE, defaultView);
+    }
+  }, []);
+
+  const setTimetableViewType: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>> = useCallback((value) => {
+    _setTimetableViewType(prev => {
+      const next = typeof value === 'function' ? value(prev) : value;
+      storage.setString(STORAGE_KEYS.TIMETABLE_VIEW_TYPE, next);
+      return next;
+    });
+  }, []);
+
+  const setMathViewMode = useCallback((value: 'day-based' | 'teacher-based') => {
+    _setMathViewMode(value);
+    storage.setString(STORAGE_KEYS.TIMETABLE_MATH_VIEW_MODE, value);
+  }, []);
 
   return {
     timetableSubject,

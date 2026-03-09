@@ -15,6 +15,7 @@ import {
 import { db } from '../firebaseConfig';
 import { SubjectType } from '../types';
 import { getTodayKST, formatDateKST } from '../utils/dateUtils';
+import { logTimetableChange } from './useTimetableLog';
 
 const COL_STUDENTS = 'students';
 const COL_CLASSES = 'classes';
@@ -84,6 +85,14 @@ export const useCreateClass = () => {
       });
 
       await Promise.all(promises);
+
+      logTimetableChange({
+        action: 'class_create',
+        subject,
+        className,
+        details: `수업 생성: ${className} (${subject}), 학생 ${studentIds.length}명`,
+        after: { className, teacher, subject, schedule, room, studentCount: studentIds.length },
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
@@ -230,6 +239,18 @@ export const useUpdateClass = () => {
         // enrollments 업데이트 실패 시 무시 (classes가 업데이트되면 괜찮음)
       }
 
+      // 로그 기록
+      if (classesUpdated > 0 || enrollmentsUpdated > 0) {
+        logTimetableChange({
+          action: 'class_update',
+          subject: originalSubject,
+          className: newClassName,
+          details: `수업 수정: ${originalClassName} → ${newClassName} (${originalSubject})`,
+          before: { className: originalClassName, teacher: undefined, schedule: undefined },
+          after: { className: newClassName, teacher: newTeacher, schedule: newSchedule, room: newRoom, memo },
+        });
+      }
+
       // classes가 업데이트되었으면 성공
       if (classesUpdated > 0) {
         return;
@@ -306,6 +327,14 @@ export const useDeleteClass = () => {
       } catch {
         // enrollments 삭제 실패 시 무시
       }
+
+      logTimetableChange({
+        action: 'class_delete',
+        subject,
+        className,
+        details: `수업 삭제: ${className} (${subject})`,
+        before: { className, subject },
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });
@@ -398,7 +427,7 @@ export const useManageClassStudents = () => {
         await Promise.all(transferPromises);
       }
 
-      // 학생 추가
+      // 학생 추가 (기존 종료 enrollment이 있으면 부활, 없으면 신규 생성)
       if (addStudentIds.length > 0) {
         // KST 기준 오늘 날짜
         const today = getTodayKST();
@@ -406,29 +435,60 @@ export const useManageClassStudents = () => {
           const enrollmentsRef = collection(db, COL_STUDENTS, studentId, 'enrollments');
           // 개별 시작일이 지정되어 있으면 사용, 없으면 오늘 날짜
           const startDate = studentStartDates[studentId] || today;
-          const enrollmentData: any = {
-            className,
-            staffId: teacher, // teacher는 이제 staffId
-            teacher: teacher,  // 호환성을 위해 유지
-            subject,
-            schedule,
-            startDate,  // 수업 시작일 기록 (레거시 호환)
-            enrollmentDate: startDate,  // 수업 시작일 (표준 필드)
-            createdAt: new Date().toISOString(),
-          };
-          // 신규 학생에게 attendanceDays가 설정되어 있으면 추가 (수학용)
-          if (studentAttendanceDays[studentId] && studentAttendanceDays[studentId].length > 0) {
-            enrollmentData.attendanceDays = studentAttendanceDays[studentId];
+
+          // 기존 종료된 enrollment 확인 (같은 subject + className)
+          const existingQuery = query(
+            enrollmentsRef,
+            where('subject', '==', subject),
+            where('className', '==', className)
+          );
+          const existingSnap = await getDocs(existingQuery);
+          const endedDoc = existingSnap.docs.find(d => {
+            const data = d.data();
+            return data.endDate || data.withdrawalDate;
+          });
+
+          if (endedDoc) {
+            // 기존 종료 enrollment 부활: endDate/withdrawalDate 제거 + 시작일 갱신
+            const updateData: any = {
+              endDate: null,
+              withdrawalDate: null,
+              enrollmentDate: startDate,
+              startDate: startDate,
+              staffId: teacher,
+              teacher: teacher,
+              schedule,
+              updatedAt: new Date().toISOString(),
+            };
+            if (studentAttendanceDays[studentId] && studentAttendanceDays[studentId].length > 0) {
+              updateData.attendanceDays = studentAttendanceDays[studentId];
+            }
+            if (studentUnderlines[studentId]) updateData.underline = true;
+            if (studentSlotTeachers[studentId]) updateData.isSlotTeacher = true;
+            await updateDoc(endedDoc.ref, updateData);
+          } else {
+            // 기존 enrollment 없음 → 신규 생성
+            const enrollmentData: any = {
+              className,
+              staffId: teacher,
+              teacher: teacher,
+              subject,
+              schedule,
+              startDate,
+              enrollmentDate: startDate,
+              createdAt: new Date().toISOString(),
+            };
+            if (studentAttendanceDays[studentId] && studentAttendanceDays[studentId].length > 0) {
+              enrollmentData.attendanceDays = studentAttendanceDays[studentId];
+            }
+            if (studentUnderlines[studentId]) {
+              enrollmentData.underline = true;
+            }
+            if (studentSlotTeachers[studentId]) {
+              enrollmentData.isSlotTeacher = true;
+            }
+            await addDoc(enrollmentsRef, enrollmentData);
           }
-          // 신규 학생에게 underline이 설정되어 있으면 추가 (영어용)
-          if (studentUnderlines[studentId]) {
-            enrollmentData.underline = true;
-          }
-          // 신규 학생에게 slotTeacher 여부가 설정되어 있으면 추가 (수학용 부담임)
-          if (studentSlotTeachers[studentId]) {
-            enrollmentData.isSlotTeacher = true;
-          }
-          await addDoc(enrollmentsRef, enrollmentData);
         });
         await Promise.all(addPromises);
       }
@@ -603,6 +663,48 @@ export const useManageClassStudents = () => {
           await Promise.all(updateOps);
         });
         await Promise.all(enrollmentDatePromises);
+      }
+
+      // 로그 기록
+      if (transferStudentIds.length > 0) {
+        transferStudentIds.forEach(studentId => {
+          logTimetableChange({
+            action: 'student_transfer',
+            subject,
+            className,
+            studentId,
+            details: `반이동: ${transferFromClass[studentId]} → ${className}`,
+            before: { className: transferFromClass[studentId] },
+            after: { className },
+          });
+        });
+      }
+      if (addStudentIds.length > 0) {
+        logTimetableChange({
+          action: 'student_enroll',
+          subject,
+          className,
+          details: `학생 등록: ${addStudentIds.length}명 → ${className}`,
+          after: { className, studentIds: addStudentIds },
+        });
+      }
+      if (removeStudentIds.length > 0) {
+        logTimetableChange({
+          action: 'student_unenroll',
+          subject,
+          className,
+          details: `학생 제거: ${removeStudentIds.length}명 ← ${className}`,
+          before: { className, studentIds: removeStudentIds },
+        });
+      }
+      if (endDateStudentIds.length > 0) {
+        logTimetableChange({
+          action: 'enrollment_update',
+          subject,
+          className,
+          details: `종료예정일 변경: ${endDateStudentIds.length}명`,
+          after: { studentEndDates: Object.fromEntries(endDateStudentIds.map(id => [id, studentEndDates[id]])) },
+        });
       }
     },
     onSuccess: () => {

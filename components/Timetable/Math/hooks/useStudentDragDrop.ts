@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { db } from '../../../../firebaseConfig';
 import { TimetableClass, TimetableStudent } from '../../../../types';
 import { formatDateKey } from '../../../../utils/dateUtils';
+import { logTimetableChange } from '../../../../hooks/useTimetableLog';
 
 // 'common' = 모든 요일 등원, 특정 요일 문자열(예: '월', '목') = 해당 요일만 등원
 export type DragZone = 'common' | string;
@@ -320,6 +321,40 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
 
             await batch.commit();
 
+            // 로그 기록: 각 학생 이동 기록
+            for (const [studentId, move] of finalMoves) {
+                const isSameClass = move.fromClassId === move.toClassId;
+                const fromClass = localClasses.find(c => c.id === move.fromClassId);
+                const toClass = localClasses.find(c => c.id === move.toClassId);
+
+                if (isSameClass) {
+                    // zone만 변경 (같은 반 내 월목반 -> 월만 등)
+                    const fromZoneLabel = move.fromZone === 'common' ? '모든 요일' : `${move.fromZone}만`;
+                    const toZoneLabel = move.toZone === 'common' ? '모든 요일' : `${move.toZone}만`;
+                    logTimetableChange({
+                        action: 'student_move',
+                        subject: 'math',
+                        className: fromClass?.className || move.fromClassId,
+                        studentId,
+                        details: `학생 등원일 변경: ${fromClass?.className || ''} (${fromZoneLabel} → ${toZoneLabel})`,
+                        before: { zone: fromZoneLabel },
+                        after: { zone: toZoneLabel }
+                    });
+                } else if (fromClass && toClass) {
+                    // 반 이동
+                    const toZoneLabel = move.toZone === 'common' ? '' : ` (${move.toZone}만)`;
+                    logTimetableChange({
+                        action: 'student_move',
+                        subject: 'math',
+                        className: toClass.className,
+                        studentId,
+                        details: `학생 이동: ${fromClass.className} → ${toClass.className}${toZoneLabel}${move.scheduledDate ? ` (예정: ${move.scheduledDate})` : ''}`,
+                        before: { className: fromClass.className },
+                        after: { className: toClass.className, attendanceDays: move.toZone === 'common' ? [] : [move.toZone] }
+                    });
+                }
+            }
+
             // React Query 캐시 무효화 - 실시간 반영
             queryClient.invalidateQueries({ queryKey: ['students'] });
             queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
@@ -399,6 +434,36 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
         ));
     }, []);
 
+    // 마지막 이동 취소 (Ctrl+Z용)
+    const undoLastMove = useCallback(() => {
+        if (pendingMoves.length === 0) return null;
+        const lastMove = pendingMoves[pendingMoves.length - 1];
+
+        setLocalClasses(prev => prev.map(cls => {
+            let students = [...(cls.studentList || [])];
+            let ids = [...(cls.studentIds || [])];
+
+            // 타겟 클래스에서 제거
+            if (cls.id === lastMove.toClassId) {
+                students = students.filter(s => s.id !== lastMove.studentId);
+                ids = ids.filter(id => id !== lastMove.studentId);
+            }
+            // 소스 클래스에 복원
+            if (cls.id === lastMove.fromClassId) {
+                if (!students.find(s => s.id === lastMove.studentId)) {
+                    students.push(lastMove.student);
+                }
+                if (!ids.includes(lastMove.studentId)) {
+                    ids.push(lastMove.studentId);
+                }
+            }
+            return { ...cls, studentList: students, studentIds: ids };
+        }));
+
+        setPendingMoves(prev => prev.slice(0, -1));
+        return lastMove;
+    }, [pendingMoves]);
+
     return {
         localClasses: effectiveClasses,
         pendingMoves,
@@ -412,6 +477,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
         handleMultiDrop,
         handleSavePendingMoves,
         handleCancelPendingMoves,
-        updatePendingMoveDate
+        updatePendingMoveDate,
+        undoLastMove
     };
 };

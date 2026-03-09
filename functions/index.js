@@ -2074,8 +2074,107 @@ exports.chatWithAI = functions.region("asia-northeast3").runWith({ timeoutSecond
     }
 });
 
-// ===== MakeEdu 버스 데이터 크롤링 =====
+// ===== MakeEdu 공통 유틸리티 =====
 const cheerio = require("cheerio");
+
+/** 학교명 정규화 */
+function normalizeSchoolName(school) {
+    return (school || "").trim()
+        .replace(/초등학교$/g, "초")
+        .replace(/중학교$/g, "중")
+        .replace(/고등학교$/g, "고");
+}
+
+/** 학년 정규화 */
+function normalizeGradeValue(grade, school) {
+    if (!grade) return "";
+    const gradeNum = grade.match(/\d+/)?.[0];
+    if (!gradeNum) return grade.trim();
+    const num = parseInt(gradeNum);
+    const s = (school || "").toLowerCase();
+    if (s.includes("초") || s.includes("elementary")) return `초${num}`;
+    if (s.includes("중") || s.includes("middle")) return `중${num}`;
+    if (s.includes("고") || s.includes("high")) return `고${num}`;
+    if (grade.includes("초")) return `초${num}`;
+    if (grade.includes("중")) return `중${num}`;
+    if (grade.includes("고")) return `고${num}`;
+    if (num >= 1 && num <= 6) return `초${num}`;
+    if (num >= 7 && num <= 9) return `중${num - 6}`;
+    return grade.trim();
+}
+
+/** 전화번호 포맷팅 */
+function formatPhoneNumber(phone) {
+    if (!phone) return null;
+    const digits = phone.replace(/\D/g, "");
+    if (!digits) return null;
+    let normalized = digits;
+    if (digits.length === 10 && digits.startsWith("10")) normalized = "0" + digits;
+    if (normalized.length === 11 && normalized.startsWith("01"))
+        return `${normalized.slice(0, 3)}-${normalized.slice(3, 7)}-${normalized.slice(7)}`;
+    if (normalized.length === 10 && normalized.startsWith("0") && !normalized.startsWith("02"))
+        return `${normalized.slice(0, 3)}-${normalized.slice(3, 6)}-${normalized.slice(6)}`;
+    if (normalized.startsWith("02")) {
+        if (normalized.length === 9) return `02-${normalized.slice(2, 5)}-${normalized.slice(5)}`;
+        if (normalized.length === 10) return `02-${normalized.slice(2, 6)}-${normalized.slice(6)}`;
+    }
+    return phone.trim();
+}
+
+/** 날짜 포맷 (YYYYMMDD → YYYY-MM-DD) */
+function formatDateValue(date) {
+    if (!date) return null;
+    const digits = date.replace(/\D/g, "");
+    if (digits.length === 8) return `${digits.substring(0, 4)}-${digits.substring(4, 6)}-${digits.substring(6, 8)}`;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
+    return date;
+}
+
+/** 전화번호 비교용 정규화 (숫자만, 암호화 값은 빈 문자열) */
+function normalizePhoneDigits(phone) {
+    if (!phone) return "";
+    if (phone.startsWith("U2FsdGVkX1")) return "";
+    return phone.replace(/\D/g, "");
+}
+
+/** 출결번호 생성 */
+function generateAttNum(parentPhone, existingNumbers) {
+    let base;
+    if (parentPhone && parentPhone.length >= 4) {
+        const d = parentPhone.replace(/\D/g, "");
+        base = d.length >= 4 ? d.slice(-4) : String(Math.floor(1000 + Math.random() * 9000));
+    } else {
+        base = String(Math.floor(1000 + Math.random() * 9000));
+    }
+    let num = base;
+    let suffix = 1;
+    while (existingNumbers.has(num)) { num = base + suffix; suffix++; }
+    return num;
+}
+
+/** 학생 고유번호 생성 */
+function generateStudCode(existingCodes) {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    for (let a = 0; a < 1000; a++) {
+        let code = "";
+        for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+        if (!existingCodes.has(code)) return code;
+    }
+    return "X" + Date.now().toString(36).slice(-5).toUpperCase();
+}
+
+/** 영어 클래스명 파싱 (DP3, RTT2a 등) */
+const ENGLISH_LEVELS = [
+    "DP", "PL", "RTT", "LT", "RTS", "LS", "LE", "KW", "PJ", "JP", "SP", "MEC",
+];
+function parseEngClassName(name) {
+    if (!name) return null;
+    const m = name.match(/^([A-Z]+)(\d+)([a-z]?)$/);
+    if (!m) return null;
+    return { levelAbbr: m[1], number: parseInt(m[2]), suffix: m[3] || "" };
+}
+
+// ===== MakeEdu 버스 데이터 크롤링 =====
 
 /**
  * MakeEdu 버스 등록 페이지 크롤링하여 Firestore에 저장
@@ -2266,6 +2365,694 @@ exports.scrapeMakeEduBusData = functions
             throw new functions.https.HttpsError("internal", error.message || "버스 데이터 크롤링 실패");
         }
     });
+
+// ===== MakeEdu 신규원생 크롤링 =====
+
+/**
+ * MakeEdu 신규원생 스크래핑 내부 헬퍼 (onCall + scheduled 공용)
+ * @returns {{ students: Array, count: number, headers: string[] }}
+ */
+async function scrapeMakeEduStudentsInternal() {
+    const userId = process.env.MAKEEDU_USERNAME;
+    const userPwd = process.env.MAKEEDU_PASSWORD;
+    if (!userId || !userPwd) {
+        throw new Error("MakeEdu 로그인 정보가 .env에 설정되지 않았습니다.");
+    }
+
+            const baseUrl = "https://school.makeedu.co.kr";
+            const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+
+            // 1. 세션 쿠키 획득
+            logger.info("[scrapeMakeEduNewStudents] Getting session...");
+            const sessionRes = await fetch(`${baseUrl}/login.do`, {
+                headers: { "User-Agent": UA },
+                redirect: "manual",
+            });
+            const sessionCookies = [];
+            const sessionSetCookies = sessionRes.headers.getSetCookie?.() || [];
+            for (const h of sessionSetCookies) {
+                const cookie = h.split(";")[0];
+                if (cookie) sessionCookies.push(cookie);
+            }
+            let cookieStr = sessionCookies.join("; ");
+
+            // 2. 로그인
+            logger.info("[scrapeMakeEduNewStudents] Logging in...");
+            const loginRes = await fetch(`${baseUrl}/loginPopProc.do`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "User-Agent": UA,
+                    "Cookie": cookieStr,
+                    "Referer": `${baseUrl}/login.do`,
+                },
+                body: `membId=${encodeURIComponent(userId)}&password=${encodeURIComponent(userPwd)}`,
+                redirect: "manual",
+            });
+            const loginSetCookies = loginRes.headers.getSetCookie?.() || [];
+            for (const h of loginSetCookies) {
+                const cookie = h.split(";")[0];
+                if (cookie) sessionCookies.push(cookie);
+            }
+            cookieStr = sessionCookies.join("; ");
+            const loginBody = await loginRes.text();
+            logger.info("[scrapeMakeEduNewStudents] Login status:", loginRes.status);
+
+            const loginOk = loginBody.includes("OK") || loginRes.status === 302 || loginRes.status === 200;
+            if (!loginOk && sessionCookies.length === 0) {
+                throw new functions.https.HttpsError("unauthenticated",
+                    `MakeEdu 로그인 실패 (status: ${loginRes.status})`);
+            }
+
+            // 3. 메인 페이지에서 학생 관련 URL 탐색
+            logger.info("[scrapeMakeEduNewStudents] Fetching main page for URL discovery...");
+            const mainRes = await fetch(`${baseUrl}/main.do`, {
+                headers: {
+                    "Cookie": cookieStr,
+                    "User-Agent": UA,
+                },
+            });
+            const mainHtml = await mainRes.text();
+            const $main = cheerio.load(mainHtml);
+
+            // 메인 페이지에서 학생/원생 관련 링크 추출
+            const candidateUrls = [];
+            $main("a[href]").each((_, a) => {
+                const href = $main(a).attr("href") || "";
+                const text = $main(a).text().trim();
+                if (href.includes("student") || href.includes("member") ||
+                    href.includes("consult") || href.includes("pupil") ||
+                    text.includes("원생") || text.includes("학생") || text.includes("등록")) {
+                    const fullUrl = href.startsWith("http") ? href : `${baseUrl}${href.startsWith("/") ? "" : "/"}${href}`;
+                    candidateUrls.push({ url: fullUrl, text, href });
+                }
+            });
+            // onclick 속성에서도 URL 추출
+            $main("[onclick]").each((_, el) => {
+                const onclick = $main(el).attr("onclick") || "";
+                const text = $main(el).text().trim();
+                const urlMatch = onclick.match(/location\.href\s*=\s*['"]([^'"]+)['"]/);
+                const urlMatch2 = onclick.match(/['"](\/?[a-zA-Z]+\/[a-zA-Z]+\.do[^'"]*)['"]/);
+                const matched = urlMatch?.[1] || urlMatch2?.[1];
+                if (matched && (matched.includes("student") || matched.includes("member") ||
+                    text.includes("원생") || text.includes("학생"))) {
+                    const fullUrl = matched.startsWith("http") ? matched : `${baseUrl}${matched.startsWith("/") ? "" : "/"}${matched}`;
+                    candidateUrls.push({ url: fullUrl, text, href: matched });
+                }
+            });
+            logger.info("[scrapeMakeEduNewStudents] Candidate URLs from main:", JSON.stringify(candidateUrls.slice(0, 20)));
+
+            // 시도할 URL 목록 (발견된 URL + 일반적인 MakeEdu URL 패턴)
+            const urlsToTry = [
+                ...candidateUrls.map(c => c.url),
+                `${baseUrl}/student/studentList.do`,
+                `${baseUrl}/student/studentMng.do`,
+                `${baseUrl}/student/studentManage.do`,
+                `${baseUrl}/student/studentInfo.do`,
+                `${baseUrl}/student/studentRegist.do`,
+                `${baseUrl}/student/newStudent.do`,
+                `${baseUrl}/member/memberList.do`,
+                `${baseUrl}/consult/consultRegist.do`,
+                `${baseUrl}/consult/consultList.do`,
+            ];
+            // 중복 제거
+            const uniqueUrls = [...new Set(urlsToTry)];
+
+            // 4. 각 URL 시도하여 학생 목록 페이지 찾기
+            let html = "";
+            let studentPageUrl = "";
+            for (const url of uniqueUrls) {
+                try {
+                    logger.info("[scrapeMakeEduNewStudents] Trying URL:", url);
+                    const res = await fetch(url, {
+                        headers: {
+                            "Cookie": cookieStr,
+                            "User-Agent": UA,
+                            "Referer": `${baseUrl}/main.do`,
+                        },
+                        redirect: "follow",
+                    });
+                    if (res.ok) {
+                        const body = await res.text();
+                        // 학생 관련 테이블이 있는 페이지인지 확인
+                        const $check = cheerio.load(body);
+                        const hasTable = $check("table").length > 0;
+                        const hasStudentContent = body.includes("원생") || body.includes("학생") ||
+                            body.includes("이름") || body.includes("성명");
+                        if (hasTable && hasStudentContent) {
+                            html = body;
+                            studentPageUrl = url;
+                            logger.info("[scrapeMakeEduNewStudents] Found student page at:", url, "HTML length:", body.length);
+                            break;
+                        } else {
+                            logger.info("[scrapeMakeEduNewStudents] URL ok but no student table:", url,
+                                "tables:", $check("table").length, "hasStudentContent:", hasStudentContent);
+                        }
+                    } else {
+                        logger.info("[scrapeMakeEduNewStudents] URL failed:", url, "status:", res.status);
+                    }
+                } catch (urlErr) {
+                    logger.info("[scrapeMakeEduNewStudents] URL error:", url, urlErr.message);
+                }
+            }
+
+            if (!studentPageUrl) {
+                // 메인 페이지의 모든 링크를 로그하여 디버깅 지원
+                const allLinks = [];
+                $main("a[href]").each((_, a) => {
+                    allLinks.push({ href: $main(a).attr("href"), text: $main(a).text().trim().substring(0, 50) });
+                });
+                logger.info("[scrapeMakeEduNewStudents] All main page links:", JSON.stringify(allLinks.slice(0, 50)));
+                throw new functions.https.HttpsError("internal",
+                    `학생 페이지를 찾을 수 없습니다. 시도한 URL 수: ${uniqueUrls.length}. 후보 URL: ${candidateUrls.map(c => c.href).join(', ')}`);
+            }
+
+            // 5. 페이지 form에서 신규원생 필터 파라미터 탐색
+            const $page = cheerio.load(html);
+            const formParams = {};
+            // select 요소에서 "신규" 관련 옵션 찾기
+            $page("select").each((_, sel) => {
+                const selName = $page(sel).attr("name") || "";
+                const options = [];
+                $page(sel).find("option").each((__, opt) => {
+                    options.push({ value: $page(opt).attr("value") || "", text: $page(opt).text().trim() });
+                });
+                logger.info("[scrapeMakeEduNewStudents] Select:", selName, "options:", JSON.stringify(options));
+                // "신규" 또는 "신규원생" 옵션 찾기
+                const newOpt = options.find(o =>
+                    o.text.includes("신규") || o.text === "N" || o.text.includes("new")
+                );
+                if (newOpt && (selName.toLowerCase().includes("new") || selName.toLowerCase().includes("stat") ||
+                    selName.toLowerCase().includes("srch") || options.some(o => o.text.includes("신규")))) {
+                    formParams[selName] = newOpt.value;
+                }
+            });
+            // hidden input과 기본 form 파라미터 수집
+            const formInputs = {};
+            $page("form").first().find("input[type='hidden'], input[name]").each((_, inp) => {
+                const name = $page(inp).attr("name") || "";
+                const val = $page(inp).attr("value") || "";
+                if (name) formInputs[name] = val;
+            });
+            logger.info("[scrapeMakeEduNewStudents] Form params (new student filter):", JSON.stringify(formParams));
+            logger.info("[scrapeMakeEduNewStudents] Form hidden inputs:", JSON.stringify(formInputs));
+
+            // POST body 구성: 기본 파라미터 + 신규원생 필터
+            const postParams = new URLSearchParams();
+            // pageSize 설정
+            postParams.set("pageSize", "500");
+            // form에서 발견한 신규원생 필터 적용
+            for (const [k, v] of Object.entries(formParams)) {
+                postParams.set(k, v);
+            }
+            // 발견 못했으면 기본값 시도
+            if (Object.keys(formParams).length === 0) {
+                postParams.set("srchType", "A");
+                postParams.set("srchNewStat", "N");
+            }
+            logger.info("[scrapeMakeEduNewStudents] POST body:", postParams.toString());
+
+            // 6. 신규원생 검색 (POST)
+            logger.info("[scrapeMakeEduNewStudents] Searching new students at:", studentPageUrl);
+            const searchRes = await fetch(studentPageUrl, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Cookie": cookieStr,
+                    "User-Agent": UA,
+                    "Referer": studentPageUrl,
+                },
+                body: postParams.toString(),
+            });
+            let searchHtml = await searchRes.text();
+            logger.info("[scrapeMakeEduNewStudents] Search result length:", searchHtml.length);
+
+            // 테이블이 없으면 다른 파라미터 시도
+            const $ = cheerio.load(searchHtml);
+            let tableRows = $("table tbody tr");
+            logger.info("[scrapeMakeEduNewStudents] Found table rows:", tableRows.length);
+
+            // 테이블이 없으면 원본 GET HTML에서 시도
+            if (tableRows.length === 0) {
+                logger.info("[scrapeMakeEduNewStudents] No rows in search, trying GET html...");
+                const $orig = cheerio.load(html);
+                tableRows = $orig("table tbody tr");
+                logger.info("[scrapeMakeEduNewStudents] GET html table rows:", tableRows.length);
+                if (tableRows.length > 0) {
+                    searchHtml = html;
+                }
+            }
+
+            // 7. 테이블 헤더 추출
+            const $final = cheerio.load(searchHtml);
+            const headers = [];
+            // thead에서 th 추출
+            $final("table thead tr th, table thead tr td").each((_, el) => {
+                headers.push($final(el).text().trim());
+            });
+            // thead가 없으면 첫번째 tr에서 th 추출
+            if (headers.length === 0) {
+                $final("table tr").first().find("th").each((_, el) => {
+                    headers.push($final(el).text().trim());
+                });
+            }
+            // 그래도 없으면 첫번째 tr의 td에서 추출 (헤더행으로 간주)
+            if (headers.length === 0) {
+                $final("table tr").first().find("td").each((_, el) => {
+                    headers.push($final(el).text().trim());
+                });
+            }
+            logger.info("[scrapeMakeEduNewStudents] Headers:", JSON.stringify(headers));
+
+            // 헤더 키워드 Set (데이터 행에서 헤더행 걸러내기 용)
+            const headerKeywords = new Set(["이름", "성명", "원생명", "학생명", "학교", "학년", "연락처",
+                "전화번호", "보호자", "등록일", "입학일", "반", "성별", "주소", "메모", "상태", "번호",
+                "출결", "생년월일", "강사", "담당", "비고"]);
+
+            // 6. 헤더 인덱스 매핑 (유연하게)
+            const findCol = (keywords) => {
+                return headers.findIndex(h =>
+                    keywords.some(k => h.includes(k))
+                );
+            };
+
+            const colName = findCol(["이름", "성명", "원생명", "학생명"]);
+            const colSchool = findCol(["학교"]);
+            const colGrade = findCol(["학년"]);
+            const colPhone = findCol(["원생연락", "학생연락", "휴대폰", "핸드폰"]);
+            const colParentPhone = findCol(["보호자연락", "학부모연락", "보호자폰", "부모연락"]);
+            const colRegDate = findCol(["등록일", "입학일", "등원일", "입원일"]);
+            const colClass = findCol(["반", "클래스", "수업"]);
+            const colTeacher = findCol(["선생", "담당", "강사"]);
+            const colGender = findCol(["성별"]);
+            const colParentName = findCol(["보호자명", "보호자이름", "학부모명"]);
+            const colBirth = findCol(["생년", "생일", "출생"]);
+            const colAddress = findCol(["주소"]);
+            const colAttNum = findCol(["출결번호", "출석번호"]);
+            const colCustom1 = findCol(["기타항목1", "기타1", "사용자1", "비고1"]);
+            const colCustom2 = findCol(["기타항목2", "기타2", "사용자2", "비고2"]);
+            const colSiblings = findCol(["형제", "자매"]);
+            const colMemo = findCol(["메모", "비고"]);
+            const colStatus = findCol(["상태", "재원", "등록상태"]);
+            const colAddressDetail = findCol(["상세주소"]);
+
+            logger.info("[scrapeMakeEduNewStudents] Column mapping:", JSON.stringify({
+                colName, colSchool, colGrade, colPhone, colParentPhone,
+                colRegDate, colClass, colTeacher, colGender,
+            }));
+
+            // 8. 각 행에서 학생 데이터 추출
+            const students = [];
+            // tbody tr 또는 전체 tr에서 추출 (thead 다음부터)
+            let dataRows = $final("table tbody tr");
+            if (dataRows.length === 0) {
+                // tbody가 없으면 전체 tr에서 첫 행(헤더) 제외
+                dataRows = $final("table tr").slice(1);
+            }
+            dataRows.each((_, row) => {
+                // th 셀이 있는 행은 헤더행이므로 스킵
+                if ($final(row).find("th").length > 0) return;
+
+                const cells = [];
+                $final(row).find("td").each((__, td) => {
+                    cells.push($final(td).text().trim());
+                });
+
+                if (cells.length < 3) return; // 최소 3개 컬럼 필요
+
+                // 헤더행이 tbody에 섞여있는 경우 필터: 셀 내용이 헤더 키워드와 대부분 일치하면 스킵
+                let headerMatchCount = 0;
+                cells.forEach(c => {
+                    if (headerKeywords.has(c) || headers.includes(c)) headerMatchCount++;
+                });
+                if (headerMatchCount >= 3) return; // 3개 이상 헤더 키워드 매칭 → 헤더행
+
+                const name = colName >= 0 ? cells[colName] : "";
+                if (!name) return; // 이름 없으면 스킵
+
+                // _raw: 모든 필드를 헤더와 매핑
+                const raw = {};
+                headers.forEach((h, i) => {
+                    if (i < cells.length) raw[h] = cells[i];
+                });
+
+                students.push({
+                    name,
+                    school: colSchool >= 0 ? cells[colSchool] || "" : "",
+                    grade: colGrade >= 0 ? cells[colGrade] || "" : "",
+                    phone: colPhone >= 0 ? cells[colPhone] || "" : "",
+                    parentPhone: colParentPhone >= 0 ? cells[colParentPhone] || "" : "",
+                    registrationDate: colRegDate >= 0 ? cells[colRegDate] || "" : "",
+                    className: colClass >= 0 ? cells[colClass] || "" : "",
+                    teacher: colTeacher >= 0 ? cells[colTeacher] || "" : "",
+                    gender: colGender >= 0 ? cells[colGender] || "" : "",
+                    parentName: colParentName >= 0 ? cells[colParentName] || "" : "",
+                    birthDate: colBirth >= 0 ? cells[colBirth] || "" : "",
+                    address: colAddress >= 0 ? cells[colAddress] || "" : "",
+                    addressDetail: colAddressDetail >= 0 ? cells[colAddressDetail] || "" : "",
+                    attendanceNumber: colAttNum >= 0 ? cells[colAttNum] || "" : "",
+                    customField1: colCustom1 >= 0 ? cells[colCustom1] || "" : "",
+                    customField2: colCustom2 >= 0 ? cells[colCustom2] || "" : "",
+                    siblings: colSiblings >= 0 ? cells[colSiblings] || "" : "",
+                    memo: colMemo >= 0 ? cells[colMemo] || "" : "",
+                    status: colStatus >= 0 ? cells[colStatus] || "" : "",
+                    _raw: raw,
+                });
+            });
+
+            logger.info("[scrapeMakeEduNewStudents] Parsed students:", students.length);
+
+            // 파싱 실패 시 HTML 일부를 반환하여 디버깅 지원
+            if (students.length === 0) {
+                // 페이지에서 form/table 구조 파악을 위해 HTML 일부 로깅
+                const forms = [];
+                $final("form").each((_, f) => {
+                    forms.push({
+                        action: $final(f).attr("action") || "",
+                        id: $final(f).attr("id") || "",
+                        method: $final(f).attr("method") || "",
+                    });
+                });
+                const tables = [];
+                $final("table").each((_, t) => {
+                    const id = $final(t).attr("id") || "";
+                    const cls = $final(t).attr("class") || "";
+                    const rows = $final(t).find("tr").length;
+                    tables.push({ id, class: cls, rows });
+                });
+                const links = [];
+                $final("a[href*='student'], a[href*='consult'], a[href*='new']").each((_, a) => {
+                    links.push({ href: $final(a).attr("href"), text: $final(a).text().trim() });
+                });
+                logger.info("[scrapeMakeEduNewStudents] Page structure - forms:", JSON.stringify(forms));
+                logger.info("[scrapeMakeEduNewStudents] Page structure - tables:", JSON.stringify(tables));
+                logger.info("[scrapeMakeEduNewStudents] Page structure - links:", JSON.stringify(links.slice(0, 20)));
+
+                // HTML 첫 5000자 로깅 (디버깅용)
+                logger.info("[scrapeMakeEduNewStudents] HTML preview:", searchHtml.substring(0, 5000));
+            }
+
+    return {
+        students,
+        count: students.length,
+        headers,
+    };
+}
+
+/**
+ * MakeEdu 신규원생 목록 크롤링 (클라이언트 호출용)
+ */
+exports.scrapeMakeEduNewStudents = functions
+    .region("asia-northeast3")
+    .runWith({ timeoutSeconds: 300, memory: "512MB" })
+    .https.onCall(async (data, context) => {
+        logger.info("[scrapeMakeEduNewStudents] Start (onCall)");
+        try {
+            return await scrapeMakeEduStudentsInternal();
+        } catch (error) {
+            logger.error("[scrapeMakeEduNewStudents] Error:", error);
+            if (error.code) throw error;
+            throw new functions.https.HttpsError("internal", error.message || "신규원생 크롤링 실패");
+        }
+    });
+
+/**
+ * MakeEdu 신규원생 자동 동기화 (30분마다 실행)
+ * 1. MakeEdu에서 신규원생 스크래핑
+ * 2. Firestore 기존 학생과 이름 비교
+ * 3. 미등록 학생 자동 등록 + 기존 학생 필드 업데이트
+ * 4. 영어 수업 자동 배정 (기타항목1에 E 포함 시)
+ * 5. 동기화 로그 저장 (makeEduSyncLogs)
+ */
+exports.scheduledMakeEduSync = functions
+    .region("asia-northeast3")
+    .runWith({ timeoutSeconds: 540, memory: "512MB" })
+    .pubsub.schedule("every 30 minutes")
+    .timeZone("Asia/Seoul")
+    .onRun(async (context) => {
+        logger.info("[scheduledMakeEduSync] Start");
+        const syncStart = Date.now();
+        const results = { registered: [], updated: [], errors: [], skipped: 0, total: 0 };
+
+        try {
+            // 1. MakeEdu 스크래핑
+            const { students, headers } = await scrapeMakeEduStudentsInternal();
+            results.total = students.length;
+            logger.info("[scheduledMakeEduSync] Scraped students:", students.length);
+
+            if (students.length === 0) {
+                logger.info("[scheduledMakeEduSync] No students found, skipping.");
+                await saveSyncLog(results, syncStart);
+                return null;
+            }
+
+            // 2. 기존 IJW 학생 전체 조회
+            const studentsSnap = await db.collection("students").get();
+            const ijwNameMap = new Map();
+            const usedAttNums = new Set();
+            const usedStudCodes = new Set();
+            studentsSnap.forEach(d => {
+                const s = d.data();
+                if (s.name) ijwNameMap.set(s.name.trim(), { id: d.id, ...s });
+                if (s.attendanceNumber) usedAttNums.add(s.attendanceNumber);
+                if (s.studentCode) usedStudCodes.add(s.studentCode);
+            });
+            logger.info("[scheduledMakeEduSync] Existing IJW students:", ijwNameMap.size);
+
+            // 3. 영어 클래스 목록 (자동 배정용)
+            const classesSnap = await db.collection("classes").get();
+            const englishClasses = [];
+            classesSnap.forEach(d => {
+                const c = d.data();
+                if (c.subject === "english") englishClasses.push({ id: d.id, ...c });
+            });
+
+            // 4. 각 학생 비교 및 처리
+            for (const meStudent of students) {
+                const name = (meStudent.name || "").trim();
+                if (!name) { results.skipped++; continue; }
+
+                try {
+                    const existing = ijwNameMap.get(name);
+                    if (existing) {
+                        // === 기존 학생: 필드 업데이트 ===
+                        const updateData = buildUpdateData(existing, meStudent);
+                        if (Object.keys(updateData).length > 0) {
+                            updateData.updatedAt = admin.firestore.FieldValue.serverTimestamp();
+                            updateData.makeEduSync = true;
+                            await db.collection("students").doc(existing.id).update(updateData);
+
+                            // 영어 자동 배정
+                            const enrollNote = await tryAutoEnrollEnglish(existing.id, meStudent, englishClasses, existing.startDate);
+                            results.updated.push({
+                                name, fields: Object.keys(updateData).filter(k => k !== "updatedAt" && k !== "makeEduSync"),
+                                enrollNote: enrollNote || undefined,
+                            });
+                        } else {
+                            // 영어 배정만 체크 (필드 업데이트 없어도)
+                            const enrollNote = await tryAutoEnrollEnglish(existing.id, meStudent, englishClasses, existing.startDate);
+                            if (enrollNote) {
+                                results.updated.push({ name, fields: [], enrollNote });
+                            } else {
+                                results.skipped++;
+                            }
+                        }
+                    } else {
+                        // === 신규 학생: 자동 등록 ===
+                        const normalizedSchool = normalizeSchoolName(meStudent.school);
+                        const grade = normalizeGradeValue(meStudent.grade, meStudent.school);
+                        const gender = meStudent.gender === "남" ? "male" : meStudent.gender === "여" ? "female" : null;
+                        const startDate = formatDateValue(meStudent.registrationDate) || getTodayKST();
+
+                        // ID 생성
+                        const baseId = `${name}_${normalizedSchool || "Unspecified"}_${grade || "Unspecified"}`;
+                        let studentId = baseId;
+                        let counter = 1;
+                        while ((await db.collection("students").doc(studentId).get()).exists) {
+                            counter++;
+                            studentId = `${baseId}_${counter}`;
+                            if (counter > 100) throw new Error("동일한 학생 정보가 너무 많습니다.");
+                        }
+
+                        // 출결번호 & 고유번호
+                        let attendanceNumber = meStudent.attendanceNumber;
+                        if (!attendanceNumber || usedAttNums.has(attendanceNumber)) {
+                            attendanceNumber = generateAttNum(meStudent.parentPhone || meStudent.phone, usedAttNums);
+                        }
+                        usedAttNums.add(attendanceNumber);
+                        const studentCode = generateStudCode(usedStudCodes);
+                        usedStudCodes.add(studentCode);
+
+                        const formattedStudentPhone = formatPhoneNumber(meStudent.phone);
+                        const formattedParentPhone = formatPhoneNumber(meStudent.parentPhone);
+
+                        await db.collection("students").doc(studentId).set({
+                            name, englishName: null, gender,
+                            school: normalizedSchool || null, grade: grade || null, graduationYear: null,
+                            attendanceNumber, studentCode,
+                            studentPhone: formattedStudentPhone || null,
+                            homePhone: null,
+                            parentPhone: formattedParentPhone || null,
+                            parentName: meStudent.parentName || null, parentRelation: "모",
+                            zipCode: null, address: meStudent.address || null,
+                            addressDetail: meStudent.addressDetail || null,
+                            birthDate: meStudent.birthDate || null, nickname: null,
+                            startDate, enrollmentReason: null,
+                            memo: meStudent.memo || null,
+                            customField1: meStudent.customField1 || null,
+                            customField2: meStudent.customField2 || null,
+                            status: "active",
+                            enrollmentDate: admin.firestore.FieldValue.serverTimestamp(),
+                            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                            smsNotification: true, pushNotification: false, kakaoNotification: true,
+                            billingSmsPrimary: true, billingSmsOther: false,
+                            overdueSmsPrimary: true, overdueSmsOther: false,
+                            makeEduSync: true,
+                        });
+
+                        // 영어 자동 배정
+                        const enrollNote = await tryAutoEnrollEnglish(studentId, meStudent, englishClasses, startDate);
+
+                        // ijwNameMap에 추가 (같은 이름 중복 등록 방지)
+                        ijwNameMap.set(name, { id: studentId });
+                        results.registered.push({ name, studentId, enrollNote: enrollNote || undefined });
+                    }
+                } catch (studentErr) {
+                    logger.error("[scheduledMakeEduSync] Error processing:", name, studentErr.message);
+                    results.errors.push({ name, error: studentErr.message });
+                }
+            }
+
+            logger.info("[scheduledMakeEduSync] Done.",
+                "Registered:", results.registered.length,
+                "Updated:", results.updated.length,
+                "Errors:", results.errors.length,
+                "Skipped:", results.skipped);
+
+            await saveSyncLog(results, syncStart);
+            return null;
+        } catch (error) {
+            logger.error("[scheduledMakeEduSync] Fatal error:", error);
+            results.errors.push({ name: "_fatal", error: error.message });
+            await saveSyncLog(results, syncStart);
+            return null;
+        }
+    });
+
+/** 기존 학생과 MakeEdu 데이터 비교하여 업데이트할 필드 반환 */
+function buildUpdateData(existing, meStudent) {
+    const updateData = {};
+    const normalizedSchool = normalizeSchoolName(meStudent.school);
+    const normalizedGrade = normalizeGradeValue(meStudent.grade, meStudent.school);
+    const gender = meStudent.gender === "남" ? "male" : meStudent.gender === "여" ? "female" : null;
+
+    if (gender && existing.gender !== gender) updateData.gender = gender;
+    if (normalizedSchool && existing.school !== normalizedSchool) updateData.school = normalizedSchool;
+    if (normalizedGrade && existing.grade !== normalizedGrade) updateData.grade = normalizedGrade;
+    if (meStudent.attendanceNumber && existing.attendanceNumber !== meStudent.attendanceNumber) updateData.attendanceNumber = meStudent.attendanceNumber;
+    if (meStudent.parentName && existing.parentName !== meStudent.parentName) updateData.parentName = meStudent.parentName;
+    if (meStudent.birthDate && existing.birthDate !== meStudent.birthDate) updateData.birthDate = meStudent.birthDate;
+    if (meStudent.address && existing.address !== meStudent.address) updateData.address = meStudent.address;
+    if (meStudent.customField1 && existing.customField1 !== meStudent.customField1) updateData.customField1 = meStudent.customField1;
+    if (meStudent.customField2 && existing.customField2 !== meStudent.customField2) updateData.customField2 = meStudent.customField2;
+    if (meStudent.memo && !existing.memo) updateData.memo = meStudent.memo;
+
+    const fStudentPhone = formatPhoneNumber(meStudent.phone);
+    const fParentPhone = formatPhoneNumber(meStudent.parentPhone);
+    if (fStudentPhone && normalizePhoneDigits(existing.studentPhone) !== normalizePhoneDigits(fStudentPhone))
+        updateData.studentPhone = fStudentPhone;
+    if (fParentPhone && normalizePhoneDigits(existing.parentPhone) !== normalizePhoneDigits(fParentPhone))
+        updateData.parentPhone = fParentPhone;
+
+    return updateData;
+}
+
+/** 영어 수업 자동 배정 (기타항목1에 E 포함 시) */
+async function tryAutoEnrollEnglish(studentId, meStudent, englishClasses, startDate) {
+    const cf1 = (meStudent.customField1 || "").toUpperCase();
+    if (!cf1.includes("E") || !meStudent.className) return null;
+    if (englishClasses.length === 0) return "영어 수업이 등록되어 있지 않습니다";
+
+    // 이미 영어 배정되어 있으면 스킵
+    const enrollSnap = await db.collection("students").doc(studentId).collection("enrollments").get();
+    const hasEnglish = enrollSnap.docs.some(d => {
+        const data = d.data();
+        return data.subject === "english" && !data.endDate;
+    });
+    if (hasEnglish) return null;
+
+    const matchByLevel = (name) => {
+        const parsed = parseEngClassName(name);
+        if (!parsed || !ENGLISH_LEVELS.includes(parsed.levelAbbr.toUpperCase())) return null;
+        let found = englishClasses.find(c => c.className === name);
+        if (found) return found;
+        found = englishClasses.find(c => {
+            const p = parseEngClassName(c.className);
+            return p && p.levelAbbr.toUpperCase() === parsed.levelAbbr.toUpperCase() && p.number === parsed.number;
+        });
+        return found || null;
+    };
+
+    let matched = englishClasses.find(c => c.className === meStudent.className);
+    if (!matched) matched = matchByLevel(meStudent.className);
+    // _raw에서 영어 패턴 탐색
+    if (!matched && meStudent._raw) {
+        for (const val of Object.values(meStudent._raw)) {
+            if (!val || val === meStudent.className) continue;
+            matched = matchByLevel(val.trim());
+            if (matched) break;
+        }
+    }
+    // 부분 문자열 매칭
+    if (!matched) {
+        matched = englishClasses.find(c =>
+            c.className && meStudent.className &&
+            (c.className.includes(meStudent.className) || meStudent.className.includes(c.className))
+        );
+    }
+
+    if (!matched) return `영어 수업 '${meStudent.className}' 매칭 실패`;
+
+    const enrollDate = formatDateValue(meStudent.registrationDate) || startDate || getTodayKST();
+    const enrollmentId = `enrollment_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    await db.collection(`students/${studentId}/enrollments`).doc(enrollmentId).set({
+        classId: matched.id,
+        subject: "english",
+        className: matched.className,
+        staffId: matched.teacher || "",
+        teacher: matched.teacher || "",
+        schedule: matched.schedule || [],
+        days: [],
+        period: null, room: null,
+        startDate: enrollDate, endDate: null, color: null,
+        isSlotTeacher: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return null; // 성공
+}
+
+/** 동기화 결과 로그 저장 */
+async function saveSyncLog(results, syncStart) {
+    try {
+        const duration = Date.now() - syncStart;
+        await db.collection("makeEduSyncLogs").add({
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            durationMs: duration,
+            totalScraped: results.total,
+            registeredCount: results.registered.length,
+            updatedCount: results.updated.length,
+            errorCount: results.errors.length,
+            skippedCount: results.skipped,
+            registered: results.registered.slice(0, 50), // 최대 50명까지 로그
+            updated: results.updated.slice(0, 50),
+            errors: results.errors.slice(0, 20),
+        });
+        logger.info("[scheduledMakeEduSync] Sync log saved. Duration:", duration, "ms");
+    } catch (logErr) {
+        logger.error("[scheduledMakeEduSync] Failed to save sync log:", logErr.message);
+    }
+}
 
 /**
  * 버스 페이지 HTML 파싱
@@ -2565,113 +3352,264 @@ exports.submitTimetableToClassNote = functions
                     });
                     await delay(2000);
 
-                    // 호칭 설정 (관리자) - 항상 대기 후 체크 + 모달 닫힘 검증
+                    // 호칭 설정 (관리자) - 모달 감지 개선 + 다중 클릭 전략
                     logger.info(`[${studentName}] 호칭 설정 중...`);
                     await delay(3000);
 
-                    // 호칭 모달 처리 (최대 3번 시도)
-                    for (let hoChingAttempt = 0; hoChingAttempt < 3; hoChingAttempt++) {
+                    // 호칭 모달 처리 (최대 5번 시도)
+                    let hoChingHandled = false;
+                    for (let hoChingAttempt = 0; hoChingAttempt < 5; hoChingAttempt++) {
                         const hoChingResult = await page.evaluate(() => {
-                            // 호칭 모달이 있는지 확인 ("해당 호칭을 기본 호칭으로 저장" 텍스트)
                             const bodyText = document.body?.innerText || '';
-                            const hasModal = bodyText.includes('호칭') || bodyText.includes('기본 호칭');
-                            const radios = document.querySelectorAll('input[type="radio"]');
+                            // 모달 특정 텍스트로 감지 (사이드바 "호칭 설정해 주세요"와 구분)
+                            const hasRealModal = bodyText.includes('해당 호칭을 기본 호칭으로 저장') ||
+                                bodyText.includes('호칭을 선택해') ||
+                                bodyText.includes('호칭 선택');
 
-                            if (radios.length === 0 && !hasModal) {
+                            // 모달 오버레이/다이얼로그 DOM 요소 체크
+                            const modalEl = document.querySelector('[role="dialog"], [class*="modal"], [class*="Modal"], [class*="overlay"][class*="Overlay"], [class*="popup"], [class*="Popup"]');
+                            const hasModalDom = modalEl && modalEl.offsetParent !== null;
+
+                            if (!hasRealModal && !hasModalDom) {
                                 return { status: 'no-modal' };
                             }
 
-                            // 라디오 버튼 클릭
+                            // 라디오 버튼 찾기 (다양한 방법)
+                            let radios = Array.from(document.querySelectorAll('input[type="radio"]'));
+
+                            // 커스텀 라디오 요소 (role="radio")
+                            if (radios.length === 0) {
+                                radios = Array.from(document.querySelectorAll('[role="radio"]'));
+                            }
+
+                            // 호칭 옵션 텍스트가 포함된 클릭 가능 요소 (label, li, div 등)
+                            if (radios.length === 0) {
+                                const scope = modalEl || document;
+                                const clickables = Array.from(scope.querySelectorAll('label, li, div, span, button'));
+                                const hoChingKeywords = ['관리자', '선생님', '원장님', '원장', '선생'];
+                                radios = clickables.filter(el => {
+                                    if (el.offsetParent === null) return false;
+                                    if (el.children.length > 3) return false; // 너무 큰 컨테이너 제외
+                                    const text = (el.textContent || '').trim();
+                                    return hoChingKeywords.some(kw => text === kw || text.startsWith(kw));
+                                });
+                            }
+
+                            if (radios.length === 0) {
+                                // 디버그: 모달 내 모든 텍스트 출력
+                                const modalText = modalEl ? modalEl.innerText.substring(0, 500) : '';
+                                return { status: 'modal-no-radios', modalText, hasRealModal, hasModalDom: !!hasModalDom };
+                            }
+
+                            // "관리자" 라디오 선택
                             let selected = null;
-                            for (let i = 0; i < radios.length; i++) {
-                                const radio = radios[i];
-                                const label = document.querySelector('label[for="' + radio.id + '"]');
-                                const parent = radio.parentElement;
-                                const text = (label ? label.textContent : '') + ' ' + (parent ? parent.textContent : '');
-                                if (text.includes('관리자')) {
+                            for (const radio of radios) {
+                                const labelEl = radio.id ? document.querySelector('label[for="' + radio.id + '"]') : null;
+                                const allText = ((labelEl ? labelEl.textContent : '') + ' ' + (radio.textContent || '') + ' ' + (radio.parentElement?.textContent || '')).trim();
+                                if (allText.includes('관리자')) {
                                     radio.click();
+                                    radio.dispatchEvent(new Event('change', { bubbles: true }));
+                                    radio.dispatchEvent(new Event('input', { bubbles: true }));
                                     selected = '관리자';
                                     break;
                                 }
                             }
                             if (!selected && radios.length > 0) {
                                 radios[0].click();
-                                selected = '첫번째';
+                                radios[0].dispatchEvent(new Event('change', { bubbles: true }));
+                                radios[0].dispatchEvent(new Event('input', { bubbles: true }));
+                                selected = '첫번째: ' + (radios[0].textContent || '').trim().substring(0, 20);
                             }
 
-                            return { status: 'modal-found', selected, radioCount: radios.length };
+                            // "기본 호칭으로 저장" 체크박스 체크
+                            const scope2 = modalEl || document;
+                            const checkboxes = scope2.querySelectorAll('input[type="checkbox"]');
+                            let checkedSave = false;
+                            checkboxes.forEach(cb => {
+                                const parent = cb.closest('label') || cb.parentElement;
+                                const text = (parent ? parent.textContent : '') + (cb.nextSibling?.textContent || '');
+                                if (text.includes('호칭') || text.includes('저장') || text.includes('기본')) {
+                                    if (!cb.checked) {
+                                        cb.click();
+                                        cb.dispatchEvent(new Event('change', { bubbles: true }));
+                                        checkedSave = true;
+                                    } else {
+                                        checkedSave = true; // 이미 체크됨
+                                    }
+                                }
+                            });
+                            // 체크박스를 못 찾았으면 모든 체크박스 체크
+                            if (!checkedSave && checkboxes.length > 0) {
+                                checkboxes.forEach(cb => {
+                                    if (!cb.checked) {
+                                        cb.click();
+                                        cb.dispatchEvent(new Event('change', { bubbles: true }));
+                                    }
+                                });
+                            }
+
+                            return { status: 'modal-found', selected, radioCount: radios.length, checkedSave };
                         });
                         logger.info(`[${studentName}] 호칭 시도 ${hoChingAttempt + 1}: ${JSON.stringify(hoChingResult)}`);
 
                         if (hoChingResult.status === 'no-modal') {
                             logger.info(`[${studentName}] 호칭 모달 없음, 진행`);
+                            hoChingHandled = true;
                             break;
                         }
 
-                        // 라디오 클릭 후 확인 버튼 JS 클릭 (모든 "확인" 중 호칭 모달의 것)
+                        if (hoChingResult.status === 'modal-no-radios') {
+                            logger.warn(`[${studentName}] 호칭 모달 감지됨, 라디오 없음: ${JSON.stringify(hoChingResult)}`);
+                            // 라디오 없이도 확인 버튼 클릭 시도 (기본 선택이 있을 수 있음)
+                        }
+
+                        // 확인 버튼 클릭 - 방법1: 모달 컨텍스트 내 JS 클릭
                         await delay(500);
                         const confirmResult = await page.evaluate(() => {
-                            const buttons = Array.from(document.querySelectorAll('button'))
-                                .filter(btn => btn.offsetParent !== null);
-                            // 호칭 모달의 확인 버튼 찾기
-                            const confirmBtn = buttons.find(btn => {
+                            // 모달 컨테이너 찾기
+                            const modals = document.querySelectorAll('[role="dialog"], [class*="modal"], [class*="Modal"], [class*="overlay"][class*="Overlay"], [class*="popup"], [class*="Popup"]');
+                            let targetButtons = [];
+                            modals.forEach(m => {
+                                targetButtons.push(...Array.from(m.querySelectorAll('button')).filter(b => b.offsetParent !== null));
+                            });
+
+                            // 모달 내 버튼 없으면 전체에서 검색
+                            if (targetButtons.length === 0) {
+                                targetButtons = Array.from(document.querySelectorAll('button')).filter(btn => btn.offsetParent !== null);
+                            }
+
+                            const confirmBtn = targetButtons.find(btn => {
                                 const t = (btn.textContent || '').trim();
-                                return t === '확인' || t === 'OK';
+                                return t === '확인' || t === 'OK' || t === '저장';
                             });
                             if (confirmBtn) {
                                 const btnText = (confirmBtn.textContent || '').trim();
-                                // mousedown → mouseup → click 시퀀스 (React 호환)
                                 confirmBtn.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
                                 confirmBtn.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
                                 confirmBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-                                return 'clicked: ' + btnText;
+                                return 'js-clicked: ' + btnText;
                             }
-                            return 'not-found';
+                            // 버튼 목록 반환 (디버그)
+                            return 'not-found, buttons: ' + targetButtons.map(b => (b.textContent || '').trim().substring(0, 20)).join(', ');
                         });
-                        logger.info(`[${studentName}] 호칭 확인 JS 클릭: ${confirmResult}`);
+                        logger.info(`[${studentName}] 호칭 확인 클릭 결과: ${confirmResult}`);
+
+                        // 방법2: Puppeteer 네이티브 click 시도
+                        if (confirmResult.startsWith('not-found')) {
+                            try {
+                                const confirmHandle = await page.evaluateHandle(() => {
+                                    const btns = Array.from(document.querySelectorAll('button')).filter(b => b.offsetParent !== null);
+                                    return btns.find(b => {
+                                        const t = (b.textContent || '').trim();
+                                        return t === '확인' || t === 'OK';
+                                    }) || null;
+                                });
+                                if (confirmHandle && confirmHandle.asElement()) {
+                                    await confirmHandle.asElement().click();
+                                    logger.info(`[${studentName}] 호칭 확인 Puppeteer native click 성공`);
+                                }
+                            } catch (e) {
+                                logger.warn(`[${studentName}] 호칭 확인 Puppeteer click 실패: ${e.message}`);
+                            }
+                        }
+
                         await delay(2000);
 
-                        // 호칭 모달이 닫혔는지 확인
+                        // 모달 닫힘 확인
                         const stillOpen = await page.evaluate(() => {
                             const bodyText = document.body?.innerText || '';
-                            return bodyText.includes('해당 호칭을 기본 호칭으로 저장');
+                            return bodyText.includes('해당 호칭을 기본 호칭으로 저장') || bodyText.includes('호칭을 선택해');
                         });
                         if (!stillOpen) {
                             logger.info(`[${studentName}] 호칭 모달 닫힘 확인!`);
+                            hoChingHandled = true;
                             break;
                         }
-                        logger.warn(`[${studentName}] 호칭 모달 아직 열림, 재시도...`);
+
+                        logger.warn(`[${studentName}] 호칭 모달 아직 열림, 재시도... (${hoChingAttempt + 1}/5)`);
+
+                        // 3번째부터 Puppeteer native click 재시도 (라디오 + 확인)
+                        if (hoChingAttempt >= 2) {
+                            try {
+                                // 페이지 내 모든 라디오 요소에 Puppeteer click
+                                const radioHandles = await page.$$('input[type="radio"]');
+                                if (radioHandles.length > 0) {
+                                    await radioHandles[0].click();
+                                    logger.info(`[${studentName}] 라디오 Puppeteer click (${radioHandles.length}개 중 첫번째)`);
+                                    await delay(300);
+                                }
+                                // 확인 버튼 Puppeteer click
+                                const allBtnHandles = await page.$$('button');
+                                for (const bh of allBtnHandles) {
+                                    const txt = await bh.evaluate(el => (el.textContent || '').trim());
+                                    if (txt === '확인' || txt === 'OK') {
+                                        await bh.click();
+                                        logger.info(`[${studentName}] 확인 버튼 Puppeteer click (시도 ${hoChingAttempt + 1})`);
+                                        break;
+                                    }
+                                }
+                                await delay(2000);
+                            } catch (e) {
+                                logger.warn(`[${studentName}] Puppeteer 재시도 실패: ${e.message}`);
+                            }
+                        }
                         await delay(1000);
                     }
 
-                    // 최종 확인: 호칭 모달이 아직 열려있으면 강제 닫기
-                    const finalHoChingCheck = await page.evaluate(() => {
-                        const bodyText = document.body?.innerText || '';
-                        if (bodyText.includes('해당 호칭을 기본 호칭으로 저장')) {
-                            // 취소 버튼 클릭으로 강제 닫기
-                            const buttons = Array.from(document.querySelectorAll('button'))
-                                .filter(btn => btn.offsetParent !== null);
-                            // 마지막 "취소" 버튼이 호칭 모달의 것
-                            const cancelBtns = buttons.filter(btn => {
-                                const text = (btn.textContent || '').trim();
-                                return text === '취소' || text === 'Cancel';
-                            });
-                            if (cancelBtns.length > 0) {
-                                const lastCancel = cancelBtns[cancelBtns.length - 1];
-                                lastCancel.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
-                                lastCancel.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
-                                lastCancel.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-                                return 'force-cancelled';
-                            }
-                            // ESC 키로도 시도
-                            return 'still-open';
-                        }
-                        return 'closed';
-                    });
-                    logger.info(`[${studentName}] 호칭 최종 상태: ${finalHoChingCheck}`);
-                    if (finalHoChingCheck === 'still-open') {
+                    // 호칭 모달 최종 처리: 안 닫히면 페이지 재로드 후 재시도
+                    if (!hoChingHandled) {
+                        logger.warn(`[${studentName}] 호칭 모달 5번 시도 실패, 페이지 재로드...`);
                         await page.keyboard.press('Escape');
-                        await delay(1000);
+                        await delay(500);
+                        // 페이지 재로드로 호칭 모달 다시 트리거
+                        await page.goto('https://www.classnote.com/service/report/add', {
+                            waitUntil: 'domcontentloaded',
+                            timeout: 30000
+                        });
+                        await delay(3000);
+
+                        // 재로드 후 호칭 모달 한번 더 처리 시도
+                        const retryResult = await page.evaluate(() => {
+                            const bodyText = document.body?.innerText || '';
+                            if (!bodyText.includes('해당 호칭을 기본 호칭으로 저장')) {
+                                return 'no-modal';
+                            }
+                            // 라디오 찾아서 클릭
+                            const radios = Array.from(document.querySelectorAll('input[type="radio"], [role="radio"]'));
+                            if (radios.length > 0) {
+                                radios[0].click();
+                                radios[0].dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                            // 체크박스 체크
+                            const cbs = document.querySelectorAll('input[type="checkbox"]');
+                            cbs.forEach(cb => { if (!cb.checked) { cb.click(); cb.dispatchEvent(new Event('change', { bubbles: true })); } });
+                            return 'retry-selected';
+                        });
+                        logger.info(`[${studentName}] 호칭 재로드 후 결과: ${retryResult}`);
+
+                        if (retryResult === 'retry-selected') {
+                            await delay(500);
+                            // Puppeteer native click으로 확인
+                            const allBtns = await page.$$('button');
+                            for (const bh of allBtns) {
+                                const txt = await bh.evaluate(el => (el.textContent || '').trim());
+                                if (txt === '확인' || txt === 'OK') {
+                                    await bh.click();
+                                    logger.info(`[${studentName}] 호칭 재로드 후 확인 Puppeteer click`);
+                                    break;
+                                }
+                            }
+                            await delay(2000);
+                        }
+
+                        // 최종 확인
+                        const finalCheck = await page.evaluate(() => {
+                            return (document.body?.innerText || '').includes('해당 호칭을 기본 호칭으로 저장');
+                        });
+                        if (finalCheck) {
+                            logger.error(`[${studentName}] 호칭 설정 최종 실패. ClassNote에서 직접 호칭을 설정해주세요.`);
+                            throw new Error('호칭 설정 실패: 모달을 닫을 수 없습니다. ClassNote에서 직접 호칭을 설정해주세요.');
+                        }
                     }
                     await delay(1000);
 
@@ -3195,6 +4133,301 @@ exports.submitTimetableToClassNote = functions
             }
 
             throw new functions.https.HttpsError("internal", error.message || "알 수 없는 오류");
+        }
+    });
+
+/**
+ * MakeEdu 전체 학생 목록에서 기타수납 컬럼을 스크래핑하여
+ * "셔틀버스비"가 포함된 학생을 shuttle_students 컬렉션에 저장
+ */
+async function scrapeMakeEduShuttleStudentsInternal() {
+    const userId = process.env.MAKEEDU_USERNAME;
+    const userPwd = process.env.MAKEEDU_PASSWORD;
+    if (!userId || !userPwd) {
+        throw new Error("MakeEdu 로그인 정보가 .env에 설정되지 않았습니다.");
+    }
+
+    const baseUrl = "https://school.makeedu.co.kr";
+    const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+
+    // 1. 세션 쿠키 획득
+    logger.info("[scrapeMakeEduShuttle] Getting session...");
+    const sessionRes = await fetch(`${baseUrl}/login.do`, {
+        headers: { "User-Agent": UA },
+        redirect: "manual",
+    });
+    const sessionCookies = [];
+    const sessionSetCookies = sessionRes.headers.getSetCookie?.() || [];
+    for (const h of sessionSetCookies) {
+        const cookie = h.split(";")[0];
+        if (cookie) sessionCookies.push(cookie);
+    }
+    let cookieStr = sessionCookies.join("; ");
+
+    // 2. 로그인
+    logger.info("[scrapeMakeEduShuttle] Logging in...");
+    const loginRes = await fetch(`${baseUrl}/loginPopProc.do`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": UA,
+            "Cookie": cookieStr,
+            "Referer": `${baseUrl}/login.do`,
+        },
+        body: `membId=${encodeURIComponent(userId)}&password=${encodeURIComponent(userPwd)}`,
+        redirect: "manual",
+    });
+    const loginSetCookies = loginRes.headers.getSetCookie?.() || [];
+    for (const h of loginSetCookies) {
+        const cookie = h.split(";")[0];
+        if (cookie) sessionCookies.push(cookie);
+    }
+    cookieStr = sessionCookies.join("; ");
+    const loginBody = await loginRes.text();
+
+    const loginOk = loginBody.includes("OK") || loginRes.status === 302 || loginRes.status === 200;
+    if (!loginOk && sessionCookies.length === 0) {
+        throw new functions.https.HttpsError("unauthenticated",
+            `MakeEdu 로그인 실패 (status: ${loginRes.status})`);
+    }
+
+    // 3. 메인 페이지에서 학생 관련 URL 탐색
+    logger.info("[scrapeMakeEduShuttle] Fetching main page for URL discovery...");
+    const mainRes = await fetch(`${baseUrl}/main.do`, {
+        headers: { "Cookie": cookieStr, "User-Agent": UA },
+    });
+    const mainHtml = await mainRes.text();
+    const $main = cheerio.load(mainHtml);
+
+    const candidateUrls = [];
+    $main("a[href]").each((_, a) => {
+        const href = $main(a).attr("href") || "";
+        const text = $main(a).text().trim();
+        if (href.includes("student") || href.includes("member") ||
+            href.includes("consult") || href.includes("pupil") ||
+            text.includes("원생") || text.includes("학생") || text.includes("등록")) {
+            const fullUrl = href.startsWith("http") ? href : `${baseUrl}${href.startsWith("/") ? "" : "/"}${href}`;
+            candidateUrls.push({ url: fullUrl, text, href });
+        }
+    });
+    $main("[onclick]").each((_, el) => {
+        const onclick = $main(el).attr("onclick") || "";
+        const text = $main(el).text().trim();
+        const urlMatch = onclick.match(/location\.href\s*=\s*['"]([^'"]+)['"]/);
+        const urlMatch2 = onclick.match(/['"](\/?[a-zA-Z]+\/[a-zA-Z]+\.do[^'"]*)['"]/);
+        const matched = urlMatch?.[1] || urlMatch2?.[1];
+        if (matched && (matched.includes("student") || matched.includes("member") ||
+            text.includes("원생") || text.includes("학생"))) {
+            const fullUrl = matched.startsWith("http") ? matched : `${baseUrl}${matched.startsWith("/") ? "" : "/"}${matched}`;
+            candidateUrls.push({ url: fullUrl, text, href: matched });
+        }
+    });
+
+    // 4. 학생 목록 페이지 찾기
+    const urlsToTry = [
+        ...candidateUrls.map(c => c.url),
+        `${baseUrl}/student/studentList.do`,
+        `${baseUrl}/student/studentMng.do`,
+        `${baseUrl}/student/studentManage.do`,
+        `${baseUrl}/student/studentInfo.do`,
+        `${baseUrl}/student/studentRegist.do`,
+        `${baseUrl}/member/memberList.do`,
+    ];
+    const uniqueUrls = [...new Set(urlsToTry)];
+
+    let html = "";
+    let studentPageUrl = "";
+    for (const url of uniqueUrls) {
+        try {
+            const res = await fetch(url, {
+                headers: { "Cookie": cookieStr, "User-Agent": UA, "Referer": `${baseUrl}/main.do` },
+                redirect: "follow",
+            });
+            if (res.ok) {
+                const body = await res.text();
+                const $check = cheerio.load(body);
+                const hasTable = $check("table").length > 0;
+                const hasStudentContent = body.includes("원생") || body.includes("학생") ||
+                    body.includes("이름") || body.includes("성명");
+                if (hasTable && hasStudentContent) {
+                    html = body;
+                    studentPageUrl = url;
+                    logger.info("[scrapeMakeEduShuttle] Found student page at:", url);
+                    break;
+                }
+            }
+        } catch (urlErr) {
+            logger.info("[scrapeMakeEduShuttle] URL error:", url, urlErr.message);
+        }
+    }
+
+    if (!studentPageUrl) {
+        throw new functions.https.HttpsError("internal",
+            `학생 페이지를 찾을 수 없습니다. 시도한 URL 수: ${uniqueUrls.length}`);
+    }
+
+    // 5. 전체 학생 조회 (신규원생 필터 없이)
+    const $page = cheerio.load(html);
+    const formInputs = {};
+    $page("form").first().find("input[type='hidden'], input[name]").each((_, inp) => {
+        const name = $page(inp).attr("name") || "";
+        const val = $page(inp).attr("value") || "";
+        if (name) formInputs[name] = val;
+    });
+
+    const postParams = new URLSearchParams();
+    postParams.set("pageSize", "500");
+    postParams.set("srchType", "A");
+    // 신규원생 필터(srchNewStat) 없이 전체 조회
+
+    logger.info("[scrapeMakeEduShuttle] POST body:", postParams.toString());
+
+    const searchRes = await fetch(studentPageUrl, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Cookie": cookieStr,
+            "User-Agent": UA,
+            "Referer": studentPageUrl,
+        },
+        body: postParams.toString(),
+    });
+    let searchHtml = await searchRes.text();
+    logger.info("[scrapeMakeEduShuttle] Search result length:", searchHtml.length);
+
+    const $ = cheerio.load(searchHtml);
+    let tableRows = $("table tbody tr");
+    if (tableRows.length === 0) {
+        const $orig = cheerio.load(html);
+        tableRows = $orig("table tbody tr");
+        if (tableRows.length > 0) searchHtml = html;
+    }
+
+    // 6. 헤더 추출
+    const $final = cheerio.load(searchHtml);
+    const headers = [];
+    $final("table thead tr th, table thead tr td").each((_, el) => {
+        headers.push($final(el).text().trim());
+    });
+    if (headers.length === 0) {
+        $final("table tr").first().find("th").each((_, el) => {
+            headers.push($final(el).text().trim());
+        });
+    }
+    if (headers.length === 0) {
+        $final("table tr").first().find("td").each((_, el) => {
+            headers.push($final(el).text().trim());
+        });
+    }
+    logger.info("[scrapeMakeEduShuttle] Headers:", JSON.stringify(headers));
+
+    const headerKeywords = new Set(["이름", "성명", "원생명", "학생명", "학교", "학년", "연락처",
+        "전화번호", "보호자", "등록일", "입학일", "반", "성별", "주소", "메모", "상태", "번호",
+        "출결", "생년월일", "강사", "담당", "비고"]);
+
+    // 7. 컬럼 매핑 — 이름 + 기타수납만 필요
+    const findCol = (keywords) => {
+        return headers.findIndex(h => keywords.some(k => h.includes(k)));
+    };
+
+    const colName = findCol(["이름", "성명", "원생명", "학생명"]);
+    const colEtcBilling = findCol(["기타수납", "기타"]);
+
+    logger.info("[scrapeMakeEduShuttle] Column mapping:", JSON.stringify({ colName, colEtcBilling }));
+
+    if (colName < 0) {
+        throw new functions.https.HttpsError("internal",
+            `이름 컬럼을 찾을 수 없습니다. 헤더: ${JSON.stringify(headers)}`);
+    }
+
+    // 8. 행 파싱
+    const students = [];
+    let dataRows = $final("table tbody tr");
+    if (dataRows.length === 0) {
+        dataRows = $final("table tr").slice(1);
+    }
+    dataRows.each((_, row) => {
+        if ($final(row).find("th").length > 0) return;
+
+        const cells = [];
+        $final(row).find("td").each((__, td) => {
+            cells.push($final(td).text().trim());
+        });
+
+        if (cells.length < 3) return;
+
+        let headerMatchCount = 0;
+        cells.forEach(c => {
+            if (headerKeywords.has(c) || headers.includes(c)) headerMatchCount++;
+        });
+        if (headerMatchCount >= 3) return;
+
+        const name = colName >= 0 ? cells[colName] : "";
+        if (!name) return;
+
+        const etcBilling = colEtcBilling >= 0 ? (cells[colEtcBilling] || "") : "";
+        const isShuttle = etcBilling.includes("셔틀버스비") || etcBilling.includes("셔틀") ||
+                          etcBilling.includes("스쿨버스비") || etcBilling.includes("스쿨버스");
+
+        students.push({ name, etcBilling, isShuttle });
+    });
+
+    logger.info("[scrapeMakeEduShuttle] Parsed students:", students.length);
+    const shuttleStudents = students.filter(s => s.isShuttle);
+    logger.info("[scrapeMakeEduShuttle] Shuttle students:", shuttleStudents.length);
+
+    // 9. Firestore shuttle_students 컬렉션 업데이트 (batch)
+    const now = new Date().toISOString();
+
+    // 기존 문서 모두 삭제
+    const existingSnap = await db.collection("shuttle_students").get();
+    const deleteBatch = db.batch();
+    existingSnap.docs.forEach(doc => deleteBatch.delete(doc.ref));
+    await deleteBatch.commit();
+
+    // 셔틀 학생만 저장
+    if (shuttleStudents.length > 0) {
+        // Firestore batch는 500개 제한
+        const batchSize = 450;
+        for (let i = 0; i < shuttleStudents.length; i += batchSize) {
+            const batch = db.batch();
+            const chunk = shuttleStudents.slice(i, i + batchSize);
+            chunk.forEach(s => {
+                const ref = db.collection("shuttle_students").doc();
+                batch.set(ref, {
+                    name: s.name,
+                    isShuttle: true,
+                    etcBilling: s.etcBilling,
+                    syncedAt: now,
+                });
+            });
+            await batch.commit();
+        }
+    }
+
+    return {
+        totalStudents: students.length,
+        shuttleStudents: shuttleStudents.length,
+        shuttleNames: shuttleStudents.map(s => s.name),
+        headers,
+        syncedAt: now,
+    };
+}
+
+/**
+ * MakeEdu 셔틀 학생 동기화 (클라이언트 호출용)
+ */
+exports.scrapeMakeEduShuttleStudents = functions
+    .region("asia-northeast3")
+    .runWith({ timeoutSeconds: 300, memory: "512MB" })
+    .https.onCall(async (data, context) => {
+        logger.info("[scrapeMakeEduShuttleStudents] Start (onCall)");
+        try {
+            return await scrapeMakeEduShuttleStudentsInternal();
+        } catch (error) {
+            logger.error("[scrapeMakeEduShuttleStudents] Error:", error);
+            if (error.code) throw error;
+            throw new functions.https.HttpsError("internal", error.message || "셔틀 학생 크롤링 실패");
         }
     });
 

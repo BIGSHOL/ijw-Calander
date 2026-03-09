@@ -166,6 +166,24 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
 
                 classStudentMap[className].add(studentId);
 
+                // 동일 학생이 같은 반에 여러 수강기록(종료+재등록)이 있을 경우
+                // 활성 수강기록(endDate 없음)을 우선하고, 같은 상태면 최신 등록일 우선
+                const existingData = enrollmentDataMap[className]?.[studentId];
+                if (existingData) {
+                    const existingHasEnd = !!existingData.withdrawalDate;
+                    if (!existingHasEnd && hasEndDate) {
+                        // 기존이 활성, 현재가 종료 → 기존 유지 (활성 우선)
+                        return;
+                    }
+                    if (existingHasEnd === hasEndDate) {
+                        // 같은 상태 → 최신 등록일 우선
+                        if (existingData.enrollmentDate && startDate && existingData.enrollmentDate >= startDate) {
+                            return;
+                        }
+                    }
+                    // existingHasEnd && !hasEndDate → 기존이 종료, 현재가 활성 → 덮어쓰기 (활성 우선)
+                }
+
                 enrollmentDataMap[className][studentId] = {
                     enrollmentDocId: enrollment.id,
                     underline: enrollment.underline,

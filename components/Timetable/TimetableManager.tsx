@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
 import { TimetableClass, Teacher, ClassKeywordColor, SubjectType } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
 import { VideoLoading } from '../Common/VideoLoading';
@@ -42,6 +42,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 // Performance Note (bundle-dynamic-imports): Lazy load Generic Timetable
 const GenericTimetable = lazy(() => import('./Generic/GenericTimetable'));
+const ShuttleTimetable = lazy(() => import('./Shuttle/ShuttleTimetable'));
 
 // MathTimetableContent를 외부로 분리하여 Hook 순서 에러 방지
 interface MathTimetableContentProps {
@@ -139,6 +140,7 @@ interface MathTimetableContentProps {
     setMathViewMode?: (value: string) => void;
     hasPermissionFn?: (perm: string) => boolean;
     setIsTimetableSettingsOpen?: (value: boolean) => void;
+    undoLastMove?: () => any;
 }
 
 const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
@@ -230,6 +232,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     setMathViewMode,
     hasPermissionFn,
     setIsTimetableSettingsOpen,
+    undoLastMove,
 }) => {
     const simulation = useMathSimulation();
     const { isScenarioMode, currentScenarioName, enterScenarioMode, exitScenarioMode, loadFromLive, publishToLive } = simulation;
@@ -254,6 +257,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
     const [selectedStudentClassName, setSelectedStudentClassName] = useState<string | null>(null);
     const [copiedStudent, setCopiedStudent] = useState<{ studentIds: string[]; className: string } | null>(null);
+    const [cutStudent, setCutStudent] = useState<{ studentIds: string[]; className: string } | null>(null);
     const { enrollExistingStudent, smartRemoveStudent, deleteEnrollmentRecord } = useClassOperations();
     // 엑셀뷰 보류 작업 (저장 전까지 DB 미반영)
     const [pendingExcelDeletes, setPendingExcelDeletes] = useState<Array<{ studentId: string; className: string; type: 'active' | 'withdrawn' }>>([]);
@@ -269,6 +273,9 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
         targetClassName: string;
         targetClassSchedule?: string[];
     } | null>(null);
+
+    // 엑셀 자동완성 하이라이트: 포커싱 중인 학생 ID (다른 반에서 빨갛게 표시)
+    const [acHighlightStudentId, setAcHighlightStudentId] = useState<string | null>(null);
 
     // 엑셀 모드 학생 선택 핸들러 (단일)
     const handleExcelStudentSelect = useCallback((studentId: string, className: string) => {
@@ -334,24 +341,58 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     setPendingExcelDeletes(prev => prev.slice(0, -1));
                     showExcelToast(`취소: ${name} 삭제`);
                 } else {
-                    showExcelToast('취소할 작업 없음');
+                    const undone = undoLastMove?.();
+                    if (undone) {
+                        const name = studentMap[undone.studentId]?.name || undone.studentId;
+                        showExcelToast(`취소: ${name} 이동`);
+                    } else {
+                        showExcelToast('취소할 작업 없음');
+                    }
                 }
                 return;
             }
 
             if (!e.ctrlKey && !e.metaKey) return;
 
+            // Ctrl+X: 잘라내기 (이동 의도)
+            if (e.key === 'x' || e.key === 'X' || e.code === 'KeyX') {
+                if (selectedStudentIds.size > 0 && selectedStudentClassName) {
+                    setCutStudent({ studentIds: [...selectedStudentIds], className: selectedStudentClassName });
+                    setCopiedStudent(null);
+                    const names = [...selectedStudentIds].map(id => studentMap[id]?.name || id).join(', ');
+                    showExcelToast(`잘라내기: ${names}`);
+                }
+                return;
+            }
+
             if (e.key === 'c' || e.key === 'C' || e.code === 'KeyC') {
                 // Ctrl+C: 선택된 학생 복사
                 if (selectedStudentIds.size > 0 && selectedStudentClassName) {
                     setCopiedStudent({ studentIds: [...selectedStudentIds], className: selectedStudentClassName });
+                    setCutStudent(null);
                     const names = [...selectedStudentIds].map(id => studentMap[id]?.name || id).join(', ');
                     showExcelToast(`복사: ${names}`);
                 }
+                return;
             }
 
             if (e.key === 'v' || e.key === 'V' || e.code === 'KeyV') {
-                // Ctrl+V: 선택된 셀에 붙여넣기 (등록일 선택 모달 표시)
+                // Ctrl+V: 잘라내기 상태면 이동
+                if (cutStudent && selectedClassId) {
+                    const targetClass = filteredClasses.find(c => c.id === selectedClassId);
+                    if (!targetClass || targetClass.className === cutStudent.className) return;
+                    e.preventDefault();
+                    const fromClass = filteredClasses.find(c => c.className === cutStudent.className);
+                    if (fromClass) {
+                        handleMultiDrop(cutStudent.studentIds, fromClass.id, selectedClassId);
+                        const names = cutStudent.studentIds.map(id => studentMap[id]?.name || id);
+                        const nameStr = names.length <= 3 ? names.join(', ') : `${names.slice(0, 2).join(', ')} 외 ${names.length - 2}명`;
+                        showExcelToast(`이동: ${nameStr} → ${targetClass.className}`);
+                    }
+                    setCutStudent(null);
+                    return;
+                }
+                // Ctrl+V: 복사 상태면 등록
                 if (!copiedStudent || !selectedClassId) return;
                 e.preventDefault();
 
@@ -367,19 +408,19 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     return;
                 }
 
-                // 등록일 선택 모달 표시
                 setPasteModalInfo({
                     studentIds: newStudentIds,
                     targetClassName: targetClass.className,
                     targetClassSchedule: targetClass.schedule,
                 });
                 if (skipped > 0) alert(`${skipped}명은 이미 소속되어 제외됩니다.`);
+                return;
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [viewType, selectedStudentIds, selectedStudentClassName, copiedStudent, selectedClassId, filteredClasses, pendingExcelDeletes, pendingExcelEnrollments, showExcelToast, studentMap]);
+    }, [viewType, selectedStudentIds, selectedStudentClassName, copiedStudent, cutStudent, selectedClassId, filteredClasses, pendingExcelDeletes, pendingExcelEnrollments, showExcelToast, studentMap, undoLastMove, handleMultiDrop]);
 
     // 이미지 내보내기용 그룹 상태
     const [exportGroups, setExportGroups] = useState<ExportGroup[]>([]);
@@ -766,6 +807,10 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         selectedStudentClassName={selectedStudentClassName}
                         copiedStudentIds={copiedStudent?.studentIds || null}
                         copiedStudentClassName={copiedStudent?.className || null}
+                        cutStudentIds={cutStudent?.studentIds || null}
+                        cutStudentClassName={cutStudent?.className || null}
+                        acHighlightStudentId={acHighlightStudentId}
+                        onAcHighlightChange={setAcHighlightStudentId}
                         onStudentSelect={handleExcelStudentSelect}
                         onStudentMultiSelect={handleExcelStudentMultiSelect}
                         onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
@@ -1008,6 +1053,7 @@ const TimetableManager = ({
     const canViewEnglish = hasPermission('timetable.english.view') || canEditEnglish;
     const canViewScience = hasPermission('timetable.science.view') || canEditScience;
     const canViewKorean = hasPermission('timetable.korean.view') || canEditKorean;
+    const canViewShuttle = (externalHasPermission || hasPermission)('shuttle.view');
     const canManageStudents = hasPermission('students.edit');
     // 퇴원 관리 권한 (퇴원생 클릭 시 상세 모달용)
     const canEditWithdrawal = hasPermission('withdrawal.edit');
@@ -1247,7 +1293,8 @@ const TimetableManager = ({
         handleMultiDrop,
         handleSavePendingMoves,
         handleCancelPendingMoves,
-        updatePendingMoveDate
+        updatePendingMoveDate,
+        undoLastMove
     } = useStudentDragDrop(classesWithEnrollments);
 
     // Search State
@@ -1583,6 +1630,14 @@ const TimetableManager = ({
         );
     }
 
+    if (subjectTab === 'shuttle' && !canViewShuttle) {
+        return (
+            <div className="flex items-center justify-center h-full text-red-500">
+                셔틀 시간표를 볼 수 있는 권한이 없습니다.
+            </div>
+        );
+    }
+
     if (subjectTab === 'english') {
         return (
             <Suspense fallback={<VideoLoading className="flex-1 h-full" />}>
@@ -1598,6 +1653,14 @@ const TimetableManager = ({
                     goToPrevWeek={goToPrevWeek}
                     goToNextWeek={goToNextWeek}
                     goToThisWeek={goToThisWeek}
+                    // 과목/뷰 전환 (TimetableNavBar 통합)
+                    timetableSubject={subjectTab}
+                    setTimetableSubject={setSubjectTab}
+                    setTimetableViewType={setViewType as React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>}
+                    mathViewMode={timetableViewMode}
+                    setMathViewMode={setTimetableViewMode as (value: string) => void}
+                    hasPermissionFn={externalHasPermission || hasPermission}
+                    setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
                 />
             </Suspense>
         );
@@ -1614,6 +1677,14 @@ const TimetableManager = ({
                     onStudentsUpdated={() => {
                         // Refresh logic if needed
                     }}
+                    // 과목/뷰 전환 (TimetableNavBar 통합)
+                    timetableSubject={subjectTab}
+                    setTimetableSubject={setSubjectTab}
+                    setTimetableViewType={setViewType as React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>}
+                    mathViewMode={timetableViewMode}
+                    setMathViewMode={setTimetableViewMode as (value: string) => void}
+                    hasPermissionFn={externalHasPermission || hasPermission}
+                    setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
                 />
             </Suspense>
         );
@@ -1629,6 +1700,29 @@ const TimetableManager = ({
                     onStudentsUpdated={() => {
                         // Refresh logic if needed
                     }}
+                    // 과목/뷰 전환 (TimetableNavBar 통합)
+                    timetableSubject={subjectTab}
+                    setTimetableSubject={setSubjectTab}
+                    setTimetableViewType={setViewType as React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>}
+                    mathViewMode={timetableViewMode}
+                    setMathViewMode={setTimetableViewMode as (value: string) => void}
+                    hasPermissionFn={externalHasPermission || hasPermission}
+                    setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
+                />
+            </Suspense>
+        );
+    }
+
+    if (subjectTab === 'shuttle') {
+        return (
+            <Suspense fallback={<VideoLoading className="flex-1 h-full" />}>
+                <ShuttleTimetable
+                    currentUser={currentUser}
+                    timetableSubject={subjectTab}
+                    setTimetableSubject={setSubjectTab}
+                    setTimetableViewType={setViewType as React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>}
+                    hasPermissionFn={externalHasPermission || hasPermission}
+                    setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
                 />
             </Suspense>
         );
@@ -1722,9 +1816,10 @@ const TimetableManager = ({
                 setTimetableSubject={setSubjectTab}
                 setTimetableViewType={setViewType as React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>}
                 mathViewMode={timetableViewMode}
-                setMathViewMode={setTimetableViewMode}
+                setMathViewMode={setTimetableViewMode as (value: string) => void}
                 hasPermissionFn={externalHasPermission || hasPermission}
                 setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
+                undoLastMove={undoLastMove}
             />
             {/* 드래그 예정일 선택 모달 */}
             {dateModalInfo && (

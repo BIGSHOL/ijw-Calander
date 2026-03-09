@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { UnifiedStudent, UserProfile } from '../../types';
 import StudentDetail from './StudentDetail';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface StudentDetailModalProps {
   student: UnifiedStudent;
@@ -13,6 +14,7 @@ interface StudentDetailModalProps {
 
 const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ student, onClose, readOnly = false, currentUser }) => {
   useEscapeClose(onClose);
+  const { handleMouseDown, dragStyle } = useDraggable();
 
   return (
     <div
@@ -20,9 +22,13 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ student, onClos
     >
       <div
         className="bg-white rounded-sm shadow-xl w-full max-w-xl h-[600px] flex flex-col overflow-hidden relative"
+        style={dragStyle}
       >
-        {/* 닫기 버튼 */}
-        <div className="absolute top-2 right-2 z-10">
+        {/* 드래그 핸들 + 닫기 버튼 */}
+        <div
+          className="flex items-center justify-end px-2 py-1 border-b border-gray-100 cursor-move shrink-0 select-none"
+          onMouseDown={handleMouseDown}
+        >
           <button
             onClick={onClose}
             className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"

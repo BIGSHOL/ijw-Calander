@@ -25,6 +25,7 @@ import { collection, doc, getDocs, query, where, updateDoc, addDoc, deleteDoc, w
 import { db } from '../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
 import { useScenarioOptional } from '../components/Timetable/English/context/SimulationContext';
+import { logTimetableChange } from './useTimetableLog';
 
 const COL_CLASSES = 'classes';
 
@@ -611,6 +612,12 @@ export const useEnglishClassUpdater = () => {
             });
         }
 
+        logTimetableChange({
+            action: 'class_update', subject: 'english', className: cellData.className,
+            details: `영어 셀 배정: ${cellData.className} → ${cellKey}`,
+            after: { cellKey, className: cellData.className, room: cellData.room },
+        });
+
         // 캐시 무효화
         queryClient.invalidateQueries({ queryKey: ['classes'] });
     }, [isScenarioMode, queryClient, upsertScenarioClass, findScenarioClassesAtSlot, removeSlotFromScenarioClass]);
@@ -665,6 +672,12 @@ export const useEnglishClassUpdater = () => {
                 }
             }
         }
+
+        logTimetableChange({
+            action: 'class_update', subject: 'english', className,
+            details: `영어 셀 제거: ${className} ← ${cellKey}`,
+            before: { cellKey, className },
+        });
 
         queryClient.invalidateQueries({ queryKey: ['classes'] });
     }, [isScenarioMode, queryClient, findScenarioClassByName, removeSlotFromScenarioClass]);

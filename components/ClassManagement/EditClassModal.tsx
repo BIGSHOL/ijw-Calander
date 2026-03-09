@@ -200,6 +200,25 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
     }
   }, [classInfo.schedule, classInfo.slotTeachers, classInfo.slotRooms]);
 
+  // classInfo에 schedule이 없는 경우 classDetail에서 fallback 로드
+  useEffect(() => {
+    if (classInfo.schedule && classInfo.schedule.length > 0) return;
+    if (!classDetail?.schedule || classDetail.schedule.length === 0) return;
+
+    const slots = new Set<string>();
+    classDetail.schedule.forEach(item => {
+      const parts = item.split(' ');
+      if (parts.length >= 2) {
+        const day = parts[0];
+        const periodId = convertLegacyPeriodId(parts[1]);
+        slots.add(`${day}-${periodId}`);
+      }
+    });
+    setSelectedSlots(slots);
+    if (classDetail.slotTeachers && !classInfo.slotTeachers) setSlotTeachers(classDetail.slotTeachers);
+    if (classDetail.slotRooms && !classInfo.slotRooms) setSlotRooms(classDetail.slotRooms);
+  }, [classDetail?.schedule, classDetail?.slotTeachers, classDetail?.slotRooms, classInfo.schedule, classInfo.slotTeachers, classInfo.slotRooms]);
+
   // classDetail에서 메모 로드
   useEffect(() => {
     if (classDetail?.memo) {
