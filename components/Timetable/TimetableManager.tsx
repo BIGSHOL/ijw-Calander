@@ -238,6 +238,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     const { isScenarioMode, currentScenarioName, enterScenarioMode, exitScenarioMode, loadFromLive, publishToLive } = simulation;
     const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const queryClient = useQueryClient();
 
     // 통합뷰 전용: 설정 및 이미지 저장 모달
     const { settings: mathIntegrationSettings, updateSettings: updateMathIntegrationSettings } = useMathSettings();
@@ -653,6 +654,9 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                             for (const enr of pendingExcelEnrollments) {
                                 await enrollExistingStudent(enr.studentId, enr.className, enr.enrollmentDate);
                             }
+                            // 4. 캐시 무효화 및 화면 새로고침
+                            queryClient.invalidateQueries({ queryKey: ['students'] });
+                            queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
                         } catch (error) {
                             console.error('엑셀 보류 작업 저장 오류:', error);
                             alert('일부 작업 저장에 실패했습니다.');
