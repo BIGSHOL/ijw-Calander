@@ -246,7 +246,7 @@ export const useUpdateClass = () => {
           subject: originalSubject,
           className: newClassName,
           details: `수업 수정: ${originalClassName} → ${newClassName} (${originalSubject})`,
-          before: { className: originalClassName, teacher: undefined, schedule: undefined },
+          before: { className: originalClassName },
           after: { className: newClassName, teacher: newTeacher, schedule: newSchedule, room: newRoom, memo },
         });
       }

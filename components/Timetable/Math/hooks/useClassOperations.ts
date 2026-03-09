@@ -1,4 +1,4 @@
-import { doc, setDoc, deleteDoc, updateDoc, collection, getDocs, query, where, getDoc } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, updateDoc, collection, getDocs, query, where, getDoc, deleteField } from 'firebase/firestore';
 import { useQueryClient } from '@tanstack/react-query';
 import { db } from '../../../../firebaseConfig';
 import { TimetableClass } from '../../../../types';
@@ -329,6 +329,16 @@ export const useClassOperations = () => {
         const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
         const today = new Date().toISOString().split('T')[0];
 
+        // enrollment 문서 존재 여부 확인
+        const enrollmentSnap = await getDoc(enrollmentRef);
+
+        if (!enrollmentSnap.exists()) {
+            // enrollment 문서가 없으면 (엑셀뷰 보류 등록 후 바로 삭제한 경우) 로그만 남기고 종료
+            console.log(`enrollment 문서 없음 (보류 작업): ${studentId} - ${className}`);
+            invalidateMathCaches();
+            return otherActiveMath >= 1 ? 'removed' : 'withdrawn';
+        }
+
         // 수업 스케줄 정보 조회하여 enrollment에 저장
         try {
             const classesRef = collection(db, COL_CLASSES);
@@ -344,29 +354,24 @@ export const useClassOperations = () => {
                     typeof s === 'string' ? s : `${s.day} ${s.periodId}`
                 ) || [];
 
-                // enrollment 업데이트: endDate 설정 + 스케줄 정보 저장
-                await updateDoc(enrollmentRef, {
+                // enrollment 업데이트: endDate 설정 + 스케줄 정보 저장 (merge: true로 안전하게)
+                await setDoc(enrollmentRef, {
                     endDate: today,
                     withdrawalDate: today, // 호환성
                     schedule, // 삭제 당시 스케줄 저장
                     updatedAt: new Date().toISOString(),
-                });
+                }, { merge: true });
             } else {
                 // 수업 정보가 없으면 endDate만 설정
-                await updateDoc(enrollmentRef, {
+                await setDoc(enrollmentRef, {
                     endDate: today,
                     withdrawalDate: today,
                     updatedAt: new Date().toISOString(),
-                });
+                }, { merge: true });
             }
         } catch (error) {
             console.error('enrollment 업데이트 오류:', error);
-            // 오류 발생 시 최소한 endDate는 설정
-            await updateDoc(enrollmentRef, {
-                endDate: today,
-                withdrawalDate: today,
-                updatedAt: new Date().toISOString(),
-            });
+            throw error; // 오류를 상위로 전파
         }
 
         if (otherActiveMath >= 1) {
