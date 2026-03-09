@@ -284,13 +284,14 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                         const effectiveDate = move.scheduledDate || defaultToday;
 
                         // 기존 enrollment 종료 처리 (문서가 존재하는 경우에만)
+                        // batch.update 대신 batch.set({ merge: true })를 사용하여 문서 없을 때도 안전
                         if (existingData) {
-                            batch.update(oldEnrollmentRef, {
+                            batch.set(oldEnrollmentRef, {
                                 endDate: effectiveDate,
                                 withdrawalDate: effectiveDate,
                                 isTransferred: true,
                                 updatedAt: new Date().toISOString()
-                            });
+                            }, { merge: true });
                         }
 
                         // 새 enrollment 생성 (attendanceDays 포함, isTransferred는 제거 - 실시간 계산으로 판단)

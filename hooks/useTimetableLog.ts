@@ -45,12 +45,33 @@ export interface LogTimetableChangeParams {
 }
 
 /**
+ * undefined 필드를 제거하는 헬퍼 함수 (Firestore는 undefined 불가)
+ */
+function removeUndefined(obj: Record<string, any> | undefined): Record<string, any> | undefined {
+  if (!obj) return undefined;
+  const cleaned: Record<string, any> = {};
+  for (const key in obj) {
+    if (obj[key] !== undefined) {
+      cleaned[key] = obj[key];
+    }
+  }
+  return Object.keys(cleaned).length > 0 ? cleaned : undefined;
+}
+
+/**
  * 시간표 변경 로그 기록 (fire-and-forget)
  * 로깅 실패 시 콘솔 경고만 출력하고 mutation에 영향 없음
  */
 export function logTimetableChange(params: LogTimetableChangeParams): void {
   const entry: TimetableLogEntry = {
-    ...params,
+    action: params.action,
+    subject: params.subject,
+    className: params.className,
+    studentName: params.studentName,
+    studentId: params.studentId,
+    details: params.details,
+    before: removeUndefined(params.before),
+    after: removeUndefined(params.after),
     timestamp: new Date().toISOString(),
     changedBy: auth.currentUser?.email || auth.currentUser?.displayName || 'unknown',
   };
