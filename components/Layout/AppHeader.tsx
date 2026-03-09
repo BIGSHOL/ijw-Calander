@@ -336,7 +336,19 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         />
       )}
 
-      {/* TimetableNavBar removed - integrated into TimetableHeader */}
+      {/* Row 2: Timetable Filter Bar */}
+      {appMode === 'timetable' && !isHeaderCollapsed && timetableProps && (
+        <TimetableNavBar
+          timetableSubject={timetableProps.timetableSubject}
+          setTimetableSubject={timetableProps.setTimetableSubject}
+          timetableViewType={timetableProps.timetableViewType as any}
+          setTimetableViewType={timetableProps.setTimetableViewType as any}
+          mathViewMode={timetableProps.mathViewMode as any}
+          setMathViewMode={timetableProps.setMathViewMode}
+          hasPermission={timetableProps.hasPermission}
+          setIsTimetableSettingsOpen={timetableProps.setIsTimetableSettingsOpen}
+        />
+      )}
     </header>
   );
 };
