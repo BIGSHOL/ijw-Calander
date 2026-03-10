@@ -81,8 +81,8 @@ const StudentItem: React.FC<StudentItemProps> = ({
     const [isHovered, setIsHovered] = useState(false);
     // 엑셀 모드에서는 싱글클릭으로 모달을 열지 않음
     const isClickable = !isExcelMode && !!onStudentClick;
-    // 엑셀 모드 view에서는 draggable 비활성 → 텍스트 선택 가능
-    const isDraggable = isExcelMode ? (canEdit && mode === 'edit') : canEdit;
+    // 엑셀 모드에서는 개별 학생 드래그 비활성 (테두리 드래그만 사용)
+    const isDraggable = isExcelMode ? false : canEdit;
 
     // hover 시 적용할 스타일 (자연스럽게)
     const hoverStyle: React.CSSProperties = isClickable && isHovered ? {
@@ -93,9 +93,11 @@ const StudentItem: React.FC<StudentItemProps> = ({
 
     return (
         <li
-            draggable={isExcelMode ? false : isDraggable}
+            draggable={isDraggable}
             onDragStart={(e) => {
-                if (!isExcelMode && isDraggable) onDragStart(e, student.id, classId, zone);
+                if (isDraggable) {
+                    onDragStart(e, student.id, classId, zone);
+                }
             }}
             onClick={(e) => {
                 if (isExcelMode) {
@@ -892,7 +894,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
             }}
         >
             {/* 엑셀 모드: 선택된 학생이 있을 때 테두리 드래그 오버레이 */}
-            {hasSelectedInThisCard && (() => {
+            {(() => {
+                if (!hasSelectedInThisCard) return null;
+
                 const handleBorderDrag = (e: React.DragEvent) => {
                     e.dataTransfer.effectAllowed = 'move';
                     const ids = [...selectedStudentIds!];
@@ -1232,7 +1236,13 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     style={{ minHeight: `${Math.max(40, activeItemH * 3)}px` }}
                                                     onDragOver={(e) => { if (!canEdit) return; e.preventDefault(); e.stopPropagation(); setDragOverZone(d); }}
                                                     onDragLeave={(e) => { if (e.currentTarget.contains(e.relatedTarget as Node)) return; setDragOverZone(null); }}
-                                                    onDrop={(e) => { if (!canEdit) return; e.preventDefault(); e.stopPropagation(); setDragOverZone(null); onDrop(e, cls.id, d); }}
+                                                    onDrop={(e) => {
+                                                        if (!canEdit) return;
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        setDragOverZone(null);
+                                                        onDrop(e, cls.id, d);
+                                                    }}
                                                 >
                                                     <span className="text-xxs">
                                                         {dragOverZone === d ? '▼' : `${d}만`}

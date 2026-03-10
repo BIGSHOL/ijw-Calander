@@ -63,18 +63,24 @@ function removeUndefined(obj: Record<string, any> | undefined): Record<string, a
  * 로깅 실패 시 콘솔 경고만 출력하고 mutation에 영향 없음
  */
 export function logTimetableChange(params: LogTimetableChangeParams): void {
-  const entry: TimetableLogEntry = {
+  const entry: any = {
     action: params.action,
     subject: params.subject,
     className: params.className,
-    studentName: params.studentName,
-    studentId: params.studentId,
     details: params.details,
-    before: removeUndefined(params.before),
-    after: removeUndefined(params.after),
     timestamp: new Date().toISOString(),
     changedBy: auth.currentUser?.email || auth.currentUser?.displayName || 'unknown',
   };
+
+  // Optional 필드는 값이 있을 때만 추가
+  if (params.studentName) entry.studentName = params.studentName;
+  if (params.studentId) entry.studentId = params.studentId;
+
+  const cleanedBefore = removeUndefined(params.before);
+  const cleanedAfter = removeUndefined(params.after);
+
+  if (cleanedBefore) entry.before = cleanedBefore;
+  if (cleanedAfter) entry.after = cleanedAfter;
 
   // fire-and-forget: await하지 않음
   addDoc(collection(db, COL_TIMETABLE_LOGS), entry).catch((e) => {

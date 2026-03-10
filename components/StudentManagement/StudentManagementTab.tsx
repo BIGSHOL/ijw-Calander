@@ -242,7 +242,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
                 <button
                   onClick={() => setShowMakeEduSyncModal(true)}
                   className="p-1.5 text-cyan-400 hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"
-                  title="메이크에듀 신규원생 비교"
+                  title="메이크에듀 원생 조회"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                 </button>
@@ -420,7 +420,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
         </Suspense>
       )}
 
-      {/* 메이크에듀 신규원생 비교 모달 */}
+      {/* 메이크에듀 원생 조회 모달 */}
       {showMakeEduSyncModal && (
         <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-white" /></div>}>
           <MakeEduSyncModal

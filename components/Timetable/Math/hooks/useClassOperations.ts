@@ -237,7 +237,7 @@ export const useClassOperations = () => {
         await deleteDoc(enrollmentRef);
 
         logTimetableChange({
-            action: 'student_unenroll', subject: 'math', className, studentId,
+            action: 'student_unenroll', subject: 'math', className, studentId, studentName: studentId,
             details: `학생 제거: ${studentId} ← ${className}`,
             before: { className },
         });
@@ -263,7 +263,7 @@ export const useClassOperations = () => {
         });
 
         logTimetableChange({
-            action: 'student_withdraw', subject: 'math', className, studentId,
+            action: 'student_withdraw', subject: 'math', className, studentId, studentName: studentId,
             details: `퇴원 처리: ${studentId} ← ${className}`,
             before: { status: 'active' }, after: { status: 'withdrawn', withdrawalDate: now.split('T')[0] },
         });
@@ -306,7 +306,7 @@ export const useClassOperations = () => {
         });
 
         logTimetableChange({
-            action: 'student_enroll', subject: 'math', className, studentId,
+            action: 'student_enroll', subject: 'math', className, studentId, studentName: studentId,
             details: `기존 학생 등록: ${studentId} → ${className}`,
             after: { className, enrollmentDate: enrollmentDate || now.split('T')[0] },
         });
@@ -376,7 +376,7 @@ export const useClassOperations = () => {
 
         if (otherActiveMath >= 1) {
             logTimetableChange({
-                action: 'student_unenroll', subject: 'math', className, studentId,
+                action: 'student_unenroll', subject: 'math', className, studentId, studentName: studentId,
                 details: `학생 제거 (다른 수학수업 있음): ${studentId} ← ${className}`,
                 before: { className },
             });
@@ -384,7 +384,7 @@ export const useClassOperations = () => {
             return 'removed';
         } else {
             logTimetableChange({
-                action: 'student_unenroll', subject: 'math', className, studentId,
+                action: 'student_unenroll', subject: 'math', className, studentId, studentName: studentId,
                 details: `학생 제거 (마지막 수학수업): ${studentId} ← ${className}`,
                 before: { className },
             });

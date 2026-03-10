@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { formatDateKey, getTodayKST, getFirstClassDayOfWeek } from '../../../../utils/dateUtils';
 import { addDays, format } from 'date-fns';
 import { useEscapeClose } from '../../../../hooks/useEscapeClose';
@@ -35,7 +35,44 @@ const ScheduledDateModal: React.FC<ScheduledDateModalProps> = ({
     const [mode, setMode] = useState<'immediate' | 'scheduled'>('immediate');
     const [selectedDate, setSelectedDate] = useState('');
 
+    // Dragging state
+    const [position, setPosition] = useState({ x: 0, y: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+    const dragStartPos = useRef({ x: 0, y: 0 });
+    const modalRef = useRef<HTMLDivElement>(null);
+
     useEscapeClose(onClose);
+
+    const handleMouseDown = useCallback((e: React.MouseEvent) => {
+        if ((e.target as HTMLElement).closest('button')) return; // Don't drag when clicking close button
+        setIsDragging(true);
+        dragStartPos.current = {
+            x: e.clientX - position.x,
+            y: e.clientY - position.y,
+        };
+    }, [position]);
+
+    const handleMouseMove = useCallback((e: MouseEvent) => {
+        if (!isDragging) return;
+        const newX = e.clientX - dragStartPos.current.x;
+        const newY = e.clientY - dragStartPos.current.y;
+        setPosition({ x: newX, y: newY });
+    }, [isDragging]);
+
+    const handleMouseUp = useCallback(() => {
+        setIsDragging(false);
+    }, []);
+
+    React.useEffect(() => {
+        if (isDragging) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            return () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+        }
+    }, [isDragging, handleMouseMove, handleMouseUp]);
 
     const todayStr = getTodayKST();
     const tomorrow = formatDateKey(addDays(new Date(), 1));
@@ -67,12 +104,23 @@ const ScheduledDateModal: React.FC<ScheduledDateModalProps> = ({
     return (
         <div
             className="fixed inset-0 bg-black/50 z-[110] flex items-start justify-center pt-[8vh] p-4"
+            style={{ pointerEvents: isDragging ? 'none' : 'auto' }}
         >
             <div
+                ref={modalRef}
                 className="bg-white rounded-sm shadow-2xl w-[320px] flex flex-col overflow-hidden"
+                style={{
+                    transform: `translate(${position.x}px, ${position.y}px)`,
+                    cursor: isDragging ? 'grabbing' : 'default',
+                    pointerEvents: 'auto',
+                }}
             >
                 {/* Header */}
-                <div className="bg-primary text-white p-3 font-bold text-sm flex justify-between items-center">
+                <div
+                    className="bg-primary text-white p-3 font-bold text-sm flex justify-between items-center"
+                    style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+                    onMouseDown={handleMouseDown}
+                >
                     <span>{title || '반 이동 날짜 설정'}</span>
                     <button onClick={onClose} className="text-white hover:text-gray-200">&times;</button>
                 </div>

@@ -14,6 +14,7 @@ export interface StudentRowProps {
   days: Date[];
   currentDate: Date;
   salaryConfig: SalaryConfig;
+  subject?: string; // 현재 출석부의 과목 (영어/수학)
   onEditStudent: (student: Student) => void;
   onCellClick: (studentId: string, className: string, dateKey: string, currentValue: number | undefined, isValid: boolean) => void;
   onContextMenu: (e: React.MouseEvent, student: Student, dateKey: string, isValid: boolean) => void;
@@ -39,6 +40,7 @@ const StudentRow = React.memo(({
   days,
   currentDate,
   salaryConfig,
+  subject,
   onEditStudent,
   onCellClick,
   onContextMenu,
@@ -107,8 +109,8 @@ const StudentRow = React.memo(({
   }, [showSettlement, student, salaryConfig]);
 
   // 반이동 여부 감지: endDate가 있지만 다른 수업에 활성 enrollment가 존재
-  // 반환: null(퇴원) 또는 { teacher, className } (반이동 대상 정보)
-  const transferInfo = useMemo(() => {
+  // 현재 반이 끝날 때 다음 활성 반이 있는지 확인 (to 다음 반)
+  const transferToInfo = useMemo(() => {
     if (!student.endDate || !student.enrollments?.length || !student.group) return null;
     const today = formatDateKey(new Date());
     const target = student.enrollments.find((e: any) => {
@@ -124,6 +126,56 @@ const StudentRow = React.memo(({
       className: target.className || target.group || '',
     };
   }, [student.endDate, student.enrollments, student.group]);
+
+  // 과목 판별 헬퍼 함수 (className 기반)
+  const getSubjectFromClassName = useCallback((className: string): string => {
+    if (!className) return 'unknown';
+    // 영어: 대문자 2~3글자 + 숫자 패턴 (예: AB1, ABC2)
+    if (/^[A-Z]{2,3}\d/.test(className)) return 'english';
+    // 수학: 그 외 모든 경우
+    return 'math';
+  }, []);
+
+  // 특정 날짜에 현재 반 시작 전에 **같은 과목**의 다른 반이 있었는지 확인 (from 이전 반)
+  const getPreviousEnrollmentOnDate = useCallback((dateKey: string) => {
+    if (!student.enrollments?.length || !student.group) return null;
+
+    // 현재 반의 enrollmentDate 찾기
+    const currentEnrollment = student.enrollments.find((e: any) => {
+      const className = e.className || e.group || '';
+      return className === student.group;
+    });
+
+    if (!currentEnrollment) return null;
+    const currentStartDate = currentEnrollment.enrollmentDate || currentEnrollment.startDate || '';
+
+    // dateKey가 현재 반 시작일이 아니면 null
+    if (dateKey !== currentStartDate) return null;
+
+    // 현재 반의 과목 판별 (subject prop 우선, 없으면 className으로 유추)
+    const currentSubject = subject || getSubjectFromClassName(student.group);
+
+    // 현재 반 시작일 이전에 시작한 **같은 과목**의 다른 반이 있는지 찾기
+    const target = student.enrollments.find((e: any) => {
+      const className = e.className || e.group || '';
+      if (className === student.group) return false; // 현재 반 제외
+
+      // 과목이 다르면 제외 (영어 출석부에서는 영어 반만, 수학 출석부에서는 수학 반만)
+      const enrollmentSubject = getSubjectFromClassName(className);
+      if (enrollmentSubject !== currentSubject) return false;
+
+      const startDate = typeof e.startDate === 'string' ? e.startDate : e.enrollmentDate || '';
+
+      // 이전 반: 시작일이 현재 반 시작일보다 이전이면 OK
+      return startDate && startDate < currentStartDate;
+    });
+
+    if (!target) return null;
+    return {
+      teacher: target.teacher || '',
+      className: target.className || target.group || '',
+    };
+  }, [student.enrollments, student.group, subject, getSubjectFromClassName]);
 
   // 드롭다운 위치 계산 및 열기/닫기
   const toggleDropdown = useCallback((e: React.MouseEvent) => {
@@ -357,8 +409,11 @@ const StudentRow = React.memo(({
         const prevDay = dayIndex > 0 ? days[dayIndex - 1] : null;
         const nextIsValid = nextDay ? isDateValidForStudent(formatDateKey(nextDay), student) : false;
         const prevIsValid = prevDay ? isDateValidForStudent(formatDateKey(prevDay), student) : false;
-        const isFirstClassBoundary = !isValid && nextIsValid; // 회색 셀인데 다음이 흰색 → "첫수업"
-        const isEndBoundary = !isValid && prevIsValid; // 회색 셀인데 이전이 흰색 → "퇴원"
+        const isFirstClassBoundary = !isValid && nextIsValid; // 회색 셀인데 다음이 흰색 → "첫수업" or "반이동"
+        const isEndBoundary = !isValid && prevIsValid; // 회색 셀인데 이전이 흰색 → "퇴원" or "반이동"
+
+        // 시작 경계: 이전 반에서 왔는지 확인
+        const transferFromInfo = isFirstClassBoundary ? getPreviousEnrollmentOnDate(dateKey) : null;
 
         // 과제 완료 여부 (Q2: 1시 방향)
         const homeworkDone = student.homework?.[compositeKey] ?? student.homework?.[dateKey] ?? false;
@@ -516,13 +571,18 @@ const StudentRow = React.memo(({
             ) : (
               <div className="w-full h-full min-h-[36px] flex items-center justify-center">
                 {isFirstClassBoundary && (
-                  <span className="text-micro font-black text-emerald-700 bg-emerald-100 border border-emerald-400 rounded-sm px-1 py-0.5 animate-pulse whitespace-nowrap">첫수업</span>
-                )}
-                {isEndBoundary && (
-                  transferInfo
+                  transferFromInfo
                     ? <span
                         className="text-micro font-black text-violet-700 bg-violet-100 border border-violet-400 rounded-sm px-1 py-0.5 animate-pulse whitespace-nowrap cursor-help"
-                        title={`반이동 → ${transferInfo.teacher ? transferInfo.teacher + ' 선생님' : ''} ${transferInfo.className}`.trim()}
+                        title={`반이동: ${transferFromInfo.teacher ? transferFromInfo.teacher + ' 선생님' : ''} ${transferFromInfo.className} → ${student.group}`.trim()}
+                      >반이동</span>
+                    : <span className="text-micro font-black text-emerald-700 bg-emerald-100 border border-emerald-400 rounded-sm px-1 py-0.5 animate-pulse whitespace-nowrap">첫수업</span>
+                )}
+                {isEndBoundary && (
+                  transferToInfo
+                    ? <span
+                        className="text-micro font-black text-violet-700 bg-violet-100 border border-violet-400 rounded-sm px-1 py-0.5 animate-pulse whitespace-nowrap cursor-help"
+                        title={`반이동: ${student.group} → ${transferToInfo.teacher ? transferToInfo.teacher + ' 선생님' : ''} ${transferToInfo.className}`.trim()}
                       >반이동</span>
                     : <span className="text-micro font-black text-gray-700 bg-gray-100 border border-gray-400 rounded-sm px-1 py-0.5 whitespace-nowrap">퇴원</span>
                 )}
