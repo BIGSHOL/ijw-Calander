@@ -96,6 +96,54 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
         e.preventDefault();
         setDragOverClassId(null);
 
+        // 테두리 드래그: multiStudentIds 체크 (여러 명 동시 이동)
+        const multiIdsJson = e.dataTransfer.getData('multiStudentIds');
+
+        if (multiIdsJson) {
+            try {
+                const multiIds = JSON.parse(multiIdsJson) as string[];
+                const fromClassId = e.dataTransfer.getData('fromClassId');
+                const isSameClass = fromClassId === toClassId;
+
+                if (multiIds.length > 0 && fromClassId) {
+                    if (isSameClass) {
+                        // ===== 같은 반 내 zone 이동 (여러 명의 attendanceDays 변경) =====
+                        const newAttendanceDays = toZone === 'common' ? [] : [toZone];
+
+                        setLocalClasses(prev => prev.map(cls => {
+                            if (cls.id !== fromClassId) return cls;
+                            const newStudentList = (cls.studentList || []).map(s => {
+                                if (multiIds.includes(s.id)) {
+                                    return { ...s, attendanceDays: newAttendanceDays };
+                                }
+                                return s;
+                            });
+                            return { ...cls, studentList: newStudentList };
+                        }));
+
+                        // 각 학생에 대한 pending move 추가
+                        setPendingMoves(prev => [
+                            ...prev,
+                            ...multiIds.map(sid => ({
+                                studentId: sid,
+                                fromClassId,
+                                toClassId,
+                                fromZone: 'common', // 멀티 드래그는 zone 정보 없음
+                                toZone,
+                                student: { id: sid } as TimetableStudent
+                            }))
+                        ]);
+                    } else {
+                        // ===== 다른 반으로 이동 (여러 명) =====
+                        handleMultiDrop(multiIds, fromClassId, toClassId, toZone);
+                    }
+                }
+            } catch (err) {
+                console.error('[handleDrop] multiStudentIds parsing error:', err);
+            }
+            return;
+        }
+
         // ref에서 최신 draggingStudent 읽기 (stale closure 방지)
         const currentDragging = draggingStudentRef.current;
         if (!currentDragging) return;
@@ -337,6 +385,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                         subject: 'math',
                         className: fromClass?.className || move.fromClassId,
                         studentId,
+                        studentName: studentId,
                         details: `학생 등원일 변경: ${fromClass?.className || ''} (${fromZoneLabel} → ${toZoneLabel})`,
                         before: { zone: fromZoneLabel },
                         after: { zone: toZoneLabel }
@@ -349,6 +398,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                         subject: 'math',
                         className: toClass.className,
                         studentId,
+                        studentName: studentId,
                         details: `학생 이동: ${fromClass.className} → ${toClass.className}${toZoneLabel}${move.scheduledDate ? ` (예정: ${move.scheduledDate})` : ''}`,
                         before: { className: fromClass.className },
                         after: { className: toClass.className, attendanceDays: move.toZone === 'common' ? [] : [move.toZone] }

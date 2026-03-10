@@ -913,6 +913,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
             currentDate={currentDate}
             students={visibleStudents}
             salaryConfig={salaryConfig}
+            subject={selectedSubject}
             onAttendanceChange={handleAttendanceChange}
             onEditStudent={handleEditStudent}
             onMemoChange={handleMemoChange}

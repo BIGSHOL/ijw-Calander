@@ -83,9 +83,32 @@ export const getLocalYearMonth = (date: Date): string => {
 
 // Check if a specific date key (YYYY-MM-DD) is valid within student's start/end range
 export const isDateValidForStudent = (dateKey: string, student: Student): boolean => {
-  // startDate가 문자열이 아니면 항상 유효한 것으로 간주
+  // 1. 해당 반(group)의 enrollment 정보 확인
+  if (student.group && student.enrollments?.length) {
+    const currentEnrollment = student.enrollments.find((e: any) => {
+      const className = e.className || e.group || '';
+      return className === student.group;
+    });
+
+    if (currentEnrollment) {
+      // enrollmentDate (등원일) 확인
+      const enrollmentDate = currentEnrollment.enrollmentDate || currentEnrollment.startDate;
+      if (enrollmentDate && typeof enrollmentDate === 'string' && dateKey < enrollmentDate) {
+        return false; // 등원일 이전
+      }
+
+      // endDate 확인
+      const endDate = currentEnrollment.endDate || currentEnrollment.withdrawalDate;
+      if (endDate && typeof endDate === 'string' && dateKey > endDate) {
+        return false; // 퇴원일 이후
+      }
+    }
+  }
+
+  // 2. 전체 학생 startDate/endDate 확인 (fallback)
   if (typeof student.startDate === 'string' && dateKey < student.startDate) return false;
   if (student.endDate && typeof student.endDate === 'string' && dateKey > student.endDate) return false;
+
   return true;
 };
 

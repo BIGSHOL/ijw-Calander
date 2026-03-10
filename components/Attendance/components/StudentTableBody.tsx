@@ -10,6 +10,7 @@ export interface StudentTableBodyProps {
   days: Date[];
   currentDate: Date;
   salaryConfig: SalaryConfig;
+  subject?: string; // 현재 출석부의 과목 (영어/수학)
   onEditStudent: (student: Student) => void;
   onCellClick: (studentId: string, className: string, dateKey: string, currentValue: number | undefined, isValid: boolean) => void;
   onContextMenu: (e: React.MouseEvent, student: Student, dateKey: string, isValid: boolean) => void;
@@ -41,6 +42,7 @@ const StudentTableBody = React.memo(({
   hasHiddenDates = false,
   currentDate,
   salaryConfig,
+  subject,
   onEditStudent,
   onCellClick,
   onContextMenu,
@@ -308,6 +310,7 @@ const StudentTableBody = React.memo(({
         days={days}
         currentDate={currentDate}
         salaryConfig={salaryConfig}
+        subject={subject}
         onEditStudent={onEditStudent}
         onCellClick={onCellClick}
         onContextMenu={onContextMenu}

@@ -12,6 +12,7 @@ interface Props {
   currentDate: Date;
   students: Student[];
   salaryConfig: SalaryConfig;
+  subject?: string; // 현재 출석부의 과목 (영어/수학)
   onAttendanceChange: (studentId: string, className: string, dateKey: string, value: number | null) => void;
   onEditStudent: (student: Student) => void;
   onMemoChange: (studentId: string, className: string, dateKey: string, memo: string) => void;
@@ -67,6 +68,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
   currentDate,
   students,
   salaryConfig,
+  subject,
   onAttendanceChange,
   onEditStudent,
   onMemoChange,
@@ -294,6 +296,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
               hasHiddenDates={hiddenDates.size > 0}
               currentDate={currentDate}
               salaryConfig={salaryConfig}
+              subject={subject}
               onEditStudent={onEditStudent}
               onCellClick={handleCellClick}
               onContextMenu={handleContextMenu}
