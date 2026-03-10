@@ -2538,13 +2538,17 @@ async function scrapeMakeEduStudentsInternal() {
                     options.push({ value: $page(opt).attr("value") || "", text: $page(opt).text().trim() });
                 });
                 logger.info("[scrapeMakeEduNewStudents] Select:", selName, "options:", JSON.stringify(options));
-                // "신규" 또는 "신규원생" 옵션 찾기
-                const newOpt = options.find(o =>
-                    o.text.includes("신규") || o.text === "N" || o.text.includes("new")
-                );
-                if (newOpt && (selName.toLowerCase().includes("new") || selName.toLowerCase().includes("stat") ||
-                    selName.toLowerCase().includes("srch") || options.some(o => o.text.includes("신규")))) {
-                    formParams[selName] = newOpt.value;
+                // "전체" 원생 조회: "신규"와 "전체" 옵션을 모두 가진 select에서 "전체" 선택
+                const hasNewOption = options.some(o => o.text.includes("신규"));
+                const hasAllOption = options.some(o => o.text.includes("전체") || o.text === "A");
+                const isNewStudentSelect = hasNewOption && hasAllOption;
+                
+                if (isNewStudentSelect) {
+                    const allOpt = options.find(o => o.text.includes("전체") || o.text === "A");
+                    if (allOpt) {
+                        formParams[selName] = allOpt.value;
+                        logger.info(`[scrapeMakeEduNewStudents] Selected "전체" option for ${selName}: ${allOpt.value}`);
+                    }
                 }
             });
             // hidden input과 기본 form 파라미터 수집
