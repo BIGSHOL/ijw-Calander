@@ -2654,6 +2654,7 @@ async function scrapeMakeEduStudentsInternal() {
             const colSiblings = findCol(["형제", "자매"]);
             const colMemo = findCol(["메모", "비고"]);
             const colStatus = findCol(["상태", "재원", "등록상태"]);
+            const colNo = findCol(["원생고유번호"]);
             const colAddressDetail = findCol(["상세주소"]);
 
             logger.info("[scrapeMakeEduNewStudents] Column mapping:", JSON.stringify({
@@ -2716,6 +2717,7 @@ async function scrapeMakeEduStudentsInternal() {
                     siblings: colSiblings >= 0 ? cells[colSiblings] || "" : "",
                     memo: colMemo >= 0 ? cells[colMemo] || "" : "",
                     status: colStatus >= 0 ? cells[colStatus] || "" : "",
+                    makeEduNo: colNo >= 0 ? cells[colNo] || "" : "",
                     _raw: raw,
                 });
             });
@@ -2880,8 +2882,7 @@ exports.scheduledMakeEduSync = functions
                             attendanceNumber = generateAttNum(meStudent.parentPhone || meStudent.phone, usedAttNums);
                         }
                         usedAttNums.add(attendanceNumber);
-                        const studentCode = generateStudCode(usedStudCodes);
-                        usedStudCodes.add(studentCode);
+                        const studentCode = meStudent.makeEduNo || null; // MakeEdu 원생고유번호 사용
 
                         const formattedStudentPhone = formatPhoneNumber(meStudent.phone);
                         const formattedParentPhone = formatPhoneNumber(meStudent.parentPhone);
@@ -2952,6 +2953,8 @@ function buildUpdateData(existing, meStudent) {
     if (normalizedGrade && existing.grade !== normalizedGrade) updateData.grade = normalizedGrade;
     if (meStudent.attendanceNumber && existing.attendanceNumber !== meStudent.attendanceNumber) updateData.attendanceNumber = meStudent.attendanceNumber;
     if (meStudent.parentName && existing.parentName !== meStudent.parentName) updateData.parentName = meStudent.parentName;
+    if (meStudent.makeEduNo && existing.studentCode !== meStudent.makeEduNo) updateData.studentCode = meStudent.makeEduNo;
+    if (meStudent.makeEduNo && existing.studentCode !== meStudent.makeEduNo) updateData.studentCode = meStudent.makeEduNo;
     if (meStudent.birthDate && existing.birthDate !== meStudent.birthDate) updateData.birthDate = meStudent.birthDate;
     if (meStudent.address && existing.address !== meStudent.address) updateData.address = meStudent.address;
     if (meStudent.customField1 && existing.customField1 !== meStudent.customField1) updateData.customField1 = meStudent.customField1;
@@ -4398,6 +4401,7 @@ async function scrapeMakeEduShuttleStudentsInternal() {
                     name: s.name,
                     isShuttle: true,
                     etcBilling: s.etcBilling,
+                    makeEduNo: s.makeEduNo || null,
                     syncedAt: now,
                 });
             });

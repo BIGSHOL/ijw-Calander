@@ -51,6 +51,7 @@ function ShuttleTimetable({
 }: ShuttleTimetableProps) {
     const [viewMode, setViewMode] = useState<ViewMode>('timeslot');
     const [isSyncing, setIsSyncing] = useState(false);
+    const [shuttleEnabled, setShuttleEnabled] = useState(false);
     const queryClient = useQueryClient();
 
     // 호차별 뷰 데이터
@@ -59,7 +60,8 @@ function ShuttleTimetable({
     const { classDataMap, isLoading: studentsLoading } = useClassStudents('shuttle', classNames, {});
 
     // 시간대별 뷰 데이터
-    const { data: shuttleData, isLoading: shuttleLoading } = useShuttleStudents();
+    const { data: shuttleData, isLoading: shuttleLoading, refetch: refetchShuttle } = useShuttleStudents(shuttleEnabled);
+
 
     const vehicleData = useMemo(() => {
         return classes.map(cls => {
@@ -103,6 +105,8 @@ function ShuttleTimetable({
             const data = result.data as any;
             alert(`동기화 완료!\n전체 학생: ${data.totalStudents}명\n셔틀 학생: ${data.shuttleStudents}명`);
             queryClient.invalidateQueries({ queryKey: ['shuttleStudents'] });
+            setShuttleEnabled(true);
+            await refetchShuttle();
         } catch (error: any) {
             console.error('Shuttle sync failed:', error);
             alert('동기화 실패: ' + (error.message || '알 수 없는 오류'));
@@ -179,7 +183,7 @@ function ShuttleTimetable({
                 <span className="text-gray-500 ml-auto">
                     {viewMode === 'vehicle'
                         ? `총 ${classes.length}대 차량`
-                        : `셔틀 학생 ${shuttleData?.shuttleNames.length || 0}명`
+                        : `셔틀 학생 ${shuttleData?.shuttleNames.length || 0}명 `
                     }
                 </span>
 

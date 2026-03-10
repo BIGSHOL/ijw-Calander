@@ -6,7 +6,6 @@ import { doc, setDoc, getDoc, Timestamp, collection, getDocs, updateDoc, query, 
 import Modal from '../Common/Modal';
 import { UnifiedStudent } from '../../types';
 import { generateAttendanceNumber } from '../../utils/attendanceNumberGenerator';
-import { generateStudentCode } from '../../utils/studentCodeGenerator';
 import { parseClassName, DEFAULT_ENGLISH_LEVELS } from '../Timetable/English/englishUtils';
 
 interface MakeEduStudent {
@@ -346,9 +345,8 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
       }
       usedAttendanceNumbers.add(attendanceNumber);
 
-      // 학생 고유번호 생성
-      const studentCode = generateStudentCode(usedStudentCodes);
-      usedStudentCodes.add(studentCode);
+      // 학생 고유번호: MakeEdu 원생고유번호 사용
+      const studentCode = (student as any).makeEduNo || null;
 
       const formattedStudentPhone = formatPhoneNumber(student.phone);
       const formattedParentPhone = formatPhoneNumber(student.parentPhone);
@@ -427,6 +425,8 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
       if (student.birthDate && (existing as any).birthDate !== student.birthDate) updateData.birthDate = student.birthDate;
       if (student.address && (existing as any).address !== student.address) updateData.address = student.address;
       if (student.customField1 && (existing as any).customField1 !== student.customField1) updateData.customField1 = student.customField1;
+      const makeEduNo = (student as any).makeEduNo;
+      if (makeEduNo && (existing as any).studentCode !== makeEduNo) updateData.studentCode = makeEduNo;
       if (student.customField2 && (existing as any).customField2 !== student.customField2) updateData.customField2 = student.customField2;
       if (student.memo && !(existing as any).memo) updateData.memo = student.memo;
 
