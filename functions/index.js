@@ -2564,7 +2564,7 @@ async function scrapeMakeEduStudentsInternal() {
             // POST body 구성: 기본 파라미터 + 신규원생 필터
             const postParams = new URLSearchParams();
             // pageSize 설정
-            postParams.set("pageSize", "500");
+            postParams.set("pageSize", "300");
             // form에서 발견한 신규원생 필터 적용
             for (const [k, v] of Object.entries(formParams)) {
                 postParams.set(k, v);
@@ -2666,21 +2666,43 @@ async function scrapeMakeEduStudentsInternal() {
                 colRegDate, colClass, colTeacher, colGender,
             }));
 
-            // 8. 각 행에서 학생 데이터 추출
-            const students = [];
-            // tbody tr 또는 전체 tr에서 추출 (thead 다음부터)
-            let dataRows = $final("table tbody tr");
+            // 8. 각 행에서 학생 데이터 추출 (페이지네이션)
+            const allStudents = [];
+            let currentPage = 1;
+            const maxPages = 20; // 최대 20페이지 (300 * 20 = 6000명)
+            
+            while (currentPage <= maxPages) {
+                postParams.set("pageIndex", currentPage.toString());
+                postParams.set("currentPage", currentPage.toString());
+                
+                logger.info(`[scrapeMakeEduNewStudents] Fetching page ${currentPage}...`);
+                
+                const pageRes = await fetch(studentPageUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                        "Cookie": cookieStr,
+                        "User-Agent": UA,
+                        "Referer": studentPageUrl,
+                    },
+                    body: postParams.toString(),
+                });
+                const pageHtml = await pageRes.text();
+                const $page = cheerio.load(pageHtml);
+                
+                const pageStudents = [];
+                // tbody tr 또는 전체 tr에서 추출 (thead 다음부터)
+                let dataRows = $page("table tbody tr");
             if (dataRows.length === 0) {
-                // tbody가 없으면 전체 tr에서 첫 행(헤더) 제외
-                dataRows = $final("table tr").slice(1);
-            }
+                    dataRows = $page("table tr").slice(1);
+                }
             dataRows.each((_, row) => {
                 // th 셀이 있는 행은 헤더행이므로 스킵
-                if ($final(row).find("th").length > 0) return;
+                if ($page(row).find("th").length > 0) return;
 
                 const cells = [];
-                $final(row).find("td").each((__, td) => {
-                    cells.push($final(td).text().trim());
+                $page(row).find("td").each((__, td) => {
+                    cells.push($page(td).text().trim());
                 });
 
                 if (cells.length < 3) return; // 최소 3개 컬럼 필요
@@ -2701,7 +2723,7 @@ async function scrapeMakeEduStudentsInternal() {
                     if (i < cells.length) raw[h] = cells[i];
                 });
 
-                students.push({
+                pageStudents.push({
                     name,
                     school: colSchool >= 0 ? cells[colSchool] || "" : "",
                     grade: colGrade >= 0 ? cells[colGrade] || "" : "",
@@ -2726,7 +2748,22 @@ async function scrapeMakeEduStudentsInternal() {
                 });
             });
 
-            logger.info("[scrapeMakeEduNewStudents] Parsed students:", students.length);
+                logger.info(`[scrapeMakeEduNewStudents] Page ${currentPage}: Found ${pageStudents.length} students`);
+
+                // Add page students to total
+                allStudents.push(...pageStudents);
+
+                // Break if no more students on this page
+                if (pageStudents.length === 0) {
+                    logger.info(`[scrapeMakeEduNewStudents] No more students found. Stopping at page ${currentPage}`);
+                    break;
+                }
+
+                currentPage++;
+            }
+
+            const students = allStudents;
+            logger.info("[scrapeMakeEduNewStudents] Total parsed students:", students.length);
 
             // 파싱 실패 시 HTML 일부를 반환하여 디버깅 지원
             if (students.length === 0) {
@@ -4283,7 +4320,7 @@ async function scrapeMakeEduShuttleStudentsInternal() {
     });
 
     const postParams = new URLSearchParams();
-    postParams.set("pageSize", "500");
+    postParams.set("pageSize", "300");
     postParams.set("srchType", "A");
     // 신규원생 필터(srchNewStat) 없이 전체 조회
 
@@ -4347,39 +4384,77 @@ async function scrapeMakeEduShuttleStudentsInternal() {
             `이름 컬럼을 찾을 수 없습니다. 헤더: ${JSON.stringify(headers)}`);
     }
 
-    // 8. 행 파싱
-    const students = [];
-    let dataRows = $final("table tbody tr");
-    if (dataRows.length === 0) {
-        dataRows = $final("table tr").slice(1);
+    // 8. 행 파싱 (페이지네이션)
+    const allStudents = [];
+    let currentPage = 1;
+    const maxPages = 20; // 최대 20페이지 (300 * 20 = 6000명)
+
+    while (currentPage <= maxPages) {
+        postParams.set("pageIndex", currentPage.toString());
+        postParams.set("currentPage", currentPage.toString());
+
+        logger.info(`[scrapeMakeEduShuttle] Fetching page ${currentPage}...`);
+
+        const pageRes = await fetch(studentPageUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Cookie": cookieStr,
+                "User-Agent": UA,
+                "Referer": studentPageUrl,
+            },
+            body: postParams.toString(),
+        });
+        const pageHtml = await pageRes.text();
+        const $page = cheerio.load(pageHtml);
+
+        const pageStudents = [];
+        let dataRows = $page("table tbody tr");
+        if (dataRows.length === 0) {
+            dataRows = $page("table tr").slice(1);
+        }
+        dataRows.each((_, row) => {
+            if ($page(row).find("th").length > 0) return;
+
+            const cells = [];
+            $page(row).find("td").each((__, td) => {
+                cells.push($page(td).text().trim());
+            });
+
+            if (cells.length < 3) return;
+
+            let headerMatchCount = 0;
+            cells.forEach(c => {
+                if (headerKeywords.has(c) || headers.includes(c)) headerMatchCount++;
+            });
+            if (headerMatchCount >= 3) return;
+
+            const name = colName >= 0 ? cells[colName] : "";
+            if (!name) return;
+
+            const etcBilling = colEtcBilling >= 0 ? (cells[colEtcBilling] || "") : "";
+            const isShuttle = etcBilling.includes("셔틀버스비") || etcBilling.includes("셔틀") ||
+                              etcBilling.includes("스쿨버스비") || etcBilling.includes("스쿨버스");
+
+            pageStudents.push({ name, etcBilling, isShuttle });
+        });
+
+        logger.info(`[scrapeMakeEduShuttle] Page ${currentPage}: Found ${pageStudents.length} students`);
+
+        // Add page students to total
+        allStudents.push(...pageStudents);
+
+        // Break if no more students on this page
+        if (pageStudents.length === 0) {
+            logger.info(`[scrapeMakeEduShuttle] No more students found. Stopping at page ${currentPage}`);
+            break;
+        }
+
+        currentPage++;
     }
-    dataRows.each((_, row) => {
-        if ($final(row).find("th").length > 0) return;
 
-        const cells = [];
-        $final(row).find("td").each((__, td) => {
-            cells.push($final(td).text().trim());
-        });
-
-        if (cells.length < 3) return;
-
-        let headerMatchCount = 0;
-        cells.forEach(c => {
-            if (headerKeywords.has(c) || headers.includes(c)) headerMatchCount++;
-        });
-        if (headerMatchCount >= 3) return;
-
-        const name = colName >= 0 ? cells[colName] : "";
-        if (!name) return;
-
-        const etcBilling = colEtcBilling >= 0 ? (cells[colEtcBilling] || "") : "";
-        const isShuttle = etcBilling.includes("셔틀버스비") || etcBilling.includes("셔틀") ||
-                          etcBilling.includes("스쿨버스비") || etcBilling.includes("스쿨버스");
-
-        students.push({ name, etcBilling, isShuttle });
-    });
-
-    logger.info("[scrapeMakeEduShuttle] Parsed students:", students.length);
+    const students = allStudents;
+    logger.info("[scrapeMakeEduShuttle] Total parsed students:", students.length);
     const shuttleStudents = students.filter(s => s.isShuttle);
     logger.info("[scrapeMakeEduShuttle] Shuttle students:", shuttleStudents.length);
 
