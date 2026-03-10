@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { X, UserPlus, Loader2, User, School, Phone, MapPin, Cake, FileText } from 'lucide-react';
 import { db } from '../../firebaseConfig';
 import { doc, setDoc, getDoc, collection, getDocs, Timestamp } from 'firebase/firestore';
-import { generateStudentCode } from '../../utils/studentCodeGenerator';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useForm } from '../../hooks/useForm';
 import { required, phone as phoneValidator } from '../../utils/formValidation';
@@ -140,15 +139,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                 });
                 const encryptedPhones = (encryptResult.data as any).encrypted;
 
-                // 학생 고유번호 생성 (기존 코드 수집 후 중복 방지)
-                const allStudentsSnap = await getDocs(collection(db, 'students'));
-                const existingCodes = new Set<string>();
-                allStudentsSnap.docs.forEach(d => {
-                    const code = d.data().studentCode;
-                    if (code) existingCodes.add(code);
-                });
-                const studentCode = generateStudentCode(existingCodes);
-
+                // 학생 고유번호는 MakeEdu 동기화 시 설정됨
                 // students 컬렉션에 추가 (전화번호는 서버 측 암호화)
                 await setDoc(doc(db, 'students', studentId), {
                     // 기본 정보
@@ -176,7 +167,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                     enrollmentReason: formData.enrollmentReason.trim() || null,
                     memo: formData.memo.trim() || null,
                     // 시스템 필드
-                    studentCode,
+                    studentCode: null, // MakeEdu 동기화 시 설정됨
                     status: 'active',
                     enrollmentDate: Timestamp.now(),
                     createdAt: Timestamp.now(),

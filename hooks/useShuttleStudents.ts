@@ -49,9 +49,10 @@ function nearestSlot(endHour: number, endMin: number): TimeSlot {
     );
 }
 
-export function useShuttleStudents() {
+export function useShuttleStudents(enabled = false) {
     return useQuery({
         queryKey: ['shuttleStudents'],
+        enabled,
         queryFn: async (): Promise<{
             scheduleMap: ShuttleScheduleMap;
             shuttleNames: string[];
@@ -69,6 +70,8 @@ export function useShuttleStudents() {
                 }
                 if (data.syncedAt && !syncedAt) syncedAt = data.syncedAt;
             });
+
+            console.log('[useShuttleStudents] Shuttle students from DB:', shuttleNameSet.size, Array.from(shuttleNameSet));
 
             if (shuttleNameSet.size === 0) {
                 const emptyMap: ShuttleScheduleMap = {};
@@ -89,6 +92,7 @@ export function useShuttleStudents() {
                     matchedStudentIds.push({ id: doc.id, name });
                 }
             });
+            console.log('[useShuttleStudents] Matched student IDs:', matchedStudentIds.length, matchedStudentIds.map(s => s.name));
 
             // 3. 모든 enrollments 조회 (collectionGroup)
             const enrollSnap = await getDocs(collectionGroup(db, 'enrollments'));
@@ -199,6 +203,19 @@ export function useShuttleStudents() {
                     scheduleMap[day][slot].sort((a, b) => a.studentName.localeCompare(b.studentName, 'ko'));
                 }
             }
+
+            // 디버깅: 총 배정 수 확인
+            let totalAssigned = 0;
+            for (const day of WEEKDAYS) {
+                for (const slot of TIME_SLOTS) {
+                    totalAssigned += scheduleMap[day][slot].length;
+                }
+            }
+            console.log('[useShuttleStudents] Total assigned entries:', totalAssigned);
+            console.log('[useShuttleStudents] Schedule map sample:', {
+                월14: scheduleMap['월'][14],
+                화16: scheduleMap['화'][16],
+            });
 
             return {
                 scheduleMap,
