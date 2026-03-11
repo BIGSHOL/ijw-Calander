@@ -35,7 +35,7 @@ interface MakeEduStudent {
 interface ComparisonResult {
   makeEduStudent: MakeEduStudent;
   ijwMatch: UnifiedStudent | null;
-  matchType: 'exact' | 'none';
+  matchType: 'exact' | 'code' | 'none';  // exact: 이름 매칭, code: 원생고유번호 매칭, none: 미매칭
   updatableFields: string[]; // 업데이트 가능한 필드 목록
 }
 
@@ -631,13 +631,13 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
   };
 
   const unmatchedCount = results.filter(r => r.matchType === 'none').length;
-  const matchedCount = results.filter(r => r.matchType === 'exact').length;
+  const matchedCount = results.filter(r => r.matchType === 'exact' || r.matchType === 'code').length;
   const registeredCount = Object.values(registered).filter(Boolean).length;
   const updatedCount = Object.values(updated).filter(Boolean).length;
   const remainingUnmatched = unmatchedCount - registeredCount;
 
   const updatableCount = useMemo(() =>
-    results.filter((r, i) => r.matchType === 'exact' && r.updatableFields.length > 0 && !updated[i]).length,
+    results.filter((r, i) => (r.matchType === 'exact' || r.matchType === 'code') && r.updatableFields.length > 0 && !updated[i]).length,
     [results, updated]
   );
 
@@ -852,7 +852,7 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
                               <CheckCircle2 className="w-3.5 h-3.5" />
                               업데이트됨
                             </span>
-                          ) : result.matchType === 'exact' && hasUpdates ? (
+                          ) : (result.matchType === 'exact' || result.matchType === 'code') && hasUpdates ? (
                             <div>
                               <button
                                 onClick={() => updateExistingStudent(i)}
@@ -873,11 +873,19 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
                                   </span>
                                 ))}
                               </div>
+                              {result.matchType === 'code' && (
+                                <div className="text-xxs text-gray-500 mt-0.5">
+                                  원생고유번호로 매칭
+                                </div>
+                              )}
                             </div>
-                          ) : result.matchType === 'exact' ? (
+                          ) : (result.matchType === 'exact' || result.matchType === 'code') ? (
                             <span className="inline-flex items-center gap-0.5 text-emerald-600 font-bold">
                               <UserCheck className="w-3.5 h-3.5" />
                               동기화됨
+                              {result.matchType === 'code' && (
+                                <span className="text-xxs text-gray-500 ml-1">(고유번호)</span>
+                              )}
                             </span>
                           ) : (
                             <button
