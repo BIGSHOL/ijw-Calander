@@ -152,6 +152,9 @@ const getUpdatableFields = (existing: UnifiedStudent, meStudent: MakeEduStudent)
   if (meStudent.customField1 && (existing as any).customField1 !== meStudent.customField1) fields.push('기타항목1');
   if (meStudent.customField2 && (existing as any).customField2 !== meStudent.customField2) fields.push('기타항목2');
   if (meStudent.memo && !(existing as any).memo) fields.push('메모');
+  // MakeEdu 원생고유번호
+  const makeEduNo = (meStudent as any).makeEduNo;
+  if (makeEduNo && makeEduNo.trim() !== "" && (existing as any).studentCode !== makeEduNo) fields.push('원생고유번호');
 
   return fields;
 };
@@ -425,8 +428,11 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
       if (student.birthDate && (existing as any).birthDate !== student.birthDate) updateData.birthDate = student.birthDate;
       if (student.address && (existing as any).address !== student.address) updateData.address = student.address;
       if (student.customField1 && (existing as any).customField1 !== student.customField1) updateData.customField1 = student.customField1;
+      // MakeEdu 원생고유번호로 studentCode 업데이트 (빈 문자열 제외)
       const makeEduNo = (student as any).makeEduNo;
-      if (makeEduNo && (existing as any).studentCode !== makeEduNo) updateData.studentCode = makeEduNo;
+      if (makeEduNo && makeEduNo.trim() !== "" && (existing as any).studentCode !== makeEduNo) {
+        updateData.studentCode = makeEduNo;
+      }
       if (student.customField2 && (existing as any).customField2 !== student.customField2) updateData.customField2 = student.customField2;
       if (student.memo && !(existing as any).memo) updateData.memo = student.memo;
 
