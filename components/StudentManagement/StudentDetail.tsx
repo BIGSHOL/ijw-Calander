@@ -13,7 +13,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { collection, getDocs, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
-import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2, Calendar, CreditCard, AlertTriangle, BookCopy } from 'lucide-react';
+import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2, Calendar, CreditCard, AlertTriangle, BookCopy, TrendingUp } from 'lucide-react';
 import { useStudentEnrollmentValidation } from './hooks/useStudentEnrollmentValidation';
 
 interface StudentDetailProps {
@@ -24,7 +24,7 @@ interface StudentDetailProps {
   // compact 모드(모달)에서는 퇴원처리 버튼이 항상 숨겨짐 - 학생관리에서만 처리
 }
 
-type TabType = 'basic' | 'courses' | 'grades' | 'attendance' | 'consultations' | 'billing' | 'textbooks';
+type TabType = 'basic' | 'courses' | 'grades' | 'attendance' | 'consultations' | 'billing' | 'textbooks' | 'progress';
 
 const StudentDetail: React.FC<StudentDetailProps> = ({ student: studentProp, compact = false, readOnly = false, currentUser }) => {
   const [activeTab, setActiveTab] = useState<TabType>('basic');
@@ -53,6 +53,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student: studentProp, com
     { id: 'consultations', label: '상담', icon: <MessageSquare className="w-3 h-3" /> },
     { id: 'billing', label: '수납', icon: <CreditCard className="w-3 h-3" /> },
     { id: 'textbooks', label: '교재', icon: <BookCopy className="w-3 h-3" /> },
+    { id: 'progress', label: '진도', icon: <TrendingUp className="w-3 h-3" /> },
   ];
 
   const isWithdrawn = student.status === 'withdrawn';
@@ -239,6 +240,15 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student: studentProp, com
         {activeTab === 'consultations' && <ConsultationsTab student={student} readOnly={readOnly || !canEditStudent} currentUser={currentUser} />}
         {activeTab === 'billing' && <BillingTab student={student} />}
         {activeTab === 'textbooks' && <StudentTextbookTab student={student} />}
+        {activeTab === 'progress' && (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <TrendingUp className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+              <p className="text-gray-500 text-sm font-medium">준비중</p>
+              <p className="text-gray-400 text-xs mt-1">진도 관리 기능이 곧 추가됩니다.</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 퇴원 처리 모달 */}

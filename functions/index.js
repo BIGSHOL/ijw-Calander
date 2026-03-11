@@ -2672,9 +2672,12 @@ async function scrapeMakeEduStudentsInternal() {
             const maxPages = 20; // 최대 20페이지 (300 * 20 = 6000명)
             
             while (currentPage <= maxPages) {
+                // 다양한 페이지네이션 파라미터 시도 (MakeEdu가 어떤 것을 사용하는지 확실하지 않음)
                 postParams.set("pageIndex", currentPage.toString());
                 postParams.set("currentPage", currentPage.toString());
-                
+                postParams.set("page", currentPage.toString());
+                postParams.set("pageNo", currentPage.toString());
+
                 logger.info(`[scrapeMakeEduNewStudents] Fetching page ${currentPage}...`);
                 
                 const pageRes = await fetch(studentPageUrl, {
@@ -2994,8 +2997,10 @@ function buildUpdateData(existing, meStudent) {
     if (normalizedGrade && existing.grade !== normalizedGrade) updateData.grade = normalizedGrade;
     if (meStudent.attendanceNumber && existing.attendanceNumber !== meStudent.attendanceNumber) updateData.attendanceNumber = meStudent.attendanceNumber;
     if (meStudent.parentName && existing.parentName !== meStudent.parentName) updateData.parentName = meStudent.parentName;
-    if (meStudent.makeEduNo && existing.studentCode !== meStudent.makeEduNo) updateData.studentCode = meStudent.makeEduNo;
-    if (meStudent.makeEduNo && existing.studentCode !== meStudent.makeEduNo) updateData.studentCode = meStudent.makeEduNo;
+    // MakeEdu 원생고유번호로 studentCode 업데이트 (빈 문자열 제외)
+    if (meStudent.makeEduNo && meStudent.makeEduNo.trim() !== "" && existing.studentCode !== meStudent.makeEduNo) {
+        updateData.studentCode = meStudent.makeEduNo;
+    }
     if (meStudent.birthDate && existing.birthDate !== meStudent.birthDate) updateData.birthDate = meStudent.birthDate;
     if (meStudent.address && existing.address !== meStudent.address) updateData.address = meStudent.address;
     if (meStudent.customField1 && existing.customField1 !== meStudent.customField1) updateData.customField1 = meStudent.customField1;
@@ -4390,8 +4395,11 @@ async function scrapeMakeEduShuttleStudentsInternal() {
     const maxPages = 20; // 최대 20페이지 (300 * 20 = 6000명)
 
     while (currentPage <= maxPages) {
+        // 다양한 페이지네이션 파라미터 시도
         postParams.set("pageIndex", currentPage.toString());
         postParams.set("currentPage", currentPage.toString());
+        postParams.set("page", currentPage.toString());
+        postParams.set("pageNo", currentPage.toString());
 
         logger.info(`[scrapeMakeEduShuttle] Fetching page ${currentPage}...`);
 
