@@ -127,10 +127,41 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
 
     // Filter by search term (통합 검색: TimetableHeader의 searchQuery 사용)
     const filteredClasses = useMemo(() => {
+        const hiddenTeachers = settings.hiddenTeachers || [];
+        const roomFilter = settings.roomFilter || 'all';
+
         return mathClasses
-            .filter(c => !searchQuery || (c.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
+            .filter(c => {
+                // 검색어 필터
+                if (searchQuery && !(c.name || '').toLowerCase().includes(searchQuery.toLowerCase())) {
+                    return false;
+                }
+
+                // 선생님 필터 (hiddenTeachers에 포함된 선생님의 수업 제외)
+                if (hiddenTeachers.includes(c.mainTeacher)) {
+                    return false;
+                }
+
+                // 강의실 필터
+                if (roomFilter !== 'all') {
+                    const room = c.mainRoom || '';
+                    if (roomFilter === 'main') {
+                        // 본원: "본원" 또는 "LAB"로 시작
+                        if (!room.startsWith('본원') && !room.startsWith('LAB')) {
+                            return false;
+                        }
+                    } else if (roomFilter === 'barun') {
+                        // 바른: "프리미엄" 또는 "바른"으로 시작
+                        if (!room.startsWith('프리미엄') && !room.startsWith('바른')) {
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            })
             .sort((a, b) => a.startPeriod - b.startPeriod || (a.name || '').localeCompare(b.name || '', 'ko'));
-    }, [mathClasses, searchQuery]);
+    }, [mathClasses, searchQuery, settings.hiddenTeachers, settings.roomFilter]);
 
     // Group classes by start period OR Custom Groups
     const groupedClasses = useMemo(() => {

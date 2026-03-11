@@ -14,6 +14,7 @@ export interface MathIntegrationSettings {
     othersGroupTitle: string;
     displayOptions?: MathDisplayOptions;
     hiddenTeachers?: string[];
+    roomFilter?: 'all' | 'main' | 'barun';  // 강의실 필터: 전체/본원/바른
 }
 
 export interface MathCustomGroup {
@@ -64,6 +65,9 @@ export const useMathSettings = () => {
     );
     const [localHiddenTeachers, setLocalHiddenTeachers] = useState<string[]>(() =>
         storage.getJSON<string[]>(STORAGE_KEYS.MATH_HIDDEN_TEACHERS, [])
+    );
+    const [localRoomFilter, setLocalRoomFilter] = useState<'all' | 'main' | 'barun'>(() =>
+        storage.getString(STORAGE_KEYS.MATH_ROOM_FILTER) as 'all' | 'main' | 'barun' || 'all'
     );
 
     const migrationDone = useRef(false);
@@ -155,6 +159,7 @@ export const useMathSettings = () => {
         ...firebaseSettings,
         displayOptions: localDisplayOptions,
         hiddenTeachers: localHiddenTeachers,
+        roomFilter: localRoomFilter,
     };
 
     const updateSettings = useCallback(async (newSettings: MathIntegrationSettings) => {
@@ -168,6 +173,7 @@ export const useMathSettings = () => {
         // Route display settings to localStorage
         const displayChanged = JSON.stringify(safeSettings.displayOptions) !== JSON.stringify(localDisplayOptions);
         const hiddenChanged = JSON.stringify(safeSettings.hiddenTeachers) !== JSON.stringify(localHiddenTeachers);
+        const roomFilterChanged = safeSettings.roomFilter !== localRoomFilter;
 
         if (displayChanged && safeSettings.displayOptions) {
             setLocalDisplayOptions(safeSettings.displayOptions);
@@ -177,6 +183,11 @@ export const useMathSettings = () => {
             const val = safeSettings.hiddenTeachers || [];
             setLocalHiddenTeachers(val);
             storage.setJSON(STORAGE_KEYS.MATH_HIDDEN_TEACHERS, val);
+        }
+        if (roomFilterChanged) {
+            const val = safeSettings.roomFilter || 'all';
+            setLocalRoomFilter(val);
+            storage.setString(STORAGE_KEYS.MATH_ROOM_FILTER, val);
         }
 
         // Route group settings to Firebase
@@ -196,7 +207,7 @@ export const useMathSettings = () => {
             setFirebaseSettings(firebaseData);
             await setDoc(doc(db, 'settings', 'math_class_integration'), firebaseData, { merge: true });
         }
-    }, [firebaseSettings, localDisplayOptions, localHiddenTeachers]);
+    }, [firebaseSettings, localDisplayOptions, localHiddenTeachers, localRoomFilter]);
 
     return {
         settings,
