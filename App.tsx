@@ -51,6 +51,7 @@ import EmbedRouter, { isEmbedMode } from './components/Embed/EmbedRouter';
 import { AppHeader } from './components/Layout/AppHeader';
 import { TabContent } from './components/Layout/TabContent';
 import { ModalManager } from './components/Layout/ModalManager';
+import { EdutrixReportsProvider } from './components/EdutrixReportsProvider';
 
 // Firestore
 import { db } from './firebaseConfig';
@@ -640,6 +641,7 @@ const App: React.FC = () => {
       externalState={simulationState}
       onStateChange={setSimulationState}
     >
+      <EdutrixReportsProvider />
       <VersionUpdateToast />
       <div className="h-screen overflow-hidden flex bg-[#f0f4f8]">
         <RoleSimulationBanner
