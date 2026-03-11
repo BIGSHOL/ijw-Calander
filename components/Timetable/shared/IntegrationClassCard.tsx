@@ -170,8 +170,14 @@ const StudentItem: React.FC<StudentItemProps> = ({
                 progressSection.push(`선생님: ${latestReport.teacher_name}`);
             }
 
-            // 진도는 나중에 구현 예정
-            // progressSection.push(`진도: 준비 중`);
+            // 진도 (notes 필드)
+            if (latestReport.notes) {
+                // 진도 내용이 길면 처음 50자만 표시
+                const progressText = latestReport.notes.length > 50
+                    ? latestReport.notes.substring(0, 50) + '...'
+                    : latestReport.notes;
+                progressSection.push(`진도: ${progressText}`);
+            }
 
             // 시험 성적
             if (latestReport.exam_info) {
