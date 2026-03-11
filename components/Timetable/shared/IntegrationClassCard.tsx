@@ -131,23 +131,9 @@ const StudentItem: React.FC<StudentItemProps> = ({
     // 반이동예정 여부 (isTransferred + isWithdrawalScheduled)
     const isTransferScheduled = !!(student.isTransferred && (student as any).isWithdrawalScheduled);
 
-    // 전체 학생의 최근 보고서 데이터 (사전 로드됨)
-    const { data: allLatestReports, isLoading: reportsLoading } = useAllLatestReports();
+    // 전체 학생의 최근 보고서 데이터 (EdutrixReportsProvider에서 사전 로드됨, 여기서는 캐시된 데이터만 읽음)
+    const { data: allLatestReports } = useAllLatestReports();
     const latestReport = allLatestReports?.get(student.name) || null;
-
-    // 디버깅: 특정 학생의 보고서 데이터 확인
-    useEffect(() => {
-        if (allLatestReports && student.name) {
-            const report = allLatestReports.get(student.name);
-            if (report) {
-                console.log(`[IntegrationClassCard] ${student.name} 보고서:`, {
-                    progress: report.progress,
-                    date: report.date,
-                    hasProgress: !!report.progress
-                });
-            }
-        }
-    }, [allLatestReports, student.name]);
 
     // 툴팁 메시지 (강사뷰와 통일 - 구분선으로 섹션 분리)
     const tooltipMessage = useMemo(() => {
