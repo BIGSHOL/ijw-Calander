@@ -331,8 +331,8 @@ const ProgressTab: React.FC<{ student: UnifiedStudent }> = ({ student }) => {
                   <td className="px-2 py-1.5 border-b border-gray-200">{formattedDate}</td>
                   <td className="px-2 py-1.5 border-b border-gray-200">{report.teacher_name || '-'}</td>
                   <td className="px-2 py-1.5 border-b border-gray-200 text-xs max-w-xs">
-                    <div className="truncate" title={report.study_attitude || undefined}>
-                      {report.study_attitude || '-'}
+                    <div className="truncate" title={report.progress || undefined}>
+                      {report.progress || '-'}
                     </div>
                   </td>
                   <td className="px-2 py-1.5 border-b border-gray-200 text-center">{examScore}</td>

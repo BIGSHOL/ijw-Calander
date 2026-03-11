@@ -23,8 +23,8 @@ export interface EdutrixReport {
     created_at: string;
     /** 과제 점수 (0, 50, 90, 100 등) - 0이면 미제출 */
     assignment_score: string | null;
-    /** 수업태도 */
-    study_attitude: string | null;
+    /** 진도 정보 */
+    progress: string | null;
     /** 시험 정보 */
     exam_info: string | null;
     // joined fields
@@ -240,7 +240,7 @@ export async function fetchStudentReports(studentName: string, limit: number = 1
             lateness,
             notes,
             assignment_score,
-            study_attitude,
+            progress,
             exam_info,
             created_at,
             students(name),
@@ -266,7 +266,7 @@ export async function fetchStudentReports(studentName: string, limit: number = 1
             lateness: row.lateness,
             notes: row.notes,
             assignment_score: row.assignment_score || null,
-            study_attitude: row.study_attitude || null,
+            progress: row.progress || null,
             exam_info: row.exam_info || null,
             created_at: row.created_at,
             student_name: row.students?.name || null,
@@ -304,7 +304,7 @@ export async function fetchAllLatestReports(): Promise<Map<string, EdutrixReport
             lateness,
             notes,
             assignment_score,
-            study_attitude,
+            progress,
             exam_info,
             created_at,
             students(name),
@@ -337,7 +337,7 @@ export async function fetchAllLatestReports(): Promise<Map<string, EdutrixReport
             lateness: row.lateness,
             notes: row.notes,
             assignment_score: row.assignment_score || null,
-            study_attitude: row.study_attitude || null,
+            progress: row.progress || null,
             exam_info: row.exam_info || null,
             created_at: row.created_at,
             student_name: studentName,
