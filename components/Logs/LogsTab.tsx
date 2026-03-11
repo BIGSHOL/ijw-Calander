@@ -15,6 +15,7 @@ const ACTION_LABELS: Record<TimetableLogAction, string> = {
   student_withdraw: '퇴원 처리',
   enrollment_update: '등록정보 수정',
   english_move: '영어 반이동',
+  student_move: '학생 이동',
 };
 
 const ACTION_COLORS: Record<TimetableLogAction, string> = {
@@ -27,6 +28,7 @@ const ACTION_COLORS: Record<TimetableLogAction, string> = {
   student_withdraw: 'bg-red-100 text-red-700',
   enrollment_update: 'bg-yellow-100 text-yellow-800',
   english_move: 'bg-indigo-100 text-indigo-800',
+  student_move: 'bg-cyan-100 text-cyan-800',
 };
 
 const PAGE_SIZE = 50;
