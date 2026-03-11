@@ -5,6 +5,7 @@ import ClassCard from './ClassCard';
 import { WEEKEND_PERIOD_TIMES, ALL_WEEKDAYS, LEGACY_TO_UNIFIED_PERIOD_MAP, MATH_GROUP_DISPLAY, MATH_GROUP_PERIOD_IDS, MATH_GROUPED_PERIODS, MATH_PERIOD_TIMES } from '../../constants';
 import { BookOpen } from 'lucide-react';
 import { useClassTextbookMap } from '../../../../hooks/useClassTextbookMap';
+import { useAllLatestReports } from '../../../../hooks/useAllLatestReports';
 import { formatDateKey, getWeekReferenceDate } from '../../../../utils/dateUtils';
 
 // 시간 텍스트를 ~ 뒤에서 줄바꿈하는 헬퍼
@@ -151,6 +152,9 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     const getLatestTextbook = (cls: TimetableClass) =>
         byClassId.get(cls.id) || byClassName.get(cls.className) || null;
 
+    
+    // 학생별 최근 보고서 (진도 정보)
+    const { data: latestReports } = useAllLatestReports();
     // 수정 모드일 때만 실제 canEdit 적용
     const effectiveCanEdit = canEdit && mode === 'edit';
     // 부담임 셀에서는 드래그 비활성화 (teacher 뷰에서 해당 셀의 리소스가 담임이 아닌 경우)
@@ -433,6 +437,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     mergedClasses={mergedClassesForCard}
                     showMergedLabel={!!mergedClassesForCard}
                     latestTextbook={getLatestTextbook(cls)}
+                    latestReports={latestReports}
                     studentTextbookMap={byStudentName}
                     referenceDate={referenceDate}
                     isExcelMode={isExcelMode}
@@ -1351,6 +1356,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             pendingMovedStudentIds={pendingMovedStudentIds}
                                                                             pendingMoveSchedules={pendingMoveSchedules}
                                                                             latestTextbook={getLatestTextbook(cls)}
+                    latestReports={latestReports}
                     studentTextbookMap={byStudentName}
                                                                             referenceDate={referenceDate}
                                                                             isExcelMode={isExcelMode}
@@ -1449,6 +1455,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             pendingMovedStudentIds={pendingMovedStudentIds}
                                                                             pendingMoveSchedules={pendingMoveSchedules}
                                                                             latestTextbook={getLatestTextbook(cls)}
+                    latestReports={latestReports}
                     studentTextbookMap={byStudentName}
                                                                             referenceDate={referenceDate}
                                                                             isExcelMode={isExcelMode}
@@ -1564,6 +1571,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 pendingMovedStudentIds={pendingMovedStudentIds}
                                                                                 pendingMoveSchedules={pendingMoveSchedules}
                                                                                 latestTextbook={getLatestTextbook(cls)}
+                    latestReports={latestReports}
                     studentTextbookMap={byStudentName}
                                                                                 isExcelMode={isExcelMode}
                                                                                 isSelected={selectedClassId === cls.id}
@@ -1684,6 +1692,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         pendingMovedStudentIds={pendingMovedStudentIds}
                                                                         pendingMoveSchedules={pendingMoveSchedules}
                                                                         latestTextbook={getLatestTextbook(cls)}
+                    latestReports={latestReports}
                     studentTextbookMap={byStudentName}
                                                                         isExcelMode={isExcelMode}
                                                                         isSelected={selectedClassId === cls.id}

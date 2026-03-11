@@ -231,6 +231,7 @@ interface ClassCardProps {
     latestTextbook?: { textbookName: string; distributedAt: string } | null;
     studentTextbookMap?: Map<string, { month: string; textbookName: string }>;
     referenceDate?: string;  // 주차 기준일 (YYYY-MM-DD), 없으면 오늘
+    latestReports?: Map<string, any>;  // 학생별 최근 보고서 (학생이름 → EdutrixReport)
     // 엑셀 모드 (강사뷰 변형)
     isExcelMode?: boolean;
     isSelected?: boolean;
@@ -287,6 +288,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
     latestTextbook,
     studentTextbookMap,
     referenceDate,
+    latestReports,
     isExcelMode,
     isSelected,
     onCellSelect,
@@ -500,6 +502,46 @@ const ClassCard: React.FC<ClassCardProps> = ({
         }).filter(item => item.timeRange !== '시간 미정');
     }, [cls.schedule]);
 
+
+    // 최신 진도 정보 (교재를 받은 학생들의 최근 보고서)
+    const latestProgressInfo = useMemo(() => {
+        if (!latestTextbook || !latestReports || latestReports.size === 0) return null;
+        
+        // 이 수업에 등록된 학생들의 보고서 조회
+        const students = cls.studentList || [];
+        const reports: Array<{ studentName: string; progress: string; date: string; teacherName: string }> = [];
+        
+        for (const student of students) {
+            const report = latestReports.get(student.name);
+            if (report && report.progress) {
+                reports.push({
+                    studentName: student.name,
+                    progress: report.progress,
+                    date: report.date,
+                    teacherName: report.teacher_name || ''
+                });
+            }
+        }
+        
+        if (reports.length === 0) return null;
+        
+        // 가장 최근 보고서 선택
+        reports.sort((a, b) => b.date.localeCompare(a.date));
+        const latest = reports[0];
+        
+        // 날짜 포맷팅
+        const dateObj = new Date(latest.date);
+        const month = dateObj.getMonth() + 1;
+        const day = dateObj.getDate();
+        const formattedDate = month + '/' + day;
+        
+        return {
+            progress: latest.progress,
+            date: formattedDate,
+            teacherName: latest.teacherName,
+            studentName: latest.studentName
+        };
+    }, [cls.studentList, latestTextbook, latestReports]);
     // 키워드 매칭으로 색상 결정
     const matchedKeyword = useMemo(() => {
         return classKeywords.find(kw => cls.className?.includes(kw.keyword));
@@ -1051,7 +1093,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     )}
 
                     {/* Schedule Tooltip - Portal을 사용하여 DOM 최상위에 렌더링 */}
-                    {showScheduleTooltip && (scheduleInfo.length > 0 || latestTextbook) && createPortal(
+                    {showScheduleTooltip && (scheduleInfo.length > 0 || latestTextbook || latestProgressInfo) && createPortal(
                         <div
                             className="fixed bg-gray-900 text-white text-xs rounded-sm shadow-xl p-2 min-w-[140px] whitespace-nowrap pointer-events-none"
                             style={{
@@ -1088,6 +1130,27 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                     <div className="text-gray-400 mt-0.5" style={{ fontSize: '10px' }}>
                                         배부일: {latestTextbook.distributedAt.slice(0, 10)}
                                     </div>
+                                </div>
+                            )}
+                            {latestProgressInfo && (
+                                <div className={scheduleInfo.length > 0 || latestTextbook ? "mt-1.5 pt-1.5 border-t border-gray-700" : ""}>
+                                    <div className="flex items-center gap-1.5 mb-1">
+                                        <BookOpen size={12} className="text-blue-400" />
+                                        <span className="font-bold">최근 진도</span>
+                                    </div>
+                                    <div className="text-gray-400 text-[10px] mb-0.5">
+                                        {latestProgressInfo.date} ({latestProgressInfo.studentName})
+                                    </div>
+                                    <div className="text-gray-200 text-[10px] max-w-[200px] whitespace-normal">
+                                        {latestProgressInfo.progress.length > 60 
+                                            ? latestProgressInfo.progress.substring(0, 60) + '...'
+                                            : latestProgressInfo.progress}
+                                    </div>
+                                    {latestProgressInfo.teacherName && (
+                                        <div className="text-gray-400 mt-0.5" style={{ fontSize: '10px' }}>
+                                            선생님: {latestProgressInfo.teacherName}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>,
@@ -1733,6 +1796,7 @@ export default React.memo(ClassCard, (prevProps, nextProps) => {
         prevProps.isAssistantTeacher === nextProps.isAssistantTeacher &&
         prevProps.pendingMoveSchedules === nextProps.pendingMoveSchedules &&
         prevProps.latestTextbook === nextProps.latestTextbook &&
+        prevProps.latestReports === nextProps.latestReports &&
         prevProps.studentTextbookMap === nextProps.studentTextbookMap &&
         prevProps.isExcelMode === nextProps.isExcelMode &&
         prevProps.isSelected === nextProps.isSelected &&
