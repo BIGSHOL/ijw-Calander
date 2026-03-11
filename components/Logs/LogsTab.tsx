@@ -123,7 +123,9 @@ const LogsTab: React.FC = () => {
   const [actionFilter, setActionFilter] = useState<Set<string>>(new Set(['all']));
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: logs = [], isLoading, refetch } = useQuery({
     queryKey: ['timetableLogs', selectedDate],
@@ -160,6 +162,20 @@ const LogsTab: React.FC = () => {
     }
   }, [filteredLogs]);
 
+  // 드롭다운 외부 클릭 감지
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isDropdownOpen]);
+
   const toggleExpand = (id: string) => {
     setExpandedIds(prev => {
       const next = new Set(prev);
@@ -167,6 +183,22 @@ const LogsTab: React.FC = () => {
       else next.add(id);
       return next;
     });
+  };
+
+  const toggleActionFilter = (action: string) => {
+    const newFilter = new Set(actionFilter);
+
+    if (action === 'all') {
+      setActionFilter(new Set(['all']));
+    } else {
+      newFilter.delete('all');
+      if (newFilter.has(action)) {
+        newFilter.delete(action);
+      } else {
+        newFilter.add(action);
+      }
+      setActionFilter(newFilter.size > 0 ? newFilter : new Set(['all']));
+    }
   };
 
   return (
@@ -183,42 +215,50 @@ const LogsTab: React.FC = () => {
           className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
 
-        {/* 작업유형 (멀티선택) */}
-        <div className="relative">
-          <select
-            multiple
-            value={Array.from(actionFilter)}
-            onChange={(e) => {
-              const selected = Array.from(e.target.selectedOptions, opt => opt.value);
-              const newSet = new Set(selected);
-
-              // '전체 작업' 선택 시 다른 선택 해제
-              if (newSet.has('all') && !actionFilter.has('all')) {
-                setActionFilter(new Set(['all']));
-              }
-              // 다른 항목 선택 시 '전체 작업' 해제
-              else if (newSet.size > 0 && !newSet.has('all')) {
-                newSet.delete('all');
-                setActionFilter(newSet.size > 0 ? newSet : new Set(['all']));
-              }
-              // 아무것도 선택 안 된 경우 '전체 작업' 선택
-              else if (newSet.size === 0) {
-                setActionFilter(new Set(['all']));
-              } else {
-                setActionFilter(newSet);
-              }
-            }}
-            className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-[120px] max-h-[100px] overflow-y-auto"
-            size={5}
+        {/* 작업유형 (체크박스 멀티선택) */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white hover:bg-gray-50 flex items-center gap-1 min-w-[120px]"
           >
-            <option value="all">전체 작업</option>
-            {Object.entries(ACTION_LABELS).map(([key, label]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-          </select>
-          <div className="text-[10px] text-gray-400 mt-0.5">
-            {actionFilter.has('all') ? '전체' : `${actionFilter.size}개 선택`}
-          </div>
+            <span className="flex-1 text-left truncate">
+              {actionFilter.has('all') ? '전체 작업' : `작업 ${actionFilter.size}개`}
+            </span>
+            <ChevronDown size={12} className={`text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {isDropdownOpen && (
+            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-20 min-w-[180px] max-h-[300px] overflow-y-auto">
+              <label
+                className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer border-b border-gray-200"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <input
+                  type="checkbox"
+                  checked={actionFilter.has('all')}
+                  onChange={() => toggleActionFilter('all')}
+                  className="w-3 h-3 rounded border-gray-300 text-blue-600 focus:ring-1 focus:ring-blue-500"
+                />
+                <span className="font-medium">전체 작업</span>
+              </label>
+
+              {Object.entries(ACTION_LABELS).map(([key, label]) => (
+                <label
+                  key={key}
+                  className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <input
+                    type="checkbox"
+                    checked={actionFilter.has(key)}
+                    onChange={() => toggleActionFilter(key)}
+                    className="w-3 h-3 rounded border-gray-300 text-blue-600 focus:ring-1 focus:ring-blue-500"
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 검색 */}
