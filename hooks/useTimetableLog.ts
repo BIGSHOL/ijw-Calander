@@ -18,7 +18,8 @@ export type TimetableLogAction =
   | 'student_transfer'
   | 'student_withdraw'
   | 'enrollment_update'
-  | 'english_move';
+  | 'english_move'
+  | 'student_move';
 
 export interface TimetableLogEntry {
   timestamp: string;
