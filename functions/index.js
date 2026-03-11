@@ -2864,15 +2864,19 @@ exports.scheduledMakeEduSync = functions
             // 2. 기존 IJW 학생 전체 조회
             const studentsSnap = await db.collection("students").get();
             const ijwNameMap = new Map();
+            const ijwCodeMap = new Map(); // 원생고유번호로 매칭
             const usedAttNums = new Set();
             const usedStudCodes = new Set();
             studentsSnap.forEach(d => {
                 const s = d.data();
                 if (s.name) ijwNameMap.set(s.name.trim(), { id: d.id, ...s });
+                if (s.studentCode && s.studentCode.trim() !== "") {
+                    ijwCodeMap.set(s.studentCode.trim(), { id: d.id, ...s });
+                }
                 if (s.attendanceNumber) usedAttNums.add(s.attendanceNumber);
                 if (s.studentCode) usedStudCodes.add(s.studentCode);
             });
-            logger.info("[scheduledMakeEduSync] Existing IJW students:", ijwNameMap.size);
+            logger.info("[scheduledMakeEduSync] Existing IJW students:", ijwNameMap.size, "with studentCode:", ijwCodeMap.size);
 
             // 3. 영어 클래스 목록 (자동 배정용)
             const classesSnap = await db.collection("classes").get();
@@ -2888,7 +2892,27 @@ exports.scheduledMakeEduSync = functions
                 if (!name) { results.skipped++; continue; }
 
                 try {
-                    const existing = ijwNameMap.get(name);
+                    // 우선순위 1: 원생고유번호로 매칭 (이름이 바뀌어도 동일 학생 식별)
+                    const makeEduNo = meStudent.makeEduNo?.trim();
+                    let existing = null;
+                    let matchedByCode = false;
+
+                    if (makeEduNo && makeEduNo !== "") {
+                        existing = ijwCodeMap.get(makeEduNo);
+                        if (existing) {
+                            matchedByCode = true;
+                            logger.info(`[scheduledMakeEduSync] Matched by studentCode: ${name} (code: ${makeEduNo})`);
+                        }
+                    }
+
+                    // 우선순위 2: 이름으로 매칭 (원생고유번호가 없거나 매칭 실패한 경우)
+                    if (!existing) {
+                        existing = ijwNameMap.get(name);
+                        if (existing) {
+                            logger.info(`[scheduledMakeEduSync] Matched by name: ${name}`);
+                        }
+                    }
+
                     if (existing) {
                         // === 기존 학생: 필드 업데이트 ===
                         const updateData = buildUpdateData(existing, meStudent);
@@ -3000,6 +3024,10 @@ function buildUpdateData(existing, meStudent) {
     const normalizedSchool = normalizeSchoolName(meStudent.school);
     const normalizedGrade = normalizeGradeValue(meStudent.grade, meStudent.school);
     const gender = meStudent.gender === "남" ? "male" : meStudent.gender === "여" ? "female" : null;
+
+    // 이름 업데이트 (원생고유번호로 매칭된 경우 이름이 변경되었을 수 있음)
+    const newName = (meStudent.name || "").trim();
+    if (newName && existing.name !== newName) updateData.name = newName;
 
     if (gender && existing.gender !== gender) updateData.gender = gender;
     if (normalizedSchool && existing.school !== normalizedSchool) updateData.school = normalizedSchool;
