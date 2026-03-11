@@ -7,7 +7,7 @@ import { useStudentFilters } from '../../hooks/useStudentFilters';
 import StudentList from './StudentList';
 import StudentDetail from './StudentDetail';
 import AddStudentModal from './AddStudentModal';
-import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft, Database, GitMerge, Trash2, AlertTriangle, Languages, Download, ExternalLink, Key } from 'lucide-react';
+import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft, Database, GitMerge, Trash2, AlertTriangle, Languages, Download, ExternalLink } from 'lucide-react';
 import { formatDateKey } from '../../utils/dateUtils';
 
 // Performance: bundle-dynamic-imports - Modal components lazy load (~80-100KB bundle reduction)
@@ -17,7 +17,6 @@ const StudentDataCleanupModal = lazy(() => import('./StudentDataCleanupModal'));
 const DuplicateNamesViewModal = lazy(() => import('./DuplicateNamesViewModal'));
 const BulkEnglishNameUpdateModal = lazy(() => import('./BulkEnglishNameUpdateModal'));
 const MakeEduSyncModal = lazy(() => import('./MakeEduSyncModal'));
-const StudentCodeMigrationModal = lazy(() => import('./StudentCodeMigrationModal'));
 
 export type SearchField =
   | 'all'           // 전체
@@ -59,7 +58,6 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
   const [showDuplicateNamesModal, setShowDuplicateNamesModal] = useState(false);
   const [showBulkEnglishNameModal, setShowBulkEnglishNameModal] = useState(false);
   const [showMakeEduSyncModal, setShowMakeEduSyncModal] = useState(false);
-  const [showStudentCodeMigrationModal, setShowStudentCodeMigrationModal] = useState(false);
 
   // 선택된 학생 자동 업데이트 (students 배열 변경 시)
   useEffect(() => {
@@ -247,15 +245,6 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
                   <ExternalLink className="w-3.5 h-3.5" />
                 </button>
             )}
-            {currentUser?.role === 'master' && (
-                <button
-                  onClick={() => setShowStudentCodeMigrationModal(true)}
-                  className="p-1.5 text-blue-400 hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"
-                  title="고유번호 일괄 생성"
-                >
-                  <Key className="w-3.5 h-3.5" />
-                </button>
-            )}
             {canEdit && (
               <button
                 onClick={() => setIsAddStudentModalOpen(true)}
@@ -426,19 +415,6 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
           <MakeEduSyncModal
             existingStudents={students}
             onClose={() => setShowMakeEduSyncModal(false)}
-          />
-        </Suspense>
-      )}
-
-      {/* 고유번호 일괄 생성 모달 */}
-      {showStudentCodeMigrationModal && (
-        <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-white" /></div>}>
-          <StudentCodeMigrationModal
-            onClose={() => {
-              refreshStudents();
-              setShowStudentCodeMigrationModal(false);
-            }}
-            onComplete={refreshStudents}
           />
         </Suspense>
       )}
