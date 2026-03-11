@@ -330,8 +330,10 @@ const ProgressTab: React.FC<{ student: UnifiedStudent }> = ({ student }) => {
                 <tr key={report.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                   <td className="px-2 py-1.5 border-b border-gray-200">{formattedDate}</td>
                   <td className="px-2 py-1.5 border-b border-gray-200">{report.teacher_name || '-'}</td>
-                  <td className="px-2 py-1.5 border-b border-gray-200 text-gray-500">
-                    <span className="text-xxs">준비 중</span>
+                  <td className="px-2 py-1.5 border-b border-gray-200 text-xs max-w-xs">
+                    <div className="truncate" title={report.notes || undefined}>
+                      {report.notes || '-'}
+                    </div>
                   </td>
                   <td className="px-2 py-1.5 border-b border-gray-200 text-center">{examScore}</td>
                   <td className="px-2 py-1.5 border-b border-gray-200 text-center">{homeworkStatus}</td>
@@ -340,7 +342,7 @@ const ProgressTab: React.FC<{ student: UnifiedStudent }> = ({ student }) => {
                       <button
                         onClick={() => setSelectedReport(report)}
                         className="inline-flex items-center gap-0.5 text-blue-600 hover:text-blue-700 transition-colors"
-                        title="특이사항 보기"
+                        title="전체 내용 보기"
                       >
                         <Info className="w-3 h-3" />
                       </button>

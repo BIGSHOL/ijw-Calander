@@ -210,6 +210,25 @@ export async function fetchStudentReports(studentName: string, limit: number = 1
 
     console.log(`[Supabase] 학생별 보고서 조회 시작: ${studentName} (최근 ${limit}개)`);
 
+    // 먼저 students 테이블에서 학생 ID를 조회
+    const { data: studentData, error: studentError } = await supabase
+        .from('students')
+        .select('id')
+        .eq('name', studentName)
+        .limit(1)
+        .single();
+
+    if (studentError) {
+        console.error('[Supabase] 학생 조회 실패:', studentError);
+        return [];
+    }
+
+    if (!studentData) {
+        console.warn(`[Supabase] 학생을 찾을 수 없음: ${studentName}`);
+        return [];
+    }
+
+    // 학생 ID로 보고서 조회
     const { data, error } = await supabase
         .from('reports')
         .select(`
@@ -224,10 +243,10 @@ export async function fetchStudentReports(studentName: string, limit: number = 1
             study_attitude,
             exam_info,
             created_at,
-            students!inner(name),
+            students(name),
             classes(name)
         `)
-        .eq('students.name', studentName)
+        .eq('student_id', studentData.id)
         .order('date', { ascending: false })
         .limit(limit);
 
