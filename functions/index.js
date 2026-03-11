@@ -2533,16 +2533,27 @@ async function scrapeMakeEduStudentsInternal() {
             // select 요소에서 "신규" 관련 옵션 찾기
             $page("select").each((_, sel) => {
                 const selName = $page(sel).attr("name") || "";
+                const selId = $page(sel).attr("id") || "";
                 const options = [];
                 $page(sel).find("option").each((__, opt) => {
                     options.push({ value: $page(opt).attr("value") || "", text: $page(opt).text().trim() });
                 });
-                logger.info("[scrapeMakeEduNewStudents] Select:", selName, "options:", JSON.stringify(options));
+                logger.info("[scrapeMakeEduNewStudents] Select:", selName, "id:", selId, "options:", JSON.stringify(options));
+
+                // listSize select를 찾아서 500으로 설정
+                if (selName === "listSize" || selId === "listSize") {
+                    const opt500 = options.find(o => o.value === "500");
+                    if (opt500) {
+                        formParams[selName] = "500";
+                        logger.info(`[scrapeMakeEduNewStudents] Set listSize to 500 (페이지당 500개)`);
+                    }
+                }
+
                 // "전체" 원생 조회: "신규"와 "전체" 옵션을 모두 가진 select에서 "전체" 선택
                 const hasNewOption = options.some(o => o.text.includes("신규"));
                 const hasAllOption = options.some(o => o.text.includes("전체") || o.text === "A");
                 const isNewStudentSelect = hasNewOption && hasAllOption;
-                
+
                 if (isNewStudentSelect) {
                     const allOpt = options.find(o => o.text.includes("전체") || o.text === "A");
                     if (allOpt) {
@@ -2563,9 +2574,7 @@ async function scrapeMakeEduStudentsInternal() {
 
             // POST body 구성: 기본 파라미터 + 신규원생 필터
             const postParams = new URLSearchParams();
-            // pageSize 설정
-            postParams.set("pageSize", "300");
-            // form에서 발견한 신규원생 필터 적용
+            // form에서 발견한 listSize 및 신규원생 필터 적용
             for (const [k, v] of Object.entries(formParams)) {
                 postParams.set(k, v);
             }
@@ -4317,6 +4326,27 @@ async function scrapeMakeEduShuttleStudentsInternal() {
 
     // 5. 전체 학생 조회 (신규원생 필터 없이)
     const $page = cheerio.load(html);
+    const formParams = {};
+
+    // select 요소에서 listSize 찾기
+    $page("select").each((_, sel) => {
+        const selName = $page(sel).attr("name") || "";
+        const selId = $page(sel).attr("id") || "";
+        const options = [];
+        $page(sel).find("option").each((__, opt) => {
+            options.push({ value: $page(opt).attr("value") || "", text: $page(opt).text().trim() });
+        });
+
+        // listSize select를 찾아서 500으로 설정
+        if (selName === "listSize" || selId === "listSize") {
+            const opt500 = options.find(o => o.value === "500");
+            if (opt500) {
+                formParams[selName] = "500";
+                logger.info(`[scrapeMakeEduShuttle] Set listSize to 500 (페이지당 500개)`);
+            }
+        }
+    });
+
     const formInputs = {};
     $page("form").first().find("input[type='hidden'], input[name]").each((_, inp) => {
         const name = $page(inp).attr("name") || "";
@@ -4325,7 +4355,10 @@ async function scrapeMakeEduShuttleStudentsInternal() {
     });
 
     const postParams = new URLSearchParams();
-    postParams.set("pageSize", "300");
+    // listSize 파라미터 적용
+    for (const [k, v] of Object.entries(formParams)) {
+        postParams.set(k, v);
+    }
     postParams.set("srchType", "A");
     // 신규원생 필터(srchNewStat) 없이 전체 조회
 
