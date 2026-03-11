@@ -43,6 +43,7 @@ export const STORAGE_KEYS = {
   // Math Timetable Display (personal/local)
   MATH_DISPLAY_OPTIONS: 'ijw_math_display_options',
   MATH_HIDDEN_TEACHERS: 'ijw_math_hidden_teachers',
+  MATH_ROOM_FILTER: 'ijw_math_room_filter',
 
   // Resource Favorites (personal/local)
   RESOURCE_FAVORITES: 'ijw_resource_favorites',

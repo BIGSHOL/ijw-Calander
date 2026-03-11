@@ -178,6 +178,13 @@ const MathIntegrationViewSettings: React.FC<MathIntegrationViewSettingsProps> = 
         });
     };
 
+    const handleRoomFilterChange = (filter: 'all' | 'main' | 'barun') => {
+        onChange({
+            ...safeSettings,
+            roomFilter: filter
+        });
+    };
+
     // Helper to get teacher color
     const getTeacherColor = (teacher: string): { bg: string; text: string } => {
         const teacherData = teachersData.find(t => t.name === teacher);
@@ -361,6 +368,51 @@ const MathIntegrationViewSettings: React.FC<MathIntegrationViewSettingsProps> = 
                         </div>
                         <div className="text-xxs text-gray-400 mt-1">
                             • <b>숨김</b>: 해당 강사의 수업이 시간표 셀에서 보이지 않게 됩니다.
+                        </div>
+                    </section>
+
+                    {/* 5. Room Filter */}
+                    <section className="border border-gray-200 rounded-sm p-3 space-y-2">
+                        <div className="font-bold text-gray-700 mb-2">강의실 필터</div>
+                        <div className="space-y-1.5">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="roomFilter"
+                                    value="all"
+                                    checked={(safeSettings.roomFilter || 'all') === 'all'}
+                                    onChange={() => handleRoomFilterChange('all')}
+                                    className="rounded-full border-gray-300 text-indigo-900 focus:ring-indigo-900"
+                                />
+                                <span>전체 보기</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="roomFilter"
+                                    value="main"
+                                    checked={(safeSettings.roomFilter || 'all') === 'main'}
+                                    onChange={() => handleRoomFilterChange('main')}
+                                    className="rounded-full border-gray-300 text-indigo-900 focus:ring-indigo-900"
+                                />
+                                <span>본원만 보기 (본원, LAB)</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="roomFilter"
+                                    value="barun"
+                                    checked={(safeSettings.roomFilter || 'all') === 'barun'}
+                                    onChange={() => handleRoomFilterChange('barun')}
+                                    className="rounded-full border-gray-300 text-indigo-900 focus:ring-indigo-900"
+                                />
+                                <span>바른만 보기 (프리미엄, 바른)</span>
+                            </label>
+                        </div>
+                        <div className="text-xxs text-gray-400 mt-2">
+                            • 강의실 이름을 기준으로 필터링됩니다.<br />
+                            • 본원: "본원" 또는 "LAB"로 시작하는 강의실<br />
+                            • 바른: "프리미엄" 또는 "바른"으로 시작하는 강의실
                         </div>
                     </section>
                 </div>
