@@ -135,6 +135,8 @@ const getUpdatableFields = (existing: UnifiedStudent, meStudent: MakeEduStudent)
   const gender = meStudent.gender === '남' ? 'male' : meStudent.gender === '여' ? 'female' : null;
 
   // 비어있거나 다른 경우 업데이트 가능
+  // 이름 변경 체크 (원생고유번호로 매칭된 경우에만)
+  if (meStudent.name && existing.name !== meStudent.name.trim()) fields.push('이름');
   if (gender && existing.gender !== gender) fields.push('성별');
   if (normalizedSchool && existing.school !== normalizedSchool) fields.push('학교');
   if (normalizedGrade && existing.grade !== normalizedGrade) fields.push('학년');
@@ -227,22 +229,47 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
       setMakeEduCount(data.count);
       setHeaders(data.headers);
 
-      // Build name lookup of existing IJW students
+      // Build name and studentCode lookup of existing IJW students
       const ijwNameMap = new Map<string, UnifiedStudent>();
+      const ijwCodeMap = new Map<string, UnifiedStudent>();
       existingStudents.forEach(s => {
         if (s.name) ijwNameMap.set(s.name.trim(), s);
+        const studentCode = (s as any).studentCode;
+        if (studentCode && studentCode.trim() !== "") {
+          ijwCodeMap.set(studentCode.trim(), s);
+        }
       });
 
       // Compare each MakeEdu student with IJW
       const comparisonResults: ComparisonResult[] = data.students.map(meStudent => {
         const normalizedName = meStudent.name.trim();
-        const exactMatch = ijwNameMap.get(normalizedName) || null;
+        const makeEduNo = (meStudent as any).makeEduNo?.trim();
+
+        // 우선순위 1: 원생고유번호로 매칭 (이름이 바뀌어도 동일 학생 식별)
+        let exactMatch: UnifiedStudent | null = null;
+        let matchType: 'exact' | 'code' | 'none' = 'none';
+
+        if (makeEduNo && makeEduNo !== "") {
+          exactMatch = ijwCodeMap.get(makeEduNo) || null;
+          if (exactMatch) {
+            matchType = 'code'; // 원생고유번호로 매칭됨
+          }
+        }
+
+        // 우선순위 2: 이름으로 매칭 (원생고유번호가 없거나 매칭 실패한 경우)
+        if (!exactMatch) {
+          exactMatch = ijwNameMap.get(normalizedName) || null;
+          if (exactMatch) {
+            matchType = 'exact'; // 이름으로 매칭됨
+          }
+        }
+
         const updatableFields = exactMatch ? getUpdatableFields(exactMatch, meStudent) : [];
 
         return {
           makeEduStudent: meStudent,
           ijwMatch: exactMatch,
-          matchType: exactMatch ? 'exact' : 'none',
+          matchType,
           updatableFields,
         };
       });
@@ -420,6 +447,10 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
       const gender = student.gender === '남' ? 'male' : student.gender === '여' ? 'female' : null;
 
       // 비어있거나 다른 필드 업데이트
+      // 이름 업데이트 (원생고유번호로 매칭된 경우 이름이 변경되었을 수 있음)
+      if (student.name && existing.name !== student.name.trim()) {
+        updateData.name = student.name.trim();
+      }
       if (gender && existing.gender !== gender) updateData.gender = gender;
       if (normalizedSchool && existing.school !== normalizedSchool) updateData.school = normalizedSchool;
       if (normalizedGradeVal && existing.grade !== normalizedGradeVal) updateData.grade = normalizedGradeVal;
