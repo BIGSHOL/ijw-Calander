@@ -198,6 +198,70 @@ export async function fetchReportsByMonth(yearMonth: string): Promise<EdutrixRep
 }
 
 /**
+ * 특정 학생의 최근 보고서를 조회합니다.
+ * @param studentName - 학생 이름
+ * @param limit - 조회할 보고서 개수 (기본값: 10)
+ */
+export async function fetchStudentReports(studentName: string, limit: number = 10): Promise<EdutrixReport[]> {
+    if (!supabase) {
+        console.warn('[Supabase] 클라이언트가 초기화되지 않았습니다. 빈 결과를 반환합니다.');
+        return [];
+    }
+
+    console.log(`[Supabase] 학생별 보고서 조회 시작: ${studentName} (최근 ${limit}개)`);
+
+    const { data, error } = await supabase
+        .from('reports')
+        .select(`
+            id,
+            date,
+            student_id,
+            class_id,
+            writer_id,
+            lateness,
+            notes,
+            assignment_score,
+            study_attitude,
+            exam_info,
+            created_at,
+            students!inner(name),
+            classes(name)
+        `)
+        .eq('students.name', studentName)
+        .order('date', { ascending: false })
+        .limit(limit);
+
+    if (error) {
+        console.error('[Supabase] 학생별 보고서 조회 실패:', error);
+        throw error;
+    }
+
+    const mapped = (data || []).map((row: any) => {
+        const className = row.classes?.name || null;
+        return {
+            id: row.id,
+            date: row.date,
+            student_id: row.student_id,
+            class_id: row.class_id,
+            writer_id: row.writer_id,
+            lateness: row.lateness,
+            notes: row.notes,
+            assignment_score: row.assignment_score || null,
+            study_attitude: row.study_attitude || null,
+            exam_info: row.exam_info || null,
+            created_at: row.created_at,
+            student_name: row.students?.name || null,
+            class_name: className,
+            teacher_name: extractTeacherFromClassName(className),
+        };
+    });
+
+    console.log(`[Supabase] 학생별 보고서 조회 완료: ${mapped.length}건`);
+
+    return mapped;
+}
+
+/**
  * 보고서의 lateness 필드를 출석 numeric 값으로 변환합니다.
  * IJW 출석 시스템: 0=결석, 1=출석, 2=지각
  */

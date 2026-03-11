@@ -15,6 +15,7 @@ import { db } from '../../../firebaseConfig';
 import { CLASS_COLLECTION } from '../English/englishUtils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useStudents } from '../../../hooks/useStudents';
+import { useStudentReports } from '../../../hooks/useStudentReports';
 
 // 공용 클래스 정보 타입
 export interface IntegrationClassInfo {
@@ -130,6 +131,10 @@ const StudentItem: React.FC<StudentItemProps> = ({
     // 반이동예정 여부 (isTransferred + isWithdrawalScheduled)
     const isTransferScheduled = !!(student.isTransferred && (student as any).isWithdrawalScheduled);
 
+    // 최근 보고서 데이터 조회
+    const { data: studentReports } = useStudentReports(student.name, 1, true);
+    const latestReport = studentReports && studentReports.length > 0 ? studentReports[0] : null;
+
     // 툴팁 메시지 (강사뷰와 통일 - 구분선으로 섹션 분리)
     const tooltipMessage = useMemo(() => {
         const sections: string[] = [];
@@ -150,8 +155,41 @@ const StudentItem: React.FC<StudentItemProps> = ({
             sections.push(`입학일: ${student.enrollmentDate}`);
         }
 
+        // 3섹션: 최근 진도 정보 (Edutrix 보고서)
+        if (latestReport) {
+            const progressSection: string[] = [];
+
+            // 날짜 포맷팅 (년도 제외)
+            const dateObj = new Date(latestReport.date);
+            const formattedDate = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+
+            progressSection.push(`[최근 진도 - ${formattedDate}]`);
+
+            // 선생님
+            if (latestReport.teacher_name) {
+                progressSection.push(`선생님: ${latestReport.teacher_name}`);
+            }
+
+            // 진도는 나중에 구현 예정
+            // progressSection.push(`진도: 준비 중`);
+
+            // 시험 성적
+            if (latestReport.exam_info) {
+                progressSection.push(`시험: ${latestReport.exam_info}`);
+            }
+
+            // 숙제 여부
+            if (latestReport.assignment_score !== null && latestReport.assignment_score !== undefined) {
+                const score = parseInt(latestReport.assignment_score, 10);
+                const homeworkStatus = isNaN(score) || score > 0 ? '○' : '✕';
+                progressSection.push(`숙제: ${homeworkStatus}`);
+            }
+
+            sections.push(progressSection.join('\n'));
+        }
+
         return sections.length > 1 ? sections.join('\n────────\n') : (sections[0] || undefined);
-    }, [student.name, student.isTransferredIn, isTransferScheduled, isNewStudent, student.enrollmentDate, student.englishName, student.withdrawalDate, student.transferTo]);
+    }, [student.name, student.isTransferredIn, isTransferScheduled, isNewStudent, student.enrollmentDate, student.englishName, student.withdrawalDate, student.transferTo, latestReport]);
 
     // 엑셀 모드 스타일 오버라이드
     const excelStyle: React.CSSProperties = isPendingExcelDelete
