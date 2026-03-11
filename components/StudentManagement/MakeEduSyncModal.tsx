@@ -624,7 +624,7 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
     setBulkUpdating(true);
     const indices = results
       .map((r, i) => ({ r, i }))
-      .filter(({ r, i }) => r.matchType === 'exact' && r.updatableFields.length > 0 && !updated[i])
+      .filter(({ r, i }) => (r.matchType === 'exact' || r.matchType === 'code') && r.updatableFields.length > 0 && !updated[i])
       .map(({ i }) => i);
     for (const idx of indices) await updateExistingStudent(idx);
     setBulkUpdating(false);
