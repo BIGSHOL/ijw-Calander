@@ -15,7 +15,7 @@ import { db } from '../../../firebaseConfig';
 import { CLASS_COLLECTION } from '../English/englishUtils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useStudents } from '../../../hooks/useStudents';
-import { useStudentReports } from '../../../hooks/useStudentReports';
+import { useAllLatestReports } from '../../../hooks/useAllLatestReports';
 
 // 공용 클래스 정보 타입
 export interface IntegrationClassInfo {
@@ -131,9 +131,9 @@ const StudentItem: React.FC<StudentItemProps> = ({
     // 반이동예정 여부 (isTransferred + isWithdrawalScheduled)
     const isTransferScheduled = !!(student.isTransferred && (student as any).isWithdrawalScheduled);
 
-    // 최근 보고서 데이터 조회
-    const { data: studentReports } = useStudentReports(student.name, 1, true);
-    const latestReport = studentReports && studentReports.length > 0 ? studentReports[0] : null;
+    // 전체 학생의 최근 보고서 데이터 (사전 로드됨)
+    const { data: allLatestReports } = useAllLatestReports();
+    const latestReport = allLatestReports?.get(student.name) || null;
 
     // 툴팁 메시지 (강사뷰와 통일 - 구분선으로 섹션 분리)
     const tooltipMessage = useMemo(() => {
@@ -170,12 +170,12 @@ const StudentItem: React.FC<StudentItemProps> = ({
                 progressSection.push(`선생님: ${latestReport.teacher_name}`);
             }
 
-            // 진도 (notes 필드)
-            if (latestReport.notes) {
+            // 진도 (study_attitude 필드)
+            if (latestReport.study_attitude) {
                 // 진도 내용이 길면 처음 50자만 표시
-                const progressText = latestReport.notes.length > 50
-                    ? latestReport.notes.substring(0, 50) + '...'
-                    : latestReport.notes;
+                const progressText = latestReport.study_attitude.length > 50
+                    ? latestReport.study_attitude.substring(0, 50) + '...'
+                    : latestReport.study_attitude;
                 progressSection.push(`진도: ${progressText}`);
             }
 

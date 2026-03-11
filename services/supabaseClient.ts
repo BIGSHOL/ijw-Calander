@@ -281,6 +281,79 @@ export async function fetchStudentReports(studentName: string, limit: number = 1
 }
 
 /**
+ * 모든 학생의 최근 보고서를 조회합니다 (학생당 1개씩)
+ * 시간표 호버 툴팁용으로 사용
+ */
+export async function fetchAllLatestReports(): Promise<Map<string, EdutrixReport>> {
+    if (!supabase) {
+        console.warn('[Supabase] 클라이언트가 초기화되지 않았습니다. 빈 결과를 반환합니다.');
+        return new Map();
+    }
+
+    console.log('[Supabase] 전체 학생 최근 보고서 조회 시작');
+
+    // 모든 보고서를 날짜 기준 내림차순으로 조회
+    const { data, error } = await supabase
+        .from('reports')
+        .select(`
+            id,
+            date,
+            student_id,
+            class_id,
+            writer_id,
+            lateness,
+            notes,
+            assignment_score,
+            study_attitude,
+            exam_info,
+            created_at,
+            students(name),
+            classes(name)
+        `)
+        .order('date', { ascending: false });
+
+    if (error) {
+        console.error('[Supabase] 전체 학생 최근 보고서 조회 실패:', error);
+        return new Map();
+    }
+
+    // 학생 이름별로 최근 보고서만 저장
+    const latestReportsMap = new Map<string, EdutrixReport>();
+
+    (data || []).forEach((row: any) => {
+        const studentName = row.students?.name;
+        if (!studentName) return;
+
+        // 이미 해당 학생의 보고서가 있으면 건너뛰기 (날짜 내림차순이므로 첫 번째가 최신)
+        if (latestReportsMap.has(studentName)) return;
+
+        const className = row.classes?.name || null;
+        const report: EdutrixReport = {
+            id: row.id,
+            date: row.date,
+            student_id: row.student_id,
+            class_id: row.class_id,
+            writer_id: row.writer_id,
+            lateness: row.lateness,
+            notes: row.notes,
+            assignment_score: row.assignment_score || null,
+            study_attitude: row.study_attitude || null,
+            exam_info: row.exam_info || null,
+            created_at: row.created_at,
+            student_name: studentName,
+            class_name: className,
+            teacher_name: extractTeacherFromClassName(className),
+        };
+
+        latestReportsMap.set(studentName, report);
+    });
+
+    console.log(`[Supabase] 전체 학생 최근 보고서 조회 완료: ${latestReportsMap.size}명`);
+
+    return latestReportsMap;
+}
+
+/**
  * 보고서의 lateness 필드를 출석 numeric 값으로 변환합니다.
  * IJW 출석 시스템: 0=결석, 1=출석, 2=지각
  */
