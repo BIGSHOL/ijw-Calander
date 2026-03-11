@@ -13,8 +13,9 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { collection, getDocs, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
-import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2, Calendar, CreditCard, AlertTriangle, BookCopy, TrendingUp } from 'lucide-react';
+import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2, Calendar, CreditCard, AlertTriangle, BookCopy, TrendingUp, Info, Loader2 } from 'lucide-react';
 import { useStudentEnrollmentValidation } from './hooks/useStudentEnrollmentValidation';
+import { useStudentReports } from '../../hooks/useStudentReports';
 
 interface StudentDetailProps {
   student: UnifiedStudent;
@@ -240,15 +241,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student: studentProp, com
         {activeTab === 'consultations' && <ConsultationsTab student={student} readOnly={readOnly || !canEditStudent} currentUser={currentUser} />}
         {activeTab === 'billing' && <BillingTab student={student} />}
         {activeTab === 'textbooks' && <StudentTextbookTab student={student} />}
-        {activeTab === 'progress' && (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <TrendingUp className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-gray-500 text-sm font-medium">준비중</p>
-              <p className="text-gray-400 text-xs mt-1">진도 관리 기능이 곧 추가됩니다.</p>
-            </div>
-          </div>
-        )}
+        {activeTab === 'progress' && <ProgressTab student={student} />}
       </div>
 
       {/* 퇴원 처리 모달 */}
@@ -258,6 +251,140 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student: studentProp, com
           onClose={() => setShowWithdrawalModal(false)}
           onConfirm={handleWithdrawal}
         />
+      )}
+    </div>
+  );
+};
+
+/** 진도 탭 컴포넌트 */
+const ProgressTab: React.FC<{ student: UnifiedStudent }> = ({ student }) => {
+  const { data: reports, isLoading, error } = useStudentReports(student.name, 10);
+  const [selectedReport, setSelectedReport] = useState<typeof reports[number] | null>(null);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-red-400" />
+          <p className="text-red-600 text-sm font-medium">보고서 조회 실패</p>
+          <p className="text-gray-400 text-xs mt-1">{error.message}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!reports || reports.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <TrendingUp className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+          <p className="text-gray-500 text-sm font-medium">보고서 없음</p>
+          <p className="text-gray-400 text-xs mt-1">Edutrix에 등록된 보고서가 없습니다.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4">
+      <div className="mb-3">
+        <h3 className="text-sm font-semibold text-gray-700">최근 보고서 ({reports.length}개)</h3>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="min-w-full border border-gray-200 text-xs">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-2 py-1.5 border-b border-gray-200 text-left font-semibold text-gray-700">수업날짜</th>
+              <th className="px-2 py-1.5 border-b border-gray-200 text-left font-semibold text-gray-700">선생님</th>
+              <th className="px-2 py-1.5 border-b border-gray-200 text-left font-semibold text-gray-700">진도</th>
+              <th className="px-2 py-1.5 border-b border-gray-200 text-center font-semibold text-gray-700">시험성적</th>
+              <th className="px-2 py-1.5 border-b border-gray-200 text-center font-semibold text-gray-700">숙제</th>
+              <th className="px-2 py-1.5 border-b border-gray-200 text-center font-semibold text-gray-700">기타</th>
+            </tr>
+          </thead>
+          <tbody>
+            {reports.map((report, index) => {
+              const dateObj = new Date(report.date);
+              const formattedDate = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+
+              // 시험 점수 파싱
+              const examScore = report.exam_info || '-';
+
+              // 숙제 여부 (assignment_score 기준: 0이면 미제출, 나머지는 제출)
+              let homeworkStatus = '-';
+              if (report.assignment_score !== null && report.assignment_score !== undefined) {
+                const score = parseInt(report.assignment_score, 10);
+                homeworkStatus = isNaN(score) || score > 0 ? '○' : '✕';
+              }
+
+              return (
+                <tr key={report.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <td className="px-2 py-1.5 border-b border-gray-200">{formattedDate}</td>
+                  <td className="px-2 py-1.5 border-b border-gray-200">{report.teacher_name || '-'}</td>
+                  <td className="px-2 py-1.5 border-b border-gray-200 text-gray-500">
+                    <span className="text-xxs">준비 중</span>
+                  </td>
+                  <td className="px-2 py-1.5 border-b border-gray-200 text-center">{examScore}</td>
+                  <td className="px-2 py-1.5 border-b border-gray-200 text-center">{homeworkStatus}</td>
+                  <td className="px-2 py-1.5 border-b border-gray-200 text-center">
+                    {report.notes ? (
+                      <button
+                        onClick={() => setSelectedReport(report)}
+                        className="inline-flex items-center gap-0.5 text-blue-600 hover:text-blue-700 transition-colors"
+                        title="특이사항 보기"
+                      >
+                        <Info className="w-3 h-3" />
+                      </button>
+                    ) : (
+                      <span className="text-gray-300">-</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* 특이사항 모달 */}
+      {selectedReport && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setSelectedReport(null)}>
+          <div className="bg-white rounded-lg p-4 max-w-md w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-700">특이사항</h3>
+              <button
+                onClick={() => setSelectedReport(null)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="mb-2 text-xs text-gray-500">
+              <div>날짜: {selectedReport.date}</div>
+              <div>선생님: {selectedReport.teacher_name || '-'}</div>
+            </div>
+            <div className="bg-gray-50 rounded p-3 text-sm text-gray-700 whitespace-pre-wrap max-h-64 overflow-y-auto">
+              {selectedReport.notes || '내용 없음'}
+            </div>
+            <div className="mt-3 flex justify-end">
+              <button
+                onClick={() => setSelectedReport(null)}
+                className="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
