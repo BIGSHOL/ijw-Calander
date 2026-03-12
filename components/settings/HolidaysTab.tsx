@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Holiday } from '../../types';
 import { db } from '../../firebaseConfig';
 import { setDoc, doc, deleteDoc, writeBatch } from 'firebase/firestore';
@@ -11,6 +12,7 @@ interface HolidaysTabProps {
 }
 
 const HolidaysTab: React.FC<HolidaysTabProps> = ({ holidays, canEditHolidays }) => {
+    const queryClient = useQueryClient();
     // --- Local State ---
     const [localHolidays, setLocalHolidays] = useState<Holiday[]>(holidays);
     const [expandedYear, setExpandedYear] = useState<string>(new Date().getFullYear().toString());
@@ -34,6 +36,7 @@ const HolidaysTab: React.FC<HolidaysTabProps> = ({ holidays, canEditHolidays }) 
                 name: newHolidayName,
                 type: 'custom'
             });
+            queryClient.invalidateQueries({ queryKey: ['holidays'] });
             setNewHolidayDate('');
             setNewHolidayName('');
         } catch (e) {
@@ -45,6 +48,7 @@ const HolidaysTab: React.FC<HolidaysTabProps> = ({ holidays, canEditHolidays }) 
     const handleUpdateHoliday = async (holiday: Holiday) => {
         try {
             await setDoc(doc(db, 'holidays', holiday.id), { ...holiday, name: editHolidayName }, { merge: true });
+            queryClient.invalidateQueries({ queryKey: ['holidays'] });
             setEditingHolidayId(null);
         } catch (e) {
             console.error(e);
@@ -56,6 +60,7 @@ const HolidaysTab: React.FC<HolidaysTabProps> = ({ holidays, canEditHolidays }) 
         if (!confirm(`'${holiday.name}' 삭제하시겠습니까?`)) return;
         try {
             await deleteDoc(doc(db, 'holidays', holiday.id));
+            queryClient.invalidateQueries({ queryKey: ['holidays'] });
         } catch (e) {
             console.error(e);
             alert('삭제 실패');
@@ -78,6 +83,7 @@ const HolidaysTab: React.FC<HolidaysTabProps> = ({ holidays, canEditHolidays }) 
                 count++;
             }
             await batch.commit();
+            queryClient.invalidateQueries({ queryKey: ['holidays'] });
             alert(`${count}개의 공휴일 데이터가 등록되었습니다.`);
         } catch (e) {
             console.error(e);

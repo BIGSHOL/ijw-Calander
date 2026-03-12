@@ -100,7 +100,9 @@ export type PermissionId =
   // Marketing (마케팅)
   | 'marketing.view' | 'marketing.edit'
   // AI Chatbot (AI 챗봇)
-  | 'chatbot.access';
+  | 'chatbot.access'
+  // Tuition Calculator (수강료 계산)
+  | 'tuition.view' | 'tuition.edit' | 'tuition.manage';
 
 // Role-based permission configuration (stored in Firestore)
 export type RolePermissions = {
@@ -184,6 +186,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'shuttle.view': true, 'shuttle.edit': true,
     // Marketing
     'marketing.view': true, 'marketing.edit': true,
+    // Tuition Calculator
+    'tuition.view': true, 'tuition.edit': true, 'tuition.manage': true,
   },
   manager: {
     // Events
@@ -256,6 +260,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'shuttle.view': true, 'shuttle.edit': true,
     // Marketing
     'marketing.view': true, 'marketing.edit': true,
+    // Tuition Calculator
+    'tuition.view': true, 'tuition.edit': true, 'tuition.manage': false,
   },
   math_lead: {
     // Events
@@ -325,6 +331,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'shuttle.view': true, 'shuttle.edit': false,
     // Marketing
     'marketing.view': false, 'marketing.edit': false,
+    // Tuition Calculator
+    'tuition.view': false, 'tuition.edit': false, 'tuition.manage': false,
   },
   english_lead: {
     // Events
@@ -396,6 +404,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'shuttle.view': true, 'shuttle.edit': false,
     // Marketing
     'marketing.view': false, 'marketing.edit': false,
+    // Tuition Calculator
+    'tuition.view': false, 'tuition.edit': false, 'tuition.manage': false,
   },
   math_teacher: {
     // Events
@@ -464,6 +474,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'shuttle.view': true, 'shuttle.edit': false,
     // Marketing
     'marketing.view': false, 'marketing.edit': false,
+    // Tuition Calculator
+    'tuition.view': false, 'tuition.edit': false, 'tuition.manage': false,
   },
   english_teacher: {
     // Events
@@ -532,6 +544,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'shuttle.view': true, 'shuttle.edit': false,
     // Marketing
     'marketing.view': false, 'marketing.edit': false,
+    // Tuition Calculator
+    'tuition.view': false, 'tuition.edit': false, 'tuition.manage': false,
   },
   user: {
     // Events (basic)
@@ -585,6 +599,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'shuttle.view': false, 'shuttle.edit': false,
     // Marketing
     'marketing.view': false, 'marketing.edit': false,
+    // Tuition Calculator
+    'tuition.view': false, 'tuition.edit': false, 'tuition.manage': false,
   },
 };
 

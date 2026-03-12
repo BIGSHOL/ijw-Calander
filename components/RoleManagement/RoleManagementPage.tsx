@@ -206,6 +206,14 @@ const PERMISSION_GROUPS: { id: string; label: string; icon: string; categories: 
     icon: '⚙️',
     categories: [
       {
+        id: 'tuition', label: '수강료 계산', icon: '🧮',
+        permissions: [
+          { id: 'tuition.view' as PermissionId, label: '조회' },
+          { id: 'tuition.edit' as PermissionId, label: '수정' },
+          { id: 'tuition.manage' as PermissionId, label: '설정 관리' },
+        ]
+      },
+      {
         id: 'payment', label: '수강료 현황', icon: '💳',
         permissions: [
           { id: 'payment.view' as PermissionId, label: '조회' },
