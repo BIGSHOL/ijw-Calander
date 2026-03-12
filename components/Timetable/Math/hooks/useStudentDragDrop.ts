@@ -110,7 +110,9 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                         // ===== 같은 반 내 zone 이동 (여러 명의 attendanceDays 변경) =====
                         const newAttendanceDays = toZone === 'common' ? [] : [toZone];
 
-                        setLocalClasses(prev => prev.map(cls => {
+                        // localClassesRef.current 사용 (항상 최신 데이터 보장)
+                        const snapshot = localClassesRef.current;
+                        setLocalClasses(snapshot.map(cls => {
                             if (cls.id !== fromClassId) return cls;
                             const newStudentList = (cls.studentList || []).map(s => {
                                 if (multiIds.includes(s.id)) {
@@ -163,7 +165,9 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
             // ===== 같은 반 내 zone 이동 (attendanceDays만 변경) =====
             const newAttendanceDays = toZone === 'common' ? [] : [toZone];
 
-            setLocalClasses(prev => prev.map(cls => {
+            // localClassesRef.current 사용 (항상 최신 데이터 보장)
+            const snapshot = localClassesRef.current;
+            setLocalClasses(snapshot.map(cls => {
                 if (cls.id !== fromClassId) return cls;
                 const newStudentList = (cls.studentList || []).map(s => {
                     if (s.id !== studentId) return s;

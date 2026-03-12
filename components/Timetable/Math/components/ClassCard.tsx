@@ -7,6 +7,8 @@ import { MATH_PERIOD_INFO, MATH_PERIOD_TIMES, WEEKEND_PERIOD_INFO, WEEKEND_PERIO
 import { formatSchoolGrade } from '../../../../utils/studentUtils';
 import { formatDateKey } from '../../../../utils/dateUtils';
 import PortalTooltip from '../../../Common/PortalTooltip';
+import { useAllLatestReports } from '../../../../hooks/useAllLatestReports';
+import { EdutrixReport } from '../../../../services/supabaseClient';
 
 // 학생 항목 컴포넌트 - hover 효과를 위해 분리
 interface StudentItemProps {
@@ -42,6 +44,7 @@ interface StudentItemProps {
     selectedStudentIds?: Set<string>;
     className?: string;
     isPendingExcelDelete?: boolean;
+    latestReport?: EdutrixReport | null;  // 최근 진도 보고서 (ClassCard에서 전달)
 }
 
 const StudentItem: React.FC<StudentItemProps> = ({
@@ -77,6 +80,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
     selectedStudentIds,
     className: clsName,
     isPendingExcelDelete = false,
+    latestReport,
 }) => {
     const [isHovered, setIsHovered] = useState(false);
     // 엑셀 모드에서는 싱글클릭으로 모달을 열지 않음
@@ -169,6 +173,16 @@ const StudentItem: React.FC<StudentItemProps> = ({
                         : '';
                     if (statusInfo) lines += `\n────────\n${statusInfo}`;
                     if (textbookInfo) lines += `\n────────\n${textbookInfo.month} ${textbookInfo.textbookName}`;
+                    // 최근 진도 정보
+                    if (latestReport && latestReport.progress) {
+                        const d = new Date(latestReport.date);
+                        const t = latestReport.progress.trim();
+                        const truncated = t.length > 80 ? t.substring(0, 80) + '...' : t;
+                        const yy = String(d.getFullYear()).slice(2);
+                        const mm = String(d.getMonth() + 1).padStart(2, '0');
+                        const dd = String(d.getDate()).padStart(2, '0');
+                        lines += `\n────────\n[진도] ${yy}.${mm}.${dd}\n${truncated}`;
+                    }
                     return lines;
                 })()
             }
@@ -834,6 +848,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
     // 병합 셀 내 zone 드래그 오버 상태 (로컬)
     const [dragOverZone, setDragOverZone] = useState<string | null>(null);
+    const borderOverlayRef = useRef<HTMLDivElement>(null);
+
+    // 전체 학생 최근 보고서 (ClassCard 레벨에서 1회 호출, 캐시 데이터만 읽음)
+    const { data: allLatestReports } = useAllLatestReports();
 
     // 고스트 카드 (스케줄 변경 예정)
     if (cls.isPendingSchedule) {
@@ -883,7 +901,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     setDragOverZone(null);
                 }
             }}
-            onDrop={(e) => canEdit && onDrop(e, cls.id, 'common')}
+            onDrop={(e) => { if (canEdit) onDrop(e, cls.id, 'common'); }}
             onClick={isExcelMode ? (e) => { e.stopPropagation(); onCellSelect?.(cls.id); } : undefined}
             onDoubleClick={isExcelMode ? handleClassHeaderDoubleClick : undefined}
             className={`relative flex flex-col ${fixedCardHeight ? '' : 'h-full '}overflow-hidden transition-all w-full max-w-full ${isDragOver ? 'ring-2 ring-indigo-400 shadow-lg shadow-indigo-200' : ''} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''} ${isExcelMode && isSelected ? 'ring-[3px] ring-blue-500 shadow-lg shadow-blue-200' : ''} ${isExcelMode ? 'cursor-pointer' : ''}`}
@@ -920,19 +938,33 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     e.dataTransfer.setDragImage(ghost, 10, 10);
                     requestAnimationFrame(() => document.body.removeChild(ghost));
                 };
+                // 드래그 시작 후 오버레이 전체를 숨겨서 같은 카드 내 드롭존이 이벤트를 받도록 함
+                const hideOverlay = () => {
+                    requestAnimationFrame(() => {
+                        if (borderOverlayRef.current) {
+                            borderOverlayRef.current.style.visibility = 'hidden';
+                        }
+                    });
+                };
+                const showOverlay = () => {
+                    if (borderOverlayRef.current) {
+                        borderOverlayRef.current.style.visibility = '';
+                    }
+                };
                 return (
                     <div
+                        ref={borderOverlayRef}
                         className="absolute inset-0 pointer-events-none z-20"
                         style={{ outline: '3px solid #3b82f6', outlineOffset: '-1px', borderRadius: '2px' }}
                     >
                         {/* 위 핸들 */}
-                        <div className="absolute top-0 left-0 right-0 h-[20px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
+                        <div className="absolute top-0 left-0 right-0 h-[20px] pointer-events-auto cursor-move" draggable onDragStart={(e) => { handleBorderDrag(e); hideOverlay(); }} onDragEnd={showOverlay} />
                         {/* 아래 핸들 */}
-                        <div className="absolute bottom-0 left-0 right-0 h-[20px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
+                        <div className="absolute bottom-0 left-0 right-0 h-[20px] pointer-events-auto cursor-move" draggable onDragStart={(e) => { handleBorderDrag(e); hideOverlay(); }} onDragEnd={showOverlay} />
                         {/* 왼쪽 핸들 */}
-                        <div className="absolute top-0 left-0 bottom-0 w-[20px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
+                        <div className="absolute top-0 left-0 bottom-0 w-[20px] pointer-events-auto cursor-move" draggable onDragStart={(e) => { handleBorderDrag(e); hideOverlay(); }} onDragEnd={showOverlay} />
                         {/* 오른쪽 핸들 */}
-                        <div className="absolute top-0 right-0 bottom-0 w-[28px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
+                        <div className="absolute top-0 right-0 bottom-0 w-[28px] pointer-events-auto cursor-move" draggable onDragStart={(e) => { handleBorderDrag(e); hideOverlay(); }} onDragEnd={showOverlay} />
                     </div>
                 );
             })()}
@@ -1137,6 +1169,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             selectedStudentIds={selectedStudentIds}
                                             className={cls.className}
                                             isPendingExcelDelete={!!pendingExcelDeleteIds?.has(`${s.id}_${cls.className}`)}
+                                            latestReport={allLatestReports?.get(s.name) || null}
                                         />
                                     );
                                 })}
@@ -1216,6 +1249,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                 selectedStudentIds={selectedStudentIds}
                                                                 className={cls.className}
                                                                 isPendingExcelDelete={!!pendingExcelDeleteIds?.has(`${s.id}_${cls.className}`)}
+                                                                latestReport={allLatestReports?.get(s.name) || null}
                                                             />
                                                         )}
                                                     </div>
@@ -1427,6 +1461,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             selectedStudentIds={selectedStudentIds}
                                             className={cls.className}
                                             isPendingExcelDelete={!!pendingExcelDeleteIds?.has(`${s.id}_${cls.className}`)}
+                                            latestReport={allLatestReports?.get(s.name) || null}
                                         />
                                     );
                                 })}

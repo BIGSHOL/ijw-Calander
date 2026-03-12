@@ -317,15 +317,18 @@ export async function fetchAllLatestReports(): Promise<Map<string, EdutrixReport
         return new Map();
     }
 
-    // 학생 이름별로 최근 보고서만 저장
+    // 학생 이름별로 진도가 입력된 최신 보고서만 저장
     const latestReportsMap = new Map<string, EdutrixReport>();
 
     (data || []).forEach((row: any) => {
         const studentName = row.students?.name;
         if (!studentName) return;
 
-        // 이미 해당 학생의 보고서가 있으면 건너뛰기 (날짜 내림차순이므로 첫 번째가 최신)
+        // 이미 해당 학생의 (진도가 있는) 보고서가 있으면 건너뛰기
         if (latestReportsMap.has(studentName)) return;
+
+        // 진도가 없는 보고서는 건너뛰기
+        if (!row.progress) return;
 
         const className = row.classes?.name || null;
         const report: EdutrixReport = {

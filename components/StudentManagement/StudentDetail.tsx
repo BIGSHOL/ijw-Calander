@@ -13,7 +13,7 @@ import { usePermissions } from '../../hooks/usePermissions';
 import { collection, getDocs, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
-import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2, Calendar, CreditCard, AlertTriangle, BookCopy, TrendingUp, Info, Loader2 } from 'lucide-react';
+import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2, Calendar, CreditCard, AlertTriangle, BookCopy, TrendingUp, Loader2 } from 'lucide-react';
 import { useStudentEnrollmentValidation } from './hooks/useStudentEnrollmentValidation';
 import { useStudentReports } from '../../hooks/useStudentReports';
 
@@ -294,93 +294,120 @@ const ProgressTab: React.FC<{ student: UnifiedStudent }> = ({ student }) => {
   }
 
   return (
-    <div className="p-4">
-      <div className="mb-3">
-        <h3 className="text-sm font-semibold text-gray-700">최근 보고서 ({reports.length}개)</h3>
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-xs font-semibold text-gray-500">최근 보고서 ({reports.length}개)</h3>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full border border-gray-200 text-xs">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-2 py-1.5 border-b border-gray-200 text-left font-semibold text-gray-700">수업날짜</th>
-              <th className="px-2 py-1.5 border-b border-gray-200 text-left font-semibold text-gray-700">선생님</th>
-              <th className="px-2 py-1.5 border-b border-gray-200 text-left font-semibold text-gray-700">진도</th>
-              <th className="px-2 py-1.5 border-b border-gray-200 text-center font-semibold text-gray-700">시험성적</th>
-              <th className="px-2 py-1.5 border-b border-gray-200 text-center font-semibold text-gray-700">숙제</th>
-              <th className="px-2 py-1.5 border-b border-gray-200 text-center font-semibold text-gray-700">기타</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reports.map((report, index) => {
-              const dateObj = new Date(report.date);
-              const formattedDate = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+      <table className="w-full border border-gray-200 text-xs">
+        <thead className="bg-gray-50 sticky top-0">
+          <tr>
+            <th className="px-1.5 py-1 border-b border-gray-200 text-left font-semibold text-gray-600 whitespace-nowrap">날짜</th>
+            <th className="px-1.5 py-1 border-b border-gray-200 text-left font-semibold text-gray-600 whitespace-nowrap">선생님</th>
+            <th className="px-1.5 py-1 border-b border-gray-200 text-left font-semibold text-gray-600">진도</th>
+            <th className="px-1.5 py-1 border-b border-gray-200 text-center font-semibold text-gray-600 whitespace-nowrap">시험</th>
+            <th className="px-1.5 py-1 border-b border-gray-200 text-center font-semibold text-gray-600 whitespace-nowrap">숙제</th>
+          </tr>
+        </thead>
+        <tbody>
+          {reports.map((report, index) => {
+            const dateObj = new Date(report.date);
+            const formattedDate = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
 
-              // 시험 점수 파싱
-              const examScore = report.exam_info || '-';
+            const examScore = report.exam_info || '-';
 
-              // 숙제 여부 (assignment_score 기준: 0이면 미제출, 나머지는 제출)
-              let homeworkStatus = '-';
-              if (report.assignment_score !== null && report.assignment_score !== undefined) {
-                const score = parseInt(report.assignment_score, 10);
-                homeworkStatus = isNaN(score) || score > 0 ? '○' : '✕';
-              }
+            let homeworkStatus = '-';
+            if (report.assignment_score !== null && report.assignment_score !== undefined) {
+              const score = parseInt(report.assignment_score, 10);
+              homeworkStatus = isNaN(score) || score > 0 ? '○' : '✕';
+            }
 
-              return (
-                <tr key={report.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <td className="px-2 py-1.5 border-b border-gray-200">{formattedDate}</td>
-                  <td className="px-2 py-1.5 border-b border-gray-200">{report.teacher_name || '-'}</td>
-                  <td className="px-2 py-1.5 border-b border-gray-200 text-xs max-w-xs">
-                    <div className="truncate" title={report.progress || undefined}>
-                      {report.progress || '-'}
-                    </div>
-                  </td>
-                  <td className="px-2 py-1.5 border-b border-gray-200 text-center">{examScore}</td>
-                  <td className="px-2 py-1.5 border-b border-gray-200 text-center">{homeworkStatus}</td>
-                  <td className="px-2 py-1.5 border-b border-gray-200 text-center">
-                    {report.notes ? (
-                      <button
-                        onClick={() => setSelectedReport(report)}
-                        className="inline-flex items-center gap-0.5 text-blue-600 hover:text-blue-700 transition-colors"
-                        title="특이사항 보기"
-                      >
-                        <Info className="w-3 h-3" />
-                      </button>
-                    ) : (
-                      <span className="text-gray-300">-</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+            const hasDetails = report.progress || report.notes;
 
-      {/* 특이사항 모달 */}
+            return (
+              <tr
+                key={report.id}
+                className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${hasDetails ? 'cursor-pointer hover:bg-blue-50 transition-colors' : ''}`}
+                onClick={() => hasDetails && setSelectedReport(report)}
+              >
+                <td className="px-1.5 py-1 border-b border-gray-100 whitespace-nowrap">{formattedDate}</td>
+                <td className="px-1.5 py-1 border-b border-gray-100 whitespace-nowrap">{report.teacher_name || '-'}</td>
+                <td className="px-1.5 py-1 border-b border-gray-100 max-w-[180px]">
+                  <div className="truncate" title={report.progress || undefined}>
+                    {report.progress || '-'}
+                  </div>
+                </td>
+                <td className="px-1.5 py-1 border-b border-gray-100 text-center whitespace-nowrap">{examScore}</td>
+                <td className="px-1.5 py-1 border-b border-gray-100 text-center">{homeworkStatus}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      {/* 보고서 상세 미니 모달 */}
       {selectedReport && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setSelectedReport(null)}>
-          <div className="bg-white rounded-lg p-4 max-w-md w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-700">특이사항</h3>
+          <div className="bg-white rounded-sm shadow-xl max-w-sm w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            {/* 헤더 */}
+            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-gray-800">{selectedReport.date}</span>
+                <span className="text-xs text-gray-500">{selectedReport.teacher_name || ''}</span>
+              </div>
               <button
                 onClick={() => setSelectedReport(null)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600 transition-colors p-0.5"
               >
                 ✕
               </button>
             </div>
-            <div className="mb-2 text-xs text-gray-500">
-              <div>날짜: {selectedReport.date}</div>
-              <div>선생님: {selectedReport.teacher_name || '-'}</div>
+
+            {/* 본문 */}
+            <div className="px-3 py-2 space-y-2 text-xs max-h-72 overflow-y-auto">
+              {/* 진도 */}
+              {selectedReport.progress && (
+                <div>
+                  <div className="font-semibold text-gray-500 mb-0.5">진도</div>
+                  <div className="text-gray-800 whitespace-pre-wrap">{selectedReport.progress}</div>
+                </div>
+              )}
+
+              {/* 시험/숙제 */}
+              <div className="flex gap-4">
+                {selectedReport.exam_info && (
+                  <div>
+                    <span className="font-semibold text-gray-500">시험 </span>
+                    <span className="text-gray-800">{selectedReport.exam_info}</span>
+                  </div>
+                )}
+                {selectedReport.assignment_score !== null && selectedReport.assignment_score !== undefined && (
+                  <div>
+                    <span className="font-semibold text-gray-500">숙제 </span>
+                    <span className="text-gray-800">
+                      {(() => {
+                        const score = parseInt(selectedReport.assignment_score!, 10);
+                        return isNaN(score) || score > 0 ? '제출 ○' : '미제출 ✕';
+                      })()}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* 특이사항 */}
+              {selectedReport.notes && (
+                <div>
+                  <div className="font-semibold text-gray-500 mb-0.5">특이사항</div>
+                  <div className="text-gray-800 whitespace-pre-wrap bg-amber-50 rounded p-2">{selectedReport.notes}</div>
+                </div>
+              )}
             </div>
-            <div className="bg-gray-50 rounded p-3 text-sm text-gray-700 whitespace-pre-wrap max-h-64 overflow-y-auto">
-              {selectedReport.notes || '내용 없음'}
-            </div>
-            <div className="mt-3 flex justify-end">
+
+            {/* 하단 */}
+            <div className="px-3 py-2 border-t border-gray-100 flex justify-end">
               <button
                 onClick={() => setSelectedReport(null)}
-                className="px-3 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors"
               >
                 닫기
               </button>

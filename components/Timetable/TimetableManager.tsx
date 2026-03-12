@@ -597,19 +597,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                 simulation.moveStudent(fromClass.className, toClass.className, studentId);
             }
         } else {
-            // 멀티 학생 드롭 처리
-            const multiData = e.dataTransfer.getData('multiStudentIds');
-            if (multiData) {
-                e.preventDefault();
-                try {
-                    const studentIds: string[] = JSON.parse(multiData);
-                    const fromClassId = e.dataTransfer.getData('fromClassId');
-                    if (fromClassId && studentIds.length > 0) {
-                        handleMultiDrop(studentIds, fromClassId, toClassId, toZone);
-                    }
-                } catch { /* ignore */ }
-                return;
-            }
+            // handleDrop이 멀티/단일 학생 드롭 + 같은 반 zone 이동을 모두 처리
             handleDrop(e, toClassId, toZone);
         }
     }, [isScenarioMode, simulation, handleDrop, handleMultiDrop]);
