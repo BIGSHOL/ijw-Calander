@@ -23,7 +23,16 @@ const TUITION_SPECIAL_TEXTBOOKS: TuitionExtraItem[] = [
 ];
 
 // 교재 카탈로그 → TuitionExtraItem 변환 (교재 관리 연동)
-const catalogToExtraItem = (item: TextbookCatalogItem, index: number): TuitionExtraItem => {
+export const catalogToExtraItem = (item: TextbookCatalogItem, index: number): TuitionExtraItem => {
+  // 영어 교재는 이름에 이미 [EiE] 접두사 포함
+  if (item.subject === '영어') {
+    return {
+      id: `tb_catalog_${index}`,
+      category: 'textbook',
+      name: item.name,
+      defaultPrice: item.price,
+    };
+  }
   const prefix = item.category === 'elementary' ? '초등수학'
     : item.category === 'middle' ? '중등수학' : '고등수학';
   return {
@@ -34,12 +43,12 @@ const catalogToExtraItem = (item: TextbookCatalogItem, index: number): TuitionEx
   };
 };
 
-// 전체 교재+기타 항목 (교재 관리 카탈로그 자동 연동)
-export const buildAllExtras = (): TuitionExtraItem[] => {
-  const catalogExtras = TEXTBOOK_CATALOG.map(catalogToExtraItem);
+// 전체 교재+기타 항목 (Firestore 카탈로그 우선, 없으면 정적 폴백)
+export const buildAllExtras = (catalog?: TextbookCatalogItem[]): TuitionExtraItem[] => {
+  const source = catalog || TEXTBOOK_CATALOG;
+  const catalogExtras = source.map(catalogToExtraItem);
   return [
     ...TUITION_SERVICE_EXTRAS,
-    ...TUITION_EIE_TEXTBOOKS,
     ...TUITION_SPECIAL_TEXTBOOKS,
     ...catalogExtras,
   ];

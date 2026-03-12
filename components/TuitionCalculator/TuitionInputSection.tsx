@@ -3,6 +3,7 @@ import {
   Trash2, Calculator, ChevronDown, Check, Search, CalendarOff, Calendar,
 } from 'lucide-react';
 import { isHolidayDate } from '../../utils/tuitionHolidays';
+import { formatSchoolGrade } from '../../utils/studentUtils';
 import type { UnifiedStudent } from '../../types/student';
 import type {
   TuitionCourse, TuitionSelectedCourse, TuitionExtraItem, TuitionSelectedExtra,
@@ -265,7 +266,7 @@ export const TuitionInputSection: React.FC<TuitionInputSectionProps> = ({
     setStudentInfo(prev => ({
       ...prev,
       name: student.name,
-      school: [student.school, student.grade].filter(Boolean).join(''),
+      school: formatSchoolGrade(student.school, student.grade, { numberLast: true }),
     }));
     setShowStudentDropdown(false);
   };
@@ -319,7 +320,7 @@ export const TuitionInputSection: React.FC<TuitionInputSectionProps> = ({
                       className="w-full px-3 py-2 text-sm text-left hover:bg-[#fdb813]/10 transition-colors border-b border-slate-100 last:border-b-0 flex justify-between"
                     >
                       <span className="font-medium">{s.name}</span>
-                      <span className="text-xs text-slate-400">{[s.school, s.grade].filter(Boolean).join('')}</span>
+                      <span className="text-xs text-slate-400">{formatSchoolGrade(s.school, s.grade, { numberLast: true })}</span>
                     </button>
                   ))}
                 </div>
