@@ -139,10 +139,11 @@ const splitCoursesByMonth = (
         // 월 순서로 정렬
         courseLines.sort((a, b) => parseInt(a.month) - parseInt(b.month));
 
-        // 회당 단가로 금액 계산
+        // 금액 계산 (총 금액을 세션 비율로 분배)
         if (courseTotalSessions > 0) {
+          const perSessionPrice = course.price / (course.sessions || 1);
           courseLines.forEach((line, idx) => {
-            line.price = course.defaultPrice * line.sessions;
+            line.price = Math.round(perSessionPrice * line.sessions);
             courseSubtotal += line.price;
             if (idx === 0) line.note = course.note || '';
           });
