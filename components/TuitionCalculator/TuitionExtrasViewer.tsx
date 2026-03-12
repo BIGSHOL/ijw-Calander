@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, Edit3, Save, X, Loader2, Database, Plus, Trash2 } from 'lucide-react';
-import { TUITION_EXTRA_CATEGORY_LABELS, TUITION_EIE_TEXTBOOKS } from '../../constants/tuitionExtras';
-import { TEXTBOOK_CATALOG } from '../../data/textbookCatalog';
+import { TUITION_EXTRA_CATEGORY_LABELS, catalogToExtraItem } from '../../constants/tuitionExtras';
+import type { TextbookCatalogItem } from '../../data/textbookCatalog';
 import type { TuitionExtraItem } from '../../types/tuition';
 
 const EXTRA_CATEGORY_OPTIONS = [
@@ -14,6 +14,7 @@ const EXTRA_CATEGORY_OPTIONS = [
 
 interface TuitionExtrasViewerProps {
   extras: TuitionExtraItem[];
+  textbookCatalog?: TextbookCatalogItem[];
   canManage?: boolean;
   isEmpty?: boolean;
   onUpdateExtra?: (item: TuitionExtraItem) => Promise<void>;
@@ -25,7 +26,7 @@ interface TuitionExtrasViewerProps {
 }
 
 export const TuitionExtrasViewer: React.FC<TuitionExtrasViewerProps> = ({
-  extras, canManage, isEmpty, onUpdateExtra, onAddExtra, onDeleteExtra, onSeed, isUpdating, isSeeding,
+  extras, textbookCatalog, canManage, isEmpty, onUpdateExtra, onAddExtra, onDeleteExtra, onSeed, isUpdating, isSeeding,
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<{ category: string; name: string; defaultPrice: number }>({ category: 'test', name: '', defaultPrice: 0 });
@@ -33,20 +34,8 @@ export const TuitionExtrasViewer: React.FC<TuitionExtrasViewerProps> = ({
   const [newItem, setNewItem] = useState({ name: '', category: 'test', defaultPrice: 0 });
   const [activeSection, setActiveSection] = useState<'textbook' | 'service'>('textbook');
 
-  // 교재 카탈로그 데이터 (읽기전용)
-  const textbookItems = [
-    ...TUITION_EIE_TEXTBOOKS,
-    ...TEXTBOOK_CATALOG.map((item, i) => {
-      const prefix = item.category === 'elementary' ? '초등수학'
-        : item.category === 'middle' ? '중등수학' : '고등수학';
-      return {
-        id: `tb_catalog_${i}`,
-        category: 'textbook' as const,
-        name: `[${prefix}] ${item.name}`,
-        defaultPrice: item.price,
-      };
-    }),
-  ];
+  // 교재 카탈로그 데이터 (Firestore 교재 관리 연동)
+  const textbookItems = (textbookCatalog || []).map(catalogToExtraItem);
 
   const startEdit = (item: TuitionExtraItem) => {
     setEditingId(item.id);

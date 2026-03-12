@@ -58,11 +58,11 @@ const countSessionsInRange = (
   return count;
 };
 
-// 과목 카테고리 → 세션 카테고리 매핑
+// 과목 카테고리 → 세션 카테고리 매핑 (Firestore 세션은 영문 키 사용)
 const mapCategoryToSessionCategory = (category: string): string | null => {
-  if (category === '수학') return '수학';
-  if (category === '영어') return '영어';
-  if (category === 'EIE') return 'EiE';
+  if (category === '수학') return 'math';
+  if (category === '영어') return 'english';
+  if (category === 'EIE') return 'eie';
   return null;
 };
 

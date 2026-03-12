@@ -12,6 +12,7 @@ import { useTuitionHolidays } from '../../hooks/useTuitionHolidays';
 import { useTuitionCourses } from '../../hooks/useTuitionCourses';
 import { useTuitionExtras } from '../../hooks/useTuitionExtras';
 import { useTuitionDiscounts } from '../../hooks/useTuitionDiscounts';
+import { useTextbookRequests } from '../../hooks/useTextbookRequests';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useStudents } from '../../hooks/useStudents';
 import type { UserProfile } from '../../types/auth';
@@ -99,8 +100,11 @@ const TuitionCalculatorTab: React.FC<TuitionCalculatorTabProps> = ({ userProfile
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [staffName]);
 
-  // 상수 데이터 (계산기 입력용 - 교재+기타 통합)
-  const availableExtras = buildAllExtras();
+  // Firestore 교재 카탈로그 (교재 관리 탭과 동일 소스)
+  const { catalog: textbookCatalog } = useTextbookRequests();
+
+  // 상수 데이터 (계산기 입력용 - Firestore 카탈로그 연동)
+  const availableExtras = buildAllExtras(textbookCatalog);
 
   // 훅
   const { saveInvoice, updateInvoice } = useTuitionInvoices();
@@ -396,6 +400,7 @@ const TuitionCalculatorTab: React.FC<TuitionCalculatorTabProps> = ({ userProfile
               {manageTab === 'extras' && (
                 <TuitionExtrasViewer
                   extras={serviceExtras}
+                  textbookCatalog={textbookCatalog}
                   canManage={canManage}
                   isEmpty={isExtrasEmpty}
                   onUpdateExtra={updateExtraItem}
