@@ -7,6 +7,7 @@ import { MATH_PERIOD_INFO, MATH_PERIOD_TIMES, WEEKEND_PERIOD_INFO, WEEKEND_PERIO
 import { formatSchoolGrade } from '../../../../utils/studentUtils';
 import { formatDateKey } from '../../../../utils/dateUtils';
 import PortalTooltip from '../../../Common/PortalTooltip';
+import { useAllLatestReports } from '../../../../hooks/useAllLatestReports';
 
 // 학생 항목 컴포넌트 - hover 효과를 위해 분리
 interface StudentItemProps {
@@ -42,6 +43,7 @@ interface StudentItemProps {
     selectedStudentIds?: Set<string>;
     className?: string;
     isPendingExcelDelete?: boolean;
+    allLatestReports?: Map<string, any> | null;
 }
 
 const StudentItem: React.FC<StudentItemProps> = ({
@@ -77,6 +79,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
     selectedStudentIds,
     className: clsName,
     isPendingExcelDelete = false,
+    allLatestReports,
 }) => {
     const [isHovered, setIsHovered] = useState(false);
     // 엑셀 모드에서는 싱글클릭으로 모달을 열지 않음
@@ -169,6 +172,28 @@ const StudentItem: React.FC<StudentItemProps> = ({
                         : '';
                     if (statusInfo) lines += `\n────────\n${statusInfo}`;
                     if (textbookInfo) lines += `\n────────\n${textbookInfo.month} ${textbookInfo.textbookName}`;
+                    // 진도 정보 (Edutrix 보고서)
+                    const latestReport = allLatestReports?.get(student.name) || null;
+                    if (latestReport) {
+                        const progressParts: string[] = [];
+                        const dateObj = new Date(latestReport.date);
+                        const formattedDate = `${dateObj.getMonth() + 1}/${dateObj.getDate()}`;
+                        progressParts.push(`[최근 진도 - ${formattedDate}]`);
+                        if (latestReport.teacher_name) progressParts.push(`선생님: ${latestReport.teacher_name}`);
+                        if (latestReport.progress) {
+                            const progressText = latestReport.progress.length > 50
+                                ? latestReport.progress.substring(0, 50) + '...'
+                                : latestReport.progress;
+                            progressParts.push(`진도: ${progressText}`);
+                        }
+                        if (latestReport.exam_info) progressParts.push(`시험: ${latestReport.exam_info}`);
+                        if (latestReport.assignment_score !== null && latestReport.assignment_score !== undefined) {
+                            const score = parseInt(latestReport.assignment_score, 10);
+                            const homeworkStatus = isNaN(score) || score > 0 ? '○' : '✕';
+                            progressParts.push(`숙제: ${homeworkStatus}`);
+                        }
+                        lines += `\n────────\n${progressParts.join('\n')}`;
+                    }
                     return lines;
                 })()
             }
@@ -293,6 +318,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
     pendingExcelDeleteIds,
     pendingExcelEnrollments,
 }) => {
+    // 전체 학생의 최근 보고서 데이터 (EdutrixReportsProvider에서 사전 로드됨, 캐시된 데이터만 읽음)
+    const { data: allLatestReports } = useAllLatestReports();
+
     // 주차 기준일: referenceDate가 있으면 해당 날짜, 없으면 오늘
     const refDateStr = referenceDate || formatDateKey(new Date());
     const refDateMs = new Date(refDateStr).getTime();
@@ -920,19 +948,22 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     e.dataTransfer.setDragImage(ghost, 10, 10);
                     requestAnimationFrame(() => document.body.removeChild(ghost));
                 };
+                // 드래그 오버 중에는 핸들의 pointer-events를 비활성화하여
+                // 아래의 요일별 드롭존(월만/목만 등)이 이벤트를 받을 수 있게 함
+                const handlePointerClass = isDragOver ? 'pointer-events-none' : 'pointer-events-auto cursor-move';
                 return (
                     <div
                         className="absolute inset-0 pointer-events-none z-20"
                         style={{ outline: '3px solid #3b82f6', outlineOffset: '-1px', borderRadius: '2px' }}
                     >
                         {/* 위 핸들 */}
-                        <div className="absolute top-0 left-0 right-0 h-[20px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
+                        <div className={`absolute top-0 left-0 right-0 h-[20px] ${handlePointerClass}`} draggable={!isDragOver} onDragStart={handleBorderDrag} />
                         {/* 아래 핸들 */}
-                        <div className="absolute bottom-0 left-0 right-0 h-[20px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
+                        <div className={`absolute bottom-0 left-0 right-0 h-[20px] ${handlePointerClass}`} draggable={!isDragOver} onDragStart={handleBorderDrag} />
                         {/* 왼쪽 핸들 */}
-                        <div className="absolute top-0 left-0 bottom-0 w-[20px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
+                        <div className={`absolute top-0 left-0 bottom-0 w-[20px] ${handlePointerClass}`} draggable={!isDragOver} onDragStart={handleBorderDrag} />
                         {/* 오른쪽 핸들 */}
-                        <div className="absolute top-0 right-0 bottom-0 w-[28px] pointer-events-auto cursor-move" draggable onDragStart={handleBorderDrag} />
+                        <div className={`absolute top-0 right-0 bottom-0 w-[28px] ${handlePointerClass}`} draggable={!isDragOver} onDragStart={handleBorderDrag} />
                     </div>
                 );
             })()}
@@ -1137,6 +1168,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             selectedStudentIds={selectedStudentIds}
                                             className={cls.className}
                                             isPendingExcelDelete={!!pendingExcelDeleteIds?.has(`${s.id}_${cls.className}`)}
+                                            allLatestReports={allLatestReports}
                                         />
                                     );
                                 })}
@@ -1216,6 +1248,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                 selectedStudentIds={selectedStudentIds}
                                                                 className={cls.className}
                                                                 isPendingExcelDelete={!!pendingExcelDeleteIds?.has(`${s.id}_${cls.className}`)}
+                                                                allLatestReports={allLatestReports}
                                                             />
                                                         )}
                                                     </div>
@@ -1427,6 +1460,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             selectedStudentIds={selectedStudentIds}
                                             className={cls.className}
                                             isPendingExcelDelete={!!pendingExcelDeleteIds?.has(`${s.id}_${cls.className}`)}
+                                            allLatestReports={allLatestReports}
                                         />
                                     );
                                 })}
