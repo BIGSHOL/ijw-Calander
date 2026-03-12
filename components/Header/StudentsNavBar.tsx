@@ -55,7 +55,7 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
   }, [studentFilters, studentSortBy]);
 
   return (
-    <TabSubNavigation variant="compact" className="justify-between px-3 md:px-6 border-b border-white/10 z-30">
+    <TabSubNavigation variant="compact" allowOverflow className="justify-between px-3 md:px-6 border-b border-white/10 z-30">
       <TabFilterGroup>
         {/* Primary Filters - 항상 보이는 주요 필터 */}
         <TabFilterGroup.Primary>
