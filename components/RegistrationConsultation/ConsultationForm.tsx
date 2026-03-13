@@ -4,8 +4,9 @@ import {
     X, ChevronDown, ChevronRight, User, Phone, Calendar, MapPin, School, BookOpen,
     FileText, Globe, Users, Cake, Home, Smile, AlertTriangle, Target, Tag, Bus,
     XCircle, CheckCircle, Banknote, Shield, UserCheck, GraduationCap, MessageSquare, ClipboardList, Droplet, Inbox,
-    Pencil, Eye, FlaskConical
+    Pencil, Eye, FlaskConical, Mic, MicOff, Upload, Loader2, Square
 } from 'lucide-react';
+import { useRegistrationRecording, RegistrationExtractedData } from '../../hooks/useRegistrationRecording';
 
 interface ConsultationFormProps {
     isOpen: boolean;
@@ -206,6 +207,96 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
         }
     }, [initialData, isOpen, draftId]);
 
+    // ===== 녹음/분석 기능 =====
+    const recording = useRegistrationRecording();
+    const [showRecordingPanel, setShowRecordingPanel] = useState(false);
+    const [recordingFile, setRecordingFile] = useState<File | null>(null);
+
+    const formatDuration = (sec: number) => {
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+        return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    };
+
+    // 녹음 분석 결과 → 폼 자동 채우기
+    const applyExtractedData = useCallback((data: RegistrationExtractedData) => {
+        const gradeMap: Record<string, SchoolGrade> = {
+            '초1': SchoolGrade.Elementary1, '초2': SchoolGrade.Elementary2, '초3': SchoolGrade.Elementary3,
+            '초4': SchoolGrade.Elementary4, '초5': SchoolGrade.Elementary5, '초6': SchoolGrade.Elementary6,
+            '중1': SchoolGrade.Middle1, '중2': SchoolGrade.Middle2, '중3': SchoolGrade.Middle3,
+            '고1': SchoolGrade.High1, '고2': SchoolGrade.High2, '고3': SchoolGrade.High3,
+        };
+        const subjectMap: Record<string, ConsultationSubject> = {
+            '수학': ConsultationSubject.Math, '영어': ConsultationSubject.English,
+            '국어': ConsultationSubject.Korean, '과학': ConsultationSubject.Science,
+        };
+        const statusMap: Record<string, ConsultationStatus> = {
+            '영수등록': ConsultationStatus.EngMathRegistered, '수학등록': ConsultationStatus.MathRegistered,
+            '영어등록': ConsultationStatus.EngRegistered, '국어등록': ConsultationStatus.KoreanRegistered,
+            '과학등록': ConsultationStatus.ScienceRegistered, '이번달 등록예정': ConsultationStatus.PendingThisMonth,
+            '추후 등록예정': ConsultationStatus.PendingFuture, '미등록': ConsultationStatus.NotRegistered,
+            '등록완료': ConsultationStatus.Registered,
+        };
+
+        setFormData(prev => ({
+            ...prev,
+            studentName: data.studentName || prev.studentName,
+            schoolName: data.schoolName || prev.schoolName,
+            grade: gradeMap[data.grade || ''] || prev.grade,
+            parentPhone: data.parentPhone || prev.parentPhone,
+            parentName: data.parentName || prev.parentName,
+            parentRelation: data.parentRelation || prev.parentRelation,
+            address: data.address || prev.address,
+            birthDate: data.birthDate || prev.birthDate,
+            consultationPath: data.consultationPath || prev.consultationPath,
+            enrollmentReason: data.enrollmentReason || prev.enrollmentReason,
+            siblings: data.siblings || prev.siblings,
+            shuttleBusRequest: data.shuttleBusRequest === true || data.shuttleBusRequest === 'true' || prev.shuttleBusRequest,
+            safetyNotes: data.safetyNotes || prev.safetyNotes,
+            careerGoal: data.careerGoal || prev.careerGoal,
+            subject: subjectMap[data.subject || ''] || prev.subject,
+            status: statusMap[data.status || ''] || prev.status,
+            notes: data.notes || prev.notes,
+            nonRegistrationReason: data.nonRegistrationReason || prev.nonRegistrationReason,
+            followUpDate: data.followUpDate || prev.followUpDate,
+            followUpContent: data.followUpContent || prev.followUpContent,
+        }));
+        if (data.mathConsultation) setMathConsult(data.mathConsultation as unknown as SubjectConsultationDetail);
+        if (data.englishConsultation) setEnglishConsult(data.englishConsultation as unknown as SubjectConsultationDetail);
+        if (data.koreanConsultation) setKoreanConsult(data.koreanConsultation as unknown as SubjectConsultationDetail);
+        if (data.scienceConsultation) setScienceConsult(data.scienceConsultation as unknown as SubjectConsultationDetail);
+    }, []);
+
+    // extractedData가 변경되면 자동 채우기
+    useEffect(() => {
+        if (recording.extractedData) {
+            applyExtractedData(recording.extractedData);
+            setShowRecordingPanel(false);
+        }
+    }, [recording.extractedData, applyExtractedData]);
+
+    const handleStartAnalysis = useCallback(async (file: File) => {
+        try {
+            await recording.uploadAndProcess({
+                file,
+                studentName: formData.studentName || '미입력',
+                consultationDate: formData.consultationDate || getLocalDate(),
+                counselorName: formData.counselor || '',
+            });
+        } catch {
+            // error handled by hook
+        }
+    }, [recording, formData.studentName, formData.consultationDate, formData.counselor]);
+
+    const handleStopAndAnalyze = useCallback(async () => {
+        try {
+            const file = await recording.stopRecording();
+            await handleStartAnalysis(file);
+        } catch {
+            // error handled by hook
+        }
+    }, [recording, handleStartAnalysis]);
+
     // Performance: rerender-functional-setstate - 안정적인 핸들러
     const handleChange = useCallback((field: keyof typeof formData, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -335,6 +426,155 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                         <span className="text-xs text-amber-800">
                             학부모 QR 폼에서 접수된 데이터입니다. 내용을 확인/수정 후 등록하세요.
                         </span>
+                    </div>
+                )}
+
+                {/* 녹음/분석 패널 */}
+                {!isViewMode && (
+                    <div className="mx-3 mt-2 shrink-0">
+                        {!showRecordingPanel && recording.status === 'idle' && (
+                            <button
+                                type="button"
+                                onClick={() => setShowRecordingPanel(true)}
+                                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-purple-50 border border-purple-200 rounded-sm text-xs text-purple-700 font-medium hover:bg-purple-100 transition-colors"
+                            >
+                                <Mic size={14} />
+                                녹음으로 AI 자동입력
+                            </button>
+                        )}
+                        {showRecordingPanel && (
+                            <div className="bg-purple-50 border border-purple-200 rounded-sm p-3 space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold text-purple-800 flex items-center gap-1">
+                                        <Mic size={12} /> 상담 녹음 AI 분석
+                                    </span>
+                                    {recording.status === 'idle' && (
+                                        <button type="button" onClick={() => { setShowRecordingPanel(false); setRecordingFile(null); }} className="text-gray-400 hover:text-gray-600">
+                                            <X size={14} />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {recording.status === 'idle' && !recording.isRecording && !recordingFile && (
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => recording.startRecording()}
+                                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-sm text-xs font-bold transition-colors"
+                                        >
+                                            <Mic size={14} />
+                                            녹음 시작
+                                        </button>
+                                        <label className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-purple-300 text-purple-700 rounded-sm text-xs font-bold hover:bg-purple-50 cursor-pointer transition-colors">
+                                            <Upload size={14} />
+                                            파일 첨부
+                                            <input
+                                                type="file"
+                                                accept="audio/*,.mp3,.wav,.m4a,.webm,.ogg"
+                                                className="hidden"
+                                                onChange={(e) => {
+                                                    const f = e.target.files?.[0];
+                                                    if (f) setRecordingFile(f);
+                                                }}
+                                            />
+                                        </label>
+                                    </div>
+                                )}
+
+                                {recording.isRecording && (
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2 flex-1">
+                                            <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
+                                            <span className="text-sm font-mono font-bold text-red-700">{formatDuration(recording.recordingDuration)}</span>
+                                            <span className="text-[10px] text-red-500">녹음 중...</span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleStopAndAnalyze}
+                                            className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-sm text-xs font-bold transition-colors"
+                                        >
+                                            <Square size={12} fill="currentColor" />
+                                            정지 + AI 분석
+                                        </button>
+                                    </div>
+                                )}
+
+                                {recordingFile && recording.status === 'idle' && (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-2 p-2 bg-white border border-purple-200 rounded-sm">
+                                            <Mic className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
+                                            <span className="text-xs text-gray-700 truncate flex-1">{recordingFile.name}</span>
+                                            <span className="text-[10px] text-gray-400">{(recordingFile.size / 1024 / 1024).toFixed(1)}MB</span>
+                                            <button type="button" onClick={() => setRecordingFile(null)} className="p-0.5 hover:bg-gray-100 rounded">
+                                                <X size={12} className="text-gray-400" />
+                                            </button>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleStartAnalysis(recordingFile)}
+                                            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-sm text-xs font-bold transition-colors"
+                                        >
+                                            <Mic size={14} />
+                                            AI 분석 시작
+                                        </button>
+                                    </div>
+                                )}
+
+                                {(recording.status === 'uploading' || recording.status === 'transcribing' || recording.status === 'analyzing') && (
+                                    <div className="space-y-2">
+                                        {recording.uploadProgress && (
+                                            <div>
+                                                <div className="flex justify-between text-[10px] text-purple-600 mb-0.5">
+                                                    <span>업로드 중</span>
+                                                    <span>{recording.uploadProgress.percent}%</span>
+                                                </div>
+                                                <div className="w-full h-1.5 bg-purple-200 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-purple-600 rounded-full transition-all" style={{ width: `${recording.uploadProgress.percent}%` }} />
+                                                </div>
+                                            </div>
+                                        )}
+                                        {recording.status === 'transcribing' && (
+                                            <div className="flex items-center gap-2">
+                                                <Loader2 className="w-3.5 h-3.5 text-purple-600 animate-spin" />
+                                                <span className="text-xs text-purple-700">음성 → 텍스트 변환 중...</span>
+                                            </div>
+                                        )}
+                                        {recording.status === 'analyzing' && (
+                                            <div className="flex items-center gap-2">
+                                                <Loader2 className="w-3.5 h-3.5 text-purple-600 animate-spin" />
+                                                <span className="text-xs text-purple-700">AI가 상담 내용 분석 중...</span>
+                                            </div>
+                                        )}
+                                        {recording.statusMessage && (
+                                            <p className="text-[10px] text-gray-500">{recording.statusMessage}</p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {recording.status === 'completed' && (
+                                    <div className="flex items-center gap-2 text-xs text-green-700">
+                                        <CheckCircle size={14} className="text-green-600" />
+                                        분석 완료! 폼에 자동 입력되었습니다.
+                                    </div>
+                                )}
+
+                                {recording.status === 'error' && (
+                                    <div className="space-y-1">
+                                        <div className="flex items-center gap-2 text-xs text-red-700">
+                                            <AlertTriangle size={14} className="text-red-500" />
+                                            {recording.error}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => { recording.reset(); setRecordingFile(null); }}
+                                            className="text-[10px] text-purple-600 hover:underline"
+                                        >
+                                            다시 시도
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
 

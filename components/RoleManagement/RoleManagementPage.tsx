@@ -342,6 +342,12 @@ const PERMISSION_GROUPS: { id: string; label: string; icon: string; categories: 
         ]
       },
       {
+        id: 'recording', label: '상담녹음분석', icon: '🎙️',
+        permissions: [
+          { id: 'recording.delete' as PermissionId, label: '삭제' },
+        ]
+      },
+      {
         id: 'chatbot', label: 'AI 챗봇', icon: '🤖',
         permissions: [
           { id: 'chatbot.access' as PermissionId, label: '사용' },

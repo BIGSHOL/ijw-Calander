@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { UnifiedStudent, Consultation, CATEGORY_CONFIG, UserProfile, ConsultationRecord } from '../../../types';
-import { MessageSquare, Plus, ClipboardList, ChevronDown } from 'lucide-react';
+import { UnifiedStudent, Consultation, CATEGORY_CONFIG, UserProfile, ConsultationRecord, ConsultationReport } from '../../../types';
+import { MessageSquare, Plus, ClipboardList, ChevronDown, Mic, AlertTriangle } from 'lucide-react';
 import { useStudentConsultations, getFollowUpUrgency, getFollowUpDaysLeft } from '../../../hooks/useStudentConsultations';
 import { useStaff } from '../../../hooks/useStaff';
 import { useConsultations, useUpdateConsultation } from '../../../hooks/useConsultations';
+import { useConsultationReports } from '../../../hooks/useConsultationRecording';
 import { ConsultationDetailModal } from '../../StudentConsultation';
 import { ConsultationForm } from '../../RegistrationConsultation/ConsultationForm';
 // Lazy load for better code splitting
@@ -19,16 +20,25 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
   const [selectedRegistrationRecord, setSelectedRegistrationRecord] = useState<ConsultationRecord | null>(null);
+  const [selectedReport, setSelectedReport] = useState<ConsultationReport | null>(null);
   const { staff } = useStaff();
   const { consultations, loading } = useStudentConsultations({ studentId: student.id });
 
   // 섹션 접기/펼치기 상태
   const [showStudentConsultations, setShowStudentConsultations] = useState(true);
   const [showRegistrationConsultations, setShowRegistrationConsultations] = useState(true);
+  const [showRecordingReports, setShowRecordingReports] = useState(true);
 
   // 전체 등록 상담 기록 조회
   const { data: allConsultations = [], isLoading: regLoading } = useConsultations({});
   const updateConsultation = useUpdateConsultation();
+
+  // AI 상담 녹음 분석 리포트
+  const { data: recordingReports = [], isLoading: reportsLoading } = useConsultationReports(student.id);
+  const completedReports = useMemo(() =>
+    recordingReports.filter(r => r.status === 'completed' && r.report),
+    [recordingReports]
+  );
 
   // 재원생 상담 기록 정렬
   const sortedConsultations = useMemo(() =>
@@ -112,7 +122,7 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
     return labels[category] || '기타';
   };
 
-  if (loading || regLoading) {
+  if (loading || regLoading || reportsLoading) {
     return (
       <div className="text-center py-6">
         <div className="animate-spin w-5 h-5 border-2 border-accent border-t-transparent rounded-sm mx-auto mb-2"></div>
@@ -306,6 +316,78 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
         </>
         )}
       </div>
+
+      {/* ========== AI 상담 녹음 분석 ========== */}
+      {completedReports.length > 0 && (
+      <div className="space-y-3 pt-3 border-t border-gray-200">
+        <div
+          className="flex items-center gap-2 cursor-pointer"
+          onClick={() => setShowRecordingReports(!showRecordingReports)}
+        >
+          <Mic className="w-4 h-4 text-primary" />
+          <h3 className="text-xs font-bold text-primary">AI 상담 녹음 분석</h3>
+          <span className="text-xs text-primary-700">
+            ({completedReports.length}건)
+          </span>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showRecordingReports ? '' : 'rotate-180'}`} />
+        </div>
+
+        {showRecordingReports && (
+        <div className="bg-white border border-gray-200 overflow-hidden rounded-sm">
+          <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-primary-700">
+            <span className="w-16 shrink-0">상담일</span>
+            <span className="w-14 shrink-0">상담자</span>
+            <span className="flex-1">요약</span>
+            <span className="w-10 shrink-0 text-right">주의</span>
+          </div>
+
+          {completedReports.map(report => {
+            const hasRisk = report.report?.riskFlags && !report.report.riskFlags.includes('특이사항 없음') && !report.report.riskFlags.includes('없음');
+            return (
+              <div key={report.id} className="group">
+                <div
+                  className="flex items-center gap-2 px-2 py-1 border-b border-gray-100 hover:bg-accent/5 transition-colors cursor-pointer"
+                  onClick={() => setSelectedReport(selectedReport?.id === report.id ? null : report)}
+                >
+                  <span className="w-16 shrink-0 text-xxs text-gray-500">
+                    {report.consultationDate}
+                  </span>
+                  <span className="w-14 shrink-0 text-xxs text-primary-700 truncate">
+                    {report.consultantName || '-'}
+                  </span>
+                  <span className="flex-1 text-xs text-primary truncate">
+                    {report.report?.summary?.slice(0, 60) || '분석 완료'}...
+                  </span>
+                  <span className="w-10 shrink-0 text-right">
+                    {hasRisk && <AlertTriangle className="w-3 h-3 text-red-500 inline" />}
+                  </span>
+                </div>
+
+                {selectedReport?.id === report.id && report.report && (
+                  <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 space-y-2">
+                    {[
+                      { label: '📋 요약', value: report.report.summary },
+                      { label: '😟 학부모 걱정', value: report.report.parentConcerns },
+                      { label: '🙋 학부모 요청', value: report.report.parentRequests },
+                      { label: '📝 학생 특이사항', value: report.report.studentNotes },
+                      { label: '🤝 합의사항', value: report.report.agreements },
+                      { label: '✅ 후속 조치', value: report.report.actionItems },
+                      { label: '🚨 주의 신호', value: report.report.riskFlags },
+                    ].filter(s => s.value && s.value.trim()).map(s => (
+                      <div key={s.label}>
+                        <p className="text-xxs font-semibold text-primary-700">{s.label}</p>
+                        <p className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed mt-0.5">{s.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        )}
+      </div>
+      )}
 
       {/* 상담 추가 모달 */}
       {showAddModal && (
