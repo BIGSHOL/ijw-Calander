@@ -15,3 +15,4 @@ export * from './system';
 export * from './attendance';
 export * from './billing';
 export * from './resources';
+export * from './tuition';

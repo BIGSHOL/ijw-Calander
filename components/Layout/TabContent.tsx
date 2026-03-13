@@ -40,6 +40,7 @@ const MarketingTab = React.lazy(() => import('../Marketing').then(m => ({ defaul
 const TimetableDistributionTab = React.lazy(() => import('../TimetableDistribution').then(m => ({ default: m.TimetableDistributionTab })));
 
 const LogsTab = React.lazy(() => import('../Logs/LogsTab'));
+const TuitionCalculatorTab = React.lazy(() => import('../TuitionCalculator').then(m => ({ default: m.TuitionCalculatorTab })));
 
 // Loading fallback
 const TabLoadingFallback = () => <VideoLoading className="flex-1 h-full" />;
@@ -473,6 +474,12 @@ export const TabContent: React.FC<TabContentProps> = ({
         <Suspense fallback={<TabLoadingFallback />}>
           <div className="w-full flex-1 overflow-hidden">
             <TimetableDistributionTab />
+          </div>
+        </Suspense>
+      ) : appMode === 'tuition-calculator' ? (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <div className="w-full flex-1 overflow-auto">
+            <TuitionCalculatorTab userProfile={effectiveProfile} />
           </div>
         </Suspense>
       ) : null}

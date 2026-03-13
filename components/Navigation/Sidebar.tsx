@@ -148,14 +148,17 @@ const Sidebar: React.FC<SidebarProps> = ({
                   const meta = TAB_META[tab];
                   const isActive = currentTab === tab;
 
+                  // 수강료 계산 탭은 관리 그룹 최상단에서 테두리로 구분
+                  const isTuitionCalc = tab === 'tuition-calculator';
+
                   return (
+                    <React.Fragment key={tab}>
                     <button
-                      key={tab}
                       onClick={() => onTabSelect(tab)}
                       className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs font-medium transition-all ${isActive
                         ? 'bg-accent text-primary shadow-sm'
                         : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                        } ${isCollapsed ? 'justify-center' : ''}`}
+                        } ${isCollapsed ? 'justify-center' : ''} ${isTuitionCalc ? 'border border-gray-300 border-dashed' : ''}`}
                       aria-label={`${meta.label} 탭으로 이동`}
                       aria-current={isActive ? 'page' : undefined}
                       title={isCollapsed ? meta.label : undefined}
@@ -165,6 +168,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                       </span>
                       {!isCollapsed && <span>{meta.label}</span>}
                     </button>
+                    {isTuitionCalc && !isCollapsed && <div className="w-full h-px bg-gray-300 my-0.5" />}
+                    </React.Fragment>
                   );
                 })}
 
