@@ -1884,7 +1884,7 @@ const TOOL_EXECUTOR_MAP = {
     get_homework_status: toolGetHomeworkStatus,
 };
 
-exports.chatWithAI = functions.region("asia-northeast3").runWith({ timeoutSeconds: 60, memory: "512MB" }).https.onCall(async (data, context) => {
+exports.chatWithAI = functions.region("asia-northeast3").runWith({ timeoutSeconds: 60, memory: "512MB", secrets: ["GEMINI_API_KEY"] }).https.onCall(async (data, context) => {
     // 1. Auth check
     if (!context.auth) {
         throw new functions.https.HttpsError("unauthenticated", "로그인이 필요합니다.");
