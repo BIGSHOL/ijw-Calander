@@ -97,10 +97,10 @@ grep -rl "usePermissions" components/Staff/ components/Billing/ components/RoleM
 
 ```bash
 grep -c "AppTab" types/system.ts
-grep "'dashboard'\|'calendar'\|'timetable'\|'payment'\|'gantt'\|'consultation'\|'attendance'\|'students'\|'grades'\|'classes'\|'classroom'\|'classroom-assignment'\|'student-consultations'\|'staff'\|'daily-attendance'\|'billing'\|'role-management'\|'resources'\|'withdrawal'\|'help'" types/system.ts | head -5
+grep "'dashboard'\|'calendar'\|'timetable'\|'payment'\|'gantt'\|'consultation'\|'attendance'\|'students'\|'grades'\|'classes'\|'classroom'\|'classroom-assignment'\|'student-consultations'\|'staff'\|'daily-attendance'\|'billing'\|'role-management'\|'resources'\|'withdrawal'\|'help'\|'tuition-calculator'" types/system.ts | head -5
 ```
 
-**PASS 기준:** AppTab의 모든 값(19개+)이 TAB_META에 메타데이터가 존재
+**PASS 기준:** AppTab의 모든 값(20개+, tuition-calculator 포함)이 TAB_META에 메타데이터가 존재
 **FAIL 기준:** 탭 타입은 있지만 메타데이터가 없는 탭 존재
 
 ## Output Format

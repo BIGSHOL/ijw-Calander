@@ -58,6 +58,7 @@ export const useTuitionInvoices = (limitCount = 100) => {
       return docId;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tuitionInvoices'] }),
+    onError: (error: Error) => console.error('[useTuitionInvoices]', error),
   });
 
   const updateMutation = useMutation({
@@ -79,6 +80,7 @@ export const useTuitionInvoices = (limitCount = 100) => {
       });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tuitionInvoices'] }),
+    onError: (error: Error) => console.error('[useTuitionInvoices]', error),
   });
 
   const deleteMutation = useMutation({
@@ -86,6 +88,7 @@ export const useTuitionInvoices = (limitCount = 100) => {
       await deleteDoc(doc(db, COLLECTION, id));
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tuitionInvoices'] }),
+    onError: (error: Error) => console.error('[useTuitionInvoices]', error),
   });
 
   const searchByName = (name: string) => {

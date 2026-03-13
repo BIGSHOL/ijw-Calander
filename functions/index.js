@@ -4583,3 +4583,299 @@ exports.scrapeMakeEduShuttleStudents = functions
         }
     });
 
+// ========================================================================
+// 상담 녹음 분석 (AssemblyAI 음성인식 + Claude AI 보고서)
+// ========================================================================
+
+/**
+ * 상담 녹음 파일을 분석하여 보고서를 생성하는 Cloud Function
+ *
+ * Flow:
+ * 1. Storage에서 Signed URL 생성
+ * 2. AssemblyAI로 음성인식 + 화자구분
+ * 3. Claude API로 보고서 생성
+ * 4. Firestore consultation_reports에 저장
+ */
+exports.processConsultationRecording = functions
+    .region("asia-northeast3")
+    .runWith({
+        timeoutSeconds: 540,
+        memory: "1GB",
+        secrets: ["ASSEMBLYAI_API_KEY", "ANTHROPIC_API_KEY"],
+    })
+    .https.onCall(async (data, context) => {
+        // 1. Auth check
+        if (!context.auth) {
+            throw new functions.https.HttpsError("unauthenticated", "로그인이 필요합니다.");
+        }
+
+        const { storagePath, studentId, studentName, consultantName, consultationDate, fileName } = data;
+
+        // 2. 입력 검증
+        if (!storagePath || !studentName || !consultationDate) {
+            throw new functions.https.HttpsError("invalid-argument", "필수 정보가 누락되었습니다. (storagePath, studentName, consultationDate)");
+        }
+
+        // 3. API 키 확인
+        const assemblyAiKey = process.env.ASSEMBLYAI_API_KEY;
+        const anthropicKey = process.env.ANTHROPIC_API_KEY;
+        if (!assemblyAiKey || !anthropicKey) {
+            logger.error("[processConsultationRecording] API keys not configured");
+            throw new functions.https.HttpsError("failed-precondition", "AI 서비스가 설정되지 않았습니다.");
+        }
+
+        // 4. Firestore에 초기 문서 생성
+        const reportRef = db.collection("consultation_reports").doc();
+        const now = Date.now();
+        await reportRef.set({
+            studentId: studentId || "",
+            studentName,
+            consultantName: consultantName || "",
+            consultationDate,
+            fileName: fileName || storagePath.split("/").pop(),
+            storagePath,
+            fileSizeBytes: 0,
+            status: "transcribing",
+            statusMessage: "음성 인식을 시작합니다...",
+            createdAt: now,
+            updatedAt: now,
+            createdBy: context.auth.uid,
+        });
+
+        try {
+            // 5. Storage에서 Signed URL 생성
+            const bucket = admin.storage().bucket();
+            const file = bucket.file(storagePath);
+            const [metadata] = await file.getMetadata();
+            const [signedUrl] = await file.getSignedUrl({
+                action: "read",
+                expires: Date.now() + 30 * 60 * 1000, // 30분
+            });
+
+            await reportRef.update({
+                fileSizeBytes: parseInt(metadata.size || "0"),
+                updatedAt: Date.now(),
+            });
+
+            // 6. AssemblyAI에 전사 요청
+            logger.info("[processConsultationRecording] Submitting to AssemblyAI", { storagePath });
+
+            const transcriptResponse = await fetch("https://api.assemblyai.com/v2/transcript", {
+                method: "POST",
+                headers: {
+                    "Authorization": assemblyAiKey,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    audio_url: signedUrl,
+                    language_code: "ko",
+                    speaker_labels: true,
+                    speech_models: ["universal-2"],
+                }),
+            });
+
+            if (!transcriptResponse.ok) {
+                const errText = await transcriptResponse.text();
+                throw new Error(`AssemblyAI 요청 실패: ${transcriptResponse.status} - ${errText}`);
+            }
+
+            const transcriptData = await transcriptResponse.json();
+            const transcriptId = transcriptData.id;
+            logger.info("[processConsultationRecording] AssemblyAI transcript ID:", transcriptId);
+
+            // 7. 전사 완료까지 폴링 (5초 간격, 최대 7.5분)
+            let transcriptResult;
+            let pollCount = 0;
+            const maxPolls = 90;
+
+            while (pollCount < maxPolls) {
+                await new Promise(resolve => setTimeout(resolve, 5000));
+
+                const pollResponse = await fetch(
+                    `https://api.assemblyai.com/v2/transcript/${transcriptId}`,
+                    { headers: { "Authorization": assemblyAiKey } }
+                );
+                transcriptResult = await pollResponse.json();
+
+                if (transcriptResult.status === "completed") {
+                    logger.info("[processConsultationRecording] Transcription completed");
+                    break;
+                } else if (transcriptResult.status === "error") {
+                    throw new Error(`음성 인식 실패: ${transcriptResult.error}`);
+                }
+
+                // 30초마다 상태 업데이트
+                if (pollCount % 6 === 0) {
+                    await reportRef.update({
+                        statusMessage: `음성 인식 중... (${Math.min(Math.round((pollCount / maxPolls) * 100), 95)}%)`,
+                        updatedAt: Date.now(),
+                    });
+                }
+                pollCount++;
+            }
+
+            if (!transcriptResult || transcriptResult.status !== "completed") {
+                throw new Error("음성 인식 시간 초과");
+            }
+
+            // 8. 화자 구분 결과 추출
+            const fullText = transcriptResult.text;
+            const speakerLabels = (transcriptResult.utterances || []).map(u => ({
+                speaker: u.speaker,
+                text: u.text,
+                start: u.start,
+                end: u.end,
+            }));
+
+            await reportRef.update({
+                status: "analyzing",
+                statusMessage: "AI 분석을 시작합니다...",
+                transcription: fullText,
+                speakerLabels,
+                durationSeconds: Math.round(transcriptResult.audio_duration || 0),
+                updatedAt: Date.now(),
+            });
+
+            // 9. Claude API로 보고서 생성
+            logger.info("[processConsultationRecording] Calling Claude API for analysis");
+
+            const formattedTranscript = speakerLabels.length > 0
+                ? speakerLabels.map(s => `[화자 ${s.speaker}] ${s.text}`).join("\n")
+                : fullText;
+
+            const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                    "x-api-key": anthropicKey,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    model: "claude-sonnet-4-20250514",
+                    max_tokens: 4096,
+                    messages: [{
+                        role: "user",
+                        content: `당신은 학원 학부모 상담 기록을 깊이 있게 분석하는 교육 상담 전문가입니다.
+
+다음은 학부모와 학원 상담사 간의 상담 녹음을 텍스트로 변환한 것입니다.
+화자가 구분되어 있으며, 대화 맥락을 바탕으로 [선생님], [학부모], [학생] 역할을 추정해주세요.
+역할이 확실하지 않은 경우에는 원래 화자 표기(화자 A, 화자 B 등)를 그대로 유지하세요.
+
+학생: ${studentName}
+상담일: ${consultationDate}
+상담자: ${consultantName || "미지정"}
+
+--- 상담 내용 ---
+${formattedTranscript}
+--- 끝 ---
+
+위 상담 내용을 심층 분석하여 보고서를 작성해주세요.
+대화의 행간, 감정, 뉘앙스까지 읽어서 학부모의 진짜 의도와 감정을 파악해주세요.
+각 항목은 한국어로 구체적이고 상세하게 작성하세요.
+
+반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
+{
+  "summary": "상담의 전체적인 요약 (5-7문장, 상담 분위기와 핵심 흐름 포함)",
+  "parentConcerns": "학부모가 걱정하거나 불안해하는 부분 (직접 말한 것 + 말투/맥락에서 추론되는 것 모두 포함, - 불릿 포인트)",
+  "parentQuestions": "학부모가 궁금해하거나 질문한 사항들 (답변이 된 것과 안 된 것 구분, - 불릿 포인트)",
+  "parentRequests": "학부모가 명시적으로 요청한 사항들 (- 불릿 포인트)",
+  "parentSatisfaction": "학부모의 전반적인 만족도/감정 상태 분석 (긍정적인 부분, 불만인 부분, 아직 해소되지 않은 우려 등)",
+  "studentNotes": "학생에 관한 특이사항 (학습 태도, 성적 변화, 교우관계, 행동 특성, 강점/약점 등 - 불릿 포인트)",
+  "teacherResponse": "교사/상담자가 제시한 해결책이나 설명 요약 (- 불릿 포인트)",
+  "agreements": "상담 중 합의된 사항들 (구체적인 일정/방법 포함, - 불릿 포인트)",
+  "actionItems": "후속 조치가 필요한 항목들 (담당자, 기한 포함 가능하면, - 불릿 포인트)",
+  "riskFlags": "주의가 필요한 신호 (퇴원 가능성, 심각한 불만, 학생 정서적 문제 등 - 없으면 '특이사항 없음')"
+}`
+                    }],
+                }),
+            });
+
+            if (!claudeResponse.ok) {
+                const errBody = await claudeResponse.text();
+                throw new Error(`Claude API 오류: ${claudeResponse.status} - ${errBody}`);
+            }
+
+            const claudeData = await claudeResponse.json();
+            const reportText = claudeData.content?.[0]?.text || "";
+
+            // JSON 파싱
+            let report;
+            try {
+                const jsonMatch = reportText.match(/\{[\s\S]*\}/);
+                report = JSON.parse(jsonMatch ? jsonMatch[0] : reportText);
+            } catch {
+                // JSON 파싱 실패 시 전체 텍스트를 summary에 저장
+                report = {
+                    summary: reportText,
+                    parentRequests: "",
+                    studentNotes: "",
+                    agreements: "",
+                    actionItems: "",
+                };
+            }
+
+            // 10. 최종 보고서 저장
+            await reportRef.update({
+                status: "completed",
+                statusMessage: "분석이 완료되었습니다.",
+                report,
+                updatedAt: Date.now(),
+            });
+
+            logger.info("[processConsultationRecording] Complete", { reportId: reportRef.id });
+            return { reportId: reportRef.id, status: "completed" };
+
+        } catch (error) {
+            logger.error("[processConsultationRecording] Error:", error);
+            await reportRef.update({
+                status: "error",
+                statusMessage: "처리 중 오류가 발생했습니다.",
+                errorMessage: error.message || "알 수 없는 오류",
+                updatedAt: Date.now(),
+            });
+            throw new functions.https.HttpsError("internal", error.message || "상담 녹음 분석 실패");
+        }
+    });
+
+/**
+ * AssemblyAI 실시간 전사용 임시 토큰 생성
+ * 프론트엔드에서 WebSocket 연결 시 사용
+ */
+exports.createRealtimeToken = functions
+    .region("asia-northeast3")
+    .runWith({
+        timeoutSeconds: 10,
+        memory: "128MB",
+        secrets: ["ASSEMBLYAI_API_KEY"],
+    })
+    .https.onCall(async (data, context) => {
+        if (!context.auth) {
+            throw new functions.https.HttpsError("unauthenticated", "로그인이 필요합니다.");
+        }
+
+        const assemblyAiKey = process.env.ASSEMBLYAI_API_KEY;
+        if (!assemblyAiKey) {
+            throw new functions.https.HttpsError("failed-precondition", "AssemblyAI API 키가 설정되지 않았습니다.");
+        }
+
+        try {
+            const tokenUrl = new URL("https://streaming.assemblyai.com/v3/token");
+            tokenUrl.search = new URLSearchParams({ expires_in_seconds: "600" }).toString();
+            const response = await fetch(tokenUrl, {
+                method: "GET",
+                headers: { "Authorization": assemblyAiKey },
+            });
+
+            if (!response.ok) {
+                const errText = await response.text();
+                throw new Error(`토큰 생성 실패: ${response.status} - ${errText}`);
+            }
+
+            const tokenData = await response.json();
+            return { token: tokenData.token };
+        } catch (error) {
+            logger.error("[createRealtimeToken] Error:", error);
+            throw new functions.https.HttpsError("internal", error.message || "토큰 생성 실패");
+        }
+    });
+

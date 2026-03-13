@@ -34,6 +34,7 @@ export const useTuitionCourses = () => {
       });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+    onError: (error: Error) => console.error('[useTuitionCourses]', error),
   });
 
   // 과목 추가
@@ -47,6 +48,7 @@ export const useTuitionCourses = () => {
       });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+    onError: (error: Error) => console.error('[useTuitionCourses]', error),
   });
 
   // 과목 삭제
@@ -55,6 +57,7 @@ export const useTuitionCourses = () => {
       await deleteDoc(doc(db, COLLECTION, id));
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+    onError: (error: Error) => console.error('[useTuitionCourses]', error),
   });
 
   // 초기 시드: 하드코딩 상수 → Firebase
@@ -72,6 +75,7 @@ export const useTuitionCourses = () => {
       await batch.commit();
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+    onError: (error: Error) => console.error('[useTuitionCourses]', error),
   });
 
   return {

@@ -28,6 +28,7 @@ export const useTuitionHolidays = () => {
       await setDoc(doc(db, COLLECTION, docId), { ...holiday, id: docId });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+    onError: (error: Error) => console.error('[useTuitionHolidays]', error),
   });
 
   const deleteMutation = useMutation({
@@ -35,6 +36,7 @@ export const useTuitionHolidays = () => {
       await deleteDoc(doc(db, COLLECTION, id));
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+    onError: (error: Error) => console.error('[useTuitionHolidays]', error),
   });
 
   const migrateMutation = useMutation({
@@ -63,6 +65,7 @@ export const useTuitionHolidays = () => {
       }
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+    onError: (error: Error) => console.error('[useTuitionHolidays]', error),
   });
 
   // 공휴일 날짜 Set (계산용)
