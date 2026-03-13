@@ -31,6 +31,7 @@ export const useTuitionExtras = () => {
       });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+    onError: (error: Error) => console.error('[useTuitionExtras]', error),
   });
 
   const addMutation = useMutation({
@@ -42,6 +43,7 @@ export const useTuitionExtras = () => {
       });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+    onError: (error: Error) => console.error('[useTuitionExtras]', error),
   });
 
   const deleteMutation = useMutation({
@@ -49,6 +51,7 @@ export const useTuitionExtras = () => {
       await deleteDoc(doc(db, COLLECTION, id));
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+    onError: (error: Error) => console.error('[useTuitionExtras]', error),
   });
 
   const seedMutation = useMutation({
@@ -64,6 +67,7 @@ export const useTuitionExtras = () => {
       await batch.commit();
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+    onError: (error: Error) => console.error('[useTuitionExtras]', error),
   });
 
   return {

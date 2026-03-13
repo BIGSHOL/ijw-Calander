@@ -63,6 +63,9 @@ export const db = dbInstance;
 
 export const auth = getAuth(app);
 
+import { getStorage } from "firebase/storage";
+export const storage = getStorage(app);
+
 // ======== 개발용 전역 진단 함수 ========
 // 브라우저 콘솔에서 window.diagnoseEnrollments() 로 호출
 import { collection, getDocs } from "firebase/firestore";

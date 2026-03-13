@@ -30,6 +30,7 @@ export const useTuitionDiscounts = () => {
       });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+    onError: (error: Error) => console.error('[useTuitionDiscounts]', error),
   });
 
   const addMutation = useMutation({
@@ -40,6 +41,7 @@ export const useTuitionDiscounts = () => {
       });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+    onError: (error: Error) => console.error('[useTuitionDiscounts]', error),
   });
 
   const deleteMutation = useMutation({
@@ -47,6 +49,7 @@ export const useTuitionDiscounts = () => {
       await deleteDoc(doc(db, COLLECTION, id));
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+    onError: (error: Error) => console.error('[useTuitionDiscounts]', error),
   });
 
   const seedMutation = useMutation({
@@ -61,6 +64,7 @@ export const useTuitionDiscounts = () => {
       await batch.commit();
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+    onError: (error: Error) => console.error('[useTuitionDiscounts]', error),
   });
 
   return {
