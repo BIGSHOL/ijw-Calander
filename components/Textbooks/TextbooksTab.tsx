@@ -4,7 +4,7 @@ import { useTextbooks } from '../../hooks/useTextbooks';
 import { useTextbookRequests } from '../../hooks/useTextbookRequests';
 import { usePermissions } from '../../hooks/usePermissions';
 import { TextbookCatalogItem } from '../../data/textbookCatalog';
-import { Search, BookOpen, UserCheck, UserX, ChevronLeft, ChevronRight, FileText, FileSpreadsheet, Check, X } from 'lucide-react';
+import { Search, BookOpen, UserCheck, UserX, ChevronLeft, ChevronRight, FileText, FileSpreadsheet, Check, X, Plus, Trash2 } from 'lucide-react';
 
 const TextbookRequestView = lazy(() => import('./TextbookRequestView'));
 
@@ -94,7 +94,55 @@ export default function TextbooksTab({ currentUser }: TextbooksTabProps) {
 
   const handleCancelEdit = useCallback(() => {
     setEditingIdx(null);
+    setAddingNew(false);
   }, []);
+
+  // 교재 추가
+  const [addingNew, setAddingNew] = useState(false);
+  const [addForm, setAddForm] = useState({ subject: '수학', grade: '', difficulty: '기본', name: '', price: 0 });
+
+  const handleAddStart = useCallback(() => {
+    setAddingNew(true);
+    setAddForm({ subject: subjectFilter === 'all' ? '수학' : subjectFilter, grade: '', difficulty: '기본', name: '', price: 0 });
+    setEditingIdx(null);
+  }, [subjectFilter]);
+
+  const handleAddSave = useCallback(async () => {
+    if (!addForm.name.trim() || !addForm.grade.trim()) {
+      alert('교재명과 학년을 입력해주세요.');
+      return;
+    }
+    const category: 'elementary' | 'middle' | 'high' =
+      addForm.grade.startsWith('초') ? 'elementary' :
+      addForm.grade.startsWith('중') ? 'middle' : 'high';
+    const newItem: TextbookCatalogItem = {
+      subject: addForm.subject,
+      grade: addForm.grade,
+      difficulty: addForm.difficulty,
+      name: addForm.name.trim(),
+      price: addForm.price,
+      category,
+    };
+    try {
+      await saveCatalog.mutateAsync([...catalog, newItem]);
+      setAddingNew(false);
+    } catch (err) {
+      console.error('교재 추가 실패:', err);
+      alert('저장에 실패했습니다.');
+    }
+  }, [addForm, catalog, saveCatalog]);
+
+  // 교재 삭제
+  const handleDelete = useCallback(async (catalogIndex: number) => {
+    const item = catalog[catalogIndex];
+    if (!confirm(`"${item.name}" 교재를 삭제하시겠습니까?`)) return;
+    try {
+      await saveCatalog.mutateAsync(catalog.filter((_, i) => i !== catalogIndex));
+    } catch (err) {
+      console.error('교재 삭제 실패:', err);
+      alert('삭제에 실패했습니다.');
+    }
+  }, [catalog, saveCatalog]);
 
   // filteredCatalog → catalog 원본 인덱스 매핑
   const catalogIndexMap = useMemo(() => {
@@ -177,6 +225,14 @@ export default function TextbooksTab({ currentUser }: TextbooksTabProps) {
               </button>
             ))}
           </div>
+          {isAdmin && (
+            <>
+              <div className="w-px h-5 bg-gray-300" />
+              <button onClick={handleAddStart} className="flex items-center gap-1 px-2.5 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 whitespace-nowrap">
+                <Plus size={13} /> 교재 추가
+              </button>
+            </>
+          )}
           </>
         )}
       </div>}
@@ -203,10 +259,53 @@ export default function TextbooksTab({ currentUser }: TextbooksTabProps) {
                     <th className="px-3 py-2 text-center font-medium text-gray-600">난이도</th>
                     <th className="px-3 py-2 text-left font-medium text-gray-600">교재명</th>
                     <th className="px-3 py-2 text-right font-medium text-gray-600">가격</th>
-                    {isAdmin && <th className="px-3 py-2 text-center font-medium text-gray-600 w-16">수정</th>}
+                    {isAdmin && <th className="px-3 py-2 text-center font-medium text-gray-600 w-20">관리</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
+                  {/* 교재 추가 입력 행 (최상단) */}
+                  {addingNew && (
+                    <tr className="bg-blue-50/50 border-b-2 border-blue-200">
+                      <td className="px-3 py-2">
+                        <input type="text" value={addForm.subject} onChange={e => setAddForm(f => ({ ...f, subject: e.target.value }))}
+                          className="w-16 px-1.5 py-0.5 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="과목" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input type="text" value={addForm.grade} onChange={e => setAddForm(f => ({ ...f, grade: e.target.value }))}
+                          className="w-16 px-1.5 py-0.5 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="예: 초4" autoFocus />
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <select value={addForm.difficulty} onChange={e => setAddForm(f => ({ ...f, difficulty: e.target.value }))}
+                          className="px-1.5 py-0.5 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-blue-500">
+                          <option value="기본">기본</option>
+                          <option value="발전">발전</option>
+                          <option value="심화">심화</option>
+                          <option value="최상위">최상위</option>
+                          <option value="개념연산">개념연산</option>
+                          <option value="정규반">정규반</option>
+                          <option value="교재">교재</option>
+                        </select>
+                      </td>
+                      <td className="px-3 py-2">
+                        <input type="text" value={addForm.name} onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))}
+                          className="w-full px-1.5 py-0.5 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="교재명 입력" />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input type="number" value={addForm.price} onChange={e => setAddForm(f => ({ ...f, price: Number(e.target.value) }))}
+                          className="w-24 px-1.5 py-0.5 text-xs border rounded text-right focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="가격" />
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button onClick={handleAddSave} className="p-0.5 rounded text-emerald-600 hover:bg-emerald-50" title="추가">
+                            <Check size={14} />
+                          </button>
+                          <button onClick={() => setAddingNew(false)} className="p-0.5 rounded text-gray-400 hover:bg-gray-100" title="취소">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                   {filteredCatalog.map((item, i) => {
                     const origIdx = catalogIndexMap[i];
                     const isEditing = editingIdx === origIdx;
@@ -267,12 +366,12 @@ export default function TextbooksTab({ currentUser }: TextbooksTabProps) {
                                 </button>
                               </div>
                             ) : (
-                              <button
-                                onClick={() => handleStartEdit(item, origIdx)}
-                                className="text-xxs text-blue-600 hover:underline"
-                              >
-                                수정
-                              </button>
+                              <div className="flex items-center justify-center gap-1">
+                                <button onClick={() => handleStartEdit(item, origIdx)} className="text-xxs text-blue-600 hover:underline">수정</button>
+                                <button onClick={() => handleDelete(origIdx)} className="p-0.5 rounded text-red-400 hover:bg-red-50 hover:text-red-600" title="삭제">
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
                             )}
                           </td>
                         )}

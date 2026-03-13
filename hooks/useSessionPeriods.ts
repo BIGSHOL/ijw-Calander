@@ -99,15 +99,9 @@ export const useSaveSessionPeriod = () => {
       return dataToSave;
     },
     onSuccess: (savedSession) => {
-      // Invalidate related queries
+      // Invalidate related queries (수강료 계산기 동기화 포함)
       queryClient.invalidateQueries({
-        queryKey: [SESSION_PERIODS_KEY, savedSession.year]
-      });
-      queryClient.invalidateQueries({
-        queryKey: [SESSION_PERIODS_KEY, savedSession.year, savedSession.category]
-      });
-      queryClient.invalidateQueries({
-        queryKey: [SESSION_PERIODS_KEY, savedSession.year, savedSession.category, savedSession.month]
+        queryKey: [SESSION_PERIODS_KEY]
       });
     },
     onError: (error: Error) => {
@@ -128,17 +122,10 @@ export const useDeleteSessionPeriod = () => {
       await deleteDoc(docRef);
       return sessionId;
     },
-    onSuccess: (_, sessionId) => {
-      // Parse sessionId to get year and category for cache invalidation
-      const parts = sessionId.split('-');
-      const year = parseInt(parts[0]);
-      const category = parts[1];
-
+    onSuccess: () => {
+      // 수강료 계산기 동기화 포함
       queryClient.invalidateQueries({
-        queryKey: [SESSION_PERIODS_KEY, year]
-      });
-      queryClient.invalidateQueries({
-        queryKey: [SESSION_PERIODS_KEY, year, category]
+        queryKey: [SESSION_PERIODS_KEY]
       });
     },
     onError: (error: Error) => {
@@ -174,13 +161,10 @@ export const useBatchSaveSessionPeriods = () => {
 
       return Promise.all(savePromises);
     },
-    onSuccess: (savedSessions) => {
-      // Invalidate all affected year queries
-      const years = [...new Set(savedSessions.map(s => s.year))];
-      years.forEach(year => {
-        queryClient.invalidateQueries({
-          queryKey: [SESSION_PERIODS_KEY, year]
-        });
+    onSuccess: () => {
+      // 수강료 계산기 동기화 포함
+      queryClient.invalidateQueries({
+        queryKey: [SESSION_PERIODS_KEY]
       });
     },
     onError: (error: Error) => {

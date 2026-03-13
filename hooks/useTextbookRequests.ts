@@ -62,7 +62,7 @@ export function useTextbookRequests() {
     staleTime: 10 * 60 * 1000,
   });
 
-  // 카탈로그 (Firestore 우선, 없으면 정적 데이터)
+  // 카탈로그 (Firestore 우선, 정적 데이터에 새 항목이 있으면 자동 병합)
   const { data: catalog = TEXTBOOK_CATALOG } = useQuery({
     queryKey: ['textbookCatalog'],
     queryFn: async () => {
@@ -71,7 +71,14 @@ export function useTextbookRequests() {
       if (snap.exists()) {
         const list = snap.data().list as TextbookCatalogItem[];
         if (list && list.length > 0) {
-          return list.map(item => ({ ...item, subject: item.subject || DEFAULT_SUBJECT }));
+          const result = list.map(item => ({ ...item, subject: item.subject || DEFAULT_SUBJECT }));
+          // 정적 카탈로그에 새로 추가된 항목 자동 병합
+          const existingNames = new Set(result.map(item => item.name));
+          const newDefaults = TEXTBOOK_CATALOG
+            .filter(item => !existingNames.has(item.name))
+            .map(item => ({ ...item, subject: item.subject || DEFAULT_SUBJECT }));
+          if (newDefaults.length > 0) return [...result, ...newDefaults];
+          return result;
         }
       }
       return TEXTBOOK_CATALOG.map(item => ({ ...item, subject: item.subject || DEFAULT_SUBJECT }));

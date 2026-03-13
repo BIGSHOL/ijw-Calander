@@ -157,4 +157,10 @@ export const TEXTBOOK_CATALOG: TextbookCatalogItem[] = [
   { category: 'high', grade: '고2', difficulty: '다빈치', name: '다빈치 확률과 통계 01. 경우의 수', price: 12500 },
   { category: 'high', grade: '고2', difficulty: '다빈치', name: '다빈치 확률과 통계 02. 확률', price: 16000 },
   { category: 'high', grade: '고2', difficulty: '다빈치', name: '다빈치 확률과 통계 03. 통계', price: 19000 },
+
+  // 영어 과정
+  { category: 'elementary', grade: '초등', difficulty: '교재', name: '[EiE] PHONICS', price: 40000, subject: '영어' },
+  { category: 'elementary', grade: '초등', difficulty: '교재', name: '[EiE] ROOKIES (PL)', price: 40000, subject: '영어' },
+  { category: 'elementary', grade: '초등', difficulty: '교재', name: "[EiE] ROOKIES (LET'S)", price: 44000, subject: '영어' },
+  { category: 'elementary', grade: '초등', difficulty: '교재', name: '[EiE] LEADERS', price: 44000, subject: '영어' },
 ];

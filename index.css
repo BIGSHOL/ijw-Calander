@@ -551,3 +551,50 @@ tbody:not(.timetable-body) tr {
     box-shadow: none !important;
   }
 }
+
+/* ==================== 수강료 계산기 인쇄 ==================== */
+/* tuition-print-mode: body에 추가되면 A4 세로 인쇄 모드 */
+body.tuition-print-mode {
+  min-width: auto !important;
+  overflow: visible !important;
+  height: auto !important;
+}
+
+@media print {
+  body.tuition-print-mode {
+    background: white !important;
+  }
+
+  body.tuition-print-mode #root {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* 사이드바, 헤더, 입력패널 숨김 */
+  body.tuition-print-mode aside,
+  body.tuition-print-mode header,
+  body.tuition-print-mode .no-print {
+    display: none !important;
+  }
+
+  /* A4 세로 */
+  body.tuition-print-mode {
+    @page {
+      size: A4 portrait;
+      margin: 10mm;
+    }
+  }
+
+  /* 인쇄 전용 영역 표시 */
+  body.tuition-print-mode .print\\:block {
+    display: block !important;
+  }
+
+  /* 전체 폭 사용 */
+  body.tuition-print-mode main {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}

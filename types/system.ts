@@ -17,7 +17,7 @@ export interface ReportSummary {
 
 // ============ SYSTEM TAB PERMISSIONS ============
 
-// Top-level Application Tabs (32개)
+// Top-level Application Tabs (33개)
 export type AppTab =
   // 기존 탭 (20개)
   | 'dashboard' | 'calendar' | 'timetable' | 'payment' | 'gantt'
@@ -28,7 +28,7 @@ export type AppTab =
   // Phase 1: 소통 강화
   | 'notices' | 'parent-portal'
   // Phase 2: 경영 관리
-  | 'analytics' | 'payroll'
+  | 'analytics' | 'payroll' | 'tuition-calculator'
   // Phase 3: 수업 운영
   | 'homework' | 'exams' | 'sms-notifications' | 'textbooks'
   // Phase 4: 기능 완성
@@ -78,6 +78,7 @@ export const TAB_META: Record<AppTab, Omit<TabMetadata, 'id'>> = {
   'role-management': { label: '역할 관리', icon: '🔐' },
   payroll: { label: '급여 관리', icon: '💵' },
   analytics: { label: '매출 분석', icon: '📈' },
+  'tuition-calculator': { label: '수강료 계산', icon: '🧮' },
   // 소통
   'parent-portal': { label: '학부모 소통', icon: '👨‍👩‍👧' },
   'sms-notifications': { label: '알림 발송', icon: '📲' },
@@ -133,7 +134,7 @@ export const TAB_GROUPS: TabGroup[] = [
     id: 'admin',
     label: '관리',
     icon: '⚙️',
-    tabs: ['payment', 'staff', 'billing', 'resources', 'role-management', 'payroll', 'analytics'],
+    tabs: ['tuition-calculator', 'payment', 'staff', 'billing', 'resources', 'role-management', 'payroll', 'analytics'],
     order: 4,
   },
   {
@@ -180,6 +181,7 @@ export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
     'student-consultations', 'staff', 'billing', 'role-management', 'resources', 'withdrawal',
     'homework', 'exams', 'textbooks', 'contracts', 'reports', 'payroll', 'analytics',
     'parent-portal', 'sms-notifications', 'marketing', 'shuttle', 'timetable-distribution', 'help', 'logs',
+    'tuition-calculator',
   ],
   admin: [
     'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt',
@@ -187,13 +189,14 @@ export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
     'student-consultations', 'staff', 'billing', 'role-management', 'resources', 'withdrawal',
     'homework', 'exams', 'textbooks', 'contracts', 'reports', 'payroll', 'analytics',
     'parent-portal', 'sms-notifications', 'marketing', 'shuttle', 'timetable-distribution', 'help', 'logs',
+    'tuition-calculator',
   ],
   manager: [
     'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'daily-attendance',
     'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment',
     'student-consultations', 'staff', 'billing', 'resources', 'withdrawal',
     'homework', 'exams', 'textbooks', 'contracts', 'reports', 'analytics',
-    'parent-portal', 'sms-notifications', 'shuttle', 'help',
+    'parent-portal', 'sms-notifications', 'shuttle', 'help', 'tuition-calculator',
   ],
   math_lead: [
     'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'daily-attendance',
