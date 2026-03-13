@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { ref, uploadBytesResumable } from 'firebase/storage';
-import { collection, doc, onSnapshot, query, orderBy, limit, getDocs, where } from 'firebase/firestore';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ref, uploadBytesResumable, deleteObject } from 'firebase/storage';
+import { collection, doc, onSnapshot, query, orderBy, limit, getDocs, where, deleteDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getApp } from 'firebase/app';
 import { db, storage } from '../firebaseConfig';
@@ -153,5 +153,34 @@ export function useConsultationReports(studentId?: string) {
       return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as ConsultationReport));
     },
     staleTime: 1000 * 60 * 5,
+  });
+}
+
+/**
+ * 상담 녹음 리포트 삭제 (Firestore 문서 + Storage 파일)
+ */
+export function useDeleteConsultationReport() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (report: Pick<ConsultationReport, 'id' | 'storagePath'>) => {
+      // 1. Storage 파일 삭제 (존재하면)
+      if (report.storagePath) {
+        try {
+          const storageRef = ref(storage, report.storagePath);
+          await deleteObject(storageRef);
+        } catch (err: unknown) {
+          // 파일이 이미 없으면 무시
+          if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code !== 'storage/object-not-found') {
+            throw err;
+          }
+        }
+      }
+      // 2. Firestore 문서 삭제
+      await deleteDoc(doc(db, COLLECTION, report.id));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['consultation_reports'] });
+    },
   });
 }

@@ -5,6 +5,7 @@ export type ConsultationReportStatus =
   | 'transcribing'   // 음성 인식 중
   | 'analyzing'      // AI 분석 중
   | 'completed'      // 완료
+  | 'failed'         // 분석 불가 (텍스트 부족/음성 인식 실패)
   | 'error';         // 오류
 
 export interface ConsultationReportSection {

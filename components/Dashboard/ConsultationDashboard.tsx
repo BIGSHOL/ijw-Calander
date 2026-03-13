@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { Calendar, RefreshCw, FileText, Users, UserCheck, AlertTriangle, X, ChevronRight, AlertCircle, Search } from 'lucide-react';
 import { useConsultationStats, getDateRangeFromPreset, DatePreset, StaffSubjectStat, StudentNeedingConsultation } from '../../hooks/useConsultationStats';
+import { useConsultationReports } from '../../hooks/useConsultationRecording';
 import { useStaff } from '../../hooks/useStaff';
 import { usePermissions } from '../../hooks/usePermissions';
-import { UserProfile } from '../../types';
+import { UserProfile, ConsultationReport } from '../../types';
+import { Mic } from 'lucide-react';
 import CounselingOverview from './CounselingOverview';
 import CategoryStats from './CategoryStats';
 import StaffSubjectStats from './StaffSubjectStats';
@@ -55,6 +57,19 @@ const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
   const { stats: rawStats, loading, refetch } = useConsultationStats(
     { dateRange },
     staff
+  );
+
+  // AI 상담 녹음 분석 리포트
+  const { data: allReports = [] } = useConsultationReports();
+  const riskReports = useMemo(() =>
+    allReports.filter(r =>
+      r.status === 'completed' &&
+      r.report?.riskFlags &&
+      !r.report.riskFlags.includes('특이사항 없음') &&
+      !r.report.riskFlags.includes('없음') &&
+      r.report.riskFlags.trim() !== ''
+    ).slice(0, 5),
+    [allReports]
   );
 
   // 권한에 따른 통계 필터링
@@ -274,6 +289,34 @@ const ConsultationDashboard: React.FC<ConsultationDashboardProps> = ({
           />
         </div>
       </div>
+
+      {/* AI 상담 분석 주의 학생 */}
+      {riskReports.length > 0 && (
+        <div className="bg-white border border-red-200 rounded-sm overflow-hidden">
+          <div className="px-3 py-2 bg-red-50 border-b border-red-200 flex items-center gap-2">
+            <Mic className="w-4 h-4 text-red-600" />
+            <h3 className="text-xs font-bold text-red-800">AI 상담 분석 - 주의 필요 학생</h3>
+            <span className="text-xxs text-red-600">({riskReports.length}건)</span>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {riskReports.map(report => (
+              <div key={report.id} className="px-3 py-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-primary">{report.studentName}</span>
+                    <span className="text-xxs text-gray-500">{report.consultationDate}</span>
+                    <span className="text-xxs text-gray-400">{report.consultantName}</span>
+                  </div>
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+                </div>
+                <p className="text-xxs text-red-700 mt-1 whitespace-pre-wrap leading-relaxed">
+                  {report.report?.riskFlags}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 모달들 */}
       {showStaffModal && (

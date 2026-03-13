@@ -480,7 +480,7 @@ export const TabContent: React.FC<TabContentProps> = ({
       ) : appMode === 'consultation-recording' ? (
         <Suspense fallback={<TabLoadingFallback />}>
           <div className="w-full flex-1 overflow-hidden">
-            <ConsultationRecordingTab />
+            <ConsultationRecordingTab userProfile={effectiveProfile} />
           </div>
         </Suspense>
       ) : appMode === 'tuition-calculator' ? (

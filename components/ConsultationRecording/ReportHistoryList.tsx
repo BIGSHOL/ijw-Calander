@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Search, FileText, Clock, AlertCircle, Loader2 } from 'lucide-react';
-import { useConsultationReports } from '../../hooks/useConsultationRecording';
+import { Search, FileText, Clock, AlertCircle, Loader2, Trash2 } from 'lucide-react';
+import { useConsultationReports, useDeleteConsultationReport } from '../../hooks/useConsultationRecording';
+import { usePermissions } from '../../hooks/usePermissions';
 import { format } from 'date-fns';
-import type { ConsultationReportStatus } from '../../types';
+import type { ConsultationReportStatus, UserProfile } from '../../types';
 
 interface ReportHistoryListProps {
   onSelectReport: (reportId: string) => void;
+  userProfile: UserProfile | null;
 }
 
 const STATUS_MAP: Record<ConsultationReportStatus, { label: string; color: string }> = {
@@ -13,12 +15,22 @@ const STATUS_MAP: Record<ConsultationReportStatus, { label: string; color: strin
   transcribing: { label: '음성 인식 중', color: 'bg-yellow-100 text-yellow-700' },
   analyzing: { label: 'AI 분석 중', color: 'bg-purple-100 text-purple-700' },
   completed: { label: '완료', color: 'bg-green-100 text-green-700' },
+  failed: { label: '분석 불가', color: 'bg-amber-100 text-amber-700' },
   error: { label: '오류', color: 'bg-red-100 text-red-700' },
 };
 
-export function ReportHistoryList({ onSelectReport }: ReportHistoryListProps) {
+export function ReportHistoryList({ onSelectReport, userProfile }: ReportHistoryListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const { data: reports = [], isLoading } = useConsultationReports();
+  const { hasPermission } = usePermissions(userProfile);
+  const deleteMutation = useDeleteConsultationReport();
+  const canDelete = hasPermission('recording.delete');
+
+  const handleDelete = (e: React.MouseEvent, report: { id: string; storagePath?: string; studentName?: string }) => {
+    e.stopPropagation();
+    if (!window.confirm(`"${report.studentName}" 녹음 분석 내역을 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
+    deleteMutation.mutate({ id: report.id, storagePath: report.storagePath || '' });
+  };
 
   const filtered = searchQuery.trim()
     ? reports.filter(r =>
@@ -64,18 +76,20 @@ export function ReportHistoryList({ onSelectReport }: ReportHistoryListProps) {
         <div className="divide-y max-h-[600px] overflow-auto">
           {filtered.map(report => {
             const statusInfo = STATUS_MAP[report.status] || STATUS_MAP.error;
+            const isDeleting = deleteMutation.isPending && deleteMutation.variables?.id === report.id;
             return (
               <button
                 key={report.id}
                 onClick={() => onSelectReport(report.id)}
                 className="w-full px-5 py-3 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left"
+                disabled={isDeleting}
               >
                 {/* 상태 아이콘 */}
                 <div className="flex-shrink-0">
                   {report.status === 'completed' ? (
                     <FileText size={20} className="text-green-500" />
-                  ) : report.status === 'error' ? (
-                    <AlertCircle size={20} className="text-red-500" />
+                  ) : report.status === 'error' || report.status === 'failed' ? (
+                    <AlertCircle size={20} className={report.status === 'failed' ? 'text-amber-500' : 'text-red-500'} />
                   ) : (
                     <Loader2 size={20} className="text-accent-500 animate-spin" />
                   )}
@@ -100,6 +114,22 @@ export function ReportHistoryList({ onSelectReport }: ReportHistoryListProps) {
                     )}
                   </div>
                 </div>
+
+                {/* 삭제 버튼 */}
+                {canDelete && (
+                  <button
+                    onClick={(e) => handleDelete(e, report)}
+                    disabled={isDeleting}
+                    className="flex-shrink-0 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                    title="삭제"
+                  >
+                    {isDeleting ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Trash2 size={14} />
+                    )}
+                  </button>
+                )}
 
                 {/* 생성일 */}
                 <span className="text-xs text-gray-400 flex-shrink-0">

@@ -5,10 +5,15 @@ import { RecordingStatusTracker } from './RecordingStatusTracker';
 import { ReportViewer } from './ReportViewer';
 import { ReportHistoryList } from './ReportHistoryList';
 import { useConsultationReportStatus } from '../../hooks/useConsultationRecording';
+import type { UserProfile } from '../../types';
 
 type ViewMode = 'upload' | 'history';
 
-export default function ConsultationRecordingTab() {
+interface ConsultationRecordingTabProps {
+  userProfile?: UserProfile | null;
+}
+
+export default function ConsultationRecordingTab({ userProfile }: ConsultationRecordingTabProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('upload');
   const [activeReportId, setActiveReportId] = useState<string | null>(null);
   const { report } = useConsultationReportStatus(activeReportId);
@@ -18,7 +23,7 @@ export default function ConsultationRecordingTab() {
     setViewMode('upload');
   };
 
-  const isInProgress = report && report.status !== 'completed' && report.status !== 'error';
+  const isInProgress = report && report.status !== 'completed' && report.status !== 'error' && report.status !== 'failed';
 
   return (
     <div className="h-full flex flex-col bg-gray-50">
@@ -83,6 +88,20 @@ export default function ConsultationRecordingTab() {
               </>
             )}
 
+            {/* 분석 불가 (텍스트 부족/음성 인식 실패) */}
+            {report?.status === 'failed' && (
+              <div className="bg-amber-50 border border-amber-200 rounded-sm p-5 text-center">
+                <p className="text-amber-800 font-medium">분석할 수 없는 녹음입니다</p>
+                <p className="text-amber-600 text-sm mt-1">{report.statusMessage}</p>
+                <button
+                  onClick={() => setActiveReportId(null)}
+                  className="mt-4 px-4 py-2 bg-amber-100 text-amber-800 rounded-sm text-sm hover:bg-amber-200"
+                >
+                  다른 파일로 다시 시도
+                </button>
+              </div>
+            )}
+
             {/* 에러 */}
             {report?.status === 'error' && (
               <div className="bg-red-50 border border-red-200 rounded-sm p-5 text-center">
@@ -99,7 +118,7 @@ export default function ConsultationRecordingTab() {
           </div>
         ) : (
           <div className="max-w-3xl mx-auto">
-            <ReportHistoryList onSelectReport={handleSelectFromHistory} />
+            <ReportHistoryList onSelectReport={handleSelectFromHistory} userProfile={userProfile || null} />
           </div>
         )}
       </div>
