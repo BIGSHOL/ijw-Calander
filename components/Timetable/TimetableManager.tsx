@@ -295,11 +295,25 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
         if (viewType !== 'excel') return;
 
         const handleKeyDown = async (e: KeyboardEvent) => {
+            // input, textarea 등에서는 기본 동작 유지
+            const target = e.target as HTMLElement;
+            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' ||
+                target.tagName === 'SELECT' || target.isContentEditable) {
+                return;
+            }
+
             // Del 키: 선택된 학생을 보류 삭제 목록에 추가 (저장 시 실행) - edit 모드에서만
             if (e.key === 'Delete') {
-                if (mode !== 'edit') return; // 조회 모드에서는 삭제 불가
-                if (selectedStudentIds.size === 0 || !selectedStudentClassName) return;
+                if (mode !== 'edit') {
+                    console.log('[Delete Key] 조회 모드에서는 삭제가 불가능합니다.');
+                    return; // 조회 모드에서는 삭제 불가
+                }
+                if (selectedStudentIds.size === 0 || !selectedStudentClassName) {
+                    console.log('[Delete Key] 선택된 학생이 없습니다.');
+                    return;
+                }
                 e.preventDefault();
+                console.log(`[Delete Key] ${selectedStudentIds.size}명의 학생을 삭제 대기 목록에 추가합니다.`);
 
                 const className = selectedStudentClassName;
                 const targetClass = filteredClasses.find(c => c.className === className);
@@ -331,6 +345,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
             // Ctrl+Z: 마지막 보류 작업 취소 (한국어 IME에서 e.key가 'ㅋ'일 수 있으므로 e.code도 체크)
             if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z' || e.code === 'KeyZ')) {
                 e.preventDefault();
+                console.log('[Ctrl+Z] 실행 취소');
                 // 보류 등록이 있으면 마지막 등록 취소, 없으면 마지막 삭제 취소
                 if (pendingExcelEnrollments.length > 0) {
                     const last = pendingExcelEnrollments[pendingExcelEnrollments.length - 1];
@@ -374,7 +389,10 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     setCopiedStudent({ studentIds: [...selectedStudentIds], className: selectedStudentClassName });
                     setCutStudent(null);
                     const names = [...selectedStudentIds].map(id => studentMap[id]?.name || id).join(', ');
+                    console.log(`[Ctrl+C] ${selectedStudentIds.size}명 복사: ${names}`);
                     showExcelToast(`복사: ${names}`);
+                } else {
+                    console.log('[Ctrl+C] 복사할 학생이 선택되지 않았습니다.');
                 }
                 return;
             }
@@ -629,22 +647,39 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     handleSavePendingMoves={async () => {
                         // 1. 기존 드래그 이동 저장
                         if (pendingMovesCount > 0) await handleSavePendingMoves();
+
                         // 2. 보류 삭제 실행
+                        console.log('[Excel Save] 보류 삭제 시작:', pendingExcelDeletes);
                         try {
                             for (const del of pendingExcelDeletes) {
+                                console.log(`[Excel Delete] ${del.studentId}를 ${del.className}에서 삭제 중... (type: ${del.type})`);
                                 if (del.type === 'withdrawn') {
                                     await deleteEnrollmentRecord(del.className, del.studentId);
+                                    console.log(`[Excel Delete] ${del.studentId} 퇴원생 기록 삭제 완료`);
                                 } else {
-                                    await smartRemoveStudent(del.className, del.studentId);
+                                    const result = await smartRemoveStudent(del.className, del.studentId);
+                                    console.log(`[Excel Delete] ${del.studentId} 삭제 완료 (결과: ${result})`);
                                 }
                             }
+
                             // 3. 보류 등록 실행
+                            console.log('[Excel Save] 보류 등록 시작:', pendingExcelEnrollments);
                             for (const enr of pendingExcelEnrollments) {
+                                console.log(`[Excel Enroll] ${enr.studentId}를 ${enr.className}에 등록 중...`);
                                 await enrollExistingStudent(enr.studentId, enr.className, enr.enrollmentDate);
+                                console.log(`[Excel Enroll] ${enr.studentId} 등록 완료`);
                             }
-                            // 4. 캐시 무효화 및 화면 새로고침
-                            queryClient.invalidateQueries({ queryKey: ['students'] });
-                            queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
+
+                            // 4. 캐시 무효화 및 화면 새로고침 (강제 refetch)
+                            console.log('[Excel Save] 캐시 무효화 및 강제 새로고침...');
+                            await queryClient.invalidateQueries({ queryKey: ['students'] });
+                            await queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
+                            await queryClient.invalidateQueries({ queryKey: ['mathClasses'] });
+
+                            // 강제로 다시 fetch
+                            await queryClient.refetchQueries({ queryKey: ['timetableClasses'] });
+                            await queryClient.refetchQueries({ queryKey: ['mathClasses'] });
+                            console.log('[Excel Save] 저장 완료!');
                         } catch (error) {
                             console.error('엑셀 보류 작업 저장 오류:', error);
                             alert('일부 작업 저장에 실패했습니다.');

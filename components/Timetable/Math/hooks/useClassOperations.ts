@@ -316,9 +316,11 @@ export const useClassOperations = () => {
 
     // 스마트 삭제: enrollment에 endDate 설정하고 스케줄 정보 저장 (지난수업 기록 유지)
     const smartRemoveStudent = async (className: string, studentId: string): Promise<'removed' | 'withdrawn'> => {
+        console.log(`[smartRemoveStudent] 시작: ${studentId} from ${className}`);
         const enrollmentsRef = collection(db, 'students', studentId, 'enrollments');
         const q = query(enrollmentsRef, where('subject', '==', 'math'));
         const snapshot = await getDocs(q);
+        console.log(`[smartRemoveStudent] 학생의 수학 enrollments 수: ${snapshot.size}`);
 
         // 현재 반을 제외한 다른 활성 수학수업 수
         const otherActiveMath = snapshot.docs.filter(d => {
@@ -330,13 +332,23 @@ export const useClassOperations = () => {
         const today = new Date().toISOString().split('T')[0];
 
         // enrollment 문서 존재 여부 확인
+        console.log(`[smartRemoveStudent] enrollment 문서 확인 중: math_${className}`);
         const enrollmentSnap = await getDoc(enrollmentRef);
 
         if (!enrollmentSnap.exists()) {
-            // enrollment 문서가 없으면 (엑셀뷰 보류 등록 후 바로 삭제한 경우) 로그만 남기고 종료
-            console.log(`enrollment 문서 없음 (보류 작업): ${studentId} - ${className}`);
+            // enrollment 문서가 없으면 실제로 시간표에서만 삭제
+            console.log(`[smartRemoveStudent] ⚠️ enrollment 문서 없음: ${studentId} - ${className}`);
+            console.log(`[smartRemoveStudent] 시간표에서만 제거 중...`);
+
+            // 시간표에서 학생 제거를 위해 캐시 무효화
             invalidateMathCaches();
+            queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
+            queryClient.invalidateQueries({ queryKey: ['mathClasses'] });
+
+            console.log(`[smartRemoveStudent] ✅ 시간표에서 제거 완료 (enrollment 없음)`);
             return otherActiveMath >= 1 ? 'removed' : 'withdrawn';
+        } else {
+            console.log(`[smartRemoveStudent] ✅ enrollment 문서 존재`);
         }
 
         // 수업 스케줄 정보 조회하여 enrollment에 저장
@@ -355,12 +367,14 @@ export const useClassOperations = () => {
                 ) || [];
 
                 // enrollment 업데이트: endDate 설정 + 스케줄 정보 저장 (merge: true로 안전하게)
+                console.log(`[smartRemoveStudent] enrollment 업데이트 중...`);
                 await setDoc(enrollmentRef, {
                     endDate: today,
                     withdrawalDate: today, // 호환성
                     schedule, // 삭제 당시 스케줄 저장
                     updatedAt: new Date().toISOString(),
                 }, { merge: true });
+                console.log(`[smartRemoveStudent] ✅ enrollment 업데이트 완료`);
             } else {
                 // 수업 정보가 없으면 endDate만 설정
                 await setDoc(enrollmentRef, {
