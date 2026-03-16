@@ -10,15 +10,18 @@ export type ConsultationReportStatus =
 
 export interface ConsultationReportSection {
   summary: string;              // 상담 요약 (분위기, 핵심 흐름)
+  consultationType: string;     // 상담 성격 (등록상담/정기상담/성적상담/문제상담 등)
+  familyContext: string;        // 가정 배경/개인 맥락 (ASR 노이즈 메모 포함)
   parentConcerns: string;       // 학부모 걱정/불안 (직접 말한 것 + 추론)
   parentQuestions: string;      // 학부모 질문사항 (답변 여부 구분)
-  parentRequests: string;       // 학부모 명시적 요청
+  parentRequests: string;       // 학부모가 직접 요청한 사항 (상담사 제안과 구분)
   parentSatisfaction: string;   // 만족도/감정 상태 분석
-  studentNotes: string;         // 학생 특이사항 (학습, 행동, 강점/약점)
-  teacherResponse: string;      // 교사 해결책/설명 요약
-  agreements: string;           // 합의된 사항
+  studentNotes: string;         // 학생 특이사항 (학습, 행동, 심리, 의사소통 패턴)
+  teacherResponse: string;      // 교사/상담사 대응 요약
+  salesPoints: string;          // 상담사의 세일즈 포인트/설득 논거 (등록상담 시)
+  agreements: string;           // 합의된 사항 (구체적 로드맵 포함)
   actionItems: string;          // 후속 조치 항목
-  riskFlags: string;            // 주의 신호 (퇴원 가능성, 심각한 불만 등)
+  riskFlags: string;            // 주의 신호 (자존감, 가정 갈등, 퇴원 가능성 등)
 }
 
 export interface SpeakerUtterance {

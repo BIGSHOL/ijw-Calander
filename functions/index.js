@@ -4807,7 +4807,7 @@ exports.processConsultationRecording = functions
             throw new functions.https.HttpsError("unauthenticated", "로그인이 필요합니다.");
         }
 
-        const { storagePath, studentId, studentName, consultantName, consultationDate, fileName } = data;
+        const { reportId: existingReportId, storagePath, studentId, studentName, consultantName, consultationDate, fileName } = data;
 
         // 2. 입력 검증
         if (!storagePath || !studentName || !consultationDate) {
@@ -4822,10 +4822,12 @@ exports.processConsultationRecording = functions
             throw new functions.https.HttpsError("failed-precondition", "AI 서비스가 설정되지 않았습니다.");
         }
 
-        // 4. Firestore에 초기 문서 생성
-        const reportRef = db.collection("consultation_reports").doc();
+        // 4. Firestore 문서 (프론트에서 미리 생성한 경우 재사용, 아니면 새로 생성)
+        const reportRef = existingReportId
+            ? db.collection("consultation_reports").doc(existingReportId)
+            : db.collection("consultation_reports").doc();
         const now = Date.now();
-        await reportRef.set({
+        const docData = {
             studentId: studentId || "",
             studentName,
             consultantName: consultantName || "",
@@ -4835,10 +4837,14 @@ exports.processConsultationRecording = functions
             fileSizeBytes: 0,
             status: "transcribing",
             statusMessage: "음성 인식을 시작합니다...",
-            createdAt: now,
             updatedAt: now,
             createdBy: context.auth.uid,
-        });
+        };
+        if (existingReportId) {
+            await reportRef.update(docData);
+        } else {
+            await reportRef.set({ ...docData, createdAt: now });
+        }
 
         try {
             // 5. Storage에서 Signed URL 생성
@@ -4871,7 +4877,7 @@ exports.processConsultationRecording = functions
                     audio_url: signedUrl,
                     language_code: "ko",
                     speaker_labels: true,
-                    speech_model: "best",
+                    speech_models: ["universal-3-pro", "universal-2"],
                     word_boost: ACADEMY_WORD_BOOST,
                     boost_param: "high",
                 }),
@@ -5000,14 +5006,15 @@ exports.processConsultationRecording = functions
                 },
                 body: JSON.stringify({
                     model: "claude-sonnet-4-20250514",
-                    max_tokens: 4096,
+                    max_tokens: 8192,
                     messages: [{
                         role: "user",
                         content: `당신은 학원 학부모 상담 기록을 깊이 있게 분석하는 교육 상담 전문가입니다.
 
 다음은 학부모와 학원 상담사 간의 상담 녹음을 텍스트로 변환한 것입니다.
+음성인식(ASR) 특성상 고유명사(인명, 지명, 학교명 등)가 잘못 인식될 수 있습니다.
+같은 사람을 가리키는 유사한 이름이 여러 형태로 나타나면 하나로 통일하되, 통일한 사실을 메모해주세요.
 화자가 구분되어 있으며, 대화 맥락을 바탕으로 [선생님], [학부모], [학생] 역할을 추정해주세요.
-역할이 확실하지 않은 경우에는 원래 화자 표기(화자 A, 화자 B 등)를 그대로 유지하세요.
 
 학생: ${studentName}
 상담일: ${consultationDate}
@@ -5018,25 +5025,42 @@ ${formattedTranscript}
 --- 끝 ---
 
 위 상담 내용을 심층 분석하여 보고서를 작성해주세요.
+
+분석 시 반드시 주의할 점:
+1. 상담의 성격을 정확히 파악하세요 (등록/영업 상담 vs 정기 상담 vs 성적 상담 vs 문제 상담 등). 등록 상담이면 상담사가 프로그램 등록을 유도하는 구조임을 명시하세요.
+2. 학부모가 직접 언급한 개인 배경(나이, 가족 상황, 직업, 과거 경험 등)을 빠짐없이 기록하세요. 이는 학부모의 동기와 감정을 이해하는 핵심 맥락입니다.
+3. "학부모 요청사항"은 학부모가 직접 발의한 것만 포함하세요. 상담사가 제안하고 학부모가 수용한 것은 "교사 대응/설명 요약" 또는 "합의된 사항"에 넣으세요.
+4. "주의 필요 신호"는 절대 가볍게 보지 마세요. 다음을 반드시 감지하세요:
+   - 학생의 자존감/자기효능감 저하 신호 (IQ 의심, "나는 머리가 나쁜가" 등)
+   - 가정 내 갈등/압박 신호 (부부 갈등, 부모의 과도한 기대, 체벌/화냄 고백 등)
+   - 학생의 눈치를 보는 성향, 의사소통 어려움
+   - 퇴원/이탈 가능성
+   - 학부모의 번아웃/좌절감
+5. 학생의 심리 상태와 의사소통 패턴에 주목하세요 (예: 문제를 인식하고도 부모에게 말 못하는 상황, 주변 눈치를 보는 성향 등).
+6. 상담사가 등록/유지를 위해 사용한 설득 포인트(성공 사례, 입시 정보, 시설 홍보 등)를 별도로 정리하세요.
+7. 합의사항에는 구체적인 학습 로드맵(시기별 목표, 진도 계획)이 언급되었으면 반드시 포함하세요.
+
 대화의 행간, 감정, 뉘앙스까지 읽어서 학부모의 진짜 의도와 감정을 파악해주세요.
-각 항목은 한국어로 구체적이고 상세하게 작성하세요.
 
 중요: 각 JSON 값 내에서 항목을 구분할 때 반드시 줄바꿈(\\n)을 사용하세요.
 불릿 포인트(-)는 각각 새 줄에 작성하세요. 예시: "- 첫번째 항목\\n- 두번째 항목\\n- 세번째 항목"
 
 반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
 {
-  "speakerRoles": {"A": "선생님", "B": "학부모"} (화자 식별 결과 - 대화 맥락에서 각 화자의 역할을 추정. 가능한 역할: 선생님, 학부모, 학생, 원장, 기타. 확실하지 않으면 원래 화자 표기 유지),
-  "summary": "상담의 전체적인 요약 (5-7문장, 상담 분위기와 핵심 흐름 포함. 문단 구분 시 \\n 사용)",
-  "parentConcerns": "학부모가 걱정하거나 불안해하는 부분 (직접 말한 것 + 말투/맥락에서 추론되는 것 모두 포함.\\n각 항목은 - 불릿으로 줄바꿈하여 작성)",
-  "parentQuestions": "학부모가 궁금해하거나 질문한 사항들 (답변이 된 것과 안 된 것 구분.\\n각 항목은 - 불릿으로 줄바꿈하여 작성)",
-  "parentRequests": "학부모가 명시적으로 요청한 사항들 (각 항목은 - 불릿으로 줄바꿈하여 작성)",
-  "parentSatisfaction": "학부모의 전반적인 만족도/감정 상태 분석 (긍정적인 부분, 불만인 부분, 아직 해소되지 않은 우려 등. 문단 구분 시 \\n 사용)",
-  "studentNotes": "학생에 관한 특이사항 (학습 태도, 성적 변화, 교우관계, 행동 특성, 강점/약점 등.\\n각 항목은 - 불릿으로 줄바꿈하여 작성)",
-  "teacherResponse": "교사/상담자가 제시한 해결책이나 설명 요약 (각 항목은 - 불릿으로 줄바꿈하여 작성)",
-  "agreements": "상담 중 합의된 사항들 (구체적인 일정/방법 포함.\\n각 항목은 - 불릿으로 줄바꿈하여 작성)",
-  "actionItems": "후속 조치가 필요한 항목들 (담당자, 기한 포함 가능하면.\\n각 항목은 - 불릿으로 줄바꿈하여 작성)",
-  "riskFlags": "주의가 필요한 신호 (퇴원 가능성, 심각한 불만, 학생 정서적 문제 등 - 없으면 '특이사항 없음'.\\n각 항목은 - 불릿으로 줄바꿈하여 작성)"
+  "speakerRoles": {"A": "선생님", "B": "학부모"} (화자 식별 결과. 가능한 역할: 선생님, 학부모, 학생, 원장, 기타),
+  "consultationType": "상담 성격 한 줄 요약 (예: '등록 상담 - 진단평가 결과 설명 및 프로그램 등록 유도', '정기 성적 상담', '학습 태도 문제 상담' 등)",
+  "summary": "상담의 전체적인 요약 (5-7문장).\\n상담 성격, 핵심 흐름, 주요 결론을 포함.\\nASR 인식 오류로 이름이 혼재된 경우 통일 사실도 명시",
+  "familyContext": "상담에서 드러난 가정 배경과 개인 맥락 (학부모의 나이/직업/가족구성, 학생의 형제관계, 과거 학습 이력, 이전 학원/공부방 경험, 학부모의 학력관/교육철학 등).\\n언급되지 않은 항목은 생략. 각 항목은 - 불릿으로 줄바꿈",
+  "parentConcerns": "학부모가 걱정하거나 불안해하는 부분.\\n직접 말한 것 + 말투/맥락에서 추론되는 것 모두 포함.\\n각 항목은 - 불릿으로 줄바꿈",
+  "parentQuestions": "학부모가 궁금해하거나 질문한 사항들.\\n(답변됨) 또는 (미답변) 표시.\\n각 항목은 - 불릿으로 줄바꿈",
+  "parentRequests": "학부모가 직접 발의하여 요청한 사항만 포함 (상담사 제안 제외).\\n각 항목은 - 불릿으로 줄바꿈",
+  "parentSatisfaction": "학부모의 전반적인 만족도/감정 상태 분석.\\n긍정적 반응, 불만/우려, 아직 해소되지 않은 부분을 구분.\\n문단 구분 시 \\n 사용",
+  "studentNotes": "학생에 관한 특이사항.\\n학습 태도, 성적 변화, 심리 상태(자존감/자기효능감), 의사소통 패턴(눈치, 표현 어려움), 교우관계, 강점/약점.\\n각 항목은 - 불릿으로 줄바꿈",
+  "teacherResponse": "교사/상담사가 제시한 해결책, 설명, 제안 요약 (상담사가 제안하고 학부모가 수용한 것 포함).\\n각 항목은 - 불릿으로 줄바꿈",
+  "salesPoints": "상담사가 등록/유지를 위해 사용한 설득 논거 (성공 사례, 입시 정보, 시설/프로그램 홍보, 지역 특수성 등).\\n등록/영업 성격이 아닌 상담이면 빈 문자열.\\n각 항목은 - 불릿으로 줄바꿈",
+  "agreements": "상담 중 합의된 사항.\\n구체적인 일정/방법/학습 로드맵(시기별 목표, 진도 계획) 포함.\\n누가 제안했는지 (학부모/상담사) 표시.\\n각 항목은 - 불릿으로 줄바꿈",
+  "actionItems": "후속 조치가 필요한 항목 (담당자, 기한 포함 가능하면).\\n각 항목은 - 불릿으로 줄바꿈",
+  "riskFlags": "주의가 필요한 신호. 절대 '특이사항 없음'으로 넘기지 말고 다음을 꼼꼼히 확인:\\n- 학생 자존감/자기효능감 저하 (IQ 의심, 자신감 상실 등)\\n- 가정 내 갈등/압박 (부부 갈등, 과도한 기대, 감정적 훈육 등)\\n- 학생 의사소통 문제 (부모에게 말 못함, 눈치 봄 등)\\n- 퇴원/이탈 가능성\\n- 학부모 번아웃/좌절감\\n위 항목 중 해당 없으면 '확인된 위험 신호 없음'으로 표기.\\n각 항목은 - 불릿으로 줄바꿈"
 }`
                     }],
                 }),
@@ -5135,6 +5159,147 @@ ${formattedTranscript}
     });
 
 /**
+ * 기존 상담 녹음 보고서 재분석 (저장된 텍스트 활용, Claude만 재호출)
+ */
+exports.reanalyzeConsultationReport = functions
+    .region("asia-northeast3")
+    .runWith({
+        timeoutSeconds: 300,
+        memory: "512MB",
+        secrets: ["ANTHROPIC_API_KEY"],
+    })
+    .https.onCall(async (data, context) => {
+        if (!context.auth) throw new functions.https.HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+        const { reportId } = data;
+        if (!reportId) throw new functions.https.HttpsError("invalid-argument", "보고서 ID가 필요합니다.");
+
+        const anthropicKey = process.env.ANTHROPIC_API_KEY;
+        if (!anthropicKey) throw new functions.https.HttpsError("internal", "API 키가 설정되지 않았습니다.");
+
+        const reportRef = db.collection("consultation_reports").doc(reportId);
+        const reportSnap = await reportRef.get();
+        if (!reportSnap.exists) throw new functions.https.HttpsError("not-found", "보고서를 찾을 수 없습니다.");
+
+        const reportData = reportSnap.data();
+        const { transcription, speakerLabels, studentName, consultationDate, consultantName } = reportData;
+
+        if (!transcription) throw new functions.https.HttpsError("failed-precondition", "음성인식 텍스트가 없습니다.");
+
+        try {
+            await reportRef.update({ status: "analyzing", statusMessage: "AI가 새로운 알고리즘으로 재분석 중...", updatedAt: Date.now() });
+
+            const formattedTranscript = speakerLabels && speakerLabels.length > 0
+                ? speakerLabels.map(s => `[화자 ${s.speaker}] ${s.text}`).join("\n")
+                : transcription;
+
+            const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: { "x-api-key": anthropicKey, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    model: "claude-sonnet-4-20250514",
+                    max_tokens: 8192,
+                    messages: [{
+                        role: "user",
+                        content: `당신은 학원 학부모 상담 기록을 깊이 있게 분석하는 교육 상담 전문가입니다.
+
+다음은 학부모와 학원 상담사 간의 상담 녹음을 텍스트로 변환한 것입니다.
+음성인식(ASR) 특성상 고유명사(인명, 지명, 학교명 등)가 잘못 인식될 수 있습니다.
+같은 사람을 가리키는 유사한 이름이 여러 형태로 나타나면 하나로 통일하되, 통일한 사실을 메모해주세요.
+화자가 구분되어 있으며, 대화 맥락을 바탕으로 [선생님], [학부모], [학생] 역할을 추정해주세요.
+
+학생: ${studentName}
+상담일: ${consultationDate}
+상담자: ${consultantName || "미지정"}
+
+--- 상담 내용 ---
+${formattedTranscript}
+--- 끝 ---
+
+위 상담 내용을 심층 분석하여 보고서를 작성해주세요.
+
+분석 시 반드시 주의할 점:
+1. 상담의 성격을 정확히 파악하세요 (등록/영업 상담 vs 정기 상담 vs 성적 상담 vs 문제 상담 등). 등록 상담이면 상담사가 프로그램 등록을 유도하는 구조임을 명시하세요.
+2. 학부모가 직접 언급한 개인 배경(나이, 가족 상황, 직업, 과거 경험 등)을 빠짐없이 기록하세요. 이는 학부모의 동기와 감정을 이해하는 핵심 맥락입니다.
+3. "학부모 요청사항"은 학부모가 직접 발의한 것만 포함하세요. 상담사가 제안하고 학부모가 수용한 것은 "교사 대응/설명 요약" 또는 "합의된 사항"에 넣으세요.
+4. "주의 필요 신호"는 절대 가볍게 보지 마세요. 다음을 반드시 감지하세요:
+   - 학생의 자존감/자기효능감 저하 신호 (IQ 의심, "나는 머리가 나쁜가" 등)
+   - 가정 내 갈등/압박 신호 (부부 갈등, 부모의 과도한 기대, 체벌/화냄 고백 등)
+   - 학생의 눈치를 보는 성향, 의사소통 어려움
+   - 퇴원/이탈 가능성
+   - 학부모의 번아웃/좌절감
+5. 학생의 심리 상태와 의사소통 패턴에 주목하세요 (예: 문제를 인식하고도 부모에게 말 못하는 상황, 주변 눈치를 보는 성향 등).
+6. 상담사가 등록/유지를 위해 사용한 설득 포인트(성공 사례, 입시 정보, 시설 홍보 등)를 별도로 정리하세요.
+7. 합의사항에는 구체적인 학습 로드맵(시기별 목표, 진도 계획)이 언급되었으면 반드시 포함하세요.
+
+대화의 행간, 감정, 뉘앙스까지 읽어서 학부모의 진짜 의도와 감정을 파악해주세요.
+
+중요: 각 JSON 값 내에서 항목을 구분할 때 반드시 줄바꿈(\\n)을 사용하세요.
+불릿 포인트(-)는 각각 새 줄에 작성하세요. 예시: "- 첫번째 항목\\n- 두번째 항목\\n- 세번째 항목"
+
+반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
+{
+  "speakerRoles": {"A": "선생님", "B": "학부모"} (화자 식별 결과. 가능한 역할: 선생님, 학부모, 학생, 원장, 기타),
+  "consultationType": "상담 성격 한 줄 요약 (예: '등록 상담 - 진단평가 결과 설명 및 프로그램 등록 유도', '정기 성적 상담', '학습 태도 문제 상담' 등)",
+  "summary": "상담의 전체적인 요약 (5-7문장).\\n상담 성격, 핵심 흐름, 주요 결론을 포함.\\nASR 인식 오류로 이름이 혼재된 경우 통일 사실도 명시",
+  "familyContext": "상담에서 드러난 가정 배경과 개인 맥락 (학부모의 나이/직업/가족구성, 학생의 형제관계, 과거 학습 이력, 이전 학원/공부방 경험, 학부모의 학력관/교육철학 등).\\n언급되지 않은 항목은 생략. 각 항목은 - 불릿으로 줄바꿈",
+  "parentConcerns": "학부모가 걱정하거나 불안해하는 부분.\\n직접 말한 것 + 말투/맥락에서 추론되는 것 모두 포함.\\n각 항목은 - 불릿으로 줄바꿈",
+  "parentQuestions": "학부모가 궁금해하거나 질문한 사항들.\\n(답변됨) 또는 (미답변) 표시.\\n각 항목은 - 불릿으로 줄바꿈",
+  "parentRequests": "학부모가 직접 발의하여 요청한 사항만 포함 (상담사 제안 제외).\\n각 항목은 - 불릿으로 줄바꿈",
+  "parentSatisfaction": "학부모의 전반적인 만족도/감정 상태 분석.\\n긍정적 반응, 불만/우려, 아직 해소되지 않은 부분을 구분.\\n문단 구분 시 \\n 사용",
+  "studentNotes": "학생에 관한 특이사항.\\n학습 태도, 성적 변화, 심리 상태(자존감/자기효능감), 의사소통 패턴(눈치, 표현 어려움), 교우관계, 강점/약점.\\n각 항목은 - 불릿으로 줄바꿈",
+  "teacherResponse": "교사/상담사가 제시한 해결책, 설명, 제안 요약 (상담사가 제안하고 학부모가 수용한 것 포함).\\n각 항목은 - 불릿으로 줄바꿈",
+  "salesPoints": "상담사가 등록/유지를 위해 사용한 설득 논거 (성공 사례, 입시 정보, 시설/프로그램 홍보, 지역 특수성 등).\\n등록/영업 성격이 아닌 상담이면 빈 문자열.\\n각 항목은 - 불릿으로 줄바꿈",
+  "agreements": "상담 중 합의된 사항.\\n구체적인 일정/방법/학습 로드맵(시기별 목표, 진도 계획) 포함.\\n누가 제안했는지 (학부모/상담사) 표시.\\n각 항목은 - 불릿으로 줄바꿈",
+  "actionItems": "후속 조치가 필요한 항목 (담당자, 기한 포함 가능하면).\\n각 항목은 - 불릿으로 줄바꿈",
+  "riskFlags": "주의가 필요한 신호. 절대 '특이사항 없음'으로 넘기지 말고 다음을 꼼꼼히 확인:\\n- 학생 자존감/자기효능감 저하 (IQ 의심, 자신감 상실 등)\\n- 가정 내 갈등/압박 (부부 갈등, 과도한 기대, 감정적 훈육 등)\\n- 학생 의사소통 문제 (부모에게 말 못함, 눈치 봄 등)\\n- 퇴원/이탈 가능성\\n- 학부모 번아웃/좌절감\\n위 항목 중 해당 없으면 '확인된 위험 신호 없음'으로 표기.\\n각 항목은 - 불릿으로 줄바꿈"
+}`
+                    }],
+                }),
+            });
+
+            if (!claudeResponse.ok) {
+                const errBody = await claudeResponse.text();
+                throw new Error(`Claude API 오류: ${claudeResponse.status} - ${errBody}`);
+            }
+
+            const claudeData = await claudeResponse.json();
+            const reportText = claudeData.content?.[0]?.text || "";
+
+            let report;
+            try {
+                const jsonMatch = reportText.match(/\{[\s\S]*\}/);
+                report = JSON.parse(jsonMatch ? jsonMatch[0] : reportText);
+            } catch {
+                report = { summary: reportText };
+            }
+
+            const speakerRoles = report.speakerRoles || {};
+            delete report.speakerRoles;
+
+            await reportRef.update({
+                status: "completed",
+                statusMessage: "재분석이 완료되었습니다.",
+                report,
+                speakerRoles,
+                updatedAt: Date.now(),
+            });
+
+            logger.info("[reanalyzeConsultationReport] Complete", { reportId });
+            return { reportId, status: "completed" };
+        } catch (error) {
+            logger.error("[reanalyzeConsultationReport] Error:", error);
+            await reportRef.update({
+                status: "completed",
+                statusMessage: "재분석 실패 - 이전 분석 결과를 유지합니다.",
+                errorMessage: error.message || "",
+                updatedAt: Date.now(),
+            });
+            throw new functions.https.HttpsError("internal", error.message || "재분석 실패");
+        }
+    });
+
+/**
  * 등록 상담 녹음 분석 → ConsultationRecord 폼 자동 채우기용 JSON 추출
  */
 exports.processRegistrationRecording = functions
@@ -5177,7 +5342,7 @@ exports.processRegistrationRecording = functions
                     audio_url: signedUrl,
                     language_code: "ko",
                     speaker_labels: true,
-                    speech_model: "best",
+                    speech_models: ["universal-3-pro", "universal-2"],
                     word_boost: ACADEMY_WORD_BOOST,
                     boost_param: "high",
                 }),

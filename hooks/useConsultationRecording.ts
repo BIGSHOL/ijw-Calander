@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ref, uploadBytesResumable, deleteObject } from 'firebase/storage';
-import { collection, doc, onSnapshot, query, orderBy, limit, getDocs, where, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, orderBy, limit, getDocs, where, deleteDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getApp } from 'firebase/app';
 import { db, storage } from '../firebaseConfig';
@@ -10,6 +10,7 @@ import type { ConsultationReport } from '../types';
 const functions = getFunctions(getApp(), 'asia-northeast3');
 const processConsultationRecording = httpsCallable<
   {
+    reportId?: string;
     storagePath: string;
     studentId: string;
     studentName: string;
@@ -19,6 +20,11 @@ const processConsultationRecording = httpsCallable<
   },
   { reportId: string; status: string }
 >(functions, 'processConsultationRecording', { timeout: 600_000 }); // 10분 (120MB+ 파일 대응)
+
+const reanalyzeConsultationReport = httpsCallable<
+  { reportId: string },
+  { success: boolean }
+>(functions, 'reanalyzeConsultationReport', { timeout: 360_000 }); // 6분
 
 const COLLECTION = 'consultation_reports';
 
@@ -81,19 +87,41 @@ export function useUploadConsultationRecording() {
 
       setIsUploading(false);
       setUploadProgress(null);
-      setIsProcessing(true);
 
-      // 2. Cloud Function 호출
-      const result = await processConsultationRecording({
+      // 2. Firestore에 초기 문서 생성 (즉시 reportId 확보)
+      const reportRef = doc(collection(db, COLLECTION));
+      const now = Date.now();
+      await setDoc(reportRef, {
+        studentId: studentId || '',
+        studentName,
+        studentNames: studentNames || [],
+        studentIds: studentIds || [],
+        consultantName: consultantName || '',
+        consultationDate,
+        fileName: file.name,
+        storagePath,
+        fileSizeBytes: file.size,
+        status: 'uploading',
+        statusMessage: '분석 서버에 요청 중...',
+        createdAt: now,
+        updatedAt: now,
+        createdBy: '', // Cloud Function에서 auth.uid로 덮어씀
+      });
+
+      // 3. Cloud Function 호출 (fire-and-forget — onSnapshot으로 추적)
+      processConsultationRecording({
+        reportId: reportRef.id,
         storagePath,
         studentId,
         studentName,
         consultantName,
         consultationDate,
         fileName: file.name,
+      }).catch((err) => {
+        console.error('[processConsultationRecording] Error:', err);
       });
 
-      return { reportId: result.data.reportId };
+      return { reportId: reportRef.id };
     } finally {
       setIsUploading(false);
       setIsProcessing(false);
@@ -169,6 +197,48 @@ export function useUpdateConsultationReportName() {
       await updateDoc(doc(db, COLLECTION, id), { studentName, updatedAt: Date.now() });
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['consultation_reports'] });
+    },
+  });
+}
+
+/**
+ * 기존 리포트를 새 알고리즘으로 재분석
+ * - 낙관적 업데이트: 즉시 "analyzing" 상태로 표시
+ * - 완료/에러 시 쿼리 무효화
+ */
+export function useReanalyzeReport() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (reportId: string) => {
+      await reanalyzeConsultationReport({ reportId });
+      return reportId;
+    },
+    onMutate: async (reportId: string) => {
+      // 진행 중인 쿼리 취소
+      await queryClient.cancelQueries({ queryKey: ['consultation_reports'] });
+
+      // 현재 캐시 스냅샷
+      const previousReports = queryClient.getQueriesData<ConsultationReport[]>({ queryKey: ['consultation_reports'] });
+
+      // 낙관적 업데이트: 해당 리포트 상태를 analyzing으로 변경
+      queryClient.setQueriesData<ConsultationReport[]>(
+        { queryKey: ['consultation_reports'] },
+        (old) => old?.map(r => r.id === reportId ? { ...r, status: 'analyzing' as const, statusMessage: '새 알고리즘으로 재분석 중...' } : r),
+      );
+
+      return { previousReports };
+    },
+    onError: (_err, _reportId, context) => {
+      // 에러 시 이전 캐시 복원
+      if (context?.previousReports) {
+        for (const [key, data] of context.previousReports) {
+          queryClient.setQueryData(key, data);
+        }
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['consultation_reports'] });
     },
   });
