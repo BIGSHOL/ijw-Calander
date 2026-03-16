@@ -18,7 +18,7 @@ const processConsultationRecording = httpsCallable<
     fileName: string;
   },
   { reportId: string; status: string }
->(functions, 'processConsultationRecording');
+>(functions, 'processConsultationRecording', { timeout: 600_000 }); // 10분 (120MB+ 파일 대응)
 
 const COLLECTION = 'consultation_reports';
 
@@ -41,10 +41,12 @@ export function useUploadConsultationRecording() {
     file: File;
     studentId: string;
     studentName: string;
+    studentNames?: string[];
+    studentIds?: string[];
     consultantName: string;
     consultationDate: string;
   }): Promise<{ reportId: string }> => {
-    const { file, studentId, studentName, consultantName, consultationDate } = params;
+    const { file, studentId, studentName, studentNames, studentIds, consultantName, consultationDate } = params;
 
     // 파일명: studentName_YYYY-MM-DD_timestamp.ext
     const ext = file.name.split('.').pop() || 'mp3';

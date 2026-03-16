@@ -33,9 +33,11 @@ export interface ConsultationReport {
 
   // 메타데이터
   studentId: string;
-  studentName: string;
+  studentName: string;          // 콤마 구분 (호환용)
+  studentNames?: string[];      // 복수 학생 이름 배열
+  studentIds?: string[];        // 복수 학생 ID 배열
   consultantName: string;
-  consultationDate: string;   // YYYY-MM-DD
+  consultationDate: string;     // YYYY-MM-DD
 
   // 녹음 파일 정보
   fileName: string;
