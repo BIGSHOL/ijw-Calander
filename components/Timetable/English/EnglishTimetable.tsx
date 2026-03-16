@@ -82,6 +82,8 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isLevelSettingsOpen, setIsLevelSettingsOpen] = useState(false);
     const [isDisplayOptionsOpen, setIsDisplayOptionsOpen] = useState(false);
+    const displayOptionsBtnRef = React.useRef<HTMLButtonElement>(null);
+    const [displayOptionsPos, setDisplayOptionsPos] = useState<{ top: number; left: number } | null>(null);
 
     // Header controls (mode, search) - managed at parent level for class view
     const [mode, setMode] = useState<'view' | 'edit'>('view');
@@ -953,10 +955,18 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                             저장
                         </button>
 
-                        {/* 보기 드롭다운 (표시 옵션) */}
+                        {/* 보기 드롭다운 (표시 옵션) - fixed 포지션으로 overflow 잘림 방지 */}
                         <div className="relative">
                             <button
-                                onClick={(e) => { e.stopPropagation(); setIsDisplayOptionsOpen(!isDisplayOptionsOpen); }}
+                                ref={displayOptionsBtnRef}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!isDisplayOptionsOpen && displayOptionsBtnRef.current) {
+                                        const rect = displayOptionsBtnRef.current.getBoundingClientRect();
+                                        setDisplayOptionsPos({ top: rect.bottom + 4, left: Math.max(8, rect.right - 160) });
+                                    }
+                                    setIsDisplayOptionsOpen(!isDisplayOptionsOpen);
+                                }}
                                 className="px-2 py-1 border border-gray-300 rounded-sm text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-1"
                                 title="표시 옵션"
                             >
@@ -964,79 +974,83 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 보기
                             </button>
 
-                            {isDisplayOptionsOpen && (
-                                <div
-                                    className="absolute right-0 top-full mt-1 bg-white shadow-lg rounded-sm border border-gray-200 z-20 py-2 min-w-[140px]"
-                                    onClick={(e) => e.stopPropagation()}
-                                >
-                                    <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={settings.displayOptions?.showStudents ?? true}
-                                            onChange={(e) => updateSettings({
-                                                ...settings,
-                                                displayOptions: {
-                                                    ...settings.displayOptions!,
-                                                    showStudents: e.target.checked
-                                                }
-                                            })}
-                                            className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                        />
-                                        <Users size={14} className="text-gray-500" />
-                                        <span className="text-xs text-gray-700">학생 목록</span>
-                                    </label>
+                            {isDisplayOptionsOpen && displayOptionsPos && (
+                                <>
+                                    <div className="fixed inset-0 z-[9998]" onClick={(e) => { e.stopPropagation(); setIsDisplayOptionsOpen(false); }} />
+                                    <div
+                                        className="fixed bg-white shadow-lg rounded-sm border border-gray-200 z-[9999] py-2 min-w-[160px]"
+                                        style={{ top: displayOptionsPos.top, left: displayOptionsPos.left }}
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={settings.displayOptions?.showStudents ?? true}
+                                                onChange={(e) => updateSettings({
+                                                    ...settings,
+                                                    displayOptions: {
+                                                        ...settings.displayOptions!,
+                                                        showStudents: e.target.checked
+                                                    }
+                                                })}
+                                                className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                            />
+                                            <Users size={14} className="text-gray-500" />
+                                            <span className="text-xs text-gray-700">학생 목록</span>
+                                        </label>
 
-                                    <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={settings.displayOptions?.showRoom ?? true}
-                                            onChange={(e) => updateSettings({
-                                                ...settings,
-                                                displayOptions: {
-                                                    ...settings.displayOptions!,
-                                                    showRoom: e.target.checked
-                                                }
-                                            })}
-                                            className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                        />
-                                        <Home size={14} className="text-gray-500" />
-                                        <span className="text-xs text-gray-700">강의실</span>
-                                    </label>
+                                        <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={settings.displayOptions?.showRoom ?? true}
+                                                onChange={(e) => updateSettings({
+                                                    ...settings,
+                                                    displayOptions: {
+                                                        ...settings.displayOptions!,
+                                                        showRoom: e.target.checked
+                                                    }
+                                                })}
+                                                className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                            />
+                                            <Home size={14} className="text-gray-500" />
+                                            <span className="text-xs text-gray-700">강의실</span>
+                                        </label>
 
-                                    <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={settings.displayOptions?.showTeacher ?? true}
-                                            onChange={(e) => updateSettings({
-                                                ...settings,
-                                                displayOptions: {
-                                                    ...settings.displayOptions!,
-                                                    showTeacher: e.target.checked
-                                                }
-                                            })}
-                                            className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                        />
-                                        <User size={14} className="text-gray-500" />
-                                        <span className="text-xs text-gray-700">담임 정보</span>
-                                    </label>
+                                        <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={settings.displayOptions?.showTeacher ?? true}
+                                                onChange={(e) => updateSettings({
+                                                    ...settings,
+                                                    displayOptions: {
+                                                        ...settings.displayOptions!,
+                                                        showTeacher: e.target.checked
+                                                    }
+                                                })}
+                                                className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                            />
+                                            <User size={14} className="text-gray-500" />
+                                            <span className="text-xs text-gray-700">담임 정보</span>
+                                        </label>
 
-                                    <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={settings.displayOptions?.showSchedule ?? true}
-                                            onChange={(e) => updateSettings({
-                                                ...settings,
-                                                displayOptions: {
-                                                    ...settings.displayOptions!,
-                                                    showSchedule: e.target.checked
-                                                }
-                                            })}
-                                            className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                        />
-                                        <CalendarDays size={14} className="text-gray-500" />
-                                        <span className="text-xs text-gray-700">스케줄</span>
-                                    </label>
-                                </div>
+                                        <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={settings.displayOptions?.showSchedule ?? true}
+                                                onChange={(e) => updateSettings({
+                                                    ...settings,
+                                                    displayOptions: {
+                                                        ...settings.displayOptions!,
+                                                        showSchedule: e.target.checked
+                                                    }
+                                                })}
+                                                className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                            />
+                                            <CalendarDays size={14} className="text-gray-500" />
+                                            <span className="text-xs text-gray-700">스케줄</span>
+                                        </label>
+                                    </div>
+                                </>
                             )}
                         </div>
 
