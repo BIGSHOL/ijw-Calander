@@ -22,6 +22,13 @@ export interface ConsultationReportSection {
   agreements: string;           // 합의된 사항 (구체적 로드맵 포함)
   actionItems: string;          // 후속 조치 항목
   riskFlags: string;            // 주의 신호 (자존감, 가정 갈등, 퇴원 가능성 등)
+  conversationFlow?: ConversationFlowNode[]; // 상담 흐름 수형도
+}
+
+export interface ConversationFlowNode {
+  topic: string;
+  summary: string;
+  children?: ConversationFlowNode[];
 }
 
 export interface SpeakerUtterance {

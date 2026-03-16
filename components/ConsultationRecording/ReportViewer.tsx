@@ -26,6 +26,7 @@ const SECTIONS = [
 
 import { formatReportContent } from '../../utils/formatReportContent';
 import { HighlightedReportText } from '../../utils/HighlightedReportText';
+import { ConversationFlowTree } from './ConversationFlowTree';
 
 export function ReportViewer({ report }: ReportViewerProps) {
   const [showTranscript, setShowTranscript] = useState(false);
@@ -200,6 +201,26 @@ export function ReportViewer({ report }: ReportViewerProps) {
             </div>
           );
         })}
+
+        {/* 상담 흐름 수형도 */}
+        {report.report?.conversationFlow && report.report.conversationFlow.length > 0 && (
+          <div className="border rounded-sm">
+            <button
+              onClick={() => toggleSection('_conversationFlow')}
+              className="w-full px-4 py-3 bg-gray-50 flex items-center justify-between hover:bg-gray-100 transition-colors"
+            >
+              <h3 className="text-sm font-semibold text-gray-800">
+                🌳 상담 흐름 수형도
+              </h3>
+              {expandedSections.has('_conversationFlow') ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+            </button>
+            {expandedSections.has('_conversationFlow') && (
+              <div className="px-4 py-3 border-t">
+                <ConversationFlowTree flow={report.report.conversationFlow} />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 원본 음성인식 텍스트 (접기/펼치기) */}
         {report.transcription && (
