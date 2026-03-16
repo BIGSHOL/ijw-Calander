@@ -747,7 +747,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     hasPermission={hasPermissionFn}
                     setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
                     roomFilter={roomFilter}
-                    onRoomFilterChange={handleRoomFilterChange}
+                    onRoomFilterChange={onRoomFilterChange}
                 />
 
                 {/* Timetable Content - viewType에 따라 분기 */}
