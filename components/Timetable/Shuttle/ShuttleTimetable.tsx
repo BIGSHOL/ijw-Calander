@@ -279,7 +279,7 @@ function TimeSlotView({
             </div>
 
             {/* 시간대별 시간표 */}
-            <div className="border border-emerald-200 rounded-lg overflow-hidden">
+            <div className="border border-gray-800 rounded-lg overflow-hidden">
                 <div
                     className="px-4 py-2 flex items-center gap-3"
                     style={{ backgroundColor: colors.bg, color: colors.text }}
@@ -296,14 +296,14 @@ function TimeSlotView({
                                     <React.Fragment key={slot}>
                                         {/* 회차 헤더 행: 요일 + 회차를 큼지막하게 표시 */}
                                         <tr>
-                                            <td className={`border border-emerald-200 px-2 py-2 text-center font-bold whitespace-nowrap ${sc.bg}`}>
+                                            <td className={`border border-gray-800 px-2 py-2 text-center font-bold whitespace-nowrap ${sc.bg}`}>
                                                 <div className={`font-bold ${sc.text} text-sm`}>{SESSION_LABELS[slot]}</div>
                                             </td>
                                             {WEEKDAYS.map(day => {
                                                 return (
                                                     <td
                                                         key={`${day}-${slot}-header`}
-                                                        className={`border border-emerald-200 px-2 py-2 text-center font-bold text-sm ${sc.bg} ${sc.text}`}
+                                                        className={`border border-gray-800 px-2 py-2 text-center font-bold text-sm ${sc.bg} ${sc.text}`}
                                                     >
                                                         {day}요일 {SESSION_LABELS[slot]}
                                                     </td>
@@ -312,7 +312,7 @@ function TimeSlotView({
                                         </tr>
                                         {/* 데이터 행 */}
                                         <tr className="hover:bg-emerald-50/50">
-                                            <td className="border border-emerald-200"></td>
+                                            <td className="border border-gray-800"></td>
                                             {WEEKDAYS.map(day => {
                                                 const allStudents = scheduleMap[day]?.[slot] || [];
                                                 const cellStudents = allStudents.filter(s =>
@@ -324,7 +324,7 @@ function TimeSlotView({
                                                 return (
                                                     <td
                                                         key={`${day}-${slot}`}
-                                                        className="border border-emerald-200 px-1.5 py-1 align-top bg-white"
+                                                        className="border border-gray-800 px-1.5 py-1 align-top bg-white"
                                                     >
                                                         {cellStudents.length > 0 ? (
                                                             <div className="space-y-1">
