@@ -141,6 +141,9 @@ interface MathTimetableContentProps {
     hasPermissionFn?: (perm: string) => boolean;
     setIsTimetableSettingsOpen?: (value: boolean) => void;
     undoLastMove?: () => any;
+    // 강의실 필터
+    roomFilter?: { main: boolean; barun: boolean };
+    onRoomFilterChange?: (type: 'main' | 'barun', value: boolean) => void;
 }
 
 const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
@@ -233,6 +236,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     hasPermissionFn,
     setIsTimetableSettingsOpen,
     undoLastMove,
+    roomFilter,
+    onRoomFilterChange,
 }) => {
     const simulation = useMathSimulation();
     const { isScenarioMode, currentScenarioName, enterScenarioMode, exitScenarioMode, loadFromLive, publishToLive } = simulation;
@@ -741,6 +746,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     setMathViewMode={setMathViewMode}
                     hasPermission={hasPermissionFn}
                     setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
+                    roomFilter={roomFilter}
+                    onRoomFilterChange={handleRoomFilterChange}
                 />
 
                 {/* Timetable Content - viewType에 따라 분기 */}
@@ -1258,6 +1265,25 @@ const TimetableManager = ({
     const [showHoldStudents, setShowHoldStudents] = useState(viewSettings.showHoldStudents ?? true);
     const [showWithdrawnStudents, setShowWithdrawnStudents] = useState(viewSettings.showWithdrawnStudents ?? true);
 
+    // 강의실 필터 (멀티 선택: 본원/바른)
+    const [roomFilter, setRoomFilter] = useState<{ main: boolean; barun: boolean }>(() => {
+        try {
+            const saved = storage.getString(STORAGE_KEYS.MATH_ROOM_FILTER);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (typeof parsed === 'object' && parsed !== null && 'main' in parsed) return parsed;
+            }
+        } catch { /* ignore */ }
+        return { main: true, barun: true };
+    });
+    const handleRoomFilterChange = useCallback((type: 'main' | 'barun', value: boolean) => {
+        setRoomFilter(prev => {
+            const next = { ...prev, [type]: value };
+            storage.setString(STORAGE_KEYS.MATH_ROOM_FILTER, JSON.stringify(next));
+            return next;
+        });
+    }, []);
+
     // 뷰 설정이 변경될 때마다 로컬 스토리지에 저장
     useEffect(() => {
         const settings = {
@@ -1450,7 +1476,19 @@ const TimetableManager = ({
     // Filter classes by current subject (localClasses already has enrollment data merged)
     // + 스케줄 변경 예정 고스트 블록 추가
     const filteredClasses = useMemo(() => {
-        const base = localClasses.filter(c => c.subject === currentSubjectFilter);
+        let base = localClasses.filter(c => c.subject === currentSubjectFilter);
+
+        // 강의실 필터 (본원/바른 멀티 선택)
+        if (!roomFilter.main || !roomFilter.barun) {
+            base = base.filter(c => {
+                const room = c.room || '';
+                const isBarun = room.startsWith('바른') || room.startsWith('프리미엄');
+                if (roomFilter.main && !isBarun) return true;
+                if (roomFilter.barun && isBarun) return true;
+                return false;
+            });
+        }
+
         const ghosts: TimetableClass[] = [];
         base.forEach(cls => {
             if (cls.pendingSchedule && cls.pendingScheduleDate) {
@@ -1470,7 +1508,7 @@ const TimetableManager = ({
             }
         });
         return [...base, ...ghosts];
-    }, [localClasses, currentSubjectFilter]);
+    }, [localClasses, currentSubjectFilter, roomFilter]);
 
     // 스케줄 변경 예정 자동 적용 (마운트 시 1회)
     useEffect(() => {
@@ -1850,6 +1888,8 @@ const TimetableManager = ({
                 hasPermissionFn={externalHasPermission || hasPermission}
                 setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
                 undoLastMove={undoLastMove}
+                roomFilter={roomFilter}
+                onRoomFilterChange={handleRoomFilterChange}
             />
             {/* 드래그 예정일 선택 모달 */}
             {dateModalInfo && (
