@@ -63,45 +63,32 @@ export default function SubjectControls({
                 </button>
             )}
 
-            {/* 수학 뷰 전환 - 개별 버튼 */}
+            {/* 수학 뷰 전환 - 드롭다운 순환 */}
             {timetableSubject === 'math' && setTimetableViewType && setMathViewMode && (
-                <div className="flex items-center bg-gray-200 rounded-sm p-0.5 gap-0.5">
-                    <button
-                        onClick={() => { setTimetableViewType('teacher'); setMathViewMode('teacher-based'); }}
-                        className={`px-1.5 py-0.5 rounded-sm text-xs font-bold transition-all flex items-center gap-0.5 ${viewType === 'teacher' && mathViewMode === 'teacher-based' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
-                        title="강사별 보기"
-                    >
-                        <UserIcon size={11} /> 강사별
-                    </button>
-                    <button
-                        onClick={() => { setTimetableViewType('teacher'); setMathViewMode('day-based'); }}
-                        className={`px-1.5 py-0.5 rounded-sm text-xs font-bold transition-all flex items-center gap-0.5 ${viewType === 'teacher' && mathViewMode === 'day-based' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
-                        title="요일별 보기"
-                    >
-                        <CalendarIcon size={11} /> 요일별
-                    </button>
-                    <button
-                        onClick={() => { setTimetableViewType('room'); }}
-                        className={`px-1.5 py-0.5 rounded-sm text-xs font-bold transition-all flex items-center gap-0.5 ${viewType === 'room' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
-                        title="강의실별 보기"
-                    >
-                        <Building size={11} /> 강의실별
-                    </button>
-                    <button
-                        onClick={() => { setTimetableViewType('class'); }}
-                        className={`px-1.5 py-0.5 rounded-sm text-xs font-bold transition-all flex items-center gap-0.5 ${viewType === 'class' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
-                        title="통합뷰"
-                    >
-                        <ClipboardList size={11} /> 통합
-                    </button>
-                    <button
-                        onClick={() => { setTimetableViewType('excel'); }}
-                        className={`px-1.5 py-0.5 rounded-sm text-xs font-bold transition-all flex items-center gap-0.5 ${viewType === 'excel' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
-                        title="엑셀 보기"
-                    >
-                        <Table2 size={11} /> 엑셀
-                    </button>
-                </div>
+                <button
+                    onClick={() => {
+                        setTimetableViewType(prev => {
+                            if (prev === 'teacher' && mathViewMode === 'teacher-based') {
+                                setMathViewMode('day-based');
+                                return 'teacher';
+                            }
+                            if (prev === 'teacher' && mathViewMode === 'day-based') return 'room';
+                            if (prev === 'room') return 'class';
+                            if (prev === 'class') return 'excel';
+                            // excel → teacher (강사별)
+                            setMathViewMode('teacher-based');
+                            return 'teacher';
+                        });
+                    }}
+                    className="px-2 py-0.5 rounded-sm bg-white border border-gray-300 text-gray-700 font-bold text-xs hover:bg-gray-100 active:scale-95 transition-all cursor-pointer"
+                    title="보기방식 전환"
+                >
+                    {viewType === 'teacher' && mathViewMode === 'teacher-based' ? <><UserIcon size={12} className="inline" /> 강사별</>
+                        : viewType === 'teacher' && mathViewMode === 'day-based' ? <><CalendarIcon size={12} className="inline" /> 요일별</>
+                        : viewType === 'room' ? <><Building size={12} className="inline" /> 강의실</>
+                        : viewType === 'class' ? <><ClipboardList size={12} className="inline" /> 통합뷰</>
+                        : <><Table2 size={12} className="inline" /> 엑셀</>}
+                </button>
             )}
 
             {/* 수업 설정 버튼 */}
