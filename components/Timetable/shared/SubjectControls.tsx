@@ -63,29 +63,45 @@ export default function SubjectControls({
                 </button>
             )}
 
-            {/* 수학 뷰 전환 */}
+            {/* 수학 뷰 전환 - 개별 버튼 */}
             {timetableSubject === 'math' && setTimetableViewType && setMathViewMode && (
-                <button
-                    onClick={() => {
-                        if (viewType === 'class') {
-                            setTimetableViewType('teacher');
-                            setMathViewMode('teacher-based');
-                        } else if (viewType === 'excel') {
-                            setTimetableViewType('class');
-                        } else if (mathViewMode === 'teacher-based') {
-                            setMathViewMode('day-based');
-                        } else {
-                            setTimetableViewType('excel');
-                        }
-                    }}
-                    className="px-2 py-0.5 rounded-sm bg-white border border-gray-300 text-gray-700 font-bold text-xs hover:bg-gray-100 active:scale-95 transition-all cursor-pointer"
-                    title="보기방식 전환"
-                >
-                    {viewType === 'class' ? <><ClipboardList size={12} className="inline" /> 통합뷰</>
-                        : viewType === 'excel' ? <><Table2 size={12} className="inline" /> 엑셀</>
-                        : mathViewMode === 'teacher-based' ? <><UserIcon size={12} className="inline" /> 강사</>
-                        : <><CalendarIcon size={12} className="inline" /> 날짜</>}
-                </button>
+                <div className="flex items-center bg-gray-200 rounded-sm p-0.5 gap-0.5">
+                    <button
+                        onClick={() => { setTimetableViewType('teacher'); setMathViewMode('teacher-based'); }}
+                        className={`px-1.5 py-0.5 rounded-sm text-xs font-bold transition-all flex items-center gap-0.5 ${viewType === 'teacher' && mathViewMode === 'teacher-based' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
+                        title="강사별 보기"
+                    >
+                        <UserIcon size={11} /> 강사별
+                    </button>
+                    <button
+                        onClick={() => { setTimetableViewType('teacher'); setMathViewMode('day-based'); }}
+                        className={`px-1.5 py-0.5 rounded-sm text-xs font-bold transition-all flex items-center gap-0.5 ${viewType === 'teacher' && mathViewMode === 'day-based' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
+                        title="요일별 보기"
+                    >
+                        <CalendarIcon size={11} /> 요일별
+                    </button>
+                    <button
+                        onClick={() => { setTimetableViewType('room'); }}
+                        className={`px-1.5 py-0.5 rounded-sm text-xs font-bold transition-all flex items-center gap-0.5 ${viewType === 'room' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
+                        title="강의실별 보기"
+                    >
+                        <Building size={11} /> 강의실별
+                    </button>
+                    <button
+                        onClick={() => { setTimetableViewType('class'); }}
+                        className={`px-1.5 py-0.5 rounded-sm text-xs font-bold transition-all flex items-center gap-0.5 ${viewType === 'class' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
+                        title="통합뷰"
+                    >
+                        <ClipboardList size={11} /> 통합
+                    </button>
+                    <button
+                        onClick={() => { setTimetableViewType('excel'); }}
+                        className={`px-1.5 py-0.5 rounded-sm text-xs font-bold transition-all flex items-center gap-0.5 ${viewType === 'excel' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
+                        title="엑셀 보기"
+                    >
+                        <Table2 size={11} /> 엑셀
+                    </button>
+                </div>
             )}
 
             {/* 수업 설정 버튼 */}
