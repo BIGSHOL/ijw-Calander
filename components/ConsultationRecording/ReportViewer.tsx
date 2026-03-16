@@ -1,0 +1,157 @@
+import React, { useState } from 'react';
+import { FileText, Download, ChevronDown, ChevronUp, Clock, User, Calendar } from 'lucide-react';
+import type { ConsultationReport } from '../../types';
+import { format } from 'date-fns';
+
+interface ReportViewerProps {
+  report: ConsultationReport;
+}
+
+const SECTIONS = [
+  { key: 'summary' as const, label: '상담 요약', emoji: '📋' },
+  { key: 'parentConcerns' as const, label: '학부모 걱정/불안 사항', emoji: '😟' },
+  { key: 'parentQuestions' as const, label: '학부모 질문사항', emoji: '❓' },
+  { key: 'parentRequests' as const, label: '학부모 요청사항', emoji: '🙋' },
+  { key: 'parentSatisfaction' as const, label: '학부모 만족도/감정 분석', emoji: '💭' },
+  { key: 'studentNotes' as const, label: '학생 관련 특이사항', emoji: '📝' },
+  { key: 'teacherResponse' as const, label: '교사 대응/설명 요약', emoji: '🧑‍🏫' },
+  { key: 'agreements' as const, label: '합의된 사항', emoji: '🤝' },
+  { key: 'actionItems' as const, label: '후속 조치 항목', emoji: '✅' },
+  { key: 'riskFlags' as const, label: '주의 필요 신호', emoji: '🚨' },
+];
+
+export function ReportViewer({ report }: ReportViewerProps) {
+  const [showTranscript, setShowTranscript] = useState(false);
+
+  // TXT 다운로드
+  const handleDownload = () => {
+    const lines: string[] = [
+      `상담 녹음 분석 보고서`,
+      `${'='.repeat(40)}`,
+      `학생: ${report.studentName}`,
+      `상담일: ${report.consultationDate}`,
+      `상담자: ${report.consultantName || '미지정'}`,
+      report.durationSeconds ? `녹음 길이: ${Math.floor(report.durationSeconds / 60)}분 ${report.durationSeconds % 60}초` : '',
+      `생성일: ${format(new Date(report.createdAt), 'yyyy-MM-dd HH:mm')}`,
+      '',
+    ];
+
+    if (report.report) {
+      for (const section of SECTIONS) {
+        const content = report.report[section.key];
+        if (content) {
+          lines.push(`[${section.label}]`);
+          lines.push(content);
+          lines.push('');
+        }
+      }
+    }
+
+    if (report.transcription) {
+      lines.push(`${'='.repeat(40)}`);
+      lines.push('[원본 음성인식 텍스트]');
+      lines.push('');
+      if (report.speakerLabels && report.speakerLabels.length > 0) {
+        report.speakerLabels.forEach(s => {
+          lines.push(`[화자 ${s.speaker}] ${s.text}`);
+        });
+      } else {
+        lines.push(report.transcription);
+      }
+    }
+
+    const blob = new Blob([lines.filter(Boolean).join('\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `상담분석_${report.studentName}_${report.consultationDate}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="bg-white rounded-sm border shadow-sm">
+      {/* 헤더 */}
+      <div className="px-5 py-4 border-b bg-green-50 flex items-center justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-green-800 flex items-center gap-2">
+            <FileText size={18} />
+            분석 완료
+          </h2>
+          <div className="flex items-center gap-4 mt-1 text-xs text-green-600">
+            <span className="flex items-center gap-1">
+              <User size={12} /> {report.studentName}
+            </span>
+            <span className="flex items-center gap-1">
+              <Calendar size={12} /> {report.consultationDate}
+            </span>
+            {report.durationSeconds && (
+              <span className="flex items-center gap-1">
+                <Clock size={12} /> {Math.floor(report.durationSeconds / 60)}분 {report.durationSeconds % 60}초
+              </span>
+            )}
+          </div>
+        </div>
+        <button
+          onClick={handleDownload}
+          className="px-4 py-2 text-sm bg-white border border-green-300 text-green-700 rounded-sm hover:bg-green-50 flex items-center gap-1.5"
+        >
+          <Download size={14} />
+          TXT 다운로드
+        </button>
+      </div>
+
+      {/* 보고서 섹션 */}
+      <div className="p-5 space-y-4">
+        {report.report && SECTIONS.map(section => {
+          const content = report.report?.[section.key];
+          if (!content) return null;
+
+          return (
+            <div key={section.key} className="border rounded-sm">
+              <div className="px-4 py-3 bg-gray-50 border-b">
+                <h3 className="text-sm font-semibold text-gray-800">
+                  {section.emoji} {section.label}
+                </h3>
+              </div>
+              <div className="px-4 py-3">
+                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{content}</p>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* 원본 음성인식 텍스트 (접기/펼치기) */}
+        {report.transcription && (
+          <div className="border rounded-sm">
+            <button
+              onClick={() => setShowTranscript(!showTranscript)}
+              className="w-full px-4 py-3 bg-gray-50 border-b flex items-center justify-between hover:bg-gray-100 transition-colors"
+            >
+              <h3 className="text-sm font-semibold text-gray-600">
+                🎤 원본 음성인식 텍스트
+              </h3>
+              {showTranscript ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+            {showTranscript && (
+              <div className="px-4 py-3 max-h-80 overflow-auto">
+                {report.speakerLabels && report.speakerLabels.length > 0 ? (
+                  <div className="space-y-2">
+                    {report.speakerLabels.map((s, i) => (
+                      <div key={i} className="text-sm">
+                        <span className="font-medium text-accent-600">[화자 {s.speaker}]</span>{' '}
+                        <span className="text-gray-700">{s.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{report.transcription}</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
