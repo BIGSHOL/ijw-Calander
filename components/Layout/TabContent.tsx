@@ -42,6 +42,7 @@ const TimetableDistributionTab = React.lazy(() => import('../TimetableDistributi
 const LogsTab = React.lazy(() => import('../Logs/LogsTab'));
 const ConsultationRecordingTab = React.lazy(() => import('../ConsultationRecording').then(m => ({ default: m.ConsultationRecordingTab })));
 const TuitionCalculatorTab = React.lazy(() => import('../TuitionCalculator').then(m => ({ default: m.TuitionCalculatorTab })));
+const MeetingMinutesTab = React.lazy(() => import('../MeetingMinutes').then(m => ({ default: m.MeetingMinutesTab })));
 
 // Loading fallback
 const TabLoadingFallback = () => <VideoLoading className="flex-1 h-full" />;
@@ -487,6 +488,12 @@ export const TabContent: React.FC<TabContentProps> = ({
         <Suspense fallback={<TabLoadingFallback />}>
           <div className="w-full flex-1 overflow-auto">
             <TuitionCalculatorTab userProfile={effectiveProfile} />
+          </div>
+        </Suspense>
+      ) : appMode === 'meeting-minutes' ? (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <div className="w-full flex-1 overflow-hidden">
+            <MeetingMinutesTab userProfile={effectiveProfile} />
           </div>
         </Suspense>
       ) : null}
