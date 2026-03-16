@@ -1120,15 +1120,11 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     };
 
     // 날짜 기반 뷰: 요일별로 해당 요일에 수업이 있는 선생님 목록 (slotTeachers 포함)
-    // 날짜 뷰에서는 기본 요일 순서(월화수목금토일)를 사용
+    // orderedSelectedDays는 이미 사용자 설정 요일 순서가 반영된 상태
     const dayBasedData = useMemo(() => {
         const data: { day: string; resources: string[] }[] = [];
-        const naturalDayOrder = ALL_WEEKDAYS; // 월화수목금토일 순서
 
-        // 선택된 요일 중 기본 순서로 정렬
-        const selectedDaysInOrder = naturalDayOrder.filter(day => orderedSelectedDays.includes(day));
-
-        selectedDaysInOrder.forEach(day => {
+        orderedSelectedDays.forEach(day => {
             const resourcesForDay = allResources.filter(resource =>
                 resourceDayLookup.get(resource?.trim())?.has(day) ?? false
             );

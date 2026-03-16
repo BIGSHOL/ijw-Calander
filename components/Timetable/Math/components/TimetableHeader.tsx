@@ -91,6 +91,9 @@ interface TimetableHeaderProps {
     setMathViewMode?: (value: string) => void;
     hasPermission?: (perm: string) => boolean;
     setIsTimetableSettingsOpen?: (value: boolean) => void;
+    // 강의실 필터
+    roomFilter?: { main: boolean; barun: boolean };
+    onRoomFilterChange?: (type: 'main' | 'barun', value: boolean) => void;
 }
 
 const TimetableHeader: React.FC<TimetableHeaderProps> = ({
@@ -156,6 +159,8 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     setMathViewMode,
     hasPermission,
     setIsTimetableSettingsOpen,
+    roomFilter,
+    onRoomFilterChange,
 }) => {
     // 드롭다운 상태
     const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
@@ -774,6 +779,27 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                             </div>
                                         </div>
                                     )}
+                                    {/* 강의실 필터 */}
+                                    {roomFilter && onRoomFilterChange && (
+                                        <div className="px-3 py-2 border-b border-gray-100">
+                                            <div className="text-xxs font-bold text-gray-600 mb-2">강의실</div>
+                                            <div className="flex gap-1">
+                                                <button
+                                                    onClick={() => onRoomFilterChange('main', !roomFilter.main)}
+                                                    className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${roomFilter.main ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'}`}
+                                                >
+                                                    본원
+                                                </button>
+                                                <button
+                                                    onClick={() => onRoomFilterChange('barun', !roomFilter.barun)}
+                                                    className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${roomFilter.barun ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'}`}
+                                                >
+                                                    바른학습관
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* 요일 순서 */}
                                     <div className="px-3 py-2 border-b border-gray-100">
                                         <div className="text-xxs font-bold text-gray-600 mb-2 flex items-center gap-1">
