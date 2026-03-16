@@ -20,33 +20,49 @@ function getStepIndex(status: string): number {
 
 function formatElapsed(createdAt: number): string {
   const elapsed = Math.round((Date.now() - createdAt) / 1000);
-  if (elapsed < 60) return `${elapsed}초`;
   const min = Math.floor(elapsed / 60);
   const sec = elapsed % 60;
+  return `${min}:${String(sec).padStart(2, '0')}`;
+}
+
+function formatDuration(seconds: number): string {
+  const min = Math.floor(seconds / 60);
+  const sec = seconds % 60;
   return `${min}분 ${sec}초`;
+}
+
+/** statusMessage에서 퍼센트(%) 추출 */
+function extractPercent(msg: string): number | null {
+  const match = msg.match(/\((\d+)%\)/);
+  return match ? parseInt(match[1]) : null;
 }
 
 export function RecordingStatusTracker({ report }: RecordingStatusTrackerProps) {
   const currentIndex = getStepIndex(report.status);
   const isError = report.status === 'error';
   const isFailed = report.status === 'failed';
+  const isCompleted = report.status === 'completed';
+  const isInProgress = !isCompleted && !isError && !isFailed;
 
-  // 실시간 경과시간 표시
+  // 실시간 경과시간
   const [elapsed, setElapsed] = React.useState('');
   React.useEffect(() => {
-    if (report.status === 'completed' || isError || isFailed) return;
+    if (!isInProgress) return;
     const update = () => setElapsed(formatElapsed(report.createdAt));
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [report.status, report.createdAt, isError, isFailed]);
+  }, [report.status, report.createdAt, isInProgress]);
+
+  // statusMessage에서 퍼센트 추출
+  const percent = report.statusMessage ? extractPercent(report.statusMessage) : null;
 
   return (
     <div className="bg-white rounded-sm border shadow-sm p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-sm font-semibold text-gray-900">처리 진행 상황</h3>
-        {elapsed && !isError && !isFailed && report.status !== 'completed' && (
-          <span className="text-xs text-gray-400 font-mono">{elapsed} 경과</span>
+        {isInProgress && elapsed && (
+          <span className="text-xs text-gray-400 font-mono">{elapsed}</span>
         )}
       </div>
 
@@ -54,30 +70,28 @@ export function RecordingStatusTracker({ report }: RecordingStatusTrackerProps) 
       <div className="flex items-center justify-between mb-6">
         {STEPS.map((step, index) => {
           const Icon = step.icon;
-          const isCompleted = index < currentIndex;
+          const isStepCompleted = index < currentIndex;
           const isCurrent = index === currentIndex && !isError && !isFailed;
           const isPending = index > currentIndex || isError || isFailed;
           const isErrorStep = (isError || isFailed) && index === currentIndex;
 
           return (
             <React.Fragment key={step.key}>
-              {/* 연결선 */}
               {index > 0 && (
-                <div className={`flex-1 h-0.5 mx-2 ${isCompleted ? 'bg-green-400' : isErrorStep ? 'bg-red-300' : 'bg-gray-200'}`} />
+                <div className={`flex-1 h-0.5 mx-2 ${isStepCompleted ? 'bg-green-400' : isErrorStep ? 'bg-red-300' : 'bg-gray-200'}`} />
               )}
 
-              {/* 단계 원형 */}
               <div className="flex flex-col items-center gap-2">
                 <div
                   className={`
                     w-10 h-10 rounded-full flex items-center justify-center transition-colors
-                    ${isCompleted ? 'bg-green-100 text-green-600' : ''}
+                    ${isStepCompleted ? 'bg-green-100 text-green-600' : ''}
                     ${isCurrent ? 'bg-accent-100 text-accent-600 ring-2 ring-accent-300' : ''}
                     ${isErrorStep ? 'bg-red-100 text-red-600 ring-2 ring-red-300' : ''}
                     ${isPending && !isErrorStep ? 'bg-gray-100 text-gray-400' : ''}
                   `}
                 >
-                  {isCompleted ? (
+                  {isStepCompleted ? (
                     <CheckCircle2 size={20} />
                   ) : isErrorStep ? (
                     isFailed ? <AlertTriangle size={20} /> : <XCircle size={20} />
@@ -101,6 +115,22 @@ export function RecordingStatusTracker({ report }: RecordingStatusTrackerProps) 
         })}
       </div>
 
+      {/* 현재 단계 진행률 바 */}
+      {isInProgress && percent != null && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-gray-500">{STEPS[currentIndex]?.label}</span>
+            <span className="text-xs text-accent-600 font-medium">{percent}%</span>
+          </div>
+          <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-accent-500 rounded-full transition-all duration-500"
+              style={{ width: `${percent}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* 상태 메시지 */}
       <div className="text-center space-y-1">
         <p className={`text-sm ${isError ? 'text-red-600' : isFailed ? 'text-amber-600' : 'text-gray-600'}`}>
@@ -108,7 +138,7 @@ export function RecordingStatusTracker({ report }: RecordingStatusTrackerProps) 
         </p>
         {report.durationSeconds != null && report.durationSeconds > 0 && (
           <p className="text-xs text-gray-400">
-            녹음 길이: {Math.floor(report.durationSeconds / 60)}분 {report.durationSeconds % 60}초
+            녹음 길이: {formatDuration(report.durationSeconds)}
             {report.fileSizeBytes > 0 && ` · ${(report.fileSizeBytes / 1024 / 1024).toFixed(1)}MB`}
           </p>
         )}

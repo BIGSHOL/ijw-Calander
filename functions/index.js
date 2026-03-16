@@ -4860,7 +4860,7 @@ exports.processConsultationRecording = functions
 
             await reportRef.update({
                 fileSizeBytes: parseInt(metadata.size || "0"),
-                statusMessage: `파일 준비 완료 (${fileSizeMB}MB). 음성 인식 요청 중...`,
+                statusMessage: `파일 확인 완료 (${fileSizeMB}MB). 음성 인식 중...`,
                 updatedAt: Date.now(),
             });
 
@@ -4893,7 +4893,7 @@ exports.processConsultationRecording = functions
             logger.info("[processConsultationRecording] AssemblyAI transcript ID:", transcriptId);
 
             await reportRef.update({
-                statusMessage: `음성 인식 대기열 등록 완료 (ID: ${transcriptId.slice(0, 8)}...). 처리 대기 중...`,
+                statusMessage: "음성 인식 서버에 전송 완료. 분석 대기 중...",
                 updatedAt: Date.now(),
             });
 
@@ -4922,10 +4922,12 @@ exports.processConsultationRecording = functions
 
                 // 10초마다 상태 업데이트 (더 자주)
                 if (pollCount % 2 === 0) {
-                    const elapsedSec = Math.round((Date.now() - pollStartTime) / 1000);
-                    const statusLabel = transcriptResult.status === "queued" ? "대기열 처리 중" : "음성 인식 중";
+                    const progressPct = Math.min(Math.round((pollCount / maxPolls) * 95), 95);
+                    const statusLabel = transcriptResult.status === "queued"
+                        ? `음성 인식 준비 중... (${progressPct}%)`
+                        : `음성을 텍스트로 변환 중... (${progressPct}%)`;
                     await reportRef.update({
-                        statusMessage: `${statusLabel}... (${elapsedSec}초 경과)`,
+                        statusMessage: statusLabel,
                         updatedAt: Date.now(),
                     });
                 }
@@ -4981,9 +4983,12 @@ exports.processConsultationRecording = functions
             }
 
             const speakerCount = new Set(speakerLabels.map(s => s.speaker)).size;
+            const durationMin = Math.floor(audioDuration / 60);
+            const durationSec = audioDuration % 60;
+            const durationStr = durationMin > 0 ? `${durationMin}분 ${durationSec}초` : `${durationSec}초`;
             await reportRef.update({
                 status: "analyzing",
-                statusMessage: `음성 인식 완료 (${audioDuration}초, ${textLength}자, 화자 ${speakerCount}명). AI 분석 시작...`,
+                statusMessage: `음성 인식 완료 (${durationStr}, 화자 ${speakerCount}명). AI가 분석 중...`,
                 transcription: fullText,
                 speakerLabels,
                 durationSeconds: audioDuration,
@@ -5359,7 +5364,11 @@ exports.processRegistrationRecording = functions
                 const pollData = await pollRes.json();
                 if (pollData.status === "completed") { transcript = pollData; break; }
                 if (pollData.status === "error") throw new Error("음성 인식 실패: " + (pollData.error || ""));
-                if (i % 6 === 0) await reportRef.update({ statusMessage: `음성 인식 중... (${Math.min(Math.round((i/90)*100), 95)}%)`, updatedAt: Date.now() });
+                if (i % 6 === 0) {
+                    const pct = Math.min(Math.round((i / 90) * 95), 95);
+                    const label = pollData.status === "queued" ? `음성 인식 준비 중... (${pct}%)` : `음성을 텍스트로 변환 중... (${pct}%)`;
+                    await reportRef.update({ statusMessage: label, updatedAt: Date.now() });
+                }
             }
             if (!transcript) throw new Error("음성 인식 시간 초과");
 

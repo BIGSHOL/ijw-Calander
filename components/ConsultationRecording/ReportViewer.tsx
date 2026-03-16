@@ -24,29 +24,7 @@ const SECTIONS = [
   { key: 'riskFlags' as const, label: '주의 필요 신호', emoji: '🚨' },
 ];
 
-// 불릿 포인트가 줄바꿈 없이 이어진 경우 강제 줄바꿈 처리
-function formatContent(text: unknown): string {
-  // 배열인 경우 (구버전 Firestore 데이터)
-  if (Array.isArray(text)) {
-    return text
-      .map(item => String(item).trim())
-      .filter(Boolean)
-      .map(item => item.startsWith('-') ? item : `- ${item}`)
-      .join('\n');
-  }
-  if (typeof text !== 'string') return String(text ?? '');
-
-  // 이미 줄바꿈이 있으면 그대로 반환 (새 녹음)
-  if (text.includes('\n')) return text.trim();
-
-  // 기존 데이터: ",- " 패턴으로 이어진 불릿을 줄바꿈으로 분리
-  const parts = text.split(/,\s*(?=- )/);
-  return parts
-    .map(p => p.trim())
-    .filter(Boolean)
-    .join('\n')
-    .trim();
-}
+import { formatReportContent } from '../../utils/formatReportContent';
 
 export function ReportViewer({ report }: ReportViewerProps) {
   const [showTranscript, setShowTranscript] = useState(false);
@@ -75,7 +53,7 @@ export function ReportViewer({ report }: ReportViewerProps) {
         const content = report.report[section.key];
         if (content) {
           lines.push(`[${section.label}]`);
-          lines.push(formatContent(content));
+          lines.push(formatReportContent(content));
           lines.push('');
         }
       }
@@ -180,7 +158,7 @@ export function ReportViewer({ report }: ReportViewerProps) {
                 </h3>
               </div>
               <div className="px-4 py-3">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{formatContent(content)}</p>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{formatReportContent(content)}</p>
               </div>
             </div>
           );
