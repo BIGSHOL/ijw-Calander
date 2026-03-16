@@ -7,6 +7,7 @@ import { useForm } from '../../hooks/useForm';
 import { required, phone as phoneValidator } from '../../utils/formValidation';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { getTodayKST } from '../../utils/dateUtils';
+import { getKoreanErrorMessage } from '../../utils/errorMessages';
 
 interface AddStudentModalProps {
     isOpen: boolean;
@@ -190,7 +191,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                 handleClose();
             } catch (err) {
                 console.error('학생 추가 오류:', err);
-                const errorMessage = err instanceof Error ? err.message : '학생 추가 중 오류가 발생했습니다';
+                const errorMessage = getKoreanErrorMessage(err, '학생 추가 중 오류가 발생했습니다.');
                 setErrors({ name: errorMessage });
             }
         },

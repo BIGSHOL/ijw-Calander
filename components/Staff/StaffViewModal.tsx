@@ -7,6 +7,7 @@ import { auth } from '../../firebaseConfig';
 import { SUBJECT_COLORS, SubjectType } from '../../utils/styleUtils';
 import StaffClassHistory from './StaffClassHistory';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { getKoreanErrorMessage } from '../../utils/errorMessages';
 
 interface StaffViewModalProps {
   staff: StaffMember;
@@ -111,13 +112,7 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
       setResetResult({ success: true, message: `${staff.email}로 비밀번호 재설정 이메일을 발송했습니다.` });
     } catch (error: any) {
       console.error('Password reset email error:', error);
-      let message = '이메일 발송에 실패했습니다.';
-      if (error.code === 'auth/user-not-found') {
-        message = '해당 이메일로 등록된 계정이 없습니다.';
-      } else if (error.code === 'auth/invalid-email') {
-        message = '유효하지 않은 이메일 주소입니다.';
-      }
-      setResetResult({ success: false, message });
+      setResetResult({ success: false, message: getKoreanErrorMessage(error, '이메일 발송에 실패했습니다.') });
     } finally {
       setIsSendingReset(false);
     }
@@ -146,7 +141,7 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
       setNewPassword('');
     } catch (error: any) {
       console.error('Set password error:', error);
-      setResetResult({ success: false, message: error.message || '비밀번호 변경에 실패했습니다.' });
+      setResetResult({ success: false, message: getKoreanErrorMessage(error, '비밀번호 변경에 실패했습니다.') });
     } finally {
       setIsSendingReset(false);
     }
@@ -180,10 +175,7 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
       setNewEmail('');
     } catch (error: any) {
       console.error('Email change error:', error);
-      const message = error.message?.includes('이미 사용 중')
-        ? '이미 사용 중인 이메일입니다.'
-        : error.message || '이메일 변경에 실패했습니다.';
-      setEmailChangeResult({ success: false, message });
+      setEmailChangeResult({ success: false, message: getKoreanErrorMessage(error, '이메일 변경에 실패했습니다.') });
     } finally {
       setIsChangingEmail(false);
     }

@@ -10,6 +10,7 @@ import { usePermissions } from '../../../hooks/usePermissions';
 import { useSimulationOptional } from './context/SimulationContext';
 import ScenarioCompareModal from './ScenarioCompareModal';
 import { useEscapeClose } from '../../../hooks/useEscapeClose';
+import { getKoreanErrorMessage } from '../../../utils/errorMessages';
 
 /**
  * Firebase에 저장 전 undefined 값을 제거합니다.
@@ -236,7 +237,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
             setScheduledApplyDate('');
         } catch (error) {
             console.error('시나리오 저장 실패:', error);
-            alert(`시나리오 저장 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+            alert(getKoreanErrorMessage(error, '시나리오 저장에 실패했습니다.'));
         } finally {
             setActiveOperation(null);
         }
@@ -355,7 +356,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
             onClose();
         } catch (error) {
             console.error('시나리오 불러오기 실패:', error);
-            alert(`불러오기 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+            alert(getKoreanErrorMessage(error, '시나리오 불러오기에 실패했습니다.'));
         } finally {
             setActiveOperation(null);
         }
@@ -424,7 +425,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
             alert(`✅ 시나리오 "${scenario.name}"가 업데이트되었습니다.\n(수업: ${classCount}개, 학생: ${studentCount}명)`);
         } catch (error) {
             console.error('시나리오 덮어쓰기 실패:', error);
-            alert(`덮어쓰기 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+            alert(getKoreanErrorMessage(error, '시나리오 덮어쓰기에 실패했습니다.'));
         } finally {
             setActiveOperation(null);
         }

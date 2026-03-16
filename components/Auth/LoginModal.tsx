@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { X, Lock as LockIcon, LogIn, UserPlus, Mail, User, KeyRound } from 'lucide-react';
+import { X, Lock as LockIcon, LogIn, UserPlus, Mail, User, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { auth, db } from '../../firebaseConfig';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, setDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
 import { StaffMember } from '../../types';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { getTodayKST } from '../../utils/dateUtils';
+import { getKoreanErrorMessage } from '../../utils/errorMessages';
 
 interface LoginModalProps {
     isOpen: boolean;
@@ -25,6 +26,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
     const [phone, setPhone] = useState(''); // 전화번호
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     if (!isOpen) return null;
 
@@ -136,15 +139,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
             }
         } catch (err: any) {
             console.error(err);
-            if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-                setError('이메일 또는 비밀번호가 올바르지 않습니다.');
-            } else if (err.code === 'auth/email-already-in-use') {
-                setError('이미 사용 중인 이메일입니다.');
-            } else if (err.code === 'auth/weak-password') {
-                setError('비밀번호는 6자 이상이어야 합니다.');
-            } else {
-                setError('오류가 발생했습니다: ' + err.message);
-            }
+            setError(getKoreanErrorMessage(err));
         } finally {
             setLoading(false);
         }
@@ -179,11 +174,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
             setError('비밀번호 재설정 링크가 이메일로 전송되었습니다.');
         } catch (err: any) {
             console.error(err);
-            if (err.code === 'auth/invalid-email') {
-                setError('올바른 이메일 주소를 입력해주세요.');
-            } else {
-                setError('오류가 발생했습니다: ' + err.message);
-            }
+            setError(getKoreanErrorMessage(err, '비밀번호 재설정에 실패했습니다.'));
         } finally {
             setLoading(false);
         }
@@ -253,17 +244,22 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                                     <div className="flex items-center gap-2 px-2 py-1.5">
                                         <KeyRound className="w-3 h-3 text-gray-400 shrink-0" />
                                         <span className="w-14 shrink-0 text-xs font-medium text-primary-700">비밀번호</span>
-                                        <input
-                                            id="login-password"
-                                            type="password"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none"
-                                            placeholder="••••••••"
-                                            required
-                                            aria-required="true"
-                                            autoComplete="current-password"
-                                        />
+                                        <div className="flex-1 relative">
+                                            <input
+                                                id="login-password"
+                                                type={showPassword ? "text" : "password"}
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                className="w-full px-2 py-1.5 pr-7 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none"
+                                                placeholder="••••••••"
+                                                required
+                                                aria-required="true"
+                                                autoComplete="current-password"
+                                            />
+                                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" tabIndex={-1}>
+                                                {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -297,30 +293,40 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                                     <div className="flex items-center gap-2 px-2 py-1.5">
                                         <KeyRound className="w-3 h-3 text-gray-400 shrink-0" />
                                         <span className="w-20 shrink-0 text-xs font-medium text-primary-700">비밀번호 <span className="text-red-500">*</span></span>
-                                        <input
-                                            id="signup-password"
-                                            type="password"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none"
-                                            placeholder="••••••••"
-                                            required
-                                            aria-required="true"
-                                            autoComplete="new-password"
-                                        />
+                                        <div className="flex-1 relative">
+                                            <input
+                                                id="signup-password"
+                                                type={showPassword ? "text" : "password"}
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                className="w-full px-2 py-1.5 pr-7 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none"
+                                                placeholder="••••••••"
+                                                required
+                                                aria-required="true"
+                                                autoComplete="new-password"
+                                            />
+                                            <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" tabIndex={-1}>
+                                                {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                                            </button>
+                                        </div>
                                     </div>
                                     {/* Confirm Password Row */}
                                     <div className="flex items-center gap-2 px-2 py-1.5">
                                         <KeyRound className="w-3 h-3 text-gray-400 shrink-0" />
                                         <span className="w-20 shrink-0 text-xs font-medium text-primary-700">비밀번호 확인 <span className="text-red-500">*</span></span>
-                                        <input
-                                            type="password"
-                                            value={confirmPassword}
-                                            onChange={(e) => setConfirmPassword(e.target.value)}
-                                            className="flex-1 px-2 py-1.5 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none"
-                                            placeholder="••••••••"
-                                            required
-                                        />
+                                        <div className="flex-1 relative">
+                                            <input
+                                                type={showConfirmPassword ? "text" : "password"}
+                                                value={confirmPassword}
+                                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                                className="w-full px-2 py-1.5 pr-7 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none"
+                                                placeholder="••••••••"
+                                                required
+                                            />
+                                            <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" tabIndex={-1}>
+                                                {showConfirmPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

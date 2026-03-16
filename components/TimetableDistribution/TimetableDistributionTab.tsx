@@ -16,6 +16,7 @@ import {
 } from '../Timetable/constants';
 import { SUBJECT_COLORS, SUBJECT_LABELS } from '../../utils/styleUtils';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+import { getKoreanErrorMessage } from '../../utils/errorMessages';
 
 // ─── Types ───────────────────────────────────────────────
 interface ClassBlock {
@@ -741,7 +742,7 @@ const TimetableDistributionTab: React.FC = () => {
         });
         setResults(prev => ({ ...prev, [student.id]: { status: 'sending' } }));
       } catch (err: any) {
-        setResults(prev => ({ ...prev, [student.id]: { status: 'error', message: `캡처 실패: ${err.message}` } }));
+        setResults(prev => ({ ...prev, [student.id]: { status: 'error', message: getKoreanErrorMessage(err, '캡처에 실패했습니다.') } }));
       }
     }
 
@@ -786,7 +787,7 @@ const TimetableDistributionTab: React.FC = () => {
             ...prev,
             [report.studentId]: {
               status: 'error',
-              message: `전송 실패: ${err.message}`,
+              message: getKoreanErrorMessage(err, '전송에 실패했습니다.'),
             },
           }));
         });

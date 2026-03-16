@@ -8,6 +8,7 @@ import React, { useState } from 'react';
 import { Hash, X, AlertCircle, Check, Loader2, Database, TrendingUp, AlertTriangle, FileText, Info } from 'lucide-react';
 import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
+import { getKoreanErrorMessage } from '../../utils/errorMessages';
 import { UnifiedStudent } from '../../types';
 import { generateBulkAttendanceNumbers } from '../../utils/attendanceNumberGenerator';
 
@@ -67,7 +68,7 @@ const AttendanceNumberMigrationModal: React.FC<AttendanceNumberMigrationModalPro
       setLoading(false);
     } catch (err: any) {
       console.error('미리보기 오류:', err);
-      setError(err.message || '미리보기 중 오류가 발생했습니다.');
+      setError(getKoreanErrorMessage(err, '미리보기 중 오류가 발생했습니다.'));
       setLoading(false);
     }
   };
@@ -124,7 +125,7 @@ const AttendanceNumberMigrationModal: React.FC<AttendanceNumberMigrationModalPro
       onComplete?.();
     } catch (err: any) {
       console.error('마이그레이션 오류:', err);
-      setError(`마이그레이션 중 오류 발생: ${err.message}`);
+      setError(getKoreanErrorMessage(err, '마이그레이션 중 오류가 발생했습니다.'));
       setStep('confirm');
     }
   };

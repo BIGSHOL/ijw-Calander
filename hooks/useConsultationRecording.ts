@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ref, uploadBytesResumable, deleteObject } from 'firebase/storage';
-import { collection, doc, onSnapshot, query, orderBy, limit, getDocs, where, deleteDoc } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, orderBy, limit, getDocs, where, deleteDoc, updateDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getApp } from 'firebase/app';
 import { db, storage } from '../firebaseConfig';
@@ -155,6 +155,22 @@ export function useConsultationReports(studentId?: string) {
       return snapshot.docs.map(d => ({ id: d.id, ...d.data() } as ConsultationReport));
     },
     staleTime: 1000 * 60 * 5,
+  });
+}
+
+/**
+ * 상담 녹음 리포트 이름 수정
+ */
+export function useUpdateConsultationReportName() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, studentName }: { id: string; studentName: string }) => {
+      await updateDoc(doc(db, COLLECTION, id), { studentName, updatedAt: Date.now() });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['consultation_reports'] });
+    },
   });
 }
 

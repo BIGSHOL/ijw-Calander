@@ -10,6 +10,7 @@ import { TimetableStudent, EnglishLevel, UnifiedStudent } from '../../../types';
 import { DEFAULT_ENGLISH_LEVELS, parseClassName, CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
 import StudentListTable from './StudentModal/StudentListTable';
 import StudentBatchActions from './StudentModal/StudentBatchActions';
+import { getKoreanErrorMessage } from '../../../utils/errorMessages';
 
 interface StudentModalProps {
     isOpen: boolean;
@@ -237,12 +238,7 @@ const StudentModal: React.FC<StudentModalProps> = ({
             // Re-enable isDirty on error so user can retry
             setIsDirty(true);
 
-            let message = '저장 실패: ';
-            if (error.code === 'permission-denied') message += '권한이 없습니다.';
-            else if (error.code === 'unavailable') message += '네트워크를 확인해주세요.';
-            else if (error.code === 'not-found') message += '수업 문서를 찾을 수 없습니다.';
-            else message += error.message || '알 수 없는 오류';
-            alert(message);
+            alert(getKoreanErrorMessage(error, '저장에 실패했습니다.'));
         }
     };
 

@@ -8,6 +8,7 @@
 import React, { useState, useRef } from 'react';
 import { Database, X, Upload, AlertCircle, Check, Loader2, FileSpreadsheet, Settings, BarChart3 } from 'lucide-react';
 import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
+import { getKoreanErrorMessage } from '../../utils/errorMessages';
 import { db } from '../../firebaseConfig';
 import { UnifiedStudent } from '../../types';
 import { read, utils } from 'xlsx';
@@ -451,7 +452,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
 
     } catch (err: any) {
       console.error('에러 발생:', err);
-      setError(err.message || '파일 업로드 중 오류가 발생했습니다.');
+      setError(getKoreanErrorMessage(err, '파일 업로드 중 오류가 발생했습니다.'));
       setLoading(false);
     }
   };
@@ -700,7 +701,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
 
     } catch (err: any) {
       console.error(err);
-      setError(`마이그레이션 중 오류 발생: ${err.message}`);
+      setError(getKoreanErrorMessage(err, '마이그레이션 중 오류가 발생했습니다.'));
       setStep('preview');
     }
   };

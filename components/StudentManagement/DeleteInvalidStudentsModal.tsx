@@ -26,6 +26,7 @@ import {
     deleteDoc
 } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
+import { getKoreanErrorMessage } from '../../utils/errorMessages';
 
 interface DeleteInvalidStudentsModalProps {
     onClose: () => void;
@@ -115,7 +116,7 @@ const DeleteInvalidStudentsModal: React.FC<DeleteInvalidStudentsModalProps> = ({
             setStudents(docs);
             setStep('preview');
         } catch (err: any) {
-            setError(err.message);
+            setError(getKoreanErrorMessage(err, '처리 중 오류가 발생했습니다.'));
         }
     };
 
@@ -192,7 +193,7 @@ const DeleteInvalidStudentsModal: React.FC<DeleteInvalidStudentsModalProps> = ({
             setResults({ deleted, fixed });
             setStep('done');
         } catch (err: any) {
-            setError(err.message);
+            setError(getKoreanErrorMessage(err, '처리 중 오류가 발생했습니다.'));
             setStep('preview');
         }
     };

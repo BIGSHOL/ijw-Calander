@@ -8,6 +8,7 @@ import { useStaff } from '../../hooks/useStaff';
 import { useStaffLeaves } from '../../hooks/useStaffLeaves';
 import { usePermissions } from '../../hooks/usePermissions';
 import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS, UserProfile, ROLE_HIERARCHY } from '../../types';
+import { getKoreanErrorMessage } from '../../utils/errorMessages';
 import StaffList from './StaffList';
 import StaffForm from './StaffForm';
 import StaffViewModal from './StaffViewModal';
@@ -196,15 +197,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
             data = { ...data, uid: userCredential.user.uid, approvalStatus: 'approved' };
             await signOut(secondaryAuth);
           } catch (authErr: any) {
-            if (authErr.code === 'auth/email-already-in-use') {
-              alert('이미 사용 중인 이메일입니다. 기존 계정으로 로그인 후 직원 연동을 이용해주세요.');
-            } else if (authErr.code === 'auth/weak-password') {
-              alert('비밀번호는 6자 이상이어야 합니다.');
-            } else if (authErr.code === 'auth/invalid-email') {
-              alert('올바른 이메일 주소를 입력해주세요.');
-            } else {
-              alert('계정 생성 실패: ' + authErr.message);
-            }
+            alert(getKoreanErrorMessage(authErr, '계정 생성에 실패했습니다.'));
             return;
           } finally {
             if (secondaryApp) {

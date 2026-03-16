@@ -20,6 +20,30 @@ const SECTIONS = [
   { key: 'riskFlags' as const, label: '주의 필요 신호', emoji: '🚨' },
 ];
 
+// 불릿 포인트가 줄바꿈 없이 이어진 경우 강제 줄바꿈 처리
+function formatContent(text: unknown): string {
+  // 배열인 경우 (구버전 Firestore 데이터)
+  if (Array.isArray(text)) {
+    return text
+      .map(item => String(item).trim())
+      .filter(Boolean)
+      .map(item => item.startsWith('-') ? item : `- ${item}`)
+      .join('\n');
+  }
+  if (typeof text !== 'string') return String(text ?? '');
+
+  // 이미 줄바꿈이 있으면 그대로 반환 (새 녹음)
+  if (text.includes('\n')) return text.trim();
+
+  // 기존 데이터: ",- " 패턴으로 이어진 불릿을 줄바꿈으로 분리
+  const parts = text.split(/,\s*(?=- )/);
+  return parts
+    .map(p => p.trim())
+    .filter(Boolean)
+    .join('\n')
+    .trim();
+}
+
 export function ReportViewer({ report }: ReportViewerProps) {
   const [showTranscript, setShowTranscript] = useState(false);
 
@@ -41,7 +65,7 @@ export function ReportViewer({ report }: ReportViewerProps) {
         const content = report.report[section.key];
         if (content) {
           lines.push(`[${section.label}]`);
-          lines.push(content);
+          lines.push(formatContent(content));
           lines.push('');
         }
       }
@@ -52,8 +76,13 @@ export function ReportViewer({ report }: ReportViewerProps) {
       lines.push('[원본 음성인식 텍스트]');
       lines.push('');
       if (report.speakerLabels && report.speakerLabels.length > 0) {
+        if (report.speakerRoles && Object.keys(report.speakerRoles).length > 0) {
+          lines.push(`[화자 식별] ${Object.entries(report.speakerRoles).map(([k, v]) => `화자 ${k} = ${v}`).join(', ')}`);
+          lines.push('');
+        }
         report.speakerLabels.forEach(s => {
-          lines.push(`[화자 ${s.speaker}] ${s.text}`);
+          const role = report.speakerRoles?.[s.speaker];
+          lines.push(`[${role || `화자 ${s.speaker}`}] ${s.text}`);
         });
       } else {
         lines.push(report.transcription);
@@ -115,7 +144,7 @@ export function ReportViewer({ report }: ReportViewerProps) {
                 </h3>
               </div>
               <div className="px-4 py-3">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{content}</p>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{formatContent(content)}</p>
               </div>
             </div>
           );
@@ -137,12 +166,25 @@ export function ReportViewer({ report }: ReportViewerProps) {
               <div className="px-4 py-3 max-h-80 overflow-auto">
                 {report.speakerLabels && report.speakerLabels.length > 0 ? (
                   <div className="space-y-2">
-                    {report.speakerLabels.map((s, i) => (
-                      <div key={i} className="text-sm">
-                        <span className="font-medium text-accent-600">[화자 {s.speaker}]</span>{' '}
-                        <span className="text-gray-700">{s.text}</span>
+                    {/* 화자 역할 범례 */}
+                    {report.speakerRoles && Object.keys(report.speakerRoles).length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-3 pb-2 border-b">
+                        {Object.entries(report.speakerRoles).map(([key, role]) => (
+                          <span key={key} className="px-2 py-0.5 text-xs rounded-full bg-accent-50 text-accent-700 font-medium">
+                            화자 {key} = {role}
+                          </span>
+                        ))}
                       </div>
-                    ))}
+                    )}
+                    {report.speakerLabels.map((s, i) => {
+                      const role = report.speakerRoles?.[s.speaker];
+                      return (
+                        <div key={i} className="text-sm">
+                          <span className="font-medium text-accent-600">[{role || `화자 ${s.speaker}`}]</span>{' '}
+                          <span className="text-gray-700">{s.text}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-sm text-gray-700 whitespace-pre-wrap">{report.transcription}</p>

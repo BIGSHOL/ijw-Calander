@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X, Plus, Trash2, FileText, Clock } from 'lucide-react';
 import { StudentTermSummary, EnrollmentTerm } from '../../../types/enrollmentTerm';
 import { useCreateEnrollmentTerm, useCancelEnrollmentTerm, useStudentEnrollmentTerms } from '../../../hooks/useEnrollmentTerms';
+import { getKoreanErrorMessage } from '../../../utils/errorMessages';
 
 interface Props {
   studentId: string;
@@ -78,7 +79,7 @@ const EnrollmentTermPopover: React.FC<Props> = ({
       setAddUnitPrice('');
       setAddNote('');
     } catch (err) {
-      alert(err instanceof Error ? err.message : '등록차수 생성에 실패했습니다.');
+      alert(getKoreanErrorMessage(err, '등록차수 생성에 실패했습니다.'));
     }
   };
 

@@ -6,6 +6,7 @@ import { usePendingDraftCount, useConsultationDrafts, useConvertDraft, useDelete
 import { useStudents } from '../../hooks/useStudents';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAddLevelTest, determineLevel } from '../../hooks/useGradeProfile';
+import { getKoreanErrorMessage } from '../../utils/errorMessages';
 import { ConsultationDashboard } from './ConsultationDashboard';
 import { ConsultationTable } from './ConsultationTable';
 import { ConsultationYearView } from './ConsultationYearView';
@@ -462,7 +463,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
             alert(successMsg);
         } catch (error) {
             console.error('원생 전환 오류:', error);
-            alert('❌ 원생 전환에 실패했습니다.\n\n' + (error instanceof Error ? error.message : '알 수 없는 오류'));
+            alert(getKoreanErrorMessage(error, '원생 전환에 실패했습니다.'));
         }
     }, [existingStudents, addStudent, updateConsultation, addLevelTest, userProfile]);
 

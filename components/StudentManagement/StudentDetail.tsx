@@ -16,6 +16,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2, Calendar, CreditCard, AlertTriangle, BookCopy, TrendingUp, Loader2 } from 'lucide-react';
 import { useStudentEnrollmentValidation } from './hooks/useStudentEnrollmentValidation';
 import { useStudentReports } from '../../hooks/useStudentReports';
+import { getKoreanErrorMessage } from '../../utils/errorMessages';
 
 interface StudentDetailProps {
   student: UnifiedStudent;
@@ -275,7 +276,7 @@ const ProgressTab: React.FC<{ student: UnifiedStudent }> = ({ student }) => {
         <div className="text-center">
           <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-red-400" />
           <p className="text-red-600 text-sm font-medium">보고서 조회 실패</p>
-          <p className="text-gray-400 text-xs mt-1">{error.message}</p>
+          <p className="text-gray-400 text-xs mt-1">{getKoreanErrorMessage(error)}</p>
         </div>
       </div>
     );
