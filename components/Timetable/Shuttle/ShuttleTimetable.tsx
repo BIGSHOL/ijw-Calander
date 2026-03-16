@@ -377,14 +377,20 @@ function CellGroup({ type, students }: { type: '등원' | '하원' | '이동'; s
 /** 학생 셀 */
 function StudentCell({ student }: { student: ShuttleStudentSlot }) {
     if (student.type === '이동') {
+        // time 형식: "18:20 바른→본원"
+        const [timeStr, direction] = student.time.split(' ');
+        const isToBonwon = direction?.includes('바른→');
         return (
             <div
                 className="text-xs leading-tight flex items-center gap-0.5 bg-orange-50 rounded px-0.5 -mx-0.5"
-                title={`${student.studentName} | 강의실이동 ${student.time} | ${student.room}`}
+                title={`${student.studentName} | 강의실이동 ${student.time} | ${student.className} | ${student.room}`}
             >
                 <ArrowRight size={8} className="text-orange-500 flex-shrink-0" />
                 <span className="font-medium">{student.studentName}</span>
-                <span className="text-orange-600 text-[10px]">{student.time}</span>
+                <span className="text-gray-400 text-[10px]">{timeStr}</span>
+                <span className={`text-[9px] font-bold ${isToBonwon ? 'text-gray-600' : 'text-blue-600'}`}>
+                    {direction || ''}
+                </span>
             </div>
         );
     }

@@ -279,32 +279,56 @@ export function useShuttleStudents(enabled = false) {
                             });
                         }
 
-                        // 강의실 이동 감지: 시간순 블록에서 위치 전환 지점 찾기
-                        const locations = new Set(blocks.map(b => b.location));
-                        if (locations.has('바른학습관') && locations.has('본원')) {
-                            // 이동 엔트리 추가 (실제 전환 시점)
-                            let prevLoc: Location | null = null;
-                            let prevBlock: Block | null = null;
-                            for (const block of sortedByStart) {
-                                if (prevLoc && prevLoc !== block.location && prevBlock) {
-                                    const [th, tm] = prevBlock.endTime.split(':').map(Number);
-                                    const transferSlot = nearestSlot(th, tm);
-                                    const transferArr = scheduleMap[day]?.[transferSlot];
-                                    if (transferArr && !transferArr.some(e => e.studentName === name && e.type === '이동' && e.time === prevBlock!.endTime)) {
-                                        transferArr.push({
-                                            studentName: name,
-                                            className: `${prevBlock.className} → ${block.className}`,
-                                            subject: prevBlock.subject,
-                                            time: prevBlock.endTime,
-                                            location: prevBlock.location,
-                                            room: `${prevBlock.room} → ${block.room}`,
-                                            teacher: '',
-                                            type: '이동',
-                                        });
-                                    }
+                        // 강의실 이동 감지: 수업(class) 단위로 그룹화 후 위치 전환 감지
+                        // 개별 교시가 아닌 수업 단위로 location을 결정하여 중복 이동 방지
+                        const classSummaryMap = new Map<string, {
+                            className: string;
+                            location: Location;
+                            startTime: string;
+                            endTime: string;
+                            room: string;
+                            teacher: string;
+                            subject: string;
+                        }>();
+                        for (const block of blocks) {
+                            const existing = classSummaryMap.get(block.className);
+                            if (!existing) {
+                                classSummaryMap.set(block.className, { ...block });
+                            } else {
+                                if (block.startTime < existing.startTime) existing.startTime = block.startTime;
+                                if (block.endTime > existing.endTime) {
+                                    existing.endTime = block.endTime;
+                                    existing.room = block.room;
                                 }
-                                prevLoc = block.location;
-                                prevBlock = block;
+                            }
+                        }
+                        const classSummaries = [...classSummaryMap.values()]
+                            .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
+                        const classLocations = new Set(classSummaries.map(c => c.location));
+                        if (classLocations.has('바른학습관') && classLocations.has('본원')) {
+                            // 수업 단위 이동 엔트리 추가
+                            for (let ci = 1; ci < classSummaries.length; ci++) {
+                                const fromClass = classSummaries[ci - 1];
+                                const toClass = classSummaries[ci];
+                                if (fromClass.location === toClass.location) continue;
+
+                                const [th, tm] = fromClass.endTime.split(':').map(Number);
+                                const transferSlot = nearestSlot(th, tm);
+                                const transferArr = scheduleMap[day]?.[transferSlot];
+                                if (transferArr && !transferArr.some(e => e.studentName === name && e.type === '이동' && e.className === `${fromClass.className} → ${toClass.className}`)) {
+                                    const direction = fromClass.location === '바른학습관' ? '바른→본원' : '본원→바른';
+                                    transferArr.push({
+                                        studentName: name,
+                                        className: `${fromClass.className} → ${toClass.className}`,
+                                        subject: fromClass.subject,
+                                        time: `${fromClass.endTime} ${direction}`,
+                                        location: fromClass.location,
+                                        room: `${fromClass.room} → ${toClass.room}`,
+                                        teacher: '',
+                                        type: '이동',
+                                    });
+                                }
                             }
 
                             // 이동 상세 정보 (TransferSection용)
