@@ -24,7 +24,7 @@ const TIME_SLOTS = [14, 16, 18, 20, 22] as const;
 export type TimeSlot = typeof TIME_SLOTS[number];
 export type Location = '바른학습관' | '본원';
 
-export type BoardingType = '등원' | '하원';
+export type BoardingType = '등원' | '하원' | '이동';
 
 export interface ShuttleStudentSlot {
     studentName: string;
@@ -279,9 +279,35 @@ export function useShuttleStudents(enabled = false) {
                             });
                         }
 
-                        // 바른학습관 → 본원 이동 감지
+                        // 강의실 이동 감지: 시간순 블록에서 위치 전환 지점 찾기
                         const locations = new Set(blocks.map(b => b.location));
                         if (locations.has('바른학습관') && locations.has('본원')) {
+                            // 이동 엔트리 추가 (실제 전환 시점)
+                            let prevLoc: Location | null = null;
+                            let prevBlock: Block | null = null;
+                            for (const block of sortedByStart) {
+                                if (prevLoc && prevLoc !== block.location && prevBlock) {
+                                    const [th, tm] = prevBlock.endTime.split(':').map(Number);
+                                    const transferSlot = nearestSlot(th, tm);
+                                    const transferArr = scheduleMap[day]?.[transferSlot];
+                                    if (transferArr && !transferArr.some(e => e.studentName === name && e.type === '이동' && e.time === prevBlock!.endTime)) {
+                                        transferArr.push({
+                                            studentName: name,
+                                            className: `${prevBlock.className} → ${block.className}`,
+                                            subject: prevBlock.subject,
+                                            time: prevBlock.endTime,
+                                            location: prevBlock.location,
+                                            room: `${prevBlock.room} → ${block.room}`,
+                                            teacher: '',
+                                            type: '이동',
+                                        });
+                                    }
+                                }
+                                prevLoc = block.location;
+                                prevBlock = block;
+                            }
+
+                            // 이동 상세 정보 (TransferSection용)
                             if (!transferStudents.some(t => t.studentName === name && t.day === day)) {
                                 const uniqueClasses = (loc: Location) => {
                                     const map = new Map<string, Block>();
