@@ -60,23 +60,51 @@ export default function ConsultationRecordingTab({ userProfile }: ConsultationRe
       {/* 콘텐츠 */}
       <div className="flex-1 overflow-auto p-4">
         {viewMode === 'upload' ? (
-          <div className="max-w-3xl mx-auto space-y-4">
-            {/* 업로드 폼 (진행 중이 아닐 때) */}
-            {!isInProgress && (
-              <RecordingUploader
-                onUploadStart={(reportId) => setActiveReportId(reportId)}
-              />
-            )}
+          <div className={`mx-auto ${report?.status === 'completed' ? 'max-w-7xl grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-5' : 'max-w-3xl space-y-4'}`}>
+            {/* 왼쪽: 업로드 / 상태 */}
+            <div className="space-y-4">
+              {/* 업로드 폼 (진행 중이 아닐 때) */}
+              {!isInProgress && (
+                <RecordingUploader
+                  onUploadStart={(reportId) => setActiveReportId(reportId)}
+                />
+              )}
 
-            {/* 처리 상태 추적 */}
-            {isInProgress && report && (
-              <RecordingStatusTracker report={report} />
-            )}
+              {/* 처리 상태 추적 */}
+              {isInProgress && report && (
+                <RecordingStatusTracker report={report} />
+              )}
 
-            {/* 완료된 리포트 */}
-            {report?.status === 'completed' && (
-              <>
-                <ReportViewer report={report} />
+              {/* 분석 불가 (텍스트 부족/음성 인식 실패) */}
+              {report?.status === 'failed' && (
+                <div className="bg-amber-50 border border-amber-200 rounded-sm p-5 text-center">
+                  <p className="text-amber-800 font-medium">분석할 수 없는 녹음입니다</p>
+                  <p className="text-amber-600 text-sm mt-1">{report.statusMessage}</p>
+                  <button
+                    onClick={() => setActiveReportId(null)}
+                    className="mt-4 px-4 py-2 bg-amber-100 text-amber-800 rounded-sm text-sm hover:bg-amber-200"
+                  >
+                    다른 파일로 다시 시도
+                  </button>
+                </div>
+              )}
+
+              {/* 에러 */}
+              {report?.status === 'error' && (
+                <div className="bg-red-50 border border-red-200 rounded-sm p-5 text-center">
+                  <p className="text-red-800 font-medium">분석 중 오류가 발생했습니다</p>
+                  <p className="text-red-600 text-sm mt-1">{report.errorMessage}</p>
+                  <button
+                    onClick={() => setActiveReportId(null)}
+                    className="mt-4 px-4 py-2 bg-red-100 text-red-800 rounded-sm text-sm hover:bg-red-200"
+                  >
+                    다시 시도
+                  </button>
+                </div>
+              )}
+
+              {/* 완료 후 새 분석 버튼 */}
+              {report?.status === 'completed' && (
                 <div className="text-center">
                   <button
                     onClick={() => setActiveReportId(null)}
@@ -85,34 +113,13 @@ export default function ConsultationRecordingTab({ userProfile }: ConsultationRe
                     새 분석 시작
                   </button>
                 </div>
-              </>
-            )}
+              )}
+            </div>
 
-            {/* 분석 불가 (텍스트 부족/음성 인식 실패) */}
-            {report?.status === 'failed' && (
-              <div className="bg-amber-50 border border-amber-200 rounded-sm p-5 text-center">
-                <p className="text-amber-800 font-medium">분석할 수 없는 녹음입니다</p>
-                <p className="text-amber-600 text-sm mt-1">{report.statusMessage}</p>
-                <button
-                  onClick={() => setActiveReportId(null)}
-                  className="mt-4 px-4 py-2 bg-amber-100 text-amber-800 rounded-sm text-sm hover:bg-amber-200"
-                >
-                  다른 파일로 다시 시도
-                </button>
-              </div>
-            )}
-
-            {/* 에러 */}
-            {report?.status === 'error' && (
-              <div className="bg-red-50 border border-red-200 rounded-sm p-5 text-center">
-                <p className="text-red-800 font-medium">분석 중 오류가 발생했습니다</p>
-                <p className="text-red-600 text-sm mt-1">{report.errorMessage}</p>
-                <button
-                  onClick={() => setActiveReportId(null)}
-                  className="mt-4 px-4 py-2 bg-red-100 text-red-800 rounded-sm text-sm hover:bg-red-200"
-                >
-                  다시 시도
-                </button>
+            {/* 오른쪽: 완료된 리포트 */}
+            {report?.status === 'completed' && (
+              <div className="overflow-auto">
+                <ReportViewer report={report} />
               </div>
             )}
           </div>

@@ -7,7 +7,7 @@ import { useConsultations, useUpdateConsultation } from '../../../hooks/useConsu
 import { useConsultationReports } from '../../../hooks/useConsultationRecording';
 import { ConsultationDetailModal } from '../../StudentConsultation';
 import { ConsultationForm } from '../../RegistrationConsultation/ConsultationForm';
-import { formatReportContent } from '../../../utils/formatReportContent';
+import { HighlightedReportText } from '../../../utils/HighlightedReportText';
 // Lazy load for better code splitting
 const AddConsultationModal = React.lazy(() => import('../../StudentConsultation/AddConsultationModal'));
 
@@ -377,7 +377,7 @@ const ConsultationsTab: React.FC<ConsultationsTabProps> = ({ student, readOnly =
                     ].filter(s => s.value && s.value.trim()).map(s => (
                       <div key={s.label}>
                         <p className="text-xxs font-semibold text-primary-700">{s.label}</p>
-                        <p className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed mt-0.5">{formatReportContent(s.value)}</p>
+                        <p className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed mt-0.5"><HighlightedReportText content={s.value} /></p>
                       </div>
                     ))}
                   </div>

@@ -5047,6 +5047,11 @@ ${formattedTranscript}
 
 대화의 행간, 감정, 뉘앙스까지 읽어서 학부모의 진짜 의도와 감정을 파악해주세요.
 
+ASR 오류 처리: 음성인식 특성상 문맥에 맞지 않는 단어가 포함될 수 있습니다.
+- 문맥상 의미가 통하지 않거나 맞지 않는 표현은 해당 부분 뒤에 [?]를 붙여주세요. 예: '티켓 찍으려 한다[?]며 추가적인 스트레스'
+- 고유명사(인명, 학교명, 지명)가 잘못 인식된 것 같으면 문맥으로 추론한 뒤 [?]를 붙여주세요. 예: '대구일중[?]'
+- 확실히 오인식된 부분은 보고서에 그대로 포함하되, 반드시 [?]를 표시하여 사용자가 원본 녹음과 대조할 수 있게 하세요.
+
 중요: 각 JSON 값 내에서 항목을 구분할 때 반드시 줄바꿈(\\n)을 사용하세요.
 불릿 포인트(-)는 각각 새 줄에 작성하세요. 예시: "- 첫번째 항목\\n- 두번째 항목\\n- 세번째 항목"
 
@@ -5239,6 +5244,11 @@ ${formattedTranscript}
 
 대화의 행간, 감정, 뉘앙스까지 읽어서 학부모의 진짜 의도와 감정을 파악해주세요.
 
+ASR 오류 처리: 음성인식 특성상 문맥에 맞지 않는 단어가 포함될 수 있습니다.
+- 문맥상 의미가 통하지 않거나 맞지 않는 표현은 해당 부분 뒤에 [?]를 붙여주세요. 예: '티켓 찍으려 한다[?]며 추가적인 스트레스'
+- 고유명사(인명, 학교명, 지명)가 잘못 인식된 것 같으면 문맥으로 추론한 뒤 [?]를 붙여주세요. 예: '대구일중[?]'
+- 확실히 오인식된 부분은 보고서에 그대로 포함하되, 반드시 [?]를 표시하여 사용자가 원본 녹음과 대조할 수 있게 하세요.
+
 중요: 각 JSON 값 내에서 항목을 구분할 때 반드시 줄바꿈(\\n)을 사용하세요.
 불릿 포인트(-)는 각각 새 줄에 작성하세요. 예시: "- 첫번째 항목\\n- 두번째 항목\\n- 세번째 항목"
 
@@ -5402,16 +5412,38 @@ exports.processRegistrationRecording = functions
                 return { reportId: reportRef.id, status: "failed" };
             }
 
-            await reportRef.update({ status: "analyzing", statusMessage: "AI가 등록상담 내용을 분석 중...", transcription: fullText, updatedAt: Date.now() });
+            // speaker labels 추출 (상담녹음분석과 동일)
+            const speakerLabels = (transcript.utterances || []).map(u => ({
+                speaker: u.speaker,
+                text: u.text,
+                start: u.start,
+                end: u.end,
+            }));
+            const speakerCount = new Set(speakerLabels.map(s => s.speaker)).size;
+            const formattedTranscript = speakerLabels.length > 0
+                ? speakerLabels.map(s => `[화자 ${s.speaker}] ${s.text}`).join("\n")
+                : fullText;
 
-            // 4. Claude로 등록상담 폼 필드 추출
-            const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: { "x-api-key": anthropicKey, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 4096,
-                    messages: [{ role: "user", content: `당신은 학원 등록 상담 내용을 분석하여 상담 기록 양식에 맞게 구조화하는 전문가입니다.
+            await reportRef.update({
+                status: "analyzing",
+                statusMessage: "AI가 등록상담 내용을 분석 중...",
+                transcription: fullText,
+                durationSeconds: audioDuration,
+                updatedAt: Date.now(),
+            });
+
+            // 4. Claude 병렬 호출: 폼 필드 추출 + 상담녹음 심층분석
+            const claudeHeaders = { "x-api-key": anthropicKey, "anthropic-version": "2023-06-01", "Content-Type": "application/json" };
+
+            const [formResponse, analysisResponse] = await Promise.all([
+                // (A) 등록상담 폼 필드 추출 (기존)
+                fetch("https://api.anthropic.com/v1/messages", {
+                    method: "POST",
+                    headers: claudeHeaders,
+                    body: JSON.stringify({
+                        model: "claude-sonnet-4-20250514",
+                        max_tokens: 4096,
+                        messages: [{ role: "user", content: `당신은 학원 등록 상담 내용을 분석하여 상담 기록 양식에 맞게 구조화하는 전문가입니다.
 
 학생: ${studentName}
 상담일: ${consultationDate || "미지정"}
@@ -5484,29 +5516,173 @@ ${fullText}
 }
 
 반드시 위 JSON 형식으로만 응답하세요.` }],
+                    }),
                 }),
-            });
 
-            if (!claudeResponse.ok) {
-                const errBody = await claudeResponse.text();
-                throw new Error(`Claude API 오류: ${claudeResponse.status} - ${errBody}`);
+                // (B) 상담녹음 심층분석 (processConsultationRecording과 동일 프롬프트)
+                fetch("https://api.anthropic.com/v1/messages", {
+                    method: "POST",
+                    headers: claudeHeaders,
+                    body: JSON.stringify({
+                        model: "claude-sonnet-4-20250514",
+                        max_tokens: 8192,
+                        messages: [{ role: "user", content: `당신은 학원 학부모 상담 기록을 깊이 있게 분석하는 교육 상담 전문가입니다.
+
+다음은 학부모와 학원 상담사 간의 상담 녹음을 텍스트로 변환한 것입니다.
+음성인식(ASR) 특성상 고유명사(인명, 지명, 학교명 등)가 잘못 인식될 수 있습니다.
+같은 사람을 가리키는 유사한 이름이 여러 형태로 나타나면 하나로 통일하되, 통일한 사실을 메모해주세요.
+화자가 구분되어 있으며, 대화 맥락을 바탕으로 [선생님], [학부모], [학생] 역할을 추정해주세요.
+
+학생: ${studentName}
+상담일: ${consultationDate || "미지정"}
+상담자: ${counselorName || "미지정"}
+
+--- 상담 내용 ---
+${formattedTranscript}
+--- 끝 ---
+
+위 상담 내용을 심층 분석하여 보고서를 작성해주세요.
+
+분석 시 반드시 주의할 점:
+1. 상담의 성격을 정확히 파악하세요 (등록/영업 상담 vs 정기 상담 vs 성적 상담 vs 문제 상담 등). 등록 상담이면 상담사가 프로그램 등록을 유도하는 구조임을 명시하세요.
+2. 학부모가 직접 언급한 개인 배경(나이, 가족 상황, 직업, 과거 경험 등)을 빠짐없이 기록하세요. 이는 학부모의 동기와 감정을 이해하는 핵심 맥락입니다.
+3. "학부모 요청사항"은 학부모가 직접 발의한 것만 포함하세요. 상담사가 제안하고 학부모가 수용한 것은 "교사 대응/설명 요약" 또는 "합의된 사항"에 넣으세요.
+4. "주의 필요 신호"는 절대 가볍게 보지 마세요. 다음을 반드시 감지하세요:
+   - 학생의 자존감/자기효능감 저하 신호 (IQ 의심, "나는 머리가 나쁜가" 등)
+   - 가정 내 갈등/압박 신호 (부부 갈등, 부모의 과도한 기대, 체벌/화냄 고백 등)
+   - 학생의 눈치를 보는 성향, 의사소통 어려움
+   - 퇴원/이탈 가능성
+   - 학부모의 번아웃/좌절감
+5. 학생의 심리 상태와 의사소통 패턴에 주목하세요 (예: 문제를 인식하고도 부모에게 말 못하는 상황, 주변 눈치를 보는 성향 등).
+6. 상담사가 등록/유지를 위해 사용한 설득 포인트(성공 사례, 입시 정보, 시설 홍보 등)를 별도로 정리하세요.
+7. 합의사항에는 구체적인 학습 로드맵(시기별 목표, 진도 계획)이 언급되었으면 반드시 포함하세요.
+
+대화의 행간, 감정, 뉘앙스까지 읽어서 학부모의 진짜 의도와 감정을 파악해주세요.
+
+ASR 오류 처리: 음성인식 특성상 문맥에 맞지 않는 단어가 포함될 수 있습니다.
+- 문맥상 의미가 통하지 않거나 맞지 않는 표현은 해당 부분 뒤에 [?]를 붙여주세요. 예: '티켓 찍으려 한다[?]며 추가적인 스트레스'
+- 고유명사(인명, 학교명, 지명)가 잘못 인식된 것 같으면 문맥으로 추론한 뒤 [?]를 붙여주세요. 예: '대구일중[?]'
+- 확실히 오인식된 부분은 보고서에 그대로 포함하되, 반드시 [?]를 표시하여 사용자가 원본 녹음과 대조할 수 있게 하세요.
+
+중요: 각 JSON 값 내에서 항목을 구분할 때 반드시 줄바꿈(\\n)을 사용하세요.
+불릿 포인트(-)는 각각 새 줄에 작성하세요. 예시: "- 첫번째 항목\\n- 두번째 항목\\n- 세번째 항목"
+
+반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
+{
+  "speakerRoles": {"A": "선생님", "B": "학부모"} (화자 식별 결과. 가능한 역할: 선생님, 학부모, 학생, 원장, 기타),
+  "consultationType": "상담 성격 한 줄 요약 (예: '등록 상담 - 진단평가 결과 설명 및 프로그램 등록 유도', '정기 성적 상담', '학습 태도 문제 상담' 등)",
+  "summary": "상담의 전체적인 요약 (5-7문장).\\n상담 성격, 핵심 흐름, 주요 결론을 포함.\\nASR 인식 오류로 이름이 혼재된 경우 통일 사실도 명시",
+  "familyContext": "상담에서 드러난 가정 배경과 개인 맥락 (학부모의 나이/직업/가족구성, 학생의 형제관계, 과거 학습 이력, 이전 학원/공부방 경험, 학부모의 학력관/교육철학 등).\\n언급되지 않은 항목은 생략. 각 항목은 - 불릿으로 줄바꿈",
+  "parentConcerns": "학부모가 걱정하거나 불안해하는 부분.\\n직접 말한 것 + 말투/맥락에서 추론되는 것 모두 포함.\\n각 항목은 - 불릿으로 줄바꿈",
+  "parentQuestions": "학부모가 궁금해하거나 질문한 사항들.\\n(답변됨) 또는 (미답변) 표시.\\n각 항목은 - 불릿으로 줄바꿈",
+  "parentRequests": "학부모가 직접 발의하여 요청한 사항만 포함 (상담사 제안 제외).\\n각 항목은 - 불릿으로 줄바꿈",
+  "parentSatisfaction": "학부모의 전반적인 만족도/감정 상태 분석.\\n긍정적 반응, 불만/우려, 아직 해소되지 않은 부분을 구분.\\n문단 구분 시 \\n 사용",
+  "studentNotes": "학생에 관한 특이사항.\\n학습 태도, 성적 변화, 심리 상태(자존감/자기효능감), 의사소통 패턴(눈치, 표현 어려움), 교우관계, 강점/약점.\\n각 항목은 - 불릿으로 줄바꿈",
+  "teacherResponse": "교사/상담사가 제시한 해결책, 설명, 제안 요약 (상담사가 제안하고 학부모가 수용한 것 포함).\\n각 항목은 - 불릿으로 줄바꿈",
+  "salesPoints": "상담사가 등록/유지를 위해 사용한 설득 논거 (성공 사례, 입시 정보, 시설/프로그램 홍보, 지역 특수성 등).\\n등록/영업 성격이 아닌 상담이면 빈 문자열.\\n각 항목은 - 불릿으로 줄바꿈",
+  "agreements": "상담 중 합의된 사항.\\n구체적인 일정/방법/학습 로드맵(시기별 목표, 진도 계획) 포함.\\n누가 제안했는지 (학부모/상담사) 표시.\\n각 항목은 - 불릿으로 줄바꿈",
+  "actionItems": "후속 조치가 필요한 항목 (담당자, 기한 포함 가능하면).\\n각 항목은 - 불릿으로 줄바꿈",
+  "riskFlags": "주의가 필요한 신호. 절대 '특이사항 없음'으로 넘기지 말고 다음을 꼼꼼히 확인:\\n- 학생 자존감/자기효능감 저하 (IQ 의심, 자신감 상실 등)\\n- 가정 내 갈등/압박 (부부 갈등, 과도한 기대, 감정적 훈육 등)\\n- 학생 의사소통 문제 (부모에게 말 못함, 눈치 봄 등)\\n- 퇴원/이탈 가능성\\n- 학부모 번아웃/좌절감\\n위 항목 중 해당 없으면 '확인된 위험 신호 없음'으로 표기.\\n각 항목은 - 불릿으로 줄바꿈"
+}` }],
+                    }),
+                }),
+            ]);
+
+            // (A) 폼 필드 추출 결과 처리
+            if (!formResponse.ok) {
+                const errBody = await formResponse.text();
+                throw new Error(`Claude API 오류 (폼 추출): ${formResponse.status} - ${errBody}`);
             }
-
-            const claudeData = await claudeResponse.json();
-            const responseText = claudeData.content?.[0]?.text || "";
+            const formData = await formResponse.json();
+            const formText = formData.content?.[0]?.text || "";
 
             let extractedData;
             try {
-                const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-                extractedData = JSON.parse(jsonMatch ? jsonMatch[0] : responseText);
+                const jsonMatch = formText.match(/\{[\s\S]*\}/);
+                extractedData = JSON.parse(jsonMatch ? jsonMatch[0] : formText);
             } catch {
-                extractedData = { notes: responseText };
+                extractedData = { notes: formText };
             }
 
-            // 5. 저장
+            // 5. 등록상담 폼 데이터 저장
             await reportRef.update({
                 status: "completed", statusMessage: "분석 완료", extractedData, updatedAt: Date.now(),
             });
+
+            // (B) 상담녹음 심층분석 결과 처리 → consultation_reports 자동 생성
+            try {
+                if (!analysisResponse.ok) {
+                    logger.error("[processRegistrationRecording] 상담분석 Claude 오류:", analysisResponse.status);
+                } else {
+                    const analysisData = await analysisResponse.json();
+                    const analysisText = analysisData.content?.[0]?.text || "";
+
+                    let report;
+                    try {
+                        const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
+                        report = JSON.parse(jsonMatch ? jsonMatch[0] : analysisText);
+                    } catch {
+                        report = { summary: analysisText, parentRequests: "", studentNotes: "", agreements: "", actionItems: "" };
+                    }
+
+                    const speakerRoles = report.speakerRoles || {};
+                    delete report.speakerRoles;
+
+                    // consultation_reports 문서 생성
+                    const consultReportRef = db.collection("consultation_reports").doc();
+                    const consultNow = Date.now();
+                    await consultReportRef.set({
+                        studentId: "",
+                        studentName,
+                        consultantName: counselorName || "",
+                        consultationDate: consultationDate || "",
+                        fileName: fileName || storagePath.split("/").pop(),
+                        storagePath,
+                        fileSizeBytes: 0,
+                        durationSeconds: audioDuration,
+                        status: "completed",
+                        statusMessage: "분석이 완료되었습니다.",
+                        transcription: fullText,
+                        speakerLabels,
+                        report,
+                        speakerRoles,
+                        sourceType: "registration",
+                        registrationReportId: reportRef.id,
+                        createdAt: consultNow,
+                        updatedAt: consultNow,
+                        createdBy: context.auth.uid,
+                    });
+                    logger.info("[processRegistrationRecording] consultation_reports 자동 생성 완료", { consultReportId: consultReportRef.id });
+
+                    // student_consultations 자동 기록 생성
+                    try {
+                        await db.collection("student_consultations").add({
+                            studentId: "",
+                            studentName,
+                            consultantName: counselorName || "",
+                            type: "parent",
+                            category: "general",
+                            title: `[등록상담 녹음분석] ${consultationDate || ""} 상담`,
+                            content: report.summary || "",
+                            date: consultationDate || "",
+                            followUpNeeded: !!(report.actionItems && report.actionItems.trim() && !report.actionItems.includes("없음")),
+                            followUpDone: false,
+                            followUpNotes: report.actionItems || "",
+                            consultationReportId: consultReportRef.id,
+                            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                            createdBy: context.auth.uid,
+                            autoGenerated: true,
+                        });
+                        logger.info("[processRegistrationRecording] student_consultations 자동 생성 완료");
+                    } catch (autoErr) {
+                        logger.error("[processRegistrationRecording] student_consultations 생성 실패:", autoErr);
+                    }
+                }
+            } catch (analysisErr) {
+                // 상담분석 실패해도 폼 추출은 이미 성공 → 에러 로그만 남김
+                logger.error("[processRegistrationRecording] 상담분석 처리 실패 (폼 추출은 정상):", analysisErr);
+            }
 
             logger.info("[processRegistrationRecording] Complete", { reportId: reportRef.id });
             return { reportId: reportRef.id, status: "completed", extractedData };
@@ -5557,6 +5733,467 @@ exports.createRealtimeToken = functions
         } catch (error) {
             logger.error("[createRealtimeToken] Error:", error);
             throw new functions.https.HttpsError("internal", error.message || "토큰 생성 실패");
+        }
+    });
+
+// ============ 회의록 녹음 분석 ============
+
+const MEETING_WORD_BOOST = [
+    ...ACADEMY_WORD_BOOST,
+    "회의", "안건", "발표", "논의", "결정", "합의", "투표",
+    "찬성", "반대", "보류", "제안", "건의", "보고",
+    "예산", "실적", "매출", "목표", "달성률",
+    "인사", "채용", "퇴사", "승진", "발령",
+    "교육과정", "커리큘럼", "신규프로그램", "폐강",
+    "학부모설명회", "공개수업", "학원행사", "체험수업",
+    "시설", "리모델링", "장비", "교구",
+    "마케팅", "홍보", "전단", "블로그",
+    "경쟁학원", "시장조사", "트렌드",
+    "민원", "컴플레인", "개선", "피드백",
+];
+
+/**
+ * 회의 녹음 분석 — AssemblyAI 전사 + Claude 회의록 생성
+ */
+exports.processMeetingRecording = functions
+    .region("asia-northeast3")
+    .runWith({
+        timeoutSeconds: 540,
+        memory: "1GB",
+        secrets: ["ASSEMBLYAI_API_KEY", "ANTHROPIC_API_KEY"],
+    })
+    .https.onCall(async (data, context) => {
+        if (!context.auth) {
+            throw new functions.https.HttpsError("unauthenticated", "로그인이 필요합니다.");
+        }
+
+        const { reportId: existingReportId, storagePath, title, attendees, meetingDate, recorder, fileName } = data;
+        if (!storagePath || !title) {
+            throw new functions.https.HttpsError("invalid-argument", "필수 정보(storagePath, title)가 누락되었습니다.");
+        }
+
+        const assemblyAiKey = process.env.ASSEMBLYAI_API_KEY;
+        const anthropicKey = process.env.ANTHROPIC_API_KEY;
+        if (!assemblyAiKey || !anthropicKey) {
+            throw new functions.https.HttpsError("failed-precondition", "API keys not configured");
+        }
+
+        const COLLECTION = "meeting_reports";
+        const reportRef = existingReportId
+            ? db.collection(COLLECTION).doc(existingReportId)
+            : db.collection(COLLECTION).doc();
+        const now = Date.now();
+
+        const docData = {
+            title: title || "",
+            attendees: attendees || [],
+            meetingDate: meetingDate || "",
+            recorder: recorder || "",
+            fileName: fileName || storagePath.split("/").pop(),
+            storagePath,
+            fileSizeBytes: 0,
+            status: "transcribing",
+            statusMessage: "음성 인식을 시작합니다...",
+            updatedAt: now,
+            createdBy: context.auth.uid,
+        };
+        if (existingReportId) {
+            await reportRef.update(docData);
+        } else {
+            await reportRef.set({ ...docData, createdAt: now });
+        }
+
+        try {
+            // Signed URL 생성
+            const bucket = admin.storage().bucket();
+            const file = bucket.file(storagePath);
+            const [metadata] = await file.getMetadata();
+            const fileSizeMB = (parseInt(metadata.size || "0") / 1024 / 1024).toFixed(1);
+            const [signedUrl] = await file.getSignedUrl({
+                action: "read",
+                expires: Date.now() + 30 * 60 * 1000,
+            });
+
+            await reportRef.update({
+                fileSizeBytes: parseInt(metadata.size || "0"),
+                statusMessage: `파일 확인 완료 (${fileSizeMB}MB). 음성 인식 중...`,
+                updatedAt: Date.now(),
+            });
+
+            // AssemblyAI 전사 요청
+            const transcriptResponse = await fetch("https://api.assemblyai.com/v2/transcript", {
+                method: "POST",
+                headers: {
+                    "Authorization": assemblyAiKey,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    audio_url: signedUrl,
+                    language_code: "ko",
+                    speaker_labels: true,
+                    speech_models: ["universal-3-pro", "universal-2"],
+                    word_boost: MEETING_WORD_BOOST,
+                    boost_param: "high",
+                }),
+            });
+
+            if (!transcriptResponse.ok) {
+                const errText = await transcriptResponse.text();
+                throw new Error(`AssemblyAI 요청 실패: ${transcriptResponse.status} - ${errText}`);
+            }
+
+            const transcriptData = await transcriptResponse.json();
+            const transcriptId = transcriptData.id;
+
+            await reportRef.update({
+                statusMessage: "음성 인식 서버에 전송 완료. 분석 대기 중...",
+                updatedAt: Date.now(),
+            });
+
+            // 폴링 (5초 간격, 최대 7.5분)
+            let transcriptResult;
+            let pollCount = 0;
+            const maxPolls = 90;
+
+            while (pollCount < maxPolls) {
+                await new Promise(resolve => setTimeout(resolve, 5000));
+
+                const pollResponse = await fetch(
+                    `https://api.assemblyai.com/v2/transcript/${transcriptId}`,
+                    { headers: { "Authorization": assemblyAiKey } }
+                );
+                transcriptResult = await pollResponse.json();
+
+                if (transcriptResult.status === "completed") break;
+                if (transcriptResult.status === "error") {
+                    throw new Error(`음성 인식 실패: ${transcriptResult.error}`);
+                }
+
+                if (pollCount % 2 === 0) {
+                    const progressPct = Math.min(Math.round((pollCount / maxPolls) * 95), 95);
+                    const statusLabel = transcriptResult.status === "queued"
+                        ? `음성 인식 준비 중... (${progressPct}%)`
+                        : `음성을 텍스트로 변환 중... (${progressPct}%)`;
+                    await reportRef.update({
+                        statusMessage: statusLabel,
+                        updatedAt: Date.now(),
+                    });
+                }
+                pollCount++;
+            }
+
+            if (!transcriptResult || transcriptResult.status !== "completed") {
+                throw new Error("음성 인식 시간 초과");
+            }
+
+            // 결과 추출
+            const fullText = (transcriptResult.text || "").trim();
+            const speakerLabels = (transcriptResult.utterances || []).map(u => ({
+                speaker: u.speaker,
+                text: u.text,
+                start: u.start,
+                end: u.end,
+            }));
+            const audioDuration = Math.round(transcriptResult.audio_duration || 0);
+
+            // 유효성 검증
+            const textLength = fullText.replace(/\s+/g, "").length;
+            if (!fullText || textLength < 30) {
+                await reportRef.update({
+                    status: "failed",
+                    statusMessage: textLength === 0
+                        ? "음성에서 텍스트를 인식하지 못했습니다. 녹음 파일을 확인해주세요."
+                        : `인식된 텍스트가 너무 짧습니다 (${textLength}자). 회의 내용이 충분히 녹음되었는지 확인해주세요.`,
+                    transcription: fullText || null,
+                    durationSeconds: audioDuration,
+                    updatedAt: Date.now(),
+                });
+                return { reportId: reportRef.id, status: "failed" };
+            }
+
+            if (audioDuration > 0 && audioDuration < 5) {
+                await reportRef.update({
+                    status: "failed",
+                    statusMessage: `녹음 시간이 너무 짧습니다 (${audioDuration}초). 5초 이상의 녹음이 필요합니다.`,
+                    transcription: fullText,
+                    durationSeconds: audioDuration,
+                    updatedAt: Date.now(),
+                });
+                return { reportId: reportRef.id, status: "failed" };
+            }
+
+            const speakerCount = new Set(speakerLabels.map(s => s.speaker)).size;
+            const durationMin = Math.floor(audioDuration / 60);
+            const durationSec = audioDuration % 60;
+            const durationStr = durationMin > 0 ? `${durationMin}분 ${durationSec}초` : `${durationSec}초`;
+            await reportRef.update({
+                status: "analyzing",
+                statusMessage: `음성 인식 완료 (${durationStr}, 화자 ${speakerCount}명). AI가 회의록 작성 중...`,
+                transcription: fullText,
+                speakerLabels,
+                durationSeconds: audioDuration,
+                updatedAt: Date.now(),
+            });
+
+            // Claude API 회의록 분석
+            const formattedTranscript = speakerLabels.length > 0
+                ? speakerLabels.map(s => `[화자 ${s.speaker}] ${s.text}`).join("\n")
+                : fullText;
+
+            const attendeeStr = (attendees || []).join(", ") || "미지정";
+
+            const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                    "x-api-key": anthropicKey,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    model: "claude-sonnet-4-20250514",
+                    max_tokens: 8192,
+                    messages: [{ role: "user", content: `당신은 학원 내부 회의 기록을 정밀하게 분석하는 조직 관리 전문가입니다.
+
+다음은 학원 교직원 회의/발표 녹음을 텍스트로 변환한 것입니다.
+음성인식(ASR) 특성상 고유명사(인명, 지명, 학원명 등)가 잘못 인식될 수 있습니다.
+같은 사람을 가리키는 유사한 이름이 여러 형태로 나타나면 하나로 통일하되, 통일한 사실을 메모해주세요.
+화자가 구분되어 있으며, 대화 맥락을 바탕으로 역할(원장, 부원장, 실장, 팀장, 교사 등)을 추정해주세요.
+
+회의 제목: ${title}
+회의일: ${meetingDate || "미지정"}
+참석자: ${attendeeStr}
+기록자: ${recorder || "미지정"}
+
+--- 회의 내용 ---
+${formattedTranscript}
+--- 끝 ---
+
+위 회의 내용을 심층 분석하여 회의록을 작성해주세요.
+
+분석 시 반드시 주의할 점:
+1. 회의의 유형을 정확히 파악하세요 (정기 운영회의, 임시회의, 교사연수, 발표/세미나, 브레인스토밍, 학부모설명회 준비회의 등).
+2. 안건(주제)이 여러 개인 경우 각 안건별로 논의 내용을 분리하여 정리하세요.
+3. 결정 사항은 "누가 제안했고, 반대 의견은 무엇이었으며, 최종 어떻게 결정되었는지"를 명확히 기록하세요.
+4. 액션 아이템은 반드시 담당자와 기한을 포함하세요. 기한이 명시되지 않았으면 "(기한 미정)"으로 표기하세요.
+5. 참석자별 발언을 요약할 때 각 참석자의 입장/주장/관점을 중립적으로 기록하세요.
+6. 미해결 이슈, 갈등 포인트, 위험 요소를 놓치지 마세요:
+   - 의견 충돌이 해소되지 않은 안건
+   - 예산/인력 부족으로 실행이 불확실한 계획
+   - 불만이나 소진(번아웃) 신호를 보이는 참석자
+   - 외부 리스크 (경쟁, 규제, 민원 등)
+7. 향후 계획에는 다음 회의 일정, 후속 작업, 중장기 로드맵이 언급되었으면 반드시 포함하세요.
+
+대화의 행간, 분위기, 뉘앙스까지 읽어서 회의의 실질적인 의사결정 과정을 파악해주세요.
+
+중요: 각 JSON 값 내에서 항목을 구분할 때 반드시 줄바꿈(\\n)을 사용하세요.
+불릿 포인트(-)는 각각 새 줄에 작성하세요. 예시: "- 첫번째 항목\\n- 두번째 항목"
+
+반드시 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
+{
+  "speakerRoles": {"A": "원장", "B": "실장", "C": "수학팀장"},
+  "meetingType": "회의 유형 한 줄 요약",
+  "summary": "회의의 전체적인 요약 (5-7문장).\\n회의 목적, 핵심 논의 흐름, 주요 결론을 포함.",
+  "agendaDiscussion": "안건별 논의 내용.\\n[안건 1: 제목] 내용...\\n[안건 2: 제목] 내용...\\n각 안건에서 누가 어떤 의견을 냈는지 기록.",
+  "decisions": "확정된 결정 사항.\\n각 결정에 대해: 제안자, 반대 의견, 최종 결정 내용.\\n각 항목은 - 불릿으로 줄바꿈",
+  "actionItems": "후속 조치/실행 항목.\\n형식: - [담당자] 내용 (기한: YYYY-MM-DD 또는 기한 미정).\\n각 항목은 - 불릿으로 줄바꿈",
+  "speakerSummary": "참석자별 발언 요약.\\n[이름/역할] 주요 발언과 입장 요약.\\n각 참석자를 - 불릿으로 구분",
+  "concerns": "우려/이슈 사항.\\n미해결 문제, 의견 충돌, 리스크.\\n해당 없으면 '특별한 우려 사항 없음'.\\n각 항목은 - 불릿으로 줄바꿈",
+  "nextSteps": "향후 계획.\\n다음 회의 일정, 후속 작업 일정, 중장기 로드맵.\\n각 항목은 - 불릿으로 줄바꿈"
+}` }],
+                }),
+            });
+
+            if (!claudeResponse.ok) {
+                const errBody = await claudeResponse.text();
+                throw new Error(`Claude API 오류: ${claudeResponse.status} - ${errBody}`);
+            }
+
+            const claudeData = await claudeResponse.json();
+            const reportText = claudeData.content?.[0]?.text || "";
+
+            let report;
+            try {
+                const jsonMatch = reportText.match(/\{[\s\S]*\}/);
+                report = JSON.parse(jsonMatch ? jsonMatch[0] : reportText);
+            } catch {
+                report = {
+                    summary: reportText,
+                    meetingType: "", agendaDiscussion: "", decisions: "",
+                    actionItems: "", speakerSummary: "", concerns: "", nextSteps: "",
+                };
+            }
+
+            const speakerRoles = report.speakerRoles || {};
+            delete report.speakerRoles;
+
+            await reportRef.update({
+                status: "completed",
+                statusMessage: "회의록 작성이 완료되었습니다.",
+                report,
+                speakerRoles,
+                updatedAt: Date.now(),
+            });
+
+            logger.info("[processMeetingRecording] Complete", { reportId: reportRef.id });
+            return { reportId: reportRef.id, status: "completed" };
+
+        } catch (error) {
+            logger.error("[processMeetingRecording] Error:", error);
+            let userMessage = "처리 중 오류가 발생했습니다.";
+            const errMsg = error.message || "";
+            if (errMsg.includes("deadline") || errMsg.includes("timeout") || errMsg.includes("시간 초과")) {
+                userMessage = "처리 시간이 초과되었습니다. 파일이 너무 크거나 서버가 바쁜 상태입니다.";
+            } else if (errMsg.includes("AssemblyAI")) {
+                userMessage = `음성 인식 서비스 오류: ${errMsg}`;
+            } else if (errMsg.includes("Claude")) {
+                userMessage = `AI 분석 서비스 오류: ${errMsg}`;
+            }
+            await reportRef.update({
+                status: "error",
+                statusMessage: userMessage,
+                errorMessage: errMsg,
+                updatedAt: Date.now(),
+            });
+            throw new functions.https.HttpsError("internal", errMsg || "회의록 분석 실패");
+        }
+    });
+
+/**
+ * 기존 회의록을 새 알고리즘으로 재분석 (음성인식 스킵)
+ */
+exports.reanalyzeMeetingReport = functions
+    .region("asia-northeast3")
+    .runWith({
+        timeoutSeconds: 300,
+        memory: "512MB",
+        secrets: ["ANTHROPIC_API_KEY"],
+    })
+    .https.onCall(async (data, context) => {
+        if (!context.auth) {
+            throw new functions.https.HttpsError("unauthenticated", "로그인이 필요합니다.");
+        }
+
+        const { reportId } = data;
+        if (!reportId) {
+            throw new functions.https.HttpsError("invalid-argument", "reportId가 필요합니다.");
+        }
+
+        const anthropicKey = process.env.ANTHROPIC_API_KEY;
+        if (!anthropicKey) {
+            throw new functions.https.HttpsError("failed-precondition", "ANTHROPIC_API_KEY not configured");
+        }
+
+        const reportRef = db.collection("meeting_reports").doc(reportId);
+        const reportDoc = await reportRef.get();
+        if (!reportDoc.exists) {
+            throw new functions.https.HttpsError("not-found", "회의록을 찾을 수 없습니다.");
+        }
+
+        const reportData = reportDoc.data();
+        const { transcription, speakerLabels, title, meetingDate, attendees, recorder } = reportData;
+
+        if (!transcription) {
+            throw new functions.https.HttpsError("failed-precondition", "음성인식 결과가 없습니다.");
+        }
+
+        try {
+            await reportRef.update({ status: "analyzing", statusMessage: "AI가 새로운 알고리즘으로 재분석 중...", updatedAt: Date.now() });
+
+            const formattedTranscript = (speakerLabels || []).length > 0
+                ? speakerLabels.map(s => `[화자 ${s.speaker}] ${s.text}`).join("\n")
+                : transcription;
+
+            const attendeeStr = (attendees || []).join(", ") || "미지정";
+
+            const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
+                method: "POST",
+                headers: {
+                    "x-api-key": anthropicKey,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    model: "claude-sonnet-4-20250514",
+                    max_tokens: 8192,
+                    messages: [{ role: "user", content: `당신은 학원 내부 회의 기록을 정밀하게 분석하는 조직 관리 전문가입니다.
+
+다음은 학원 교직원 회의/발표 녹음을 텍스트로 변환한 것입니다.
+음성인식(ASR) 특성상 고유명사가 잘못 인식될 수 있습니다.
+같은 사람을 가리키는 유사한 이름은 하나로 통일하되, 통일한 사실을 메모해주세요.
+
+회의 제목: ${title || "미지정"}
+회의일: ${meetingDate || "미지정"}
+참석자: ${attendeeStr}
+기록자: ${recorder || "미지정"}
+
+--- 회의 내용 ---
+${formattedTranscript}
+--- 끝 ---
+
+위 회의 내용을 심층 분석하여 회의록을 작성해주세요.
+
+분석 시 주의할 점:
+1. 회의 유형을 정확히 파악하세요.
+2. 안건별로 논의 내용을 분리 정리하세요.
+3. 결정 사항은 제안자, 반대 의견, 최종 결정을 명확히 기록하세요.
+4. 액션 아이템은 담당자와 기한을 포함하세요.
+5. 참석자별 발언을 중립적으로 요약하세요.
+6. 미해결 이슈, 갈등, 리스크를 놓치지 마세요.
+7. 향후 계획(다음 회의, 후속 작업, 로드맵)을 포함하세요.
+
+중요: 각 JSON 값 내에서 항목을 구분할 때 반드시 줄바꿈(\\n)을 사용하세요.
+
+반드시 아래 JSON 형식으로만 응답하세요:
+{
+  "speakerRoles": {"A": "원장", "B": "실장"},
+  "meetingType": "회의 유형 한 줄 요약",
+  "summary": "회의 요약 (5-7문장)",
+  "agendaDiscussion": "안건별 논의 내용",
+  "decisions": "결정 사항",
+  "actionItems": "액션 아이템 (담당자, 기한 포함)",
+  "speakerSummary": "참석자별 발언 요약",
+  "concerns": "우려/이슈 사항",
+  "nextSteps": "향후 계획"
+}` }],
+                }),
+            });
+
+            if (!claudeResponse.ok) {
+                throw new Error(`Claude API 오류: ${claudeResponse.status}`);
+            }
+
+            const claudeData = await claudeResponse.json();
+            const reportText = claudeData.content?.[0]?.text || "";
+
+            let report;
+            try {
+                const jsonMatch = reportText.match(/\{[\s\S]*\}/);
+                report = JSON.parse(jsonMatch ? jsonMatch[0] : reportText);
+            } catch {
+                report = { summary: reportText };
+            }
+
+            const speakerRoles = report.speakerRoles || {};
+            delete report.speakerRoles;
+
+            await reportRef.update({
+                status: "completed",
+                statusMessage: "재분석이 완료되었습니다.",
+                report,
+                speakerRoles,
+                updatedAt: Date.now(),
+            });
+
+            return { success: true };
+        } catch (error) {
+            logger.error("[reanalyzeMeetingReport] Error:", error);
+            await reportRef.update({
+                status: "completed",
+                statusMessage: "재분석 실패 - 이전 분석 결과를 유지합니다.",
+                errorMessage: error.message || "",
+                updatedAt: Date.now(),
+            });
+            throw new functions.https.HttpsError("internal", error.message || "회의록 재분석 실패");
         }
     });
 
