@@ -1,4 +1,7 @@
 {
+  "storage": {
+    "rules": "storage.rules"
+  },
   "firestore": {
     "database": "restore260202",
     "rules": "firestore.rules"

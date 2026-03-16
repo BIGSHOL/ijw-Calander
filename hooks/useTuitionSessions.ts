@@ -30,6 +30,7 @@ export const useTuitionSessions = () => {
       });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+    onError: (error: Error) => console.error('[useTuitionSessions]', error),
   });
 
   const deleteMutation = useMutation({
@@ -37,6 +38,7 @@ export const useTuitionSessions = () => {
       await deleteDoc(doc(db, COLLECTION, id));
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }),
+    onError: (error: Error) => console.error('[useTuitionSessions]', error),
   });
 
   return {
