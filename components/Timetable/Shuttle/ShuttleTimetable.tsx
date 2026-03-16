@@ -1,12 +1,12 @@
 /**
  * ShuttleTimetable - 셔틀버스 시간표 컴포넌트
  *
- * 등원(첫 수업 시작) / 하원(마지막 수업 종료) 구분 표시
- * 강의실 기준 바른학습관/본원 분류 + 이동 필요 학생 별도 표시
+ * 등원(첫 수업 시작) / 하원(마지막 수업 종료) / 이동(강의실 전환) 구분 표시
+ * 강의실 기준 바른학습관/본원 분류
  * 필터: 등원, 하원, 본원(영어), 본원(수학), 바른학습관, 강의실이동 (멀티 선택)
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import type { SubjectType } from '../../../types';
 import SubjectControls from '../shared/SubjectControls';
 import { SUBJECT_COLORS } from '../../../utils/styleUtils';
@@ -181,9 +181,7 @@ function ShuttleTimetable({
 /** 학생이 필터 조건에 맞는지 검사 (OR 조건) */
 function matchesFilter(
     student: ShuttleStudentSlot,
-    day: string,
     activeFilters: Set<ShuttleFilter>,
-    transferNameDays: Set<string>,
 ): boolean {
     if (activeFilters.size === 0) return true;
 
@@ -191,13 +189,15 @@ function matchesFilter(
     if (activeFilters.has('boarding') && student.type === '등원') return true;
     if (activeFilters.has('alighting') && student.type === '하원') return true;
 
-    // 위치/과목 필터
-    if (activeFilters.has('bonwon-english') && student.location === '본원' && student.subject === 'english') return true;
-    if (activeFilters.has('bonwon-math') && student.location === '본원' && student.subject !== 'english') return true;
-    if (activeFilters.has('bareun') && student.location === '바른학습관') return true;
+    // 강의실이동 필터: '이동' 타입만 매칭
+    if (activeFilters.has('transfer') && student.type === '이동') return true;
 
-    // 강의실이동 필터
-    if (activeFilters.has('transfer') && transferNameDays.has(`${student.studentName}\t${day}`)) return true;
+    // 위치/과목 필터 (등원/하원만 대상, 이동은 제외)
+    if (student.type !== '이동') {
+        if (activeFilters.has('bonwon-english') && student.location === '본원' && student.subject === 'english') return true;
+        if (activeFilters.has('bonwon-math') && student.location === '본원' && student.subject !== 'english') return true;
+        if (activeFilters.has('bareun') && student.location === '바른학습관') return true;
+    }
 
     return false;
 }
@@ -212,12 +212,6 @@ function TimeSlotView({
     transferStudents: TransferStudent[];
     activeFilters: Set<ShuttleFilter>;
 }) {
-    const transferNameDays = useMemo(() => {
-        const set = new Set<string>();
-        for (const t of transferStudents) set.add(`${t.studentName}\t${t.day}`);
-        return set;
-    }, [transferStudents]);
-
     if (!scheduleMap) {
         return (
             <div className="flex items-center justify-center h-64 text-gray-500">
@@ -256,6 +250,10 @@ function TimeSlotView({
                 <span className="inline-flex items-center gap-1">
                     <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700 border border-red-300">하원</span>
                     마지막 수업 종료 기준
+                </span>
+                <span className="inline-flex items-center gap-1">
+                    <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-orange-100 text-orange-700 border border-orange-300">이동</span>
+                    강의실 이동 (바른↔본원)
                 </span>
                 <span className="inline-flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
@@ -302,10 +300,10 @@ function TimeSlotView({
                                     {WEEKDAYS.map(day => {
                                         const allStudents = scheduleMap[day]?.[slot] || [];
                                         const cellStudents = allStudents.filter(s =>
-                                            matchesFilter(s, day, activeFilters, transferNameDays)
+                                            matchesFilter(s, activeFilters)
                                         );
-                                        // 등원/하원 그룹 분리
                                         const boarding = cellStudents.filter(s => s.type === '등원');
+                                        const transfer = cellStudents.filter(s => s.type === '이동');
                                         const alighting = cellStudents.filter(s => s.type === '하원');
                                         return (
                                             <td
@@ -315,43 +313,19 @@ function TimeSlotView({
                                                 {cellStudents.length > 0 ? (
                                                     <div className="space-y-1">
                                                         {boarding.length > 0 && (
-                                                            <div>
-                                                                <div className="flex items-center gap-1 mb-0.5">
-                                                                    <span className="px-1 py-0 rounded text-[8px] font-bold bg-green-100 text-green-700 border border-green-300">
-                                                                        등원 {boarding.length}
-                                                                    </span>
-                                                                </div>
-                                                                <div className="space-y-0.5">
-                                                                    {boarding.map((s, idx) => (
-                                                                        <StudentCell
-                                                                            key={`b-${s.studentName}-${idx}`}
-                                                                            student={s}
-                                                                            isTransfer={transferNameDays.has(`${s.studentName}\t${day}`)}
-                                                                        />
-                                                                    ))}
-                                                                </div>
-                                                            </div>
+                                                            <CellGroup type="등원" students={boarding} />
                                                         )}
-                                                        {boarding.length > 0 && alighting.length > 0 && (
+                                                        {boarding.length > 0 && (transfer.length > 0 || alighting.length > 0) && (
+                                                            <hr className="border-gray-200" />
+                                                        )}
+                                                        {transfer.length > 0 && (
+                                                            <CellGroup type="이동" students={transfer} />
+                                                        )}
+                                                        {transfer.length > 0 && alighting.length > 0 && (
                                                             <hr className="border-gray-200" />
                                                         )}
                                                         {alighting.length > 0 && (
-                                                            <div>
-                                                                <div className="flex items-center gap-1 mb-0.5">
-                                                                    <span className="px-1 py-0 rounded text-[8px] font-bold bg-red-100 text-red-700 border border-red-300">
-                                                                        하원 {alighting.length}
-                                                                    </span>
-                                                                </div>
-                                                                <div className="space-y-0.5">
-                                                                    {alighting.map((s, idx) => (
-                                                                        <StudentCell
-                                                                            key={`a-${s.studentName}-${idx}`}
-                                                                            student={s}
-                                                                            isTransfer={transferNameDays.has(`${s.studentName}\t${day}`)}
-                                                                        />
-                                                                    ))}
-                                                                </div>
-                                                            </div>
+                                                            <CellGroup type="하원" students={alighting} />
                                                         )}
                                                     </div>
                                                 ) : (
@@ -367,7 +341,7 @@ function TimeSlotView({
                 </div>
             </div>
 
-            {/* 이동 필요 학생 섹션 */}
+            {/* 이동 필요 학생 상세 */}
             {showTransferSection && (
                 <TransferSection transferStudents={transferStudents} />
             )}
@@ -375,12 +349,50 @@ function TimeSlotView({
     );
 }
 
+const GROUP_STYLES = {
+    '등원': { badge: 'bg-green-100 text-green-700 border-green-300' },
+    '하원': { badge: 'bg-red-100 text-red-700 border-red-300' },
+    '이동': { badge: 'bg-orange-100 text-orange-700 border-orange-300' },
+} as const;
+
+/** 셀 내 그룹 (등원/이동/하원) */
+function CellGroup({ type, students }: { type: '등원' | '하원' | '이동'; students: ShuttleStudentSlot[] }) {
+    const style = GROUP_STYLES[type];
+    return (
+        <div>
+            <div className="flex items-center gap-1 mb-0.5">
+                <span className={`px-1 py-0 rounded text-[8px] font-bold border ${style.badge}`}>
+                    {type} {students.length}
+                </span>
+            </div>
+            <div className="space-y-0.5">
+                {students.map((s, idx) => (
+                    <StudentCell key={`${s.studentName}-${idx}`} student={s} />
+                ))}
+            </div>
+        </div>
+    );
+}
+
 /** 학생 셀 */
-function StudentCell({ student, isTransfer }: { student: ShuttleStudentSlot; isTransfer: boolean }) {
+function StudentCell({ student }: { student: ShuttleStudentSlot }) {
+    if (student.type === '이동') {
+        return (
+            <div
+                className="text-xs leading-tight flex items-center gap-0.5 bg-orange-50 rounded px-0.5 -mx-0.5"
+                title={`${student.studentName} | 강의실이동 ${student.time} | ${student.room}`}
+            >
+                <ArrowRight size={8} className="text-orange-500 flex-shrink-0" />
+                <span className="font-medium">{student.studentName}</span>
+                <span className="text-orange-600 text-[10px]">{student.time}</span>
+            </div>
+        );
+    }
+
     const isBareun = student.location === '바른학습관';
     return (
         <div
-            className={`text-xs leading-tight flex items-center gap-0.5 ${isTransfer ? 'bg-orange-50 rounded px-0.5 -mx-0.5' : ''}`}
+            className="text-xs leading-tight flex items-center gap-0.5"
             title={`${student.studentName} | ${student.type} ${student.time} | ${student.teacher || '담당미정'} | ${student.className} | ${student.room || '강의실 미배정'}`}
         >
             <span
@@ -396,14 +408,11 @@ function StudentCell({ student, isTransfer }: { student: ShuttleStudentSlot; isT
             {isBareun && (
                 <span className="text-[9px] text-blue-600 font-medium ml-0.5">[바른]</span>
             )}
-            {isTransfer && (
-                <ArrowRight size={8} className="text-orange-500 flex-shrink-0 ml-0.5" />
-            )}
         </div>
     );
 }
 
-/** 이동 필요 학생 섹션 */
+/** 이동 필요 학생 상세 섹션 */
 function TransferSection({ transferStudents }: { transferStudents: TransferStudent[] }) {
     const byDay = new Map<string, TransferStudent[]>();
     for (const t of transferStudents) {
@@ -418,7 +427,7 @@ function TransferSection({ transferStudents }: { transferStudents: TransferStude
             <div className="px-4 py-2 bg-orange-50 flex items-center gap-2">
                 <ArrowRight size={14} className="text-orange-600" />
                 <span className="font-bold text-sm text-orange-800">
-                    강의실 이동 필요 학생 (바른학습관 ↔ 본원)
+                    강의실 이동 상세 (바른학습관 ↔ 본원)
                 </span>
                 <span className="text-xs text-orange-500 ml-auto">
                     {transferStudents.length}건
