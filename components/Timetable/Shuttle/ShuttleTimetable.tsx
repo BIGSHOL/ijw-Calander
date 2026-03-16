@@ -30,14 +30,6 @@ const SESSION_LABELS: Record<TimeSlot, string> = {
     22: '5회차',
 };
 
-/** 요일별 색상 */
-const DAY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-    '월': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
-    '화': { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200' },
-    '수': { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
-    '목': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
-    '금': { bg: 'bg-teal-50', text: 'text-teal-700', border: 'border-teal-200' },
-};
 
 /** 회차별 색상 */
 const SESSION_COLORS: Record<TimeSlot, { bg: string; text: string }> = {
@@ -308,11 +300,10 @@ function TimeSlotView({
                                                 <div className={`font-bold ${sc.text} text-sm`}>{SESSION_LABELS[slot]}</div>
                                             </td>
                                             {WEEKDAYS.map(day => {
-                                                const dc = DAY_COLORS[day];
                                                 return (
                                                     <td
                                                         key={`${day}-${slot}-header`}
-                                                        className={`border border-emerald-200 px-2 py-2 text-center font-bold text-sm ${dc.bg} ${dc.text}`}
+                                                        className={`border border-emerald-200 px-2 py-2 text-center font-bold text-sm ${sc.bg} ${sc.text}`}
                                                     >
                                                         {day}요일 {SESSION_LABELS[slot]}
                                                     </td>
@@ -330,11 +321,10 @@ function TimeSlotView({
                                                 const boarding = cellStudents.filter(s => s.type === '등원');
                                                 const transfer = cellStudents.filter(s => s.type === '이동');
                                                 const alighting = cellStudents.filter(s => s.type === '하원');
-                                                const dc = DAY_COLORS[day];
                                                 return (
                                                     <td
                                                         key={`${day}-${slot}`}
-                                                        className={`border border-emerald-200 px-1.5 py-1 align-top ${dc.bg}/30`}
+                                                        className="border border-emerald-200 px-1.5 py-1 align-top bg-white"
                                                     >
                                                         {cellStudents.length > 0 ? (
                                                             <div className="space-y-1">
