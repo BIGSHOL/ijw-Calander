@@ -29,7 +29,26 @@ import { HighlightedReportText } from '../../utils/HighlightedReportText';
 
 export function ReportViewer({ report }: ReportViewerProps) {
   const [showTranscript, setShowTranscript] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const reanalyzeMutation = useReanalyzeReport();
+
+  const toggleSection = (key: string) => {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const toggleAllSections = () => {
+    const availableKeys = SECTIONS.filter(s => report.report?.[s.key]).map(s => s.key);
+    if (expandedSections.size >= availableKeys.length) {
+      setExpandedSections(new Set());
+    } else {
+      setExpandedSections(new Set(availableKeys));
+    }
+  };
 
   const handleReanalyze = () => {
     if (!window.confirm('새 알고리즘으로 재분석하시겠습니까?\n기존 분석 결과가 덮어씌워집니다.')) return;
@@ -146,21 +165,38 @@ export function ReportViewer({ report }: ReportViewerProps) {
       )}
 
       {/* 보고서 섹션 */}
-      <div className="p-5 space-y-4">
+      <div className="p-5 space-y-1">
+        {report.report && (
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={toggleAllSections}
+              className="text-xs text-gray-400 hover:text-accent-600 transition-colors"
+            >
+              {expandedSections.size >= SECTIONS.filter(s => report.report?.[s.key]).length ? '모두 접기' : '모두 펼치기'}
+            </button>
+          </div>
+        )}
         {report.report && SECTIONS.map(section => {
           const content = report.report?.[section.key];
           if (!content) return null;
+          const isExpanded = expandedSections.has(section.key);
 
           return (
             <div key={section.key} className="border rounded-sm">
-              <div className="px-4 py-3 bg-gray-50 border-b">
+              <button
+                onClick={() => toggleSection(section.key)}
+                className="w-full px-4 py-3 bg-gray-50 flex items-center justify-between hover:bg-gray-100 transition-colors"
+              >
                 <h3 className="text-sm font-semibold text-gray-800">
                   {section.emoji} {section.label}
                 </h3>
-              </div>
-              <div className="px-4 py-3">
-                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed"><HighlightedReportText content={content} /></p>
-              </div>
+                {isExpanded ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+              </button>
+              {isExpanded && (
+                <div className="px-4 py-3 border-t">
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed"><HighlightedReportText content={content} /></p>
+                </div>
+              )}
             </div>
           );
         })}
