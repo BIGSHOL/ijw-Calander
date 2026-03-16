@@ -13,6 +13,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { X, Loader2, GitMerge, ChevronDown, ChevronRight, Check, AlertTriangle, Crown } from 'lucide-react';
 import { doc, writeBatch, collection, getDocs, query, where, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
+import { getKoreanErrorMessage } from '../../utils/errorMessages';
 import { StaffMember } from '../../types';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
@@ -236,7 +237,7 @@ const StaffMergeModal: React.FC<StaffMergeModalProps> = ({ staff, onClose }) => 
         await batch.commit();
         mergedGroups++;
       } catch (err: any) {
-        errors.push(`${group.name}: ${err.message}`);
+        errors.push(`${group.name}: ${getKoreanErrorMessage(err)}`);
       }
     }
 

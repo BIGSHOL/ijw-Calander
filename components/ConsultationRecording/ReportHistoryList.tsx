@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Search, FileText, Clock, AlertCircle, Loader2, Trash2 } from 'lucide-react';
-import { useConsultationReports, useDeleteConsultationReport } from '../../hooks/useConsultationRecording';
+import { Search, FileText, Clock, AlertCircle, Loader2, Trash2, Pencil, Check, X } from 'lucide-react';
+import { useConsultationReports, useDeleteConsultationReport, useUpdateConsultationReportName } from '../../hooks/useConsultationRecording';
 import { usePermissions } from '../../hooks/usePermissions';
 import { format } from 'date-fns';
 import type { ConsultationReportStatus, UserProfile } from '../../types';
@@ -24,12 +24,34 @@ export function ReportHistoryList({ onSelectReport, userProfile }: ReportHistory
   const { data: reports = [], isLoading } = useConsultationReports();
   const { hasPermission } = usePermissions(userProfile);
   const deleteMutation = useDeleteConsultationReport();
+  const renameMutation = useUpdateConsultationReportName();
   const canDelete = hasPermission('recording.delete');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
 
   const handleDelete = (e: React.MouseEvent, report: { id: string; storagePath?: string; studentName?: string }) => {
     e.stopPropagation();
     if (!window.confirm(`"${report.studentName}" 녹음 분석 내역을 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
     deleteMutation.mutate({ id: report.id, storagePath: report.storagePath || '' });
+  };
+
+  const handleStartEdit = (e: React.MouseEvent, report: { id: string; studentName: string }) => {
+    e.stopPropagation();
+    setEditingId(report.id);
+    setEditName(report.studentName);
+  };
+
+  const handleSaveEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!editingId || !editName.trim()) return;
+    renameMutation.mutate({ id: editingId, studentName: editName.trim() }, {
+      onSuccess: () => setEditingId(null),
+    });
+  };
+
+  const handleCancelEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(null);
   };
 
   const filtered = searchQuery.trim()
@@ -78,11 +100,10 @@ export function ReportHistoryList({ onSelectReport, userProfile }: ReportHistory
             const statusInfo = STATUS_MAP[report.status] || STATUS_MAP.error;
             const isDeleting = deleteMutation.isPending && deleteMutation.variables?.id === report.id;
             return (
-              <button
+              <div
                 key={report.id}
-                onClick={() => onSelectReport(report.id)}
-                className="w-full px-5 py-3 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left"
-                disabled={isDeleting}
+                onClick={() => !isDeleting && onSelectReport(report.id)}
+                className={`w-full px-5 py-3 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left cursor-pointer ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}
               >
                 {/* 상태 아이콘 */}
                 <div className="flex-shrink-0">
@@ -98,7 +119,38 @@ export function ReportHistoryList({ onSelectReport, userProfile }: ReportHistory
                 {/* 정보 */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-900">{report.studentName}</span>
+                    {editingId === report.id ? (
+                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveEdit(e as unknown as React.MouseEvent);
+                            if (e.key === 'Escape') { setEditingId(null); }
+                          }}
+                          className="text-sm font-medium text-gray-900 border rounded-sm px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-accent-400 w-32"
+                          autoFocus
+                        />
+                        <button onClick={handleSaveEdit} className="p-0.5 text-green-500 hover:bg-green-50 rounded" title="저장">
+                          <Check size={14} />
+                        </button>
+                        <button onClick={handleCancelEdit} className="p-0.5 text-gray-400 hover:bg-gray-100 rounded" title="취소">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <span className="text-sm font-medium text-gray-900">{report.studentName}</span>
+                        <button
+                          onClick={(e) => handleStartEdit(e, report)}
+                          className="p-0.5 text-gray-300 hover:text-accent-500 rounded"
+                          title="이름 수정"
+                        >
+                          <Pencil size={12} />
+                        </button>
+                      </>
+                    )}
                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${statusInfo.color}`}>
                       {statusInfo.label}
                     </span>
@@ -135,7 +187,7 @@ export function ReportHistoryList({ onSelectReport, userProfile }: ReportHistory
                 <span className="text-xs text-gray-400 flex-shrink-0">
                   {format(new Date(report.createdAt), 'MM/dd HH:mm')}
                 </span>
-              </button>
+              </div>
             );
           })}
         </div>

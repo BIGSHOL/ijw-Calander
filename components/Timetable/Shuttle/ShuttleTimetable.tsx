@@ -15,6 +15,7 @@ import type { TimeSlot, ShuttleStudentSlot, TransferStudent, ShuttleScheduleMap 
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useQueryClient } from '@tanstack/react-query';
 import { RefreshCw, ArrowRight } from 'lucide-react';
+import { getKoreanErrorMessage } from '../../../utils/errorMessages';
 
 const WEEKDAYS = ['월', '화', '수', '목', '금'];
 const colors = SUBJECT_COLORS.shuttle;
@@ -97,7 +98,7 @@ function ShuttleTimetable({
             await refetchShuttle();
         } catch (error: any) {
             console.error('Shuttle sync failed:', error);
-            alert('동기화 실패: ' + (error.message || '알 수 없는 오류'));
+            alert(getKoreanErrorMessage(error, '동기화에 실패했습니다.'));
         } finally {
             setIsSyncing(false);
         }

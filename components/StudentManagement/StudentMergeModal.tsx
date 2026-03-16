@@ -17,6 +17,7 @@ import { useStudents } from '../../hooks/useStudents';
 import { useStudentDuplicates, DuplicateGroup } from './hooks/useStudentDuplicates';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { getKoreanErrorMessage } from '../../utils/errorMessages';
 
 interface StudentMergeModalProps {
   onClose: () => void;
@@ -207,7 +208,7 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
       return {
         enrollmentsTransferred,
         studentsDeleted,
-        error: error instanceof Error ? error.message : '알 수 없는 오류'
+        error: getKoreanErrorMessage(error)
       };
     }
   }, [mergeBasicInfo]);

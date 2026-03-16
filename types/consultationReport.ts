@@ -56,6 +56,7 @@ export interface ConsultationReport {
 
   // AI 분석 보고서
   report?: ConsultationReportSection;
+  speakerRoles?: Record<string, string>;  // { "A": "선생님", "B": "학부모" }
 
   // 시스템 필드
   createdAt: number;

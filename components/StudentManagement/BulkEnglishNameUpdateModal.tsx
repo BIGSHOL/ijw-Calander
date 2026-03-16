@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { X, Upload, Check, AlertCircle, Loader2, FileText, Info, BarChart, Eye, CheckCircle } from 'lucide-react';
 import { useStudents } from '../../hooks/useStudents';
 import { UnifiedStudent } from '../../types';
+import { getKoreanErrorMessage } from '../../utils/errorMessages';
 
 interface ParsedEntry {
   koreanName: string;
@@ -148,7 +149,7 @@ const BulkEnglishNameUpdateModal: React.FC<BulkEnglishNameUpdateModalProps> = ({
         results[i] = {
           ...entry,
           status: 'error',
-          errorMessage: `업데이트 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
+          errorMessage: getKoreanErrorMessage(error, '업데이트에 실패했습니다.'),
         };
       }
 

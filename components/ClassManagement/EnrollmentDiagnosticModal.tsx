@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { getKoreanErrorMessage } from '../../utils/errorMessages';
 import {
     X,
     Search,
@@ -366,7 +367,7 @@ const EnrollmentDiagnosticModal: React.FC<EnrollmentDiagnosticModalProps> = ({
 
         } catch (err: any) {
             console.error(err);
-            alert('복구 중 오류 발생: ' + err.message);
+            alert(getKoreanErrorMessage(err, '복구 중 오류가 발생했습니다.'));
             setStep('results');
         }
     };

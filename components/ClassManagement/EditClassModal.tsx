@@ -6,6 +6,7 @@ import { ClassInfo, useClasses } from '../../hooks/useClasses';
 import { useClassDetail, ClassStudent } from '../../hooks/useClassDetail';
 import { useStudents } from '../../hooks/useStudents';
 import { SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
+import { getKoreanErrorMessage } from '../../utils/errorMessages';
 import { ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS, convertLegacyPeriodId } from '../Timetable/constants';
 import { useTeachers } from '../../hooks/useFirebaseQueries';
 import { useStaff } from '../../hooks/useStaff';
@@ -498,7 +499,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
       }
     } catch (err) {
       console.error('[EditClassModal] Error saving with schedule modal:', err);
-      setError(err instanceof Error ? err.message : '저장 중 오류가 발생했습니다.');
+      setError(getKoreanErrorMessage(err, '저장 중 오류가 발생했습니다.'));
     }
     pendingSaveDataRef.current = null;
   }, [classInfo, teacher, room, memo, studentsToAdd, studentsToRemove, studentAttendanceDays, studentUnderlines, studentSlotTeachers, studentStartDates]);

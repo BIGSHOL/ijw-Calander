@@ -4,6 +4,7 @@ import { read, utils } from 'xlsx';
 import { collection, writeBatch, doc, getDocs } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { ConsultationRecord, ConsultationSubject, ConsultationStatus, SchoolGrade } from '../../types';
+import { getKoreanErrorMessage } from '../../utils/errorMessages';
 
 interface RegistrationMigrationModalProps {
   onClose: () => void;
@@ -217,7 +218,7 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
 
     } catch (err: any) {
       console.error('파일 업로드 오류:', err);
-      setError(err.message || '파일 처리 중 오류가 발생했습니다.');
+      setError(getKoreanErrorMessage(err, '파일 처리 중 오류가 발생했습니다.'));
       setLoading(false);
     }
   };
@@ -421,7 +422,7 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
 
     } catch (err: any) {
       console.error('파일 업로드 오류:', err);
-      setError(err.message || '파일 처리 중 오류가 발생했습니다.');
+      setError(getKoreanErrorMessage(err, '파일 처리 중 오류가 발생했습니다.'));
       setLoading(false);
     }
   };
@@ -473,7 +474,7 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
 
     } catch (err: any) {
       console.error('마이그레이션 오류:', err);
-      setError(err.message || '마이그레이션 중 오류가 발생했습니다.');
+      setError(getKoreanErrorMessage(err, '마이그레이션 중 오류가 발생했습니다.'));
       setStep('preview');
     }
   };

@@ -5,6 +5,7 @@ import { useStudents } from '../../hooks/useStudents';
 import { format } from 'date-fns';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getApp } from 'firebase/app';
+import { getKoreanErrorMessage } from '../../utils/errorMessages';
 
 const ACCEPTED_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/wav', 'audio/webm', 'audio/ogg'];
 const ACCEPTED_EXTENSIONS = ['.mp3', '.m4a', '.wav', '.webm', '.ogg'];
@@ -334,7 +335,7 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
       });
       onUploadStart(result.reportId);
     } catch (err: any) {
-      setError(err.message || '업로드 중 오류가 발생했습니다.');
+      setError(getKoreanErrorMessage(err, '업로드 중 오류가 발생했습니다.'));
     }
   };
 

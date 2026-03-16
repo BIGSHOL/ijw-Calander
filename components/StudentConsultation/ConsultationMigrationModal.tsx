@@ -8,6 +8,7 @@ import { collection, writeBatch, doc, query, where, getDocs, deleteDoc } from 'f
 import { db } from '../../firebaseConfig';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { formatDateKey } from '../../utils/dateUtils';
+import { getKoreanErrorMessage } from '../../utils/errorMessages';
 
 interface ParsedConsultation {
     no: number | string;
@@ -510,7 +511,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
             setStep('done');
         } catch (err: any) {
             console.error(err);
-            setError(`마이그레이션 중 오류 발생: ${err.message}`);
+            setError(getKoreanErrorMessage(err, '마이그레이션 중 오류가 발생했습니다.'));
             setStep('preview');
         }
     };
@@ -539,7 +540,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
             alert(`총 ${snapshot.size}건의 잘못된 데이터를 삭제했습니다.`);
         } catch (err: any) {
             console.error(err);
-            alert(`삭제 중 오류 발생: ${err.message}`);
+            alert(getKoreanErrorMessage(err, '삭제 중 오류가 발생했습니다.'));
         } finally {
             setLoading(false);
         }

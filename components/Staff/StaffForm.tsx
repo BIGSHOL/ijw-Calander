@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, User, Shield, KeyRound, Lock } from 'lucide-react';
+import { X, Save, User, Shield, KeyRound, Lock, Eye, EyeOff } from 'lucide-react';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS, ROLE_LABELS, UserRole } from '../../types';
 import { formatDateKey } from '../../utils/dateUtils';
@@ -57,6 +57,10 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordChangeResult, setPasswordChangeResult] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  const [showPw, setShowPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmNewPw, setShowConfirmNewPw] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     englishName: '',
@@ -328,14 +332,17 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                   <div className="relative">
                     <KeyRound className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                     <input
-                      type="password"
+                      type={showPw ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="6자 이상"
                       required={!staff}
                       minLength={6}
-                      className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                      className="w-full pl-8 pr-8 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                     />
+                    <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" tabIndex={-1}>
+                      {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
                   </div>
                   {staff && !staff.uid && (
                     <p className="text-xxs text-blue-500 mt-0.5">
@@ -350,17 +357,20 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                   <div className="relative">
                     <KeyRound className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                     <input
-                      type="password"
+                      type={showConfirmPw ? "text" : "password"}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="비밀번호 재입력"
                       required={!staff}
-                      className={`w-full pl-8 pr-3 py-1.5 text-sm border rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${
+                      className={`w-full pl-8 pr-8 py-1.5 text-sm border rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${
                         confirmPassword && password !== confirmPassword
                           ? 'border-red-400 bg-red-50'
                           : 'border-gray-300'
                       }`}
                     />
+                    <button type="button" onClick={() => setShowConfirmPw(!showConfirmPw)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" tabIndex={-1}>
+                      {showConfirmPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
                   </div>
                   {confirmPassword && password !== confirmPassword && (
                     <p className="text-xxs text-red-500 mt-0.5">비밀번호가 일치하지 않습니다.</p>
@@ -646,13 +656,16 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                     <div className="relative">
                       <KeyRound className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                       <input
-                        type="password"
+                        type={showNewPw ? "text" : "password"}
                         value={newPassword}
                         onChange={(e) => { setNewPassword(e.target.value); setPasswordChangeResult(null); }}
                         placeholder="6자 이상"
                         minLength={6}
-                        className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                        className="w-full pl-8 pr-8 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                       />
+                      <button type="button" onClick={() => setShowNewPw(!showNewPw)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" tabIndex={-1}>
+                        {showNewPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
                     </div>
                   </div>
                   <div>
@@ -662,16 +675,19 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                     <div className="relative">
                       <KeyRound className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                       <input
-                        type="password"
+                        type={showConfirmNewPw ? "text" : "password"}
                         value={confirmNewPassword}
                         onChange={(e) => { setConfirmNewPassword(e.target.value); setPasswordChangeResult(null); }}
                         placeholder="비밀번호 재입력"
-                        className={`w-full pl-8 pr-3 py-1.5 text-sm border rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent ${
+                        className={`w-full pl-8 pr-8 py-1.5 text-sm border rounded-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent ${
                           confirmNewPassword && newPassword !== confirmNewPassword
                             ? 'border-red-400 bg-red-50'
                             : 'border-gray-300'
                         }`}
                       />
+                      <button type="button" onClick={() => setShowConfirmNewPw(!showConfirmNewPw)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" tabIndex={-1}>
+                        {showConfirmNewPw ? <EyeOff size={14} /> : <Eye size={14} />}
+                      </button>
                     </div>
                   </div>
                 </div>

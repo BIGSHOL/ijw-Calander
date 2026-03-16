@@ -7,6 +7,7 @@ import {
     Pencil, Eye, FlaskConical, Mic, MicOff, Upload, Loader2, Square
 } from 'lucide-react';
 import { useRegistrationRecording, RegistrationExtractedData } from '../../hooks/useRegistrationRecording';
+import { getKoreanErrorMessage } from '../../utils/errorMessages';
 
 interface ConsultationFormProps {
     isOpen: boolean;
@@ -392,7 +393,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
             // onClose()를 여기서 호출하지 않음 - 부모가 모달 상태를 관리
         } catch (error) {
             console.error('❌ Form submit error:', error);
-            alert(`폼 제출 중 오류가 발생했습니다:\n\n${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+            alert(getKoreanErrorMessage(error, '폼 제출 중 오류가 발생했습니다.'));
         }
     };
 
