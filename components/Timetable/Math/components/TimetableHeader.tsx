@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { addDays } from 'date-fns';
 import {
     ChevronLeft, ChevronRight, Search, X, Settings, Eye, Edit, SlidersHorizontal,
-    ArrowRightLeft, Copy, Upload, Save, Link2, Users, ChevronUp, ChevronDown, GripVertical, Download
+    ArrowRightLeft, Copy, Upload, Save, Link2, Users, ChevronUp, ChevronDown, GripVertical, Download, Calendar as CalendarIcon
 } from 'lucide-react';
 import { UnifiedStudent, TimetableClass } from '../../../../types';
 import { formatSchoolGrade } from '../../../../utils/studentUtils';
@@ -218,22 +218,21 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     // 강사 순서 관리 훅
     const { mathConfig, handleSaveTeacherOrder, handleSaveWeekdayOrder } = useMathConfig();
 
-    // 요일 순서 프리셋
-    const WEEKDAY_ORDER_PRESETS = [
-        { label: '월/목', order: ['월', '목', '화', '금', '수', '토', '일'] },
-        { label: '수', order: ['수', '월', '목', '화', '금', '토', '일'] },
-        { label: '화/금', order: ['화', '금', '월', '목', '수', '토', '일'] },
-        { label: '토', order: ['토', '월', '목', '화', '금', '수', '일'] },
-    ];
-
-    const currentWeekdayOrderLabel = useMemo(() => {
-        const order = mathConfig.weekdayOrder;
-        if (order.length === 0) return null;
-        for (const preset of WEEKDAY_ORDER_PRESETS) {
-            if (preset.order[0] === order[0] && preset.order[1] === order[1]) return preset.label;
-        }
-        return null;
+    // 요일 순서 목록 (설정값 or 기본값)
+    const weekdayOrderList = useMemo(() => {
+        if (mathConfig.weekdayOrder.length > 0) return mathConfig.weekdayOrder;
+        return ['월', '화', '수', '목', '금', '토', '일'];
     }, [mathConfig.weekdayOrder]);
+
+    // 요일 순서 이동
+    const moveWeekday = (index: number, direction: 'up' | 'down') => {
+        const newOrder = [...weekdayOrderList];
+        const targetIndex = direction === 'up' ? index - 1 : index + 1;
+        if (targetIndex >= 0 && targetIndex < newOrder.length) {
+            [newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]];
+            handleSaveWeekdayOrder(newOrder);
+        }
+    };
 
     // 강사 순서 이동
     const moveTeacher = (index: number, direction: 'up' | 'down') => {
@@ -777,20 +776,36 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                     )}
                                     {/* 요일 순서 */}
                                     <div className="px-3 py-2 border-b border-gray-100">
-                                        <div className="text-xxs font-bold text-gray-600 mb-2">요일 순서</div>
-                                        <div className="flex gap-1">
-                                            {WEEKDAY_ORDER_PRESETS.map(preset => (
-                                                <button
-                                                    key={preset.label}
-                                                    onClick={() => handleSaveWeekdayOrder(preset.order)}
-                                                    className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border transition-colors ${
-                                                        currentWeekdayOrderLabel === preset.label
-                                                            ? 'bg-accent text-primary border-accent'
-                                                            : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
-                                                    }`}
-                                                >
-                                                    {preset.label}
-                                                </button>
+                                        <div className="text-xxs font-bold text-gray-600 mb-2 flex items-center gap-1">
+                                            <CalendarIcon size={12} />
+                                            요일 순서
+                                        </div>
+                                        <div className="space-y-0.5">
+                                            {weekdayOrderList.map((day, index) => (
+                                                <div key={day} className="flex items-center justify-between px-2 py-1 hover:bg-gray-50 rounded-sm group">
+                                                    <div className="flex items-center gap-2">
+                                                        <GripVertical size={12} className="text-gray-300" />
+                                                        <span className="text-xs text-gray-700 font-medium">{day}요일</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => moveWeekday(index, 'up')}
+                                                            disabled={index === 0}
+                                                            className="p-0.5 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                                            title="위로 이동"
+                                                        >
+                                                            <ChevronUp size={14} className="text-gray-500" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => moveWeekday(index, 'down')}
+                                                            disabled={index === weekdayOrderList.length - 1}
+                                                            className="p-0.5 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                                            title="아래로 이동"
+                                                        >
+                                                            <ChevronDown size={14} className="text-gray-500" />
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             ))}
                                         </div>
                                     </div>
