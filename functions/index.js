@@ -4441,7 +4441,10 @@ async function scrapeMakeEduShuttleStudentsInternal() {
     };
 
     const colName = findCol(["이름", "성명", "원생명", "학생명"]);
-    const colEtcBilling = findCol(["기타수납", "기타"]);
+    // "기타수납"을 먼저 정확히 찾고, 못 찾으면 "기타"로 폴백 (기타항목1/2와 혼동 방지)
+    let colEtcBilling = headers.findIndex(h => h === "기타수납");
+    if (colEtcBilling < 0) colEtcBilling = headers.findIndex(h => h.includes("기타수납"));
+    if (colEtcBilling < 0) colEtcBilling = findCol(["기타"]);
 
     logger.info("[scrapeMakeEduShuttle] Column mapping:", JSON.stringify({ colName, colEtcBilling }));
 
@@ -4524,6 +4527,12 @@ async function scrapeMakeEduShuttleStudentsInternal() {
 
     const students = allStudents;
     logger.info("[scrapeMakeEduShuttle] Total parsed students:", students.length);
+
+    // 디버그: 기타수납 컬럼에 값이 있는 학생들 로깅
+    const studentsWithEtc = students.filter(s => s.etcBilling && s.etcBilling.trim() !== "");
+    logger.info("[scrapeMakeEduShuttle] Students with etcBilling:", studentsWithEtc.length,
+        "samples:", JSON.stringify(studentsWithEtc.slice(0, 20).map(s => ({ name: s.name, etcBilling: s.etcBilling }))));
+
     const shuttleStudents = students.filter(s => s.isShuttle);
     logger.info("[scrapeMakeEduShuttle] Shuttle students:", shuttleStudents.length);
 

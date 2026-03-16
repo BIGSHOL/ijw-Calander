@@ -1,23 +1,20 @@
 /**
  * ShuttleTimetable - 셔틀버스 시간표 컴포넌트
  *
- * 두 가지 뷰 모드:
- * 1. 호차별 뷰: 기존 차량별 테이블 (회차 × 요일)
- * 2. 시간대별 뷰: MakeEdu 기타수납 기반 셔틀 학생을 수업 종료 시간대별로 표시
+ * 승차(첫 수업 시작) / 하차(마지막 수업 종료) 구분 표시
+ * 강의실 기준 바른학습관/본원 분류 + 이동 필요 학생 별도 표시
+ * 필터: 승차, 하차, 본원(영어), 본원(수학), 바른학습관, 강의실이동 (멀티 선택)
  */
 
 import React, { useMemo, useState } from 'react';
 import type { SubjectType } from '../../../types';
-import { SHUTTLE_PERIOD_INFO, SHUTTLE_UNIFIED_PERIODS } from '../constants';
-import { useTimetableClasses } from '../Generic/hooks/useTimetableClasses';
-import { useClassStudents } from '../Generic/hooks/useClassStudents';
 import SubjectControls from '../shared/SubjectControls';
 import { SUBJECT_COLORS } from '../../../utils/styleUtils';
-import { useShuttleStudents, TIME_SLOTS, WEEKDAYS as SHUTTLE_WEEKDAYS } from '../../../hooks/useShuttleStudents';
-import type { TimeSlot } from '../../../hooks/useShuttleStudents';
+import { useShuttleStudents, TIME_SLOTS } from '../../../hooks/useShuttleStudents';
+import type { TimeSlot, ShuttleStudentSlot, TransferStudent, ShuttleScheduleMap } from '../../../hooks/useShuttleStudents';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useQueryClient } from '@tanstack/react-query';
-import { RefreshCw, Bus, List } from 'lucide-react';
+import { RefreshCw, ArrowRight } from 'lucide-react';
 
 const WEEKDAYS = ['월', '화', '수', '목', '금'];
 const colors = SUBJECT_COLORS.shuttle;
@@ -30,7 +27,16 @@ const TIME_SLOT_LABELS: Record<TimeSlot, string> = {
     22: '22시 (10시)',
 };
 
-type ViewMode = 'vehicle' | 'timeslot';
+type ShuttleFilter = 'boarding' | 'alighting' | 'bonwon-english' | 'bonwon-math' | 'bareun' | 'transfer';
+
+const FILTER_CONFIG: { key: ShuttleFilter; label: string; color: string; activeColor: string }[] = [
+    { key: 'boarding', label: '승차', color: 'border-gray-300 text-gray-600', activeColor: 'border-green-400 bg-green-50 text-green-700' },
+    { key: 'alighting', label: '하차', color: 'border-gray-300 text-gray-600', activeColor: 'border-red-400 bg-red-50 text-red-700' },
+    { key: 'bonwon-math', label: '본원(수학)', color: 'border-gray-300 text-gray-600', activeColor: 'border-indigo-400 bg-indigo-50 text-indigo-700' },
+    { key: 'bonwon-english', label: '본원(영어)', color: 'border-gray-300 text-gray-600', activeColor: 'border-purple-400 bg-purple-50 text-purple-700' },
+    { key: 'bareun', label: '바른학습관', color: 'border-gray-300 text-gray-600', activeColor: 'border-blue-400 bg-blue-50 text-blue-700' },
+    { key: 'transfer', label: '강의실이동', color: 'border-gray-300 text-gray-600', activeColor: 'border-orange-400 bg-orange-50 text-orange-700' },
+];
 
 interface ShuttleTimetableProps {
     currentUser: any;
@@ -42,55 +48,26 @@ interface ShuttleTimetableProps {
 }
 
 function ShuttleTimetable({
-    currentUser,
     timetableSubject,
     setTimetableSubject,
     setTimetableViewType,
     hasPermissionFn,
     setIsTimetableSettingsOpen,
 }: ShuttleTimetableProps) {
-    const [viewMode, setViewMode] = useState<ViewMode>('timeslot');
     const [isSyncing, setIsSyncing] = useState(false);
+    const [activeFilters, setActiveFilters] = useState<Set<ShuttleFilter>>(new Set());
     const queryClient = useQueryClient();
 
-    // 호차별 뷰 데이터
-    const { classes, loading: classesLoading } = useTimetableClasses('shuttle');
-    const classNames = useMemo(() => classes.map(c => c.className), [classes]);
-    const { classDataMap, isLoading: studentsLoading } = useClassStudents('shuttle', classNames, {});
+    const { data: shuttleData, isLoading, refetch: refetchShuttle } = useShuttleStudents(true);
 
-    // 시간대별 뷰 데이터 (시간대별 뷰일 때 자동 활성화)
-    const { data: shuttleData, isLoading: shuttleLoading, refetch: refetchShuttle } = useShuttleStudents(viewMode === 'timeslot');
-
-
-    const vehicleData = useMemo(() => {
-        return classes.map(cls => {
-            const students = classDataMap[cls.className]?.studentList || [];
-            const scheduleSlots = new Set(cls.schedule || []);
-            const studentsByDayAndPeriod: Record<string, Record<string, typeof students>> = {};
-
-            WEEKDAYS.forEach(day => {
-                studentsByDayAndPeriod[day] = {};
-                SHUTTLE_UNIFIED_PERIODS.forEach(periodId => {
-                    studentsByDayAndPeriod[day][periodId] = [];
-                });
-            });
-
-            students.forEach(student => {
-                const days = student.attendanceDays?.length ? student.attendanceDays : WEEKDAYS;
-                days.forEach(day => {
-                    if (!WEEKDAYS.includes(day)) return;
-                    SHUTTLE_UNIFIED_PERIODS.forEach(periodId => {
-                        const slotKey = `${day} ${periodId}`;
-                        if (scheduleSlots.has(slotKey) || scheduleSlots.size === 0) {
-                            studentsByDayAndPeriod[day][periodId].push(student);
-                        }
-                    });
-                });
-            });
-
-            return { cls, students, studentsByDayAndPeriod, totalStudents: students.length };
+    const toggleFilter = (filter: ShuttleFilter) => {
+        setActiveFilters(prev => {
+            const next = new Set(prev);
+            if (next.has(filter)) next.delete(filter);
+            else next.add(filter);
+            return next;
         });
-    }, [classes, classDataMap]);
+    };
 
     const handleSync = async () => {
         if (isSyncing) return;
@@ -112,10 +89,6 @@ function ShuttleTimetable({
             setIsSyncing(false);
         }
     };
-
-    const isLoading = viewMode === 'vehicle'
-        ? classesLoading || studentsLoading
-        : shuttleLoading;
 
     if (isLoading) {
         return (
@@ -153,40 +126,36 @@ function ShuttleTimetable({
                     setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
                 />
 
-                {/* 뷰 전환 토글 */}
                 <button
-                    onClick={() => setViewMode(prev => prev === 'vehicle' ? 'timeslot' : 'vehicle')}
-                    className="px-2 py-1 rounded border border-gray-300 text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-1"
-                    title="뷰 전환"
+                    onClick={handleSync}
+                    disabled={isSyncing}
+                    className="px-2 py-1 rounded border border-emerald-300 text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center gap-1 disabled:opacity-50"
+                    title="MakeEdu에서 셔틀 학생 동기화"
                 >
-                    {viewMode === 'vehicle'
-                        ? <><Bus size={12} /> 시간대별</>
-                        : <><List size={12} /> 호차별</>
-                    }
+                    <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
+                    MakeEdu 동기화
                 </button>
 
-                {/* MakeEdu 동기화 버튼 (시간대별 뷰에서만) */}
-                {viewMode === 'timeslot' && (
-                    <button
-                        onClick={handleSync}
-                        disabled={isSyncing}
-                        className="px-2 py-1 rounded border border-emerald-300 text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center gap-1 disabled:opacity-50"
-                        title="MakeEdu에서 셔틀 학생 동기화"
-                    >
-                        <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
-                        MakeEdu 동기화
-                    </button>
-                )}
+                {/* 필터 버튼 */}
+                <div className="flex items-center gap-1 ml-2">
+                    {FILTER_CONFIG.map(f => (
+                        <button
+                            key={f.key}
+                            onClick={() => toggleFilter(f.key)}
+                            className={`px-1.5 py-0.5 rounded border text-[10px] font-medium transition-colors ${
+                                activeFilters.has(f.key) ? f.activeColor : f.color
+                            } hover:opacity-80`}
+                        >
+                            {f.label}
+                        </button>
+                    ))}
+                </div>
 
                 <span className="text-gray-500 ml-auto">
-                    {viewMode === 'vehicle'
-                        ? `총 ${classes.length}대 차량`
-                        : `셔틀 학생 ${shuttleData?.shuttleNames.length || 0}명 `
-                    }
+                    셔틀 학생 {shuttleData?.shuttleNames.length || 0}명
                 </span>
 
-                {/* 동기화 시각 */}
-                {viewMode === 'timeslot' && shuttleData?.syncedAt && (
+                {shuttleData?.syncedAt && (
                     <span className="text-gray-400 text-[10px]">
                         동기화: {new Date(shuttleData.syncedAt).toLocaleString('ko-KR', {
                             month: '2-digit', day: '2-digit',
@@ -199,18 +168,56 @@ function ShuttleTimetable({
 
             {/* 시간표 본문 */}
             <div className="flex-1 overflow-auto p-4 space-y-6">
-                {viewMode === 'timeslot' ? (
-                    <TimeSlotView scheduleMap={shuttleData?.scheduleMap} />
-                ) : (
-                    <VehicleView vehicleData={vehicleData} />
-                )}
+                <TimeSlotView
+                    scheduleMap={shuttleData?.scheduleMap}
+                    transferStudents={shuttleData?.transferStudents || []}
+                    activeFilters={activeFilters}
+                />
             </div>
         </div>
     );
 }
 
+/** 학생이 필터 조건에 맞는지 검사 (OR 조건) */
+function matchesFilter(
+    student: ShuttleStudentSlot,
+    day: string,
+    activeFilters: Set<ShuttleFilter>,
+    transferNameDays: Set<string>,
+): boolean {
+    if (activeFilters.size === 0) return true;
+
+    // 승차/하차 필터
+    if (activeFilters.has('boarding') && student.type === '승차') return true;
+    if (activeFilters.has('alighting') && student.type === '하차') return true;
+
+    // 위치/과목 필터
+    if (activeFilters.has('bonwon-english') && student.location === '본원' && student.subject === 'english') return true;
+    if (activeFilters.has('bonwon-math') && student.location === '본원' && student.subject !== 'english') return true;
+    if (activeFilters.has('bareun') && student.location === '바른학습관') return true;
+
+    // 강의실이동 필터
+    if (activeFilters.has('transfer') && transferNameDays.has(`${student.studentName}\t${day}`)) return true;
+
+    return false;
+}
+
 /** 시간대별 뷰 */
-function TimeSlotView({ scheduleMap }: { scheduleMap?: ReturnType<typeof useShuttleStudents>['data'] extends infer T ? T extends { scheduleMap: infer S } ? S : never : never }) {
+function TimeSlotView({
+    scheduleMap,
+    transferStudents,
+    activeFilters,
+}: {
+    scheduleMap?: ShuttleScheduleMap;
+    transferStudents: TransferStudent[];
+    activeFilters: Set<ShuttleFilter>;
+}) {
+    const transferNameDays = useMemo(() => {
+        const set = new Set<string>();
+        for (const t of transferStudents) set.add(`${t.studentName}\t${t.day}`);
+        return set;
+    }, [transferStudents]);
+
     if (!scheduleMap) {
         return (
             <div className="flex items-center justify-center h-64 text-gray-500">
@@ -219,7 +226,6 @@ function TimeSlotView({ scheduleMap }: { scheduleMap?: ReturnType<typeof useShut
         );
     }
 
-    // 전체 학생 수 계산
     let totalEntries = 0;
     WEEKDAYS.forEach(day => {
         TIME_SLOTS.forEach(slot => {
@@ -236,184 +242,228 @@ function TimeSlotView({ scheduleMap }: { scheduleMap?: ReturnType<typeof useShut
         );
     }
 
+    const showTransferSection = transferStudents.length > 0 &&
+        (activeFilters.size === 0 || activeFilters.has('transfer'));
+
     return (
-        <div className="border border-emerald-200 rounded-lg overflow-hidden">
-            <div
-                className="px-4 py-2 flex items-center gap-3"
-                style={{ backgroundColor: colors.bg, color: colors.text }}
-            >
-                <span className="font-bold text-sm">셔틀버스 시간대별 배차</span>
-                <span className="text-xs opacity-80 ml-auto">
-                    수업 종료 시간 기준 배정
+        <>
+            {/* 범례 */}
+            <div className="flex items-center gap-4 text-[10px] px-1">
+                <span className="inline-flex items-center gap-1">
+                    <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-green-100 text-green-700 border border-green-300">승차</span>
+                    첫 수업 시작 기준
+                </span>
+                <span className="inline-flex items-center gap-1">
+                    <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700 border border-red-300">하차</span>
+                    마지막 수업 종료 기준
+                </span>
+                <span className="inline-flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
+                    바른학습관
+                </span>
+                <span className="inline-flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-gray-400 inline-block" />
+                    본원
                 </span>
             </div>
 
-            <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-xs">
-                    <thead>
-                        <tr className="bg-emerald-50">
-                            <th className="border border-emerald-200 px-2 py-1.5 text-center font-bold w-24">
-                                시간대
-                            </th>
-                            {WEEKDAYS.map(day => (
-                                <th
-                                    key={day}
-                                    className="border border-emerald-200 px-2 py-1.5 text-center font-bold"
-                                >
-                                    {day}요일
+            {/* 시간대별 시간표 */}
+            <div className="border border-emerald-200 rounded-lg overflow-hidden">
+                <div
+                    className="px-4 py-2 flex items-center gap-3"
+                    style={{ backgroundColor: colors.bg, color: colors.text }}
+                >
+                    <span className="font-bold text-sm">셔틀버스 시간대별 배차</span>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full border-collapse text-xs">
+                        <thead>
+                            <tr className="bg-emerald-50">
+                                <th className="border border-emerald-200 px-2 py-1.5 text-center font-bold w-24">
+                                    시간대
                                 </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {TIME_SLOTS.map(slot => (
-                            <tr key={slot} className="hover:bg-emerald-50/50">
-                                <td className="border border-emerald-200 px-2 py-1.5 text-center font-semibold bg-emerald-50/50 whitespace-nowrap">
-                                    {TIME_SLOT_LABELS[slot]}
-                                </td>
-                                {WEEKDAYS.map(day => {
-                                    const cellStudents = scheduleMap[day]?.[slot] || [];
-                                    return (
-                                        <td
-                                            key={`${day}-${slot}`}
-                                            className="border border-emerald-200 px-1.5 py-1 align-top"
-                                        >
-                                            {cellStudents.length > 0 ? (
-                                                <div className="space-y-0.5">
-                                                    {cellStudents.map((s, idx) => (
-                                                        <div
-                                                            key={`${s.studentName}-${s.className}-${idx}`}
-                                                            className="text-xs leading-tight"
-                                                            title={`${s.studentName} (${s.className}) ~${s.endTime}`}
-                                                        >
-                                                            <span className="font-medium">{s.studentName}</span>
-                                                            <span className="text-gray-400 ml-0.5 text-[10px]">
-                                                                ({s.className})
-                                                            </span>
-                                                        </div>
-                                                    ))}
-                                                    <div className="text-[9px] text-gray-400 text-right mt-0.5">
-                                                        {cellStudents.length}명
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div className="text-gray-300 text-center">-</div>
-                                            )}
-                                        </td>
-                                    );
-                                })}
+                                {WEEKDAYS.map(day => (
+                                    <th
+                                        key={day}
+                                        className="border border-emerald-200 px-2 py-1.5 text-center font-bold"
+                                    >
+                                        {day}요일
+                                    </th>
+                                ))}
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {TIME_SLOTS.map(slot => (
+                                <tr key={slot} className="hover:bg-emerald-50/50">
+                                    <td className="border border-emerald-200 px-2 py-1.5 text-center font-semibold bg-emerald-50/50 whitespace-nowrap">
+                                        {TIME_SLOT_LABELS[slot]}
+                                    </td>
+                                    {WEEKDAYS.map(day => {
+                                        const allStudents = scheduleMap[day]?.[slot] || [];
+                                        const cellStudents = allStudents.filter(s =>
+                                            matchesFilter(s, day, activeFilters, transferNameDays)
+                                        );
+                                        // 승차/하차 그룹 분리
+                                        const boarding = cellStudents.filter(s => s.type === '승차');
+                                        const alighting = cellStudents.filter(s => s.type === '하차');
+                                        return (
+                                            <td
+                                                key={`${day}-${slot}`}
+                                                className="border border-emerald-200 px-1.5 py-1 align-top"
+                                            >
+                                                {cellStudents.length > 0 ? (
+                                                    <div className="space-y-1">
+                                                        {boarding.length > 0 && (
+                                                            <div>
+                                                                <div className="flex items-center gap-1 mb-0.5">
+                                                                    <span className="px-1 py-0 rounded text-[8px] font-bold bg-green-100 text-green-700 border border-green-300">
+                                                                        승차 {boarding.length}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="space-y-0.5">
+                                                                    {boarding.map((s, idx) => (
+                                                                        <StudentCell
+                                                                            key={`b-${s.studentName}-${idx}`}
+                                                                            student={s}
+                                                                            isTransfer={transferNameDays.has(`${s.studentName}\t${day}`)}
+                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        {boarding.length > 0 && alighting.length > 0 && (
+                                                            <hr className="border-gray-200" />
+                                                        )}
+                                                        {alighting.length > 0 && (
+                                                            <div>
+                                                                <div className="flex items-center gap-1 mb-0.5">
+                                                                    <span className="px-1 py-0 rounded text-[8px] font-bold bg-red-100 text-red-700 border border-red-300">
+                                                                        하차 {alighting.length}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="space-y-0.5">
+                                                                    {alighting.map((s, idx) => (
+                                                                        <StudentCell
+                                                                            key={`a-${s.studentName}-${idx}`}
+                                                                            student={s}
+                                                                            isTransfer={transferNameDays.has(`${s.studentName}\t${day}`)}
+                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-gray-300 text-center">-</div>
+                                                )}
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
+
+            {/* 이동 필요 학생 섹션 */}
+            {showTransferSection && (
+                <TransferSection transferStudents={transferStudents} />
+            )}
+        </>
+    );
+}
+
+/** 학생 셀 */
+function StudentCell({ student, isTransfer }: { student: ShuttleStudentSlot; isTransfer: boolean }) {
+    const isBareun = student.location === '바른학습관';
+    return (
+        <div
+            className={`text-xs leading-tight flex items-center gap-0.5 ${isTransfer ? 'bg-orange-50 rounded px-0.5 -mx-0.5' : ''}`}
+            title={`${student.studentName} | ${student.type} ${student.time} | ${student.teacher || '담당미정'} | ${student.className} | ${student.room || '강의실 미배정'}`}
+        >
+            <span
+                className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isBareun ? 'bg-blue-500' : 'bg-gray-300'}`}
+            />
+            <span className="font-medium">{student.studentName}</span>
+            {student.teacher && (
+                <span className="text-emerald-600 text-[10px]">{student.teacher}</span>
+            )}
+            <span className="text-gray-400 text-[10px]">
+                {student.time}
+            </span>
+            {isBareun && (
+                <span className="text-[9px] text-blue-600 font-medium ml-0.5">[바른]</span>
+            )}
+            {isTransfer && (
+                <ArrowRight size={8} className="text-orange-500 flex-shrink-0 ml-0.5" />
+            )}
         </div>
     );
 }
 
-/** 호차별 뷰 (기존) */
-function VehicleView({ vehicleData }: { vehicleData: any[] }) {
-    if (vehicleData.length === 0) {
-        return (
-            <div className="flex items-center justify-center h-64 text-gray-500">
-                등록된 셔틀 차량이 없습니다. "반 추가"에서 과목을 "셔틀버스"로 선택하여 호차를 추가하세요.
-            </div>
-        );
+/** 이동 필요 학생 섹션 */
+function TransferSection({ transferStudents }: { transferStudents: TransferStudent[] }) {
+    const byDay = new Map<string, TransferStudent[]>();
+    for (const t of transferStudents) {
+        if (!byDay.has(t.day)) byDay.set(t.day, []);
+        byDay.get(t.day)!.push(t);
     }
 
+    const sortedDays = WEEKDAYS.filter(d => byDay.has(d));
+
     return (
-        <>
-            {vehicleData.map(({ cls, studentsByDayAndPeriod, totalStudents }: any) => (
-                <div key={cls.id} className="border border-emerald-200 rounded-lg overflow-hidden">
-                    <div
-                        className="px-4 py-2 flex items-center gap-3"
-                        style={{ backgroundColor: colors.bg, color: colors.text }}
-                    >
-                        <span className="font-bold text-sm">{cls.className}</span>
-                        {cls.teacher && (
-                            <span className="text-xs opacity-80">({cls.teacher})</span>
-                        )}
-                        <span className="text-xs opacity-80 ml-auto">
-                            {totalStudents}명
-                        </span>
-                    </div>
+        <div className="border border-orange-200 rounded-lg overflow-hidden">
+            <div className="px-4 py-2 bg-orange-50 flex items-center gap-2">
+                <ArrowRight size={14} className="text-orange-600" />
+                <span className="font-bold text-sm text-orange-800">
+                    강의실 이동 필요 학생 (바른학습관 ↔ 본원)
+                </span>
+                <span className="text-xs text-orange-500 ml-auto">
+                    {transferStudents.length}건
+                </span>
+            </div>
 
-                    <div className="overflow-x-auto">
-                        <table className="w-full border-collapse text-xs">
-                            <thead>
-                                <tr className="bg-emerald-50">
-                                    <th className="border border-emerald-200 px-2 py-1.5 text-center font-bold w-16">
-                                        회차
-                                    </th>
-                                    <th className="border border-emerald-200 px-2 py-1.5 text-center font-bold w-32">
-                                        시간
-                                    </th>
-                                    {WEEKDAYS.map(day => (
-                                        <th
-                                            key={day}
-                                            className="border border-emerald-200 px-2 py-1.5 text-center font-bold"
-                                        >
-                                            {day}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {SHUTTLE_UNIFIED_PERIODS.map(periodId => {
-                                    const info = SHUTTLE_PERIOD_INFO[periodId];
-                                    return (
-                                        <tr key={periodId} className="hover:bg-emerald-50/50">
-                                            <td className="border border-emerald-200 px-2 py-1.5 text-center font-semibold bg-emerald-50/50">
-                                                {info.label}
-                                            </td>
-                                            <td className="border border-emerald-200 px-1.5 py-1.5 text-center text-gray-600 bg-emerald-50/30 whitespace-nowrap">
-                                                {info.time}
-                                            </td>
-                                            {WEEKDAYS.map(day => {
-                                                const cellStudents = studentsByDayAndPeriod[day]?.[periodId] || [];
-                                                return (
-                                                    <td
-                                                        key={`${day}-${periodId}`}
-                                                        className="border border-emerald-200 px-1.5 py-1 align-top"
-                                                    >
-                                                        {cellStudents.length > 0 ? (
-                                                            <div className="space-y-0.5">
-                                                                {cellStudents.map((s: any) => (
-                                                                    <div
-                                                                        key={s.id}
-                                                                        className="text-xs leading-tight"
-                                                                        title={`${s.name}${s.school ? ` (${s.school})` : ''}`}
-                                                                    >
-                                                                        <span className="font-medium">{s.name}</span>
-                                                                        {s.school && (
-                                                                            <span className="text-gray-400 ml-0.5">
-                                                                                {s.school}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        ) : (
-                                                            <div className="text-gray-300 text-center">-</div>
-                                                        )}
-                                                    </td>
-                                                );
-                                            })}
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {cls.memo && (
-                        <div className="px-4 py-2 text-xs text-gray-500 bg-gray-50 border-t border-emerald-200">
-                            {cls.memo}
+            <div className="p-3 space-y-3">
+                {sortedDays.map(day => {
+                    const students = byDay.get(day)!;
+                    return (
+                        <div key={day}>
+                            <div className="text-xs font-bold text-gray-700 mb-1 flex items-center gap-1">
+                                <span className="bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded text-[10px]">
+                                    {day}요일
+                                </span>
+                                <span className="text-gray-400 text-[10px]">{students.length}명</span>
+                            </div>
+                            <div className="space-y-1.5 ml-2">
+                                {students.map((t, idx) => (
+                                    <div
+                                        key={`${t.studentName}-${idx}`}
+                                        className="text-xs bg-orange-50/50 px-2 py-1.5 rounded"
+                                    >
+                                        <div className="flex items-center gap-1 flex-wrap">
+                                            <span className="font-bold text-gray-800">{t.studentName}</span>
+                                            <span className="text-blue-600 text-[10px]">
+                                                {t.bareunClasses.map(c =>
+                                                    `${c.className}${c.teacher ? `(${c.teacher})` : ''} ${c.startTime}~${c.endTime}`
+                                                ).join(', ')}
+                                            </span>
+                                            <ArrowRight size={10} className="text-orange-500 flex-shrink-0" />
+                                            <span className="text-gray-600 text-[10px]">
+                                                {t.bonwonClasses.map(c =>
+                                                    `${c.className}${c.teacher ? `(${c.teacher})` : ''} ${c.startTime}~${c.endTime}`
+                                                ).join(', ')}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    )}
-                </div>
-            ))}
-        </>
+                    );
+                })}
+            </div>
+        </div>
     );
 }
 
