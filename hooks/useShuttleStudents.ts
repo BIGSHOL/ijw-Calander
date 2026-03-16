@@ -24,7 +24,7 @@ const TIME_SLOTS = [14, 16, 18, 20, 22] as const;
 export type TimeSlot = typeof TIME_SLOTS[number];
 export type Location = '바른학습관' | '본원';
 
-export type BoardingType = '승차' | '하차';
+export type BoardingType = '등원' | '하원';
 
 export interface ShuttleStudentSlot {
     studentName: string;
@@ -249,7 +249,7 @@ export function useShuttleStudents(enabled = false) {
                         const [h1, m1] = firstBlock.startTime.split(':').map(Number);
                         const boardingSlot = nearestSlot(h1, m1);
                         const boardingArr = scheduleMap[day]?.[boardingSlot];
-                        if (boardingArr && !boardingArr.some(e => e.studentName === name && e.type === '승차')) {
+                        if (boardingArr && !boardingArr.some(e => e.studentName === name && e.type === '등원')) {
                             boardingArr.push({
                                 studentName: name,
                                 className: firstBlock.className,
@@ -258,7 +258,7 @@ export function useShuttleStudents(enabled = false) {
                                 location: firstBlock.location,
                                 room: firstBlock.room,
                                 teacher: firstBlock.teacher,
-                                type: '승차',
+                                type: '등원',
                             });
                         }
 
@@ -266,7 +266,7 @@ export function useShuttleStudents(enabled = false) {
                         const [h2, m2] = lastBlock.endTime.split(':').map(Number);
                         const alightingSlot = nearestSlot(h2, m2);
                         const alightingArr = scheduleMap[day]?.[alightingSlot];
-                        if (alightingArr && !alightingArr.some(e => e.studentName === name && e.type === '하차')) {
+                        if (alightingArr && !alightingArr.some(e => e.studentName === name && e.type === '하원')) {
                             alightingArr.push({
                                 studentName: name,
                                 className: lastBlock.className,
@@ -275,7 +275,7 @@ export function useShuttleStudents(enabled = false) {
                                 location: lastBlock.location,
                                 room: lastBlock.room,
                                 teacher: lastBlock.teacher,
-                                type: '하차',
+                                type: '하원',
                             });
                         }
 
