@@ -4737,9 +4737,11 @@ exports.processConsultationRecording = functions
 
         try {
             // 5. Storage에서 Signed URL 생성
+            logger.info("[processConsultationRecording] Getting signed URL", { storagePath });
             const bucket = admin.storage().bucket();
             const file = bucket.file(storagePath);
             const [metadata] = await file.getMetadata();
+            const fileSizeMB = (parseInt(metadata.size || "0") / 1024 / 1024).toFixed(1);
             const [signedUrl] = await file.getSignedUrl({
                 action: "read",
                 expires: Date.now() + 30 * 60 * 1000, // 30분
@@ -4747,11 +4749,12 @@ exports.processConsultationRecording = functions
 
             await reportRef.update({
                 fileSizeBytes: parseInt(metadata.size || "0"),
+                statusMessage: `파일 준비 완료 (${fileSizeMB}MB). 음성 인식 요청 중...`,
                 updatedAt: Date.now(),
             });
 
             // 6. AssemblyAI에 전사 요청
-            logger.info("[processConsultationRecording] Submitting to AssemblyAI", { storagePath });
+            logger.info("[processConsultationRecording] Submitting to AssemblyAI", { storagePath, fileSizeMB });
 
             const transcriptResponse = await fetch("https://api.assemblyai.com/v2/transcript", {
                 method: "POST",
@@ -4776,10 +4779,16 @@ exports.processConsultationRecording = functions
             const transcriptId = transcriptData.id;
             logger.info("[processConsultationRecording] AssemblyAI transcript ID:", transcriptId);
 
+            await reportRef.update({
+                statusMessage: `음성 인식 대기열 등록 완료 (ID: ${transcriptId.slice(0, 8)}...). 처리 대기 중...`,
+                updatedAt: Date.now(),
+            });
+
             // 7. 전사 완료까지 폴링 (5초 간격, 최대 7.5분)
             let transcriptResult;
             let pollCount = 0;
             const maxPolls = 90;
+            const pollStartTime = Date.now();
 
             while (pollCount < maxPolls) {
                 await new Promise(resolve => setTimeout(resolve, 5000));
@@ -4791,16 +4800,19 @@ exports.processConsultationRecording = functions
                 transcriptResult = await pollResponse.json();
 
                 if (transcriptResult.status === "completed") {
-                    logger.info("[processConsultationRecording] Transcription completed");
+                    const elapsedSec = Math.round((Date.now() - pollStartTime) / 1000);
+                    logger.info("[processConsultationRecording] Transcription completed", { elapsedSec });
                     break;
                 } else if (transcriptResult.status === "error") {
                     throw new Error(`음성 인식 실패: ${transcriptResult.error}`);
                 }
 
-                // 30초마다 상태 업데이트
-                if (pollCount % 6 === 0) {
+                // 10초마다 상태 업데이트 (더 자주)
+                if (pollCount % 2 === 0) {
+                    const elapsedSec = Math.round((Date.now() - pollStartTime) / 1000);
+                    const statusLabel = transcriptResult.status === "queued" ? "대기열 처리 중" : "음성 인식 중";
                     await reportRef.update({
-                        statusMessage: `음성 인식 중... (${Math.min(Math.round((pollCount / maxPolls) * 100), 95)}%)`,
+                        statusMessage: `${statusLabel}... (${elapsedSec}초 경과)`,
                         updatedAt: Date.now(),
                     });
                 }
@@ -4855,9 +4867,10 @@ exports.processConsultationRecording = functions
                 return { reportId: reportRef.id, status: "failed" };
             }
 
+            const speakerCount = new Set(speakerLabels.map(s => s.speaker)).size;
             await reportRef.update({
                 status: "analyzing",
-                statusMessage: "AI 분석을 시작합니다...",
+                statusMessage: `음성 인식 완료 (${audioDuration}초, ${textLength}자, 화자 ${speakerCount}명). AI 분석 시작...`,
                 transcription: fullText,
                 speakerLabels,
                 durationSeconds: audioDuration,
@@ -4865,7 +4878,7 @@ exports.processConsultationRecording = functions
             });
 
             // 9. Claude API로 보고서 생성
-            logger.info("[processConsultationRecording] Calling Claude API for analysis");
+            logger.info("[processConsultationRecording] Calling Claude API for analysis", { textLength, audioDuration, speakerCount });
 
             const formattedTranscript = speakerLabels.length > 0
                 ? speakerLabels.map(s => `[화자 ${s.speaker}] ${s.text}`).join("\n")
@@ -4981,13 +4994,27 @@ ${formattedTranscript}
 
         } catch (error) {
             logger.error("[processConsultationRecording] Error:", error);
+            // 에러 원인을 사용자 친화적으로 변환
+            let userMessage = "처리 중 오류가 발생했습니다.";
+            const errMsg = error.message || "";
+            if (errMsg.includes("deadline") || errMsg.includes("timeout") || errMsg.includes("시간 초과")) {
+                userMessage = "처리 시간이 초과되었습니다. 파일이 너무 크거나 서버가 바쁜 상태입니다. 잠시 후 다시 시도해주세요.";
+            } else if (errMsg.includes("AssemblyAI")) {
+                userMessage = `음성 인식 서비스 오류: ${errMsg}`;
+            } else if (errMsg.includes("Claude")) {
+                userMessage = `AI 분석 서비스 오류: ${errMsg}`;
+            } else if (errMsg.includes("storage") || errMsg.includes("Storage")) {
+                userMessage = `파일 접근 오류: ${errMsg}`;
+            } else {
+                userMessage = `오류: ${errMsg}`;
+            }
             await reportRef.update({
                 status: "error",
-                statusMessage: "처리 중 오류가 발생했습니다.",
-                errorMessage: error.message || "알 수 없는 오류",
+                statusMessage: userMessage,
+                errorMessage: errMsg,
                 updatedAt: Date.now(),
             });
-            throw new functions.https.HttpsError("internal", error.message || "상담 녹음 분석 실패");
+            throw new functions.https.HttpsError("internal", errMsg || "상담 녹음 분석 실패");
         }
     });
 

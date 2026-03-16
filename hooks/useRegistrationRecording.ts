@@ -15,7 +15,7 @@ const processRegistrationRecording = httpsCallable<
     fileName: string;
   },
   { reportId: string; status: string; extractedData?: Record<string, unknown> }
->(functions, 'processRegistrationRecording');
+>(functions, 'processRegistrationRecording', { timeout: 600_000 }); // 10분 (120MB+ 파일 대응)
 
 export interface RegistrationExtractedData {
   studentName?: string;

@@ -211,6 +211,31 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
     const recording = useRegistrationRecording();
     const [showRecordingPanel, setShowRecordingPanel] = useState(false);
     const [recordingFile, setRecordingFile] = useState<File | null>(null);
+    const [isDragOver, setIsDragOver] = useState(false);
+
+    // 오디오 파일 드래그 앤 드롭 핸들러
+    const handleRecordingDrop = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+        const file = e.dataTransfer.files[0];
+        if (file && (file.type.startsWith('audio/') || /\.(mp3|m4a|wav|webm|ogg)$/i.test(file.name))) {
+            setRecordingFile(file);
+            setShowRecordingPanel(true);
+        }
+    }, []);
+
+    const handleRecordingDragOver = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(true);
+    }, []);
+
+    const handleRecordingDragLeave = useCallback((e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsDragOver(false);
+    }, []);
 
     const formatDuration = (sec: number) => {
         const m = Math.floor(sec / 60);
@@ -433,14 +458,21 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                 {!isViewMode && (
                     <div className="mx-3 mt-2 shrink-0">
                         {!showRecordingPanel && recording.status === 'idle' && (
-                            <button
-                                type="button"
+                            <div
+                                onDrop={handleRecordingDrop}
+                                onDragOver={handleRecordingDragOver}
+                                onDragLeave={handleRecordingDragLeave}
+                                className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-sm text-xs font-medium transition-colors cursor-pointer border ${
+                                    isDragOver
+                                        ? 'bg-purple-100 border-purple-400 border-dashed ring-2 ring-purple-300'
+                                        : 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100'
+                                }`}
                                 onClick={() => setShowRecordingPanel(true)}
-                                className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-purple-50 border border-purple-200 rounded-sm text-xs text-purple-700 font-medium hover:bg-purple-100 transition-colors"
                             >
                                 <Mic size={14} />
-                                녹음으로 AI 자동입력
-                            </button>
+                                {isDragOver ? '여기에 녹음 파일을 놓으세요' : '녹음으로 AI 자동입력'}
+                                <span className="text-[10px] text-purple-400 ml-1">(파일 드래그 가능)</span>
+                            </div>
                         )}
                         {showRecordingPanel && (
                             <div className="bg-purple-50 border border-purple-200 rounded-sm p-3 space-y-2">
@@ -456,28 +488,43 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                 </div>
 
                                 {recording.status === 'idle' && !recording.isRecording && !recordingFile && (
-                                    <div className="flex gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => recording.startRecording()}
-                                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-sm text-xs font-bold transition-colors"
+                                    <div className="space-y-2">
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => recording.startRecording()}
+                                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-sm text-xs font-bold transition-colors"
+                                            >
+                                                <Mic size={14} />
+                                                녹음 시작
+                                            </button>
+                                            <label className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-purple-300 text-purple-700 rounded-sm text-xs font-bold hover:bg-purple-50 cursor-pointer transition-colors">
+                                                <Upload size={14} />
+                                                파일 첨부
+                                                <input
+                                                    type="file"
+                                                    accept="audio/*,.mp3,.wav,.m4a,.webm,.ogg"
+                                                    className="hidden"
+                                                    onChange={(e) => {
+                                                        const f = e.target.files?.[0];
+                                                        if (f) setRecordingFile(f);
+                                                        e.target.value = '';
+                                                    }}
+                                                />
+                                            </label>
+                                        </div>
+                                        <div
+                                            onDrop={handleRecordingDrop}
+                                            onDragOver={handleRecordingDragOver}
+                                            onDragLeave={handleRecordingDragLeave}
+                                            className={`border-2 border-dashed rounded-sm p-3 text-center text-[10px] transition-colors ${
+                                                isDragOver
+                                                    ? 'border-purple-400 bg-purple-100 text-purple-700'
+                                                    : 'border-purple-200 text-purple-400'
+                                            }`}
                                         >
-                                            <Mic size={14} />
-                                            녹음 시작
-                                        </button>
-                                        <label className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-purple-300 text-purple-700 rounded-sm text-xs font-bold hover:bg-purple-50 cursor-pointer transition-colors">
-                                            <Upload size={14} />
-                                            파일 첨부
-                                            <input
-                                                type="file"
-                                                accept="audio/*,.mp3,.wav,.m4a,.webm,.ogg"
-                                                className="hidden"
-                                                onChange={(e) => {
-                                                    const f = e.target.files?.[0];
-                                                    if (f) setRecordingFile(f);
-                                                }}
-                                            />
-                                        </label>
+                                            {isDragOver ? '여기에 놓으세요!' : '또는 녹음 파일을 여기로 드래그'}
+                                        </div>
                                     </div>
                                 )}
 

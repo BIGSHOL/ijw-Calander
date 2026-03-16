@@ -20,6 +20,12 @@ function formatTimer(sec: number) {
   return `${m}:${s}`;
 }
 
+// 선택된 학생 태그
+interface StudentTag {
+  id: string;   // 기존 학생이면 Firestore ID, 직접 입력이면 ''
+  name: string;
+}
+
 export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -29,8 +35,9 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
   const { uploadAndProcess, uploadProgress, isUploading, isProcessing } = useUploadConsultationRecording();
   const { students } = useStudents();
 
-  const [studentName, setStudentName] = useState('');
-  const [studentId, setStudentId] = useState('');
+  // 복수 학생 태그
+  const [selectedStudents, setSelectedStudents] = useState<StudentTag[]>([]);
+  const [studentInput, setStudentInput] = useState('');
   const [consultantName, setConsultantName] = useState('');
   const [consultationDate, setConsultationDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -51,12 +58,47 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
   const [interimText, setInterimText] = useState('');
   const [speechStatus, setSpeechStatus] = useState<'off' | 'starting' | 'active' | 'error'>('off');
 
-  // 학생명 자동완성 필터
-  const filteredStudents = studentName.trim()
+  // 학생명 자동완성 필터 (이미 선택된 학생 제외)
+  const selectedIds = new Set(selectedStudents.map(s => s.id).filter(Boolean));
+  const selectedNames = new Set(selectedStudents.map(s => s.name));
+  const filteredStudents = studentInput.trim()
     ? (students || [])
-        .filter(s => s.status === 'active' && s.name?.includes(studentName.trim()))
+        .filter(s =>
+          s.status === 'active' &&
+          s.name?.includes(studentInput.trim()) &&
+          !selectedIds.has(s.id) &&
+          !selectedNames.has(s.name)
+        )
         .slice(0, 8)
     : [];
+
+  // 학생 태그 추가
+  const addStudentTag = (tag: StudentTag) => {
+    if (!tag.name.trim()) return;
+    // 중복 방지
+    if (tag.id && selectedIds.has(tag.id)) return;
+    if (selectedNames.has(tag.name.trim())) return;
+    setSelectedStudents(prev => [...prev, { id: tag.id, name: tag.name.trim() }]);
+    setStudentInput('');
+    setShowSuggestions(false);
+  };
+
+  // Enter 키로 직접 입력 추가
+  const handleStudentInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && studentInput.trim()) {
+      e.preventDefault();
+      addStudentTag({ id: '', name: studentInput.trim() });
+    }
+    // Backspace로 마지막 태그 삭제
+    if (e.key === 'Backspace' && !studentInput && selectedStudents.length > 0) {
+      setSelectedStudents(prev => prev.slice(0, -1));
+    }
+  };
+
+  // 학생 태그 삭제
+  const removeStudentTag = (index: number) => {
+    setSelectedStudents(prev => prev.filter((_, i) => i !== index));
+  };
 
   // 녹음 타이머 정리
   useEffect(() => {
@@ -266,10 +308,6 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
   }, [handleFileSelect]);
 
   const handleSubmit = async () => {
-    if (!studentName.trim()) {
-      setError('학생 이름을 입력해주세요.');
-      return;
-    }
     if (!consultationDate) {
       setError('상담 날짜를 선택해주세요.');
       return;
@@ -280,11 +318,17 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
     }
 
     setError('');
+    // 복수 학생 이름/ID 조합
+    const studentNames = selectedStudents.map(s => s.name);
+    const studentIds = selectedStudents.map(s => s.id).filter(Boolean);
+
     try {
       const result = await uploadAndProcess({
         file: selectedFile,
-        studentId,
-        studentName: studentName.trim(),
+        studentId: studentIds[0] || '',
+        studentName: studentNames.join(', ') || '미등록 상담',
+        studentNames,
+        studentIds,
         consultantName: consultantName.trim(),
         consultationDate,
       });
@@ -311,27 +355,39 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
 
       <div className="p-5 space-y-4">
         {/* 메타데이터 입력 */}
-        <div className="grid grid-cols-3 gap-4">
-          {/* 학생 이름 */}
+        <div className="space-y-3">
+          {/* 학생 이름 (복수 가능, 선택사항) */}
           <div className="relative">
             <label className="block text-xs font-medium text-gray-700 mb-1">
               <Users size={12} className="inline mr-1" />
-              학생 이름 *
+              학생 이름 <span className="text-gray-400 font-normal">(선택 — 형제 등 복수 가능, 등록상담은 생략 가능)</span>
             </label>
-            <input
-              type="text"
-              value={studentName}
-              onChange={(e) => {
-                setStudentName(e.target.value);
-                setStudentId('');
-                setShowSuggestions(true);
-              }}
-              onFocus={() => setShowSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-              placeholder="학생 이름 입력"
-              className="w-full px-3 py-2 text-sm border rounded-sm focus:outline-none focus:ring-1 focus:ring-accent-400"
-              disabled={isSubmitting || isRecording}
-            />
+            <div className={`flex flex-wrap items-center gap-1.5 min-h-[38px] px-2 py-1.5 border rounded-sm focus-within:ring-1 focus-within:ring-accent-400 ${isSubmitting || isRecording ? 'bg-gray-50' : 'bg-white'}`}>
+              {selectedStudents.map((tag, i) => (
+                <span key={`${tag.id || tag.name}-${i}`} className="inline-flex items-center gap-1 px-2 py-0.5 bg-accent-100 text-accent-800 text-sm rounded-sm">
+                  {tag.name}
+                  {!isSubmitting && !isRecording && (
+                    <button type="button" onClick={() => removeStudentTag(i)} className="hover:text-red-500">
+                      <X size={12} />
+                    </button>
+                  )}
+                </span>
+              ))}
+              <input
+                type="text"
+                value={studentInput}
+                onChange={(e) => {
+                  setStudentInput(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                onKeyDown={handleStudentInputKeyDown}
+                placeholder={selectedStudents.length ? '' : '학생 이름 입력 후 Enter (또는 목록에서 선택)'}
+                className="flex-1 min-w-[120px] py-0.5 text-sm bg-transparent outline-none"
+                disabled={isSubmitting || isRecording}
+              />
+            </div>
             {showSuggestions && filteredStudents.length > 0 && (
               <div className="absolute z-20 top-full left-0 right-0 mt-1 bg-white border rounded-sm shadow-lg max-h-40 overflow-auto">
                 {filteredStudents.map(s => (
@@ -339,11 +395,7 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
                     key={s.id}
                     type="button"
                     className="w-full px-3 py-2 text-left text-sm hover:bg-accent-50 flex justify-between"
-                    onMouseDown={() => {
-                      setStudentName(s.name);
-                      setStudentId(s.id);
-                      setShowSuggestions(false);
-                    }}
+                    onMouseDown={() => addStudentTag({ id: s.id, name: s.name })}
                   >
                     <span>{s.name}</span>
                     <span className="text-gray-400 text-xs">{s.school} {s.grade}</span>
@@ -353,35 +405,37 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
             )}
           </div>
 
-          {/* 상담 날짜 */}
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              <Calendar size={12} className="inline mr-1" />
-              상담 날짜 *
-            </label>
-            <input
-              type="date"
-              value={consultationDate}
-              onChange={(e) => setConsultationDate(e.target.value)}
-              className="w-full px-3 py-2 text-sm border rounded-sm focus:outline-none focus:ring-1 focus:ring-accent-400"
-              disabled={isSubmitting || isRecording}
-            />
-          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {/* 상담 날짜 */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                <Calendar size={12} className="inline mr-1" />
+                상담 날짜 *
+              </label>
+              <input
+                type="date"
+                value={consultationDate}
+                onChange={(e) => setConsultationDate(e.target.value)}
+                className="w-full px-3 py-2 text-sm border rounded-sm focus:outline-none focus:ring-1 focus:ring-accent-400"
+                disabled={isSubmitting || isRecording}
+              />
+            </div>
 
-          {/* 상담자 */}
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              <User size={12} className="inline mr-1" />
-              상담자
-            </label>
-            <input
-              type="text"
-              value={consultantName}
-              onChange={(e) => setConsultantName(e.target.value)}
-              placeholder="상담자 이름 (선택)"
-              className="w-full px-3 py-2 text-sm border rounded-sm focus:outline-none focus:ring-1 focus:ring-accent-400"
-              disabled={isSubmitting || isRecording}
-            />
+            {/* 상담자 */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                <User size={12} className="inline mr-1" />
+                상담자
+              </label>
+              <input
+                type="text"
+                value={consultantName}
+                onChange={(e) => setConsultantName(e.target.value)}
+                placeholder="상담자 이름 (선택)"
+                className="w-full px-3 py-2 text-sm border rounded-sm focus:outline-none focus:ring-1 focus:ring-accent-400"
+                disabled={isSubmitting || isRecording}
+              />
+            </div>
           </div>
         </div>
 
@@ -519,10 +573,10 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
         {/* 제출 버튼 */}
         <button
           onClick={handleSubmit}
-          disabled={isSubmitting || isRecording || !selectedFile || !studentName.trim()}
+          disabled={isSubmitting || isRecording || !selectedFile}
           className={`
             w-full py-3 rounded-sm font-medium text-sm transition-colors
-            ${isSubmitting || isRecording || !selectedFile || !studentName.trim()
+            ${isSubmitting || isRecording || !selectedFile
               ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
               : 'bg-[#081429] text-white hover:bg-[#0f2340]'
             }
