@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Search, FileText, Clock, AlertCircle, Loader2, Trash2, Pencil, Check, X } from 'lucide-react';
-import { useConsultationReports, useDeleteConsultationReport, useUpdateConsultationReportName } from '../../hooks/useConsultationRecording';
+import { Search, FileText, Clock, AlertCircle, Loader2, Trash2, Pencil, Check, X, RefreshCw } from 'lucide-react';
+import { useConsultationReports, useDeleteConsultationReport, useUpdateConsultationReportName, useReanalyzeReport } from '../../hooks/useConsultationRecording';
 import { usePermissions } from '../../hooks/usePermissions';
 import { format } from 'date-fns';
 import type { ConsultationReportStatus, UserProfile } from '../../types';
@@ -25,6 +25,7 @@ export function ReportHistoryList({ onSelectReport, userProfile }: ReportHistory
   const { hasPermission } = usePermissions(userProfile);
   const deleteMutation = useDeleteConsultationReport();
   const renameMutation = useUpdateConsultationReportName();
+  const reanalyzeMutation = useReanalyzeReport();
   const canDelete = hasPermission('recording.delete');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -33,6 +34,12 @@ export function ReportHistoryList({ onSelectReport, userProfile }: ReportHistory
     e.stopPropagation();
     if (!window.confirm(`"${report.studentName}" 녹음 분석 내역을 삭제하시겠습니까?\n삭제 후 복구할 수 없습니다.`)) return;
     deleteMutation.mutate({ id: report.id, storagePath: report.storagePath || '' });
+  };
+
+  const handleReanalyze = (e: React.MouseEvent, reportId: string) => {
+    e.stopPropagation();
+    if (!window.confirm('새 알고리즘으로 재분석하시겠습니까?\n기존 분석 결과가 덮어씌워집니다.')) return;
+    reanalyzeMutation.mutate(reportId);
   };
 
   const handleStartEdit = (e: React.MouseEvent, report: { id: string; studentName: string }) => {
@@ -164,8 +171,30 @@ export function ReportHistoryList({ onSelectReport, userProfile }: ReportHistory
                         {Math.floor(report.durationSeconds / 60)}분
                       </span>
                     )}
+                    {report.statusMessage && report.status === 'analyzing' && (
+                      <span className="text-purple-500">{report.statusMessage}</span>
+                    )}
                   </div>
                 </div>
+
+                {/* 재분석 버튼 (완료/분석불가 상태에서만) */}
+                {(report.status === 'completed' || report.status === 'failed') && (() => {
+                  const isReanalyzing = reanalyzeMutation.isPending && reanalyzeMutation.variables === report.id;
+                  return (
+                    <button
+                      onClick={(e) => handleReanalyze(e, report.id)}
+                      disabled={isReanalyzing}
+                      className="flex-shrink-0 p-1.5 text-gray-300 hover:text-accent-500 hover:bg-accent-50 rounded transition-colors"
+                      title="재분석"
+                    >
+                      {isReanalyzing ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <RefreshCw size={14} />
+                      )}
+                    </button>
+                  );
+                })()}
 
                 {/* 삭제 버튼 */}
                 {canDelete && (
