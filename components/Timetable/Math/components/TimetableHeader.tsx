@@ -11,6 +11,8 @@ import { getEndedSubjects } from '../../../../utils/enrollment';
 import { useMathConfig } from '../hooks/useMathConfig';
 import WithdrawalStudentDetail from '../../../WithdrawalManagement/WithdrawalStudentDetail';
 import { WithdrawalEntry } from '../../../../hooks/useWithdrawalFilters';
+import SubjectControls from '../../shared/SubjectControls';
+import type { SubjectType } from '../../../../types';
 
 interface TimetableHeaderProps {
     weekLabel: string;
@@ -81,6 +83,14 @@ interface TimetableHeaderProps {
     // 퇴원 관리 권한 (퇴원생 클릭 시 상세 모달용)
     canEditWithdrawal?: boolean;
     canReactivateWithdrawal?: boolean;
+    // 과목/뷰 전환 (SubjectControls)
+    timetableSubject?: SubjectType;
+    setTimetableSubject?: (value: SubjectType) => void;
+    setTimetableViewType?: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>;
+    mathViewMode?: 'day-based' | 'teacher-based';
+    setMathViewMode?: (value: string) => void;
+    hasPermission?: (perm: string) => boolean;
+    setIsTimetableSettingsOpen?: (value: boolean) => void;
 }
 
 const TimetableHeader: React.FC<TimetableHeaderProps> = ({
@@ -137,7 +147,15 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     onIntegrationDisplayOptionsChange,
     // 퇴원 관리 권한
     canEditWithdrawal = false,
-    canReactivateWithdrawal = false
+    canReactivateWithdrawal = false,
+    // 과목/뷰 전환
+    timetableSubject,
+    setTimetableSubject,
+    setTimetableViewType,
+    mathViewMode,
+    setMathViewMode,
+    hasPermission,
+    setIsTimetableSettingsOpen,
 }) => {
     // 드롭다운 상태
     const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
@@ -198,7 +216,24 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     };
 
     // 강사 순서 관리 훅
-    const { mathConfig, handleSaveTeacherOrder } = useMathConfig();
+    const { mathConfig, handleSaveTeacherOrder, handleSaveWeekdayOrder } = useMathConfig();
+
+    // 요일 순서 프리셋
+    const WEEKDAY_ORDER_PRESETS = [
+        { label: '월/목', order: ['월', '목', '화', '금', '수', '토', '일'] },
+        { label: '수', order: ['수', '월', '목', '화', '금', '토', '일'] },
+        { label: '화/금', order: ['화', '금', '월', '목', '수', '토', '일'] },
+        { label: '토', order: ['토', '월', '목', '화', '금', '수', '일'] },
+    ];
+
+    const currentWeekdayOrderLabel = useMemo(() => {
+        const order = mathConfig.weekdayOrder;
+        if (order.length === 0) return null;
+        for (const preset of WEEKDAY_ORDER_PRESETS) {
+            if (preset.order[0] === order[0] && preset.order[1] === order[1]) return preset.label;
+        }
+        return null;
+    }, [mathConfig.weekdayOrder]);
 
     // 강사 순서 이동
     const moveTeacher = (index: number, direction: 'up' | 'down') => {
@@ -331,6 +366,20 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
         <div className="flex flex-col flex-shrink-0 min-w-0">
             {/* Main Header Row */}
             <div className={`bg-gray-50 min-h-[2.5rem] flex items-center gap-3 pl-4 border-b border-gray-200 text-xs min-w-0 flex-wrap py-1 overflow-visible ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
+                {/* Subject & View Controls */}
+                {timetableSubject && setTimetableSubject && hasPermission && (
+                    <SubjectControls
+                        timetableSubject={timetableSubject}
+                        setTimetableSubject={setTimetableSubject}
+                        viewType={viewType}
+                        setTimetableViewType={setTimetableViewType}
+                        mathViewMode={mathViewMode}
+                        setMathViewMode={setMathViewMode}
+                        hasPermission={hasPermission}
+                        setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
+                    />
+                )}
+
                 {/* Left: Week Info */}
                 <div className="flex items-center gap-3 flex-shrink-0">
                     <span className="text-gray-600 font-medium">{weekLabel}</span>
@@ -726,6 +775,26 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                             </div>
                                         </div>
                                     )}
+                                    {/* 요일 순서 */}
+                                    <div className="px-3 py-2 border-b border-gray-100">
+                                        <div className="text-xxs font-bold text-gray-600 mb-2">요일 순서</div>
+                                        <div className="flex gap-1">
+                                            {WEEKDAY_ORDER_PRESETS.map(preset => (
+                                                <button
+                                                    key={preset.label}
+                                                    onClick={() => handleSaveWeekdayOrder(preset.order)}
+                                                    className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border transition-colors ${
+                                                        currentWeekdayOrderLabel === preset.label
+                                                            ? 'bg-accent text-primary border-accent'
+                                                            : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
+                                                    }`}
+                                                >
+                                                    {preset.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
                                     {/* 표시 옵션 */}
                                     <div className="px-3 py-2 border-b border-gray-100">
                                         <div className="text-xxs font-bold text-gray-600 mb-2">표시 옵션</div>
@@ -828,8 +897,8 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                             </div>
                                         </div>
                                     )}
-                                    {/* 강사 순서 설정 - 강사뷰에서만 표시 */}
-                                    {viewType === 'teacher' && mathConfig.teacherOrder.length > 0 && (
+                                    {/* 강사 순서 설정 - 강사뷰/엑셀뷰에서 표시 */}
+                                    {(viewType === 'teacher' || viewType === 'excel') && mathConfig.teacherOrder.length > 0 && (
                                         <div className="px-3 py-2 border-t border-gray-100">
                                             <div className="text-xxs font-bold text-gray-600 mb-2 flex items-center gap-1">
                                                 <Users size={12} />
