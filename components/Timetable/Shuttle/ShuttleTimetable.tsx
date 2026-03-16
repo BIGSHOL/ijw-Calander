@@ -296,16 +296,17 @@ function TimeSlotView({
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="border-collapse text-xs">
+                    <table className="w-full border-collapse text-xs">
                         <thead>
-                            {/* 요일 그룹 헤더 */}
                             <tr>
+                                <th className="border border-emerald-200 px-2 py-1 text-center font-bold bg-emerald-100 w-20">
+                                    시간대
+                                </th>
                                 {WEEKDAYS.map(day => {
                                     const dc = DAY_COLORS[day];
                                     return (
                                         <th
                                             key={day}
-                                            colSpan={TIME_SLOTS.length}
                                             className={`border border-emerald-200 px-2 py-1.5 text-center font-bold ${dc.bg} ${dc.text}`}
                                         >
                                             {day}요일
@@ -313,70 +314,60 @@ function TimeSlotView({
                                     );
                                 })}
                             </tr>
-                            {/* 회차 서브 헤더 */}
-                            <tr>
-                                {WEEKDAYS.map(day =>
-                                    TIME_SLOTS.map(slot => {
-                                        const sc = SESSION_COLORS[slot];
-                                        const dc = DAY_COLORS[day];
-                                        return (
-                                            <th
-                                                key={`${day}-${slot}`}
-                                                className={`border border-emerald-200 px-1 py-0.5 text-center ${dc.bg}/50`}
-                                            >
-                                                <span className={`${sc.bg} ${sc.text} text-[9px] font-bold px-1.5 py-0.5 rounded`}>
-                                                    {SESSION_LABELS[slot]}
-                                                </span>
-                                            </th>
-                                        );
-                                    })
-                                )}
-                            </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                {WEEKDAYS.map(day =>
-                                    TIME_SLOTS.map(slot => {
-                                        const allStudents = scheduleMap[day]?.[slot] || [];
-                                        const cellStudents = allStudents.filter(s =>
-                                            matchesFilter(s, activeFilters)
-                                        );
-                                        const boarding = cellStudents.filter(s => s.type === '등원');
-                                        const transfer = cellStudents.filter(s => s.type === '이동');
-                                        const alighting = cellStudents.filter(s => s.type === '하원');
-                                        const dc = DAY_COLORS[day];
-                                        return (
-                                            <td
-                                                key={`${day}-${slot}`}
-                                                className={`border border-emerald-200 px-1 py-1 align-top ${dc.bg}/30`}
-                                                style={{ minWidth: '110px' }}
-                                            >
-                                                {cellStudents.length > 0 ? (
-                                                    <div className="space-y-1">
-                                                        {boarding.length > 0 && (
-                                                            <CellGroup type="등원" students={boarding} />
-                                                        )}
-                                                        {boarding.length > 0 && (transfer.length > 0 || alighting.length > 0) && (
-                                                            <hr className="border-gray-200" />
-                                                        )}
-                                                        {transfer.length > 0 && (
-                                                            <CellGroup type="이동" students={transfer} />
-                                                        )}
-                                                        {transfer.length > 0 && alighting.length > 0 && (
-                                                            <hr className="border-gray-200" />
-                                                        )}
-                                                        {alighting.length > 0 && (
-                                                            <CellGroup type="하원" students={alighting} />
-                                                        )}
+                            {TIME_SLOTS.map(slot => {
+                                const sc = SESSION_COLORS[slot];
+                                return (
+                                    <tr key={slot} className="hover:bg-emerald-50/50">
+                                        <td className={`border border-emerald-200 px-2 py-1.5 text-center font-semibold whitespace-nowrap ${sc.bg}`}>
+                                            <div className={`font-bold ${sc.text} text-[10px]`}>{SESSION_LABELS[slot]}</div>
+                                        </td>
+                                        {WEEKDAYS.map(day => {
+                                            const allStudents = scheduleMap[day]?.[slot] || [];
+                                            const cellStudents = allStudents.filter(s =>
+                                                matchesFilter(s, activeFilters)
+                                            );
+                                            const boarding = cellStudents.filter(s => s.type === '등원');
+                                            const transfer = cellStudents.filter(s => s.type === '이동');
+                                            const alighting = cellStudents.filter(s => s.type === '하원');
+                                            const dc = DAY_COLORS[day];
+                                            return (
+                                                <td
+                                                    key={`${day}-${slot}`}
+                                                    className={`border border-emerald-200 px-1.5 py-1 align-top ${dc.bg}/30`}
+                                                >
+                                                    {/* 셀 헤더: 요일 + 회차 */}
+                                                    <div className={`text-[9px] font-bold mb-1 ${dc.text}`}>
+                                                        {day}요일 {SESSION_LABELS[slot]}
                                                     </div>
-                                                ) : (
-                                                    <div className="text-gray-300 text-center">-</div>
-                                                )}
-                                            </td>
-                                        );
-                                    })
-                                )}
-                            </tr>
+                                                    {cellStudents.length > 0 ? (
+                                                        <div className="space-y-1">
+                                                            {boarding.length > 0 && (
+                                                                <CellGroup type="등원" students={boarding} />
+                                                            )}
+                                                            {boarding.length > 0 && (transfer.length > 0 || alighting.length > 0) && (
+                                                                <hr className="border-gray-200" />
+                                                            )}
+                                                            {transfer.length > 0 && (
+                                                                <CellGroup type="이동" students={transfer} />
+                                                            )}
+                                                            {transfer.length > 0 && alighting.length > 0 && (
+                                                                <hr className="border-gray-200" />
+                                                            )}
+                                                            {alighting.length > 0 && (
+                                                                <CellGroup type="하원" students={alighting} />
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-gray-300 text-center">-</div>
+                                                    )}
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
