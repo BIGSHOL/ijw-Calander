@@ -1,9 +1,9 @@
 /**
  * ShuttleTimetable - 셔틀버스 시간표 컴포넌트
  *
- * 승차(첫 수업 시작) / 하차(마지막 수업 종료) 구분 표시
+ * 등원(첫 수업 시작) / 하원(마지막 수업 종료) 구분 표시
  * 강의실 기준 바른학습관/본원 분류 + 이동 필요 학생 별도 표시
- * 필터: 승차, 하차, 본원(영어), 본원(수학), 바른학습관, 강의실이동 (멀티 선택)
+ * 필터: 등원, 하원, 본원(영어), 본원(수학), 바른학습관, 강의실이동 (멀티 선택)
  */
 
 import React, { useMemo, useState } from 'react';
@@ -30,8 +30,8 @@ const TIME_SLOT_LABELS: Record<TimeSlot, string> = {
 type ShuttleFilter = 'boarding' | 'alighting' | 'bonwon-english' | 'bonwon-math' | 'bareun' | 'transfer';
 
 const FILTER_CONFIG: { key: ShuttleFilter; label: string; color: string; activeColor: string }[] = [
-    { key: 'boarding', label: '승차', color: 'border-gray-300 text-gray-600', activeColor: 'border-green-400 bg-green-50 text-green-700' },
-    { key: 'alighting', label: '하차', color: 'border-gray-300 text-gray-600', activeColor: 'border-red-400 bg-red-50 text-red-700' },
+    { key: 'boarding', label: '등원', color: 'border-gray-300 text-gray-600', activeColor: 'border-green-400 bg-green-50 text-green-700' },
+    { key: 'alighting', label: '하원', color: 'border-gray-300 text-gray-600', activeColor: 'border-red-400 bg-red-50 text-red-700' },
     { key: 'bonwon-math', label: '본원(수학)', color: 'border-gray-300 text-gray-600', activeColor: 'border-indigo-400 bg-indigo-50 text-indigo-700' },
     { key: 'bonwon-english', label: '본원(영어)', color: 'border-gray-300 text-gray-600', activeColor: 'border-purple-400 bg-purple-50 text-purple-700' },
     { key: 'bareun', label: '바른학습관', color: 'border-gray-300 text-gray-600', activeColor: 'border-blue-400 bg-blue-50 text-blue-700' },
@@ -187,9 +187,9 @@ function matchesFilter(
 ): boolean {
     if (activeFilters.size === 0) return true;
 
-    // 승차/하차 필터
-    if (activeFilters.has('boarding') && student.type === '승차') return true;
-    if (activeFilters.has('alighting') && student.type === '하차') return true;
+    // 등원/하원 필터
+    if (activeFilters.has('boarding') && student.type === '등원') return true;
+    if (activeFilters.has('alighting') && student.type === '하원') return true;
 
     // 위치/과목 필터
     if (activeFilters.has('bonwon-english') && student.location === '본원' && student.subject === 'english') return true;
@@ -250,11 +250,11 @@ function TimeSlotView({
             {/* 범례 */}
             <div className="flex items-center gap-4 text-[10px] px-1">
                 <span className="inline-flex items-center gap-1">
-                    <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-green-100 text-green-700 border border-green-300">승차</span>
+                    <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-green-100 text-green-700 border border-green-300">등원</span>
                     첫 수업 시작 기준
                 </span>
                 <span className="inline-flex items-center gap-1">
-                    <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700 border border-red-300">하차</span>
+                    <span className="px-1 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700 border border-red-300">하원</span>
                     마지막 수업 종료 기준
                 </span>
                 <span className="inline-flex items-center gap-1">
@@ -304,9 +304,9 @@ function TimeSlotView({
                                         const cellStudents = allStudents.filter(s =>
                                             matchesFilter(s, day, activeFilters, transferNameDays)
                                         );
-                                        // 승차/하차 그룹 분리
-                                        const boarding = cellStudents.filter(s => s.type === '승차');
-                                        const alighting = cellStudents.filter(s => s.type === '하차');
+                                        // 등원/하원 그룹 분리
+                                        const boarding = cellStudents.filter(s => s.type === '등원');
+                                        const alighting = cellStudents.filter(s => s.type === '하원');
                                         return (
                                             <td
                                                 key={`${day}-${slot}`}
@@ -318,7 +318,7 @@ function TimeSlotView({
                                                             <div>
                                                                 <div className="flex items-center gap-1 mb-0.5">
                                                                     <span className="px-1 py-0 rounded text-[8px] font-bold bg-green-100 text-green-700 border border-green-300">
-                                                                        승차 {boarding.length}
+                                                                        등원 {boarding.length}
                                                                     </span>
                                                                 </div>
                                                                 <div className="space-y-0.5">
@@ -339,7 +339,7 @@ function TimeSlotView({
                                                             <div>
                                                                 <div className="flex items-center gap-1 mb-0.5">
                                                                     <span className="px-1 py-0 rounded text-[8px] font-bold bg-red-100 text-red-700 border border-red-300">
-                                                                        하차 {alighting.length}
+                                                                        하원 {alighting.length}
                                                                     </span>
                                                                 </div>
                                                                 <div className="space-y-0.5">
