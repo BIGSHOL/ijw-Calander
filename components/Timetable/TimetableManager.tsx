@@ -142,8 +142,8 @@ interface MathTimetableContentProps {
     setIsTimetableSettingsOpen?: (value: boolean) => void;
     undoLastMove?: () => any;
     // 강의실 필터
-    roomFilter?: { main: boolean; barun: boolean };
-    onRoomFilterChange?: (type: 'main' | 'barun', value: boolean) => void;
+    roomFilter?: { main: boolean; barun: boolean; godeung: boolean };
+    onRoomFilterChange?: (type: 'main' | 'barun' | 'godeung', value: boolean) => void;
 }
 
 const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
@@ -1265,18 +1265,20 @@ const TimetableManager = ({
     const [showHoldStudents, setShowHoldStudents] = useState(viewSettings.showHoldStudents ?? true);
     const [showWithdrawnStudents, setShowWithdrawnStudents] = useState(viewSettings.showWithdrawnStudents ?? true);
 
-    // 강의실 필터 (멀티 선택: 본원/바른)
-    const [roomFilter, setRoomFilter] = useState<{ main: boolean; barun: boolean }>(() => {
+    // 강의실 필터 (멀티 선택: 본원/바른/고등)
+    const [roomFilter, setRoomFilter] = useState<{ main: boolean; barun: boolean; godeung: boolean }>(() => {
         try {
             const saved = storage.getString(STORAGE_KEYS.MATH_ROOM_FILTER);
             if (saved) {
                 const parsed = JSON.parse(saved);
-                if (typeof parsed === 'object' && parsed !== null && 'main' in parsed) return parsed;
+                if (typeof parsed === 'object' && parsed !== null && 'main' in parsed) {
+                    return { main: true, barun: true, godeung: true, ...parsed };
+                }
             }
         } catch { /* ignore */ }
-        return { main: true, barun: true };
+        return { main: true, barun: true, godeung: true };
     });
-    const handleRoomFilterChange = useCallback((type: 'main' | 'barun', value: boolean) => {
+    const handleRoomFilterChange = useCallback((type: 'main' | 'barun' | 'godeung', value: boolean) => {
         setRoomFilter(prev => {
             const next = { ...prev, [type]: value };
             storage.setString(STORAGE_KEYS.MATH_ROOM_FILTER, JSON.stringify(next));
@@ -1478,14 +1480,15 @@ const TimetableManager = ({
     const filteredClasses = useMemo(() => {
         let base = localClasses.filter(c => c.subject === currentSubjectFilter);
 
-        // 강의실 필터 (본원/바른 멀티 선택)
-        if (!roomFilter.main || !roomFilter.barun) {
+        // 강의실 필터 (본원/바른/고등 멀티 선택)
+        if (!roomFilter.main || !roomFilter.barun || !roomFilter.godeung) {
             base = base.filter(c => {
                 const room = c.room || '';
-                const isBarun = room.startsWith('바른') || room.startsWith('프리미엄');
-                if (roomFilter.main && !isBarun) return true;
-                if (roomFilter.barun && isBarun) return true;
-                return false;
+                const isBarun = room.startsWith('바른') || room.startsWith('프리미엄') || room.toLowerCase().includes('lab');
+                const isGodeung = room.includes('고등');
+                if (isGodeung) return roomFilter.godeung;
+                if (isBarun) return roomFilter.barun;
+                return roomFilter.main;
             });
         }
 

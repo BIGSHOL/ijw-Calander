@@ -14,7 +14,7 @@ export interface MathIntegrationSettings {
     othersGroupTitle: string;
     displayOptions?: MathDisplayOptions;
     hiddenTeachers?: string[];
-    roomFilter?: 'all' | 'main' | 'barun';  // 강의실 필터: 전체/본원/바른
+    roomFilter?: 'all' | 'main' | 'barun' | 'godeung';  // 강의실 필터: 전체/본원/바른/고등
 }
 
 export interface MathCustomGroup {

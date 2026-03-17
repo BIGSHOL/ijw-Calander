@@ -92,8 +92,8 @@ interface TimetableHeaderProps {
     hasPermission?: (perm: string) => boolean;
     setIsTimetableSettingsOpen?: (value: boolean) => void;
     // 강의실 필터
-    roomFilter?: { main: boolean; barun: boolean };
-    onRoomFilterChange?: (type: 'main' | 'barun', value: boolean) => void;
+    roomFilter?: { main: boolean; barun: boolean; godeung: boolean };
+    onRoomFilterChange?: (type: 'main' | 'barun' | 'godeung', value: boolean) => void;
 }
 
 const TimetableHeader: React.FC<TimetableHeaderProps> = ({
@@ -786,15 +786,21 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                             <div className="flex gap-1">
                                                 <button
                                                     onClick={() => onRoomFilterChange('main', !roomFilter.main)}
-                                                    className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${roomFilter.main ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'}`}
+                                                    className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${roomFilter.main ? 'bg-blue-500 text-white border-blue-500' : 'bg-gray-100 text-gray-400 border-gray-200'}`}
                                                 >
                                                     본원
                                                 </button>
                                                 <button
                                                     onClick={() => onRoomFilterChange('barun', !roomFilter.barun)}
-                                                    className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${roomFilter.barun ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'}`}
+                                                    className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${roomFilter.barun ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-gray-100 text-gray-400 border-gray-200'}`}
                                                 >
-                                                    바른학습관
+                                                    바른
+                                                </button>
+                                                <button
+                                                    onClick={() => onRoomFilterChange('godeung', !roomFilter.godeung)}
+                                                    className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${roomFilter.godeung ? 'bg-purple-500 text-white border-purple-500' : 'bg-gray-100 text-gray-400 border-gray-200'}`}
+                                                >
+                                                    고등
                                                 </button>
                                             </div>
                                         </div>
