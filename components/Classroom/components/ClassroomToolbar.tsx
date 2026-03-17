@@ -3,7 +3,7 @@ import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import { SUBJECT_LABELS } from '../../../utils/styleUtils';
 import { SubjectType } from '../../../types';
 import { CLASSROOM_COLORS } from '../constants';
-import { RoomData, RoomCategory, ROOM_CATEGORIES, detectCategory, detectFloor, addRoom, updateRoom, deactivateRoom } from '../../../hooks/useRooms';
+import { RoomData, RoomCategory, ROOM_CATEGORIES, detectCategory, detectFloor, addRoom, updateRoom, deactivateRoom, renameRoomInClasses } from '../../../hooks/useRooms';
 
 const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 const SUBJECTS: SubjectType[] = ['math', 'english', 'science', 'korean'];
@@ -131,7 +131,15 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
     try {
       const updates: Partial<RoomData> = { category: editCategory };
       if (trimmed !== originalName) {
+        // 동일 이름의 기존 강의실이 있는지 확인
+        const existing = roomDataList.find(r => r.name === trimmed && r.id !== roomId);
+        if (existing) {
+          alert(`"${trimmed}" 강의실이 이미 존재합니다. 다른 이름을 입력해주세요.`);
+          return;
+        }
         updates.name = trimmed;
+        // classes의 room/slotRooms에서 이전 이름을 새 이름으로 일괄 변경
+        await renameRoomInClasses(originalName, trimmed);
       }
       await updateRoom(roomId, updates);
       setEditingRoomId(null);
