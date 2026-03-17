@@ -145,7 +145,7 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                 // 강의실 필터
                 if (roomFilter !== 'all') {
                     const room = c.mainRoom || '';
-                    const isBarun = room.startsWith('바른') || room.startsWith('프리미엄') || room.toLowerCase().includes('lab');
+                    const isBarun = room.startsWith('바른') || room.startsWith('프리미엄');
                     const isGodeung = room.includes('고등');
                     if (roomFilter === 'main') {
                         if (isBarun || isGodeung) return false;

@@ -1484,7 +1484,7 @@ const TimetableManager = ({
         if (!roomFilter.main || !roomFilter.barun || !roomFilter.godeung) {
             base = base.filter(c => {
                 const room = c.room || '';
-                const isBarun = room.startsWith('바른') || room.startsWith('프리미엄') || room.toLowerCase().includes('lab');
+                const isBarun = room.startsWith('바른') || room.startsWith('프리미엄');
                 const isGodeung = room.includes('고등');
                 if (isGodeung) return roomFilter.godeung;
                 if (isBarun) return roomFilter.barun;
