@@ -178,6 +178,59 @@ export async function deactivateRoom(id: string): Promise<void> {
   await updateDoc(docRef, { isActive: false });
 }
 
+// ─── 강의실명 변경 시 classes의 room/slotRooms 일괄 업데이트 ───
+export async function renameRoomInClasses(oldName: string, newName: string): Promise<number> {
+  if (oldName === newName) return 0;
+  const classesSnapshot = await getDocs(collection(db, 'classes'));
+  const batch = writeBatch(db);
+  let count = 0;
+  let batchCount = 0;
+
+  for (const docSnap of classesSnapshot.docs) {
+    const data = docSnap.data();
+    let needsUpdate = false;
+    const updates: Record<string, any> = {};
+
+    // room 필드
+    if (data.room === oldName) {
+      updates.room = newName;
+      needsUpdate = true;
+    }
+
+    // slotRooms 필드
+    if (data.slotRooms) {
+      const newSlotRooms: Record<string, string> = {};
+      let slotChanged = false;
+      for (const [key, value] of Object.entries(data.slotRooms)) {
+        if (value === oldName) {
+          newSlotRooms[key] = newName;
+          slotChanged = true;
+        } else {
+          newSlotRooms[key] = value as string;
+        }
+      }
+      if (slotChanged) {
+        updates.slotRooms = newSlotRooms;
+        needsUpdate = true;
+      }
+    }
+
+    if (needsUpdate) {
+      batch.update(docSnap.ref, updates);
+      count++;
+      batchCount++;
+      if (batchCount >= 490) {
+        await batch.commit();
+        batchCount = 0;
+      }
+    }
+  }
+
+  if (batchCount > 0) await batch.commit();
+  console.log(`[강의실] "${oldName}" → "${newName}" 반 ${count}개 업데이트`);
+  return count;
+}
+
 // ─── 기존 classes 데이터의 room/slotRooms에 "본원" 접두사 마이그레이션 ───
 export async function migrateRoomNames(): Promise<{ classesUpdated: number; staffUpdated: number; roomsCreated: number }> {
   let classesUpdated = 0;
