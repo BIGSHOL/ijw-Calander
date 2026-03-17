@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useClassroomData } from './hooks/useClassroomData';
 import ClassroomToolbar from './components/ClassroomToolbar';
 import ClassroomGrid from './components/ClassroomGrid';
@@ -6,7 +6,7 @@ import ClassDetailModal from '../ClassManagement/ClassDetailModal';
 import { ClassInfo } from '../../hooks/useClasses';
 import { ClassroomBlock } from './types';
 import { SubjectType } from '../../types';
-import { useRooms } from '../../hooks/useRooms';
+import { useRooms, addRoom, detectCategory, detectFloor } from '../../hooks/useRooms';
 
 const IGNORED_ROOMS_KEY = 'classroom_ignored_rooms';
 const TIME_RANGE_KEY = 'classroom_time_range';
@@ -48,6 +48,35 @@ const ClassroomTab: React.FC = () => {
   const { blocksByRoom, rooms, loading, classes } = useClassroomData(selectedDay, selectedRooms, ignoredRooms);
   const { data: roomDataList = [], invalidate: invalidateRooms } = useRooms();
   const isWeekend = selectedDay === '토' || selectedDay === '일';
+
+  // 수업 데이터에 있지만 rooms 컬렉션에 없는 강의실 자동 등록
+  const syncedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (rooms.length === 0 || roomDataList.length === 0) return;
+    const registered = new Set(roomDataList.map(r => r.name));
+    const missing = rooms.filter(r => r && !registered.has(r) && !syncedRef.current.has(r));
+    if (missing.length === 0) return;
+
+    missing.forEach(name => syncedRef.current.add(name));
+    Promise.all(missing.map(name =>
+      addRoom({
+        name,
+        floor: detectFloor(name),
+        capacity: 20,
+        preferredSubjects: [],
+        building: detectCategory(name) === '바른' ? '바른학습관' : '본원',
+        category: detectCategory(name),
+        order: roomDataList.length + 1,
+        isActive: true,
+      })
+    )).then(() => {
+      console.log(`[강의실] 미등록 강의실 ${missing.length}개 자동 추가:`, missing);
+      invalidateRooms();
+    }).catch(err => {
+      console.error('[강의실] 자동 추가 실패:', err);
+      missing.forEach(name => syncedRef.current.delete(name));
+    });
+  }, [rooms, roomDataList, invalidateRooms]);
 
   const handleRoomToggle = useCallback((room: string) => {
     setSelectedRooms(prev => {
