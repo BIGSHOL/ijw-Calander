@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getApp } from 'firebase/app';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
+import { startRecoverySession, saveChunk, checkRecovery, recoverRecording, clearRecovery } from '../../utils/recordingRecovery';
 
 const ACCEPTED_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/wav', 'audio/webm', 'audio/ogg'];
 const ACCEPTED_EXTENSIONS = ['.mp3', '.m4a', '.wav', '.webm', '.ogg'];
@@ -50,6 +51,8 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
   const [liveTranscript, setLiveTranscript] = useState<string[]>([]);
   const [interimText, setInterimText] = useState('');
   const [speechStatus, setSpeechStatus] = useState<'off' | 'starting' | 'active' | 'error'>('off');
+  const chunkIndexRef = useRef(0);
+  const [recoveryFile, setRecoveryFile] = useState<File | null>(null);
 
   // 참석자 태그 추가
   const addAttendee = (name: string) => {
@@ -77,6 +80,23 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
+  }, []);
+
+  // 녹음 중 탭 닫기/새로고침 방지
+  useEffect(() => {
+    if (!isRecording) return;
+    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isRecording]);
+
+  // 이전 녹음 복구 확인
+  useEffect(() => {
+    checkRecovery('meeting').then(meta => {
+      if (meta) {
+        recoverRecording('meeting').then(file => { if (file) setRecoveryFile(file); });
+      }
+    });
   }, []);
 
   // AssemblyAI 실시간 전사
@@ -157,15 +177,26 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       chunksRef.current = [];
+      chunkIndexRef.current = 0;
       const rec = new MediaRecorder(stream);
-      rec.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+
+      await startRecoverySession('meeting', 'audio/webm');
+
+      rec.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+          saveChunk('meeting', chunkIndexRef.current, e.data);
+          chunkIndexRef.current++;
+        }
+      };
       rec.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         const file = new File([blob], `회의녹음_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.webm`, { type: 'audio/webm' });
         setSelectedFile(file);
         stream.getTracks().forEach(t => t.stop());
+        clearRecovery('meeting');
       };
-      rec.start();
+      rec.start(1000);
       mediaRecorderRef.current = rec;
       setIsRecording(true);
       setRecordSeconds(0);
@@ -241,6 +272,32 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
           직접 녹음하거나 파일을 업로드하면 자동으로 음성인식 → AI 분석 → 회의록 생성이 진행됩니다.
         </p>
       </div>
+
+      {/* 녹음 복구 배너 */}
+      {recoveryFile && (
+        <div className="mx-5 mt-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-sm flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-amber-800">이전 녹음이 복구되었습니다</p>
+            <p className="text-xs text-amber-600 mt-0.5">
+              비정상 종료로 저장된 녹음 파일입니다. ({(recoveryFile.size / 1024 / 1024).toFixed(1)}MB)
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => { setSelectedFile(recoveryFile); setRecoveryFile(null); clearRecovery('meeting'); }}
+              className="px-3 py-1.5 text-xs font-medium bg-amber-600 text-white rounded-sm hover:bg-amber-700"
+            >
+              사용
+            </button>
+            <button
+              onClick={() => { setRecoveryFile(null); clearRecovery('meeting'); }}
+              className="px-3 py-1.5 text-xs font-medium bg-white border border-amber-300 text-amber-700 rounded-sm hover:bg-amber-100"
+            >
+              삭제
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="p-5 space-y-4">
         {/* 메타 입력 */}

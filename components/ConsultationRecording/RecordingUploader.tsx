@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getApp } from 'firebase/app';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
+import { startRecoverySession, saveChunk, checkRecovery, recoverRecording, clearRecovery } from '../../utils/recordingRecovery';
 
 const ACCEPTED_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/wav', 'audio/webm', 'audio/ogg'];
 const ACCEPTED_EXTENSIONS = ['.mp3', '.m4a', '.wav', '.webm', '.ogg'];
@@ -58,6 +59,10 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
   const [liveTranscript, setLiveTranscript] = useState<string[]>([]);
   const [interimText, setInterimText] = useState('');
   const [speechStatus, setSpeechStatus] = useState<'off' | 'starting' | 'active' | 'error'>('off');
+  const chunkIndexRef = useRef(0);
+
+  // 녹음 복구
+  const [recoveryFile, setRecoveryFile] = useState<File | null>(null);
 
   // 학생명 자동완성 필터 (이미 선택된 학생 제외)
   const selectedIds = new Set(selectedStudents.map(s => s.id).filter(Boolean));
@@ -106,6 +111,27 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
+  }, []);
+
+  // 녹음 중 탭 닫기/새로고침 방지
+  useEffect(() => {
+    if (!isRecording) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [isRecording]);
+
+  // 이전 녹음 복구 확인
+  useEffect(() => {
+    checkRecovery('consultation').then(meta => {
+      if (meta) {
+        recoverRecording('consultation').then(file => {
+          if (file) setRecoveryFile(file);
+        });
+      }
+    });
   }, []);
 
   // AssemblyAI 실시간 전사 시작
@@ -231,10 +257,19 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       chunksRef.current = [];
+      chunkIndexRef.current = 0;
       const recorder = new MediaRecorder(stream);
 
+      // IndexedDB 복구 세션 시작
+      await startRecoverySession('consultation', 'audio/webm');
+
       recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+          // IndexedDB에 비동기 저장 (실패해도 녹음 계속)
+          saveChunk('consultation', chunkIndexRef.current, e.data);
+          chunkIndexRef.current++;
+        }
       };
 
       recorder.onstop = () => {
@@ -244,9 +279,12 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
         });
         setSelectedFile(file);
         stream.getTracks().forEach(t => t.stop());
+        // 정상 종료 시 복구 데이터 삭제
+        clearRecovery('consultation');
       };
 
-      recorder.start();
+      // 1초마다 청크 생성 (IndexedDB 저장 간격)
+      recorder.start(1000);
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
       setRecordSeconds(0);
@@ -353,6 +391,39 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
           직접 녹음하거나 파일을 업로드하면 자동으로 음성인식 → AI 분석 → 보고서 생성이 진행됩니다.
         </p>
       </div>
+
+      {/* 녹음 복구 배너 */}
+      {recoveryFile && (
+        <div className="mx-5 mt-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-sm flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-amber-800">이전 녹음이 복구되었습니다</p>
+            <p className="text-xs text-amber-600 mt-0.5">
+              비정상 종료로 저장된 녹음 파일입니다. ({(recoveryFile.size / 1024 / 1024).toFixed(1)}MB)
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => {
+                setSelectedFile(recoveryFile);
+                setRecoveryFile(null);
+                clearRecovery('consultation');
+              }}
+              className="px-3 py-1.5 text-xs font-medium bg-amber-600 text-white rounded-sm hover:bg-amber-700"
+            >
+              사용
+            </button>
+            <button
+              onClick={() => {
+                setRecoveryFile(null);
+                clearRecovery('consultation');
+              }}
+              className="px-3 py-1.5 text-xs font-medium bg-white border border-amber-300 text-amber-700 rounded-sm hover:bg-amber-100"
+            >
+              삭제
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="p-5 space-y-4">
         {/* 메타데이터 입력 */}
