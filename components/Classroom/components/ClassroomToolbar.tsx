@@ -1,18 +1,12 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Settings } from 'lucide-react';
 import { SUBJECT_LABELS } from '../../../utils/styleUtils';
 import { SubjectType } from '../../../types';
 import { CLASSROOM_COLORS } from '../constants';
-import { RoomData, RoomCategory, ROOM_CATEGORIES, detectCategory, detectFloor, addRoom, updateRoom, deactivateRoom, renameRoomInClasses } from '../../../hooks/useRooms';
+import { RoomData, RoomCategory, RoomCategoryData, detectCategory, detectFloor, addRoom, updateRoom, deactivateRoom, renameRoomInClasses, addCategory, updateCategory, deleteCategory, getCategoryColors, CATEGORY_COLOR_OPTIONS, useRoomCategories } from '../../../hooks/useRooms';
 
 const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 const SUBJECTS: SubjectType[] = ['math', 'english', 'science', 'korean'];
-
-const CATEGORY_COLORS: Record<RoomCategory, { bg: string; text: string; border: string }> = {
-  '본원': { bg: 'bg-blue-500', text: 'text-blue-400', border: 'border-blue-500' },
-  '바른': { bg: 'bg-emerald-500', text: 'text-emerald-400', border: 'border-emerald-500' },
-  '고등': { bg: 'bg-purple-500', text: 'text-purple-400', border: 'border-purple-500' },
-};
 
 interface ClassroomToolbarProps {
   selectedDay: string;
@@ -63,26 +57,59 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
   const settingsRef = useRef<HTMLDivElement>(null);
   const manageRef = useRef<HTMLDivElement>(null);
 
+  // 동적 카테고리
+  const { data: categories = [], invalidate: invalidateCategories } = useRoomCategories();
+
   // 강의실 추가 폼
   const [addingRoom, setAddingRoom] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
-  const [newRoomCategory, setNewRoomCategory] = useState<RoomCategory>('본원');
+  const [newRoomCategory, setNewRoomCategory] = useState<RoomCategory>('');
   const [newRoomCapacity, setNewRoomCapacity] = useState(20);
 
   // 강의실 수정
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
-  const [editCategory, setEditCategory] = useState<RoomCategory>('본원');
+  const [editCategory, setEditCategory] = useState<RoomCategory>('');
   const [editName, setEditName] = useState('');
+
+  // 카테고리 관리
+  const [showCategoryManage, setShowCategoryManage] = useState(false);
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatColor, setNewCatColor] = useState('blue');
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [editCatName, setEditCatName] = useState('');
+  const [editCatColor, setEditCatColor] = useState('');
+
+  // 첫 번째 카테고리를 기본값으로
+  useEffect(() => {
+    if (categories.length > 0 && !newRoomCategory) {
+      setNewRoomCategory(categories[0].name);
+    }
+  }, [categories, newRoomCategory]);
 
   // roomDataList 기반 카테고리 그룹 (드롭다운, 설정, 관리 모두 동일 소스)
   const categoryGroups = useMemo(() => {
-    const groups: Record<RoomCategory, RoomData[]> = { '본원': [], '바른': [], '고등': [] };
+    const catNames = categories.map(c => c.name);
+    const groups: Record<string, RoomData[]> = {};
+    for (const name of catNames) groups[name] = [];
     for (const room of roomDataList) {
       const cat = room.category || detectCategory(room.name);
+      if (!groups[cat]) groups[cat] = []; // 카테고리가 삭제된 경우 대비
       groups[cat].push(room);
     }
-    return ROOM_CATEGORIES.map(cat => ({ label: cat, rooms: groups[cat] }));
-  }, [roomDataList]);
+    const naturalSort = (a: RoomData, b: RoomData) =>
+      a.name.localeCompare(b.name, 'ko', { numeric: true });
+    for (const cat of catNames) {
+      groups[cat]?.sort(naturalSort);
+    }
+    return catNames.map(cat => ({ label: cat, rooms: groups[cat] || [] }));
+  }, [roomDataList, categories]);
+
+  // 카테고리별 색상 조회 헬퍼
+  const getCatColors = (catName: string) => {
+    const catData = categories.find(c => c.name === catName);
+    return getCategoryColors(catData?.color || 'blue');
+  };
 
   const allRoomNames = useMemo(() => roomDataList.map(r => r.name), [roomDataList]);
   const allSelected = !selectedRooms || (allRoomNames.length > 0 && allRoomNames.every(r => selectedRooms.has(r)));
@@ -118,6 +145,7 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
         isActive: true,
       });
       setNewRoomName('');
+      setNewRoomCategory(categories[0]?.name || '본원');
       setAddingRoom(false);
       onRoomsChanged();
     } catch (err) {
@@ -208,7 +236,7 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
             {/* 카테고리별 강의실 */}
             {categoryGroups.filter(g => g.rooms.length > 0).map(group => (
               <div key={group.label} className="mb-2">
-                <div className={`text-xxs font-bold mb-1 ${CATEGORY_COLORS[group.label as RoomCategory]?.text || 'text-accent'}`}>
+                <div className={`text-xxs font-bold mb-1 ${getCatColors(group.label).text}`}>
                   {group.label}
                 </div>
                 <div className="grid grid-cols-3 gap-1">
@@ -248,13 +276,157 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
           <div className="absolute top-full left-0 mt-1 z-50 bg-[#0d1f3c] border border-gray-600 rounded-sm shadow-xl p-3 min-w-[340px] max-h-[70vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-700">
               <span className="text-xs font-bold text-gray-200">강의실 관리</span>
-              <button
-                onClick={() => { setAddingRoom(true); setNewRoomName(''); setNewRoomCategory('본원'); setNewRoomCapacity(20); }}
-                className="flex items-center gap-1 px-2 py-0.5 text-xxs rounded bg-accent text-primary font-bold hover:bg-accent/80"
-              >
-                <Plus size={12} /> 추가
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setShowCategoryManage(!showCategoryManage)}
+                  className={`flex items-center gap-1 px-2 py-0.5 text-xxs rounded border ${
+                    showCategoryManage ? 'bg-gray-600 text-accent border-accent' : 'bg-gray-700 text-gray-400 border-gray-600 hover:bg-gray-600'
+                  }`}
+                  title="카테고리 관리"
+                >
+                  <Settings size={11} /> 카테고리
+                </button>
+                <button
+                  onClick={() => { setAddingRoom(true); setNewRoomName(''); setNewRoomCategory(categories[0]?.name || ''); setNewRoomCapacity(20); }}
+                  className="flex items-center gap-1 px-2 py-0.5 text-xxs rounded bg-accent text-primary font-bold hover:bg-accent/80"
+                >
+                  <Plus size={12} /> 추가
+                </button>
+              </div>
             </div>
+
+            {/* 카테고리 관리 */}
+            {showCategoryManage && (
+              <div className="mb-3 p-2 bg-gray-800/50 rounded border border-gray-600">
+                <div className="text-xxs font-bold text-gray-300 mb-2">카테고리 관리</div>
+                <div className="space-y-1 mb-2">
+                  {categories.map(cat => {
+                    const colors = getCategoryColors(cat.color);
+                    if (editingCatId === cat.id) {
+                      return (
+                        <div key={cat.id} className="p-1.5 bg-gray-900 rounded border border-gray-600 space-y-1.5">
+                          <input
+                            value={editCatName}
+                            onChange={e => setEditCatName(e.target.value)}
+                            className="w-full px-2 py-1 text-xs bg-gray-800 text-gray-200 rounded border border-gray-600"
+                            autoFocus
+                          />
+                          <div className="flex gap-1 flex-wrap">
+                            {CATEGORY_COLOR_OPTIONS.map(c => (
+                              <button
+                                key={c.key}
+                                onClick={() => setEditCatColor(c.key)}
+                                className={`w-5 h-5 rounded-full border-2 ${c.bg} ${
+                                  editCatColor === c.key ? 'border-white scale-110' : 'border-transparent opacity-60 hover:opacity-100'
+                                }`}
+                                title={c.label}
+                              />
+                            ))}
+                          </div>
+                          <div className="flex gap-1 justify-end">
+                            <button onClick={() => setEditingCatId(null)} className="px-2 py-0.5 text-xxs rounded bg-gray-700 text-gray-400 hover:bg-gray-600">취소</button>
+                            <button
+                              onClick={async () => {
+                                const trimmed = editCatName.trim();
+                                if (!trimmed) return;
+                                if (trimmed !== cat.name && categories.some(c => c.name === trimmed)) {
+                                  alert('동일한 이름의 카테고리가 이미 존재합니다.');
+                                  return;
+                                }
+                                await updateCategory(cat.id, { name: trimmed, color: editCatColor });
+                                setEditingCatId(null);
+                                invalidateCategories();
+                                onRoomsChanged();
+                              }}
+                              className="px-2 py-0.5 text-xxs rounded bg-accent text-primary font-bold hover:bg-accent/80"
+                            >저장</button>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return (
+                      <div key={cat.id} className="flex items-center justify-between px-2 py-1 hover:bg-gray-800 rounded group">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-3 h-3 rounded-full ${colors.bg}`} />
+                          <span className="text-xs text-gray-200">{cat.name}</span>
+                          <span className="text-xxs text-gray-500">({categoryGroups.find(g => g.label === cat.name)?.rooms.length || 0})</span>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => { setEditingCatId(cat.id); setEditCatName(cat.name); setEditCatColor(cat.color); }}
+                            className="p-0.5 text-gray-500 hover:text-accent"
+                            title="수정"
+                          >
+                            <Pencil size={11} />
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (categories.length <= 1) { alert('최소 1개의 카테고리가 필요합니다.'); return; }
+                              const roomCount = categoryGroups.find(g => g.label === cat.name)?.rooms.length || 0;
+                              const fallback = categories.find(c => c.name !== cat.name)!.name;
+                              if (!confirm(`"${cat.name}" 카테고리를 삭제하시겠습니까?${roomCount > 0 ? `\n소속 강의실 ${roomCount}개는 "${fallback}"(으)로 이동됩니다.` : ''}`)) return;
+                              await deleteCategory(cat.id, fallback);
+                              invalidateCategories();
+                              onRoomsChanged();
+                            }}
+                            className="p-0.5 text-gray-500 hover:text-red-400"
+                            title="삭제"
+                          >
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* 카테고리 추가 */}
+                {addingCategory ? (
+                  <div className="p-1.5 bg-gray-900 rounded border border-gray-600 space-y-1.5">
+                    <input
+                      value={newCatName}
+                      onChange={e => setNewCatName(e.target.value)}
+                      placeholder="카테고리명"
+                      className="w-full px-2 py-1 text-xs bg-gray-800 text-gray-200 rounded border border-gray-600"
+                      autoFocus
+                    />
+                    <div className="flex gap-1 flex-wrap">
+                      {CATEGORY_COLOR_OPTIONS.map(c => (
+                        <button
+                          key={c.key}
+                          onClick={() => setNewCatColor(c.key)}
+                          className={`w-5 h-5 rounded-full border-2 ${c.bg} ${
+                            newCatColor === c.key ? 'border-white scale-110' : 'border-transparent opacity-60 hover:opacity-100'
+                          }`}
+                          title={c.label}
+                        />
+                      ))}
+                    </div>
+                    <div className="flex gap-1 justify-end">
+                      <button onClick={() => setAddingCategory(false)} className="px-2 py-0.5 text-xxs rounded bg-gray-700 text-gray-400 hover:bg-gray-600">취소</button>
+                      <button
+                        onClick={async () => {
+                          const trimmed = newCatName.trim();
+                          if (!trimmed) return;
+                          if (categories.some(c => c.name === trimmed)) { alert('동일한 이름의 카테고리가 이미 존재합니다.'); return; }
+                          await addCategory({ name: trimmed, color: newCatColor, order: categories.length });
+                          setNewCatName('');
+                          setAddingCategory(false);
+                          invalidateCategories();
+                        }}
+                        className="px-2 py-0.5 text-xxs rounded bg-accent text-primary font-bold hover:bg-accent/80"
+                      >저장</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setAddingCategory(true); setNewCatName(''); setNewCatColor('blue'); }}
+                    className="flex items-center gap-1 px-2 py-0.5 text-xxs rounded bg-gray-700 text-gray-400 hover:bg-gray-600 w-full justify-center"
+                  >
+                    <Plus size={11} /> 카테고리 추가
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* 강의실 추가 폼 */}
             {addingRoom && (
@@ -275,20 +447,23 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
                     placeholder="인원"
                   />
                 </div>
-                <div className="flex gap-1 mb-2">
-                  {ROOM_CATEGORIES.map(cat => (
-                    <button
-                      key={cat}
-                      onClick={() => setNewRoomCategory(cat)}
-                      className={`flex-1 py-1 text-xxs font-bold rounded border ${
-                        newRoomCategory === cat
-                          ? `${CATEGORY_COLORS[cat].bg} text-white ${CATEGORY_COLORS[cat].border}`
-                          : 'bg-gray-700 text-gray-400 border-gray-600'
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
+                <div className="flex gap-1 mb-2 flex-wrap">
+                  {categories.map(cat => {
+                    const colors = getCategoryColors(cat.color);
+                    return (
+                      <button
+                        key={cat.id}
+                        onClick={() => setNewRoomCategory(cat.name)}
+                        className={`flex-1 min-w-[60px] py-1 text-xxs font-bold rounded border ${
+                          newRoomCategory === cat.name
+                            ? `${colors.bg} text-white ${colors.border}`
+                            : 'bg-gray-700 text-gray-400 border-gray-600'
+                        }`}
+                      >
+                        {cat.name}
+                      </button>
+                    );
+                  })}
                 </div>
                 <div className="flex gap-1 justify-end">
                   <button onClick={() => setAddingRoom(false)} className="px-2 py-0.5 text-xxs rounded bg-gray-700 text-gray-400 hover:bg-gray-600">
@@ -304,8 +479,8 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
             {/* 카테고리별 강의실 목록 */}
             {categoryGroups.map(group => (
               <div key={group.label} className="mb-3">
-                <div className={`text-xxs font-bold mb-1.5 flex items-center gap-1.5 ${CATEGORY_COLORS[group.label as RoomCategory]?.text || 'text-accent'}`}>
-                  <div className={`w-2 h-2 rounded-full ${CATEGORY_COLORS[group.label as RoomCategory]?.bg || 'bg-gray-500'}`} />
+                <div className={`text-xxs font-bold mb-1.5 flex items-center gap-1.5 ${getCatColors(group.label).text}`}>
+                  <div className={`w-2 h-2 rounded-full ${getCatColors(group.label).bg}`} />
                   {group.label}
                   <span className="text-gray-500 font-normal">({group.rooms.length})</span>
                 </div>
@@ -323,20 +498,23 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
                               className="w-full px-2 py-1 text-xs bg-gray-900 text-gray-200 rounded border border-gray-600"
                               autoFocus
                             />
-                            <div className="flex gap-0.5">
-                              {ROOM_CATEGORIES.map(cat => (
-                                <button
-                                  key={cat}
-                                  onClick={() => setEditCategory(cat)}
-                                  className={`flex-1 py-0.5 text-[9px] font-bold rounded ${
-                                    editCategory === cat
-                                      ? `${CATEGORY_COLORS[cat].bg} text-white`
-                                      : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-                                  }`}
-                                >
-                                  {cat}
-                                </button>
-                              ))}
+                            <div className="flex gap-0.5 flex-wrap">
+                              {categories.map(cat => {
+                                const colors = getCategoryColors(cat.color);
+                                return (
+                                  <button
+                                    key={cat.id}
+                                    onClick={() => setEditCategory(cat.name)}
+                                    className={`flex-1 min-w-[40px] py-0.5 text-[9px] font-bold rounded ${
+                                      editCategory === cat.name
+                                        ? `${colors.bg} text-white`
+                                        : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                                    }`}
+                                  >
+                                    {cat.name}
+                                  </button>
+                                );
+                              })}
                             </div>
                             <div className="flex gap-1 justify-end">
                               <button onClick={() => setEditingRoomId(null)} className="px-2 py-0.5 text-xxs rounded bg-gray-700 text-gray-400 hover:bg-gray-600">
@@ -428,7 +606,7 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
             </div>
             {categoryGroups.filter(g => g.rooms.length > 0).map(group => (
               <div key={group.label} className="mb-2">
-                <div className={`text-xxs font-bold mb-1 ${CATEGORY_COLORS[group.label as RoomCategory]?.text || 'text-accent'}`}>
+                <div className={`text-xxs font-bold mb-1 ${getCatColors(group.label).text}`}>
                   {group.label}
                 </div>
                 <div className="grid grid-cols-3 gap-1">
