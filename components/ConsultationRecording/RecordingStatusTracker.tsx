@@ -48,11 +48,12 @@ export function RecordingStatusTracker({ report }: RecordingStatusTrackerProps) 
   const [elapsed, setElapsed] = React.useState('');
   React.useEffect(() => {
     if (!isInProgress) return;
-    const update = () => setElapsed(formatElapsed(report.createdAt));
+    const startTime = report.updatedAt || report.createdAt;
+    const update = () => setElapsed(formatElapsed(startTime));
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [report.status, report.createdAt, isInProgress]);
+  }, [report.status, report.createdAt, report.updatedAt, isInProgress]);
 
   // statusMessage에서 퍼센트 추출
   const percent = report.statusMessage ? extractPercent(report.statusMessage) : null;
