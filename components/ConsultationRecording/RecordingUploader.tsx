@@ -321,8 +321,7 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
         });
         setSelectedFile(file);
         stream.getTracks().forEach(t => t.stop());
-        // 정상 종료 시 복구 데이터 삭제
-        clearRecovery('consultation');
+        // 복구 데이터는 분석 시작 시 삭제 (정지 후 나가도 복구 가능)
       };
 
       // 1초마다 청크 생성 (IndexedDB 저장 간격)
@@ -432,6 +431,8 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
         consultationDate,
         studentContext,
       });
+      // 분석 시작 성공 → 복구 데이터 삭제
+      clearRecovery('consultation');
       onUploadStart(result.reportId);
     } catch (err: any) {
       setError(getKoreanErrorMessage(err, '업로드 중 오류가 발생했습니다.'));
