@@ -1,43 +1,37 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
 import { SUBJECT_LABELS } from '../../../utils/styleUtils';
 import { SubjectType } from '../../../types';
 import { CLASSROOM_COLORS } from '../constants';
+import { RoomData, RoomCategory, ROOM_CATEGORIES, detectCategory, detectFloor, addRoom, updateRoom, deactivateRoom } from '../../../hooks/useRooms';
 
 const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 const SUBJECTS: SubjectType[] = ['math', 'english', 'science', 'korean'];
+
+const CATEGORY_COLORS: Record<RoomCategory, { bg: string; text: string; border: string }> = {
+  '본원': { bg: 'bg-blue-500', text: 'text-blue-400', border: 'border-blue-500' },
+  '바른': { bg: 'bg-emerald-500', text: 'text-emerald-400', border: 'border-emerald-500' },
+  '고등': { bg: 'bg-purple-500', text: 'text-purple-400', border: 'border-purple-500' },
+};
 
 interface RoomGroup {
   label: string;
   rooms: string[];
 }
 
-function groupRooms(rooms: string[]): RoomGroup[] {
-  const groups: Record<string, string[]> = {
-    '2층': [],
-    '3층': [],
-    '6층': [],
-    '프리미엄관': [],
-    '기타': [],
-  };
+function groupRoomsByCategory(rooms: string[], roomDataList: RoomData[]): RoomGroup[] {
+  const roomMap = new Map(roomDataList.map(r => [r.name, r]));
+  const groups: Record<RoomCategory, string[]> = { '본원': [], '바른': [], '고등': [] };
 
   for (const room of rooms) {
-    if (/^2\d{2}/.test(room) || room.includes('SKY')) groups['2층'].push(room);
-    else if (/^3\d{2}/.test(room)) groups['3층'].push(room);
-    else if (/^6\d{2}/.test(room)) groups['6층'].push(room);
-    else if (room.includes('프리미엄') || room.includes('LAB')) groups['프리미엄관'].push(room);
-    else groups['기타'].push(room);
+    const data = roomMap.get(room);
+    const category = data?.category || detectCategory(room);
+    groups[category].push(room);
   }
 
-  // SKY 강의실을 2층 그룹 맨 앞으로
-  groups['2층'].sort((a, b) => {
-    const aIsSky = a.includes('SKY') ? 0 : 1;
-    const bIsSky = b.includes('SKY') ? 0 : 1;
-    return aIsSky - bIsSky || a.localeCompare(b, 'ko');
-  });
-
-  return Object.entries(groups)
-    .filter(([, rooms]) => rooms.length > 0)
-    .map(([label, rooms]) => ({ label, rooms }));
+  return ROOM_CATEGORIES
+    .filter(cat => groups[cat].length > 0)
+    .map(cat => ({ label: cat, rooms: groups[cat] }));
 }
 
 interface ClassroomToolbarProps {
@@ -48,6 +42,8 @@ interface ClassroomToolbarProps {
   onSelectAllRooms: () => void;
   onDeselectAllRooms: () => void;
   rooms: string[];
+  roomDataList: RoomData[];
+  onRoomsChanged: () => void;
   ignoredRooms: Set<string>;
   onIgnoredRoomToggle: (room: string) => void;
   timeRange: { start: number; end: number };
@@ -70,6 +66,8 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
   onSelectAllRooms,
   onDeselectAllRooms,
   rooms,
+  roomDataList,
+  onRoomsChanged,
   ignoredRooms,
   onIgnoredRoomToggle,
   timeRange,
@@ -81,12 +79,33 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
   const allSelected = !selectedRooms || (rooms.length > 0 && rooms.every(r => selectedRooms.has(r)));
   const [showRoomDropdown, setShowRoomDropdown] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showRoomManage, setShowRoomManage] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
+  const manageRef = useRef<HTMLDivElement>(null);
 
-  const roomGroups = groupRooms(rooms);
+  // 강의실 추가 폼
+  const [addingRoom, setAddingRoom] = useState(false);
+  const [newRoomName, setNewRoomName] = useState('');
+  const [newRoomCategory, setNewRoomCategory] = useState<RoomCategory>('본원');
+  const [newRoomCapacity, setNewRoomCapacity] = useState(20);
 
-  // 선택된 강의실 수 표시
+  // 강의실 수정
+  const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
+  const [editCategory, setEditCategory] = useState<RoomCategory>('본원');
+
+  const roomGroups = useMemo(() => groupRoomsByCategory(rooms, roomDataList), [rooms, roomDataList]);
+
+  // 관리용 카테고리 그룹
+  const manageGroups = useMemo(() => {
+    const groups: Record<RoomCategory, RoomData[]> = { '본원': [], '바른': [], '고등': [] };
+    for (const room of roomDataList) {
+      const cat = room.category || detectCategory(room.name);
+      groups[cat].push(room);
+    }
+    return ROOM_CATEGORIES.map(cat => ({ label: cat, rooms: groups[cat] })).filter(g => g.rooms.length > 0 || true);
+  }, [roomDataList]);
+
   const selectedCount = selectedRooms ? selectedRooms.size : rooms.length;
 
   useEffect(() => {
@@ -97,10 +116,54 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
       if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
         setShowSettings(false);
       }
+      if (manageRef.current && !manageRef.current.contains(e.target as Node)) {
+        setShowRoomManage(false);
+      }
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
+
+  const handleAddRoom = async () => {
+    if (!newRoomName.trim()) return;
+    try {
+      await addRoom({
+        name: newRoomName.trim(),
+        floor: detectFloor(newRoomName.trim()),
+        capacity: newRoomCapacity,
+        preferredSubjects: [],
+        building: newRoomCategory === '바른' ? '바른학습관' : newRoomCategory === '고등' ? '고등' : '본원',
+        category: newRoomCategory,
+        order: roomDataList.length + 1,
+        isActive: true,
+      });
+      setNewRoomName('');
+      setAddingRoom(false);
+      onRoomsChanged();
+    } catch (err) {
+      console.error('강의실 추가 실패:', err);
+    }
+  };
+
+  const handleUpdateCategory = async (roomId: string, category: RoomCategory) => {
+    try {
+      await updateRoom(roomId, { category });
+      setEditingRoomId(null);
+      onRoomsChanged();
+    } catch (err) {
+      console.error('카테고리 변경 실패:', err);
+    }
+  };
+
+  const handleDeactivate = async (roomId: string, roomName: string) => {
+    if (!confirm(`"${roomName}" 강의실을 비활성화하시겠습니까?`)) return;
+    try {
+      await deactivateRoom(roomId);
+      onRoomsChanged();
+    } catch (err) {
+      console.error('강의실 비활성화 실패:', err);
+    }
+  };
 
   return (
     <div className="flex items-center gap-2 px-3 py-2 bg-primary border-b border-gray-700">
@@ -148,10 +211,12 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
               </button>
             </div>
 
-            {/* 그룹별 강의실 */}
+            {/* 카테고리별 강의실 */}
             {roomGroups.map(group => (
               <div key={group.label} className="mb-2">
-                <div className="text-xxs font-bold text-accent mb-1">{group.label}</div>
+                <div className={`text-xxs font-bold mb-1 ${CATEGORY_COLORS[group.label as RoomCategory]?.text || 'text-accent'}`}>
+                  {group.label}
+                </div>
                 <div className="grid grid-cols-3 gap-1">
                   {group.rooms.map(room => {
                     const isSelected = !selectedRooms || selectedRooms.has(room);
@@ -170,6 +235,139 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
                     );
                   })}
                 </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 강의실 관리 */}
+      <div className="relative" ref={manageRef}>
+        <button
+          onClick={() => setShowRoomManage(!showRoomManage)}
+          className="px-2 py-1 text-xs rounded bg-gray-700 text-gray-400 hover:bg-gray-600 border border-gray-600"
+        >
+          강의실 관리
+        </button>
+
+        {showRoomManage && (
+          <div className="absolute top-full left-0 mt-1 z-50 bg-[#0d1f3c] border border-gray-600 rounded-sm shadow-xl p-3 min-w-[340px] max-h-[70vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-700">
+              <span className="text-xs font-bold text-gray-200">강의실 관리</span>
+              <button
+                onClick={() => { setAddingRoom(true); setNewRoomName(''); setNewRoomCategory('본원'); setNewRoomCapacity(20); }}
+                className="flex items-center gap-1 px-2 py-0.5 text-xxs rounded bg-accent text-primary font-bold hover:bg-accent/80"
+              >
+                <Plus size={12} /> 추가
+              </button>
+            </div>
+
+            {/* 강의실 추가 폼 */}
+            {addingRoom && (
+              <div className="mb-3 p-2 bg-gray-800 rounded border border-gray-600">
+                <div className="flex gap-2 mb-2">
+                  <input
+                    value={newRoomName}
+                    onChange={e => setNewRoomName(e.target.value)}
+                    placeholder="강의실명"
+                    className="flex-1 px-2 py-1 text-xs bg-gray-900 text-gray-200 rounded border border-gray-600"
+                    autoFocus
+                  />
+                  <input
+                    type="number"
+                    value={newRoomCapacity}
+                    onChange={e => setNewRoomCapacity(Number(e.target.value))}
+                    className="w-16 px-2 py-1 text-xs bg-gray-900 text-gray-200 rounded border border-gray-600"
+                    placeholder="인원"
+                  />
+                </div>
+                <div className="flex gap-1 mb-2">
+                  {ROOM_CATEGORIES.map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setNewRoomCategory(cat)}
+                      className={`flex-1 py-1 text-xxs font-bold rounded border ${
+                        newRoomCategory === cat
+                          ? `${CATEGORY_COLORS[cat].bg} text-white ${CATEGORY_COLORS[cat].border}`
+                          : 'bg-gray-700 text-gray-400 border-gray-600'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-1 justify-end">
+                  <button onClick={() => setAddingRoom(false)} className="px-2 py-0.5 text-xxs rounded bg-gray-700 text-gray-400 hover:bg-gray-600">
+                    취소
+                  </button>
+                  <button onClick={handleAddRoom} className="px-2 py-0.5 text-xxs rounded bg-accent text-primary font-bold hover:bg-accent/80">
+                    저장
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 카테고리별 강의실 목록 */}
+            {manageGroups.map(group => (
+              <div key={group.label} className="mb-3">
+                <div className={`text-xxs font-bold mb-1.5 flex items-center gap-1.5 ${CATEGORY_COLORS[group.label as RoomCategory]?.text || 'text-accent'}`}>
+                  <div className={`w-2 h-2 rounded-full ${CATEGORY_COLORS[group.label as RoomCategory]?.bg || 'bg-gray-500'}`} />
+                  {group.label}
+                  <span className="text-gray-500 font-normal">({group.rooms.length})</span>
+                </div>
+                {group.rooms.length === 0 ? (
+                  <div className="text-xxs text-gray-600 pl-3">강의실 없음</div>
+                ) : (
+                  <div className="space-y-0.5">
+                    {group.rooms.map(room => (
+                      <div key={room.id} className="flex items-center justify-between px-2 py-1 hover:bg-gray-800 rounded group">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-200">{room.name}</span>
+                          <span className="text-xxs text-gray-500">{room.capacity}명</span>
+                        </div>
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {editingRoomId === room.id ? (
+                            <div className="flex gap-0.5">
+                              {ROOM_CATEGORIES.map(cat => (
+                                <button
+                                  key={cat}
+                                  onClick={() => handleUpdateCategory(room.id, cat)}
+                                  className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${
+                                    editCategory === cat
+                                      ? `${CATEGORY_COLORS[cat].bg} text-white`
+                                      : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
+                                  }`}
+                                >
+                                  {cat}
+                                </button>
+                              ))}
+                              <button onClick={() => setEditingRoomId(null)} className="px-1 text-gray-500 hover:text-gray-300">
+                                <X size={10} />
+                              </button>
+                            </div>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => { setEditingRoomId(room.id); setEditCategory(room.category || detectCategory(room.name)); }}
+                                className="p-0.5 text-gray-500 hover:text-accent"
+                                title="카테고리 변경"
+                              >
+                                <Pencil size={11} />
+                              </button>
+                              <button
+                                onClick={() => handleDeactivate(room.id, room.name)}
+                                className="p-0.5 text-gray-500 hover:text-red-400"
+                                title="비활성화"
+                              >
+                                <Trash2 size={11} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -223,7 +421,9 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
             </div>
             {roomGroups.map(group => (
               <div key={group.label} className="mb-2">
-                <div className="text-xxs font-bold text-accent mb-1">{group.label}</div>
+                <div className={`text-xxs font-bold mb-1 ${CATEGORY_COLORS[group.label as RoomCategory]?.text || 'text-accent'}`}>
+                  {group.label}
+                </div>
                 <div className="grid grid-cols-3 gap-1">
                   {group.rooms.map(room => {
                     const isIgnored = ignoredRooms.has(room);

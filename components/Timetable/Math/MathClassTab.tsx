@@ -145,16 +145,14 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                 // 강의실 필터
                 if (roomFilter !== 'all') {
                     const room = c.mainRoom || '';
+                    const isBarun = room.startsWith('바른') || room.startsWith('프리미엄') || room.toLowerCase().includes('lab');
+                    const isGodeung = room.includes('고등');
                     if (roomFilter === 'main') {
-                        // 본원: "본원" 또는 "LAB"로 시작
-                        if (!room.startsWith('본원') && !room.startsWith('LAB')) {
-                            return false;
-                        }
+                        if (isBarun || isGodeung) return false;
                     } else if (roomFilter === 'barun') {
-                        // 바른: "프리미엄" 또는 "바른"으로 시작
-                        if (!room.startsWith('프리미엄') && !room.startsWith('바른')) {
-                            return false;
-                        }
+                        if (!isBarun) return false;
+                    } else if (roomFilter === 'godeung') {
+                        if (!isGodeung) return false;
                     }
                 }
 

@@ -3,6 +3,10 @@ import { collection, getDocs, doc, setDoc, deleteDoc, writeBatch, updateDoc, que
 import { db } from '../firebaseConfig';
 import { SubjectType } from '../types';
 
+// ─── 강의실 카테고리 ───
+export type RoomCategory = '본원' | '바른' | '고등';
+export const ROOM_CATEGORIES: RoomCategory[] = ['본원', '바른', '고등'];
+
 // ─── 강의실 타입 ───
 export interface RoomData {
   id: string;           // Firestore document ID
@@ -11,6 +15,7 @@ export interface RoomData {
   capacity: number;     // 수용 인원
   preferredSubjects: SubjectType[];
   building: string;     // 건물 (본원, 프리미엄관, 바른학습관 등)
+  category: RoomCategory; // 카테고리 (본원, 바른, 고등)
   order: number;        // 정렬 순서
   isActive: boolean;    // 활성 여부
 }
@@ -28,10 +33,14 @@ export const useRooms = () => {
     queryKey: ['rooms'],
     queryFn: async () => {
       const snapshot = await getDocs(collection(db, COL_ROOMS));
-      const rooms: RoomData[] = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      } as RoomData));
+      const rooms: RoomData[] = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          category: data.category || detectCategory(data.name || doc.id),
+        } as RoomData;
+      });
       return rooms
         .filter(r => r.isActive !== false)
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
@@ -45,6 +54,13 @@ export const useRooms = () => {
 
   return { ...queryResult, invalidate };
 };
+
+// ─── 카테고리 판별 함수 (이름 기반 자동 분류) ───
+export function detectCategory(roomName: string): RoomCategory {
+  const lower = roomName.toLowerCase();
+  if (lower.includes('바른') || lower.includes('프리미엄') || lower.includes('lab')) return '바른';
+  return '본원';
+}
 
 // ─── 건물 판별 함수 ───
 export function detectBuilding(roomName: string): string {
@@ -89,28 +105,28 @@ export function addBuildingPrefix(roomName: string): string {
 export async function initializeRoomsCollection(): Promise<number> {
   const DEFAULT_ROOMS: Omit<RoomData, 'id'>[] = [
     // 본원 2층
-    { name: '본원SKY', floor: '2층', capacity: 25, preferredSubjects: ['math', 'science'] as SubjectType[], building: '본원', order: 1, isActive: true },
-    { name: '본원201', floor: '2층', capacity: 20, preferredSubjects: ['math', 'science'] as SubjectType[], building: '본원', order: 2, isActive: true },
-    { name: '본원202', floor: '2층', capacity: 20, preferredSubjects: ['math', 'science'] as SubjectType[], building: '본원', order: 3, isActive: true },
-    { name: '본원203', floor: '2층', capacity: 20, preferredSubjects: ['math', 'science'] as SubjectType[], building: '본원', order: 4, isActive: true },
-    { name: '본원204', floor: '2층', capacity: 20, preferredSubjects: ['math', 'science'] as SubjectType[], building: '본원', order: 5, isActive: true },
-    { name: '본원205', floor: '2층', capacity: 15, preferredSubjects: ['math', 'science'] as SubjectType[], building: '본원', order: 6, isActive: true },
-    { name: '본원206', floor: '2층', capacity: 15, preferredSubjects: ['math', 'science'] as SubjectType[], building: '본원', order: 7, isActive: true },
+    { name: '본원SKY', floor: '2층', capacity: 25, preferredSubjects: ['math', 'science'] as SubjectType[], building: '본원', category: '본원', order: 1, isActive: true },
+    { name: '본원201', floor: '2층', capacity: 20, preferredSubjects: ['math', 'science'] as SubjectType[], building: '본원', category: '본원', order: 2, isActive: true },
+    { name: '본원202', floor: '2층', capacity: 20, preferredSubjects: ['math', 'science'] as SubjectType[], building: '본원', category: '본원', order: 3, isActive: true },
+    { name: '본원203', floor: '2층', capacity: 20, preferredSubjects: ['math', 'science'] as SubjectType[], building: '본원', category: '본원', order: 4, isActive: true },
+    { name: '본원204', floor: '2층', capacity: 20, preferredSubjects: ['math', 'science'] as SubjectType[], building: '본원', category: '본원', order: 5, isActive: true },
+    { name: '본원205', floor: '2층', capacity: 15, preferredSubjects: ['math', 'science'] as SubjectType[], building: '본원', category: '본원', order: 6, isActive: true },
+    { name: '본원206', floor: '2층', capacity: 15, preferredSubjects: ['math', 'science'] as SubjectType[], building: '본원', category: '본원', order: 7, isActive: true },
     // 본원 3층
-    { name: '본원301', floor: '3층', capacity: 20, preferredSubjects: ['english'] as SubjectType[], building: '본원', order: 10, isActive: true },
-    { name: '본원302', floor: '3층', capacity: 20, preferredSubjects: ['english'] as SubjectType[], building: '본원', order: 11, isActive: true },
-    { name: '본원303', floor: '3층', capacity: 15, preferredSubjects: ['english'] as SubjectType[], building: '본원', order: 12, isActive: true },
-    { name: '본원304', floor: '3층', capacity: 15, preferredSubjects: ['english'] as SubjectType[], building: '본원', order: 13, isActive: true },
-    { name: '본원305', floor: '3층', capacity: 15, preferredSubjects: ['english'] as SubjectType[], building: '본원', order: 14, isActive: true },
-    { name: '본원306', floor: '3층', capacity: 15, preferredSubjects: ['english'] as SubjectType[], building: '본원', order: 15, isActive: true },
+    { name: '본원301', floor: '3층', capacity: 20, preferredSubjects: ['english'] as SubjectType[], building: '본원', category: '본원', order: 10, isActive: true },
+    { name: '본원302', floor: '3층', capacity: 20, preferredSubjects: ['english'] as SubjectType[], building: '본원', category: '본원', order: 11, isActive: true },
+    { name: '본원303', floor: '3층', capacity: 15, preferredSubjects: ['english'] as SubjectType[], building: '본원', category: '본원', order: 12, isActive: true },
+    { name: '본원304', floor: '3층', capacity: 15, preferredSubjects: ['english'] as SubjectType[], building: '본원', category: '본원', order: 13, isActive: true },
+    { name: '본원305', floor: '3층', capacity: 15, preferredSubjects: ['english'] as SubjectType[], building: '본원', category: '본원', order: 14, isActive: true },
+    { name: '본원306', floor: '3층', capacity: 15, preferredSubjects: ['english'] as SubjectType[], building: '본원', category: '본원', order: 15, isActive: true },
     // 본원 6층
-    { name: '본원601', floor: '6층', capacity: 25, preferredSubjects: ['math', 'korean'] as SubjectType[], building: '본원', order: 20, isActive: true },
-    { name: '본원602', floor: '6층', capacity: 25, preferredSubjects: ['math', 'korean'] as SubjectType[], building: '본원', order: 21, isActive: true },
-    { name: '본원603', floor: '6층', capacity: 20, preferredSubjects: ['math', 'korean'] as SubjectType[], building: '본원', order: 22, isActive: true },
-    // 프리미엄관
-    { name: '프리미엄1', floor: '프리미엄관', capacity: 12, preferredSubjects: ['english'] as SubjectType[], building: '프리미엄관', order: 30, isActive: true },
-    { name: '프리미엄2', floor: '프리미엄관', capacity: 12, preferredSubjects: ['english'] as SubjectType[], building: '프리미엄관', order: 31, isActive: true },
-    { name: 'LAB', floor: '프리미엄관', capacity: 15, preferredSubjects: ['english'] as SubjectType[], building: '프리미엄관', order: 32, isActive: true },
+    { name: '본원601', floor: '6층', capacity: 25, preferredSubjects: ['math', 'korean'] as SubjectType[], building: '본원', category: '본원', order: 20, isActive: true },
+    { name: '본원602', floor: '6층', capacity: 25, preferredSubjects: ['math', 'korean'] as SubjectType[], building: '본원', category: '본원', order: 21, isActive: true },
+    { name: '본원603', floor: '6층', capacity: 20, preferredSubjects: ['math', 'korean'] as SubjectType[], building: '본원', category: '본원', order: 22, isActive: true },
+    // 바른 (프리미엄관)
+    { name: '프리미엄1', floor: '프리미엄관', capacity: 12, preferredSubjects: ['english'] as SubjectType[], building: '프리미엄관', category: '바른', order: 30, isActive: true },
+    { name: '프리미엄2', floor: '프리미엄관', capacity: 12, preferredSubjects: ['english'] as SubjectType[], building: '프리미엄관', category: '바른', order: 31, isActive: true },
+    { name: 'LAB', floor: '프리미엄관', capacity: 15, preferredSubjects: ['english'] as SubjectType[], building: '프리미엄관', category: '바른', order: 32, isActive: true },
   ];
 
   const batch = writeBatch(db);
@@ -124,6 +140,42 @@ export async function initializeRoomsCollection(): Promise<number> {
 
   await batch.commit();
   return count;
+}
+
+// ─── 기존 rooms에 category 필드 마이그레이션 ───
+export async function migrateRoomCategories(): Promise<number> {
+  const snapshot = await getDocs(collection(db, COL_ROOMS));
+  const batch = writeBatch(db);
+  let count = 0;
+
+  for (const docSnap of snapshot.docs) {
+    const data = docSnap.data();
+    if (!data.category) {
+      batch.update(docSnap.ref, { category: detectCategory(data.name || docSnap.id) });
+      count++;
+    }
+  }
+
+  if (count > 0) await batch.commit();
+  return count;
+}
+
+// ─── 강의실 추가 ───
+export async function addRoom(room: Omit<RoomData, 'id'>): Promise<void> {
+  const docRef = doc(db, COL_ROOMS, room.name);
+  await setDoc(docRef, room);
+}
+
+// ─── 강의실 수정 ───
+export async function updateRoom(id: string, updates: Partial<RoomData>): Promise<void> {
+  const docRef = doc(db, COL_ROOMS, id);
+  await updateDoc(docRef, updates);
+}
+
+// ─── 강의실 삭제 (비활성화) ───
+export async function deactivateRoom(id: string): Promise<void> {
+  const docRef = doc(db, COL_ROOMS, id);
+  await updateDoc(docRef, { isActive: false });
 }
 
 // ─── 기존 classes 데이터의 room/slotRooms에 "본원" 접두사 마이그레이션 ───

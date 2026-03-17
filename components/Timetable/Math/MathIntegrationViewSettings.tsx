@@ -178,7 +178,7 @@ const MathIntegrationViewSettings: React.FC<MathIntegrationViewSettingsProps> = 
         });
     };
 
-    const handleRoomFilterChange = (filter: 'all' | 'main' | 'barun') => {
+    const handleRoomFilterChange = (filter: 'all' | 'main' | 'barun' | 'godeung') => {
         onChange({
             ...safeSettings,
             roomFilter: filter
@@ -408,11 +408,23 @@ const MathIntegrationViewSettings: React.FC<MathIntegrationViewSettingsProps> = 
                                 />
                                 <span>바른만 보기 (프리미엄, 바른)</span>
                             </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="roomFilter"
+                                    value="godeung"
+                                    checked={(safeSettings.roomFilter || 'all') === 'godeung'}
+                                    onChange={() => handleRoomFilterChange('godeung')}
+                                    className="rounded-full border-gray-300 text-indigo-900 focus:ring-indigo-900"
+                                />
+                                <span>고등만 보기</span>
+                            </label>
                         </div>
                         <div className="text-xxs text-gray-400 mt-2">
                             • 강의실 이름을 기준으로 필터링됩니다.<br />
-                            • 본원: "본원" 또는 "LAB"로 시작하는 강의실<br />
-                            • 바른: "프리미엄" 또는 "바른"으로 시작하는 강의실
+                            • 본원: 바른/고등에 해당하지 않는 강의실<br />
+                            • 바른: "프리미엄", "바른", "LAB" 강의실<br />
+                            • 고등: "고등" 포함 강의실
                         </div>
                     </section>
                 </div>

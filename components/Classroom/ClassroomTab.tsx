@@ -6,6 +6,7 @@ import ClassDetailModal from '../ClassManagement/ClassDetailModal';
 import { ClassInfo } from '../../hooks/useClasses';
 import { ClassroomBlock } from './types';
 import { SubjectType } from '../../types';
+import { useRooms } from '../../hooks/useRooms';
 
 const IGNORED_ROOMS_KEY = 'classroom_ignored_rooms';
 const TIME_RANGE_KEY = 'classroom_time_range';
@@ -45,6 +46,7 @@ const ClassroomTab: React.FC = () => {
   const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
 
   const { blocksByRoom, rooms, loading, classes } = useClassroomData(selectedDay, selectedRooms, ignoredRooms);
+  const { data: roomDataList = [], invalidate: invalidateRooms } = useRooms();
   const isWeekend = selectedDay === '토' || selectedDay === '일';
 
   const handleRoomToggle = useCallback((room: string) => {
@@ -136,6 +138,8 @@ const ClassroomTab: React.FC = () => {
         onSelectAllRooms={handleSelectAll}
         onDeselectAllRooms={handleDeselectAll}
         rooms={rooms}
+        roomDataList={roomDataList}
+        onRoomsChanged={invalidateRooms}
         ignoredRooms={ignoredRooms}
         onIgnoredRoomToggle={handleIgnoredRoomToggle}
         timeRange={timeRange}
