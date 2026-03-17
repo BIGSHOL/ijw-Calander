@@ -1,11 +1,44 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { collection, getDocs, doc, setDoc, deleteDoc, writeBatch, updateDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, getDoc, doc, setDoc, deleteDoc, writeBatch, updateDoc, query, where } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { SubjectType } from '../types';
 
 // ─── 강의실 카테고리 ───
-export type RoomCategory = '본원' | '바른' | '고등';
-export const ROOM_CATEGORIES: RoomCategory[] = ['본원', '바른', '고등'];
+export type RoomCategory = string;
+export const DEFAULT_ROOM_CATEGORIES: RoomCategory[] = ['본원', '바른', '고등'];
+
+// ─── 카테고리 데이터 타입 ───
+export interface RoomCategoryData {
+  id: string;        // Firestore document ID
+  name: string;      // 카테고리 이름
+  color: string;     // 색상 키 (blue, emerald, purple, rose, amber, cyan, etc.)
+  order: number;     // 정렬 순서
+}
+
+const COL_CATEGORIES = 'roomCategories';
+
+// 사용 가능한 색상 팔레트
+export const CATEGORY_COLOR_OPTIONS = [
+  { key: 'blue', bg: 'bg-blue-500', text: 'text-blue-400', border: 'border-blue-500', label: '파랑' },
+  { key: 'emerald', bg: 'bg-emerald-500', text: 'text-emerald-400', border: 'border-emerald-500', label: '초록' },
+  { key: 'purple', bg: 'bg-purple-500', text: 'text-purple-400', border: 'border-purple-500', label: '보라' },
+  { key: 'rose', bg: 'bg-rose-500', text: 'text-rose-400', border: 'border-rose-500', label: '빨강' },
+  { key: 'amber', bg: 'bg-amber-500', text: 'text-amber-400', border: 'border-amber-500', label: '노랑' },
+  { key: 'cyan', bg: 'bg-cyan-500', text: 'text-cyan-400', border: 'border-cyan-500', label: '하늘' },
+  { key: 'pink', bg: 'bg-pink-500', text: 'text-pink-400', border: 'border-pink-500', label: '분홍' },
+  { key: 'orange', bg: 'bg-orange-500', text: 'text-orange-400', border: 'border-orange-500', label: '주황' },
+];
+
+export function getCategoryColors(colorKey: string) {
+  return CATEGORY_COLOR_OPTIONS.find(c => c.key === colorKey) || CATEGORY_COLOR_OPTIONS[0];
+}
+
+// ─── 기본 카테고리 초기 데이터 ───
+const DEFAULT_CATEGORY_DATA: Omit<RoomCategoryData, 'id'>[] = [
+  { name: '본원', color: 'blue', order: 0 },
+  { name: '바른', color: 'emerald', order: 1 },
+  { name: '고등', color: 'purple', order: 2 },
+];
 
 // ─── 강의실 타입 ───
 export interface RoomData {
@@ -54,6 +87,84 @@ export const useRooms = () => {
 
   return { ...queryResult, invalidate };
 };
+
+/**
+ * 강의실 카테고리 목록 조회 Hook
+ * Firestore `roomCategories` 컬렉션에서 카테고리 목록 조회
+ * 컬렉션이 비어있으면 기본 카테고리를 자동 생성
+ */
+export const useRoomCategories = () => {
+  const queryClient = useQueryClient();
+
+  const queryResult = useQuery<RoomCategoryData[]>({
+    queryKey: ['roomCategories'],
+    queryFn: async () => {
+      const snapshot = await getDocs(collection(db, COL_CATEGORIES));
+      if (snapshot.empty) {
+        // 기본 카테고리 자동 생성
+        for (const cat of DEFAULT_CATEGORY_DATA) {
+          await setDoc(doc(db, COL_CATEGORIES, cat.name), cat);
+        }
+        return DEFAULT_CATEGORY_DATA.map(c => ({ id: c.name, ...c }));
+      }
+      return snapshot.docs
+        .map(d => ({ id: d.id, ...d.data() } as RoomCategoryData))
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['roomCategories'] });
+  };
+
+  return { ...queryResult, invalidate };
+};
+
+// ─── 카테고리 CRUD ───
+export async function addCategory(cat: Omit<RoomCategoryData, 'id'>): Promise<void> {
+  await setDoc(doc(db, COL_CATEGORIES, cat.name), cat);
+}
+
+export async function updateCategory(id: string, updates: Partial<RoomCategoryData>): Promise<void> {
+  // 이름이 변경되면 새 문서 생성 후 기존 삭제 + rooms의 category 필드 일괄 업데이트
+  if (updates.name && updates.name !== id) {
+    const oldDoc = await getDocs(query(collection(db, COL_CATEGORIES), where('name', '==', id)));
+    const oldData = oldDoc.docs[0]?.data() || {};
+    await setDoc(doc(db, COL_CATEGORIES, updates.name), { ...oldData, ...updates });
+    await deleteDoc(doc(db, COL_CATEGORIES, id));
+    // rooms 컬렉션에서 해당 카테고리명 일괄 변경
+    const roomsSnapshot = await getDocs(collection(db, COL_ROOMS));
+    const batch = writeBatch(db);
+    let count = 0;
+    for (const docSnap of roomsSnapshot.docs) {
+      if (docSnap.data().category === id) {
+        batch.update(docSnap.ref, { category: updates.name });
+        count++;
+        if (count >= 490) { await batch.commit(); count = 0; }
+      }
+    }
+    if (count > 0) await batch.commit();
+  } else {
+    await updateDoc(doc(db, COL_CATEGORIES, id), updates);
+  }
+}
+
+export async function deleteCategory(id: string, fallbackCategory: string): Promise<void> {
+  // 해당 카테고리의 강의실들을 fallback 카테고리로 이동
+  const roomsSnapshot = await getDocs(collection(db, COL_ROOMS));
+  const batch = writeBatch(db);
+  let count = 0;
+  for (const docSnap of roomsSnapshot.docs) {
+    if (docSnap.data().category === id) {
+      batch.update(docSnap.ref, { category: fallbackCategory });
+      count++;
+      if (count >= 490) { await batch.commit(); count = 0; }
+    }
+  }
+  if (count > 0) await batch.commit();
+  await deleteDoc(doc(db, COL_CATEGORIES, id));
+}
 
 // ─── 카테고리 판별 함수 (이름 기반 자동 분류) ───
 export function detectCategory(roomName: string): RoomCategory {
@@ -168,8 +279,18 @@ export async function addRoom(room: Omit<RoomData, 'id'>): Promise<void> {
 
 // ─── 강의실 수정 ───
 export async function updateRoom(id: string, updates: Partial<RoomData>): Promise<void> {
-  const docRef = doc(db, COL_ROOMS, id);
-  await updateDoc(docRef, updates);
+  if (updates.name && updates.name !== id) {
+    // 이름이 변경되면 새 문서 생성 후 기존 삭제 (doc ID가 name이므로)
+    const oldRef = doc(db, COL_ROOMS, id);
+    const oldSnap = await getDoc(oldRef);
+    const oldData = oldSnap.exists() ? oldSnap.data() : {};
+    const newData = { ...oldData, ...updates };
+    await setDoc(doc(db, COL_ROOMS, updates.name), newData);
+    await deleteDoc(oldRef);
+  } else {
+    const docRef = doc(db, COL_ROOMS, id);
+    await updateDoc(docRef, updates);
+  }
 }
 
 // ─── 강의실 삭제 (비활성화) ───
@@ -227,7 +348,50 @@ export async function renameRoomInClasses(oldName: string, newName: string): Pro
   }
 
   if (batchCount > 0) await batch.commit();
-  console.log(`[강의실] "${oldName}" → "${newName}" 반 ${count}개 업데이트`);
+
+  // staff 컬렉션의 defaultRoom 업데이트
+  const staffSnapshot = await getDocs(collection(db, 'staff'));
+  const staffBatch = writeBatch(db);
+  let staffCount = 0;
+  for (const docSnap of staffSnapshot.docs) {
+    if (docSnap.data().defaultRoom === oldName) {
+      staffBatch.update(docSnap.ref, { defaultRoom: newName });
+      staffCount++;
+    }
+  }
+  if (staffCount > 0) await staffBatch.commit();
+
+  // settings/roomSettings의 labRooms 업데이트
+  try {
+    const settingsDoc = await getDoc(doc(db, 'settings', 'roomSettings'));
+    if (settingsDoc.exists()) {
+      const data = settingsDoc.data();
+      if (Array.isArray(data.labRooms) && data.labRooms.includes(oldName)) {
+        const newLabRooms = data.labRooms.map((r: string) => r === oldName ? newName : r);
+        await updateDoc(doc(db, 'settings', 'roomSettings'), { labRooms: newLabRooms });
+      }
+    }
+  } catch (e) { /* settings 없으면 무시 */ }
+
+  // localStorage의 ignoredRooms/english_room_order 업데이트
+  try {
+    const ignored = localStorage.getItem('classroom_ignored_rooms');
+    if (ignored) {
+      const arr: string[] = JSON.parse(ignored);
+      if (arr.includes(oldName)) {
+        localStorage.setItem('classroom_ignored_rooms', JSON.stringify(arr.map(r => r === oldName ? newName : r)));
+      }
+    }
+    const order = localStorage.getItem('english_room_order');
+    if (order) {
+      const arr: string[] = JSON.parse(order);
+      if (arr.includes(oldName)) {
+        localStorage.setItem('english_room_order', JSON.stringify(arr.map(r => r === oldName ? newName : r)));
+      }
+    }
+  } catch (e) { /* localStorage 에러 무시 */ }
+
+  console.log(`[강의실] "${oldName}" → "${newName}" 반 ${count}개, 강사 ${staffCount}개 업데이트`);
   return count;
 }
 
