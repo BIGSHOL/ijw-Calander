@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, Suspense } from 'react';
-import { Plus, Search, GraduationCap, Upload, LayoutDashboard, List, ChevronDown, X, Loader2, Filter, SlidersHorizontal } from 'lucide-react';
+import { Plus, Search, GraduationCap, Upload, LayoutDashboard, List, ChevronDown, X, Loader2, Filter, SlidersHorizontal, Mic, History } from 'lucide-react';
 import { usePaginatedConsultations, StudentConsultationFilters } from '../../hooks/useStudentConsultations';
 import { ConsultationCategory, CATEGORY_CONFIG } from '../../types';
 import ConsultationList from './ConsultationList';
@@ -15,6 +15,21 @@ import { TabButton } from '../Common/TabButton';
 import { GridDropdown, GridDropdownOption } from '../Common/GridDropdown';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import { UserProfile } from '../../types';
+import { useConsultationReportStatus } from '../../hooks/useConsultationRecording';
+import { usePermissions } from '../../hooks/usePermissions';
+
+// Lazy load 녹음분석 컴포넌트
+const RecordingUploader = React.lazy(() => import('../ConsultationRecording/RecordingUploader').then(m => ({ default: m.RecordingUploader })));
+const RecordingStatusTracker = React.lazy(() => import('../ConsultationRecording/RecordingStatusTracker').then(m => ({ default: m.RecordingStatusTracker })));
+const ReportViewer = React.lazy(() => import('../ConsultationRecording/ReportViewer').then(m => ({ default: m.ReportViewer })));
+const ReportHistoryList = React.lazy(() => import('../ConsultationRecording/ReportHistoryList').then(m => ({ default: m.ReportHistoryList })));
+
+// 녹음분석 로딩 fallback
+const RecordingLoadingFallback = () => (
+    <div className="flex-1 flex items-center justify-center p-8">
+        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+    </div>
+);
 
 /**
  * 상담 관리 메인 탭
@@ -22,7 +37,7 @@ import { UserProfile } from '../../types';
  * - 필터링 및 검색 기능
  * - 브랜드 컬러: 곤색(#081429), 노란색(#fdb813)
  */
-type ViewMode = 'list' | 'dashboard';
+type ViewMode = 'list' | 'dashboard' | 'recording' | 'report-history';
 
 interface ConsultationManagementTabProps {
   currentUser?: UserProfile | null;
@@ -31,10 +46,10 @@ interface ConsultationManagementTabProps {
 const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ currentUser }) => {
     const [viewMode, setViewMode] = useState<ViewMode>(() => {
         const saved = storage.getString(STORAGE_KEYS.CONSULTATION_VIEW_MODE);
-        if (saved) return saved as ViewMode;
+        if (saved && ['list', 'dashboard', 'recording', 'report-history'].includes(saved)) return saved as ViewMode;
         // Migration from old key
         const old = localStorage.getItem('consultation_viewMode');
-        if (old) {
+        if (old && ['list', 'dashboard'].includes(old)) {
             storage.setString(STORAGE_KEYS.CONSULTATION_VIEW_MODE, old);
             localStorage.removeItem('consultation_viewMode');
             return old as ViewMode;
@@ -45,6 +60,20 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
     const [showAddModal, setShowAddModal] = useState(false);
     const [showMigrationModal, setShowMigrationModal] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+
+    // 권한 체크
+    const { hasPermission } = usePermissions(currentUser);
+    const canEditReport = hasPermission('recording.edit');
+
+    // 녹음분석 상태
+    const [activeReportId, setActiveReportId] = useState<string | null>(null);
+    const { report } = useConsultationReportStatus(activeReportId);
+    const isInProgress = report && report.status !== 'completed' && report.status !== 'error' && report.status !== 'failed';
+
+    const handleSelectFromHistory = (reportId: string) => {
+        setActiveReportId(reportId);
+        handleViewModeChange('recording');
+    };
 
     // 페이지네이션 상태
     const [currentPage, setCurrentPage] = useState(1);
@@ -288,8 +317,27 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                         >
                             목록
                         </TabButton>
+                        <TabButton
+                            active={viewMode === 'recording'}
+                            onClick={() => handleViewModeChange('recording')}
+                            icon={<Mic size={12} />}
+                            theme="light"
+                        >
+                            녹음분석
+                        </TabButton>
+                        <TabButton
+                            active={viewMode === 'report-history'}
+                            onClick={() => handleViewModeChange('report-history')}
+                            icon={<History size={12} />}
+                            theme="light"
+                        >
+                            분석내역
+                        </TabButton>
                     </div>
 
+                    {/* 날짜 범위 버튼 - 통계/목록 모드만 */}
+                    {(viewMode === 'dashboard' || viewMode === 'list') && (
+                    <>
                     <div className="w-px h-4 bg-gray-300"></div>
 
                     {/* 날짜 범위 버튼 */}
@@ -488,6 +536,8 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                             </div>
                         </>
                     )}
+                    </>
+                    )}
                 </div>
 
                 {/* Center: Title */}
@@ -495,7 +545,8 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                     학생 상담
                 </h1>
 
-                {/* Right: Count + Search + Actions */}
+                {/* Right: Count + Search + Actions (통계/목록 모드만) */}
+                {(viewMode === 'dashboard' || viewMode === 'list') && (
                 <div className="flex items-center gap-2 shrink-0">
                     {/* 결과 카운트 */}
                     {viewMode === 'list' && (
@@ -543,26 +594,28 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                         <span>상담 등록</span>
                     </button>
                 </div>
+                )}
             </TabSubNavigation>
 
             {/* 메인 콘텐츠 영역 */}
-            <div className="flex-1 overflow-auto bg-gray-50 p-6">
+            <div className="flex-1 overflow-auto bg-gray-50">
                 {viewMode === 'dashboard' ? (
                     /* 대시보드 뷰 - 공통 날짜 필터 전달 */
+                    <div className="p-6">
                     <ConsultationDashboard
                         dateRange={filters.dateRange}
                         onDateRangeChange={(range) => {
                             setFilters(prev => ({ ...prev, dateRange: range }));
-                            // dateRange가 없으면 'all', 있으면 적절한 프리셋 설정
                             if (!range) {
                                 setActiveDatePreset('all');
                             }
                         }}
                         currentUser={currentUser}
                     />
-                ) : (
+                    </div>
+                ) : viewMode === 'list' ? (
                     /* 목록 뷰 */
-                    <>
+                    <div className="p-6">
                         {/* 에러 상태 */}
                         {error && (
                             <div className="bg-red-50 border border-red-300 rounded-sm p-4 mb-6">
@@ -583,7 +636,6 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                             onRefresh={refetch}
                             students={students}
                             staff={staff}
-                            // 서버 측 페이지네이션 props
                             totalCount={totalCount}
                             currentPage={currentPage}
                             totalPages={totalPages}
@@ -593,8 +645,73 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                             onPageChange={setCurrentPage}
                             onPageSizeChange={handlePageSizeChange}
                         />
-                    </>
-                )}
+                    </div>
+                ) : viewMode === 'recording' ? (
+                    /* 녹음분석 뷰 */
+                    <Suspense fallback={<RecordingLoadingFallback />}>
+                        <div className="p-4">
+                            <div className={`mx-auto ${report?.status === 'completed' ? 'max-w-7xl grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-5' : 'max-w-3xl space-y-4'}`}>
+                                {/* 왼쪽: 업로드 / 상태 */}
+                                <div className="space-y-4">
+                                    {!isInProgress && (
+                                        <RecordingUploader
+                                            onUploadStart={(reportId) => setActiveReportId(reportId)}
+                                        />
+                                    )}
+                                    {isInProgress && report && (
+                                        <RecordingStatusTracker report={report} />
+                                    )}
+                                    {report?.status === 'failed' && (
+                                        <div className="bg-amber-50 border border-amber-200 rounded-sm p-5 text-center">
+                                            <p className="text-amber-800 font-medium">분석할 수 없는 녹음입니다</p>
+                                            <p className="text-amber-600 text-sm mt-1">{report.statusMessage}</p>
+                                            <button
+                                                onClick={() => setActiveReportId(null)}
+                                                className="mt-4 px-4 py-2 bg-amber-100 text-amber-800 rounded-sm text-sm hover:bg-amber-200"
+                                            >
+                                                다른 파일로 다시 시도
+                                            </button>
+                                        </div>
+                                    )}
+                                    {report?.status === 'error' && (
+                                        <div className="bg-red-50 border border-red-200 rounded-sm p-5 text-center">
+                                            <p className="text-red-800 font-medium">분석 중 오류가 발생했습니다</p>
+                                            <p className="text-red-600 text-sm mt-1">{report.errorMessage}</p>
+                                            <button
+                                                onClick={() => setActiveReportId(null)}
+                                                className="mt-4 px-4 py-2 bg-red-100 text-red-800 rounded-sm text-sm hover:bg-red-200"
+                                            >
+                                                다시 시도
+                                            </button>
+                                        </div>
+                                    )}
+                                    {report?.status === 'completed' && (
+                                        <div className="text-center">
+                                            <button
+                                                onClick={() => setActiveReportId(null)}
+                                                className="px-4 py-2 text-sm text-gray-600 bg-white border rounded-sm hover:bg-gray-50"
+                                            >
+                                                새 분석 시작
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                                {report?.status === 'completed' && (
+                                    <div className="overflow-auto">
+                                        <ReportViewer report={report} canEdit={canEditReport} currentUser={currentUser} />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </Suspense>
+                ) : viewMode === 'report-history' ? (
+                    /* 분석내역 뷰 */
+                    <Suspense fallback={<RecordingLoadingFallback />}>
+                        <div className="p-4 max-w-3xl mx-auto">
+                            <ReportHistoryList onSelectReport={handleSelectFromHistory} userProfile={currentUser || null} />
+                        </div>
+                    </Suspense>
+                ) : null}
             </div>
 
             {/* 새 상담 추가 모달 */}

@@ -344,6 +344,7 @@ const PERMISSION_GROUPS: { id: string; label: string; icon: string; categories: 
       {
         id: 'recording', label: '상담녹음분석', icon: '🎙️',
         permissions: [
+          { id: 'recording.edit' as PermissionId, label: '수정' },
           { id: 'recording.delete' as PermissionId, label: '삭제' },
         ]
       },

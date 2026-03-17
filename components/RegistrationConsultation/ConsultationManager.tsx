@@ -936,6 +936,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                 canDelete={canManage || (canEdit && editingRecord?.authorId === userProfile?.uid)}
                 canConvert={canConvert}
                 draftId={activeDraftId}
+                userProfile={userProfile}
             />
 
             {/* Migration Modal */}

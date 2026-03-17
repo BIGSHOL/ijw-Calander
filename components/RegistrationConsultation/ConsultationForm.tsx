@@ -13,6 +13,11 @@ import type { ConsultationReportSection, SpeakerUtterance } from '../../types/co
 import { HighlightedReportText } from '../../utils/HighlightedReportText';
 import { formatReportContent } from '../../utils/formatReportContent';
 import { ConversationFlowTree } from '../ConsultationRecording/ConversationFlowTree';
+import { useUpdateConsultationReportContent } from '../../hooks/useConsultationRecording';
+import { usePermissions } from '../../hooks/usePermissions';
+import type { UserProfile } from '../../types';
+import { format } from 'date-fns';
+import { Check } from 'lucide-react';
 
 interface ConsultationFormProps {
     isOpen: boolean;
@@ -24,6 +29,7 @@ interface ConsultationFormProps {
     canDelete?: boolean;
     canConvert?: boolean;
     draftId?: string | null;
+    userProfile?: UserProfile | null;
 }
 
 // Grade options - exclude legacy
@@ -69,7 +75,7 @@ const REPORT_SECTIONS = [
 ];
 
 /** AI 분석 탭 콘텐츠 - ReportViewer와 동일한 스타일 */
-function AnalysisTabContent({ reportData, studentName, consultationDate, counselorName }: {
+function AnalysisTabContent({ reportData, studentName, consultationDate, counselorName, reportId, canEdit, currentUser, lastEditedAt, lastEditedByName }: {
     reportData: {
         report?: ConsultationReportSection;
         speakerRoles?: Record<string, string>;
@@ -83,9 +89,45 @@ function AnalysisTabContent({ reportData, studentName, consultationDate, counsel
     studentName: string;
     consultationDate: string;
     counselorName: string;
+    reportId?: string | null;
+    canEdit?: boolean;
+    currentUser?: UserProfile | null;
+    lastEditedAt?: number;
+    lastEditedByName?: string;
 }) {
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
     const [showTranscript, setShowTranscript] = useState(false);
+    const updateContentMutation = useUpdateConsultationReportContent('registration_recording_reports');
+
+    // 편집 상태
+    const [editingSection, setEditingSection] = useState<string | null>(null);
+    const [editingText, setEditingText] = useState('');
+
+    const startEditing = (sectionKey: string, currentContent: string) => {
+        setEditingSection(sectionKey);
+        setEditingText(currentContent);
+    };
+
+    const cancelEditing = () => {
+        setEditingSection(null);
+        setEditingText('');
+    };
+
+    const saveEditing = () => {
+        if (!editingSection || !currentUser || !reportId) return;
+        updateContentMutation.mutate({
+            reportId,
+            sectionKey: editingSection,
+            content: editingText,
+            editedBy: currentUser.uid || '',
+            editedByName: currentUser.displayName || currentUser.name || '',
+        }, {
+            onSuccess: () => {
+                setEditingSection(null);
+                setEditingText('');
+            },
+        });
+    };
 
     const toggleSection = (key: string) => {
         setExpandedSections(prev => {
@@ -190,6 +232,11 @@ function AnalysisTabContent({ reportData, studentName, consultationDate, counsel
                             </span>
                         )}
                     </div>
+                    {lastEditedAt && (
+                        <div className="text-[9px] text-green-500 mt-0.5">
+                            수정: {format(new Date(lastEditedAt), 'yyyy-MM-dd HH:mm')} (KST) · {lastEditedByName || '알 수 없음'}
+                        </div>
+                    )}
                 </div>
                 <button
                     type="button"
@@ -216,6 +263,7 @@ function AnalysisTabContent({ reportData, studentName, consultationDate, counsel
                     const content = reportData.report?.[section.key];
                     if (!content) return null;
                     const isExpanded = expandedSections.has(section.key);
+                    const isEditing = editingSection === section.key;
                     return (
                         <div key={section.key} className="border rounded-sm">
                             <button
@@ -226,11 +274,43 @@ function AnalysisTabContent({ reportData, studentName, consultationDate, counsel
                                 <h3 className="text-xs font-semibold text-gray-800">
                                     {section.emoji} {section.label}
                                 </h3>
-                                <ChevronDown size={14} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                <div className="flex items-center gap-1">
+                                    {canEdit && reportId && isExpanded && !isEditing && (
+                                        <span
+                                            role="button"
+                                            onClick={(e) => { e.stopPropagation(); startEditing(section.key, content as string); }}
+                                            className="p-0.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                            title="수정"
+                                        >
+                                            <Pencil size={11} />
+                                        </span>
+                                    )}
+                                    <ChevronDown size={14} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                </div>
                             </button>
                             {isExpanded && (
                                 <div className="px-3 py-2 border-t">
-                                    <p className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed"><HighlightedReportText content={content} /></p>
+                                    {isEditing ? (
+                                        <div className="space-y-2">
+                                            <textarea
+                                                value={editingText}
+                                                onChange={(e) => setEditingText(e.target.value)}
+                                                className="w-full min-h-[100px] p-2 text-xs text-gray-700 border rounded-sm focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none resize-y"
+                                                autoFocus
+                                            />
+                                            <div className="flex items-center gap-2 justify-end">
+                                                <button type="button" onClick={cancelEditing} className="px-2 py-1 text-[10px] text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-sm flex items-center gap-1">
+                                                    <X size={10} /> 취소
+                                                </button>
+                                                <button type="button" onClick={saveEditing} disabled={updateContentMutation.isPending || editingText === content} className="px-2 py-1 text-[10px] text-white bg-blue-600 hover:bg-blue-700 rounded-sm flex items-center gap-1 disabled:opacity-50">
+                                                    {updateContentMutation.isPending ? <Loader2 size={10} className="animate-spin" /> : <Check size={10} />}
+                                                    저장
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed"><HighlightedReportText content={content} /></p>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -315,8 +395,13 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
     onConvertToStudent,
     canDelete = false,
     canConvert = false,
-    draftId
+    draftId,
+    userProfile
 }) => {
+    // 권한 체크
+    const { hasPermission } = usePermissions(userProfile);
+    const canEditReport = hasPermission('recording.edit');
+
     // 탭 상태 관리
     type TabType = 'basic' | 'math' | 'english' | 'korean' | 'science' | 'etc' | 'analysis';
     const [activeTab, setActiveTab] = useState<TabType>('basic');
@@ -1691,7 +1776,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
 
                     {/* AI 분석 탭 */}
                     {activeTab === 'analysis' && (
-                        <AnalysisTabContent reportData={recording.reportData} studentName={formData.studentName} consultationDate={formData.consultationDate || ''} counselorName={formData.counselor} />
+                        <AnalysisTabContent reportData={recording.reportData} studentName={formData.studentName} consultationDate={formData.consultationDate || ''} counselorName={formData.counselor} reportId={recording.reportId} canEdit={canEditReport} currentUser={userProfile} />
                     )}
 
                     {/* 버튼 */}

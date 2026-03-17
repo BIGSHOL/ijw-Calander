@@ -100,7 +100,7 @@ export type PermissionId =
   // Marketing (마케팅)
   | 'marketing.view' | 'marketing.edit'
   // Consultation Recording (상담녹음분석)
-  | 'recording.delete'
+  | 'recording.edit' | 'recording.delete'
   // AI Chatbot (AI 챗봇)
   | 'chatbot.access'
   // Tuition Calculator (수강료 계산)

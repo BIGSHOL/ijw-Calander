@@ -394,35 +394,6 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
       },
     ],
   },
-  'consultation-recording': {
-    title: '상담녹음분석',
-    overview: '학부모 상담 녹음 파일을 업로드하면 AI가 자동으로 음성인식 및 분석 보고서를 생성합니다.',
-    sections: [
-      {
-        title: '새 분석',
-        items: [
-          '학생 이름, 상담 날짜, 상담자 입력',
-          '녹음 파일 드래그앤드롭 업로드 (MP3, M4A, WAV)',
-          '업로드 → 음성인식 → AI 분석 → 보고서 자동 생성',
-        ],
-      },
-      {
-        title: '분석 보고서',
-        items: [
-          '상담 요약, 학부모 요청사항, 학생 특이사항, 합의사항, 후속 조치',
-          'TXT 파일 다운로드 지원',
-          '원본 음성인식 텍스트 확인 가능',
-        ],
-      },
-      {
-        title: '분석 내역',
-        items: [
-          '과거 분석 결과 목록 조회',
-          '학생명, 날짜로 검색',
-        ],
-      },
-    ],
-  },
   grades: {
     title: '성적 관리',
     overview: '시험 성적과 레벨테스트 결과를 통합 관리합니다.',

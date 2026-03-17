@@ -302,6 +302,36 @@ export function useReanalyzeReport() {
 }
 
 /**
+ * 상담 녹음 분석 보고서 섹션 내용 수정
+ * - 섹션 단위로 수정 + 수정자/수정시간 기록
+ * - collectionName: 기본 consultation_reports, 등록상담은 registration_recording_reports
+ */
+export function useUpdateConsultationReportContent(collectionName: string = COLLECTION) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ reportId, sectionKey, content, editedBy, editedByName }: {
+      reportId: string;
+      sectionKey: string;
+      content: string;
+      editedBy: string;
+      editedByName: string;
+    }) => {
+      await updateDoc(doc(db, collectionName, reportId), {
+        [`report.${sectionKey}`]: content,
+        lastEditedBy: editedBy,
+        lastEditedByName: editedByName,
+        lastEditedAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['consultation_reports'] });
+    },
+  });
+}
+
+/**
  * 상담 녹음 리포트 삭제 (Firestore 문서 + Storage 파일)
  */
 export function useDeleteConsultationReport() {

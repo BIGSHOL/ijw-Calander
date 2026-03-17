@@ -68,6 +68,11 @@ export interface ConsultationReport {
   report?: ConsultationReportSection;
   speakerRoles?: Record<string, string>;  // { "A": "선생님", "B": "학부모" }
 
+  // 수정 이력
+  lastEditedBy?: string;       // 수정자 uid
+  lastEditedByName?: string;   // 수정자 이름
+  lastEditedAt?: number;       // 수정 시각 (timestamp ms)
+
   // 시스템 필드
   createdAt: number;
   updatedAt: number;

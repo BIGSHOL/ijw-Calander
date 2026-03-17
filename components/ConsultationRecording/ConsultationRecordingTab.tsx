@@ -5,6 +5,7 @@ import { RecordingStatusTracker } from './RecordingStatusTracker';
 import { ReportViewer } from './ReportViewer';
 import { ReportHistoryList } from './ReportHistoryList';
 import { useConsultationReportStatus } from '../../hooks/useConsultationRecording';
+import { usePermissions } from '../../hooks/usePermissions';
 import type { UserProfile } from '../../types';
 
 type ViewMode = 'upload' | 'history';
@@ -17,6 +18,8 @@ export default function ConsultationRecordingTab({ userProfile }: ConsultationRe
   const [viewMode, setViewMode] = useState<ViewMode>('upload');
   const [activeReportId, setActiveReportId] = useState<string | null>(null);
   const { report } = useConsultationReportStatus(activeReportId);
+  const { hasPermission } = usePermissions(userProfile);
+  const canEditReport = hasPermission('recording.edit');
 
   const handleSelectFromHistory = (reportId: string) => {
     setActiveReportId(reportId);
@@ -119,7 +122,7 @@ export default function ConsultationRecordingTab({ userProfile }: ConsultationRe
             {/* 오른쪽: 완료된 리포트 */}
             {report?.status === 'completed' && (
               <div className="overflow-auto">
-                <ReportViewer report={report} />
+                <ReportViewer report={report} canEdit={canEditReport} currentUser={userProfile} />
               </div>
             )}
           </div>

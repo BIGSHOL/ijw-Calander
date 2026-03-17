@@ -40,7 +40,6 @@ const MarketingTab = React.lazy(() => import('../Marketing').then(m => ({ defaul
 const TimetableDistributionTab = React.lazy(() => import('../TimetableDistribution').then(m => ({ default: m.TimetableDistributionTab })));
 
 const LogsTab = React.lazy(() => import('../Logs/LogsTab'));
-const ConsultationRecordingTab = React.lazy(() => import('../ConsultationRecording').then(m => ({ default: m.ConsultationRecordingTab })));
 const TuitionCalculatorTab = React.lazy(() => import('../TuitionCalculator').then(m => ({ default: m.TuitionCalculatorTab })));
 const MeetingMinutesTab = React.lazy(() => import('../MeetingMinutes').then(m => ({ default: m.MeetingMinutesTab })));
 
@@ -476,12 +475,6 @@ export const TabContent: React.FC<TabContentProps> = ({
         <Suspense fallback={<TabLoadingFallback />}>
           <div className="w-full flex-1 overflow-hidden">
             <TimetableDistributionTab />
-          </div>
-        </Suspense>
-      ) : appMode === 'consultation-recording' ? (
-        <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-hidden">
-            <ConsultationRecordingTab userProfile={effectiveProfile} />
           </div>
         </Suspense>
       ) : appMode === 'tuition-calculator' ? (

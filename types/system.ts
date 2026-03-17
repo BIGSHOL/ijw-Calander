@@ -36,7 +36,6 @@ export type AppTab =
   // Phase 5: 확장
   | 'shuttle' | 'marketing' | 'timetable-distribution'
   // Phase 6: AI 분석
-  | 'consultation-recording'
   | 'meeting-minutes'
   // 지원
   | 'logs';
@@ -90,7 +89,6 @@ export const TAB_META: Record<AppTab, Omit<TabMetadata, 'id'>> = {
   shuttle: { label: '셔틀 관리', icon: '🚌' },
   'timetable-distribution': { label: '시간표 배포', icon: '📤' },
   // AI 분석
-  'consultation-recording': { label: '상담녹음분석', icon: '🎙️' },
   'meeting-minutes': { label: '회의록', icon: '📝' },
   // 지원
   help: { label: '도움말', icon: '❓' },
@@ -133,7 +131,7 @@ export const TAB_GROUPS: TabGroup[] = [
     id: 'student',
     label: '학생',
     icon: '👥',
-    tabs: ['students', 'consultation', 'student-consultations', 'consultation-recording', 'grades', 'withdrawal', 'contracts', 'reports'],
+    tabs: ['students', 'consultation', 'student-consultations', 'grades', 'withdrawal', 'contracts', 'reports'],
     order: 3,
   },
   {
@@ -187,7 +185,7 @@ export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
     'student-consultations', 'staff', 'billing', 'role-management', 'resources', 'withdrawal',
     'homework', 'exams', 'textbooks', 'contracts', 'reports', 'payroll', 'analytics',
     'parent-portal', 'sms-notifications', 'marketing', 'shuttle', 'timetable-distribution', 'help', 'logs',
-    'tuition-calculator', 'consultation-recording', 'meeting-minutes',
+    'tuition-calculator', 'meeting-minutes',
   ],
   admin: [
     'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt',
@@ -195,14 +193,14 @@ export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
     'student-consultations', 'staff', 'billing', 'role-management', 'resources', 'withdrawal',
     'homework', 'exams', 'textbooks', 'contracts', 'reports', 'payroll', 'analytics',
     'parent-portal', 'sms-notifications', 'marketing', 'shuttle', 'timetable-distribution', 'help', 'logs',
-    'tuition-calculator', 'consultation-recording', 'meeting-minutes',
+    'tuition-calculator', 'meeting-minutes',
   ],
   manager: [
     'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'daily-attendance',
     'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment',
     'student-consultations', 'staff', 'billing', 'resources', 'withdrawal',
     'homework', 'exams', 'textbooks', 'contracts', 'reports', 'analytics',
-    'parent-portal', 'sms-notifications', 'shuttle', 'help', 'tuition-calculator', 'consultation-recording', 'meeting-minutes',
+    'parent-portal', 'sms-notifications', 'shuttle', 'help', 'tuition-calculator', 'meeting-minutes',
   ],
   math_lead: [
     'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'daily-attendance',

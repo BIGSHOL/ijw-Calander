@@ -328,6 +328,7 @@ export function useRegistrationRecording() {
     statusMessage,
     extractedData,
     reportData,
+    reportId,
     error,
     reset,
     // 브라우저 녹음
