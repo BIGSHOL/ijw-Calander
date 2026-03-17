@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
+import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import { SUBJECT_LABELS } from '../../../utils/styleUtils';
 import { SubjectType } from '../../../types';
 import { CLASSROOM_COLORS } from '../constants';
@@ -13,26 +13,6 @@ const CATEGORY_COLORS: Record<RoomCategory, { bg: string; text: string; border: 
   '바른': { bg: 'bg-emerald-500', text: 'text-emerald-400', border: 'border-emerald-500' },
   '고등': { bg: 'bg-purple-500', text: 'text-purple-400', border: 'border-purple-500' },
 };
-
-interface RoomGroup {
-  label: string;
-  rooms: string[];
-}
-
-function groupRoomsByCategory(rooms: string[], roomDataList: RoomData[]): RoomGroup[] {
-  const roomMap = new Map(roomDataList.map(r => [r.name, r]));
-  const groups: Record<RoomCategory, string[]> = { '본원': [], '바른': [], '고등': [] };
-
-  for (const room of rooms) {
-    const data = roomMap.get(room);
-    const category = data?.category || detectCategory(room);
-    groups[category].push(room);
-  }
-
-  return ROOM_CATEGORIES
-    .filter(cat => groups[cat].length > 0)
-    .map(cat => ({ label: cat, rooms: groups[cat] }));
-}
 
 interface ClassroomToolbarProps {
   selectedDay: string;
@@ -76,7 +56,6 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
   onSubjectToggle,
 }) => {
   const today = getTodayDay();
-  const allSelected = !selectedRooms || (rooms.length > 0 && rooms.every(r => selectedRooms.has(r)));
   const [showRoomDropdown, setShowRoomDropdown] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showRoomManage, setShowRoomManage] = useState(false);
@@ -94,19 +73,19 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
   const [editCategory, setEditCategory] = useState<RoomCategory>('본원');
 
-  const roomGroups = useMemo(() => groupRoomsByCategory(rooms, roomDataList), [rooms, roomDataList]);
-
-  // 관리용 카테고리 그룹
-  const manageGroups = useMemo(() => {
+  // roomDataList 기반 카테고리 그룹 (드롭다운, 설정, 관리 모두 동일 소스)
+  const categoryGroups = useMemo(() => {
     const groups: Record<RoomCategory, RoomData[]> = { '본원': [], '바른': [], '고등': [] };
     for (const room of roomDataList) {
       const cat = room.category || detectCategory(room.name);
       groups[cat].push(room);
     }
-    return ROOM_CATEGORIES.map(cat => ({ label: cat, rooms: groups[cat] })).filter(g => g.rooms.length > 0 || true);
+    return ROOM_CATEGORIES.map(cat => ({ label: cat, rooms: groups[cat] }));
   }, [roomDataList]);
 
-  const selectedCount = selectedRooms ? selectedRooms.size : rooms.length;
+  const allRoomNames = useMemo(() => roomDataList.map(r => r.name), [roomDataList]);
+  const allSelected = !selectedRooms || (allRoomNames.length > 0 && allRoomNames.every(r => selectedRooms.has(r)));
+  const selectedCount = selectedRooms ? selectedRooms.size : allRoomNames.length;
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -192,7 +171,7 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
           onClick={() => setShowRoomDropdown(!showRoomDropdown)}
           className="px-2.5 py-1 text-xs font-medium rounded bg-gray-700 text-gray-200 hover:bg-gray-600 border border-gray-600"
         >
-          강의실 {selectedCount}/{rooms.length}
+          강의실 {selectedCount}/{allRoomNames.length}
         </button>
 
         {showRoomDropdown && (
@@ -212,25 +191,25 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
             </div>
 
             {/* 카테고리별 강의실 */}
-            {roomGroups.map(group => (
+            {categoryGroups.filter(g => g.rooms.length > 0).map(group => (
               <div key={group.label} className="mb-2">
                 <div className={`text-xxs font-bold mb-1 ${CATEGORY_COLORS[group.label as RoomCategory]?.text || 'text-accent'}`}>
                   {group.label}
                 </div>
                 <div className="grid grid-cols-3 gap-1">
                   {group.rooms.map(room => {
-                    const isSelected = !selectedRooms || selectedRooms.has(room);
+                    const isSelected = !selectedRooms || selectedRooms.has(room.name);
                     return (
                       <button
-                        key={room}
-                        onClick={() => onRoomToggle(room)}
+                        key={room.id}
+                        onClick={() => onRoomToggle(room.name)}
                         className={`px-2 py-1 text-[11px] rounded border transition-colors text-center truncate ${
                           isSelected
                             ? 'bg-gray-200 text-gray-800 border-gray-400 font-medium'
                             : 'bg-gray-800 text-gray-500 border-gray-700 hover:bg-gray-700'
                         }`}
                       >
-                        {room}
+                        {room.name}
                       </button>
                     );
                   })}
@@ -308,7 +287,7 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
             )}
 
             {/* 카테고리별 강의실 목록 */}
-            {manageGroups.map(group => (
+            {categoryGroups.map(group => (
               <div key={group.label} className="mb-3">
                 <div className={`text-xxs font-bold mb-1.5 flex items-center gap-1.5 ${CATEGORY_COLORS[group.label as RoomCategory]?.text || 'text-accent'}`}>
                   <div className={`w-2 h-2 rounded-full ${CATEGORY_COLORS[group.label as RoomCategory]?.bg || 'bg-gray-500'}`} />
@@ -419,25 +398,25 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
             <div className="text-xxs text-gray-400 mb-2">
               충돌 무시 강의실은 경고 없이 수업을 나란히 표시합니다 (3배 가로폭)
             </div>
-            {roomGroups.map(group => (
+            {categoryGroups.filter(g => g.rooms.length > 0).map(group => (
               <div key={group.label} className="mb-2">
                 <div className={`text-xxs font-bold mb-1 ${CATEGORY_COLORS[group.label as RoomCategory]?.text || 'text-accent'}`}>
                   {group.label}
                 </div>
                 <div className="grid grid-cols-3 gap-1">
                   {group.rooms.map(room => {
-                    const isIgnored = ignoredRooms.has(room);
+                    const isIgnored = ignoredRooms.has(room.name);
                     return (
                       <button
-                        key={room}
-                        onClick={() => onIgnoredRoomToggle(room)}
+                        key={room.id}
+                        onClick={() => onIgnoredRoomToggle(room.name)}
                         className={`px-2 py-1 text-[11px] rounded border transition-colors text-center truncate ${
                           isIgnored
                             ? 'bg-orange-200 text-orange-800 border-orange-400 font-medium'
                             : 'bg-gray-800 text-gray-500 border-gray-700 hover:bg-gray-700'
                         }`}
                       >
-                        {room}
+                        {room.name}
                       </button>
                     );
                   })}
