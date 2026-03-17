@@ -58,7 +58,7 @@ export const useRooms = () => {
 // ─── 카테고리 판별 함수 (이름 기반 자동 분류) ───
 export function detectCategory(roomName: string): RoomCategory {
   const lower = roomName.toLowerCase();
-  if (lower.includes('바른') || lower.includes('프리미엄') || lower.includes('lab')) return '바른';
+  if (lower.includes('바른') || lower.includes('프리미엄')) return '바른';
   return '본원';
 }
 
@@ -126,7 +126,7 @@ export async function initializeRoomsCollection(): Promise<number> {
     // 바른 (프리미엄관)
     { name: '프리미엄1', floor: '프리미엄관', capacity: 12, preferredSubjects: ['english'] as SubjectType[], building: '프리미엄관', category: '바른', order: 30, isActive: true },
     { name: '프리미엄2', floor: '프리미엄관', capacity: 12, preferredSubjects: ['english'] as SubjectType[], building: '프리미엄관', category: '바른', order: 31, isActive: true },
-    { name: 'LAB', floor: '프리미엄관', capacity: 15, preferredSubjects: ['english'] as SubjectType[], building: '프리미엄관', category: '바른', order: 32, isActive: true },
+    { name: 'LAB', floor: '프리미엄관', capacity: 15, preferredSubjects: ['english'] as SubjectType[], building: '프리미엄관', category: '본원', order: 32, isActive: true },
   ];
 
   const batch = writeBatch(db);
