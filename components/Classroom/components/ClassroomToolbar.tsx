@@ -72,6 +72,7 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
   // 강의실 수정
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
   const [editCategory, setEditCategory] = useState<RoomCategory>('본원');
+  const [editName, setEditName] = useState('');
 
   // roomDataList 기반 카테고리 그룹 (드롭다운, 설정, 관리 모두 동일 소스)
   const categoryGroups = useMemo(() => {
@@ -124,13 +125,19 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
     }
   };
 
-  const handleUpdateCategory = async (roomId: string, category: RoomCategory) => {
+  const handleSaveEdit = async (roomId: string, originalName: string) => {
+    const trimmed = editName.trim();
+    if (!trimmed) return;
     try {
-      await updateRoom(roomId, { category });
+      const updates: Partial<RoomData> = { category: editCategory };
+      if (trimmed !== originalName) {
+        updates.name = trimmed;
+      }
+      await updateRoom(roomId, updates);
       setEditingRoomId(null);
       onRoomsChanged();
     } catch (err) {
-      console.error('카테고리 변경 실패:', err);
+      console.error('강의실 수정 실패:', err);
     }
   };
 
@@ -299,19 +306,21 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
                 ) : (
                   <div className="space-y-0.5">
                     {group.rooms.map(room => (
-                      <div key={room.id} className="flex items-center justify-between px-2 py-1 hover:bg-gray-800 rounded group">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-gray-200">{room.name}</span>
-                          <span className="text-xxs text-gray-500">{room.capacity}명</span>
-                        </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {editingRoomId === room.id ? (
+                      <div key={room.id}>
+                        {editingRoomId === room.id ? (
+                          <div className="p-1.5 bg-gray-800 rounded border border-gray-600 space-y-1.5">
+                            <input
+                              value={editName}
+                              onChange={e => setEditName(e.target.value)}
+                              className="w-full px-2 py-1 text-xs bg-gray-900 text-gray-200 rounded border border-gray-600"
+                              autoFocus
+                            />
                             <div className="flex gap-0.5">
                               {ROOM_CATEGORIES.map(cat => (
                                 <button
                                   key={cat}
-                                  onClick={() => handleUpdateCategory(room.id, cat)}
-                                  className={`px-1.5 py-0.5 text-[9px] font-bold rounded ${
+                                  onClick={() => setEditCategory(cat)}
+                                  className={`flex-1 py-0.5 text-[9px] font-bold rounded ${
                                     editCategory === cat
                                       ? `${CATEGORY_COLORS[cat].bg} text-white`
                                       : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
@@ -320,16 +329,27 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
                                   {cat}
                                 </button>
                               ))}
-                              <button onClick={() => setEditingRoomId(null)} className="px-1 text-gray-500 hover:text-gray-300">
-                                <X size={10} />
+                            </div>
+                            <div className="flex gap-1 justify-end">
+                              <button onClick={() => setEditingRoomId(null)} className="px-2 py-0.5 text-xxs rounded bg-gray-700 text-gray-400 hover:bg-gray-600">
+                                취소
+                              </button>
+                              <button onClick={() => handleSaveEdit(room.id, room.name)} className="px-2 py-0.5 text-xxs rounded bg-accent text-primary font-bold hover:bg-accent/80">
+                                저장
                               </button>
                             </div>
-                          ) : (
-                            <>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between px-2 py-1 hover:bg-gray-800 rounded group">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-200">{room.name}</span>
+                              <span className="text-xxs text-gray-500">{room.capacity}명</span>
+                            </div>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
-                                onClick={() => { setEditingRoomId(room.id); setEditCategory(room.category || detectCategory(room.name)); }}
+                                onClick={() => { setEditingRoomId(room.id); setEditName(room.name); setEditCategory(room.category || detectCategory(room.name)); }}
                                 className="p-0.5 text-gray-500 hover:text-accent"
-                                title="카테고리 변경"
+                                title="수정"
                               >
                                 <Pencil size={11} />
                               </button>
@@ -340,9 +360,9 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
                               >
                                 <Trash2 size={11} />
                               </button>
-                            </>
-                          )}
-                        </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
