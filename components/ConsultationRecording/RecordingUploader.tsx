@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Upload, Mic, MicOff, Calendar, User, Users, X, Square } from 'lucide-react';
+import { Upload, Mic, MicOff, Calendar, User, Users, X, Square, ArrowDownToLine } from 'lucide-react';
 import { useUploadConsultationRecording } from '../../hooks/useConsultationRecording';
 import { useStudents } from '../../hooks/useStudents';
 import { format } from 'date-fns';
@@ -7,6 +7,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getApp } from 'firebase/app';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
 import { startRecoverySession, saveChunk, checkRecovery, recoverRecording, clearRecovery } from '../../utils/recordingRecovery';
+import { RecordingPickerModal, type SelectedRecording } from './RecordingPickerModal';
 
 const ACCEPTED_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/wav', 'audio/webm', 'audio/ogg'];
 const ACCEPTED_EXTENSIONS = ['.mp3', '.m4a', '.wav', '.webm', '.ogg'];
@@ -34,7 +35,7 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const { uploadAndProcess, uploadProgress, isUploading, isProcessing } = useUploadConsultationRecording();
+  const { uploadAndProcess, processFromPath, uploadProgress, isUploading, isProcessing } = useUploadConsultationRecording();
   const { students } = useStudents();
 
   // 복수 학생 태그
@@ -63,6 +64,47 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
 
   // 녹음 복구
   const [recoveryFile, setRecoveryFile] = useState<File | null>(null);
+
+  // 교차 분석 모달
+  const [showPickerModal, setShowPickerModal] = useState(false);
+
+  const handleImportFromRegistration = async (recording: SelectedRecording) => {
+    if (!consultationDate) {
+      setError('상담 날짜를 선택해주세요.');
+      return;
+    }
+    setError('');
+
+    // 첫 번째 학생의 상세 정보
+    const studentIds = selectedStudents.map(s => s.id).filter(Boolean);
+    const firstStudent = studentIds[0]
+      ? (students || []).find(s => s.id === studentIds[0])
+      : undefined;
+    const studentContext = firstStudent ? {
+      schoolName: firstStudent.school || '',
+      grade: firstStudent.grade || '',
+      parentName: firstStudent.parentName || '',
+      parentRelation: firstStudent.parentRelation || '',
+      parentPhone: firstStudent.parentPhone || '',
+      address: firstStudent.address || '',
+      birthDate: firstStudent.birthDate || '',
+      gender: firstStudent.gender || '',
+    } : undefined;
+
+    try {
+      const result = await processFromPath({
+        storagePath: recording.storagePath,
+        studentName: selectedStudents.map(s => s.name).join(', ') || recording.studentName || '미등록 상담',
+        consultantName: consultantName.trim() || recording.consultantName,
+        consultationDate: consultationDate || recording.consultationDate,
+        fileName: recording.fileName,
+        studentContext,
+      });
+      onUploadStart(result.reportId);
+    } catch (err: any) {
+      setError(getKoreanErrorMessage(err, '불러오기 중 오류가 발생했습니다.'));
+    }
+  };
 
   // 학생명 자동완성 필터 (이미 선택된 학생 제외)
   const selectedIds = new Set(selectedStudents.map(s => s.id).filter(Boolean));
@@ -361,6 +403,24 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
     const studentNames = selectedStudents.map(s => s.name);
     const studentIds = selectedStudents.map(s => s.id).filter(Boolean);
 
+    // 첫 번째 학생의 상세 정보를 studentContext로 구성
+    const firstStudent = studentIds[0]
+      ? (students || []).find(s => s.id === studentIds[0])
+      : undefined;
+    const studentContext = firstStudent ? {
+      schoolName: firstStudent.school || '',
+      grade: firstStudent.grade || '',
+      parentName: firstStudent.parentName || '',
+      parentRelation: firstStudent.parentRelation || '',
+      parentPhone: firstStudent.parentPhone || '',
+      address: firstStudent.address || '',
+      birthDate: firstStudent.birthDate || '',
+      gender: firstStudent.gender || '',
+      siblings: (firstStudent.siblings || []).length > 0
+        ? (students || []).filter(s => firstStudent.siblings?.includes(s.id)).map(s => s.name).join(', ')
+        : '',
+    } : undefined;
+
     try {
       const result = await uploadAndProcess({
         file: selectedFile,
@@ -370,6 +430,7 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
         studentIds,
         consultantName: consultantName.trim(),
         consultationDate,
+        studentContext,
       });
       onUploadStart(result.reportId);
     } catch (err: any) {
@@ -636,6 +697,30 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
             </div>
           </div>
         )}
+
+        {/* 등록상담 녹음 불러오기 */}
+        <div className="flex items-center gap-3 text-xs text-gray-400">
+          <div className="flex-1 border-t" />
+          <span>또는 등록상담 녹음 불러오기</span>
+          <div className="flex-1 border-t" />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setShowPickerModal(true)}
+          disabled={isSubmitting || isRecording}
+          className="w-full py-2.5 rounded-sm text-sm font-medium border-2 border-dashed border-purple-300 text-purple-600 hover:bg-purple-50 hover:border-purple-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+          <ArrowDownToLine size={14} />
+          등록상담 녹음에서 불러와서 상담분석
+        </button>
+
+        <RecordingPickerModal
+          isOpen={showPickerModal}
+          onClose={() => setShowPickerModal(false)}
+          source="registration"
+          onSelect={handleImportFromRegistration}
+        />
 
         {/* 에러 메시지 */}
         {error && (

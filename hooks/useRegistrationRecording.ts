@@ -1,9 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { ref, uploadBytesResumable } from 'firebase/storage';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, getDocs, onSnapshot, orderBy, query, limit } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getApp } from 'firebase/app';
 import { db, storage } from '../firebaseConfig';
+import type { ConsultationReportSection, SpeakerUtterance } from '../types/consultationReport';
 
 const functions = getFunctions(getApp(), 'asia-northeast3');
 const processRegistrationRecording = httpsCallable<
@@ -13,6 +15,7 @@ const processRegistrationRecording = httpsCallable<
     consultationDate: string;
     counselorName: string;
     fileName: string;
+    studentContext?: Record<string, unknown>;
   },
   { reportId: string; status: string; extractedData?: Record<string, unknown> }
 >(functions, 'processRegistrationRecording', { timeout: 600_000 }); // 10분 (120MB+ 파일 대응)
@@ -76,6 +79,18 @@ export function useRegistrationRecording() {
   const [reportId, setReportId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // 분석 보고서 전체 데이터
+  const [reportData, setReportData] = useState<{
+    report?: ConsultationReportSection;
+    speakerRoles?: Record<string, string>;
+    transcription?: string;
+    speakerLabels?: SpeakerUtterance[];
+    durationSeconds?: number;
+    studentName?: string;
+    consultationDate?: string;
+    consultantName?: string;
+  } | null>(null);
+
   // Firestore 실시간 상태 감시
   useEffect(() => {
     if (!reportId) return;
@@ -86,8 +101,20 @@ export function useRegistrationRecording() {
         const data = snapshot.data();
         setStatus(data.status || 'idle');
         setStatusMessage(data.statusMessage || '');
-        if (data.status === 'completed' && data.extractedData) {
-          setExtractedData(data.extractedData as RegistrationExtractedData);
+        if (data.status === 'completed') {
+          if (data.extractedData) {
+            setExtractedData(data.extractedData as RegistrationExtractedData);
+          }
+          setReportData({
+            report: data.report || undefined,
+            speakerRoles: data.speakerRoles || undefined,
+            transcription: data.transcription || undefined,
+            speakerLabels: data.speakerLabels || undefined,
+            durationSeconds: data.durationSeconds || undefined,
+            studentName: data.studentName || undefined,
+            consultationDate: data.consultationDate || undefined,
+            consultantName: data.counselorName || undefined,
+          });
         }
         if (data.status === 'error') {
           setError(data.errorMessage || '처리 중 오류가 발생했습니다.');
@@ -102,8 +129,9 @@ export function useRegistrationRecording() {
     studentName: string;
     consultationDate: string;
     counselorName: string;
+    studentContext?: Record<string, unknown>;
   }) => {
-    const { file, studentName, consultationDate, counselorName } = params;
+    const { file, studentName, consultationDate, counselorName, studentContext } = params;
 
     setStatus('uploading');
     setError(null);
@@ -146,6 +174,7 @@ export function useRegistrationRecording() {
         consultationDate,
         counselorName,
         fileName: file.name,
+        ...(studentContext ? { studentContext } : {}),
       });
 
       setReportId(result.data.reportId);
@@ -243,17 +272,62 @@ export function useRegistrationRecording() {
     setStatusMessage('');
     setExtractedData(null);
     setReportId(null);
+    setReportData(null);
     setError(null);
     setUploadProgress(null);
     setRecordingDuration(0);
   }, []);
 
+  // 기존 storagePath로 분석 (교차 분석용 — 파일 업로드 건너뜀)
+  const processFromPath = useCallback(async (params: {
+    storagePath: string;
+    studentName: string;
+    consultationDate: string;
+    counselorName: string;
+    fileName: string;
+    studentContext?: Record<string, unknown>;
+  }) => {
+    const { storagePath, studentName, consultationDate, counselorName, fileName, studentContext } = params;
+
+    setStatus('transcribing');
+    setStatusMessage('다른 녹음에서 불러오는 중...');
+    setError(null);
+    setExtractedData(null);
+
+    try {
+      const result = await processRegistrationRecording({
+        storagePath,
+        studentName,
+        consultationDate,
+        counselorName,
+        fileName,
+        ...(studentContext ? { studentContext } : {}),
+      });
+
+      setReportId(result.data.reportId);
+
+      if (result.data.extractedData) {
+        setExtractedData(result.data.extractedData as RegistrationExtractedData);
+        setStatus('completed');
+      }
+
+      return result.data;
+    } catch (err: unknown) {
+      setStatus('error');
+      const msg = err instanceof Error ? err.message : '알 수 없는 오류';
+      setError(msg);
+      throw err;
+    }
+  }, []);
+
   return {
     uploadAndProcess,
+    processFromPath,
     uploadProgress,
     status,
     statusMessage,
     extractedData,
+    reportData,
     error,
     reset,
     // 브라우저 녹음
@@ -262,4 +336,33 @@ export function useRegistrationRecording() {
     startRecording,
     stopRecording,
   };
+}
+
+/**
+ * 등록 상담 녹음 보고서 목록 조회 (교차 분석 불러오기 모달용)
+ */
+export function useRegistrationRecordingReports() {
+  return useQuery<Array<{
+    id: string;
+    studentName: string;
+    consultationDate: string;
+    counselorName: string;
+    fileName: string;
+    storagePath: string;
+    status: string;
+    durationSeconds?: number;
+    createdAt: number;
+  }>>({
+    queryKey: ['registration_recording_reports'],
+    queryFn: async () => {
+      const q = query(
+        collection(db, 'registration_recording_reports'),
+        orderBy('createdAt', 'desc'),
+        limit(100)
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as any);
+    },
+    staleTime: 1000 * 60 * 5,
+  });
 }

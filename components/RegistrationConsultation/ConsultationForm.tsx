@@ -4,10 +4,15 @@ import {
     X, ChevronDown, ChevronRight, User, Phone, Calendar, MapPin, School, BookOpen,
     FileText, Globe, Users, Cake, Home, Smile, AlertTriangle, Target, Tag, Bus,
     XCircle, CheckCircle, Banknote, Shield, UserCheck, GraduationCap, MessageSquare, ClipboardList, Droplet, Inbox,
-    Pencil, Eye, FlaskConical, Mic, MicOff, Upload, Loader2, Square
+    Pencil, Eye, FlaskConical, Mic, MicOff, Upload, Loader2, Square, ArrowDownToLine
 } from 'lucide-react';
 import { useRegistrationRecording, RegistrationExtractedData } from '../../hooks/useRegistrationRecording';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
+import { RecordingPickerModal, type SelectedRecording } from '../ConsultationRecording/RecordingPickerModal';
+import type { ConsultationReportSection, SpeakerUtterance } from '../../types/consultationReport';
+import { HighlightedReportText } from '../../utils/HighlightedReportText';
+import { formatReportContent } from '../../utils/formatReportContent';
+import { ConversationFlowTree } from '../ConsultationRecording/ConversationFlowTree';
 
 interface ConsultationFormProps {
     isOpen: boolean;
@@ -46,6 +51,261 @@ const getLocalDate = () => {
     return new Date(now.getTime() - offset).toISOString().slice(0, 10);
 };
 
+// 분석 보고서 섹션 정의
+const REPORT_SECTIONS = [
+    { key: 'consultationType' as const, label: '상담 성격', emoji: '🏷️' },
+    { key: 'summary' as const, label: '상담 요약', emoji: '📋' },
+    { key: 'familyContext' as const, label: '가정 배경/개인 맥락', emoji: '👨‍👩‍👧' },
+    { key: 'parentConcerns' as const, label: '학부모 걱정/불안 사항', emoji: '😟' },
+    { key: 'parentQuestions' as const, label: '학부모 질문사항', emoji: '❓' },
+    { key: 'parentRequests' as const, label: '학부모 요청사항', emoji: '🙋' },
+    { key: 'parentSatisfaction' as const, label: '학부모 만족도/감정 분석', emoji: '💭' },
+    { key: 'studentNotes' as const, label: '학생 관련 특이사항', emoji: '📝' },
+    { key: 'teacherResponse' as const, label: '교사 대응/설명 요약', emoji: '🧑‍🏫' },
+    { key: 'salesPoints' as const, label: '상담사 세일즈 포인트', emoji: '💼' },
+    { key: 'agreements' as const, label: '합의된 사항', emoji: '🤝' },
+    { key: 'actionItems' as const, label: '후속 조치 항목', emoji: '✅' },
+    { key: 'riskFlags' as const, label: '주의 필요 신호', emoji: '🚨' },
+];
+
+/** AI 분석 탭 콘텐츠 - ReportViewer와 동일한 스타일 */
+function AnalysisTabContent({ reportData, studentName, consultationDate, counselorName }: {
+    reportData: {
+        report?: ConsultationReportSection;
+        speakerRoles?: Record<string, string>;
+        transcription?: string;
+        speakerLabels?: SpeakerUtterance[];
+        durationSeconds?: number;
+        studentName?: string;
+        consultationDate?: string;
+        consultantName?: string;
+    } | null;
+    studentName: string;
+    consultationDate: string;
+    counselorName: string;
+}) {
+    const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+    const [showTranscript, setShowTranscript] = useState(false);
+
+    const toggleSection = (key: string) => {
+        setExpandedSections(prev => {
+            const next = new Set(prev);
+            if (next.has(key)) next.delete(key); else next.add(key);
+            return next;
+        });
+    };
+
+    const toggleAllSections = () => {
+        if (!reportData?.report) return;
+        const availableKeys = REPORT_SECTIONS.filter(s => reportData.report?.[s.key]).map(s => s.key);
+        if (expandedSections.size >= availableKeys.length) {
+            setExpandedSections(new Set());
+        } else {
+            setExpandedSections(new Set(availableKeys));
+        }
+    };
+
+    // TXT 다운로드
+    const handleDownload = () => {
+        if (!reportData?.report) return;
+        const name = reportData.studentName || studentName;
+        const date = reportData.consultationDate || consultationDate;
+        const lines: string[] = [
+            '상담 녹음 분석 보고서',
+            '='.repeat(40),
+            `학생: ${name}`,
+            `상담일: ${date}`,
+            `상담자: ${reportData.consultantName || counselorName || '미지정'}`,
+            reportData.durationSeconds ? `녹음 길이: ${Math.floor(reportData.durationSeconds / 60)}분 ${reportData.durationSeconds % 60}초` : '',
+            '',
+        ];
+        for (const section of REPORT_SECTIONS) {
+            const content = reportData.report[section.key];
+            if (content) {
+                lines.push(`[${section.label}]`);
+                lines.push(formatReportContent(content));
+                lines.push('');
+            }
+        }
+        if (reportData.transcription) {
+            lines.push('='.repeat(40));
+            lines.push('[원본 음성인식 텍스트]');
+            lines.push('');
+            if (reportData.speakerLabels && reportData.speakerLabels.length > 0) {
+                if (reportData.speakerRoles && Object.keys(reportData.speakerRoles).length > 0) {
+                    lines.push(`[화자 식별] ${Object.entries(reportData.speakerRoles).map(([k, v]) => `화자 ${k} = ${v}`).join(', ')}`);
+                    lines.push('');
+                }
+                reportData.speakerLabels.forEach(s => {
+                    const role = reportData.speakerRoles?.[s.speaker];
+                    lines.push(`[${role || `화자 ${s.speaker}`}] ${s.text}`);
+                });
+            } else {
+                lines.push(reportData.transcription);
+            }
+        }
+        const blob = new Blob([lines.filter(Boolean).join('\n')], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `상담분석_${name}_${date}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    // 보고서 데이터가 없으면 안내 메시지
+    if (!reportData?.report) {
+        return (
+            <div className="flex flex-col items-center justify-center py-16 text-gray-400">
+                <Mic size={40} className="mb-3 opacity-40" />
+                <p className="text-sm font-medium text-gray-500 mb-1">녹음 파일 분석이 필요합니다</p>
+                <p className="text-xs text-gray-400">상단의 &apos;녹음으로 AI 자동입력&apos; 기능을 이용하여<br />녹음 파일을 업로드하거나 직접 녹음해 주세요.</p>
+            </div>
+        );
+    }
+
+    const durationStr = reportData.durationSeconds
+        ? `${Math.floor(reportData.durationSeconds / 60)}분 ${reportData.durationSeconds % 60}초`
+        : null;
+
+    return (
+        <div className="bg-white rounded-sm border shadow-sm">
+            {/* 헤더 */}
+            <div className="px-4 py-3 border-b bg-green-50 flex items-center justify-between">
+                <div>
+                    <h2 className="text-sm font-semibold text-green-800 flex items-center gap-2">
+                        <FileText size={16} />
+                        분석 완료
+                    </h2>
+                    <div className="flex items-center gap-3 mt-0.5 text-[10px] text-green-600">
+                        <span className="flex items-center gap-1">
+                            <User size={10} /> {reportData.studentName || studentName}
+                        </span>
+                        <span className="flex items-center gap-1">
+                            <Calendar size={10} /> {reportData.consultationDate || consultationDate}
+                        </span>
+                        {durationStr && (
+                            <span className="flex items-center gap-1">
+                                <ClipboardList size={10} /> {durationStr}
+                            </span>
+                        )}
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    onClick={handleDownload}
+                    className="px-2.5 py-1.5 text-xs bg-white border border-green-300 text-green-700 rounded-sm hover:bg-green-50 flex items-center gap-1"
+                >
+                    <Inbox size={12} />
+                    TXT 다운로드
+                </button>
+            </div>
+
+            {/* 보고서 섹션 */}
+            <div className="p-3 space-y-1">
+                <div className="flex justify-end mb-1">
+                    <button
+                        type="button"
+                        onClick={toggleAllSections}
+                        className="text-[10px] text-gray-400 hover:text-accent-600 transition-colors"
+                    >
+                        {expandedSections.size >= REPORT_SECTIONS.filter(s => reportData.report?.[s.key]).length ? '모두 접기' : '모두 펼치기'}
+                    </button>
+                </div>
+                {REPORT_SECTIONS.map(section => {
+                    const content = reportData.report?.[section.key];
+                    if (!content) return null;
+                    const isExpanded = expandedSections.has(section.key);
+                    return (
+                        <div key={section.key} className="border rounded-sm">
+                            <button
+                                type="button"
+                                onClick={() => toggleSection(section.key)}
+                                className="w-full px-3 py-2.5 bg-gray-50 flex items-center justify-between hover:bg-gray-100 transition-colors text-left"
+                            >
+                                <h3 className="text-xs font-semibold text-gray-800">
+                                    {section.emoji} {section.label}
+                                </h3>
+                                <ChevronDown size={14} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                            </button>
+                            {isExpanded && (
+                                <div className="px-3 py-2 border-t">
+                                    <p className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed"><HighlightedReportText content={content} /></p>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+
+                {/* 상담 흐름 수형도 */}
+                {reportData.report?.conversationFlow && reportData.report.conversationFlow.length > 0 && (
+                    <div className="border rounded-sm">
+                        <button
+                            type="button"
+                            onClick={() => toggleSection('_conversationFlow')}
+                            className="w-full px-3 py-2.5 bg-gray-50 flex items-center justify-between hover:bg-gray-100 transition-colors text-left"
+                        >
+                            <h3 className="text-xs font-semibold text-gray-800">
+                                🌳 상담 흐름 수형도
+                            </h3>
+                            <ChevronDown size={14} className={`text-gray-400 transition-transform ${expandedSections.has('_conversationFlow') ? 'rotate-180' : ''}`} />
+                        </button>
+                        {expandedSections.has('_conversationFlow') && (
+                            <div className="px-3 py-2 border-t">
+                                <ConversationFlowTree flow={reportData.report.conversationFlow} />
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* 원본 음성인식 텍스트 */}
+                {reportData.transcription && (
+                    <div className="border rounded-sm">
+                        <button
+                            type="button"
+                            onClick={() => setShowTranscript(!showTranscript)}
+                            className="w-full px-3 py-2.5 bg-gray-50 border-b flex items-center justify-between hover:bg-gray-100 transition-colors text-left"
+                        >
+                            <h3 className="text-xs font-semibold text-gray-600">
+                                🎤 원본 음성인식 텍스트
+                            </h3>
+                            <ChevronDown size={14} className={`text-gray-400 transition-transform ${showTranscript ? 'rotate-180' : ''}`} />
+                        </button>
+                        {showTranscript && (
+                            <div className="px-3 py-2 max-h-60 overflow-auto">
+                                {reportData.speakerLabels && reportData.speakerLabels.length > 0 ? (
+                                    <div className="space-y-1.5">
+                                        {reportData.speakerRoles && Object.keys(reportData.speakerRoles).length > 0 && (
+                                            <div className="flex flex-wrap gap-1.5 mb-2 pb-1.5 border-b">
+                                                {Object.entries(reportData.speakerRoles).map(([key, role]) => (
+                                                    <span key={key} className="px-1.5 py-0.5 text-[10px] rounded-full bg-accent-50 text-accent-700 font-medium">
+                                                        화자 {key} = {role}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {reportData.speakerLabels.map((s, i) => {
+                                            const role = reportData.speakerRoles?.[s.speaker];
+                                            return (
+                                                <div key={i} className="text-xs">
+                                                    <span className="font-medium text-accent-600">[{role || `화자 ${s.speaker}`}]</span>{' '}
+                                                    <span className="text-gray-700">{s.text}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-gray-700 whitespace-pre-wrap">{reportData.transcription}</p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 export const ConsultationForm: React.FC<ConsultationFormProps> = ({
     isOpen,
     onClose,
@@ -58,7 +318,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
     draftId
 }) => {
     // 탭 상태 관리
-    type TabType = 'basic' | 'math' | 'english' | 'korean' | 'science' | 'etc';
+    type TabType = 'basic' | 'math' | 'english' | 'korean' | 'science' | 'etc' | 'analysis';
     const [activeTab, setActiveTab] = useState<TabType>('basic');
 
     // 조회/편집 모드 (initialData가 있으면 기본 조회모드)
@@ -213,6 +473,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
     const [showRecordingPanel, setShowRecordingPanel] = useState(false);
     const [recordingFile, setRecordingFile] = useState<File | null>(null);
     const [isDragOver, setIsDragOver] = useState(false);
+    const [showConsultationPicker, setShowConsultationPicker] = useState(false);
 
     // 오디오 파일 드래그 앤 드롭 핸들러
     const handleRecordingDrop = useCallback((e: React.DragEvent) => {
@@ -237,6 +498,30 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
         e.stopPropagation();
         setIsDragOver(false);
     }, []);
+
+    // 교차 분석: 상담녹음에서 불러오기
+    const handleImportFromConsultation = useCallback(async (selected: SelectedRecording) => {
+        try {
+            const studentContext: Record<string, unknown> = {};
+            if (formData.schoolName) studentContext.schoolName = formData.schoolName;
+            if (formData.grade) studentContext.grade = formData.grade;
+            if (formData.parentName) studentContext.parentName = formData.parentName;
+            if (formData.parentRelation) studentContext.parentRelation = formData.parentRelation;
+            if (formData.parentPhone) studentContext.parentPhone = formData.parentPhone;
+            if (formData.address) studentContext.address = formData.address;
+
+            await recording.processFromPath({
+                storagePath: selected.storagePath,
+                studentName: formData.studentName || selected.studentName || '미입력',
+                consultationDate: formData.consultationDate || selected.consultationDate || '',
+                counselorName: formData.counselor || selected.consultantName || '',
+                fileName: selected.fileName,
+                ...(Object.keys(studentContext).length > 0 ? { studentContext } : {}),
+            });
+        } catch {
+            // error handled by hook
+        }
+    }, [recording, formData]);
 
     const formatDuration = (sec: number) => {
         const m = Math.floor(sec / 60);
@@ -303,16 +588,29 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
 
     const handleStartAnalysis = useCallback(async (file: File) => {
         try {
+            // 폼에 입력된 학생 정보를 studentContext로 구성
+            const studentContext: Record<string, unknown> = {};
+            if (formData.schoolName) studentContext.schoolName = formData.schoolName;
+            if (formData.grade) studentContext.grade = formData.grade;
+            if (formData.parentName) studentContext.parentName = formData.parentName;
+            if (formData.parentRelation) studentContext.parentRelation = formData.parentRelation;
+            if (formData.parentPhone) studentContext.parentPhone = formData.parentPhone;
+            if (formData.address) studentContext.address = formData.address;
+            if (formData.birthDate) studentContext.birthDate = formData.birthDate;
+            if (formData.gender) studentContext.gender = formData.gender;
+            if (formData.siblings) studentContext.siblings = formData.siblings;
+
             await recording.uploadAndProcess({
                 file,
                 studentName: formData.studentName || '미입력',
                 consultationDate: formData.consultationDate || getLocalDate(),
                 counselorName: formData.counselor || '',
+                ...(Object.keys(studentContext).length > 0 ? { studentContext } : {}),
             });
         } catch {
             // error handled by hook
         }
-    }, [recording, formData.studentName, formData.consultationDate, formData.counselor]);
+    }, [recording, formData]);
 
     const handleStopAndAnalyze = useCallback(async () => {
         try {
@@ -411,6 +709,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
         { id: 'korean', label: '국어 상담', color: '#f59e0b', subjectKey: 'korean' },
         { id: 'science', label: '과학 상담', color: '#ec4899', subjectKey: 'science' },
         { id: 'etc', label: '기타 상담', color: '#8b5cf6', subjectKey: 'etc' },
+        { id: 'analysis', label: 'AI 분석', color: '#16a34a' },
     ];
 
     return (
@@ -526,6 +825,21 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                         >
                                             {isDragOver ? '여기에 놓으세요!' : '또는 녹음 파일을 여기로 드래그'}
                                         </div>
+                                        {/* 상담녹음에서 불러오기 */}
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowConsultationPicker(true)}
+                                            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-blue-300 text-blue-700 rounded-sm text-xs font-bold hover:bg-blue-50 transition-colors"
+                                        >
+                                            <ArrowDownToLine size={14} />
+                                            상담녹음에서 불러오기
+                                        </button>
+                                        <RecordingPickerModal
+                                            isOpen={showConsultationPicker}
+                                            onClose={() => setShowConsultationPicker(false)}
+                                            source="consultation"
+                                            onSelect={handleImportFromConsultation}
+                                        />
                                     </div>
                                 )}
 
@@ -600,9 +914,21 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                 )}
 
                                 {recording.status === 'completed' && (
-                                    <div className="flex items-center gap-2 text-xs text-green-700">
-                                        <CheckCircle size={14} className="text-green-600" />
-                                        분석 완료! 폼에 자동 입력되었습니다.
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-2 text-xs text-green-700">
+                                            <CheckCircle size={14} className="text-green-600" />
+                                            분석 완료! 폼에 자동 입력되었습니다.
+                                        </div>
+                                        {recording.reportData?.report && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setActiveTab('analysis')}
+                                                className="text-[10px] text-accent-600 hover:underline flex items-center gap-1"
+                                            >
+                                                <FileText size={12} />
+                                                AI 분석 보고서 보기
+                                            </button>
+                                        )}
                                     </div>
                                 )}
 
@@ -1362,6 +1688,11 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                             </div>
                         );
                     })}
+
+                    {/* AI 분석 탭 */}
+                    {activeTab === 'analysis' && (
+                        <AnalysisTabContent reportData={recording.reportData} studentName={formData.studentName} consultationDate={formData.consultationDate || ''} counselorName={formData.counselor} />
+                    )}
 
                     {/* 버튼 */}
                     <div className="mt-4 flex justify-between items-center pt-3 border-t">

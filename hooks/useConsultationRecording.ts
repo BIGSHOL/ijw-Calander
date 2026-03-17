@@ -17,6 +17,7 @@ const processConsultationRecording = httpsCallable<
     consultantName: string;
     consultationDate: string;
     fileName: string;
+    studentContext?: Record<string, unknown>;
   },
   { reportId: string; status: string }
 >(functions, 'processConsultationRecording', { timeout: 600_000 }); // 10분 (120MB+ 파일 대응)
@@ -51,8 +52,9 @@ export function useUploadConsultationRecording() {
     studentIds?: string[];
     consultantName: string;
     consultationDate: string;
+    studentContext?: Record<string, unknown>;
   }): Promise<{ reportId: string }> => {
-    const { file, studentId, studentName, studentNames, studentIds, consultantName, consultationDate } = params;
+    const { file, studentId, studentName, studentNames, studentIds, consultantName, consultationDate, studentContext } = params;
 
     // 파일명: studentName_YYYY-MM-DD_timestamp.ext
     const ext = file.name.split('.').pop() || 'mp3';
@@ -117,6 +119,7 @@ export function useUploadConsultationRecording() {
         consultantName,
         consultationDate,
         fileName: file.name,
+        ...(studentContext ? { studentContext } : {}),
       }).catch((err) => {
         console.error('[processConsultationRecording] Error:', err);
       });
@@ -129,7 +132,61 @@ export function useUploadConsultationRecording() {
     }
   }, []);
 
-  return { uploadAndProcess, uploadProgress, isUploading, isProcessing };
+  // 기존 storagePath로 분석 (교차 분석용 — 파일 업로드 건너뜀)
+  const processFromPath = useCallback(async (params: {
+    storagePath: string;
+    studentName: string;
+    consultantName: string;
+    consultationDate: string;
+    fileName: string;
+    studentId?: string;
+    studentContext?: Record<string, unknown>;
+  }): Promise<{ reportId: string }> => {
+    const { storagePath, studentName, consultantName, consultationDate, fileName, studentId, studentContext } = params;
+
+    setIsProcessing(true);
+
+    try {
+      const reportRef = doc(collection(db, COLLECTION));
+      const now = Date.now();
+      await setDoc(reportRef, {
+        studentId: studentId || '',
+        studentName,
+        studentNames: [],
+        studentIds: [],
+        consultantName: consultantName || '',
+        consultationDate,
+        fileName,
+        storagePath,
+        fileSizeBytes: 0,
+        status: 'uploading',
+        statusMessage: '다른 녹음에서 불러오는 중...',
+        crossAnalysis: true,
+        createdAt: now,
+        updatedAt: now,
+        createdBy: '',
+      });
+
+      processConsultationRecording({
+        reportId: reportRef.id,
+        storagePath,
+        studentId: studentId || '',
+        studentName,
+        consultantName,
+        consultationDate,
+        fileName,
+        ...(studentContext ? { studentContext } : {}),
+      }).catch((err) => {
+        console.error('[processConsultationRecording from path] Error:', err);
+      });
+
+      return { reportId: reportRef.id };
+    } finally {
+      setIsProcessing(false);
+    }
+  }, []);
+
+  return { uploadAndProcess, processFromPath, uploadProgress, isUploading, isProcessing };
 }
 
 /**
@@ -251,9 +308,9 @@ export function useDeleteConsultationReport() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (report: Pick<ConsultationReport, 'id' | 'storagePath'>) => {
-      // 1. Storage 파일 삭제 (존재하면)
-      if (report.storagePath) {
+    mutationFn: async (report: Pick<ConsultationReport, 'id' | 'storagePath'> & { crossAnalysis?: boolean }) => {
+      // 1. Storage 파일 삭제 (교차 분석이 아닌 경우에만 — 원본 보고서에서 관리)
+      if (report.storagePath && !report.crossAnalysis) {
         try {
           const storageRef = ref(storage, report.storagePath);
           await deleteObject(storageRef);
