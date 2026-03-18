@@ -2,21 +2,25 @@ import React, { useMemo } from 'react';
 import { TimetableClass, TimetableSubjectType } from '../../types';
 import { useTimetableClasses } from './Math/hooks/useTimetableClasses';
 import { SUBJECT_COLORS, SUBJECT_LABELS } from '../../utils/styleUtils';
-import { ALL_WEEKDAYS, MATH_PERIOD_INFO, ENGLISH_PERIOD_INFO } from './constants';
+import { LEGACY_TO_UNIFIED_PERIOD_MAP } from './constants';
 import { VideoLoading } from '../Common/VideoLoading';
 import SubjectControls from './shared/SubjectControls';
 import type { SubjectType } from '../../types';
 
 const WEEKDAYS = ['월', '화', '수', '목', '금'];
-const MAX_PERIOD = 10; // 영어 10교시가 최대
 
-// 과목 한글명 → key 매핑
+// 과목명 → key 매핑 (한글/영문 모두 지원)
 const SUBJECT_KEY_MAP: Record<string, SubjectType> = {
     '수학': 'math',
     '고등수학': 'highmath',
     '영어': 'english',
     '과학': 'science',
     '국어': 'korean',
+    'math': 'math',
+    'highmath': 'highmath',
+    'english': 'english',
+    'science': 'science',
+    'korean': 'korean',
 };
 
 interface AllSubjectsTimetableProps {
@@ -49,11 +53,15 @@ export default function AllSubjectsTimetable({
 }: AllSubjectsTimetableProps) {
     const { classes, loading } = useTimetableClasses();
 
-    // 스케줄 파싱: "월 1교시" → { day: '월', period: '1' }
+    // 스케줄 파싱: "월 1-1" or "월 3" → { day: '월', period: '1' (unified) }
     const parseSchedule = (schedule: string): { day: string; period: string } | null => {
-        const match = schedule.match(/^([\uAC00-\uD7AF]+)\s+(\d+)교시$/);
-        if (!match) return null;
-        return { day: match[1], period: match[2] };
+        const parts = schedule.split(' ');
+        if (parts.length < 2) return null;
+        const day = parts[0];
+        const periodRaw = parts[1];
+        // 레거시("1-1") → 통일("1"), 또는 이미 통일("1") → 그대로
+        const period = LEGACY_TO_UNIFIED_PERIOD_MAP[periodRaw] || periodRaw;
+        return { day, period };
     };
 
     // 셔틀 제외, 모든 과목의 수업을 day/period 그리드에 매핑
