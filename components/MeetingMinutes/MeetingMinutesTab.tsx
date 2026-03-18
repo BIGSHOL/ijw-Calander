@@ -5,6 +5,7 @@ import { RecordingStatusTracker } from '../ConsultationRecording/RecordingStatus
 import { MeetingReportViewer } from './MeetingReportViewer';
 import { MeetingHistoryList } from './MeetingHistoryList';
 import { useMeetingReportStatus } from '../../hooks/useMeetingRecording';
+import { usePermissions } from '../../hooks/usePermissions';
 import type { UserProfile } from '../../types';
 
 type ViewMode = 'upload' | 'history';
@@ -17,6 +18,8 @@ export default function MeetingMinutesTab({ userProfile }: MeetingMinutesTabProp
   const [viewMode, setViewMode] = useState<ViewMode>('upload');
   const [activeReportId, setActiveReportId] = useState<string | null>(null);
   const { report } = useMeetingReportStatus(activeReportId);
+  const { hasPermission } = usePermissions(userProfile);
+  const canEditReport = hasPermission('recording.edit');
 
   const handleSelectFromHistory = (reportId: string) => {
     setActiveReportId(reportId);
@@ -73,7 +76,7 @@ export default function MeetingMinutesTab({ userProfile }: MeetingMinutesTabProp
 
             {report?.status === 'completed' && (
               <>
-                <MeetingReportViewer report={report} />
+                <MeetingReportViewer report={report} canEdit={canEditReport} currentUser={userProfile} />
                 <div className="text-center">
                   <button
                     onClick={() => setActiveReportId(null)}

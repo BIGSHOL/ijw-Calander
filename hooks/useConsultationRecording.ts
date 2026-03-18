@@ -326,7 +326,7 @@ export function useUpdateConsultationReportContent(collectionName: string = COLL
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['consultation_reports'] });
+      queryClient.invalidateQueries({ queryKey: [collectionName] });
     },
   });
 }

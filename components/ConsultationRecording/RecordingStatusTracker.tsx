@@ -136,7 +136,7 @@ export function RecordingStatusTracker({ report }: RecordingStatusTrackerProps) 
         <p className={`text-sm ${isError ? 'text-red-600' : isFailed ? 'text-amber-600' : 'text-gray-600'}`}>
           {report.statusMessage || '처리 중입니다...'}
         </p>
-        {report.durationSeconds != null && report.durationSeconds > 0 && (
+        {report.durationSeconds != null && report.durationSeconds > 0 && !report.statusMessage?.includes(formatDuration(report.durationSeconds)) && (
           <p className="text-xs text-gray-400">
             녹음 길이: {formatDuration(report.durationSeconds)}
             {report.fileSizeBytes > 0 && ` · ${(report.fileSizeBytes / 1024 / 1024).toFixed(1)}MB`}

@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { FileText, Download, ChevronDown, ChevronUp, Clock, Users, Calendar, RefreshCw, Loader2 } from 'lucide-react';
-import type { MeetingReport } from '../../types';
+import { FileText, Download, ChevronDown, ChevronUp, Clock, Users, Calendar, RefreshCw, Loader2, Pencil, Check, X } from 'lucide-react';
+import type { MeetingReport, UserProfile } from '../../types';
 import { useReanalyzeMeetingReport } from '../../hooks/useMeetingRecording';
+import { useUpdateConsultationReportContent } from '../../hooks/useConsultationRecording';
 import { format } from 'date-fns';
 import { formatReportContent } from '../../utils/formatReportContent';
 
 interface MeetingReportViewerProps {
   report: MeetingReport;
+  canEdit?: boolean;
+  currentUser?: UserProfile | null;
 }
 
 const SECTIONS = [
@@ -20,10 +23,41 @@ const SECTIONS = [
   { key: 'nextSteps' as const, label: '향후 계획', emoji: '🔮' },
 ];
 
-export function MeetingReportViewer({ report }: MeetingReportViewerProps) {
+export function MeetingReportViewer({ report, canEdit, currentUser }: MeetingReportViewerProps) {
   const [showTranscript, setShowTranscript] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const reanalyzeMutation = useReanalyzeMeetingReport();
+  const updateContentMutation = useUpdateConsultationReportContent('meeting_reports');
+
+  // 편집 상태
+  const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
+
+  const startEditing = (sectionKey: string, currentContent: string) => {
+    setEditingSection(sectionKey);
+    setEditingText(currentContent);
+  };
+
+  const cancelEditing = () => {
+    setEditingSection(null);
+    setEditingText('');
+  };
+
+  const saveEditing = () => {
+    if (!editingSection || !currentUser) return;
+    updateContentMutation.mutate({
+      reportId: report.id,
+      sectionKey: editingSection,
+      content: editingText,
+      editedBy: currentUser.uid || '',
+      editedByName: currentUser.displayName || currentUser.name || '',
+    }, {
+      onSuccess: () => {
+        setEditingSection(null);
+        setEditingText('');
+      },
+    });
+  };
 
   const toggleSection = (key: string) => {
     setExpandedSections(prev => {
@@ -124,6 +158,11 @@ export function MeetingReportViewer({ report }: MeetingReportViewerProps) {
               </span>
             )}
           </div>
+          {report.lastEditedAt && (
+            <div className="text-[10px] text-green-500 mt-0.5">
+              마지막 수정: {format(new Date(report.lastEditedAt), 'yyyy-MM-dd HH:mm')} (KST) · {report.lastEditedByName || '알 수 없음'}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -172,6 +211,8 @@ export function MeetingReportViewer({ report }: MeetingReportViewerProps) {
           const content = report.report?.[section.key];
           if (!content) return null;
           const isExpanded = expandedSections.has(section.key);
+          const isEditing = editingSection === section.key;
+
           return (
             <div key={section.key} className="border rounded-sm">
               <button
@@ -181,11 +222,51 @@ export function MeetingReportViewer({ report }: MeetingReportViewerProps) {
                 <h3 className="text-sm font-semibold text-gray-800">
                   {section.emoji} {section.label}
                 </h3>
-                {isExpanded ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+                <div className="flex items-center gap-1">
+                  {canEdit && isExpanded && !isEditing && (
+                    <span
+                      role="button"
+                      onClick={(e) => { e.stopPropagation(); startEditing(section.key, content as string); }}
+                      className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                      title="수정"
+                    >
+                      <Pencil size={13} />
+                    </span>
+                  )}
+                  {isExpanded ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
+                </div>
               </button>
               {isExpanded && (
                 <div className="px-4 py-3 border-t">
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{formatReportContent(content)}</p>
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <textarea
+                        value={editingText}
+                        onChange={(e) => setEditingText(e.target.value)}
+                        spellCheck={false}
+                        className="w-full min-h-[120px] p-3 text-sm text-gray-700 border rounded-sm focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none resize-y"
+                        autoFocus
+                      />
+                      <div className="flex items-center gap-2 justify-end">
+                        <button
+                          onClick={cancelEditing}
+                          className="px-3 py-1.5 text-xs text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-sm flex items-center gap-1"
+                        >
+                          <X size={12} /> 취소
+                        </button>
+                        <button
+                          onClick={saveEditing}
+                          disabled={updateContentMutation.isPending || editingText === content}
+                          className="px-3 py-1.5 text-xs text-white bg-blue-600 hover:bg-blue-700 rounded-sm flex items-center gap-1 disabled:opacity-50"
+                        >
+                          {updateContentMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                          저장
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{formatReportContent(content)}</p>
+                  )}
                 </div>
               )}
             </div>

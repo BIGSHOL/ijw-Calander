@@ -54,6 +54,11 @@ export interface MeetingReport {
   report?: MeetingReportSection;
   speakerRoles?: Record<string, string>;
 
+  // 수정 추적
+  lastEditedBy?: string;       // 수정자 uid
+  lastEditedByName?: string;   // 수정자 이름
+  lastEditedAt?: number;       // 수정 시각 (timestamp ms)
+
   // 시스템 필드
   createdAt: number;
   updatedAt: number;
