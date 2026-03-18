@@ -18,7 +18,6 @@ import { UnifiedStudent } from '../../types';
 import TimetableHeader from './Math/components/TimetableHeader';
 import TimetableGrid from './Math/components/TimetableGrid';
 import MathClassTab from './Math/MathClassTab';
-import HighMathDayView from './Math/HighMathDayView';
 
 // Performance: bundle-dynamic-imports - Modal components lazy load (~150-200KB bundle reduction)
 const AddClassModal = lazy(() => import('../ClassManagement/AddClassModal'));
@@ -1859,47 +1858,8 @@ const TimetableManager = ({
         );
     }
 
-    // 고등수학: 요일별 간단 뷰 (교시 그리드 없음)
-    if (subjectTab === 'highmath') {
-        return (
-            <div className="flex flex-col h-full overflow-hidden">
-                <TimetableHeader
-                    weekLabel={weekLabel}
-                    goToPrevWeek={goToPrevWeek}
-                    goToNextWeek={goToNextWeek}
-                    goToThisWeek={goToThisWeek}
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    viewType="class"
-                    setIsTeacherOrderModalOpen={setIsTeacherOrderModalOpen}
-                    setIsViewSettingsOpen={setIsViewSettingsOpen}
-                    pendingMovesCount={0}
-                    handleSavePendingMoves={() => {}}
-                    handleCancelPendingMoves={() => {}}
-                    isSaving={false}
-                    mode={mode}
-                    setMode={setMode}
-                    canEdit={canEditMath}
-                    studentMap={campusFilteredStudentMap}
-                    currentWeekStart={currentMonday}
-                    filteredClasses={filteredClasses}
-                    timetableSubject={subjectTab}
-                    setTimetableSubject={setSubjectTab}
-                    setTimetableViewType={setViewType as React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>}
-                    mathViewMode={timetableViewMode}
-                    setMathViewMode={setTimetableViewMode as (value: string) => void}
-                    hasPermission={externalHasPermission || hasPermission}
-                    setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
-                />
-                <HighMathDayView
-                    classes={filteredClasses}
-                    teachers={teachers}
-                    studentMap={campusFilteredStudentMap}
-                    searchQuery={searchQuery}
-                />
-            </div>
-        );
-    }
+    // 고등수학: 엑셀뷰 고정 (수학 엑셀뷰와 동일, 뷰 전환 없음)
+    const effectiveViewType = subjectTab === 'highmath' ? 'excel' as const : viewType;
 
     return (
         <MathSimulationProvider>
@@ -1910,7 +1870,7 @@ const TimetableManager = ({
                 goToThisWeek={goToThisWeek}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
-                viewType={viewType}
+                viewType={effectiveViewType}
                 setIsTeacherOrderModalOpen={setIsTeacherOrderModalOpen}
                 setIsViewSettingsOpen={setIsViewSettingsOpen}
                 pendingMovesCount={pendingMoves.length}
