@@ -16,7 +16,7 @@ interface AddClassModalProps {
   defaultSubject?: SubjectType;
 }
 
-const AVAILABLE_SUBJECTS: SubjectType[] = ['math', 'english', 'science', 'korean', 'shuttle'];
+const AVAILABLE_SUBJECTS: SubjectType[] = ['math', 'highmath', 'english', 'science', 'korean', 'shuttle'];
 
 const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
 const WEEKDAY_ORDER: Record<string, number> = { '월': 0, '화': 1, '수': 2, '목': 3, '금': 4, '토': 5, '일': 6 };

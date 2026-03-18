@@ -17,7 +17,7 @@ interface AssignClassModalProps {
     onSuccess: () => void;
 }
 
-const AVAILABLE_SUBJECTS: SubjectType[] = ['math', 'english', 'science', 'korean'];
+const AVAILABLE_SUBJECTS: SubjectType[] = ['math', 'highmath', 'english', 'science', 'korean'];
 
 const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, student, onSuccess }) => {
     const queryClient = useQueryClient();

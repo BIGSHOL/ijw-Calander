@@ -267,6 +267,7 @@ const App: React.FC = () => {
 
     const canViewCurrent =
       (timetableSubject === 'math' && canViewMath) ||
+      (timetableSubject === 'highmath' && canViewMath) ||
       (timetableSubject === 'english' && canViewEnglish) ||
       (timetableSubject === 'science' && canViewScience) ||
       (timetableSubject === 'korean' && canViewKorean) ||

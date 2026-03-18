@@ -52,6 +52,14 @@ export const SUBJECT_COLORS: Record<SubjectType, {
     badge: 'bg-red-500 text-white',
     badgeAlt: 'bg-red-50 text-red-700 border border-red-200',
   },
+  highmath: {
+    bg: '#a855f7',
+    text: '#ffffff',
+    border: '#9333ea',
+    light: '#faf5ff',
+    badge: 'bg-purple-500 text-white',
+    badgeAlt: 'bg-purple-50 text-purple-800 border border-purple-200',
+  },
   shuttle: {
     bg: '#059669',
     text: '#ffffff',
@@ -76,6 +84,7 @@ export const SUBJECT_LABELS: Record<SubjectType, string> = {
   english: '영어',
   science: '과학',
   korean: '국어',
+  highmath: '고등수학',
   shuttle: '셔틀버스',
   other: '기타',
 };
