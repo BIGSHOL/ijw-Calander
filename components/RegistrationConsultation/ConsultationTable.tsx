@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ConsultationRecord, CONSULTATION_STATUS_COLORS } from '../../types';
-import { Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, X, ClipboardList, UserPlus, UserCheck, ExternalLink, Filter, Users } from 'lucide-react';
+import { Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, X, ClipboardList, UserPlus, UserCheck, ExternalLink, Filter, Users, Mic } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
+import { useRegistrationRecordingReports } from '../../hooks/useRegistrationRecording';
 
 interface ConsultationTableProps {
     data: ConsultationRecord[];
@@ -153,6 +154,18 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
     const [itemsPerPage, setItemsPerPage] = useState<number>(20);
     const [filters, setFilters] = useState<FilterState>(loadSavedFilters);
     const [candidatePopover, setCandidatePopover] = useState<{ consultationId: string; candidates: { id: string; name: string }[] } | null>(null);
+
+    // 녹음 보고서 존재 여부 (studentName+consultationDate 매칭)
+    const { data: recordingReports } = useRegistrationRecordingReports();
+    const recordingSet = useMemo(() => {
+        const set = new Set<string>();
+        (recordingReports || []).forEach(r => {
+            if (r.studentName && r.consultationDate) {
+                set.add(`${r.studentName}|${r.consultationDate}`);
+            }
+        });
+        return set;
+    }, [recordingReports]);
 
     // 검색어/필터 변경 시 페이지 초기화
     useEffect(() => {
@@ -681,6 +694,14 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                 >
                                     전환
                                 </th>
+                                {/* 녹음 열 */}
+                                <th
+                                    scope="col"
+                                    className="px-1 py-1.5 text-center text-xxs font-medium whitespace-nowrap"
+                                    style={{ color: COLORS.gray, minWidth: '40px', width: '40px' }}
+                                >
+                                    녹음
+                                </th>
                                 {visibleColumnsList.map(col => (
                                     <th
                                         key={col.key}
@@ -773,6 +794,14 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                                 return <span className="text-gray-300">-</span>;
                                             })()}
                                         </td>
+                                        {/* 녹음 열 */}
+                                        <td className="px-1 py-1.5 whitespace-nowrap text-center" style={{ minWidth: '36px', width: '36px' }}>
+                                            {recordingSet.has(`${record.studentName}|${record.consultationDate}`) ? (
+                                                <Mic size={13} className="inline text-purple-500" title="녹음 분석 있음" />
+                                            ) : (
+                                                <span className="text-gray-200">-</span>
+                                            )}
+                                        </td>
                                         {visibleColumnsList.map(col => (
                                             <td key={col.key} className="px-2 py-1.5 whitespace-nowrap text-xs" style={{ minWidth: col.minWidth }}>
                                                 {getCellValue(record, col.key)}
@@ -782,7 +811,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={visibleColumnsList.length + 2} className="px-6 py-12 text-center" style={{ color: COLORS.gray }}>
+                                    <td colSpan={visibleColumnsList.length + 3} className="px-6 py-12 text-center" style={{ color: COLORS.gray }}>
                                         검색 결과가 없습니다.
                                     </td>
                                 </tr>
