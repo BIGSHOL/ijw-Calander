@@ -5,6 +5,7 @@ import { useClassDetail, ClassStudent } from '../../hooks/useClassDetail';
 import { useDeleteClass, useUpdateClass, UpdateClassData, useManageClassStudents } from '../../hooks/useClassMutations';
 import { useStudents } from '../../hooks/useStudents';
 import ClassStudentList from './ClassStudentList';
+import SubjectBadges from '../Common/SubjectBadges';
 import { SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
 import { formatScheduleCompact, SubjectForSchedule, ENGLISH_UNIFIED_PERIODS, MATH_UNIFIED_PERIODS, convertLegacyPeriodId } from '../Timetable/constants';
 import { useTeachers } from '../../hooks/useFirebaseQueries';
@@ -923,6 +924,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                           <label key={student.id} className="flex items-center gap-2 px-2 py-1 cursor-pointer transition-colors hover:bg-gray-50 text-xs">
                             <input type="checkbox" checked={studentsToAdd.has(student.id)} onChange={() => toggleAddStudent(student.id)} className="w-3 h-3 text-accent focus:ring-accent" />
                             <span className="text-gray-800">{student.name}</span>
+                            <SubjectBadges enrollments={student.enrollments} />
                             <span className="text-xxs text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
                           </label>
                         ))

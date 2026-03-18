@@ -194,7 +194,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
                 </span>
             )}
             {displayText}
-            <SubjectBadges enrollments={student.enrollments} labelType="short" className="ml-0.5" />
+            <SubjectBadges enrollments={student.enrollments} className="ml-0.5" />
         </li>
     );
 };
@@ -1759,6 +1759,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         className={`px-1.5 py-0.5 text-xxs cursor-pointer flex justify-between ${idx === acHighlightIndex ? 'bg-blue-100' : 'hover:bg-blue-50'}`}
                                     >
                                         <span className="font-medium">{s.name}</span>
+                                        <SubjectBadges enrollments={s.enrollments} />
                                         <span className="text-gray-400">{formatSchoolGrade(s.school, s.grade)}</span>
                                     </li>
                                 ))}
