@@ -12,7 +12,7 @@ export interface Department {
 }
 
 // Subject Type for unified structure
-export type SubjectType = 'math' | 'english' | 'science' | 'korean' | 'shuttle' | 'other';
+export type SubjectType = 'math' | 'english' | 'science' | 'korean' | 'highmath' | 'shuttle' | 'other';
 
 // Phase 6: Gantt Departments
 export interface GanttDepartment {

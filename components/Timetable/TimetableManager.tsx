@@ -793,6 +793,49 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                 </div>
                 )}
 
+                {/* Room View - 강의실별 뷰 */}
+                {viewType === 'room' && (
+                <div ref={gridRef} className="flex-1 overflow-hidden border-t border-gray-200 p-4">
+                    <TimetableGrid
+                        filteredClasses={filteredClasses}
+                        allResources={allResources}
+                        orderedSelectedDays={orderedSelectedDays}
+                        weekDates={weekDates}
+                        viewType="room"
+                        currentPeriods={currentPeriods}
+                        teachers={teachers}
+                        searchQuery={searchQuery}
+                        canEdit={canEditMath}
+                        mode={isScenarioMode ? 'edit' : mode}
+                        columnWidth={columnWidth}
+                        rowHeight={rowHeight}
+                        fontSize={fontSize}
+                        showClassName={showClassName}
+                        showSchool={showSchool}
+                        showGrade={showGrade}
+                        showEmptyRooms={showEmptyRooms}
+                        showStudents={showStudents}
+                        showHoldStudents={showHoldStudents}
+                        showWithdrawnStudents={showWithdrawnStudents}
+                        dragOverClassId={dragOverClassId}
+                        onClassClick={handleClassClick}
+                        onDragStart={handleGridDragStart}
+                        onDragOver={handleGridDragOver}
+                        onDragLeave={handleGridDragLeave}
+                        onDrop={handleGridDrop}
+                        currentSubjectFilter={currentSubjectFilter}
+                        studentMap={studentMap}
+                        timetableViewMode={timetableViewMode}
+                        classKeywords={classKeywords}
+                        onStudentClick={handleStudentClick}
+                        pendingMovedStudentIds={pendingMovedStudentIds}
+                        pendingMoveSchedules={pendingMoveSchedules}
+                        onCancelScheduledEnrollment={!isScenarioMode ? onCancelScheduledEnrollment : undefined}
+                        onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
+                    />
+                </div>
+                )}
+
                 {/* Excel Mode - 강사뷰 변형 (셀 선택, 텍스트 복사, 자동완성) */}
                 {viewType === 'excel' && (
                 <div ref={gridRef} className="flex-1 overflow-hidden border-t border-gray-200 p-4 relative">
@@ -1119,6 +1162,25 @@ const TimetableManager = ({
         return map;
     }, [globalStudents]);
 
+    // Campus-filtered student map: 수학 탭에서는 본원 학생만, 고등수학관 탭에서는 고등 학생만
+    const campusFilteredStudentMap = useMemo(() => {
+        if (subjectTab === 'highmath') {
+            const map: Record<string, UnifiedStudent> = {};
+            globalStudents.forEach(s => {
+                if (s.campus === 'godeung') map[s.id] = s;
+            });
+            return map;
+        }
+        if (subjectTab === 'math') {
+            const map: Record<string, UnifiedStudent> = {};
+            globalStudents.forEach(s => {
+                if (!s.campus || s.campus === 'main') map[s.id] = s;
+            });
+            return map;
+        }
+        return studentMap;
+    }, [globalStudents, subjectTab, studentMap]);
+
     // teachers는 propsTeachers에서 받아서 수학 과목 필터링하여 사용
     const teachers = React.useMemo(() =>
         propsTeachers.filter(t => !t.subjects || t.subjects.includes('math')),
@@ -1358,12 +1420,7 @@ const TimetableManager = ({
     // Search State
     const [searchQuery, setSearchQuery] = useState('');
 
-    // Reset viewType when switching to math - math supports 'teacher' and 'class', but not 'room'
-    useEffect(() => {
-        if (subjectTab === 'math' && viewType === 'room') {
-            setViewType('teacher');
-        }
-    }, [subjectTab, viewType, setViewType]);
+    // Room view is now supported for math timetable
 
     // 배정 예정 취소
     const handleCancelScheduledEnrollment = useCallback(async (studentId: string, className: string) => {
@@ -1426,8 +1483,8 @@ const TimetableManager = ({
     }, [withdrawalModalInfo, queryClient]);
 
     // Current periods based on subject tab
-    const currentPeriods = subjectTab === 'math' ? MATH_PERIODS : ENGLISH_PERIODS;
-    const currentSubjectFilter = subjectTab === 'math' ? '수학' : '영어';
+    const currentPeriods = (subjectTab === 'math' || subjectTab === 'highmath') ? MATH_PERIODS : ENGLISH_PERIODS;
+    const currentSubjectFilter = (subjectTab === 'math' || subjectTab === 'highmath') ? '수학' : '영어';
 
     // Selected days ordered by sortedWeekdays order
     const orderedSelectedDays = useMemo(() => {
@@ -1480,6 +1537,13 @@ const TimetableManager = ({
     const filteredClasses = useMemo(() => {
         let base = localClasses.filter(c => c.subject === currentSubjectFilter);
 
+        // 수학/고등수학관 분리: 고등수학관 탭이면 '고등' 강의실만, 수학 탭이면 '고등' 강의실 제외
+        if (subjectTab === 'highmath') {
+            base = base.filter(c => (c.room || '').includes('고등'));
+        } else if (subjectTab === 'math') {
+            base = base.filter(c => !(c.room || '').includes('고등'));
+        }
+
         // 강의실 필터 (본원/바른/고등 멀티 선택)
         if (!roomFilter.main || !roomFilter.barun || !roomFilter.godeung) {
             base = base.filter(c => {
@@ -1511,7 +1575,7 @@ const TimetableManager = ({
             }
         });
         return [...base, ...ghosts];
-    }, [localClasses, currentSubjectFilter, roomFilter]);
+    }, [localClasses, currentSubjectFilter, roomFilter, subjectTab]);
 
     // 스케줄 변경 예정 자동 적용 (마운트 시 1회)
     useEffect(() => {
@@ -1854,7 +1918,7 @@ const TimetableManager = ({
                 handleDrop={handleDrop}
                 handleMultiDrop={handleMultiDrop}
                 currentSubjectFilter={currentSubjectFilter}
-                studentMap={studentMap}
+                studentMap={campusFilteredStudentMap}
                 timetableViewMode={timetableViewMode}
                 classKeywords={classKeywords}
                 setSelectedClassInfo={setSelectedClassInfo}

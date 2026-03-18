@@ -64,7 +64,7 @@ export default function SubjectControls({
             )}
 
             {/* 수학 뷰 전환 - 드롭다운 순환 */}
-            {timetableSubject === 'math' && setTimetableViewType && setMathViewMode && (
+            {(timetableSubject === 'math' || timetableSubject === 'highmath') && setTimetableViewType && setMathViewMode && (
                 <button
                     onClick={() => {
                         setTimetableViewType(prev => {

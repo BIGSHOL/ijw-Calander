@@ -513,10 +513,10 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                     <span>
                         {isSimulationMode && currentScenarioName
                             ? currentScenarioName
-                            : viewType === 'teacher' ? '인재원 수학 강사 시간표'
-                                : viewType === 'room' ? '인재원 수학 강의실 시간표'
-                                    : viewType === 'excel' ? '인재원 수학 엑셀 시간표'
-                                        : '인재원 수학 통합 시간표'
+                            : viewType === 'teacher' ? `${timetableSubject === 'highmath' ? '고등수학관' : '수학'} 강사 시간표`
+                                : viewType === 'room' ? `${timetableSubject === 'highmath' ? '고등수학관' : '수학'} 강의실 시간표`
+                                    : viewType === 'excel' ? `${timetableSubject === 'highmath' ? '고등수학관' : '수학'} 엑셀 시간표`
+                                        : `${timetableSubject === 'highmath' ? '고등수학관' : '수학'} 통합 시간표`
                         }
                     </span>
                     {isSimulationMode && <span className="text-xxs bg-orange-500 text-white px-1.5 py-0.5 rounded-sm font-bold animate-pulse">SIMULATION</span>}

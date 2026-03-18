@@ -46,6 +46,9 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
           {hasPermission('timetable.math.view') && (
             <option value="math">수학</option>
           )}
+          {hasPermission('timetable.math.view') && (
+            <option value="highmath">고등수학관</option>
+          )}
           {hasPermission('timetable.english.view') && (
             <option value="english">영어</option>
           )}
@@ -85,8 +88,8 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
           </button>
         )}
 
-        {/* Math View Mode Toggle Button - 수학: 통합 → 강사 → 날짜 → 엑셀 */}
-        {timetableSubject === 'math' && (
+        {/* Math View Mode Toggle Button - 수학/고등수학관: 통합 → 강사 → 날짜 → 엑셀 */}
+        {(timetableSubject === 'math' || timetableSubject === 'highmath') && (
           <button
             onClick={() => {
               if (timetableViewType === 'class') {
