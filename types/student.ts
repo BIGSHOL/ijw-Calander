@@ -2,7 +2,7 @@ import { SubjectType } from './common';
 
 // Detailed Enrollment Information
 export interface Enrollment {
-  subject: 'math' | 'english' | 'science' | 'korean' | 'other';
+  subject: 'math' | 'english' | 'science' | 'korean' | 'highmath' | 'other';
   classId: string;    // Document ID of the class
   className: string;  // Name of the class
 

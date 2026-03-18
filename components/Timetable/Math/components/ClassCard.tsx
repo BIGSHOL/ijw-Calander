@@ -9,6 +9,7 @@ import { formatDateKey } from '../../../../utils/dateUtils';
 import PortalTooltip from '../../../Common/PortalTooltip';
 import { useAllLatestReports } from '../../../../hooks/useAllLatestReports';
 import { EdutrixReport } from '../../../../services/supabaseClient';
+import SubjectBadges from '../../../Common/SubjectBadges';
 
 // 학생 항목 컴포넌트 - hover 효과를 위해 분리
 interface StudentItemProps {
@@ -193,6 +194,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
                 </span>
             )}
             {displayText}
+            <SubjectBadges enrollments={student.enrollments} labelType="short" className="ml-0.5" />
         </li>
     );
 };

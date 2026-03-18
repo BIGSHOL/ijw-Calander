@@ -1,19 +1,29 @@
 import React, { useCallback, useMemo } from 'react';
 import { Users } from 'lucide-react';
 import { ClassStudent } from '../../hooks/useClassDetail';
+import { UnifiedStudent } from '../../types';
 import { formatSchoolGrade } from '../../utils/studentUtils';
+import SubjectBadges from '../Common/SubjectBadges';
 
 interface ClassStudentListProps {
   students: ClassStudent[];
   onStudentClick?: (studentId: string) => void;
   classDays?: string[];  // 수업 요일 목록 (등원 요일 표시 여부 결정에 사용)
+  allStudents?: UnifiedStudent[];  // 과목 배지 표시용 전체 학생 목록
 }
 
 const ClassStudentList: React.FC<ClassStudentListProps> = ({
   students,
   onStudentClick,
   classDays = [],
+  allStudents = [],
 }) => {
+  // 학생 ID → UnifiedStudent 매핑 (과목 배지용)
+  const studentMap = useMemo(() => {
+    const map: Record<string, UnifiedStudent> = {};
+    allStudents.forEach(s => { map[s.id] = s; });
+    return map;
+  }, [allStudents]);
   // 이벤트 핸들러 최적화: useCallback으로 안정화
   const handleStudentClick = useCallback((studentId: string) => {
     if (onStudentClick) {
@@ -68,6 +78,8 @@ const ClassStudentList: React.FC<ClassStudentListProps> = ({
             <span className="text-xs text-primary-700">
               {formatSchoolGrade(student.school, student.grade)}
             </span>
+            {/* 과목 배지 */}
+            <SubjectBadges enrollments={studentMap[student.id]?.enrollments} />
             {/* 등원 요일이 수업 요일과 다른 경우에만 표시 */}
             {shouldShowAttendanceDays(student.attendanceDays) && (
               <span className="text-xxs bg-amber-100 text-amber-700 px-1.5 py-0.5 font-medium">

@@ -1052,7 +1052,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                     {detailLoading ? (
                       <div className="p-6 text-center"><p className="text-gray-500 text-xs">불러오는 중...</p></div>
                     ) : classDetail ? (
-                      <ClassStudentList students={activeStudents} onStudentClick={onStudentClick} classDays={classDisplayDays} />
+                      <ClassStudentList students={activeStudents} onStudentClick={onStudentClick} classDays={classDisplayDays} allStudents={allStudents} />
                     ) : (
                       <div className="p-6 text-center">
                         <Users className="w-8 h-8 mx-auto mb-2 opacity-30 text-gray-400" />

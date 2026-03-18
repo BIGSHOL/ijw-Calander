@@ -1163,24 +1163,7 @@ const TimetableManager = ({
         return map;
     }, [globalStudents]);
 
-    // Campus-filtered student map: 수학 탭에서는 본원 학생만, 고등수학관 탭에서는 고등 학생만
-    const campusFilteredStudentMap = useMemo(() => {
-        if (subjectTab === 'highmath') {
-            const map: Record<string, UnifiedStudent> = {};
-            globalStudents.forEach(s => {
-                if (s.campus === 'godeung') map[s.id] = s;
-            });
-            return map;
-        }
-        if (subjectTab === 'math') {
-            const map: Record<string, UnifiedStudent> = {};
-            globalStudents.forEach(s => {
-                if (!s.campus || s.campus === 'main') map[s.id] = s;
-            });
-            return map;
-        }
-        return studentMap;
-    }, [globalStudents, subjectTab, studentMap]);
+    // 모든 학생을 과목/캠퍼스 구분 없이 표시 (캠퍼스 필터링 제거됨)
 
     // teachers는 propsTeachers에서 받아서 현재 과목 필터링하여 사용
     const mathSubjectKey = subjectTab === 'highmath' ? 'highmath' : 'math';
@@ -1930,7 +1913,7 @@ const TimetableManager = ({
                 handleDrop={handleDrop}
                 handleMultiDrop={handleMultiDrop}
                 currentSubjectFilter={currentSubjectFilter}
-                studentMap={campusFilteredStudentMap}
+                studentMap={studentMap}
                 timetableViewMode={timetableViewMode}
                 classKeywords={classKeywords}
                 setSelectedClassInfo={setSelectedClassInfo}
