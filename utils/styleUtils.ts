@@ -10,7 +10,7 @@ export const INJAEWON_LOGO = "/logo.png";
  * - 과학: 그린 계열 (추후 확장)
  * - 국어: 레드/핑크 계열 (추후 확장)
  */
-export type SubjectType = 'math' | 'english' | 'science' | 'korean' | 'shuttle' | 'other';
+export type SubjectType = 'math' | 'english' | 'science' | 'korean' | 'highmath' | 'shuttle' | 'other';
 
 export const SUBJECT_COLORS: Record<SubjectType, {
   bg: string;           // 배경색

@@ -885,7 +885,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         <span>
                             {isSimulationMode && currentScenarioName
                                 ? currentScenarioName
-                                : (publishedScenarioName || '영어 통합 시간표')
+                                : (publishedScenarioName || '')
                             }
                         </span>
                         {isSimulationMode && <span className="text-xxs bg-orange-500 text-white px-1.5 py-0.5 rounded-sm font-bold animate-pulse">SIMULATION</span>}
@@ -1202,7 +1202,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         <span>
                             {isSimulationMode && currentScenarioName
                                 ? currentScenarioName
-                                : (publishedScenarioName || '영어 강사 시간표')
+                                : (publishedScenarioName || '')
                             }
                         </span>
                         {isSimulationMode && <span className="text-xxs bg-orange-500 text-white px-1.5 py-0.5 rounded-sm font-bold animate-pulse">SIMULATION</span>}
@@ -1426,7 +1426,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         <span>
                             {isSimulationMode && currentScenarioName
                                 ? currentScenarioName
-                                : (publishedScenarioName || '영어 강의실 시간표')
+                                : (publishedScenarioName || '')
                             }
                         </span>
                         {isSimulationMode && <span className="text-xxs bg-orange-500 text-white px-1.5 py-0.5 rounded-sm font-bold animate-pulse">SIMULATION</span>}

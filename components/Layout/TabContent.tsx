@@ -82,8 +82,8 @@ interface TabContentProps {
 
   // Timetable props
   timetableProps?: {
-    timetableSubject: 'math' | 'english' | 'science' | 'korean' | 'shuttle';
-    setTimetableSubject: (subject: 'math' | 'english' | 'science' | 'korean' | 'shuttle') => void;
+    timetableSubject: 'math' | 'english' | 'science' | 'korean' | 'highmath' | 'shuttle';
+    setTimetableSubject: (subject: 'math' | 'english' | 'science' | 'korean' | 'highmath' | 'shuttle') => void;
     timetableViewType: string;
     setTimetableViewType: (type: string) => void;
     teachers: any[];

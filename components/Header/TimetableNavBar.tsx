@@ -47,7 +47,7 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
             <option value="math">수학</option>
           )}
           {hasPermission('timetable.math.view') && (
-            <option value="highmath">고등수학관</option>
+            <option value="highmath">고등수학</option>
           )}
           {hasPermission('timetable.english.view') && (
             <option value="english">영어</option>

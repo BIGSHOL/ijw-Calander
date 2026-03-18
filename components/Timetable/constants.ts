@@ -122,7 +122,7 @@ export const WEEKEND_PERIOD_TIMES: Record<string, string> = {
 };
 
 // periodId로 시간 정보 가져오기
-export const getPeriodTime = (periodId: string, subject?: 'math' | 'english' | 'science' | 'korean' | 'shuttle'): string => {
+export const getPeriodTime = (periodId: string, subject?: 'math' | 'english' | 'science' | 'korean' | 'highmath' | 'shuttle'): string => {
     let info: Record<string, PeriodInfo>;
     if (subject === 'english') {
         info = ENGLISH_PERIOD_INFO;
@@ -144,7 +144,7 @@ export const getPeriodLabel = (periodId: string): string => {
 };
 
 // 과목별 PeriodInfo 가져오기
-export const getPeriodInfo = (periodId: string, subject?: 'math' | 'english' | 'science' | 'korean' | 'shuttle'): PeriodInfo | undefined => {
+export const getPeriodInfo = (periodId: string, subject?: 'math' | 'english' | 'science' | 'korean' | 'highmath' | 'shuttle'): PeriodInfo | undefined => {
     let info: Record<string, PeriodInfo>;
     if (subject === 'english') {
         info = ENGLISH_PERIOD_INFO;
@@ -271,7 +271,7 @@ interface ScheduleSlotParsed {
     position: 'first' | 'second';
 }
 
-export type SubjectForSchedule = 'math' | 'english' | 'science' | 'korean' | 'shuttle';
+export type SubjectForSchedule = 'math' | 'english' | 'science' | 'korean' | 'highmath' | 'shuttle';
 
 /**
  * 스케줄 배열을 스마트하게 포맷팅

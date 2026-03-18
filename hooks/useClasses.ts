@@ -3,7 +3,7 @@ import { collection, getDocs, query, where, collectionGroup } from 'firebase/fir
 import { db } from '../firebaseConfig';
 import { getTodayKST, toDateStringKST } from '../utils/dateUtils';
 
-export type SubjectType = 'math' | 'english' | 'science' | 'korean' | 'shuttle' | 'other';
+export type SubjectType = 'math' | 'english' | 'science' | 'korean' | 'highmath' | 'shuttle' | 'other';
 
 const COL_CLASSES = 'classes';
 

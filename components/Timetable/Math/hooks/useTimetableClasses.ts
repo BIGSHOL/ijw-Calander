@@ -93,9 +93,10 @@ export const useTimetableClasses = () => {
                     return { id: sid, name: sid };
                 });
 
-                // subject 매핑: 'math' -> '수학', 'english' -> '영어'
+                // subject 매핑: 'math' -> '수학', 'english' -> '영어', 'highmath' -> '고등수학'
                 const subjectLabel = data.subject === 'math' ? '수학' :
-                    data.subject === 'english' ? '영어' : data.subject;
+                    data.subject === 'english' ? '영어' :
+                    data.subject === 'highmath' ? '고등수학' : data.subject;
 
                 return {
                     id: doc.id,

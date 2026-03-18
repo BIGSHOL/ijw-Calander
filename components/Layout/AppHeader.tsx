@@ -98,8 +98,8 @@ interface AppHeaderProps {
 
   // Timetable props
   timetableProps?: {
-    timetableSubject: 'math' | 'english' | 'science' | 'korean' | 'shuttle';
-    setTimetableSubject: (subject: 'math' | 'english' | 'science' | 'korean' | 'shuttle') => void;
+    timetableSubject: 'math' | 'english' | 'science' | 'korean' | 'highmath' | 'shuttle';
+    setTimetableSubject: (subject: 'math' | 'english' | 'science' | 'korean' | 'highmath' | 'shuttle') => void;
     timetableViewType: string;
     setTimetableViewType: (type: string) => void;
     mathViewMode: string;
@@ -336,19 +336,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         />
       )}
 
-      {/* Row 2: Timetable Filter Bar */}
-      {appMode === 'timetable' && !isHeaderCollapsed && timetableProps && (
-        <TimetableNavBar
-          timetableSubject={timetableProps.timetableSubject}
-          setTimetableSubject={timetableProps.setTimetableSubject}
-          timetableViewType={timetableProps.timetableViewType as any}
-          setTimetableViewType={timetableProps.setTimetableViewType as any}
-          mathViewMode={timetableProps.mathViewMode as any}
-          setMathViewMode={timetableProps.setMathViewMode}
-          hasPermission={timetableProps.hasPermission}
-          setIsTimetableSettingsOpen={timetableProps.setIsTimetableSettingsOpen}
-        />
-      )}
+
     </header>
   );
 };

@@ -508,19 +508,11 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                     </div>
                 </div>
 
-                {/* Center: 시간표 제목 */}
-                <h1 className="flex-shrink-0 whitespace-nowrap text-sm font-black text-gray-800 tracking-tight flex items-center gap-2">
-                    <span>
-                        {isSimulationMode && currentScenarioName
-                            ? currentScenarioName
-                            : viewType === 'teacher' ? `${timetableSubject === 'highmath' ? '고등수학관' : '수학'} 강사 시간표`
-                                : viewType === 'room' ? `${timetableSubject === 'highmath' ? '고등수학관' : '수학'} 강의실 시간표`
-                                    : viewType === 'excel' ? `${timetableSubject === 'highmath' ? '고등수학관' : '수학'} 엑셀 시간표`
-                                        : `${timetableSubject === 'highmath' ? '고등수학관' : '수학'} 통합 시간표`
-                        }
-                    </span>
-                    {isSimulationMode && <span className="text-xxs bg-orange-500 text-white px-1.5 py-0.5 rounded-sm font-bold animate-pulse">SIMULATION</span>}
-                </h1>
+                {/* Simulation Mode 표시 */}
+                {isSimulationMode && currentScenarioName && (
+                    <span className="flex-shrink-0 text-sm font-black text-gray-800">{currentScenarioName}</span>
+                )}
+                {isSimulationMode && <span className="text-xxs bg-orange-500 text-white px-1.5 py-0.5 rounded-sm font-bold animate-pulse">SIMULATION</span>}
 
                 {/* Right: Search and Actions */}
                 <div className="flex items-center gap-2 flex-shrink-0">

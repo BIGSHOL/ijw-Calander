@@ -35,6 +35,7 @@ export default function SubjectControls({
                 title="과목 선택"
             >
                 {hasPermission('timetable.math.view') && <option value="math">수학</option>}
+                {hasPermission('timetable.math.view') && <option value="highmath">고등수학</option>}
                 {hasPermission('timetable.english.view') && <option value="english">영어</option>}
                 {hasPermission('timetable.science.view') && <option value="science">과학</option>}
                 {hasPermission('timetable.korean.view') && <option value="korean">국어</option>}

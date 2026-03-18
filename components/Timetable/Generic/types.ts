@@ -1,7 +1,7 @@
 // Generic Timetable Types
 import type { PermissionId } from '../../../types';
 
-export type SubjectKey = 'math' | 'english' | 'science' | 'korean' | 'shuttle';
+export type SubjectKey = 'math' | 'english' | 'science' | 'korean' | 'highmath' | 'shuttle';
 
 export interface PeriodInfo {
   id: string;

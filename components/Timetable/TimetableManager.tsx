@@ -1484,7 +1484,7 @@ const TimetableManager = ({
 
     // Current periods based on subject tab
     const currentPeriods = (subjectTab === 'math' || subjectTab === 'highmath') ? MATH_PERIODS : ENGLISH_PERIODS;
-    const currentSubjectFilter = (subjectTab === 'math' || subjectTab === 'highmath') ? '수학' : '영어';
+    const currentSubjectFilter = subjectTab === 'highmath' ? '고등수학' : subjectTab === 'math' ? '수학' : '영어';
 
     // Selected days ordered by sortedWeekdays order
     const orderedSelectedDays = useMemo(() => {
@@ -1537,12 +1537,6 @@ const TimetableManager = ({
     const filteredClasses = useMemo(() => {
         let base = localClasses.filter(c => c.subject === currentSubjectFilter);
 
-        // 수학/고등수학관 분리: 고등수학관 탭이면 '고등' 강의실만, 수학 탭이면 '고등' 강의실 제외
-        if (subjectTab === 'highmath') {
-            base = base.filter(c => (c.room || '').includes('고등'));
-        } else if (subjectTab === 'math') {
-            base = base.filter(c => !(c.room || '').includes('고등'));
-        }
 
         // 강의실 필터 (본원/바른/고등 멀티 선택)
         if (!roomFilter.main || !roomFilter.barun || !roomFilter.godeung) {
