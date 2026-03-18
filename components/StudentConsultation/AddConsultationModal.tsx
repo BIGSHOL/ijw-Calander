@@ -511,6 +511,7 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                                 <textarea
                                     value={content}
                                     onChange={(e) => setContent(e.target.value)}
+                                    spellCheck={false}
                                     className="w-full text-xs border border-gray-300 px-2 py-1 focus:ring-1 focus:ring-accent outline-none resize-none"
                                     rows={4}
                                     placeholder="상담 내용을 입력하세요"

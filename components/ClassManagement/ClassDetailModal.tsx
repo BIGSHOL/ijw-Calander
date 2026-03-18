@@ -623,7 +623,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                       <h3 className="text-primary font-bold text-xs">메모</h3>
                     </div>
                     <div className="p-1.5">
-                      <textarea value={memo} onChange={(e) => setMemo(e.target.value)} placeholder="수업에 대한 메모를 입력하세요..." rows={3} className="w-full px-2 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none resize-none" />
+                      <textarea value={memo} onChange={(e) => setMemo(e.target.value)} spellCheck={false} placeholder="수업에 대한 메모를 입력하세요..." rows={3} className="w-full px-2 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-accent focus:border-accent outline-none resize-none" />
                     </div>
                   </div>
                 </div>

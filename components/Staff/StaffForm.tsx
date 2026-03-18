@@ -735,6 +735,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
             <textarea
               name="memo"
               value={formData.memo}
+              spellCheck={false}
               onChange={handleChange}
               rows={2}
               placeholder="추가 정보를 입력하세요..."

@@ -180,6 +180,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                   <textarea
                     value={speakerBio}
                     onChange={(e) => setSpeakerBio(e.target.value)}
+                    spellCheck={false}
                     placeholder="연사 소개"
                     rows={2}
                     className="w-full px-3 py-1.5 border border-purple-300 rounded-sm text-sm focus:ring-2 focus:ring-purple-500 outline-none resize-none"
@@ -434,6 +435,7 @@ const SeminarPanel: React.FC<SeminarPanelProps> = ({
                   <textarea
                     value={newAttendee.memo || ''}
                     onChange={(e) => setNewAttendee({ ...newAttendee, memo: e.target.value })}
+                    spellCheck={false}
                     placeholder="메모"
                     rows={2}
                     className="w-full px-3 py-2 border border-gray-300 rounded-sm text-sm resize-none"

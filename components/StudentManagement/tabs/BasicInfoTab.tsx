@@ -729,6 +729,7 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student, readOnly = false }
             <textarea
               value={formData.memo ?? ''}
               onChange={(e) => handleChange('memo', e.target.value)}
+              spellCheck={false}
               placeholder="학생 특이사항/메모"
               rows={2}
               className="w-full px-2 py-1 text-xs border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-accent resize-none"

@@ -319,6 +319,7 @@ const WithdrawalStudentDetail: React.FC<WithdrawalStudentDetailProps> = ({
                 <textarea
                   value={editMemo}
                   onChange={(e) => setEditMemo(e.target.value)}
+                  spellCheck={false}
                   placeholder="상세 사유를 입력하세요..."
                   rows={3}
                   className="w-full text-xs border rounded-sm px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary resize-none"

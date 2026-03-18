@@ -143,6 +143,7 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
                 <textarea
                   value={formData.withdrawalMemo}
                   onChange={(e) => setFormData(prev => ({ ...prev, withdrawalMemo: e.target.value }))}
+                  spellCheck={false}
                   placeholder="퇴원 관련 메모를 입력하세요..."
                   rows={3}
                   className="w-full px-2 py-1 text-xs border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 resize-none"

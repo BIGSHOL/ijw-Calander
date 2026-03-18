@@ -103,6 +103,7 @@ export const EntryForm: React.FC<EntryFormProps> = ({ initialData, existingAcade
                         <textarea
                             value={reason}
                             onChange={(e) => setReason(e.target.value)}
+                            spellCheck={false}
                             rows={3}
                             className="w-full px-4 py-2 rounded-sm border border-gray-200 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all resize-none"
                             placeholder="특이사항이 있는 경우 입력하세요"

@@ -126,6 +126,7 @@ export default function ParentPortalTab({ currentUser }: ParentPortalTabProps) {
                 <label className="block text-xs font-medium text-gray-700 mb-1">메시지 내용</label>
                 <textarea
                   rows={5}
+                  spellCheck={false}
                   placeholder="메시지를 입력하세요..."
                   className="w-full text-xs border rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none"
                 />

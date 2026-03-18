@@ -105,6 +105,7 @@ export const MemoSendModal: React.FC<MemoSendModalProps> = ({
               <textarea
                 value={memoMessage}
                 onChange={(e) => setMemoMessage(e.target.value)}
+                spellCheck={false}
                 placeholder="예: 오늘 회의 일정 만들어주세요"
                 className="w-full px-3 py-2 border border-gray-200 rounded-sm text-sm focus:ring-1 focus:ring-accent focus:border-accent outline-none resize-none h-24"
               />

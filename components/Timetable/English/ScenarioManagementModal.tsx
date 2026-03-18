@@ -755,6 +755,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                                 <textarea
                                                     value={editingDesc}
                                                     onChange={e => setEditingDesc(e.target.value)}
+                                                    spellCheck={false}
                                                     placeholder="설명 (선택사항)"
                                                     className="flex-1 px-2 py-1 border rounded-sm text-xs resize-none"
                                                     rows={2}
@@ -888,6 +889,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                 <textarea
                                     value={newScenarioDesc}
                                     onChange={e => setNewScenarioDesc(e.target.value)}
+                                    spellCheck={false}
                                     placeholder="예: 신입생 3명 추가, B반 시간 변경 반영"
                                     rows={3}
                                     className="w-full px-3 py-2 border rounded-sm text-sm resize-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"

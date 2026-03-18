@@ -396,6 +396,7 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
                       value={description}
                       disabled={isViewMode || !canEditCurrent}
                       onChange={(e) => setDescription(e.target.value)}
+                      spellCheck={false}
                       className={`w-full px-2 py-1 border border-gray-300 focus:ring-1 focus:ring-purple-500 outline-none min-h-[80px] resize-y text-xs ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
                       placeholder="세미나 내용을 소개해주세요"
                     />
@@ -527,6 +528,7 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
                       value={speakerBio}
                       disabled={isViewMode || !canEditCurrent}
                       onChange={(e) => setSpeakerBio(e.target.value)}
+                      spellCheck={false}
                       className={`w-full px-2 py-1 border border-gray-300 focus:ring-1 focus:ring-purple-500 outline-none min-h-[60px] resize-y text-xs ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
                       placeholder="발표자 약력 및 소개"
                     />

@@ -348,6 +348,7 @@ export const BillingForm: React.FC<BillingFormProps> = ({
               <textarea
                 value={formData.memo}
                 onChange={(e) => updateField('memo', e.target.value)}
+                spellCheck={false}
                 className="w-full px-3 py-2 border rounded-sm resize-none text-sm"
                 rows={2}
               />
@@ -358,6 +359,7 @@ export const BillingForm: React.FC<BillingFormProps> = ({
               <textarea
                 value={formData.discountReason}
                 onChange={(e) => updateField('discountReason', e.target.value)}
+                spellCheck={false}
                 className="w-full px-3 py-2 border rounded-sm resize-none text-sm"
                 rows={2}
               />

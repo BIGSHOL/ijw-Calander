@@ -40,6 +40,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSend, isLoading }) => {
         value={input}
         onChange={handleInput}
         onKeyDown={handleKeyDown}
+        spellCheck={false}
         placeholder="질문을 입력하세요..."
         disabled={isLoading}
         rows={1}

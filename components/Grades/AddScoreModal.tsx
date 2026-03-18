@@ -483,6 +483,7 @@ const AddScoreModal: React.FC<AddScoreModalProps> = ({
                             <textarea
                                 value={formData.memo}
                                 onChange={(e) => setFormData({ ...formData, memo: e.target.value })}
+                                spellCheck={false}
                                 placeholder="특이사항 메모..."
                                 rows={2}
                                 className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:ring-1 focus:ring-accent focus:outline-none resize-none"

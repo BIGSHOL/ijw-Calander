@@ -75,6 +75,7 @@ export default function NotificationsTab({ currentUser }: NotificationsTabProps)
                 <label className="block text-xs font-medium text-gray-700 mb-1">내용</label>
                 <textarea
                   rows={5}
+                  spellCheck={false}
                   placeholder="알림 내용을 입력하세요. {{학생명}}, {{학원명}} 등 변수를 사용할 수 있습니다."
                   className="w-full text-xs border rounded px-3 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />

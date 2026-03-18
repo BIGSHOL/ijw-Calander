@@ -420,6 +420,7 @@ export default function NoticesTab({ currentUser }: NoticesTabProps) {
                 <textarea
                   value={form.content}
                   onChange={e => setForm(prev => ({ ...prev, content: e.target.value }))}
+                  spellCheck={false}
                   placeholder="공지사항 내용을 입력하세요"
                   rows={8}
                   className="w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"

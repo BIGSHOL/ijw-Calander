@@ -539,6 +539,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                             <textarea
                                 value={values.memo}
                                 onChange={(e) => handleChange('memo', e.target.value)}
+                                spellCheck={false}
                                 className="w-full px-2 py-1 text-xs border border-gray-300 focus:ring-1 focus:ring-accent outline-none resize-none"
                                 rows={2}
                                 placeholder="특이사항이나 메모"

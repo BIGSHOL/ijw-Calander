@@ -350,6 +350,7 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
                                         <textarea
                                             value={followUpNotes}
                                             onChange={(e) => setFollowUpNotes(e.target.value)}
+                                            spellCheck={false}
                                             className="w-full border border-gray-300 rounded-sm px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent"
                                             rows={3}
                                             placeholder="후속 조치 결과를 입력하세요..."

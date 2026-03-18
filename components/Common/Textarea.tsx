@@ -65,6 +65,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         <textarea
           ref={ref}
           id={textareaId}
+          spellCheck={false}
           className={baseClasses}
           aria-invalid={error ? 'true' : 'false'}
           aria-describedby={`${error ? errorId : ''} ${helpText ? helpId : ''}`.trim() || undefined}

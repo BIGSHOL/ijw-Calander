@@ -295,6 +295,7 @@ function AnalysisTabContent({ reportData, studentName, consultationDate, counsel
                                             <textarea
                                                 value={editingText}
                                                 onChange={(e) => setEditingText(e.target.value)}
+                                                spellCheck={false}
                                                 className="w-full min-h-[100px] p-2 text-xs text-gray-700 border rounded-sm focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none resize-y"
                                                 autoFocus
                                             />
@@ -1295,6 +1296,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                     rows={13}
                                     value={formData.notes}
                                     onChange={e => setFormData({ ...formData, notes: e.target.value })}
+                                    spellCheck={false}
                                     className={`${inputClass} resize-none`}
                                     {...viewProps}
                                 />
@@ -1325,6 +1327,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                         rows={2}
                                         value={formData.safetyNotes || ''}
                                         onChange={e => setFormData({ ...formData, safetyNotes: e.target.value })}
+                                        spellCheck={false}
                                         className={`${inputClass} resize-none`}
                                         placeholder="알레르기, 주의사항 등"
                                         {...viewProps}
@@ -1737,19 +1740,19 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                     )}
                                     <div>
                                         <label className={labelClass}><FileText size={12} className="inline mr-1" />학원 히스토리 ({c.label})</label>
-                                        <textarea rows={2} value={consult.academyHistory || ''} onChange={e => setConsult({ ...consult, academyHistory: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" {...viewProps} />
+                                        <textarea rows={2} value={consult.academyHistory || ''} onChange={e => setConsult({ ...consult, academyHistory: e.target.value })} spellCheck={false} className={`${inputClass} resize-none`} placeholder="비어 있음" {...viewProps} />
                                     </div>
                                     <div>
                                         <label className={labelClass}><BookOpen size={12} className="inline mr-1" />학습 진도 ({c.label})</label>
-                                        <textarea rows={2} value={consult.learningProgress || ''} onChange={e => setConsult({ ...consult, learningProgress: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" {...viewProps} />
+                                        <textarea rows={2} value={consult.learningProgress || ''} onChange={e => setConsult({ ...consult, learningProgress: e.target.value })} spellCheck={false} className={`${inputClass} resize-none`} placeholder="비어 있음" {...viewProps} />
                                     </div>
                                     <div>
                                         <label className={labelClass}><CheckCircle size={12} className="inline mr-1" />학생 시험 성적 ({c.label})</label>
-                                        <textarea rows={2} value={consult.examResults || ''} onChange={e => setConsult({ ...consult, examResults: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" {...viewProps} />
+                                        <textarea rows={2} value={consult.examResults || ''} onChange={e => setConsult({ ...consult, examResults: e.target.value })} spellCheck={false} className={`${inputClass} resize-none`} placeholder="비어 있음" {...viewProps} />
                                     </div>
                                     <div>
                                         <label className={labelClass}><MessageSquare size={12} className="inline mr-1" />학생 상담 내역 ({c.label})</label>
-                                        <textarea rows={2} value={consult.consultationHistory || ''} onChange={e => setConsult({ ...consult, consultationHistory: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" {...viewProps} />
+                                        <textarea rows={2} value={consult.consultationHistory || ''} onChange={e => setConsult({ ...consult, consultationHistory: e.target.value })} spellCheck={false} className={`${inputClass} resize-none`} placeholder="비어 있음" {...viewProps} />
                                     </div>
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
@@ -1767,7 +1770,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                     </div>
                                     <div>
                                         <label className={labelClass}><FileText size={12} className="inline mr-1" />기타</label>
-                                        <textarea rows={2} value={consult.notes || ''} onChange={e => setConsult({ ...consult, notes: e.target.value })} className={`${inputClass} resize-none`} placeholder="비어 있음" {...viewProps} />
+                                        <textarea rows={2} value={consult.notes || ''} onChange={e => setConsult({ ...consult, notes: e.target.value })} spellCheck={false} className={`${inputClass} resize-none`} placeholder="비어 있음" {...viewProps} />
                                     </div>
                                 </div>
                             </div>

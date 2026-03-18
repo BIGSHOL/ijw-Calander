@@ -395,6 +395,7 @@ const Table = forwardRef<HTMLTableElement, Props>(({
               </div>
               <textarea
                 ref={memoInputRef}
+                spellCheck={false}
                 className="w-full text-sm border border-gray-300 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none mb-2 min-h-[80px]"
                 placeholder="예: 병결, 여행, 지각 등"
                 value={contextMenu.memoText}

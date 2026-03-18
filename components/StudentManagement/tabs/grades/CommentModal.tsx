@@ -132,6 +132,7 @@ const CommentModal: React.FC<CommentModalProps> = ({ onClose, studentId, student
                                 <textarea
                                     value={content}
                                     onChange={(e) => setContent(e.target.value)}
+                                    spellCheck={false}
                                     placeholder={`예: ${category === 'strength' ? '이해력이 뛰어나고 응용력이 우수함' : category === 'improvement' ? '계산 실수를 줄이기 위한 검산 습관 필요' : category === 'effort' ? '매일 오답노트 작성하며 꾸준히 노력함' : category === 'potential' ? '고난도 문제 해결 능력 향상 필요' : '전반적으로 학습 태도가 우수함'}`}
                                     className="w-full px-2 py-2 text-xs border border-gray-300 rounded-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none min-h-[100px] resize-y"
                                     required

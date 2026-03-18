@@ -251,6 +251,7 @@ export function ReportViewer({ report, canEdit, currentUser }: ReportViewerProps
                       <textarea
                         value={editingText}
                         onChange={(e) => setEditingText(e.target.value)}
+                        spellCheck={false}
                         className="w-full min-h-[120px] p-3 text-sm text-gray-700 border rounded-sm focus:border-blue-400 focus:ring-1 focus:ring-blue-400 outline-none resize-y"
                         autoFocus
                       />

@@ -246,6 +246,7 @@ const BulkEnglishNameUpdateModal: React.FC<BulkEnglishNameUpdateModalProps> = ({
                 <textarea
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
+                  spellCheck={false}
                   placeholder="김나윤A(Chloe)&#10;현가현(Sophia)&#10;이세인A(Vera)"
                   className="w-full h-64 p-3 border border-gray-300 rounded-sm focus:ring-2 focus:ring-accent focus:border-transparent font-mono text-sm"
                 />

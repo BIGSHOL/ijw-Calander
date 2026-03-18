@@ -333,6 +333,7 @@ const EventFormFields: React.FC<EventFormFieldsProps> = ({
             <textarea
               value={description}
               disabled={isViewMode || !canEditCurrent}
+              spellCheck={false}
               onChange={(e) => setDescription(e.target.value)}
               className={`w-full px-2 py-1 border border-gray-300 focus:ring-1 focus:ring-accent outline-none min-h-[80px] resize-y text-xs ${!canEditCurrent ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
               placeholder="일정의 자세한 내용을 입력하세요"

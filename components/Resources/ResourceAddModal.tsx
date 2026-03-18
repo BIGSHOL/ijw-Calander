@@ -379,6 +379,7 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
                 <span className="text-xs font-medium text-primary-700">설명</span>
                 <textarea
                   value={description}
+                  spellCheck={false}
                   onChange={(e) => {
                     setDescription(e.target.value);
                     // 자동 높이 조절
