@@ -109,6 +109,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
   const teachersBySubject = useMemo(() => {
     const result: Record<string, string[]> = {
       math: [],
+      highmath: [],
       english: [],
       science: [],
       korean: [],
@@ -235,6 +236,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
   const subjectFilters: Array<{ value: 'all' | SubjectType; label: string; icon: React.ReactNode }> = [
     { value: 'all', label: '전체', icon: <BookOpen className="w-4 h-4" /> },
     { value: 'math', label: SUBJECT_LABELS.math, icon: <Calculator className="w-4 h-4" /> },
+    { value: 'highmath', label: SUBJECT_LABELS.highmath, icon: <Calculator className="w-4 h-4" /> },
     { value: 'english', label: SUBJECT_LABELS.english, icon: <BookOpen className="w-4 h-4" /> },
     { value: 'science', label: SUBJECT_LABELS.science, icon: <Microscope className="w-4 h-4" /> },
     { value: 'korean', label: SUBJECT_LABELS.korean, icon: <Book className="w-4 h-4" /> },
@@ -348,6 +350,27 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
                                     setShowTeacherDropdown(false);
                                   }}
                                   className={`px-2 py-1 rounded text-xs ${filters.teacher === teacher ? 'bg-blue-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
+                                >
+                                  {teacher}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 고등수학 */}
+                        {teachersBySubject.highmath.length > 0 && (
+                          <div className="mb-2">
+                            <div className="text-xxs text-purple-400 font-bold px-2 py-0.5 border-b border-white/10 mb-1">고등수학</div>
+                            <div className="grid grid-cols-3 gap-0.5">
+                              {teachersBySubject.highmath.map(teacher => (
+                                <button
+                                  key={`highmath-${teacher}`}
+                                  onClick={() => {
+                                    setFilters({ ...filters, teacher });
+                                    setShowTeacherDropdown(false);
+                                  }}
+                                  className={`px-2 py-1 rounded text-xs ${filters.teacher === teacher ? 'bg-purple-500 text-white font-bold' : 'text-gray-300 hover:bg-white/10'}`}
                                 >
                                   {teacher}
                                 </button>
