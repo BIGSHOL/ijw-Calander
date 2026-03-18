@@ -1371,9 +1371,9 @@ const TimetableManager = ({
         }
     }, [timetableViewMode, showClassName, showSchool, showGrade, showEmptyRooms, cellSize, fontSize, internalShowStudents, internalSelectedDays, showHoldStudents, showWithdrawnStudents]);
 
-    // Step 1: 수학 수업의 enrollment 데이터를 classes에 병합 (드래그 전에 필요)
+    // Step 1: 수학/고등수학 수업의 enrollment 데이터를 classes에 병합 (드래그 전에 필요)
     const mathClassNamesFromRaw = useMemo(() => {
-        return classes.filter(c => c.subject === '수학').map(c => c.className);
+        return classes.filter(c => c.subject === '수학' || c.subject === '고등수학').map(c => c.className);
     }, [classes]);
 
     // 주차 기준일: 미래 주 → weekStart, 이번 주 → today, 과거 주 → weekEnd(일요일)
@@ -1386,7 +1386,7 @@ const TimetableManager = ({
 
     const classesWithEnrollments = useMemo(() => {
         return classes.map(cls => {
-            if (cls.subject === '수학') {
+            if (cls.subject === '수학' || cls.subject === '고등수학') {
                 const enrollmentData = mathClassDataMap[cls.className];
                 if (enrollmentData) {
                     return {
