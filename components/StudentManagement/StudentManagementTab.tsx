@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
+﻿import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { UnifiedStudent, UserProfile } from '../../types';
 import { useStudents, searchStudentsByQuery } from '../../hooks/useStudents';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -8,7 +8,6 @@ import StudentList from './StudentList';
 import StudentDetail from './StudentDetail';
 import AddStudentModal from './AddStudentModal';
 import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft, Database, GitMerge, Trash2, AlertTriangle, Languages, Download, ExternalLink } from 'lucide-react';
-import { CampusType, CAMPUS_LABELS, CAMPUS_COLORS } from '../../utils/campusUtils';
 import { formatDateKey } from '../../utils/dateUtils';
 
 // Performance: bundle-dynamic-imports - Modal components lazy load (~80-100KB bundle reduction)
@@ -18,7 +17,6 @@ const StudentDataCleanupModal = lazy(() => import('./StudentDataCleanupModal'));
 const DuplicateNamesViewModal = lazy(() => import('./DuplicateNamesViewModal'));
 const BulkEnglishNameUpdateModal = lazy(() => import('./BulkEnglishNameUpdateModal'));
 const MakeEduSyncModal = lazy(() => import('./MakeEduSyncModal'));
-const GodeungMakeEduSyncModal = lazy(() => import('./GodeungMakeEduSyncModal'));
 
 export type SearchField =
   | 'all'           // 전체
@@ -60,8 +58,6 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
   const [showDuplicateNamesModal, setShowDuplicateNamesModal] = useState(false);
   const [showBulkEnglishNameModal, setShowBulkEnglishNameModal] = useState(false);
   const [showMakeEduSyncModal, setShowMakeEduSyncModal] = useState(false);
-  const [showGodeungMakeEduSyncModal, setShowGodeungMakeEduSyncModal] = useState(false);
-  const [campusFilter, setCampusFilter] = useState<'all' | CampusType>('all');
 
   // 선택된 학생 자동 업데이트 (students 배열 변경 시)
   useEffect(() => {
@@ -143,9 +139,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
   // OPTIMIZATION: Vercel React Best Practices (rerender-derived-state)
   // - 250+ 줄 useMemo → useStudentFilters 커스텀 훅으로 분리
   // - 각 필터가 독립적으로 메모이제이션되어 불필요한 재계산 방지
-  // 캠퍼스 필터를 로컬 상태로 오버라이드
-  const filtersWithCampus = useMemo(() => ({ ...filters, campus: campusFilter }), [filters, campusFilter]);
-  const filteredStudents = useStudentFilters(students, filtersWithCampus, sortBy, oldWithdrawnStudents);
+  const filteredStudents = useStudentFilters(students, filters, sortBy, oldWithdrawnStudents);
 
   // 필터링된 학생 이름 내보내기
   const handleExportNames = () => {
@@ -251,15 +245,6 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
                   <ExternalLink className="w-3.5 h-3.5" />
                 </button>
             )}
-            {currentUser?.role === 'master' && (
-                <button
-                  onClick={() => setShowGodeungMakeEduSyncModal(true)}
-                  className="p-1.5 text-purple-400 hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"
-                  title="고등수학관 원생 조회"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </button>
-            )}
             {canEdit && (
               <button
                 onClick={() => setIsAddStudentModalOpen(true)}
@@ -312,27 +297,6 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
             </p>
           </div>
         )}
-
-        {/* 캠퍼스 필터 */}
-        <div className="flex items-center gap-1 px-2 py-1.5 border-b bg-gray-50" style={{ borderColor: 'rgba(8, 20, 41, 0.1)' }}>
-          {(['all', 'main', 'godeung'] as const).map((campus) => {
-            const isActive = campusFilter === campus;
-            const label = campus === 'all' ? '전체' : CAMPUS_LABELS[campus];
-            const color = campus === 'all' ? '#6b7280' : CAMPUS_COLORS[campus];
-            return (
-              <button
-                key={campus}
-                onClick={() => setCampusFilter(campus)}
-                className={`text-xxs px-2 py-0.5 rounded-full font-medium transition-colors ${
-                  isActive ? 'text-white' : 'text-gray-500 hover:bg-gray-200'
-                }`}
-                style={isActive ? { backgroundColor: color } : undefined}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
 
         <StudentList
           students={filteredStudents}
@@ -455,15 +419,6 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
         </Suspense>
       )}
 
-      {/* 고등수학관 메이크에듀 동기화 모달 */}
-      {showGodeungMakeEduSyncModal && (
-        <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-white" /></div>}>
-          <GodeungMakeEduSyncModal
-            existingStudents={students}
-            onClose={() => setShowGodeungMakeEduSyncModal(false)}
-          />
-        </Suspense>
-      )}
 
     </div>
   );

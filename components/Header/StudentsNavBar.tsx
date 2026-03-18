@@ -60,7 +60,7 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
         {/* Primary Filters - 항상 보이는 주요 필터 */}
         <TabFilterGroup.Primary>
           {/* Subject Filter - Grid View */}
-          <div className="grid grid-cols-5 gap-1 bg-white/10 rounded-sm p-1 border border-white/10 shadow-sm">
+          <div className="grid grid-cols-6 gap-1 bg-white/10 rounded-sm p-1 border border-white/10 shadow-sm">
             <TabButton
               active={studentFilters.subjects.length === 0}
               onClick={() => setStudentFilters(prev => ({ ...prev, subjects: [] }))}
@@ -82,6 +82,21 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
               className="px-3 py-1"
             >
               수학
+            </TabButton>
+            <TabButton
+              active={studentFilters.subjects.length > 0 && studentFilters.subjects.includes('highmath')}
+              onClick={() => {
+                const hasSubject = studentFilters.subjects.includes('highmath');
+                setStudentFilters(prev => ({
+                  ...prev,
+                  subjects: hasSubject
+                    ? prev.subjects.filter(s => s !== 'highmath')
+                    : [...prev.subjects, 'highmath']
+                }));
+              }}
+              className="px-3 py-1"
+            >
+              고등수학
             </TabButton>
             <TabButton
               active={studentFilters.subjects.length > 0 && studentFilters.subjects.includes('english')}
