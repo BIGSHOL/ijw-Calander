@@ -1366,7 +1366,7 @@ const TimetableManager = ({
         return getWeekReferenceDate(currentMonday);
     }, [currentMonday]);
 
-    const { classDataMap: mathClassDataMap, refetch: refetchMathClassStudents } = useMathClassStudents(mathClassNamesFromRaw, studentMap, mathReferenceDate);
+    const { classDataMap: mathClassDataMap, refetch: refetchMathClassStudents } = useMathClassStudents(mathClassNamesFromRaw, studentMap, mathReferenceDate, ['math', 'highmath']);
 
     const classesWithEnrollments = useMemo(() => {
         return classes.map(cls => {

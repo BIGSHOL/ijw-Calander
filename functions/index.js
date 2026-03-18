@@ -157,6 +157,7 @@ exports.syncStudentsOnClassChange = functions
         const days = [];
         if (classData?.schedule && Array.isArray(classData.schedule)) {
             classData.schedule.forEach((s) => {
+                if (typeof s !== "string") return;
                 const day = s.split(" ")[0];
                 if (day && !days.includes(day)) days.push(day);
             });
@@ -174,6 +175,7 @@ exports.syncStudentsOnClassChange = functions
         const beforeDays = [];
         if (beforeClassData.schedule && Array.isArray(beforeClassData.schedule)) {
             beforeClassData.schedule.forEach((s) => {
+                if (typeof s !== "string") return;
                 const day = s.split(" ")[0];
                 if (day && !beforeDays.includes(day)) beforeDays.push(day);
             });
@@ -202,8 +204,24 @@ exports.syncStudentsOnClassChange = functions
         // 2. Existing students (Remaining) - ONLY IF metadata changed
         const studentsToUpdate = metadataChanged ? [...addedStudents, ...remainingStudents] : addedStudents;
 
-        // enrollmentId: subject_className 형식 (프론트엔드와 동일)
-        const enrollmentDocId = `${subject}_${className}`;
+        // enrollmentId: classId 사용 (Firestore 문서 ID)
+        // 기존 문서 호환: classId로 못 찾으면 쿼리로 fallback
+        const findEnrollRef = async (studentRef, targetClassId) => {
+            // 1) classId로 직접 접근
+            const directRef = studentRef.collection("enrollments").doc(targetClassId);
+            const directSnap = await directRef.get();
+            if (directSnap.exists) return { ref: directRef, exists: true };
+            // 2) 기존 형식 fallback (subject_className)
+            const oldRef = studentRef.collection("enrollments").doc(`${subject}_${className}`);
+            const oldSnap = await oldRef.get();
+            if (oldSnap.exists) return { ref: oldRef, exists: true };
+            // 3) 쿼리 fallback
+            const qSnap = await studentRef.collection("enrollments")
+                .where("classId", "==", targetClassId).limit(1).get();
+            if (!qSnap.empty) return { ref: qSnap.docs[0].ref, exists: true };
+            // 4) 새로 생성할 ref (classId as doc ID)
+            return { ref: directRef, exists: false };
+        };
 
         // Process UPDATES (Add/Update Enrollment) → 서브컬렉션에 저장
         for (const student of studentsToUpdate) {
@@ -220,15 +238,22 @@ exports.syncStudentsOnClassChange = functions
                 days,
                 startDate: student.enrollmentDate || now.split("T")[0],
                 enrollmentDate: student.enrollmentDate || now.split("T")[0],
-                endDate: student.withdrawalDate || null,
                 createdAt: now,
                 updatedAt: now,
             };
 
             if (studentDoc.exists) {
-                // 서브컬렉션에 enrollment 문서 생성/업데이트
-                const enrollRef = studentRef.collection("enrollments").doc(enrollmentDocId);
-                batch.set(enrollRef, enrollmentData, { merge: true });
+                const { ref: enrollRef, exists: enrollExists } = await findEnrollRef(studentRef, classId);
+                if (enrollExists) {
+                    // 기존 문서 업데이트: endDate 명시적으로 제거 (재등록 시)
+                    batch.update(enrollRef, {
+                        ...enrollmentData,
+                        endDate: student.withdrawalDate || admin.firestore.FieldValue.delete(),
+                    });
+                } else {
+                    // 새 문서 생성 (doc ID = classId)
+                    batch.set(enrollRef, { ...enrollmentData, endDate: student.withdrawalDate || null });
+                }
                 batch.update(studentRef, { updatedAt: now });
             } else {
                 // 학생 문서가 없으면 학생 먼저 생성
@@ -245,9 +270,8 @@ exports.syncStudentsOnClassChange = functions
                     updatedAt: now,
                 };
                 batch.set(studentRef, newStudent);
-                // 서브컬렉션에 enrollment 추가
-                const enrollRef = studentRef.collection("enrollments").doc(enrollmentDocId);
-                batch.set(enrollRef, enrollmentData);
+                const enrollRef = studentRef.collection("enrollments").doc(classId);
+                batch.set(enrollRef, { ...enrollmentData, endDate: student.withdrawalDate || null });
             }
         }
 
@@ -258,9 +282,8 @@ exports.syncStudentsOnClassChange = functions
             const studentDoc = await studentRef.get();
 
             if (studentDoc.exists) {
-                // 서브컬렉션에서 해당 수업 enrollment 찾아서 endDate 설정
-                const enrollRef = studentRef.collection("enrollments").doc(enrollmentDocId);
-                const enrollDoc = await enrollRef.get();
+                const { ref: enrollRef, exists: enrollExists } = await findEnrollRef(studentRef, classId);
+                const enrollDoc = enrollExists ? { exists: true } : { exists: false };
 
                 if (enrollDoc.exists) {
                     batch.update(enrollRef, {
@@ -329,6 +352,8 @@ exports.migrateEnrollmentsToSubcollection = functions
             studentsWithArrayField: 0,
             enrollmentsMigrated: 0,
             duplicatesFound: 0,
+            duplicatesDeleted: 0,
+            docIdRenamed: 0,
             endDateCleared: 0,
             endDateSet: 0,
             metadataSynced: 0,
@@ -370,6 +395,13 @@ exports.migrateEnrollmentsToSubcollection = functions
                     days,
                     schedule: d.schedule || [],
                 });
+            });
+
+            // 역방향 맵: subject_className → classId (doc ID 변환용)
+            const classNameToIdMap = new Map();
+            classMetaMap.forEach((meta, classId) => {
+                const key = `${meta.subject}_${meta.className}`;
+                classNameToIdMap.set(key, classId);
             });
 
             // 2. 모든 학생 순회
@@ -450,14 +482,42 @@ exports.migrateEnrollmentsToSubcollection = functions
                 for (const [classId, docs] of finalClassIdMap) {
                     if (docs.length > 1) {
                         stats.duplicatesFound += docs.length - 1;
-                        if (isDryRun) {
-                            stats.details.push(`[duplicate] ${studentKey}: classId=${classId}, docs=${docs.map(d=>d.docId).join(', ')}`);
+
+                        // 활성(endDate 없음) enrollment 우선, 같으면 최신 createdAt 우선
+                        const sorted = [...docs].sort((a, b) => {
+                            const aActive = !a.data.endDate ? 1 : 0;
+                            const bActive = !b.data.endDate ? 1 : 0;
+                            if (aActive !== bActive) return bActive - aActive;
+                            const aTime = a.data.createdAt || "";
+                            const bTime = b.data.createdAt || "";
+                            return bTime > aTime ? 1 : bTime < aTime ? -1 : 0;
+                        });
+                        const keep = sorted[0];
+                        const toDelete = sorted.slice(1);
+
+                        for (const dup of toDelete) {
+                            stats.duplicatesDeleted++;
+                            if (!isDryRun) {
+                                try {
+                                    await dup.ref.delete();
+                                } catch (e) {
+                                    stats.errors.push(`DelDup: ${studentKey}/${dup.docId}: ${e.message}`);
+                                }
+                            } else {
+                                stats.details.push(`[duplicate] ${studentKey}: classId=${classId}, keep=${keep.docId}, delete=${dup.docId}`);
+                            }
                         }
                     }
                 }
 
+                // 중복 삭제 후 서브컬렉션 다시 조회 (삭제된 문서 제외)
+                const cleanSubSnap = (!isDryRun && stats.duplicatesDeleted > 0)
+                    ? await studentDoc.ref.collection("enrollments").get()
+                    : finalSubSnap;
+
                 // 2c. class studentList와 비교하여 endDate 정합성 확인
-                for (const enrollDoc of finalSubSnap.docs) {
+                const todayStr = new Date().toISOString().split("T")[0];
+                for (const enrollDoc of cleanSubSnap.docs) {
                     const enrollData = enrollDoc.data();
                     const classId = enrollData.classId;
                     if (!classId) continue;
@@ -467,15 +527,8 @@ exports.migrateEnrollmentsToSubcollection = functions
 
                     const isInClass = currentStudents.has(studentKey);
 
-                    // 같은 classId 중복 문서가 있는 경우, 가장 최근(active) 것만 처리
-                    const siblingDocs = finalClassIdMap.get(classId) || [];
-                    const hasActiveSibling = siblingDocs.some(d => d.docId !== enrollDoc.id && !d.data.endDate);
-
                     if (isInClass && enrollData.endDate) {
-                        // 수업에 있는데 endDate 설정됨
-                        // 같은 classId로 이미 활성 enrollment이 있으면 → 이건 이전 수강 이력이므로 건드리지 않음
-                        if (hasActiveSibling) continue;
-
+                        // 수업에 있는데 endDate 설정됨 → endDate 제거
                         stats.endDateCleared++;
                         if (!isDryRun) {
                             try {
@@ -487,20 +540,16 @@ exports.migrateEnrollmentsToSubcollection = functions
                             stats.details.push(`[clearEnd] ${studentKey}: ${enrollData.className} (endDate ${enrollData.endDate} → null)`);
                         }
                     } else if (!isInClass && !enrollData.endDate) {
-                        // 수업에 없는데 endDate 없음 → 종료 처리
-                        const endDate = enrollData.updatedAt
-                            ? (typeof enrollData.updatedAt === 'string' ? enrollData.updatedAt.split("T")[0] : new Date().toISOString().split("T")[0])
-                            : new Date().toISOString().split("T")[0];
-
+                        // 수업에 없는데 endDate 없음 → 종료 처리 (오늘 날짜)
                         stats.endDateSet++;
                         if (!isDryRun) {
                             try {
-                                await enrollDoc.ref.update({ endDate, updatedAt: new Date().toISOString() });
+                                await enrollDoc.ref.update({ endDate: todayStr, updatedAt: new Date().toISOString() });
                             } catch (e) {
                                 stats.errors.push(`SetEnd: ${studentKey}/${enrollDoc.id}: ${e.message}`);
                             }
                         } else {
-                            stats.details.push(`[setEnd] ${studentKey}: ${enrollData.className} (endDate → ${endDate})`);
+                            stats.details.push(`[setEnd] ${studentKey}: ${enrollData.className} (endDate → ${todayStr})`);
                         }
                     }
 
@@ -542,6 +591,43 @@ exports.migrateEnrollmentsToSubcollection = functions
                                 stats.details.push(`[metaSync] ${studentKey}: ${enrollData.className} (${changes})`);
                             }
                         }
+                    }
+                }
+            }
+
+            // 2e. doc ID 변환: classId가 있지만 doc ID가 classId가 아닌 문서 → classId로 변환
+            for (const studentDoc of studentsSnap.docs) {
+                const studentKey = studentDoc.id;
+                const allEnrollSnap = isDryRun
+                    ? await studentDoc.ref.collection("enrollments").get()
+                    : await studentDoc.ref.collection("enrollments").get();
+
+                for (const enrollDoc of allEnrollSnap.docs) {
+                    const data = enrollDoc.data();
+                    let classId = data.classId;
+                    // classId 필드가 없으면 subject+className으로 역방향 조회
+                    if (!classId && data.subject && data.className) {
+                        const lookupKey = `${data.subject}_${data.className}`;
+                        classId = classNameToIdMap.get(lookupKey);
+                    }
+                    if (!classId) continue;
+                    if (enrollDoc.id === classId) continue; // 이미 classId가 doc ID
+
+                    // 같은 classId로 된 문서가 이미 있으면 건너뜀 (중복 방지)
+                    const existingRef = studentDoc.ref.collection("enrollments").doc(classId);
+                    const existingSnap = await existingRef.get();
+                    if (existingSnap.exists) continue;
+
+                    stats.docIdRenamed++;
+                    if (!isDryRun) {
+                        try {
+                            await existingRef.set({ ...data, classId }); // 새 doc ID로 복사 + classId 필드 보장
+                            await enrollDoc.ref.delete(); // 기존 문서 삭제
+                        } catch (e) {
+                            stats.errors.push(`Rename: ${studentKey}/${enrollDoc.id}→${classId}: ${e.message}`);
+                        }
+                    } else {
+                        stats.details.push(`[rename] ${studentKey}: ${enrollDoc.id} → ${classId} (${data.className || ''})`);
                     }
                 }
             }
@@ -1500,6 +1586,12 @@ async function applyScenarioToLive(scenarioId, scenario) {
         }
     });
 
+    // className → classId 매핑
+    const classNameToId = {};
+    for (const [cId, cData] of Object.entries(scenarioClasses)) {
+        if (cData.className) classNameToId[cData.className] = cId;
+    }
+
     // Scenario enrollments: studentId -> className
     const scenarioStudentEnrollments = {};
     for (const [className, students] of Object.entries(scenarioEnrollments)) {
@@ -1578,9 +1670,11 @@ async function applyScenarioToLive(scenarioId, scenario) {
         const chunk = toRename.slice(i, i + 250);
         for (const item of chunk) {
             batch.delete(item.docRef);
+            const newClassId = classNameToId[item.newClassName] || `english_${item.newClassName}`;
             const newRef = db.collection("students").doc(item.studentId)
-                .collection("enrollments").doc(`english_${item.newClassName}`);
+                .collection("enrollments").doc(newClassId);
             const newData = { ...item.data };
+            newData.classId = newClassId;
             newData.className = item.newClassName;
             delete newData.endDate;
             delete newData.withdrawalDate;
@@ -1607,8 +1701,10 @@ async function applyScenarioToLive(scenarioId, scenario) {
         const batch = db.batch();
         const chunk = toCreate.slice(i, i + 500);
         for (const item of chunk) {
+            const cId = classNameToId[item.className] || `english_${item.className}`;
             const ref = db.collection("students").doc(item.studentId)
-                .collection("enrollments").doc(`english_${item.className}`);
+                .collection("enrollments").doc(cId);
+            item.data.classId = cId;
             batch.set(ref, sanitizeObject(item.data));
         }
         await batch.commit();
@@ -3502,7 +3598,7 @@ async function tryAutoEnrollEnglish(studentId, meStudent, englishClasses, startD
     if (!matched) return `영어 수업 '${meStudent.className}' 매칭 실패`;
 
     const enrollDate = formatDateValue(meStudent.registrationDate) || startDate || getTodayKST();
-    const enrollmentId = `enrollment_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const enrollmentId = matched.id;
     await db.collection(`students/${studentId}/enrollments`).doc(enrollmentId).set({
         classId: matched.id,
         subject: "english",
@@ -3540,6 +3636,215 @@ async function saveSyncLog(results, syncStart) {
         logger.error("[scheduledMakeEduSync] Failed to save sync log:", logErr.message);
     }
 }
+
+/** 고등수학관 동기화 결과 로그 저장 */
+async function saveGodeungSyncLog(results, syncStart) {
+    try {
+        const duration = Date.now() - syncStart;
+        await db.collection("makeEduGodeungSyncLogs").add({
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            durationMs: duration,
+            totalScraped: results.total,
+            registeredCount: results.registered.length,
+            updatedCount: results.updated.length,
+            errorCount: results.errors.length,
+            skippedCount: results.skipped,
+            registered: results.registered.slice(0, 50),
+            updated: results.updated.slice(0, 50),
+            errors: results.errors.slice(0, 20),
+        });
+        logger.info("[scheduledMakeEduGodeungSync] Sync log saved. Duration:", duration, "ms");
+    } catch (logErr) {
+        logger.error("[scheduledMakeEduGodeungSync] Failed to save sync log:", logErr.message);
+    }
+}
+
+/**
+ * 고등수학관 MakeEdu 자동 동기화 (1시간마다)
+ * scheduledMakeEduSync와 동일 로직, 차이점:
+ * - 고등수학관 전용 MakeEdu 크리덴셜 사용
+ * - campus === 'godeung' 학생만 매칭 대상
+ * - 신규 학생: campus='godeung', 문서 ID에 'gd_' 프리픽스
+ * - 로그: makeEduGodeungSyncLogs 컬렉션
+ */
+exports.scheduledMakeEduGodeungSync = functions
+    .region("asia-northeast3")
+    .runWith({ timeoutSeconds: 540, memory: "512MB" })
+    .pubsub.schedule("every 60 minutes")
+    .timeZone("Asia/Seoul")
+    .onRun(async (context) => {
+        logger.info("[scheduledMakeEduGodeungSync] Start");
+        const syncStart = Date.now();
+        const results = { registered: [], updated: [], errors: [], skipped: 0, total: 0 };
+
+        try {
+            // 0. 고등수학관 크리덴셜 확인
+            const gdUser = process.env.MAKEEDU_GD_USERNAME;
+            const gdPwd = process.env.MAKEEDU_GD_PASSWORD;
+            if (!gdUser || !gdPwd) {
+                logger.warn("[scheduledMakeEduGodeungSync] Godeung credentials not set, skipping.");
+                return null;
+            }
+
+            // 1. 고등수학관 MakeEdu 스크래핑
+            const { students } = await scrapeMakeEduStudentsInternal(gdUser, gdPwd);
+            results.total = students.length;
+            logger.info("[scheduledMakeEduGodeungSync] Scraped students:", students.length);
+
+            if (students.length === 0) {
+                logger.info("[scheduledMakeEduGodeungSync] No students found, skipping.");
+                await saveGodeungSyncLog(results, syncStart);
+                return null;
+            }
+
+            // 2. 기존 고등수학관 학생만 조회 (campus === 'godeung')
+            const studentsSnap = await db.collection("students").get();
+            const ijwNameMap = new Map();
+            const ijwCodeMap = new Map();
+            const usedAttNums = new Set();
+            studentsSnap.forEach(d => {
+                const s = d.data();
+                if (s.attendanceNumber) usedAttNums.add(s.attendanceNumber);
+                // 고등수학관 학생만 매칭 대상
+                if (s.campus !== "godeung") return;
+                if (s.name) ijwNameMap.set(s.name.trim(), { id: d.id, ...s });
+                if (s.studentCode && s.studentCode.trim() !== "") {
+                    ijwCodeMap.set(s.studentCode.trim(), { id: d.id, ...s });
+                }
+            });
+            logger.info("[scheduledMakeEduGodeungSync] Existing godeung students:", ijwNameMap.size, "with studentCode:", ijwCodeMap.size);
+
+            // 3. 영어 클래스 목록 (자동 배정용)
+            const classesSnap = await db.collection("classes").get();
+            const englishClasses = [];
+            classesSnap.forEach(d => {
+                const c = d.data();
+                if (c.subject === "english") englishClasses.push({ id: d.id, ...c });
+            });
+
+            // 4. 각 학생 비교 및 처리
+            for (const meStudent of students) {
+                const name = (meStudent.name || "").trim();
+                if (!name) { results.skipped++; continue; }
+
+                try {
+                    const makeEduNo = meStudent.makeEduNo?.trim();
+                    let existing = null;
+                    let matchedByCode = false;
+
+                    if (makeEduNo && makeEduNo !== "") {
+                        existing = ijwCodeMap.get(makeEduNo);
+                        if (existing) {
+                            matchedByCode = true;
+                            logger.info(`[scheduledMakeEduGodeungSync] Matched by studentCode: ${name} (code: ${makeEduNo})`);
+                        }
+                    }
+
+                    if (!existing) {
+                        existing = ijwNameMap.get(name);
+                        if (existing) {
+                            logger.info(`[scheduledMakeEduGodeungSync] Matched by name: ${name}`);
+                        }
+                    }
+
+                    if (existing) {
+                        // === 기존 학생: 필드 업데이트 ===
+                        const updateData = buildUpdateData(existing, meStudent);
+                        if (Object.keys(updateData).length > 0) {
+                            updateData.updatedAt = admin.firestore.FieldValue.serverTimestamp();
+                            updateData.makeEduSync = true;
+                            await db.collection("students").doc(existing.id).update(updateData);
+
+                            const enrollNote = await tryAutoEnrollEnglish(existing.id, meStudent, englishClasses, existing.startDate);
+                            results.updated.push({
+                                name, fields: Object.keys(updateData).filter(k => k !== "updatedAt" && k !== "makeEduSync"),
+                                enrollNote: enrollNote || undefined,
+                            });
+                        } else {
+                            const enrollNote = await tryAutoEnrollEnglish(existing.id, meStudent, englishClasses, existing.startDate);
+                            if (enrollNote) {
+                                results.updated.push({ name, fields: [], enrollNote });
+                            } else {
+                                results.skipped++;
+                            }
+                        }
+                    } else {
+                        // === 신규 학생: 자동 등록 (gd_ 프리픽스 + campus='godeung') ===
+                        const normalizedSchool = normalizeSchoolName(meStudent.school);
+                        const grade = normalizeGradeValue(meStudent.grade, meStudent.school);
+                        const gender = meStudent.gender === "남" ? "male" : meStudent.gender === "여" ? "female" : null;
+                        const startDate = formatDateValue(meStudent.registrationDate) || getTodayKST();
+
+                        const baseId = `gd_${name}_${normalizedSchool || "Unspecified"}_${grade || "Unspecified"}`;
+                        let studentId = baseId;
+                        let counter = 1;
+                        while ((await db.collection("students").doc(studentId).get()).exists) {
+                            counter++;
+                            studentId = `${baseId}_${counter}`;
+                            if (counter > 100) throw new Error("동일한 학생 정보가 너무 많습니다.");
+                        }
+
+                        let attendanceNumber = meStudent.attendanceNumber;
+                        if (!attendanceNumber || usedAttNums.has(attendanceNumber)) {
+                            attendanceNumber = generateAttNum(meStudent.parentPhone || meStudent.phone, usedAttNums);
+                        }
+                        usedAttNums.add(attendanceNumber);
+                        const studentCode = meStudent.makeEduNo || null;
+
+                        const formattedStudentPhone = formatPhoneNumber(meStudent.phone);
+                        const formattedParentPhone = formatPhoneNumber(meStudent.parentPhone);
+
+                        await db.collection("students").doc(studentId).set({
+                            name, englishName: null, gender,
+                            campus: "godeung",
+                            school: normalizedSchool || null, grade: grade || null, graduationYear: null,
+                            attendanceNumber, studentCode,
+                            studentPhone: formattedStudentPhone || null,
+                            homePhone: null,
+                            parentPhone: formattedParentPhone || null,
+                            parentName: meStudent.parentName || null, parentRelation: "모",
+                            zipCode: null, address: meStudent.address || null,
+                            addressDetail: meStudent.addressDetail || null,
+                            birthDate: meStudent.birthDate || null, nickname: null,
+                            startDate, enrollmentReason: null,
+                            memo: meStudent.memo || null,
+                            customField1: meStudent.customField1 || null,
+                            customField2: meStudent.customField2 || null,
+                            status: "active",
+                            enrollmentDate: admin.firestore.FieldValue.serverTimestamp(),
+                            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                            smsNotification: true, pushNotification: false, kakaoNotification: true,
+                            billingSmsPrimary: true, billingSmsOther: false,
+                            overdueSmsPrimary: true, overdueSmsOther: false,
+                            makeEduSync: true,
+                        });
+
+                        const enrollNote = await tryAutoEnrollEnglish(studentId, meStudent, englishClasses, startDate);
+                        ijwNameMap.set(name, { id: studentId });
+                        results.registered.push({ name, studentId, enrollNote: enrollNote || undefined });
+                    }
+                } catch (studentErr) {
+                    logger.error("[scheduledMakeEduGodeungSync] Error processing:", name, studentErr.message);
+                    results.errors.push({ name, error: studentErr.message });
+                }
+            }
+
+            logger.info("[scheduledMakeEduGodeungSync] Done.",
+                "Registered:", results.registered.length,
+                "Updated:", results.updated.length,
+                "Errors:", results.errors.length,
+                "Skipped:", results.skipped);
+
+            await saveGodeungSyncLog(results, syncStart);
+            return null;
+        } catch (error) {
+            logger.error("[scheduledMakeEduGodeungSync] Fatal error:", error);
+            results.errors.push({ name: "_fatal", error: error.message });
+            await saveGodeungSyncLog(results, syncStart);
+            return null;
+        }
+    });
 
 /**
  * 버스 페이지 HTML 파싱
@@ -4100,83 +4405,105 @@ exports.submitTimetableToClassNote = functions
                     }
                     await delay(1000);
 
-                    // 날짜 선택
-                    logger.info(`[${studentName}] 날짜 선택 중...`);
+                    // 날짜 선택 (견고한 셀렉터 전략 - CSS 클래스 + 텍스트 패턴 + data-testid)
+                    logger.info(`[${studentName}] 날짜 선택 중: ${reportDate}`);
                     const dateParts = reportDate.split("T")[0].split('-');
                     const year = parseInt(dateParts[0]);
                     const month = parseInt(dateParts[1]);
                     const day = parseInt(dateParts[2]);
 
-                    let dateButton = null;
-                    try {
-                        await page.waitForSelector("button.e1a4g8se4", { timeout: 5000 });
-                        dateButton = await page.$("button.e1a4g8se4");
-                    } catch (e) {
-                        dateButton = await page.evaluateHandle(() => {
-                            const buttons = Array.from(document.querySelectorAll('button'));
-                            for (let i = 0; i < buttons.length; i++) {
-                                const btn = buttons[i];
-                                const className = btn.className || '';
-                                if (className.includes('e1a4g8se4')) {
-                                    return btn;
-                                }
+                    // Step 1: 날짜 버튼 찾기 (다중 전략)
+                    const dateButton = await page.evaluateHandle(() => {
+                        // 전략 1: 기존 CSS 클래스
+                        const cssBtn = document.querySelector('button.e1a4g8se4');
+                        if (cssBtn) return cssBtn;
+                        // 전략 2: data-testid
+                        const testIdBtn = document.querySelector("button[data-testid*='date'], button[data-testid*='calendar']");
+                        if (testIdBtn) return testIdBtn;
+                        // 전략 3: 날짜 텍스트 패턴이 있는 버튼
+                        const buttons = Array.from(document.querySelectorAll('button'));
+                        for (const btn of buttons) {
+                            if (btn.offsetParent === null) continue;
+                            const text = (btn.textContent || '').trim();
+                            if (/\d{4}[.\-]\d{1,2}[.\-]\d{1,2}/.test(text) ||
+                                /\d{4}년\s*\d{1,2}월\s*\d{1,2}일/.test(text)) {
+                                return btn;
                             }
-                            // 날짜 패턴이 포함된 버튼 (fallback)
-                            for (const b of buttons) {
-                                if (b.offsetParent === null) continue;
-                                const text = (b.textContent || '').trim();
-                                if (/\d{4}[년.\-\/]\s*\d{1,2}[월.\-\/]/.test(text)) return b;
-                                if (/\d{1,2}월\s*\d{1,2}일/.test(text)) return b;
+                        }
+                        // 전략 4: "수업일" 라벨 근처 버튼
+                        const allEls = document.querySelectorAll('label, span, div, p');
+                        for (const el of allEls) {
+                            if ((el.textContent || '').includes('수업일')) {
+                                const nearBtn = el.parentElement?.querySelector('button') ||
+                                                el.closest('div')?.querySelector('button');
+                                if (nearBtn) return nearBtn;
                             }
-                            return null;
-                        });
-                    }
+                        }
+                        return null;
+                    });
 
-                    if (dateButton && (dateButton.asElement ? dateButton.asElement() : dateButton)) {
-                        const btnElement = dateButton.asElement ? dateButton.asElement() : dateButton;
-                        await page.evaluate(el => el.click(), btnElement);
+                    const dateEl = dateButton && (dateButton.asElement ? dateButton.asElement() : dateButton);
+                    if (!dateEl) {
+                        logger.warn(`[${studentName}] 날짜 버튼을 찾을 수 없음, 기본 날짜 사용`);
+                    } else {
+                        await page.evaluate(el => el.click(), dateEl);
                         await delay(1000);
 
-                        // 년월 조정
-                        const targetYearMonth = `${year}년 ${month}월`;
+                        // Step 2: 년/월 탐색 (숫자 비교로 zero-padding 문제 방지)
                         const maxAttempts = 24;
 
                         for (let attempt = 0; attempt < maxAttempts; attempt++) {
                             const currentYearMonth = await page.evaluate(() => {
-                                const yearMonthElement = document.querySelector('div.css-7vdbjr.e1a4g8se9');
-                                if (yearMonthElement) return yearMonthElement.textContent.trim();
-                                // fallback: "YYYY년 M월" 패턴을 가진 요소
-                                const allEls = Array.from(document.querySelectorAll('div, span, h1, h2, h3, p'));
-                                for (const e of allEls) {
-                                    if (e.children.length > 2) continue;
-                                    const text = (e.textContent || '').trim();
-                                    if (/^\d{4}년\s*\d{1,2}월$/.test(text)) return text;
+                                // 전략 1: 기존 CSS 클래스
+                                const el1 = document.querySelector('div.css-7vdbjr.e1a4g8se9');
+                                if (el1) return el1.textContent.trim();
+                                // 전략 2: "YYYY년 MM월" 패턴 매칭
+                                const candidates = document.querySelectorAll('div, span, h2, h3, strong');
+                                for (const el of candidates) {
+                                    const t = (el.textContent || '').trim();
+                                    if (/^\d{4}년\s*\d{1,2}월$/.test(t)) return t;
                                 }
                                 return null;
                             });
 
-                            if (!currentYearMonth) break;
-                            logger.info(`[${studentName}] 달력 현재: "${currentYearMonth}", 목표: "${targetYearMonth}"`);
-                            if (currentYearMonth === targetYearMonth) break;
+                            if (!currentYearMonth) {
+                                logger.warn(`[${studentName}] 캘린더 년/월 표시를 찾을 수 없음`);
+                                break;
+                            }
 
-                            // 방향 결정
-                            const currentParts = currentYearMonth.match(/(\d{4})년\s*(\d{1,2})월/);
-                            const targetParts = targetYearMonth.match(/(\d{4})년\s*(\d{1,2})월/);
-                            const goForward = currentParts && targetParts &&
-                                (parseInt(currentParts[1]) * 12 + parseInt(currentParts[2])) <
-                                (parseInt(targetParts[1]) * 12 + parseInt(targetParts[2]));
+                            // 숫자 비교 (zero-padding "03월" vs "3월" 차이 무시)
+                            const cm = currentYearMonth.match(/(\d{4})년\s*(\d{1,2})월/);
+                            if (cm && parseInt(cm[1]) === year && parseInt(cm[2]) === month) {
+                                logger.info(`[${studentName}] 캘린더 도달: ${currentYearMonth}`);
+                                break;
+                            }
 
-                            const navButton = await page.evaluateHandle((forward) => {
-                                const buttons = Array.from(document.querySelectorAll('button'));
-                                // CSS 클래스 기반
-                                for (let i = 0; i < buttons.length; i++) {
-                                    const btn = buttons[i];
-                                    const className = btn.className || '';
-                                    if (forward && className.includes('e1a4g8se11')) return btn;
-                                    if (!forward && className.includes('css-7t0053') && className.includes('e1a4g8se10')) return btn;
+                            // 방향 결정: 앞으로 or 뒤로
+                            if (!cm) break;
+                            const currentTotal = parseInt(cm[1]) * 12 + parseInt(cm[2]);
+                            const targetTotal = year * 12 + month;
+                            const goForward = targetTotal > currentTotal;
+                            logger.info(`[${studentName}] 달력 현재: "${currentYearMonth}", 목표: ${year}년 ${month}월, 방향: ${goForward ? '→' : '←'}`);
+
+                            const navBtn = await page.evaluateHandle((forward) => {
+                                // 전략 1: 기존 CSS 클래스
+                                const knownBtns = Array.from(document.querySelectorAll('button')).filter(b => {
+                                    const cn = b.className || '';
+                                    return cn.includes('e1a4g8se10') || cn.includes('e1a4g8se11');
+                                });
+                                if (knownBtns.length >= 2) {
+                                    return forward ? knownBtns[knownBtns.length - 1] : knownBtns[0];
                                 }
-                                // SVG 화살표 fallback
-                                const arrowBtns = buttons.filter(btn => {
+                                if (knownBtns.length === 1) return knownBtns[0];
+                                // 전략 2: aria-label
+                                const ariaBtn = document.querySelector(
+                                    forward
+                                        ? 'button[aria-label*="next"], button[aria-label*="다음"]'
+                                        : 'button[aria-label*="prev"], button[aria-label*="이전"]'
+                                );
+                                if (ariaBtn) return ariaBtn;
+                                // 전략 3: SVG 화살표 버튼 위치
+                                const arrowBtns = Array.from(document.querySelectorAll('button')).filter(btn => {
                                     if (btn.offsetParent === null) return false;
                                     const svg = btn.querySelector('svg');
                                     if (!svg) return false;
@@ -4188,30 +4515,33 @@ exports.submitTimetableToClassNote = functions
                                 return null;
                             }, goForward);
 
-                            if (navButton && (navButton.asElement ? navButton.asElement() : navButton)) {
-                                const navBtnElement = navButton.asElement ? navButton.asElement() : navButton;
-                                await page.evaluate(el => el.click(), navBtnElement);
+                            const navEl = navBtn && (navBtn.asElement ? navBtn.asElement() : navBtn);
+                            if (navEl) {
+                                await page.evaluate(el => el.click(), navEl);
                                 await delay(500);
                             } else {
+                                logger.warn(`[${studentName}] 캘린더 ${goForward ? '다음' : '이전'}월 버튼을 찾을 수 없음`);
                                 break;
                             }
                         }
 
-                        // 날짜 클릭
+                        // Step 3: 날짜 클릭
                         const dateClicked = await page.evaluate((targetDay) => {
+                            // <a> 태그 우선 (기존 ClassNote 구조)
                             const dateLinks = Array.from(document.querySelectorAll('a'));
-                            for (let i = 0; i < dateLinks.length; i++) {
-                                const link = dateLinks[i];
+                            for (const link of dateLinks) {
                                 if (link.textContent.trim() === String(targetDay)) {
                                     link.click();
                                     return true;
                                 }
                             }
-                            // button/td fallback
-                            const btns = Array.from(document.querySelectorAll('button, td, div[role="button"]'));
-                            for (const el of btns) {
-                                if (el.offsetParent === null) continue;
-                                if (el.textContent.trim() === String(targetDay)) { el.click(); return true; }
+                            // 폴백: td, button, span 등
+                            const cells = Array.from(document.querySelectorAll('td, button, span'));
+                            for (const cell of cells) {
+                                if (cell.textContent.trim() === String(targetDay) && cell.children.length === 0) {
+                                    cell.click();
+                                    return true;
+                                }
                             }
                             return false;
                         }, day);
@@ -4221,26 +4551,25 @@ exports.submitTimetableToClassNote = functions
                             await delay(1000);
                             const confirmBtn = await page.evaluateHandle(() => {
                                 const buttons = Array.from(document.querySelectorAll('button'));
-                                for (let i = 0; i < buttons.length; i++) {
-                                    const btn = buttons[i];
+                                for (const btn of buttons) {
                                     if (btn.offsetParent === null) continue;
-                                    const text = btn.textContent || '';
-                                    if (text.includes('확인') || text.includes('OK')) {
+                                    const text = (btn.textContent || '').trim();
+                                    if (text.includes('확인') || text === 'OK' || text === '선택') {
                                         return btn;
                                     }
                                 }
                                 return null;
                             });
 
-                            if (confirmBtn && (confirmBtn.asElement ? confirmBtn.asElement() : confirmBtn)) {
-                                const confirmElement = confirmBtn.asElement ? confirmBtn.asElement() : confirmBtn;
-                                await page.evaluate(el => el.click(), confirmElement);
+                            const confirmEl = confirmBtn && (confirmBtn.asElement ? confirmBtn.asElement() : confirmBtn);
+                            if (confirmEl) {
+                                await page.evaluate(el => el.click(), confirmEl);
                                 logger.info(`[${studentName}] 날짜 확인 클릭`);
                                 await delay(1000);
                             }
+                        } else {
+                            logger.warn(`[${studentName}] 캘린더에서 ${day}일을 클릭할 수 없음`);
                         }
-                    } else {
-                        logger.warn(`[${studentName}] 날짜 버튼을 찾을 수 없음, 기본 날짜 사용`);
                     }
 
                     // 원아 선택

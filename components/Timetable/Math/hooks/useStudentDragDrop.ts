@@ -329,7 +329,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                     if (fromClass && toClass) {
                         const oldDocId = getEnrollmentDocId(studentId, move.fromClassId, fromClass.className);
                         const oldEnrollmentRef = doc(db, 'students', studentId, 'enrollments', oldDocId);
-                        const newEnrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${toClass.className}`);
+                        const newEnrollmentRef = doc(db, 'students', studentId, 'enrollments', move.toClassId);
 
                         const existingData = enrollmentDataMap.get(`${studentId}_${move.fromClassId}`);
                         // 예정일이 있으면 해당 날짜 사용, 없으면 오늘
@@ -351,6 +351,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                             const { endDate, withdrawalDate, isTransferred, ...preservedData } = existingData;
                             batch.set(newEnrollmentRef, {
                                 ...preservedData,
+                                classId: move.toClassId,
                                 className: toClass.className,
                                 attendanceDays: newAttendanceDays,
                                 // 예정이동: 이동일을 시작일로 설정 → 대기섹션 배치, 이동일 도래 시 초록배경으로 활성화
@@ -361,8 +362,9 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                             });
                         } else {
                             batch.set(newEnrollmentRef, {
+                                classId: move.toClassId,
                                 className: toClass.className,
-                                subject: 'math',
+                                subject: toClass.subject === '고등수학' ? 'highmath' : 'math',
                                 attendanceDays: newAttendanceDays,
                                 enrollmentDate: effectiveDate,
                                 createdAt: new Date().toISOString()
@@ -386,7 +388,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                     const toZoneLabel = move.toZone === 'common' ? '모든 요일' : `${move.toZone}만`;
                     logTimetableChange({
                         action: 'student_move',
-                        subject: 'math',
+                        subject: fromClass?.subject === '고등수학' ? 'highmath' : 'math',
                         className: fromClass?.className || move.fromClassId,
                         studentId,
                         studentName: studentId,
@@ -399,7 +401,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                     const toZoneLabel = move.toZone === 'common' ? '' : ` (${move.toZone}만)`;
                     logTimetableChange({
                         action: 'student_move',
-                        subject: 'math',
+                        subject: toClass.subject === '고등수학' ? 'highmath' : 'math',
                         className: toClass.className,
                         studentId,
                         studentName: studentId,

@@ -51,8 +51,8 @@ export const useMathIntegrationClasses = (
     teachersData: Teacher[] = []
 ): MathClassInfo[] => {
     return useMemo(() => {
-        // 수학 수업만 필터링 (subject가 'math' 또는 '수학')
-        const mathClasses = classes.filter(c => c.subject === 'math' || c.subject === '수학');
+        // 수학 수업만 필터링 (수학 + 고등수학 포함)
+        const mathClasses = classes.filter(c => c.subject === 'math' || c.subject === '수학' || c.subject === 'highmath' || c.subject === '고등수학');
 
         return mathClasses.map(cls => {
             const scheduleMap: Record<string, Record<string, MathScheduleCell>> = {};

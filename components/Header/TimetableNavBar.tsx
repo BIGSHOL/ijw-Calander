@@ -40,7 +40,7 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
         <select
           value={timetableSubject}
           onChange={(e) => setTimetableSubject(e.target.value as TimetableSubjectType)}
-          className="px-2 py-0.5 rounded bg-accent text-primary font-bold text-xs hover:brightness-110 transition-all cursor-pointer border-none outline-none"
+          className="px-2 py-0.5 rounded-sm bg-accent text-primary font-bold text-xs hover:brightness-110 transition-all cursor-pointer border-none outline-none"
           title="과목 선택"
         >
           {hasPermission('timetable.math.view') && (
@@ -76,7 +76,7 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
                 return 'excel'; // room → excel
               });
             }}
-            className="px-2 py-0.5 rounded bg-primary border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
+            className="px-2 py-0.5 rounded-sm bg-white/10 border border-white/10 text-gray-300 font-bold text-xs hover:text-white hover:bg-white/15 active:scale-95 transition-all cursor-pointer"
             title="클릭하여 보기방식 전환"
           >
             {timetableViewType === 'class'
@@ -104,7 +104,7 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
                 setTimetableViewType('excel');
               }
             }}
-            className="px-2 py-0.5 rounded bg-primary border border-gray-700 text-gray-300 font-bold text-xs hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
+            className="px-2 py-0.5 rounded-sm bg-white/10 border border-white/10 text-gray-300 font-bold text-xs hover:text-white hover:bg-white/15 active:scale-95 transition-all cursor-pointer"
             title="클릭하여 보기방식 전환"
           >
             {timetableViewType === 'class'
@@ -123,7 +123,7 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
         {/* Timetable Settings Button - 수업 설정만 */}
         <button
           onClick={() => setIsTimetableSettingsOpen(true)}
-          className="p-1 rounded bg-primary border border-gray-700 text-white hover:bg-gray-700 active:scale-95 transition-all cursor-pointer"
+          className="p-1 rounded-sm text-gray-400 hover:text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
           title="수업 설정"
         >
           <Settings size={14} />

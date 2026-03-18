@@ -5,6 +5,16 @@ import { db } from '../../firebaseConfig';
 import { TimetableLogAction, TimetableLogEntry } from '../../hooks/useTimetableLog';
 import { ChevronDown, ChevronRight, Search, RefreshCw } from 'lucide-react';
 
+const SUBJECT_LABELS: Record<string, string> = {
+  math: '수학',
+  highmath: '고등수학',
+  english: '영어',
+  science: '과학',
+  korean: '국어',
+};
+
+const SUBJECT_FILTER_KEYS = ['math', 'highmath', 'english', 'science', 'korean'] as const;
+
 const ACTION_LABELS: Record<TimetableLogAction, string> = {
   class_create: '수업 생성',
   class_update: '수업 수정',
@@ -37,7 +47,7 @@ interface LogRow extends TimetableLogEntry {
   id: string;
 }
 
-const fetchLogs = async (dateStr: string, actionFilter: string): Promise<LogRow[]> => {
+const fetchLogs = async (dateStr: string): Promise<LogRow[]> => {
   const startOfDay = `${dateStr}T00:00:00.000Z`;
   const endOfDay = `${dateStr}T23:59:59.999Z`;
 
@@ -123,15 +133,18 @@ const LogsTab: React.FC = () => {
   const today = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState(today);
   const [actionFilter, setActionFilter] = useState<Set<string>>(new Set(['all']));
+  const [subjectFilter, setSubjectFilter] = useState<Set<string>>(new Set(['all']));
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isSubjectDropdownOpen, setIsSubjectDropdownOpen] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const subjectDropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: logs = [], isLoading, refetch } = useQuery({
     queryKey: ['timetableLogs', selectedDate],
-    queryFn: () => fetchLogs(selectedDate, actionFilter),
+    queryFn: () => fetchLogs(selectedDate),
     staleTime: 30_000,
   });
 
@@ -141,6 +154,11 @@ const LogsTab: React.FC = () => {
     // action 필터 (멀티선택)
     if (!actionFilter.has('all') && actionFilter.size > 0) {
       result = result.filter(l => actionFilter.has(l.action));
+    }
+
+    // 과목 필터 (멀티선택)
+    if (!subjectFilter.has('all') && subjectFilter.size > 0) {
+      result = result.filter(l => l.subject && subjectFilter.has(l.subject));
     }
 
     // 검색
@@ -155,7 +173,7 @@ const LogsTab: React.FC = () => {
     }
 
     return result;
-  }, [logs, actionFilter, searchQuery]);
+  }, [logs, actionFilter, subjectFilter, searchQuery]);
 
   // 최신 기록(하단)으로 자동 스크롤
   useEffect(() => {
@@ -177,6 +195,20 @@ const LogsTab: React.FC = () => {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [isDropdownOpen]);
+
+  // 과목 드롭다운 외부 클릭 감지
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (subjectDropdownRef.current && !subjectDropdownRef.current.contains(event.target as Node)) {
+        setIsSubjectDropdownOpen(false);
+      }
+    };
+
+    if (isSubjectDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isSubjectDropdownOpen]);
 
   const toggleExpand = (id: string) => {
     setExpandedIds(prev => {
@@ -200,6 +232,22 @@ const LogsTab: React.FC = () => {
         newFilter.add(action);
       }
       setActionFilter(newFilter.size > 0 ? newFilter : new Set(['all']));
+    }
+  };
+
+  const toggleSubjectFilter = (subject: string) => {
+    const newFilter = new Set(subjectFilter);
+
+    if (subject === 'all') {
+      setSubjectFilter(new Set(['all']));
+    } else {
+      newFilter.delete('all');
+      if (newFilter.has(subject)) {
+        newFilter.delete(subject);
+      } else {
+        newFilter.add(subject);
+      }
+      setSubjectFilter(newFilter.size > 0 ? newFilter : new Set(['all']));
     }
   };
 
@@ -257,6 +305,52 @@ const LogsTab: React.FC = () => {
                     className="w-3 h-3 rounded border-gray-300 text-blue-600 focus:ring-1 focus:ring-blue-500"
                   />
                   <span>{label}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* 과목 필터 (체크박스 멀티선택) */}
+        <div className="relative" ref={subjectDropdownRef}>
+          <button
+            onClick={() => setIsSubjectDropdownOpen(!isSubjectDropdownOpen)}
+            className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white hover:bg-gray-50 flex items-center gap-1 min-w-[100px]"
+          >
+            <span className="flex-1 text-left truncate">
+              {subjectFilter.has('all') ? '전체 과목' : `과목 ${subjectFilter.size}개`}
+            </span>
+            <ChevronDown size={12} className={`text-gray-400 transition-transform ${isSubjectDropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {isSubjectDropdownOpen && (
+            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-20 min-w-[140px] max-h-[300px] overflow-y-auto">
+              <label
+                className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer border-b border-gray-200"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <input
+                  type="checkbox"
+                  checked={subjectFilter.has('all')}
+                  onChange={() => toggleSubjectFilter('all')}
+                  className="w-3 h-3 rounded border-gray-300 text-blue-600 focus:ring-1 focus:ring-blue-500"
+                />
+                <span className="font-medium">전체 과목</span>
+              </label>
+
+              {SUBJECT_FILTER_KEYS.map(key => (
+                <label
+                  key={key}
+                  className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <input
+                    type="checkbox"
+                    checked={subjectFilter.has(key)}
+                    onChange={() => toggleSubjectFilter(key)}
+                    className="w-3 h-3 rounded border-gray-300 text-blue-600 focus:ring-1 focus:ring-blue-500"
+                  />
+                  <span>{SUBJECT_LABELS[key]}</span>
                 </label>
               ))}
             </div>
@@ -335,7 +429,7 @@ const LogsTab: React.FC = () => {
                           {ACTION_LABELS[log.action] || log.action}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-gray-600">{log.subject || '-'}</td>
+                      <td className="px-3 py-2 text-gray-600">{(log.subject && SUBJECT_LABELS[log.subject]) || log.subject || '-'}</td>
                       <td className="px-3 py-2 text-gray-800 font-medium truncate max-w-[120px]" title={log.className}>
                         {log.className || '-'}
                       </td>

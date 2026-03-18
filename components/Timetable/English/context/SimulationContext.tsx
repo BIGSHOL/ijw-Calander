@@ -1346,6 +1346,14 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
         }
       });
 
+      // className → classId 매핑 (classesToPublish의 key가 classId)
+      const classNameToIdMap: Record<string, string> = {};
+      Object.entries(classesToPublish).forEach(([classId, classData]) => {
+        if (classData.className) {
+          classNameToIdMap[classData.className] = classId;
+        }
+      });
+
       // 시나리오 enrollments 맵 구축: studentId -> className
       const scenarioStudentEnrollments: Record<string, string> = {};
       Object.entries(enrollmentsToPublish).forEach(([className, students]) => {
@@ -1383,13 +1391,15 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
             toEndDate.push({ docRef: liveInfo.docRef });
             const newEnrollment = enrollmentsToPublish[newClassName]?.[studentId];
             if (newEnrollment) {
+              const newClassId = classNameToIdMap[newClassName] || `english_${newClassName}`;
               toCreate.push({
-                ref: doc(db, 'students', studentId, 'enrollments', `english_${newClassName}`),
+                ref: doc(db, 'students', studentId, 'enrollments', newClassId),
                 data: sanitizeForFirestore({
                   ...newEnrollment,
+                  classId: newClassId,
                   subject: 'english',
                   className: newClassName,
-                  startDate: today,  // 새 수업 시작일
+                  startDate: today,
                 }),
               });
             }
@@ -1403,16 +1413,17 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
       // 2. 새로 추가된 학생들 처리
       Object.entries(scenarioStudentEnrollments).forEach(([studentId, className]) => {
         if (!liveStudentEnrollments[studentId]) {
-          // 새로 추가된 학생 → 새 수업 생성
           const newEnrollment = enrollmentsToPublish[className]?.[studentId];
           if (newEnrollment) {
+            const newClassId = classNameToIdMap[className] || `english_${className}`;
             toCreate.push({
-              ref: doc(db, 'students', studentId, 'enrollments', `english_${className}`),
+              ref: doc(db, 'students', studentId, 'enrollments', newClassId),
               data: sanitizeForFirestore({
                 ...newEnrollment,
+                classId: newClassId,
                 subject: 'english',
                 className,
-                startDate: today,  // 새 수업 시작일
+                startDate: today,
               }),
             });
           }
@@ -1426,9 +1437,11 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
         chunk.forEach(item => {
           // 기존 enrollment 삭제 (endDate 설정 안 함 → 반이동 흔적 안 남김)
           batch.delete(item.docRef);
-          // 새 className으로 enrollment 생성 (기존 startDate 유지)
-          const newRef = doc(db, 'students', item.studentId, 'enrollments', `english_${item.newClassName}`);
+          // 새 className으로 enrollment 생성 (doc ID = classId, 기존 startDate 유지)
+          const newClassId = classNameToIdMap[item.newClassName] || `english_${item.newClassName}`;
+          const newRef = doc(db, 'students', item.studentId, 'enrollments', newClassId);
           const newData = { ...item.data };
+          newData.classId = newClassId;
           newData.className = item.newClassName;
           delete newData.endDate;
           delete newData.withdrawalDate;

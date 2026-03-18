@@ -7,6 +7,7 @@ import Modal from '../Common/Modal';
 import { UnifiedStudent } from '../../types';
 import { generateAttendanceNumber } from '../../utils/attendanceNumberGenerator';
 import { parseClassName, DEFAULT_ENGLISH_LEVELS } from '../Timetable/English/englishUtils';
+import { getCampus } from '../../utils/campusUtils';
 
 interface MakeEduStudent {
   name: string;
@@ -40,6 +41,7 @@ interface ComparisonResult {
 }
 
 type SyncTab = 'compare' | 'logs';
+type CampusTab = 'main' | 'godeung';
 
 interface SyncLog {
   id: string;
@@ -175,6 +177,7 @@ const formatTimestamp = (ts: any): string => {
 };
 
 const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingStudents }) => {
+  const [campusTab, setCampusTab] = useState<CampusTab>('main');
   const [activeTab, setActiveTab] = useState<SyncTab>('compare');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -210,6 +213,14 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
     return set;
   }, [existingStudents]);
 
+  // 캠퍼스에 따라 비교 대상 학생 필터링
+  const campusStudents = useMemo(() =>
+    campusTab === 'godeung'
+      ? existingStudents.filter(s => getCampus(s) === 'godeung')
+      : existingStudents,
+    [existingStudents, campusTab]
+  );
+
   const fetchAndCompare = async () => {
     setLoading(true);
     setError(null);
@@ -218,7 +229,8 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
     setUpdated({});
     try {
       const functions = getFunctions(undefined, 'asia-northeast3');
-      const scrapeFn = httpsCallable(functions, 'scrapeMakeEduNewStudents');
+      const fnName = campusTab === 'godeung' ? 'scrapeMakeEduGodeungStudents' : 'scrapeMakeEduNewStudents';
+      const scrapeFn = httpsCallable(functions, fnName);
       const response = await scrapeFn({});
       const data = response.data as {
         students: MakeEduStudent[];
@@ -229,10 +241,10 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
       setMakeEduCount(data.count);
       setHeaders(data.headers);
 
-      // Build name and studentCode lookup of existing IJW students
+      // Build name and studentCode lookup (캠퍼스별 필터 적용)
       const ijwNameMap = new Map<string, UnifiedStudent>();
       const ijwCodeMap = new Map<string, UnifiedStudent>();
-      existingStudents.forEach(s => {
+      campusStudents.forEach(s => {
         if (s.name) ijwNameMap.set(s.name.trim(), s);
         const studentCode = (s as any).studentCode;
         if (studentCode && studentCode.trim() !== "") {
@@ -295,9 +307,10 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
   const fetchLogs = useCallback(async () => {
     setLogsLoading(true);
     try {
+      const logsCollection = campusTab === 'godeung' ? 'makeEduGodeungSyncLogs' : 'makeEduSyncLogs';
       // 넉넉히 가져와서 중복/무변동 필터 후 20건 추출
       const q = query(
-        collection(db, 'makeEduSyncLogs'),
+        collection(db, logsCollection),
         orderBy('timestamp', 'desc'),
         limit(100)
       );
@@ -332,11 +345,15 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
     } finally {
       setLogsLoading(false);
     }
-  }, []);
+  }, [campusTab]);
 
+  // 캠퍼스 탭 변경 시 데이터 리셋 + 재조회
   useEffect(() => {
+    setResults([]);
+    setLogsLoaded(false);
+    setLogs([]);
     fetchAndCompare();
-  }, []);
+  }, [campusTab]);
 
   useEffect(() => {
     if (activeTab === 'logs' && !logsLoaded) fetchLogs();
@@ -358,7 +375,8 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
       const normalizedSchool = normalizeSchoolName(student.school || '');
       const grade = normalizeGrade(student.grade, student.school);
 
-      const baseId = `${name}_${normalizedSchool || 'Unspecified'}_${grade || 'Unspecified'}`;
+      const idPrefix = campusTab === 'godeung' ? 'gd_' : '';
+      const baseId = `${idPrefix}${name}_${normalizedSchool || 'Unspecified'}_${grade || 'Unspecified'}`;
       let studentId = baseId;
       let counter = 1;
 
@@ -386,6 +404,7 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
 
       await setDoc(doc(db, 'students', studentId), {
         name, englishName: null, gender,
+        ...(campusTab === 'godeung' ? { campus: 'godeung' } : {}),
         school: normalizedSchool || null, grade: grade || null, graduationYear: null,
         attendanceNumber, studentCode,
         studentPhone: formattedStudentPhone || null,
@@ -591,7 +610,7 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
 
     if (!matchedClass) return `영어 수업 '${className}' 매칭 실패`;
 
-    const enrollmentId = `enrollment_${Date.now()}`;
+    const enrollmentId = matchedClass.id;
     await setDoc(doc(db, `students/${studentId}/enrollments`, enrollmentId), {
       classId: matchedClass.id,
       subject: 'english',
@@ -645,28 +664,52 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
     <Modal
       isOpen={true}
       onClose={onClose}
-      title="메이크에듀 신규원생 동기화"
+      title="메이크에듀 원생 동기화"
       size="xl"
       compact
     >
-      {/* 탭 버튼 */}
+      {/* 캠퍼스 탭 */}
+      <div className="flex items-center gap-1 mb-2">
+        <button
+          onClick={() => setCampusTab('main')}
+          className={`px-3 py-1.5 text-xs font-bold rounded-t transition-colors ${
+            campusTab === 'main'
+              ? 'bg-primary text-white'
+              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+          }`}
+        >
+          본원
+        </button>
+        <button
+          onClick={() => setCampusTab('godeung')}
+          className={`px-3 py-1.5 text-xs font-bold rounded-t transition-colors ${
+            campusTab === 'godeung'
+              ? 'bg-purple-600 text-white'
+              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+          }`}
+        >
+          고등수학관
+        </button>
+      </div>
+
+      {/* 기능 탭 */}
       <div className="flex border-b mb-3">
         <button
           onClick={() => setActiveTab('compare')}
           className={`flex items-center gap-1 px-4 py-2 text-xs font-bold border-b-2 transition-colors ${
             activeTab === 'compare'
-              ? 'border-primary text-primary'
+              ? campusTab === 'godeung' ? 'border-purple-600 text-purple-600' : 'border-primary text-primary'
               : 'border-transparent text-gray-400 hover:text-gray-600'
           }`}
         >
           <UserPlus className="w-3 h-3" />
-          신규원생 비교
+          원생 비교
         </button>
         <button
           onClick={() => setActiveTab('logs')}
           className={`flex items-center gap-1 px-4 py-2 text-xs font-bold border-b-2 transition-colors ${
             activeTab === 'logs'
-              ? 'border-primary text-primary'
+              ? campusTab === 'godeung' ? 'border-purple-600 text-purple-600' : 'border-primary text-primary'
               : 'border-transparent text-gray-400 hover:text-gray-600'
           }`}
         >
@@ -678,9 +721,9 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
       {/* 비교 탭 */}
       {activeTab === 'compare' && (loading ? (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
-          <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
-          <p className="text-sm text-gray-600">메이크에듀 신규원생 조회 중...</p>
-          <p className="text-xs text-gray-400">로그인 → 신규원생 목록 가져오는 중</p>
+          <Loader2 className={`w-8 h-8 animate-spin ${campusTab === 'godeung' ? 'text-purple-500' : 'text-cyan-500'}`} />
+          <p className="text-sm text-gray-600">{campusTab === 'godeung' ? '고등수학관' : '메이크에듀'} 원생 조회 중...</p>
+          <p className="text-xs text-gray-400">로그인 → 원생 목록 가져오는 중</p>
         </div>
       ) : error ? (
         <div className="flex flex-col items-center justify-center py-12 gap-3">
@@ -698,9 +741,9 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
       ) : (
         <div className="space-y-3">
           {/* Summary */}
-          <div className="flex items-center flex-wrap gap-2 p-2 bg-gray-50 rounded-sm border text-xs">
-            <span className="font-bold text-primary">
-              메이크에듀 {makeEduCount}명
+          <div className={`flex items-center flex-wrap gap-2 p-2 rounded-sm border text-xs ${campusTab === 'godeung' ? 'bg-purple-50 border-purple-200' : 'bg-gray-50'}`}>
+            <span className={`font-bold ${campusTab === 'godeung' ? 'text-purple-700' : 'text-primary'}`}>
+              {campusTab === 'godeung' ? '고등수학관' : '메이크에듀'} {makeEduCount}명
             </span>
             <span className="text-gray-300">|</span>
             {remainingUnmatched > 0 ? (
@@ -747,7 +790,9 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
                 <button
                   onClick={registerAllUnmatched}
                   disabled={bulkRegistering || bulkUpdating}
-                  className="flex items-center gap-1 px-2 py-1 bg-accent text-primary text-xs font-bold rounded-sm hover:bg-[#e5a60f] transition-colors disabled:opacity-50"
+                  className={`flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-sm transition-colors disabled:opacity-50 ${
+                    campusTab === 'godeung' ? 'bg-purple-600 text-white hover:bg-purple-700' : 'bg-accent text-primary hover:bg-[#e5a60f]'
+                  }`}
                 >
                   {bulkRegistering ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
@@ -772,7 +817,7 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
             <div className="border rounded-sm overflow-hidden overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="bg-primary text-white">
+                  <tr className={`${campusTab === 'godeung' ? 'bg-purple-600' : 'bg-primary'} text-white`}>
                     <th className="px-2 py-1.5 text-left font-medium">#</th>
                     <th className="px-2 py-1.5 text-left font-medium">이름</th>
                     <th className="px-2 py-1.5 text-left font-medium">성별</th>
@@ -891,7 +936,9 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
                             <button
                               onClick={() => registerStudent(i)}
                               disabled={registering[i] || bulkRegistering || bulkUpdating}
-                              className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-accent text-primary font-bold rounded-sm hover:bg-[#e5a60f] transition-colors disabled:opacity-50 text-xs"
+                              className={`inline-flex items-center gap-0.5 px-2 py-0.5 font-bold rounded-sm transition-colors disabled:opacity-50 text-xs ${
+                                campusTab === 'godeung' ? 'bg-purple-600 text-white hover:bg-purple-700' : 'bg-accent text-primary hover:bg-[#e5a60f]'
+                              }`}
                             >
                               {registering[i] ? (
                                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -922,6 +969,12 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
             <p>• 기타항목1에 E 포함 시 영어 수업 자동 배정 (수학은 수동 배정 필요)</p>
             <p>• 출결번호가 없는 학생은 자동 생성됩니다</p>
             <p>• 업데이트는 IJW 데이터와 다른 필드를 MakeEdu 데이터로 갱신합니다 (메모는 빈 경우만)</p>
+            {campusTab === 'godeung' && (
+              <>
+                <p>• 고등수학관 전용 MakeEdu 계정에서 원생 데이터를 가져옵니다</p>
+                <p>• 등록되는 학생은 campus='godeung' 태그 + 문서 ID에 'gd_' 프리픽스가 붙습니다</p>
+              </>
+            )}
           </div>
         </div>
       ))}
@@ -930,7 +983,7 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
       {activeTab === 'logs' && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-gray-500">30분마다 자동 동기화된 기록 (최근 20건)</p>
+            <p className="text-xs text-gray-500">{campusTab === 'godeung' ? '1시간' : '30분'}마다 자동 동기화된 기록 (최근 20건)</p>
             <button
               onClick={() => { setLogsLoaded(false); fetchLogs(); }}
               className="p-1 text-gray-400 hover:text-primary transition-colors"
@@ -953,7 +1006,7 @@ const MakeEduSyncModal: React.FC<MakeEduSyncModalProps> = ({ onClose, existingSt
             <div className="border rounded-sm overflow-hidden">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="bg-primary text-white">
+                  <tr className={`${campusTab === 'godeung' ? 'bg-purple-600' : 'bg-primary'} text-white`}>
                     <th className="px-2 py-1.5 text-left font-medium">시각</th>
                     <th className="px-2 py-1.5 text-right font-medium">소요</th>
                     <th className="px-2 py-1.5 text-right font-medium">조회</th>

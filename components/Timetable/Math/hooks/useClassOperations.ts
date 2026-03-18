@@ -6,11 +6,40 @@ import { logTimetableChange } from '../../../../hooks/useTimetableLog';
 
 const COL_CLASSES = 'classes';
 
+const MATH_SUBJECTS = ['math', 'highmath'];
+
+/**
+ * 학생의 enrollment 문서를 쿼리로 찾기 (doc ID 형식에 무관하게 동작)
+ * math/highmath 모두 검색
+ */
+const findEnrollmentDoc = async (studentId: string, subject: string | string[], className: string) => {
+    const subjects = Array.isArray(subject) ? subject : [subject];
+    const enrollmentsRef = collection(db, 'students', studentId, 'enrollments');
+
+    for (const subj of subjects) {
+        const q = query(enrollmentsRef, where('subject', '==', subj), where('className', '==', className));
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+            const activeDoc = snapshot.docs.find(d => !d.data().endDate && !d.data().withdrawalDate);
+            return activeDoc || snapshot.docs[0];
+        }
+    }
+    return null;
+};
+
+/**
+ * classId로 실제 subject 조회 (math / highmath)
+ */
+const getClassSubject = async (classId: string): Promise<string> => {
+    const classDoc = await getDoc(doc(db, COL_CLASSES, classId));
+    return classDoc.exists() ? (classDoc.data().subject || 'math') : 'math';
+};
+
 /**
  * useClassOperations - 수학 수업 CRUD 작업
  *
  * 데이터 저장: classes 컬렉션
- * 학생 등록: enrollments subcollection
+ * 학생 등록: enrollments subcollection (doc ID = classId)
  */
 export const useClassOperations = () => {
     const queryClient = useQueryClient();
@@ -196,30 +225,33 @@ export const useClassOperations = () => {
         const newStudentId = studentRef.id;
         const now = new Date().toISOString();
 
+        const classSubject = await getClassSubject(classId);
+
         const newStudent = {
             id: newStudentId,
             name: studentData.name.trim(),
             grade: studentData.grade.trim(),
             school: studentData.school.trim(),
             status: 'active',
-            subjects: ['math'],
+            subjects: [classSubject],
             createdAt: now,
             updatedAt: now
         };
 
         await setDoc(studentRef, newStudent);
 
-        // 2. Create enrollment
-        const enrollmentRef = doc(db, 'students', newStudentId, 'enrollments', `math_${className}`);
+        // 2. Create enrollment (doc ID = classId)
+        const enrollmentRef = doc(db, 'students', newStudentId, 'enrollments', classId);
         await setDoc(enrollmentRef, {
+            classId,
             className,
-            subject: 'math',
+            subject: classSubject,
             enrollmentDate: now.split('T')[0],
             createdAt: now
         });
 
         logTimetableChange({
-            action: 'student_enroll', subject: 'math', className,
+            action: 'student_enroll', subject: classSubject, className,
             studentId: newStudentId, studentName: studentData.name.trim(),
             details: `신규 학생 등록: ${studentData.name.trim()} → ${className}`,
             after: { className, studentName: studentData.name.trim() },
@@ -232,12 +264,12 @@ export const useClassOperations = () => {
     };
 
     const removeStudent = async (className: string, studentId: string) => {
-        // enrollment 문서 삭제
-        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
-        await deleteDoc(enrollmentRef);
+        // enrollment 문서 삭제 (쿼리로 찾아서 삭제 - doc ID 형식 무관, math/highmath 모두 검색)
+        const enrollDoc = await findEnrollmentDoc(studentId, MATH_SUBJECTS, className);
+        if (enrollDoc) await deleteDoc(enrollDoc.ref);
 
         logTimetableChange({
-            action: 'student_unenroll', subject: 'math', className, studentId, studentName: studentId,
+            action: 'student_unenroll', subject: enrollDoc?.data()?.subject || 'math', className, studentId, studentName: studentId,
             details: `학생 제거: ${studentId} ← ${className}`,
             before: { className },
         });
@@ -256,14 +288,16 @@ export const useClassOperations = () => {
             updatedAt: now
         });
 
-        // enrollment에 withdrawalDate 설정
-        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
-        await updateDoc(enrollmentRef, {
-            withdrawalDate: now.split('T')[0]
-        });
+        // enrollment에 withdrawalDate 설정 (쿼리로 찾기 - math/highmath 모두 검색)
+        const enrollDoc = await findEnrollmentDoc(studentId, MATH_SUBJECTS, className);
+        if (enrollDoc) {
+            await updateDoc(enrollDoc.ref, {
+                withdrawalDate: now.split('T')[0]
+            });
+        }
 
         logTimetableChange({
-            action: 'student_withdraw', subject: 'math', className, studentId, studentName: studentId,
+            action: 'student_withdraw', subject: enrollDoc?.data()?.subject || 'math', className, studentId, studentName: studentId,
             details: `퇴원 처리: ${studentId} ← ${className}`,
             before: { status: 'active' }, after: { status: 'withdrawn', withdrawalDate: now.split('T')[0] },
         });
@@ -283,13 +317,15 @@ export const useClassOperations = () => {
             updatedAt: now
         });
 
-        // enrollment에서 withdrawalDate/endDate 제거
-        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
-        await updateDoc(enrollmentRef, {
-            withdrawalDate: null,
-            endDate: null,
-            onHold: false
-        });
+        // enrollment에서 withdrawalDate/endDate 제거 (쿼리로 찾기 - math/highmath 모두 검색)
+        const enrollDoc = await findEnrollmentDoc(studentId, MATH_SUBJECTS, className);
+        if (enrollDoc) {
+            await updateDoc(enrollDoc.ref, {
+                withdrawalDate: null,
+                endDate: null,
+                onHold: false
+            });
+        }
 
         // 캐시 무효화 - 실시간 반영
         invalidateMathCaches();
@@ -297,16 +333,27 @@ export const useClassOperations = () => {
 
     const enrollExistingStudent = async (studentId: string, className: string, enrollmentDate?: string) => {
         const now = new Date().toISOString();
-        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
+
+        // classId 조회 (enrollment doc ID로 사용) - math/highmath 모두 검색
+        const classesRef = collection(db, COL_CLASSES);
+        let classSnapshot = await getDocs(query(classesRef, where('className', '==', className), where('subject', '==', 'math')));
+        if (classSnapshot.empty) {
+            classSnapshot = await getDocs(query(classesRef, where('className', '==', className), where('subject', '==', 'highmath')));
+        }
+        const classId = classSnapshot.empty ? `math_${className}` : classSnapshot.docs[0].id;
+        const classSubject = classSnapshot.empty ? 'math' : (classSnapshot.docs[0].data().subject || 'math');
+
+        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', classId);
         await setDoc(enrollmentRef, {
+            classId,
             className,
-            subject: 'math',
+            subject: classSubject,
             enrollmentDate: enrollmentDate || now.split('T')[0],
             createdAt: now,
         });
 
         logTimetableChange({
-            action: 'student_enroll', subject: 'math', className, studentId, studentName: studentId,
+            action: 'student_enroll', subject: classSubject, className, studentId, studentName: studentId,
             details: `기존 학생 등록: ${studentId} → ${className}`,
             after: { className, enrollmentDate: enrollmentDate || now.split('T')[0] },
         });
@@ -318,47 +365,40 @@ export const useClassOperations = () => {
     const smartRemoveStudent = async (className: string, studentId: string): Promise<'removed' | 'withdrawn'> => {
         console.log(`[smartRemoveStudent] 시작: ${studentId} from ${className}`);
         const enrollmentsRef = collection(db, 'students', studentId, 'enrollments');
-        const q = query(enrollmentsRef, where('subject', '==', 'math'));
-        const snapshot = await getDocs(q);
-        console.log(`[smartRemoveStudent] 학생의 수학 enrollments 수: ${snapshot.size}`);
+        // math + highmath 모두 조회
+        const qMath = query(enrollmentsRef, where('subject', '==', 'math'));
+        const qHighmath = query(enrollmentsRef, where('subject', '==', 'highmath'));
+        const [snapMath, snapHighmath] = await Promise.all([getDocs(qMath), getDocs(qHighmath)]);
+        const allDocs = [...snapMath.docs, ...snapHighmath.docs];
+        console.log(`[smartRemoveStudent] 학생의 수학 enrollments 수: ${allDocs.length}`);
 
         // 현재 반을 제외한 다른 활성 수학수업 수
-        const otherActiveMath = snapshot.docs.filter(d => {
+        const otherActiveMath = allDocs.filter(d => {
             const data = d.data();
             return data.className !== className && !data.withdrawalDate && !data.endDate;
         }).length;
 
-        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
         const today = new Date().toISOString().split('T')[0];
 
-        // enrollment 문서 존재 여부 확인
-        console.log(`[smartRemoveStudent] enrollment 문서 확인 중: math_${className}`);
-        const enrollmentSnap = await getDoc(enrollmentRef);
+        // 쿼리 결과에서 해당 className enrollment 찾기 (doc ID 형식 무관)
+        const targetDoc = allDocs.find(d => d.data().className === className && !d.data().endDate && !d.data().withdrawalDate)
+            || allDocs.find(d => d.data().className === className);
 
-        if (!enrollmentSnap.exists()) {
-            // enrollment 문서가 없으면 실제로 시간표에서만 삭제
+        if (!targetDoc) {
             console.log(`[smartRemoveStudent] ⚠️ enrollment 문서 없음: ${studentId} - ${className}`);
-            console.log(`[smartRemoveStudent] 시간표에서만 제거 중...`);
-
-            // 시간표에서 학생 제거를 위해 캐시 무효화
             invalidateMathCaches();
             queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
             queryClient.invalidateQueries({ queryKey: ['mathClasses'] });
-
-            console.log(`[smartRemoveStudent] ✅ 시간표에서 제거 완료 (enrollment 없음)`);
             return otherActiveMath >= 1 ? 'removed' : 'withdrawn';
-        } else {
-            console.log(`[smartRemoveStudent] ✅ enrollment 문서 존재`);
         }
 
         // 수업 스케줄 정보 조회하여 enrollment에 저장
         try {
             const classesRef = collection(db, COL_CLASSES);
-            const classQuery = query(classesRef,
-                where('className', '==', className),
-                where('subject', '==', 'math')
-            );
-            const classSnapshot = await getDocs(classQuery);
+            let classSnapshot = await getDocs(query(classesRef, where('className', '==', className), where('subject', '==', 'math')));
+            if (classSnapshot.empty) {
+                classSnapshot = await getDocs(query(classesRef, where('className', '==', className), where('subject', '==', 'highmath')));
+            }
 
             if (!classSnapshot.empty) {
                 const classData = classSnapshot.docs[0].data();
@@ -366,31 +406,28 @@ export const useClassOperations = () => {
                     typeof s === 'string' ? s : `${s.day} ${s.periodId}`
                 ) || [];
 
-                // enrollment 업데이트: endDate 설정 + 스케줄 정보 저장 (merge: true로 안전하게)
-                console.log(`[smartRemoveStudent] enrollment 업데이트 중...`);
-                await setDoc(enrollmentRef, {
+                await updateDoc(targetDoc.ref, {
                     endDate: today,
-                    withdrawalDate: today, // 호환성
-                    schedule, // 삭제 당시 스케줄 저장
+                    withdrawalDate: today,
+                    schedule,
                     updatedAt: new Date().toISOString(),
-                }, { merge: true });
-                console.log(`[smartRemoveStudent] ✅ enrollment 업데이트 완료`);
+                });
             } else {
-                // 수업 정보가 없으면 endDate만 설정
-                await setDoc(enrollmentRef, {
+                await updateDoc(targetDoc.ref, {
                     endDate: today,
                     withdrawalDate: today,
                     updatedAt: new Date().toISOString(),
-                }, { merge: true });
+                });
             }
         } catch (error) {
             console.error('enrollment 업데이트 오류:', error);
-            throw error; // 오류를 상위로 전파
+            throw error;
         }
 
+        const targetSubject = targetDoc?.data()?.subject || 'math';
         if (otherActiveMath >= 1) {
             logTimetableChange({
-                action: 'student_unenroll', subject: 'math', className, studentId, studentName: studentId,
+                action: 'student_unenroll', subject: targetSubject, className, studentId, studentName: studentId,
                 details: `학생 제거 (다른 수학수업 있음): ${studentId} ← ${className}`,
                 before: { className },
             });
@@ -398,7 +435,7 @@ export const useClassOperations = () => {
             return 'removed';
         } else {
             logTimetableChange({
-                action: 'student_unenroll', subject: 'math', className, studentId, studentName: studentId,
+                action: 'student_unenroll', subject: targetSubject, className, studentId, studentName: studentId,
                 details: `학생 제거 (마지막 수학수업): ${studentId} ← ${className}`,
                 before: { className },
             });
@@ -407,11 +444,11 @@ export const useClassOperations = () => {
         }
     };
 
-    // 퇴원생 수업기록 완전 삭제
+    // 퇴원생 수업기록 완전 삭제 (쿼리로 찾아서 삭제)
     const deleteEnrollmentRecord = async (className: string, studentId: string, subject?: string) => {
-        const prefix = subject === 'english' ? 'english' : 'math';
-        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `${prefix}_${className}`);
-        await deleteDoc(enrollmentRef);
+        const subjectKey = subject === 'english' ? 'english' : MATH_SUBJECTS;
+        const enrollDoc = await findEnrollmentDoc(studentId, subjectKey, className);
+        if (enrollDoc) await deleteDoc(enrollDoc.ref);
         invalidateMathCaches();
         queryClient.invalidateQueries({ queryKey: ['classDetail'] });
         queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });

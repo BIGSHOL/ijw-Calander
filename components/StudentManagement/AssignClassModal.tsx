@@ -99,8 +99,8 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                 throw new Error('선택한 수업을 찾을 수 없습니다');
             }
 
-            // enrollment ID 생성: timestamp 기반
-            const enrollmentId = `enrollment_${Date.now()}`;
+            // enrollment ID: classId (Firestore 문서 ID) 사용
+            const enrollmentId = selectedClass.id;
 
             // students/{studentId}/enrollments/{enrollmentId}에 추가
             await setDoc(doc(db, `students/${student.id}/enrollments`, enrollmentId), {

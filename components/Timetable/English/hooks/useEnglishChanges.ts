@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { collection, query, where, getDocs, writeBatch, updateDoc, addDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, writeBatch, updateDoc, doc, setDoc } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 import { TimetableStudent } from '../../../../types';
 import { CLASS_COLLECTION } from '../englishUtils';
@@ -76,6 +76,7 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
             // === 0. 대상 수업들의 teacher 정보 조회 (staffId 연동용) ===
             const targetClassNames = [...new Set(Array.from(moveChanges.values()).map(c => c.toClass))];
             const classTeacherMap = new Map<string, string>();
+            const classIdMap = new Map<string, string>(); // className → classId
 
             if (targetClassNames.length > 0) {
                 const classesQuery = query(
@@ -84,9 +85,9 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
                     where('className', 'in', targetClassNames)
                 );
                 const classesSnapshot = await getDocs(classesQuery);
-                classesSnapshot.docs.forEach(doc => {
-                    const data = doc.data();
-                    // 영어 수업은 mainTeacher 또는 teacher 필드 사용
+                classesSnapshot.docs.forEach(classDoc => {
+                    const data = classDoc.data();
+                    classIdMap.set(data.className, classDoc.id);
                     const teacher = data.mainTeacher || data.teacher;
                     if (teacher) {
                         classTeacherMap.set(data.className, teacher);
@@ -117,16 +118,17 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
                 );
                 await Promise.all(endDatePromises);
 
-                // 1-2. 새 수업 enrollment 생성 (staffId 포함)
-                const enrollmentsRef = collection(db, 'students', student.id, 'enrollments');
+                // 1-2. 새 수업 enrollment 생성 (doc ID = classId)
+                const toClassId = classIdMap.get(toClass) || `english_${toClass}`;
+                const enrollmentRef = doc(db, 'students', student.id, 'enrollments', toClassId);
                 const staffId = classTeacherMap.get(toClass) || '';
-                await addDoc(enrollmentsRef, {
+                await setDoc(enrollmentRef, {
+                    classId: toClassId,
                     className: toClass,
                     subject: 'english',
-                    staffId,  // 학생관리 수업 탭 강사 표시용
-                    enrollmentDate: prevEnrollmentDate || today,  // 반이동 시 기존 신입생 날짜 유지
+                    staffId,
+                    enrollmentDate: prevEnrollmentDate || today,
                     createdAt: new Date().toISOString(),
-                    // 이전 enrollment에서 underline 등 속성 복사
                     underline: student.underline || false,
                     attendanceDays: student.attendanceDays || [],
                 });

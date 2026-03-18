@@ -123,7 +123,14 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
         return getWeekReferenceDate(currentWeekStart);
     }, [currentWeekStart]);
 
-    const { classDataMap, isLoading: studentsLoading, refetch: refetchClassStudents } = useMathClassStudents(classNames, studentMap, referenceDate);
+    // classes의 subject에 따라 enrollment 조회 subject 결정
+    const studentSubject = useMemo(() => {
+        const hasHighmath = classes.some(c => c.subject === '고등수학' || c.subject === 'highmath');
+        if (hasHighmath) return ['math', 'highmath'];
+        return 'math';
+    }, [classes]);
+
+    const { classDataMap, isLoading: studentsLoading, refetch: refetchClassStudents } = useMathClassStudents(classNames, studentMap, referenceDate, studentSubject);
 
     // Filter by search term (통합 검색: TimetableHeader의 searchQuery 사용)
     const filteredClasses = useMemo(() => {

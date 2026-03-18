@@ -69,15 +69,17 @@ export const useCreateClass = () => {
       if (slotTeachers && Object.keys(slotTeachers).length > 0) classDoc.slotTeachers = slotTeachers;
       if (slotRooms && Object.keys(slotRooms).length > 0) classDoc.slotRooms = slotRooms;
 
-      await addDoc(collection(db, COL_CLASSES), classDoc);
+      const classRef = await addDoc(collection(db, COL_CLASSES), classDoc);
+      const classId = classRef.id;
 
-      // 2. 각 학생의 enrollments 서브컬렉션에 새 enrollment 추가
+      // 2. 각 학생의 enrollments 서브컬렉션에 새 enrollment 추가 (doc ID = classId)
       const promises = studentIds.map(async (studentId) => {
-        const enrollmentsRef = collection(db, COL_STUDENTS, studentId, 'enrollments');
-        await addDoc(enrollmentsRef, {
+        const enrollmentRef = doc(db, COL_STUDENTS, studentId, 'enrollments', classId);
+        await setDoc(enrollmentRef, {
           className,
-          staffId: teacher, // teacher는 이제 staffId (문서 ID)
-          teacher: teacher,  // 호환성을 위해 유지
+          classId,
+          staffId: teacher,
+          teacher: teacher,
           subject,
           schedule,
           createdAt: new Date().toISOString(),
@@ -467,9 +469,16 @@ export const useManageClassStudents = () => {
             if (studentSlotTeachers[studentId]) updateData.isSlotTeacher = true;
             await updateDoc(endedDoc.ref, updateData);
           } else {
-            // 기존 enrollment 없음 → 신규 생성
+            // 기존 enrollment 없음 → 신규 생성 (doc ID = classId)
+            // classId 조회
+            const classQuery = query(collection(db, COL_CLASSES), where('className', '==', className), where('subject', '==', subject));
+            const classSnap = await getDocs(classQuery);
+            const classId = classSnap.empty ? `${subject}_${className}` : classSnap.docs[0].id;
+
+            const enrollmentRef = doc(db, COL_STUDENTS, studentId, 'enrollments', classId);
             const enrollmentData: any = {
               className,
+              classId,
               staffId: teacher,
               teacher: teacher,
               subject,
@@ -487,7 +496,7 @@ export const useManageClassStudents = () => {
             if (studentSlotTeachers[studentId]) {
               enrollmentData.isSlotTeacher = true;
             }
-            await addDoc(enrollmentsRef, enrollmentData);
+            await setDoc(enrollmentRef, enrollmentData);
           }
         });
         await Promise.all(addPromises);

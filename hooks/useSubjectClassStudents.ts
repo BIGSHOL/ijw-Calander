@@ -32,8 +32,8 @@ export interface ClassStudentData {
 }
 
 export interface SubjectClassStudentOptions {
-    /** 과목 키 (Firestore enrollment.subject 값) */
-    subject: string;
+    /** 과목 키 (Firestore enrollment.subject 값). 배열이면 OR 매칭 */
+    subject: string | string[];
     /** 조회할 수업 이름 목록 */
     classNames: string[];
     /** 전역 학생 데이터 맵 (useStudents(true)에서 제공) */
@@ -49,8 +49,10 @@ export interface SubjectClassStudentOptions {
 export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
     const { subject, classNames, studentMap, referenceDate } = options;
     const queryClient = useQueryClient();
+    const subjectKey = Array.isArray(subject) ? subject.join(',') : subject;
 
     const classDataMap = useMemo<Record<string, ClassStudentData>>(() => {
+        const subjects = subjectKey.split(',');
         if (classNames.length === 0 || Object.keys(studentMap).length === 0) {
             return {};
         }
@@ -68,7 +70,7 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
             if (!student.enrollments) return;
 
             student.enrollments.forEach((enrollment: any) => {
-                if (enrollment.subject !== subject) return;
+                if (!subjects.includes(enrollment.subject)) return;
 
                 const className = enrollment.className as string;
                 if (!className) return;
@@ -116,7 +118,7 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
             if (!student.enrollments) return;
 
             student.enrollments.forEach((enrollment: any) => {
-                if (enrollment.subject !== subject) return;
+                if (!subjects.includes(enrollment.subject)) return;
 
                 const rawClassName = enrollment.className as string;
                 if (!rawClassName) return;
@@ -246,7 +248,7 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
         });
 
         return result;
-    }, [subject, classNames, studentMap, referenceDate]);
+    }, [subjectKey, classNames, studentMap, referenceDate]);
 
     const isLoading = classNames.length > 0 && Object.keys(studentMap).length === 0;
 
