@@ -1181,10 +1181,11 @@ const TimetableManager = ({
         return studentMap;
     }, [globalStudents, subjectTab, studentMap]);
 
-    // teachers는 propsTeachers에서 받아서 수학 과목 필터링하여 사용
+    // teachers는 propsTeachers에서 받아서 현재 과목 필터링하여 사용
+    const mathSubjectKey = subjectTab === 'highmath' ? 'highmath' : 'math';
     const teachers = React.useMemo(() =>
-        propsTeachers.filter(t => !t.subjects || t.subjects.includes('math')),
-        [propsTeachers]);
+        propsTeachers.filter(t => !t.subjects || t.subjects.includes(mathSubjectKey)),
+        [propsTeachers, mathSubjectKey]);
 
     // Hook Integration: Math Config
     const {

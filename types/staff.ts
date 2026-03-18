@@ -26,7 +26,7 @@ export interface StaffMember {
   email?: string;
   phone?: string;
   role: 'teacher' | 'admin' | 'staff' | '강사';
-  subjects?: ('math' | 'english')[];
+  subjects?: ('math' | 'english' | 'highmath')[];
   hireDate: string;
   status: 'active' | 'inactive' | 'resigned';
   workSchedule?: WeeklySchedule;

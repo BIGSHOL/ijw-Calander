@@ -68,7 +68,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
     phone: '',
     role: 'teacher' as StaffMember['role'],
     jobTitle: '', // 호칭 (예: 대표, 팀장, 선생님)
-    subjects: [] as ('math' | 'english')[],
+    subjects: [] as ('math' | 'english' | 'highmath')[],
     hireDate: formatDateKey(new Date()),
     status: 'active' as StaffMember['status'],
     memo: '',
@@ -131,7 +131,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubjectToggle = (subject: 'math' | 'english') => {
+  const handleSubjectToggle = (subject: 'math' | 'english' | 'highmath') => {
     setFormData((prev) => {
       const subjects = prev.subjects.includes(subject)
         ? prev.subjects.filter((s) => s !== subject)
@@ -478,6 +478,17 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                     }`}
                   >
                     수학
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSubjectToggle('highmath')}
+                    className={`flex-1 py-1.5 px-3 rounded-sm border-2 text-sm transition-colors ${
+                      formData.subjects.includes('highmath')
+                        ? 'border-purple-500 bg-purple-50 text-purple-700 font-medium'
+                        : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                    }`}
+                  >
+                    고등수학
                   </button>
                   <button
                     type="button"

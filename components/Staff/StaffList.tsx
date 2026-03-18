@@ -185,7 +185,7 @@ const StaffList: React.FC<StaffListProps> = ({
                               : 'bg-pink-100 text-pink-700'
                             }`}
                         >
-                          {subject === 'math' ? '수학' : '영어'}
+                          {subject === 'math' ? '수학' : subject === 'highmath' ? '고등수학' : '영어'}
                         </span>
                       ))}
                       {(!member.subjects || member.subjects.length === 0) && (

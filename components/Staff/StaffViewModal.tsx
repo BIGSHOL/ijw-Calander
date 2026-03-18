@@ -435,7 +435,7 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
                           SUBJECT_COLORS[subject as SubjectType]?.badge || SUBJECT_COLORS.other.badge
                         }`}
                       >
-                        {subject === 'math' ? '수학' : '영어'}
+                        {subject === 'math' ? '수학' : subject === 'highmath' ? '고등수학' : '영어'}
                       </span>
                     ))}
                   </div>
