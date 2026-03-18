@@ -1,9 +1,9 @@
-// HighMathDayView - 고등수학 요일별 시간표 뷰
-// 월~금(+토,일) 컬럼으로 수업을 시간순 나열, 교시 그리드 없음
+// HighMathDayView - 고등수학 요일별 시간표 (엑셀 테이블 형태)
+// 월~금(+토,일) 컬럼, 수업 시간순 나열, 교시 그리드 없음
 
 import React, { useMemo } from 'react';
 import { TimetableClass, Teacher, UnifiedStudent } from '../../../types';
-import { MATH_PERIOD_INFO, WEEKEND_PERIOD_INFO, formatScheduleCompact } from '../constants';
+import { MATH_PERIOD_INFO, WEEKEND_PERIOD_INFO } from '../constants';
 
 interface HighMathDayViewProps {
     classes: TimetableClass[];
@@ -14,17 +14,13 @@ interface HighMathDayViewProps {
 
 interface DayClassEntry {
     cls: TimetableClass;
-    periods: string[];       // periods on this specific day
-    startPeriod: number;     // earliest period number
-    periodCount: number;     // how many periods on this day
-    timeLabel: string;       // e.g. "20:10~22:00"
+    periods: string[];
+    startPeriod: number;
+    periodCount: number;
+    timeLabel: string;
 }
 
 const DAY_ORDER = ['월', '화', '수', '목', '금', '토', '일'];
-const DAY_LABELS: Record<string, string> = {
-    '월': '월요일', '화': '화요일', '수': '수요일',
-    '목': '목요일', '금': '금요일', '토': '토요일', '일': '일요일',
-};
 
 const getTeacherColor = (teacherName: string, teachers: Teacher[]): { bg: string; text: string } => {
     const teacher = teachers.find(t => t.name === teacherName || t.englishName === teacherName);
@@ -40,20 +36,17 @@ const HighMathDayView: React.FC<HighMathDayViewProps> = ({
     studentMap,
     searchQuery = '',
 }) => {
-    // Parse classes into day-based structure
     const dayColumns = useMemo(() => {
         const dayMap = new Map<string, DayClassEntry[]>();
 
         for (const cls of classes) {
             if (!cls.schedule || cls.schedule.length === 0) continue;
 
-            // Search filter
             if (searchQuery) {
                 const q = searchQuery.toLowerCase();
                 const matchName = (cls.className || '').toLowerCase().includes(q);
                 const matchTeacher = (cls.teacher || '').toLowerCase().includes(q);
                 const matchRoom = (cls.room || '').toLowerCase().includes(q);
-                // Check student names
                 const matchStudent = (cls.studentIds || []).some(id => {
                     const s = studentMap[id];
                     return s && s.name.toLowerCase().includes(q);
@@ -61,7 +54,6 @@ const HighMathDayView: React.FC<HighMathDayViewProps> = ({
                 if (!matchName && !matchTeacher && !matchRoom && !matchStudent) continue;
             }
 
-            // Group schedule entries by day
             const dayPeriods = new Map<string, string[]>();
             for (const slot of cls.schedule) {
                 const parts = slot.split(' ');
@@ -72,7 +64,6 @@ const HighMathDayView: React.FC<HighMathDayViewProps> = ({
                 dayPeriods.get(day)!.push(periodId);
             }
 
-            // Create an entry for each day this class appears on
             for (const [day, periods] of dayPeriods) {
                 if (!dayMap.has(day)) dayMap.set(day, []);
 
@@ -81,7 +72,6 @@ const HighMathDayView: React.FC<HighMathDayViewProps> = ({
                 const sortedPeriods = periods.sort((a, b) => Number(a) - Number(b));
                 const startPeriodNum = Number(sortedPeriods[0]) || 0;
 
-                // Build time label
                 const firstPeriod = periodInfo[sortedPeriods[0]];
                 const lastPeriod = periodInfo[sortedPeriods[sortedPeriods.length - 1]];
                 const timeLabel = firstPeriod && lastPeriod
@@ -98,16 +88,19 @@ const HighMathDayView: React.FC<HighMathDayViewProps> = ({
             }
         }
 
-        // Sort classes within each day by start period
         for (const entries of dayMap.values()) {
             entries.sort((a, b) => a.startPeriod - b.startPeriod);
         }
 
-        // Return only days that have classes, in order
         return DAY_ORDER
             .filter(day => dayMap.has(day) && dayMap.get(day)!.length > 0)
             .map(day => ({ day, entries: dayMap.get(day)! }));
-    }, [classes, teachers, studentMap, searchQuery]);
+    }, [classes, studentMap, searchQuery]);
+
+    // Max number of classes in any single day (for table row count)
+    const maxRows = useMemo(() => {
+        return Math.max(1, ...dayColumns.map(d => d.entries.length));
+    }, [dayColumns]);
 
     if (dayColumns.length === 0) {
         return (
@@ -117,83 +110,77 @@ const HighMathDayView: React.FC<HighMathDayViewProps> = ({
         );
     }
 
-    // Calculate the base height per period slot (for proportional sizing)
-    const PERIOD_HEIGHT = 80; // px per period
-
     return (
-        <div className="flex-1 overflow-auto p-4 bg-gray-50">
-            <div className="flex gap-3 min-w-max">
-                {dayColumns.map(({ day, entries }) => (
-                    <div key={day} className="flex flex-col min-w-[200px] max-w-[280px] flex-1">
-                        {/* Day Header */}
-                        <div className="bg-gray-800 text-white text-center py-2 px-3 font-bold text-sm rounded-t-md">
-                            {DAY_LABELS[day] || day}
-                            <span className="ml-2 text-xs text-gray-400 font-normal">
-                                ({entries.length}개)
-                            </span>
-                        </div>
+        <div className="flex-1 overflow-auto bg-white border-t border-gray-200">
+            <table className="w-full border-collapse text-xs min-w-[600px]">
+                {/* Day Headers */}
+                <thead className="sticky top-0 z-10">
+                    <tr>
+                        {dayColumns.map(({ day, entries }) => (
+                            <th
+                                key={day}
+                                className="bg-gray-800 text-white font-bold text-sm px-3 py-2 border border-gray-700 text-center"
+                            >
+                                {day}
+                                <span className="ml-1 text-xs text-gray-400 font-normal">
+                                    ({entries.length})
+                                </span>
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {Array.from({ length: maxRows }, (_, rowIdx) => (
+                        <tr key={rowIdx}>
+                            {dayColumns.map(({ day, entries }) => {
+                                const entry = entries[rowIdx];
+                                if (!entry) {
+                                    return (
+                                        <td key={day} className="border border-gray-200 bg-gray-50 p-1 align-top" />
+                                    );
+                                }
 
-                        {/* Class Cards */}
-                        <div className="flex flex-col bg-white border border-gray-200 border-t-0 rounded-b-md overflow-hidden">
-                            {entries.map((entry, idx) => {
                                 const { cls, periodCount, timeLabel } = entry;
                                 const teacherColor = getTeacherColor(cls.teacher, teachers);
                                 const studentCount = cls.studentIds?.length || cls.studentList?.length || 0;
-                                const minHeight = Math.max(periodCount * PERIOD_HEIGHT, 70);
+                                // Height proportional to period count (min 60px for 1 period)
+                                const cellHeight = Math.max(periodCount * 50, 60);
 
                                 return (
-                                    <div
-                                        key={`${cls.id}_${day}_${idx}`}
-                                        className="border-b border-gray-100 last:border-b-0 p-3 hover:bg-gray-50 transition-colors"
-                                        style={{ minHeight: `${minHeight}px` }}
+                                    <td
+                                        key={`${day}_${cls.id}`}
+                                        className="border border-gray-200 p-0 align-top"
+                                        style={{ height: `${cellHeight}px` }}
                                     >
-                                        {/* Teacher Badge + Time */}
-                                        <div className="flex items-center justify-between gap-2 mb-1.5">
-                                            <span
-                                                className="px-2 py-0.5 rounded text-xs font-bold shadow-sm"
+                                        <div className="h-full flex flex-col">
+                                            {/* Teacher color bar */}
+                                            <div
+                                                className="px-2 py-1 text-xs font-bold flex items-center justify-between"
                                                 style={{ backgroundColor: teacherColor.bg, color: teacherColor.text }}
                                             >
-                                                {cls.teacher}
-                                            </span>
-                                            {timeLabel && (
-                                                <span className="text-xs text-gray-400 font-medium whitespace-nowrap">
-                                                    {timeLabel}
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        {/* Class Name */}
-                                        <div className="text-sm font-bold text-gray-800 mb-1 leading-tight">
-                                            {cls.className}
-                                        </div>
-
-                                        {/* Room */}
-                                        {cls.room && (
-                                            <div className="text-xs text-gray-500 mb-1.5">
-                                                {cls.room}
+                                                <span>{cls.teacher}</span>
+                                                <span className="opacity-80 font-normal">{timeLabel}</span>
                                             </div>
-                                        )}
-
-                                        {/* Schedule (compact format) */}
-                                        <div className="text-xs text-purple-600 font-medium mb-1.5">
-                                            {formatScheduleCompact(cls.schedule, 'highmath')}
+                                            {/* Class info */}
+                                            <div className="px-2 py-1.5 flex-1 flex flex-col gap-0.5">
+                                                <div className="font-bold text-gray-900 text-xs leading-tight">
+                                                    {cls.className}
+                                                </div>
+                                                {cls.room && (
+                                                    <div className="text-gray-400 text-[10px]">{cls.room}</div>
+                                                )}
+                                                <div className="text-gray-500 text-[10px] mt-auto">
+                                                    {studentCount}명
+                                                </div>
+                                            </div>
                                         </div>
-
-                                        {/* Student Count */}
-                                        <div className="flex items-center gap-1 text-xs text-gray-400">
-                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                                            </svg>
-                                            <span>{studentCount}명</span>
-                                        </div>
-                                    </div>
+                                    </td>
                                 );
                             })}
-                        </div>
-                    </div>
-                ))}
-            </div>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
         </div>
     );
 };
