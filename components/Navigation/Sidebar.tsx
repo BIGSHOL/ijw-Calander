@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TAB_GROUPS, TAB_META, AppTab } from '../../types';
-import { ChevronLeft, ChevronRight, Menu, X, ExternalLink, MessageCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Menu, X, ExternalLink, MessageCircle, Mic, Calculator } from 'lucide-react';
 
 interface SidebarProps {
   currentTab: AppTab | null;
@@ -166,7 +166,17 @@ const Sidebar: React.FC<SidebarProps> = ({
                       <span className="text-sm flex-shrink-0" aria-hidden="true">
                         {meta.icon}
                       </span>
-                      {!isCollapsed && <span>{meta.label}</span>}
+                      {!isCollapsed && (
+                        <span className="flex items-center gap-1 flex-1">
+                          {meta.label}
+                          {(tab === 'consultation' || tab === 'student-consultations' || tab === 'meeting-minutes') && (
+                            <Mic size={11} className="text-red-400 flex-shrink-0 ml-auto" />
+                          )}
+                          {(tab === 'tuition-calculator' || tab === 'textbooks') && (
+                            <Calculator size={11} className="text-blue-400 flex-shrink-0 ml-auto" />
+                          )}
+                        </span>
+                      )}
                     </button>
                     {isTuitionCalc && !isCollapsed && <div className="w-full h-px bg-gray-300 my-0.5" />}
                     </React.Fragment>
