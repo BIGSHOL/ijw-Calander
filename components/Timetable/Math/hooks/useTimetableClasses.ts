@@ -4,6 +4,7 @@ import { db } from '../../../../firebaseConfig';
 import { TimetableClass, TimetableStudent } from '../../../../types';
 import { convertToLegacyPeriodId } from '../../constants';
 import { getTodayKST, toDateStringKST } from '../../../../utils/dateUtils';
+import { parseStudentIdWithCampus } from '../../../../utils/campusUtils';
 
 const COL_CLASSES = 'classes';
 
@@ -78,16 +79,15 @@ export const useTimetableClasses = () => {
                     ? Array.from(enrollmentStudentIds)
                     : (data.studentIds || []);
 
-                // studentIds를 TimetableStudent[] 형식으로 변환
+                // studentIds를 TimetableStudent[] 형식으로 변환 (gd_ 프리픽스 처리)
                 const studentList: TimetableStudent[] = studentIds.map((sid: string) => {
-                    // studentId 파싱: "이름_학교_학년" 형식
-                    const parts = sid.split('_');
-                    if (parts.length >= 3) {
+                    const parsed = parseStudentIdWithCampus(sid);
+                    if (parsed.school) {
                         return {
                             id: sid,
-                            name: parts[0],
-                            school: parts[1],
-                            grade: parts[2]
+                            name: parsed.name,
+                            school: parsed.school,
+                            grade: parsed.grade
                         };
                     }
                     return { id: sid, name: sid };

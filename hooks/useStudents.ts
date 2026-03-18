@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { UnifiedStudent } from '../types';
+import { CampusType, getCampus } from '../utils/campusUtils';
 
 export const COL_STUDENTS = 'students';
 
@@ -64,12 +65,13 @@ async function fetchAllEnrollmentsOptimized(students: UnifiedStudent[]): Promise
  * - includeWithdrawn=true 시 최근 90일 퇴원생만 포함 (성능 최적화)
  * @param includeWithdrawn - 퇴원생 포함 여부
  * @param enabled - 쿼리 활성화 여부 (기본값: true)
+ * @param campusFilter - 캠퍼스 필터 ('main' | 'godeung' | 'all' | undefined). undefined면 모든 학생 반환 (하위호환)
  */
-export function useStudents(includeWithdrawn = false, enabled = true) {
+export function useStudents(includeWithdrawn = false, enabled = true, campusFilter?: CampusType | 'all') {
     const queryClient = useQueryClient();
 
     const { data: students = [], isLoading: loading, error: queryError, refetch } = useQuery<UnifiedStudent[]>({
-        queryKey: ['students', includeWithdrawn],
+        queryKey: ['students', includeWithdrawn, campusFilter || 'all'],
         enabled,
         queryFn: async () => {
             if (includeWithdrawn) {
@@ -100,6 +102,10 @@ export function useStudents(includeWithdrawn = false, enabled = true) {
                 // 단일 쿼리로 모든 enrollments 조회 (collectionGroup 최적화)
                 await fetchAllEnrollmentsOptimized(studentList);
 
+                // 캠퍼스 필터링 (클라이언트 사이드 — 기존 문서에 campus 필드 없으면 'main' 취급)
+                if (campusFilter && campusFilter !== 'all') {
+                    return studentList.filter(s => getCampus(s) === campusFilter);
+                }
                 return studentList;
             } else {
                 // 활성 학생만 조회
@@ -120,6 +126,10 @@ export function useStudents(includeWithdrawn = false, enabled = true) {
                 // 단일 쿼리로 모든 enrollments 조회 (collectionGroup 최적화)
                 await fetchAllEnrollmentsOptimized(studentList);
 
+                // 캠퍼스 필터링
+                if (campusFilter && campusFilter !== 'all') {
+                    return studentList.filter(s => getCampus(s) === campusFilter);
+                }
                 return studentList;
             }
         },
@@ -279,8 +289,9 @@ export async function searchStudentsByQuery(searchQuery: string): Promise<Unifie
 /**
  * 정확한 이름으로 학생 검색 (중복 확인용)
  * - 신입 등록 시 기존 학생 확인
+ * @param campus - 특정 캠퍼스 내에서만 검색 (생략 시 전체)
  */
-export async function searchStudentByExactName(name: string): Promise<UnifiedStudent | null> {
+export async function searchStudentByExactName(name: string, campus?: CampusType): Promise<UnifiedStudent | null> {
     try {
         // 현재 students 컬렉션에서 정확히 일치하는 이름 검색
         const currentQuery = query(
@@ -290,6 +301,11 @@ export async function searchStudentByExactName(name: string): Promise<UnifiedStu
         const currentSnap = await getDocs(currentQuery);
 
         if (!currentSnap.empty) {
+            // 캠퍼스 필터가 지정된 경우 해당 캠퍼스 학생만 반환
+            if (campus) {
+                const match = currentSnap.docs.find(d => getCampus(d.data() as UnifiedStudent) === campus);
+                return match ? { ...match.data(), id: match.id } as UnifiedStudent : null;
+            }
             return { ...currentSnap.docs[0].data(), id: currentSnap.docs[0].id } as UnifiedStudent;
         }
 

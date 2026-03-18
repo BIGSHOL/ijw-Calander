@@ -18,6 +18,7 @@ import { useStudentDuplicates, DuplicateGroup } from './hooks/useStudentDuplicat
 import { useQueryClient } from '@tanstack/react-query';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
+import { CampusType, CAMPUS_LABELS, CAMPUS_COLORS } from '../../utils/campusUtils';
 
 interface StudentMergeModalProps {
   onClose: () => void;
@@ -35,6 +36,13 @@ interface MergeResult {
 const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
   const queryClient = useQueryClient();
   const { students, loading: studentsLoading } = useStudents(true); // 퇴원생 포함
+  const [campusScope, setCampusScope] = useState<CampusType | 'all'>('all');
+
+  // 캠퍼스 필터 적용 (중복 감지 전에 필터링)
+  const filteredStudents = useMemo(() => {
+    if (campusScope === 'all') return students;
+    return students.filter(s => (s.campus || 'main') === campusScope);
+  }, [students, campusScope]);
 
   const {
     duplicateGroups,
@@ -47,7 +55,7 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
     deselectAllGroups,
     autoSelectPrimary,
     getSelectedGroups,
-  } = useStudentDuplicates(students, studentsLoading);
+  } = useStudentDuplicates(filteredStudents, studentsLoading);
 
   const [step, setStep] = useState<ModalStep>(studentsLoading ? 'loading' : 'preview');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
@@ -333,7 +341,27 @@ const StudentMergeModal: React.FC<StudentMergeModalProps> = ({ onClose }) => {
           {step === 'preview' && (
             <>
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                {/* Section 1: 병합 통계 */}
+                {/* 캠퍼스 필터 */}
+                <div className="flex items-center gap-1 mb-1">
+                  {(['all', 'main', 'godeung'] as const).map(c => (
+                    <button
+                      key={c}
+                      onClick={() => setCampusScope(c)}
+                      className={`px-2 py-1 text-xs rounded-sm font-medium transition-colors ${
+                        campusScope === c
+                          ? c === 'godeung'
+                            ? 'text-white'
+                            : 'bg-blue-100 text-blue-700 border border-blue-300'
+                          : 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+                      }`}
+                      style={campusScope === c && c === 'godeung' ? { backgroundColor: CAMPUS_COLORS.godeung } : undefined}
+                    >
+                      {c === 'all' ? '전체' : CAMPUS_LABELS[c]}
+                    </button>
+                  ))}
+                </div>
+
+              {/* Section 1: 병합 통계 */}
                 <div className="bg-white border border-gray-200 overflow-hidden">
                   <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
                     <BarChart3 className="w-3 h-3 text-primary" />

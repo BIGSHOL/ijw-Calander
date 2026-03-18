@@ -13,6 +13,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { UnifiedStudent } from '../../../types';
+import { getCampus } from '../../../utils/campusUtils';
 
 /**
  * 학교명 정규화 (초등학교 → 초, 중학교 → 중, 고등학교 → 고)
@@ -162,10 +163,14 @@ export function useStudentDuplicates(
     const groupMap = new Map<string, UnifiedStudent[]>();
 
     // 문서 ID 기준 이름(접미사 포함) + 학교(정규화+약칭보정) + 학년으로 그룹화
+    // 캠퍼스별로 격리하여 교차 캠퍼스 중복 병합 방지
     students.forEach(student => {
       // 문서 ID에서 이름 추출 (접미사 A/B/C 포함, 동명이인 구분)
-      const idParts = student.id.split('_');
-      const isSemanticId = idParts.length >= 3 && !/^\d+$/.test(student.id) && !/^[a-zA-Z0-9]{15,}$/.test(student.id);
+      // gd_ 프리픽스가 있으면 제거 후 파싱
+      let workingId = student.id;
+      if (workingId.startsWith('gd_')) workingId = workingId.substring(3);
+      const idParts = workingId.split('_');
+      const isSemanticId = idParts.length >= 3 && !/^\d+$/.test(workingId) && !/^[a-zA-Z0-9]{15,}$/.test(workingId);
       const name = isSemanticId ? idParts[0] : (student.name || '').trim();
       const school = isSemanticId ? fullNormalizeSchool(idParts[1], schoolCorrections) : fullNormalizeSchool(student.school || '', schoolCorrections);
       const grade = isSemanticId ? idParts.slice(2).join('_') : (student.grade || '').trim();
@@ -173,7 +178,9 @@ export function useStudentDuplicates(
       // 이름이 없으면 스킵
       if (!name) return;
 
-      const key = `${name}_${school}_${grade}`;
+      // 캠퍼스 포함하여 키 생성 (본원과 고등수학관 동명이인 분리)
+      const campus = getCampus(student);
+      const key = `${campus}:${name}_${school}_${grade}`;
 
       if (!groupMap.has(key)) {
         groupMap.set(key, []);

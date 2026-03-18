@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { UnifiedStudent } from '../../types';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { formatDateKey } from '../../utils/dateUtils';
+import { getCampus } from '../../utils/campusUtils';
 
 interface StudentListProps {
   students: UnifiedStudent[];
@@ -294,6 +295,9 @@ const StudentList: React.FC<StudentListProps> = ({
                         {/* 1번째 줄: 상태 + 이름 + 영어이름 + 학교/학년 */}
                         <div className="flex items-center gap-1">
                           {getStatusBadge(student.status)}
+                          {getCampus(student) === 'godeung' && (
+                            <span className="text-micro bg-purple-100 text-purple-700 px-1 py-0.5 rounded-sm font-medium">고등</span>
+                          )}
                           <span className={`text-xs font-bold ${student.isOldWithdrawn ? 'text-accent' : 'text-primary'}`}>
                             {student.name}
                           </span>
@@ -382,6 +386,9 @@ const StudentList: React.FC<StudentListProps> = ({
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-center gap-1">
                           {getStatusBadge(student.status)}
+                          {getCampus(student) === 'godeung' && (
+                            <span className="text-micro bg-purple-100 text-purple-700 px-1 py-0.5 rounded-sm font-medium">고등</span>
+                          )}
                           <span className="text-xs font-bold text-primary">{student.name}</span>
                           {student.englishName && (
                             <span className="text-xxs text-gray-500 max-w-[60px] truncate" title={student.englishName}>({student.englishName})</span>
@@ -431,6 +438,9 @@ const StudentList: React.FC<StudentListProps> = ({
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-center gap-1">
                           {getStatusBadge(student.status)}
+                          {getCampus(student) === 'godeung' && (
+                            <span className="text-micro bg-purple-100 text-purple-700 px-1 py-0.5 rounded-sm font-medium">고등</span>
+                          )}
                           <span className="text-xs font-bold text-primary">{student.name}</span>
                           {student.englishName && (
                             <span className="text-xxs text-gray-500 max-w-[60px] truncate" title={student.englishName}>({student.englishName})</span>
@@ -483,6 +493,9 @@ const StudentList: React.FC<StudentListProps> = ({
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-center gap-1">
                           {getStatusBadge(student.status)}
+                          {getCampus(student) === 'godeung' && (
+                            <span className="text-micro bg-purple-100 text-purple-700 px-1 py-0.5 rounded-sm font-medium">고등</span>
+                          )}
                           <span className="text-xs font-bold text-primary">{student.name}</span>
                           {student.englishName && (
                             <span className="text-xxs text-gray-500 max-w-[60px] truncate" title={student.englishName}>({student.englishName})</span>

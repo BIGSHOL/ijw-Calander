@@ -72,6 +72,7 @@ export interface UnifiedStudent {
   school?: string;               // 학교
   grade?: string;                // 학년
   gender?: 'male' | 'female';    // 성별
+  campus?: 'main' | 'godeung';   // 캠퍼스 구분 (default: 'main', 고등수학관: 'godeung')
 
   // 연락처 정보
   studentPhone?: string;         // 학생 휴대폰

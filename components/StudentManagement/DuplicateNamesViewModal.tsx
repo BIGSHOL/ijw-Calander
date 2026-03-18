@@ -30,6 +30,9 @@ interface DuplicateGroup {
   students: UnifiedStudent[];
 }
 
+/** gd_ 프리픽스 제거 (고등수학관 학생 ID 처리) */
+const stripCampusPrefix = (id: string): string => id.startsWith('gd_') ? id.substring(3) : id;
+
 /**
  * 학교명 정규화 (초등학교 → 초, 중학교 → 중, 고등학교 → 고)
  */
@@ -50,9 +53,10 @@ const buildSchoolCorrections = (students: UnifiedStudent[]): Map<string, string>
   const schoolCounts = new Map<string, number>();
 
   students.forEach(student => {
-    // ID에서 학교명 추출
-    const idParts = student.id.split('_');
-    const isSemanticId = idParts.length >= 2 && !/^\d+$/.test(student.id) && !/^[a-zA-Z0-9]{15,}$/.test(student.id);
+    // ID에서 학교명 추출 (gd_ 프리픽스 제거)
+    const workingId = stripCampusPrefix(student.id);
+    const idParts = workingId.split('_');
+    const isSemanticId = idParts.length >= 2 && !/^\d+$/.test(workingId) && !/^[a-zA-Z0-9]{15,}$/.test(workingId);
     if (isSemanticId) {
       const school = normalizeSchool(idParts[1]);
       if (school) schoolCounts.set(school, (schoolCounts.get(school) || 0) + 1);
@@ -102,9 +106,10 @@ const fullNormalizeSchool = (school: string, corrections?: Map<string, string>):
  * 예: "김민수A_남산초_초3" → "김민수A" (동명이인 구분)
  */
 const extractNameFromId = (id: string): string => {
-  if (/^\d+$/.test(id)) return '';
-  if (/^[a-zA-Z0-9]{15,}$/.test(id)) return '';
-  const parts = id.split('_');
+  const workingId = stripCampusPrefix(id);
+  if (/^\d+$/.test(workingId)) return '';
+  if (/^[a-zA-Z0-9]{15,}$/.test(workingId)) return '';
+  const parts = workingId.split('_');
   return parts[0] || '';
 };
 
@@ -113,8 +118,9 @@ const extractNameFromId = (id: string): string => {
  * 이름은 접미사(A,B,C) 포함, 학교명은 정규화 + 약칭 보정 적용
  */
 const parseStudentId = (id: string, schoolCorrections?: Map<string, string>): { name: string; school: string; grade: string } | null => {
-  if (/^\d+$/.test(id) || /^[a-zA-Z0-9]{15,}$/.test(id)) return null;
-  const parts = id.split('_');
+  const workingId = stripCampusPrefix(id);
+  if (/^\d+$/.test(workingId) || /^[a-zA-Z0-9]{15,}$/.test(workingId)) return null;
+  const parts = workingId.split('_');
   if (parts.length < 3) return null;
   const name = parts[0] || '';
   const school = fullNormalizeSchool(parts[1] || '', schoolCorrections);
@@ -129,9 +135,10 @@ const parseStudentId = (id: string, schoolCorrections?: Map<string, string>): { 
  * - 학교 약칭: "일중" (대구일중으로 보정 필요) → true
  */
 const isIdNeedsNormalization = (id: string, schoolCorrections?: Map<string, string>): boolean => {
+  const workingId = stripCampusPrefix(id);
   // 공백 포함 여부
-  if (/\s/.test(id)) return true;
-  const parts = id.split('_');
+  if (/\s/.test(workingId)) return true;
+  const parts = workingId.split('_');
   if (parts.length < 2) return false;
   // 학교명 정규화 필요 여부 (초등학교, 중학교, 고등학교)
   if (/초등학교|중학교|고등학교/.test(parts[1])) return true;
@@ -150,11 +157,13 @@ const isIdNeedsNormalization = (id: string, schoolCorrections?: Map<string, stri
  * - 학교 약칭 보정: "박도현_일중_중1" → "박도현_대구일중_중1"
  */
 const getNormalizedId = (id: string, schoolCorrections?: Map<string, string>): string => {
+  const prefix = id.startsWith('gd_') ? 'gd_' : '';
+  const workingId = stripCampusPrefix(id);
   // 각 파트의 앞뒤 공백 제거
-  const parts = id.split('_').map(p => p.trim());
-  if (parts.length < 2) return parts.join('_');
+  const parts = workingId.split('_').map(p => p.trim());
+  if (parts.length < 2) return prefix + parts.join('_');
   parts[1] = fullNormalizeSchool(parts[1], schoolCorrections);
-  return parts.join('_');
+  return prefix + parts.join('_');
 };
 
 const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClose, students: externalStudents, onRefresh }) => {
@@ -188,9 +197,10 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
     const groupMap = new Map<string, UnifiedStudent[]>();
 
     students.forEach(student => {
-      // 문서 ID에서 이름 추출 (접미사 A/B/C 포함, 동명이인 구분)
-      const idParts = student.id.split('_');
-      const isSemanticId = idParts.length >= 3 && !/^\d+$/.test(student.id) && !/^[a-zA-Z0-9]{15,}$/.test(student.id);
+      // 문서 ID에서 이름 추출 (접미사 A/B/C 포함, 동명이인 구분, gd_ 프리픽스 제거)
+      const workingId = stripCampusPrefix(student.id);
+      const idParts = workingId.split('_');
+      const isSemanticId = idParts.length >= 3 && !/^\d+$/.test(workingId) && !/^[a-zA-Z0-9]{15,}$/.test(workingId);
       const name = isSemanticId ? idParts[0] : (student.name || '').trim();
       const school = isSemanticId ? fullNormalizeSchool(idParts[1], schoolCorrections) : fullNormalizeSchool(student.school || '', schoolCorrections);
       const grade = isSemanticId ? idParts.slice(2).join('_') : (student.grade || '').trim();
@@ -962,9 +972,10 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
                       <tbody className="divide-y divide-rose-100">
                         {unnormalizedIdStudents.map(student => {
                           const newId = getNormalizedId(student.id, schoolCorrections);
-                          const hasSpace = /\s/.test(student.id);
-                          const hasFullSchool = /초등학교|중학교|고등학교/.test(student.id);
-                          const idParts = student.id.split('_');
+                          const workingId = stripCampusPrefix(student.id);
+                          const hasSpace = /\s/.test(workingId);
+                          const hasFullSchool = /초등학교|중학교|고등학교/.test(workingId);
+                          const idParts = workingId.split('_');
                           const hasAbbreviation = idParts.length >= 2 && schoolCorrections.has(normalizeSchool(idParts[1]));
                           return (
                             <tr key={student.id} className="hover:bg-rose-50">

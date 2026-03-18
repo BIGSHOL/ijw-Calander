@@ -104,9 +104,10 @@ const buildSchoolCorrections = (existingStudents: { id: string; school?: string 
   const schoolCounts = new Map<string, number>();
 
   existingStudents.forEach(student => {
-    // ID에서 학교명 추출
-    const idParts = student.id.split('_');
-    const isSemanticId = idParts.length >= 2 && !/^\d+$/.test(student.id) && !/^[a-zA-Z0-9]{15,}$/.test(student.id);
+    // ID에서 학교명 추출 (gd_ 프리픽스 제거)
+    const workingId = student.id.startsWith('gd_') ? student.id.substring(3) : student.id;
+    const idParts = workingId.split('_');
+    const isSemanticId = idParts.length >= 2 && !/^\d+$/.test(workingId) && !/^[a-zA-Z0-9]{15,}$/.test(workingId);
     if (isSemanticId) {
       const school = normalizeSchoolName(idParts[1]);
       if (school) schoolCounts.set(school, (schoolCounts.get(school) || 0) + 1);

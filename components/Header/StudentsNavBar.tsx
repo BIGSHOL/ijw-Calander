@@ -501,7 +501,7 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
             <div className="pt-2 border-t border-white/10 mt-2">
               <button
                 onClick={() => {
-                  setStudentFilters({ searchQuery: '', searchField: 'all', grade: 'all', status: 'all', subjects: [], subjectFilterMode: 'OR', teacher: 'all', excludeNoEnrollment: false, gradeMismatch: false });
+                  setStudentFilters({ searchQuery: '', searchField: 'all', grade: 'all', status: 'all', subjects: [], subjectFilterMode: 'OR', teacher: 'all', excludeNoEnrollment: false, gradeMismatch: false, campus: 'all' });
                   setStudentSortBy('name');
                 }}
                 className="w-full px-3 py-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded transition-colors text-xs font-bold"

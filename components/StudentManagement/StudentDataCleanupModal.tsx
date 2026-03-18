@@ -102,8 +102,9 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
     const schoolCounts = new Map<string, number>();
     for (const docSnap of snapshot.docs) {
       const data = docSnap.data() as UnifiedStudent;
-      const idParts = docSnap.id.split('_');
-      const isSemanticDocId = idParts.length >= 2 && !/^\d+$/.test(docSnap.id) && !/^[a-zA-Z0-9]{15,}$/.test(docSnap.id);
+      const workingDocId = docSnap.id.startsWith('gd_') ? docSnap.id.substring(3) : docSnap.id;
+      const idParts = workingDocId.split('_');
+      const isSemanticDocId = idParts.length >= 2 && !/^\d+$/.test(workingDocId) && !/^[a-zA-Z0-9]{15,}$/.test(workingDocId);
       if (isSemanticDocId) {
         const s = normalizeSchool(idParts[1]);
         if (s) schoolCounts.set(s, (schoolCounts.get(s) || 0) + 1);

@@ -197,46 +197,46 @@ exports.syncStudentsOnClassChange = functions
         const batch = db.batch();
         const now = new Date().toISOString();
 
-        // Target students to update enrollment for: 
+        // Target students to update enrollment for:
         // 1. New students (Added)
         // 2. Existing students (Remaining) - ONLY IF metadata changed
         const studentsToUpdate = metadataChanged ? [...addedStudents, ...remainingStudents] : addedStudents;
 
-        // Process UPDATES (Add/Update Enrollment)
+        // enrollmentId: subject_className 형식 (프론트엔드와 동일)
+        const enrollmentDocId = `${subject}_${className}`;
+
+        // Process UPDATES (Add/Update Enrollment) → 서브컬렉션에 저장
         for (const student of studentsToUpdate) {
             const studentKey = getStudentKey(student);
             const studentRef = db.collection("students").doc(studentKey);
             const studentDoc = await studentRef.get();
 
-            // Build enrollment with date range
-            const enrollment = {
+            // Build enrollment data
+            const enrollmentData = {
                 subject,
                 classId,
                 className,
-                staffId: teacher,  // Changed from teacherId to staffId (migration to staff collection)
+                staffId: teacher,
                 days,
                 startDate: student.enrollmentDate || now.split("T")[0],
+                enrollmentDate: student.enrollmentDate || now.split("T")[0],
                 endDate: student.withdrawalDate || null,
+                createdAt: now,
+                updatedAt: now,
             };
 
             if (studentDoc.exists) {
-                const existingData = studentDoc.data();
-                let enrollments = existingData.enrollments || [];
-
-                // Remove potential old entry for this class (replace with new metadata)
-                enrollments = enrollments.filter(e => e.classId !== classId);
-
-                // Add new/updated enrollment
-                enrollments.push(enrollment);
-
-                batch.update(studentRef, { enrollments, updatedAt: now });
+                // 서브컬렉션에 enrollment 문서 생성/업데이트
+                const enrollRef = studentRef.collection("enrollments").doc(enrollmentDocId);
+                batch.set(enrollRef, enrollmentData, { merge: true });
+                batch.update(studentRef, { updatedAt: now });
             } else {
+                // 학생 문서가 없으면 학생 먼저 생성
                 const newStudent = {
                     name: student.name || "",
                     englishName: student.englishName || null,
                     school: student.school || "",
                     grade: student.grade || "",
-                    enrollments: [enrollment],
                     status: "active",
                     startDate: now.split("T")[0],
                     endDate: null,
@@ -245,31 +245,45 @@ exports.syncStudentsOnClassChange = functions
                     updatedAt: now,
                 };
                 batch.set(studentRef, newStudent);
+                // 서브컬렉션에 enrollment 추가
+                const enrollRef = studentRef.collection("enrollments").doc(enrollmentDocId);
+                batch.set(enrollRef, enrollmentData);
             }
         }
 
-        // Process REMOVALS
+        // Process REMOVALS → 서브컬렉션에서 endDate 설정
         for (const student of removedStudents) {
             const studentKey = getStudentKey(student);
             const studentRef = db.collection("students").doc(studentKey);
             const studentDoc = await studentRef.get();
 
             if (studentDoc.exists) {
-                const existingData = studentDoc.data();
-                let enrollments = existingData.enrollments || [];
+                // 서브컬렉션에서 해당 수업 enrollment 찾아서 endDate 설정
+                const enrollRef = studentRef.collection("enrollments").doc(enrollmentDocId);
+                const enrollDoc = await enrollRef.get();
 
-                // Remove enrollment for this class
-                enrollments = enrollments.filter(e => e.classId !== classId);
+                if (enrollDoc.exists) {
+                    batch.update(enrollRef, {
+                        endDate: now.split("T")[0],
+                        updatedAt: now,
+                    });
+                }
 
-                if (enrollments.length === 0) {
+                // 남은 활성 enrollment가 있는지 확인
+                const allEnrollments = await studentRef.collection("enrollments").get();
+                const activeCount = allEnrollments.docs.filter(d => {
+                    const data = d.data();
+                    return !data.endDate && d.id !== enrollmentDocId;
+                }).length;
+
+                if (activeCount === 0) {
                     batch.update(studentRef, {
-                        enrollments: [],
                         status: "withdrawn",
                         endDate: now.split("T")[0],
                         updatedAt: now,
                     });
                 } else {
-                    batch.update(studentRef, { enrollments, updatedAt: now });
+                    batch.update(studentRef, { updatedAt: now });
                 }
             }
         }
@@ -286,6 +300,260 @@ exports.syncStudentsOnClassChange = functions
 exports.testSync = functions.region("asia-northeast3").https.onRequest((req, res) => {
     res.send("Cloud Functions (Gen 1) for syncStudents is deployed!");
 });
+
+/**
+ * 일괄 정리: enrollment 데이터 정합성 검증 및 수정
+ *
+ * 수행 내용:
+ * 1. 배열 필드에만 있고 서브컬렉션에 없는 enrollment → 서브컬렉션에 생성
+ *    (같은 classId를 가진 서브컬렉션 문서가 이미 있으면 건너뜀 = 중복 방지)
+ * 2. 서브컬렉션에서 같은 classId를 가진 중복 문서 정리
+ *    (endDate 없는 활성 enrollment 우선, 나머지는 유지하되 중복 표시만)
+ * 3. class의 studentList와 비교하여 endDate 불일치 수정
+ *    (수업에 있는데 endDate 설정됨 → endDate 제거)
+ *    (수업에 없는데 endDate 없음 → endDate 설정)
+ *
+ * mode: "dryrun" (기본) = 변경 없이 통계만 반환
+ * mode: "execute" = 실제 수정 수행
+ */
+exports.migrateEnrollmentsToSubcollection = functions
+    .region("asia-northeast3")
+    .runWith({ timeoutSeconds: 540, memory: "1GB" })
+    .https.onCall(async (data, context) => {
+        const mode = (data && data.mode) || "dryrun";
+        const isDryRun = mode !== "execute";
+
+        const stats = {
+            mode,
+            totalStudents: 0,
+            studentsWithArrayField: 0,
+            enrollmentsMigrated: 0,
+            duplicatesFound: 0,
+            endDateCleared: 0,
+            endDateSet: 0,
+            metadataSynced: 0,
+            skippedNoClassId: 0,
+            details: [],
+            errors: [],
+        };
+
+        try {
+            // 1. 모든 classes 조회 → classId → Set<studentKey>, classId → metadata
+            const classesSnap = await db.collection("classes").get();
+            const classStudentMap = new Map();
+            const classMetaMap = new Map();
+
+            classesSnap.docs.forEach(doc => {
+                const d = doc.data();
+                const studentKeys = new Set((d.studentList || []).map(s => getStudentKey(s)));
+                classStudentMap.set(doc.id, studentKeys);
+
+                const subject = inferSubject(d, doc.id);
+                let teacher = d.teacher || "";
+                if (!teacher && subject === "math") teacher = extractTeacherFromClassId(doc.id);
+                teacher = normalizeTeacherName(teacher);
+
+                const days = [];
+                if (d.schedule && Array.isArray(d.schedule)) {
+                    d.schedule.forEach(s => {
+                        if (typeof s !== "string") return;
+                        const day = s.split(" ")[0];
+                        if (day && !days.includes(day)) days.push(day);
+                    });
+                }
+                days.sort();
+
+                classMetaMap.set(doc.id, {
+                    className: d.className || doc.id,
+                    subject,
+                    staffId: teacher,
+                    days,
+                    schedule: d.schedule || [],
+                });
+            });
+
+            // 2. 모든 학생 순회
+            const studentsSnap = await db.collection("students").get();
+            stats.totalStudents = studentsSnap.size;
+
+            for (const studentDoc of studentsSnap.docs) {
+                const studentData = studentDoc.data();
+                const studentKey = studentDoc.id;
+                const arrayEnrollments = studentData.enrollments || [];
+
+                if (arrayEnrollments.length > 0) {
+                    stats.studentsWithArrayField++;
+                }
+
+                // 기존 서브컬렉션 조회
+                const subSnap = await studentDoc.ref.collection("enrollments").get();
+
+                // classId → [docId, ...] 매핑 (중복 감지용)
+                const classIdToSubDocs = new Map();
+                subSnap.docs.forEach(d => {
+                    const cid = d.data().classId;
+                    if (cid) {
+                        if (!classIdToSubDocs.has(cid)) classIdToSubDocs.set(cid, []);
+                        classIdToSubDocs.get(cid).push({ docId: d.id, data: d.data(), ref: d.ref });
+                    }
+                });
+
+                // 2a. 배열 필드 → 서브컬렉션 마이그레이션 (classId 기준 중복 방지)
+                for (const enrollment of arrayEnrollments) {
+                    const classId = enrollment.classId;
+                    if (!classId) { stats.skippedNoClassId++; continue; }
+
+                    // 같은 classId를 가진 서브컬렉션 문서가 이미 있는지 확인
+                    const existingDocs = classIdToSubDocs.get(classId) || [];
+                    if (existingDocs.length > 0) continue; // 이미 있으면 건너뜀
+
+                    const docId = `${enrollment.subject || "math"}_${enrollment.className}`;
+                    stats.enrollmentsMigrated++;
+
+                    if (!isDryRun) {
+                        try {
+                            const now = new Date().toISOString();
+                            await studentDoc.ref.collection("enrollments").doc(docId).set({
+                                subject: enrollment.subject || "math",
+                                classId: classId,
+                                className: enrollment.className || "",
+                                staffId: enrollment.staffId || "",
+                                days: enrollment.days || [],
+                                startDate: enrollment.startDate || null,
+                                enrollmentDate: enrollment.startDate || enrollment.enrollmentDate || null,
+                                endDate: enrollment.endDate || null,
+                                createdAt: now,
+                                updatedAt: now,
+                                _migratedFromArray: true,
+                            });
+                        } catch (e) {
+                            stats.errors.push(`Migrate: ${studentKey}/${docId}: ${e.message}`);
+                        }
+                    } else {
+                        stats.details.push(`[migrate] ${studentKey}: ${enrollment.className} (${classId})`);
+                    }
+                }
+
+                // 서브컬렉션 다시 조회 (마이그레이션 반영)
+                const finalSubSnap = isDryRun ? subSnap : await studentDoc.ref.collection("enrollments").get();
+
+                // 2b. 중복 감지: 같은 classId를 가진 서브컬렉션 문서가 여러 개인 경우
+                const finalClassIdMap = new Map();
+                finalSubSnap.docs.forEach(d => {
+                    const cid = d.data().classId;
+                    if (cid) {
+                        if (!finalClassIdMap.has(cid)) finalClassIdMap.set(cid, []);
+                        finalClassIdMap.get(cid).push({ docId: d.id, data: d.data(), ref: d.ref });
+                    }
+                });
+
+                for (const [classId, docs] of finalClassIdMap) {
+                    if (docs.length > 1) {
+                        stats.duplicatesFound += docs.length - 1;
+                        if (isDryRun) {
+                            stats.details.push(`[duplicate] ${studentKey}: classId=${classId}, docs=${docs.map(d=>d.docId).join(', ')}`);
+                        }
+                    }
+                }
+
+                // 2c. class studentList와 비교하여 endDate 정합성 확인
+                for (const enrollDoc of finalSubSnap.docs) {
+                    const enrollData = enrollDoc.data();
+                    const classId = enrollData.classId;
+                    if (!classId) continue;
+
+                    const currentStudents = classStudentMap.get(classId);
+                    if (currentStudents === undefined) continue; // 수업이 삭제됨 → 건드리지 않음
+
+                    const isInClass = currentStudents.has(studentKey);
+
+                    // 같은 classId 중복 문서가 있는 경우, 가장 최근(active) 것만 처리
+                    const siblingDocs = finalClassIdMap.get(classId) || [];
+                    const hasActiveSibling = siblingDocs.some(d => d.docId !== enrollDoc.id && !d.data.endDate);
+
+                    if (isInClass && enrollData.endDate) {
+                        // 수업에 있는데 endDate 설정됨
+                        // 같은 classId로 이미 활성 enrollment이 있으면 → 이건 이전 수강 이력이므로 건드리지 않음
+                        if (hasActiveSibling) continue;
+
+                        stats.endDateCleared++;
+                        if (!isDryRun) {
+                            try {
+                                await enrollDoc.ref.update({ endDate: null, updatedAt: new Date().toISOString() });
+                            } catch (e) {
+                                stats.errors.push(`ClearEnd: ${studentKey}/${enrollDoc.id}: ${e.message}`);
+                            }
+                        } else {
+                            stats.details.push(`[clearEnd] ${studentKey}: ${enrollData.className} (endDate ${enrollData.endDate} → null)`);
+                        }
+                    } else if (!isInClass && !enrollData.endDate) {
+                        // 수업에 없는데 endDate 없음 → 종료 처리
+                        const endDate = enrollData.updatedAt
+                            ? (typeof enrollData.updatedAt === 'string' ? enrollData.updatedAt.split("T")[0] : new Date().toISOString().split("T")[0])
+                            : new Date().toISOString().split("T")[0];
+
+                        stats.endDateSet++;
+                        if (!isDryRun) {
+                            try {
+                                await enrollDoc.ref.update({ endDate, updatedAt: new Date().toISOString() });
+                            } catch (e) {
+                                stats.errors.push(`SetEnd: ${studentKey}/${enrollDoc.id}: ${e.message}`);
+                            }
+                        } else {
+                            stats.details.push(`[setEnd] ${studentKey}: ${enrollData.className} (endDate → ${endDate})`);
+                        }
+                    }
+
+                    // 2d. 활성 enrollment의 메타데이터 동기화 (schedule, days, staffId)
+                    // endDate가 없는 (활성) enrollment만 대상, class가 존재하는 경우만
+                    if (!enrollData.endDate && classMetaMap.has(classId)) {
+                        const meta = classMetaMap.get(classId);
+                        const updates = {};
+
+                        // days 비교
+                        const currentDays = (enrollData.days || []).slice().sort();
+                        if (JSON.stringify(currentDays) !== JSON.stringify(meta.days)) {
+                            updates.days = meta.days;
+                        }
+
+                        // staffId 비교
+                        if (enrollData.staffId !== meta.staffId && meta.staffId) {
+                            updates.staffId = meta.staffId;
+                        }
+
+                        // schedule 비교
+                        const currentSchedule = (enrollData.schedule || []).slice().sort();
+                        const metaSchedule = (meta.schedule || []).slice().sort();
+                        if (JSON.stringify(currentSchedule) !== JSON.stringify(metaSchedule)) {
+                            updates.schedule = meta.schedule;
+                        }
+
+                        if (Object.keys(updates).length > 0) {
+                            stats.metadataSynced++;
+                            if (!isDryRun) {
+                                try {
+                                    updates.updatedAt = new Date().toISOString();
+                                    await enrollDoc.ref.update(updates);
+                                } catch (e) {
+                                    stats.errors.push(`MetaSync: ${studentKey}/${enrollDoc.id}: ${e.message}`);
+                                }
+                            } else {
+                                const changes = Object.keys(updates).filter(k => k !== 'updatedAt').join(', ');
+                                stats.details.push(`[metaSync] ${studentKey}: ${enrollData.className} (${changes})`);
+                            }
+                        }
+                    }
+                }
+            }
+
+            logger.info(`[migration] ${mode} completed:`, JSON.stringify(stats));
+            return stats;
+        } catch (error) {
+            logger.error("[migration] Error:", error);
+            stats.errors.push(error.message);
+            return stats;
+        }
+    });
 
 /**
  * =========================================================
@@ -2476,11 +2744,13 @@ exports.scrapeMakeEduBusData = functions
 
 /**
  * MakeEdu 신규원생 스크래핑 내부 헬퍼 (onCall + scheduled 공용)
+ * @param {string} [overrideUser] - 커스텀 username (고등수학관 등 별도 계정용)
+ * @param {string} [overridePwd] - 커스텀 password
  * @returns {{ students: Array, count: number, headers: string[] }}
  */
-async function scrapeMakeEduStudentsInternal() {
-    const userId = process.env.MAKEEDU_USERNAME;
-    const userPwd = process.env.MAKEEDU_PASSWORD;
+async function scrapeMakeEduStudentsInternal(overrideUser, overridePwd) {
+    const userId = overrideUser || process.env.MAKEEDU_USERNAME;
+    const userPwd = overridePwd || process.env.MAKEEDU_PASSWORD;
     if (!userId || !userPwd) {
         throw new Error("MakeEdu 로그인 정보가 .env에 설정되지 않았습니다.");
     }
@@ -2934,6 +3204,31 @@ exports.scrapeMakeEduNewStudents = functions
             logger.error("[scrapeMakeEduNewStudents] Error:", error);
             if (error.code) throw error;
             throw new functions.https.HttpsError("internal", error.message || "신규원생 크롤링 실패");
+        }
+    });
+
+/**
+ * 고등수학관 MakeEdu 신규원생 스크래핑 (별도 계정 사용)
+ * - MAKEEDU_GD_USERNAME / MAKEEDU_GD_PASSWORD 환경변수 사용
+ * - 본원 스크래핑과 동일한 로직, 다른 크리덴셜
+ */
+exports.scrapeMakeEduGodeungStudents = functions
+    .region("asia-northeast3")
+    .runWith({ timeoutSeconds: 300, memory: "512MB" })
+    .https.onCall(async (data, context) => {
+        logger.info("[scrapeMakeEduGodeungStudents] Start (onCall)");
+        try {
+            const gdUser = process.env.MAKEEDU_GD_USERNAME;
+            const gdPwd = process.env.MAKEEDU_GD_PASSWORD;
+            if (!gdUser || !gdPwd) {
+                throw new functions.https.HttpsError("failed-precondition",
+                    "고등수학관 MakeEdu 로그인 정보가 .env에 설정되지 않았습니다. (MAKEEDU_GD_USERNAME / MAKEEDU_GD_PASSWORD)");
+            }
+            return await scrapeMakeEduStudentsInternal(gdUser, gdPwd);
+        } catch (error) {
+            logger.error("[scrapeMakeEduGodeungStudents] Error:", error);
+            if (error.code) throw error;
+            throw new functions.https.HttpsError("internal", error.message || "고등수학관 신규원생 크롤링 실패");
         }
     });
 

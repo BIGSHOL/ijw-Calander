@@ -348,6 +348,7 @@ export interface StudentFilters {
   teacher: string;  // 'all' 또는 선생님 이름
   excludeNoEnrollment: boolean;  // 미수강 학생 제외
   gradeMismatch: boolean;  // 학제/학년 불일치 필터
+  campus: 'all' | 'main' | 'godeung';  // 캠퍼스 필터
 }
 
 export function useStudentFilterState() {
@@ -361,6 +362,7 @@ export function useStudentFilterState() {
     teacher: 'all',
     excludeNoEnrollment: false,
     gradeMismatch: false,
+    campus: 'all',
   });
   const [studentSortBy, setStudentSortBy] = useState<'name' | 'grade' | 'startDate'>('name');
 
@@ -383,6 +385,7 @@ export function useStudentFilterState() {
       teacher: 'all',
       excludeNoEnrollment: false,
       gradeMismatch: false,
+      campus: 'all',
     });
   }, []);
 

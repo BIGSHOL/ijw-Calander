@@ -8,6 +8,7 @@ import { required, phone as phoneValidator } from '../../utils/formValidation';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { getTodayKST } from '../../utils/dateUtils';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
+import { CampusType, CAMPUS_ID_PREFIX, CAMPUS_LABELS, CAMPUS_COLORS } from '../../utils/campusUtils';
 
 interface AddStudentModalProps {
     isOpen: boolean;
@@ -68,6 +69,8 @@ const normalizeSchoolName = (school: string): string => {
 };
 
 const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSuccess }) => {
+    const [campus, setCampus] = useState<CampusType>('main');
+
     const {
         values,
         errors,
@@ -114,8 +117,9 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                 // 학교명 정규화 (대구일중학교 → 대구일중)
                 const normalizedSchool = normalizeSchoolName(formData.school);
 
-                // studentId 기본 형식: "이름_학교(정규화)_학년"
-                const baseId = `${formData.name.trim()}_${normalizedSchool}_${formData.grade.trim()}`;
+                // studentId 기본 형식: "[gd_]이름_학교(정규화)_학년"
+                const prefix = CAMPUS_ID_PREFIX[campus];
+                const baseId = `${prefix}${formData.name.trim()}_${normalizedSchool}_${formData.grade.trim()}`;
                 let studentId = baseId;
                 let counter = 1;
 
@@ -167,6 +171,8 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                     startDate: formData.startDate || getTodayKST(),
                     enrollmentReason: formData.enrollmentReason.trim() || null,
                     memo: formData.memo.trim() || null,
+                    // 캠퍼스 구분
+                    ...(campus === 'godeung' ? { campus: 'godeung' } : {}),
                     // 시스템 필드
                     studentCode: null, // MakeEdu 동기화 시 설정됨
                     status: 'active',
@@ -200,6 +206,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
     const handleClose = () => {
         if (isSubmitting) return;
         resetForm();
+        setCampus('main');
         onClose();
     };
 
@@ -242,6 +249,26 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                             <h3 className="text-primary font-bold text-xs">기본 정보</h3>
                         </div>
                         <div className="divide-y divide-gray-100">
+                            <div className="flex items-center gap-2 px-2 py-1.5">
+                                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">캠퍼스</span>
+                                <div className="flex items-center gap-3">
+                                    {(['main', 'godeung'] as CampusType[]).map((c) => (
+                                        <label key={c} className="flex items-center gap-1.5 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="campus"
+                                                checked={campus === c}
+                                                onChange={() => setCampus(c)}
+                                                className="w-3 h-3"
+                                                style={{ accentColor: CAMPUS_COLORS[c] }}
+                                            />
+                                            <span className="text-xs" style={{ color: campus === c ? CAMPUS_COLORS[c] : undefined, fontWeight: campus === c ? 600 : 400 }}>
+                                                {CAMPUS_LABELS[c]}
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
                             <div className="flex items-center gap-2 px-2 py-1.5">
                                 <span className="w-14 shrink-0 text-xs font-medium text-primary-700">이름 <span className="text-red-500">*</span></span>
                                 <input

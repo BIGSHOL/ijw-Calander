@@ -19,6 +19,7 @@ import { useMemo } from 'react';
 import { UnifiedStudent } from '../types';
 import { StudentFilters } from './useAppState';
 import { getTodayKST } from '../utils/dateUtils';
+import { getCampus } from '../utils/campusUtils';
 
 type SearchField = 'all' | 'name' | 'englishName' | 'phone' | 'school' | 'address' | 'parent' | 'memo' | 'email' | 'etc';
 
@@ -408,9 +409,15 @@ export const useStudentFilters = (
     // OPTIMIZATION: Each filter independently memoized
     // Only re-runs when its specific dependencies change
 
+    // 캠퍼스 필터 (첫 번째 단계)
+    const campusFiltered = useMemo(
+        () => filters.campus === 'all' ? students : students.filter(s => getCampus(s) === filters.campus),
+        [students, filters.campus]
+    );
+
     const searchFiltered = useMemo(
-        () => filterBySearch(students, filters.searchQuery, filters.searchField, oldWithdrawnStudents),
-        [students, filters.searchQuery, filters.searchField, oldWithdrawnStudents]
+        () => filterBySearch(campusFiltered, filters.searchQuery, filters.searchField, oldWithdrawnStudents),
+        [campusFiltered, filters.searchQuery, filters.searchField, oldWithdrawnStudents]
     );
 
     const gradeFiltered = useMemo(

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, query, where, collectionGroup } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { TimetableClass, TimetableStudent, SubjectType } from '../types';
+import { parseStudentIdWithCampus } from '../utils/campusUtils';
 
 export interface EnrollmentInfo {
     id: string;
@@ -37,20 +38,8 @@ export const useEnrollmentsAsClasses = (subject?: SubjectType) => {
                 // studentId는 부모 문서 ID에서 추출
                 const studentId = doc.ref.parent.parent?.id || '';
 
-                // studentId 파싱: "이름_학교_학년" 형식
-                const parseStudentId = (id: string) => {
-                    const parts = id.split('_');
-                    if (parts.length >= 3) {
-                        return {
-                            name: parts[0],
-                            school: parts[1],
-                            grade: parts[2]
-                        };
-                    }
-                    return { name: id, school: '', grade: '' };
-                };
-
-                const parsedStudent = parseStudentId(studentId);
+                // studentId 파싱: "[gd_]이름_학교_학년" 형식 (gd_ 프리픽스 처리)
+                const parsedStudent = parseStudentIdWithCampus(studentId);
 
                 return {
                     id: doc.id,
@@ -106,20 +95,8 @@ export const useEnrollmentsAsClasses = (subject?: SubjectType) => {
                 // 학생 정보를 studentList에 추가 (중복 방지)
                 const classData = classMap.get(key)!;
                 if (!classData.studentList.some(s => s.id === enrollment.studentId)) {
-                    // studentId 파싱: "이름_학교_학년" 형식
-                    const parseStudentId = (id: string) => {
-                        const parts = id.split('_');
-                        if (parts.length >= 3) {
-                            return {
-                                name: parts[0],
-                                school: parts[1],
-                                grade: parts[2]
-                            };
-                        }
-                        return { name: id, school: '', grade: '' };
-                    };
-
-                    const parsedInfo = parseStudentId(enrollment.studentId);
+                    // studentId 파싱: "[gd_]이름_학교_학년" 형식 (gd_ 프리픽스 처리)
+                    const parsedInfo = parseStudentIdWithCampus(enrollment.studentId);
 
                     classData.studentList.push({
                         id: enrollment.studentId,
