@@ -1858,9 +1858,6 @@ const TimetableManager = ({
         );
     }
 
-    // 고등수학: 엑셀뷰 고정 (수학 엑셀뷰와 동일, 뷰 전환 없음)
-    const effectiveViewType = subjectTab === 'highmath' ? 'excel' as const : viewType;
-
     return (
         <MathSimulationProvider>
             <MathTimetableContent
@@ -1870,7 +1867,7 @@ const TimetableManager = ({
                 goToThisWeek={goToThisWeek}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
-                viewType={effectiveViewType}
+                viewType={viewType}
                 setIsTeacherOrderModalOpen={setIsTeacherOrderModalOpen}
                 setIsViewSettingsOpen={setIsViewSettingsOpen}
                 pendingMovesCount={pendingMoves.length}

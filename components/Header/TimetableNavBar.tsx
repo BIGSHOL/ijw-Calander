@@ -88,8 +88,8 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
           </button>
         )}
 
-        {/* Math View Mode Toggle Button - 수학만 (고등수학은 요일뷰 고정) */}
-        {timetableSubject === 'math' && (
+        {/* Math View Mode Toggle Button - 수학/고등수학 */}
+        {(timetableSubject === 'math' || timetableSubject === 'highmath') && (
           <button
             onClick={() => {
               if (timetableViewType === 'class') {
