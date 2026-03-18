@@ -5,11 +5,11 @@
 
 import React from 'react';
 import { Settings, ClipboardList, User as UserIcon, Building, Calendar as CalendarIcon, Table2 } from 'lucide-react';
-import { SubjectType } from '../../types';
+import { TimetableSubjectType } from '../../types';
 
 interface TimetableNavBarProps {
-  timetableSubject: SubjectType;
-  setTimetableSubject: (value: SubjectType) => void;
+  timetableSubject: TimetableSubjectType;
+  setTimetableSubject: (value: TimetableSubjectType) => void;
   timetableViewType: 'teacher' | 'room' | 'class' | 'excel';
   setTimetableViewType: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>;
   mathViewMode: 'day-based' | 'teacher-based';
@@ -39,7 +39,7 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
         {/* Subject Select Dropdown */}
         <select
           value={timetableSubject}
-          onChange={(e) => setTimetableSubject(e.target.value as SubjectType)}
+          onChange={(e) => setTimetableSubject(e.target.value as TimetableSubjectType)}
           className="px-2 py-0.5 rounded bg-accent text-primary font-bold text-xs hover:brightness-110 transition-all cursor-pointer border-none outline-none"
           title="과목 선택"
         >
@@ -61,6 +61,7 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
           {hasPermission('shuttle.view') && (
             <option value="shuttle">셔틀버스</option>
           )}
+          <option value="all">전체</option>
         </select>
 
         {/* View Type Toggle Button - 영어: 엑셀 → 통합 → 강사 → 강의실 */}

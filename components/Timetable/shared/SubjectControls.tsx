@@ -3,11 +3,11 @@ import {
     ClipboardList, User as UserIcon, Building,
     Calendar as CalendarIcon, Table2, Settings
 } from 'lucide-react';
-import { SubjectType } from '../../../types';
+import { TimetableSubjectType } from '../../../types';
 
 interface SubjectControlsProps {
-    timetableSubject: SubjectType;
-    setTimetableSubject: (value: SubjectType) => void;
+    timetableSubject: TimetableSubjectType;
+    setTimetableSubject: (value: TimetableSubjectType) => void;
     viewType: 'teacher' | 'room' | 'class' | 'excel';
     setTimetableViewType?: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>;
     mathViewMode?: 'day-based' | 'teacher-based';
@@ -30,7 +30,7 @@ export default function SubjectControls({
         <div className="flex items-center gap-1.5">
             <select
                 value={timetableSubject}
-                onChange={(e) => setTimetableSubject(e.target.value as SubjectType)}
+                onChange={(e) => setTimetableSubject(e.target.value as TimetableSubjectType)}
                 className="px-2 py-0.5 rounded-sm bg-white text-gray-700 font-bold text-xs border border-gray-300 hover:bg-gray-100 transition-all cursor-pointer outline-none"
                 title="과목 선택"
             >
@@ -40,6 +40,7 @@ export default function SubjectControls({
                 {hasPermission('timetable.science.view') && <option value="science">과학</option>}
                 {hasPermission('timetable.korean.view') && <option value="korean">국어</option>}
                 {hasPermission('shuttle.view') && <option value="shuttle">셔틀버스</option>}
+                <option value="all">전체</option>
             </select>
 
             {/* 영어 뷰 전환 */}

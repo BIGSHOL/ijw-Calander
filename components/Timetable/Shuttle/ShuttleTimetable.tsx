@@ -7,7 +7,7 @@
  */
 
 import React, { useState } from 'react';
-import type { SubjectType } from '../../../types';
+import type { TimetableSubjectType } from '../../../types';
 import SubjectControls from '../shared/SubjectControls';
 import { SUBJECT_COLORS } from '../../../utils/styleUtils';
 import { useShuttleStudents, TIME_SLOTS } from '../../../hooks/useShuttleStudents';
@@ -54,8 +54,8 @@ const FILTER_CONFIG: { key: ShuttleFilter; label: string; color: string; activeC
 
 interface ShuttleTimetableProps {
     currentUser: any;
-    timetableSubject: SubjectType;
-    setTimetableSubject: (value: SubjectType) => void;
+    timetableSubject: TimetableSubjectType;
+    setTimetableSubject: (value: TimetableSubjectType) => void;
     setTimetableViewType?: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>;
     hasPermissionFn: (perm: string) => boolean;
     setIsTimetableSettingsOpen?: (value: boolean) => void;

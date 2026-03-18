@@ -12,7 +12,7 @@ import { useMathConfig } from '../hooks/useMathConfig';
 import WithdrawalStudentDetail from '../../../WithdrawalManagement/WithdrawalStudentDetail';
 import { WithdrawalEntry } from '../../../../hooks/useWithdrawalFilters';
 import SubjectControls from '../../shared/SubjectControls';
-import type { SubjectType } from '../../../../types';
+import type { TimetableSubjectType } from '../../../../types';
 
 interface TimetableHeaderProps {
     weekLabel: string;
@@ -84,8 +84,8 @@ interface TimetableHeaderProps {
     canEditWithdrawal?: boolean;
     canReactivateWithdrawal?: boolean;
     // 과목/뷰 전환 (SubjectControls)
-    timetableSubject?: SubjectType;
-    setTimetableSubject?: (value: SubjectType) => void;
+    timetableSubject?: TimetableSubjectType;
+    setTimetableSubject?: (value: TimetableSubjectType) => void;
     setTimetableViewType?: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>;
     mathViewMode?: 'day-based' | 'teacher-based';
     setMathViewMode?: (value: string) => void;

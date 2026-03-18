@@ -10,7 +10,7 @@
 
 import React, { useState, useMemo, lazy, Suspense } from 'react';
 import type { SubjectKey } from './types';
-import type { SubjectType } from '../../../types';
+import type { TimetableSubjectType } from '../../../types';
 import { getSubjectConfig } from './utils/subjectConfig';
 import { useTimetableClasses } from './hooks/useTimetableClasses';
 import { useClassStudents } from './hooks/useClassStudents';
@@ -26,8 +26,8 @@ interface GenericTimetableProps {
   viewType?: 'teacher' | 'room' | 'class';
   onStudentsUpdated?: () => void;
   // 과목/뷰 전환 (TimetableNavBar 통합)
-  timetableSubject?: SubjectType;
-  setTimetableSubject?: (value: SubjectType) => void;
+  timetableSubject?: TimetableSubjectType;
+  setTimetableSubject?: (value: TimetableSubjectType) => void;
   setTimetableViewType?: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>;
   mathViewMode?: 'day-based' | 'teacher-based';
   setMathViewMode?: (value: string) => void;

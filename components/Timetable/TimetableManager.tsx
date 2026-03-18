@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
-import { TimetableClass, Teacher, ClassKeywordColor, SubjectType } from '../../types';
+import { TimetableClass, Teacher, ClassKeywordColor, TimetableSubjectType } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
 import { VideoLoading } from '../Common/VideoLoading';
 import { getTodayKST, getWeekReferenceDate } from '../../utils/dateUtils';
@@ -43,6 +43,7 @@ import { useQueryClient } from '@tanstack/react-query';
 // Performance Note (bundle-dynamic-imports): Lazy load Generic Timetable
 const GenericTimetable = lazy(() => import('./Generic/GenericTimetable'));
 const ShuttleTimetable = lazy(() => import('./Shuttle/ShuttleTimetable'));
+const AllSubjectsTimetable = lazy(() => import('./AllSubjectsTimetable'));
 
 // MathTimetableContent를 외부로 분리하여 Hook 순서 에러 방지
 interface MathTimetableContentProps {
@@ -133,8 +134,8 @@ interface MathTimetableContentProps {
     // 퇴원 드롭존
     onWithdrawalDrop?: (studentId: string, classId: string, className: string) => void;
     // 과목/뷰 전환 (TimetableNavBar 통합)
-    timetableSubject?: SubjectType;
-    setTimetableSubject?: (value: SubjectType) => void;
+    timetableSubject?: TimetableSubjectType;
+    setTimetableSubject?: (value: TimetableSubjectType) => void;
     setTimetableViewType?: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>;
     mathViewMode?: 'day-based' | 'teacher-based';
     setMathViewMode?: (value: string) => void;
@@ -1087,8 +1088,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
 
 // Props interface for external filter control
 interface TimetableManagerProps {
-    subjectTab?: SubjectType;
-    onSubjectChange?: (subject: SubjectType) => void;
+    subjectTab?: TimetableSubjectType;
+    onSubjectChange?: (subject: TimetableSubjectType) => void;
     viewType?: 'teacher' | 'room' | 'class' | 'excel';
     onViewTypeChange?: (viewType: 'teacher' | 'room' | 'class' | 'excel') => void;
     showStudents?: boolean;
@@ -1140,7 +1141,7 @@ const TimetableManager = ({
     const canReactivateWithdrawal = hasPermission('withdrawal.reactivate');
 
     // Subject Tab (use external if provided)
-    const [internalSubjectTab, setInternalSubjectTab] = useState<SubjectType>('math');
+    const [internalSubjectTab, setInternalSubjectTab] = useState<TimetableSubjectType>('math');
     const subjectTab = externalSubjectTab ?? internalSubjectTab;
     const setSubjectTab = onSubjectChange ?? setInternalSubjectTab;
 
@@ -1831,6 +1832,22 @@ const TimetableManager = ({
                         // Refresh logic if needed
                     }}
                     // 과목/뷰 전환 (TimetableNavBar 통합)
+                    timetableSubject={subjectTab}
+                    setTimetableSubject={setSubjectTab}
+                    setTimetableViewType={setViewType as React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>}
+                    mathViewMode={timetableViewMode}
+                    setMathViewMode={setTimetableViewMode as (value: string) => void}
+                    hasPermissionFn={externalHasPermission || hasPermission}
+                    setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
+                />
+            </Suspense>
+        );
+    }
+
+    if (subjectTab === 'all') {
+        return (
+            <Suspense fallback={<VideoLoading className="flex-1 h-full" />}>
+                <AllSubjectsTimetable
                     timetableSubject={subjectTab}
                     setTimetableSubject={setSubjectTab}
                     setTimetableViewType={setViewType as React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>}

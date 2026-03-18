@@ -22,7 +22,7 @@ import { useEnglishStats } from './hooks/useEnglishStats';
 import { useEnglishSettings } from './hooks/useEnglishSettings';
 import PortalTooltip from '../../Common/PortalTooltip';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
-import { SubjectType } from '../../../types';
+import { TimetableSubjectType } from '../../../types';
 import SubjectControls from '../shared/SubjectControls';
 
 interface EnglishTimetableProps {
@@ -41,8 +41,8 @@ interface EnglishTimetableProps {
     goToNextWeek?: () => void;
     goToThisWeek?: () => void;
     // 과목/뷰 전환 (TimetableNavBar 통합)
-    timetableSubject?: SubjectType;
-    setTimetableSubject?: (value: SubjectType) => void;
+    timetableSubject?: TimetableSubjectType;
+    setTimetableSubject?: (value: TimetableSubjectType) => void;
     setTimetableViewType?: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>;
     mathViewMode?: 'day-based' | 'teacher-based';
     setMathViewMode?: (value: string) => void;
@@ -173,8 +173,14 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
 
     const enrollStudentToEnglishClass = useCallback(async (studentId: string, className: string, enrollmentDate?: string) => {
         const now = new Date().toISOString();
-        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `english_${className}`);
+        // classId 조회
+        const classQuery = query(collection(db, CLASS_COLLECTION), where('subject', '==', 'english'), where('className', '==', className));
+        const classSnap = await getDocs(classQuery);
+        const classId = classSnap.empty ? `english_${className}` : classSnap.docs[0].id;
+
+        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', classId);
         await setDoc(enrollmentRef, {
+            classId,
             className,
             subject: 'english',
             enrollmentDate: enrollmentDate || now.split('T')[0],
@@ -251,12 +257,20 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     const handleExcelSave = useCallback(async () => {
         try {
             for (const del of pendingExcelDeletes) {
-                const enrollmentRef = doc(db, 'students', del.studentId, 'enrollments', `english_${del.className}`);
-                if (del.type === 'withdrawn') {
-                    await deleteDoc(enrollmentRef);
-                } else {
-                    const today = new Date().toISOString().split('T')[0];
-                    await setDoc(enrollmentRef, { withdrawalDate: today }, { merge: true });
+                // 쿼리로 enrollment 문서 찾기 (doc ID 형식 무관)
+                const enrollQuery = query(
+                    collection(db, 'students', del.studentId, 'enrollments'),
+                    where('subject', '==', 'english'),
+                    where('className', '==', del.className)
+                );
+                const enrollSnap = await getDocs(enrollQuery);
+                for (const enrollDoc of enrollSnap.docs) {
+                    if (del.type === 'withdrawn') {
+                        await deleteDoc(enrollDoc.ref);
+                    } else {
+                        const today = new Date().toISOString().split('T')[0];
+                        await updateDoc(enrollDoc.ref, { withdrawalDate: today, endDate: today });
+                    }
                 }
             }
             for (const enr of pendingExcelEnrollments) {

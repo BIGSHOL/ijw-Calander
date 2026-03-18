@@ -14,6 +14,9 @@ export interface Department {
 // Subject Type for unified structure
 export type SubjectType = 'math' | 'english' | 'science' | 'korean' | 'highmath' | 'shuttle' | 'other';
 
+// SubjectType + 'all' (시간표 전체 보기용)
+export type TimetableSubjectType = SubjectType | 'all';
+
 // Phase 6: Gantt Departments
 export interface GanttDepartment {
   id: string;

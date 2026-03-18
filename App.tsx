@@ -266,6 +266,7 @@ const App: React.FC = () => {
     const canViewShuttle = hasPermission('shuttle.view');
 
     const canViewCurrent =
+      timetableSubject === 'all' ||
       (timetableSubject === 'math' && canViewMath) ||
       (timetableSubject === 'highmath' && canViewMath) ||
       (timetableSubject === 'english' && canViewEnglish) ||

@@ -6,7 +6,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { format } from 'date-fns';
-import { CalendarEvent, UserProfile, AppTab, SubjectType } from '../types';
+import { CalendarEvent, UserProfile, AppTab, SubjectType, TimetableSubjectType } from '../types';
 import { storage, STORAGE_KEYS } from '../utils/localStorage';
 import { usePermissions } from './usePermissions';
 
@@ -235,9 +235,9 @@ export function useModalState() {
 // 4. Timetable State Hook
 // ============================================
 export function useTimetableState() {
-  const [timetableSubject, _setTimetableSubject] = useState<SubjectType>(() => {
+  const [timetableSubject, _setTimetableSubject] = useState<TimetableSubjectType>(() => {
     const saved = storage.getString(STORAGE_KEYS.TIMETABLE_SUBJECT);
-    return (saved as SubjectType) || 'math';
+    return (saved as TimetableSubjectType) || 'math';
   });
   const [timetableViewType, _setTimetableViewType] = useState<'teacher' | 'room' | 'class' | 'excel'>(() => {
     const saved = storage.getString(STORAGE_KEYS.TIMETABLE_VIEW_TYPE);
@@ -248,7 +248,7 @@ export function useTimetableState() {
     return (saved as 'day-based' | 'teacher-based') || 'teacher-based';
   });
 
-  const setTimetableSubject = useCallback((value: SubjectType) => {
+  const setTimetableSubject = useCallback((value: TimetableSubjectType) => {
     _setTimetableSubject(value);
     storage.setString(STORAGE_KEYS.TIMETABLE_SUBJECT, value);
     // subject별 기본 viewType 설정 (저장된 값이 없을 때)
