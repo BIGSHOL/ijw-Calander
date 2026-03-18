@@ -68,24 +68,26 @@ const ClassStudentList: React.FC<ClassStudentListProps> = ({
         >
           <div
             onClick={() => handleStudentClick(student.id)}
-            className={`flex items-center gap-2 flex-1 ${
+            className={`flex flex-col flex-1 ${
               onStudentClick ? 'cursor-pointer hover:text-accent' : ''
             }`}
           >
-            <span className="text-xs font-medium text-primary">
-              {student.name}
-            </span>
-            <span className="text-xs text-primary-700">
-              {formatSchoolGrade(student.school, student.grade)}
-            </span>
-            {/* 과목 배지 */}
-            <SubjectBadges enrollments={studentMap[student.id]?.enrollments} />
-            {/* 등원 요일이 수업 요일과 다른 경우에만 표시 */}
-            {shouldShowAttendanceDays(student.attendanceDays) && (
-              <span className="text-xxs bg-amber-100 text-amber-700 px-1.5 py-0.5 font-medium">
-                {student.attendanceDays!.join(', ')}만
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-primary">
+                {student.name}
               </span>
-            )}
+              <span className="text-xs text-primary-700">
+                {formatSchoolGrade(student.school, student.grade)}
+              </span>
+              {/* 등원 요일이 수업 요일과 다른 경우에만 표시 */}
+              {shouldShowAttendanceDays(student.attendanceDays) && (
+                <span className="text-xxs bg-amber-100 text-amber-700 px-1.5 py-0.5 font-medium">
+                  {student.attendanceDays!.join(', ')}만
+                </span>
+              )}
+            </div>
+            {/* 과목 배지 (2번째 줄) */}
+            <SubjectBadges enrollments={studentMap[student.id]?.enrollments} />
           </div>
         </div>
       ))}

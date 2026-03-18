@@ -921,11 +921,15 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                         <div className="p-3 text-center text-gray-400 text-xs">{studentSearch ? '검색 결과가 없습니다' : '추가 가능한 학생이 없습니다'}</div>
                       ) : (
                         availableStudents.map(student => (
-                          <label key={student.id} className="flex items-center gap-2 px-2 py-1 cursor-pointer transition-colors hover:bg-gray-50 text-xs">
-                            <input type="checkbox" checked={studentsToAdd.has(student.id)} onChange={() => toggleAddStudent(student.id)} className="w-3 h-3 text-accent focus:ring-accent" />
-                            <span className="text-gray-800">{student.name}</span>
-                            <SubjectBadges enrollments={student.enrollments} />
-                            <span className="text-xxs text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
+                          <label key={student.id} className="flex items-start gap-2 px-2 py-1 cursor-pointer transition-colors hover:bg-gray-50 text-xs">
+                            <input type="checkbox" checked={studentsToAdd.has(student.id)} onChange={() => toggleAddStudent(student.id)} className="w-3 h-3 text-accent focus:ring-accent mt-0.5" />
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-1">
+                                <span className="text-gray-800">{student.name}</span>
+                                <span className="text-xxs text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
+                              </div>
+                              <SubjectBadges enrollments={student.enrollments} />
+                            </div>
                           </label>
                         ))
                       )}

@@ -188,13 +188,15 @@ const StudentItem: React.FC<StudentItemProps> = ({
                 })()
             }
         >
-            {classLabel && (
-                <span className={`inline-block leading-none bg-gray-500 text-white px-0.5 mr-0.5 align-middle font-bold ${fontSizeClass}`}>
-                    {classLabel}
-                </span>
-            )}
-            {displayText}
-            <SubjectBadges enrollments={student.enrollments} className="ml-0.5" />
+            <div className="leading-[1.2]">
+                {classLabel && (
+                    <span className={`inline-block leading-none bg-gray-500 text-white px-0.5 mr-0.5 align-middle font-bold ${fontSizeClass}`}>
+                        {classLabel}
+                    </span>
+                )}
+                {displayText}
+            </div>
+            <SubjectBadges enrollments={student.enrollments} />
         </li>
     );
 };
@@ -1756,11 +1758,13 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         onMouseLeave={() => {
                                             onAcHighlightChange?.(null);
                                         }}
-                                        className={`px-1.5 py-0.5 text-xxs cursor-pointer flex justify-between ${idx === acHighlightIndex ? 'bg-blue-100' : 'hover:bg-blue-50'}`}
+                                        className={`px-1.5 py-0.5 text-xxs cursor-pointer flex flex-col ${idx === acHighlightIndex ? 'bg-blue-100' : 'hover:bg-blue-50'}`}
                                     >
-                                        <span className="font-medium">{s.name}</span>
+                                        <div className="flex justify-between">
+                                            <span className="font-medium">{s.name}</span>
+                                            <span className="text-gray-400">{formatSchoolGrade(s.school, s.grade)}</span>
+                                        </div>
                                         <SubjectBadges enrollments={s.enrollments} />
-                                        <span className="text-gray-400">{formatSchoolGrade(s.school, s.grade)}</span>
                                     </li>
                                 ))}
                             </ul>

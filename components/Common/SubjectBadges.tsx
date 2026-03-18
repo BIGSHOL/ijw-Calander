@@ -6,14 +6,9 @@ const SUBJECT_ORDER: Record<string, number> = {
     math: 1, highmath: 2, english: 3, korean: 4, science: 5,
 };
 
-// 과목 라벨 (축약형)
-const SUBJECT_SHORT: Record<string, string> = {
-    math: '수', highmath: '고수', english: '영', korean: '국', science: '과',
-};
-
-// 과목 전체 라벨
-const SUBJECT_FULL: Record<string, string> = {
-    math: '수학', highmath: '고등수학', english: '영어', korean: '국어', science: '과학',
+// 과목 라벨
+const SUBJECT_LABELS: Record<string, string> = {
+    math: '수학', highmath: '고수', english: '영어', korean: '국어', science: '과학',
 };
 
 // 과목별 배지 색상
@@ -43,28 +38,25 @@ export function getActiveSubjects(enrollments?: Enrollment[]): string[] {
 
 interface SubjectBadgesProps {
     enrollments?: Enrollment[];
-    /** 'short' = 수/영/과, 'full' = 수학/영어/과학 */
-    labelType?: 'short' | 'full';
     className?: string;
 }
 
 /**
  * 학생의 과목 배지를 표시하는 공통 컴포넌트
  */
-export default function SubjectBadges({ enrollments, labelType = 'full', className = '' }: SubjectBadgesProps) {
+export default function SubjectBadges({ enrollments, className = '' }: SubjectBadgesProps) {
     const subjects = getActiveSubjects(enrollments);
     if (subjects.length === 0) return null;
 
-    const labels = labelType === 'short' ? SUBJECT_SHORT : SUBJECT_FULL;
-
     return (
-        <span className={`inline-flex items-center gap-0.5 ${className}`}>
+        <span className={`inline-flex items-center gap-px flex-wrap ${className}`}>
             {subjects.map(subject => (
                 <span
                     key={subject}
-                    className={`text-micro px-1 rounded-sm font-medium leading-tight ${BADGE_STYLES[subject] || 'bg-gray-100 text-gray-700'}`}
+                    className={`px-0.5 rounded-sm font-medium leading-none ${BADGE_STYLES[subject] || 'bg-gray-100 text-gray-700'}`}
+                    style={{ fontSize: '8px' }}
                 >
-                    {labels[subject] || subject}
+                    {SUBJECT_LABELS[subject] || subject}
                 </span>
             ))}
         </span>
