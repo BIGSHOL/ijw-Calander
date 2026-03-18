@@ -8,7 +8,7 @@ const SUBJECT_ORDER: Record<string, number> = {
 
 // 과목 라벨
 const SUBJECT_LABELS: Record<string, string> = {
-    math: '수학', highmath: '고수', english: '영어', korean: '국어', science: '과학',
+    math: '수학', highmath: '고등수학', english: '영어', korean: '국어', science: '과학',
 };
 
 // 과목별 배지 색상
