@@ -1391,7 +1391,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
             toEndDate.push({ docRef: liveInfo.docRef });
             const newEnrollment = enrollmentsToPublish[newClassName]?.[studentId];
             if (newEnrollment) {
-              const newClassId = classNameToIdMap[newClassName] || `english_${newClassName}`;
+              const newClassId = classNameToIdMap[newClassName] || newClassName;
               toCreate.push({
                 ref: doc(db, 'students', studentId, 'enrollments', newClassId),
                 data: sanitizeForFirestore({
@@ -1415,7 +1415,7 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
         if (!liveStudentEnrollments[studentId]) {
           const newEnrollment = enrollmentsToPublish[className]?.[studentId];
           if (newEnrollment) {
-            const newClassId = classNameToIdMap[className] || `english_${className}`;
+            const newClassId = classNameToIdMap[className] || className;
             toCreate.push({
               ref: doc(db, 'students', studentId, 'enrollments', newClassId),
               data: sanitizeForFirestore({

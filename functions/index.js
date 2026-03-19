@@ -439,7 +439,7 @@ exports.migrateEnrollmentsToSubcollection = functions
                     const existingDocs = classIdToSubDocs.get(classId) || [];
                     if (existingDocs.length > 0) continue; // 이미 있으면 건너뜀
 
-                    const docId = `${enrollment.subject || "math"}_${enrollment.className}`;
+                    const docId = classId; // doc ID = classId로 통일
                     stats.enrollmentsMigrated++;
 
                     if (!isDryRun) {
@@ -1670,7 +1670,7 @@ async function applyScenarioToLive(scenarioId, scenario) {
         const chunk = toRename.slice(i, i + 250);
         for (const item of chunk) {
             batch.delete(item.docRef);
-            const newClassId = classNameToId[item.newClassName] || `english_${item.newClassName}`;
+            const newClassId = classNameToId[item.newClassName] || item.newClassName;
             const newRef = db.collection("students").doc(item.studentId)
                 .collection("enrollments").doc(newClassId);
             const newData = { ...item.data };
@@ -1701,7 +1701,7 @@ async function applyScenarioToLive(scenarioId, scenario) {
         const batch = db.batch();
         const chunk = toCreate.slice(i, i + 500);
         for (const item of chunk) {
-            const cId = classNameToId[item.className] || `english_${item.className}`;
+            const cId = classNameToId[item.className] || item.className;
             const ref = db.collection("students").doc(item.studentId)
                 .collection("enrollments").doc(cId);
             item.data.classId = cId;

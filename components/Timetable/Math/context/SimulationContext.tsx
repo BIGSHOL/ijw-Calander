@@ -48,7 +48,7 @@ const sanitizeForFirestore = <T extends Record<string, any>>(obj: T): T => {
 export interface ScenarioClass {
   id: string;
   className: string;
-  subject: 'math';
+  subject: 'math' | 'highmath';
   teacher: string;
   room?: string;
   schedule: { day: string; periodId: string; room?: string }[];
@@ -62,7 +62,8 @@ export interface ScenarioClass {
 export interface ScenarioEnrollment {
   studentId: string;
   className: string;
-  subject: 'math';
+  classId?: string;
+  subject: 'math' | 'highmath';
   underline?: boolean;
   enrollmentDate?: string;
   withdrawalDate?: string;
@@ -152,10 +153,11 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
   // ============ INTERNAL LOAD FROM LIVE ============
 
   const loadFromLiveInternal = useCallback(async () => {
-    // [async-parallel] Load classes and enrollments in parallel
+    // [async-parallel] Load classes and enrollments in parallel (math + highmath)
+    const MATH_SUBJECTS = ['math', 'highmath'];
     const [classesSnapshot, enrollmentsSnapshot] = await Promise.all([
-      getDocs(query(collection(db, 'classes'), where('subject', '==', 'math'))),
-      getDocs(query(collectionGroup(db, 'enrollments'), where('subject', '==', 'math')))
+      getDocs(query(collection(db, 'classes'), where('subject', 'in', MATH_SUBJECTS))),
+      getDocs(query(collectionGroup(db, 'enrollments'), where('subject', 'in', MATH_SUBJECTS)))
     ]);
 
     // 1. Process classes
@@ -165,7 +167,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
       scenarioClasses[docSnap.id] = {
         id: docSnap.id,
         className: data.className,
-        subject: 'math',
+        subject: (data.subject === 'highmath' ? 'highmath' : 'math') as 'math' | 'highmath',
         teacher: data.teacher,
         room: data.room,
         schedule: data.schedule || [],
@@ -183,6 +185,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
       const data = docSnap.data();
       const className = data.className as string;
       const studentId = docSnap.ref.parent.parent?.id;
+      const classId = data.classId as string;
 
       if (!studentId || !className) return;
       if (data.withdrawalDate) return;  // Skip withdrawn only (onHold는 포함)
@@ -194,7 +197,8 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
       scenarioEnrollments[className][studentId] = {
         studentId,
         className,
-        subject: 'math',
+        classId,
+        subject: (data.subject === 'highmath' ? 'highmath' : 'math') as 'math' | 'highmath',
         underline: data.underline,
         enrollmentDate: convertTimestampToDate(data.enrollmentDate || data.startDate),
         withdrawalDate: convertTimestampToDate(data.withdrawalDate),
@@ -334,7 +338,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
             [studentId]: {
               studentId,
               className,
-              subject: 'math',
+              subject: enrollmentData?.subject || 'math',
               ...enrollmentData,
             },
           },
@@ -553,9 +557,10 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
       });
       await classBatch.commit();
 
-      // 3. enrollments 업데이트
+      // 3. enrollments 업데이트 (math + highmath)
+      const MATH_SUBJECTS_PUBLISH = ['math', 'highmath'];
       const existingEnrollmentsSnapshot = await getDocs(
-        query(collectionGroup(db, 'enrollments'), where('subject', '==', 'math'))
+        query(collectionGroup(db, 'enrollments'), where('subject', 'in', MATH_SUBJECTS_PUBLISH))
       );
 
       // 삭제 배치
@@ -569,16 +574,26 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
         await batch.commit();
       }
 
-      // 생성 배치
+      // className → classId 역방향 맵 구축
+      const classNameToIdMap: Record<string, string> = {};
+      Object.entries(scenarioClasses).forEach(([classId, classData]) => {
+        classNameToIdMap[classData.className] = classId;
+      });
+
+      // 생성 배치 - doc ID = classId, subject = 실제 과목
       const enrollmentsToCreate: { ref: any; data: any }[] = [];
       Object.entries(scenarioEnrollments).forEach(([className, students]) => {
+        const classId = classNameToIdMap[className];
+        const classSubject = classId && scenarioClasses[classId]?.subject || 'math';
         Object.entries(students).forEach(([studentId, enrollment]) => {
-          const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
+          const enrollDocId = classId || enrollment.classId || className;
+          const enrollmentRef = doc(db, 'students', studentId, 'enrollments', enrollDocId);
           enrollmentsToCreate.push({
             ref: enrollmentRef,
             data: sanitizeForFirestore({
               ...enrollment,
-              subject: 'math',
+              classId: enrollDocId,
+              subject: classSubject,
               className,
             }),
           });

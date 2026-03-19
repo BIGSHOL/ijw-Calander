@@ -119,7 +119,7 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
                 await Promise.all(endDatePromises);
 
                 // 1-2. 새 수업 enrollment 생성 (doc ID = classId)
-                const toClassId = classIdMap.get(toClass) || `english_${toClass}`;
+                const toClassId = classIdMap.get(toClass) || toClass;
                 const enrollmentRef = doc(db, 'students', student.id, 'enrollments', toClassId);
                 const staffId = classTeacherMap.get(toClass) || '';
                 await setDoc(enrollmentRef, {

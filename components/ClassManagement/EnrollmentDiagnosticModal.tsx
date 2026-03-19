@@ -330,10 +330,8 @@ const EnrollmentDiagnosticModal: React.FC<EnrollmentDiagnosticModalProps> = ({
                 for (const item of chunk) {
                     const { studentId, enroll } = item;
 
-                    // ID가 array_ 로 시작하면 새로 생성, 아니면 기존 ID 사용
-                    const newEnrollmentId = enroll.id.startsWith('array_')
-                        ? `fixed_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-                        : enroll.id;
+                    // doc ID = classId로 통일
+                    const newEnrollmentId = enroll.matchedClass?.id || enroll.rawClassId || enroll.id;
 
                     const enrollmentRef = doc(db, 'students', studentId, 'enrollments', newEnrollmentId);
 
