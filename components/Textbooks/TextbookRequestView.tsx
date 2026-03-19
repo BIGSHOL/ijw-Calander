@@ -454,7 +454,7 @@ export default function TextbookRequestView({ isAdmin = false, initialTab, onReq
     setIsSaving(true);
     let dataUrl = '';
     try {
-      dataUrl = await toPng(previewRef.current, { cacheBust: true, pixelRatio: 2 });
+      dataUrl = await toPng(previewRef.current, { cacheBust: true, pixelRatio: 2, skipFonts: true });
     } catch (err) {
       console.error('Image generation failed:', err);
       alert('이미지 생성에 실패했습니다. 다시 시도해주세요.');
@@ -595,7 +595,7 @@ export default function TextbookRequestView({ isAdmin = false, initialTab, onReq
     // 렌더링 완료 후 캡처
     const timer = setTimeout(async () => {
       try {
-        const dataUrl = await toPng(el, { cacheBust: true, pixelRatio: 2 });
+        const dataUrl = await toPng(el, { cacheBust: true, pixelRatio: 2, skipFonts: true });
         const link = document.createElement('a');
         link.download = `${downloadTarget.requestDate}_${downloadTarget.studentName}_${downloadTarget.bookName}.png`;
         link.href = dataUrl;
