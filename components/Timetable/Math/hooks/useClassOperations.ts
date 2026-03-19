@@ -1,4 +1,4 @@
-import { doc, setDoc, deleteDoc, updateDoc, collection, getDocs, query, where, getDoc, deleteField } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, updateDoc, collection, collectionGroup, getDocs, query, where, getDoc, deleteField, writeBatch } from 'firebase/firestore';
 import { useQueryClient } from '@tanstack/react-query';
 import { db } from '../../../../firebaseConfig';
 import { TimetableClass } from '../../../../types';
@@ -183,6 +183,35 @@ export const useClassOperations = () => {
 
         await updateDoc(doc(db, COL_CLASSES, classId), updateData);
 
+        // schedule 변경 시 해당 수업의 enrollment.schedule도 동기화
+        if (updates.schedule) {
+            const classDocSnap = await getDoc(doc(db, COL_CLASSES, classId));
+            const className = classDocSnap.exists() ? classDocSnap.data()?.className : null;
+            const subject = classDocSnap.exists() ? classDocSnap.data()?.subject : null;
+
+            if (className && subject) {
+                const enrollQuery = query(
+                    collectionGroup(db, 'enrollments'),
+                    where('className', '==', className),
+                    where('subject', '==', subject)
+                );
+                const enrollSnap = await getDocs(enrollQuery);
+                const batch = writeBatch(db);
+                let batchCount = 0;
+                enrollSnap.forEach(enrollDoc => {
+                    const data = enrollDoc.data();
+                    if (!data.endDate && !data.withdrawalDate) {
+                        batch.update(enrollDoc.ref, {
+                            schedule: updates.schedule,
+                            updatedAt: new Date().toISOString()
+                        });
+                        batchCount++;
+                    }
+                });
+                if (batchCount > 0) await batch.commit();
+            }
+        }
+
         logTimetableChange({
             action: 'class_update', subject: 'math', className: classId,
             details: `수업 수정: ${classId}`,
@@ -195,7 +224,34 @@ export const useClassOperations = () => {
 
     const deleteClass = async (classId: string) => {
         // Soft delete - isActive를 false로 설정
-        await updateDoc(doc(db, COL_CLASSES, classId), { isActive: false });
+        const classDocSnap = await getDoc(doc(db, COL_CLASSES, classId));
+        const classData = classDocSnap.exists() ? classDocSnap.data() : null;
+
+        await updateDoc(doc(db, COL_CLASSES, classId), { isActive: false, updatedAt: new Date().toISOString() });
+
+        // 해당 수업의 활성 enrollment도 종료 처리
+        if (classData?.className && classData?.subject) {
+            const today = new Date().toISOString().split('T')[0];
+            const enrollQuery = query(
+                collectionGroup(db, 'enrollments'),
+                where('className', '==', classData.className),
+                where('subject', '==', classData.subject)
+            );
+            const enrollSnap = await getDocs(enrollQuery);
+            const batch = writeBatch(db);
+            let batchCount = 0;
+            enrollSnap.forEach(enrollDoc => {
+                const data = enrollDoc.data();
+                if (!data.endDate && !data.withdrawalDate) {
+                    batch.update(enrollDoc.ref, {
+                        endDate: today,
+                        updatedAt: new Date().toISOString()
+                    });
+                    batchCount++;
+                }
+            });
+            if (batchCount > 0) await batch.commit();
+        }
 
         logTimetableChange({
             action: 'class_delete', subject: 'math', className: classId,
@@ -241,11 +297,22 @@ export const useClassOperations = () => {
         await setDoc(studentRef, newStudent);
 
         // 2. Create enrollment (doc ID = classId)
+        // class 정보에서 teacher/schedule 가져오기
+        const classDocSnap = await getDoc(doc(db, COL_CLASSES, classId));
+        const classDocData = classDocSnap.exists() ? classDocSnap.data() : null;
+        const classTeacher = classDocData?.teacher || '';
+        const classSchedule = classDocData?.schedule?.map((s: any) =>
+            typeof s === 'string' ? s : `${s.day} ${s.periodId}`
+        ) || [];
+
         const enrollmentRef = doc(db, 'students', newStudentId, 'enrollments', classId);
         await setDoc(enrollmentRef, {
             classId,
             className,
             subject: classSubject,
+            teacher: classTeacher,
+            staffId: classTeacher,
+            schedule: classSchedule,
             enrollmentDate: now.split('T')[0],
             createdAt: now
         });
@@ -343,11 +410,21 @@ export const useClassOperations = () => {
         const classId = classSnapshot.empty ? `math_${className}` : classSnapshot.docs[0].id;
         const classSubject = classSnapshot.empty ? 'math' : (classSnapshot.docs[0].data().subject || 'math');
 
+        // class 정보에서 teacher/schedule 가져오기
+        const classDocData = classSnapshot.empty ? null : classSnapshot.docs[0].data();
+        const classTeacher = classDocData?.teacher || '';
+        const classSchedule = classDocData?.schedule?.map((s: any) =>
+            typeof s === 'string' ? s : `${s.day} ${s.periodId}`
+        ) || [];
+
         const enrollmentRef = doc(db, 'students', studentId, 'enrollments', classId);
         await setDoc(enrollmentRef, {
             classId,
             className,
             subject: classSubject,
+            teacher: classTeacher,
+            staffId: classTeacher,
+            schedule: classSchedule,
             enrollmentDate: enrollmentDate || now.split('T')[0],
             createdAt: now,
         });

@@ -365,6 +365,9 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                                 classId: move.toClassId,
                                 className: toClass.className,
                                 subject: toClass.subject === '고등수학' ? 'highmath' : 'math',
+                                teacher: toClass.teacher || '',
+                                staffId: toClass.teacher || '',
+                                schedule: toClass.schedule || [],
                                 attendanceDays: newAttendanceDays,
                                 enrollmentDate: effectiveDate,
                                 createdAt: new Date().toISOString()

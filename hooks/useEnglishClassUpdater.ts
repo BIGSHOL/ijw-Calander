@@ -21,7 +21,7 @@
  */
 
 import { useCallback, useRef, useEffect } from 'react';
-import { collection, doc, getDocs, query, where, updateDoc, addDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, collectionGroup, doc, getDocs, query, where, updateDoc, addDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
 import { useScenarioOptional } from '../components/Timetable/English/context/SimulationContext';
@@ -321,6 +321,32 @@ export const useEnglishClassUpdater = () => {
                 groupMembers: null,
                 updatedAt: new Date().toISOString()
             });
+
+            // 해당 수업의 활성 enrollment도 종료 처리
+            const className = classData.className;
+            const subject = classData.subject || 'english';
+            if (className) {
+                const today = new Date().toISOString().split('T')[0];
+                const enrollQuery = query(
+                    collectionGroup(db, 'enrollments'),
+                    where('className', '==', className),
+                    where('subject', '==', subject)
+                );
+                const enrollSnap = await getDocs(enrollQuery);
+                const batch = writeBatch(db);
+                let batchCount = 0;
+                enrollSnap.forEach(enrollDoc => {
+                    const eData = enrollDoc.data();
+                    if (!eData.endDate && !eData.withdrawalDate) {
+                        batch.update(enrollDoc.ref, {
+                            endDate: today,
+                            updatedAt: new Date().toISOString()
+                        });
+                        batchCount++;
+                    }
+                });
+                if (batchCount > 0) await batch.commit();
+            }
         } else {
             await updateDoc(doc(db, COL_CLASSES, classDocId), {
                 schedule: updatedSchedule,
@@ -862,6 +888,33 @@ export const useEnglishClassUpdater = () => {
                 merged: mergedClasses,
                 underline: mainClass.underline
             });
+
+            // 이동된 수업들의 enrollment teacher도 동기화
+            if (sourceTeacher !== targetTeacher) {
+                for (const cls of classesToMove) {
+                    const enrollQuery = query(
+                        collectionGroup(db, 'enrollments'),
+                        where('subject', '==', 'english'),
+                        where('className', '==', cls.className)
+                    );
+                    const enrollSnap = await getDocs(enrollQuery);
+                    const batch = writeBatch(db);
+                    let batchCount = 0;
+                    enrollSnap.forEach(enrollDoc => {
+                        const data = enrollDoc.data();
+                        // 활성 enrollment만 (종료되지 않은 것)
+                        if (!data.endDate && !data.withdrawalDate) {
+                            batch.update(enrollDoc.ref, {
+                                teacher: targetTeacher,
+                                staffId: targetTeacher,
+                                updatedAt: new Date().toISOString()
+                            });
+                            batchCount++;
+                        }
+                    });
+                    if (batchCount > 0) await batch.commit();
+                }
+            }
         }
 
         // 3. 소스에 남은 수업 정리 (그룹 관계 재구성)

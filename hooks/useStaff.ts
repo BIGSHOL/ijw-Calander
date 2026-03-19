@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   collection,
+  collectionGroup,
   doc,
   getDocs,
   getDoc,
@@ -87,7 +88,27 @@ async function cascadeNameUpdate(
       }
     });
 
-    // 배치 커밋
+    // 4. enrollments 서브컬렉션 업데이트 (teacher/staffId 동기화)
+    const enrollQuery = query(
+      collectionGroup(db, 'enrollments'),
+      where('teacher', 'in', [oldName, ...(oldEnglishName ? [oldEnglishName] : [])])
+    );
+    const enrollSnapshot = await getDocs(enrollQuery);
+
+    enrollSnapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      // 활성 enrollment만 (종료되지 않은 것)
+      if (!data.endDate && !data.withdrawalDate) {
+        batch.update(docSnap.ref, {
+          teacher: newName,
+          staffId: newName,
+          updatedAt: new Date().toISOString(),
+        });
+        updateCount++;
+      }
+    });
+
+    // 배치 커밋 (500건 제한 주의)
     if (updateCount > 0) {
       await batch.commit();
     }

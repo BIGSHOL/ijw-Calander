@@ -202,10 +202,13 @@ export function useStudents(includeWithdrawn = false, enabled = true, campusFilt
                 await deleteDoc(docRef);
             } else {
                 const now = new Date().toISOString();
+                const today = now.split('T')[0];
                 await updateDoc(docRef, {
                     status: 'withdrawn',
                     updatedAt: now,
-                    endDate: now
+                    endDate: today,
+                    withdrawalDate: today,
+                    withdrawalReason: '삭제 처리',
                 });
             }
             return id;

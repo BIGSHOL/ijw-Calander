@@ -77,6 +77,7 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
             const targetClassNames = [...new Set(Array.from(moveChanges.values()).map(c => c.toClass))];
             const classTeacherMap = new Map<string, string>();
             const classIdMap = new Map<string, string>(); // className → classId
+            const classScheduleMap = new Map<string, string[]>(); // className → schedule
 
             if (targetClassNames.length > 0) {
                 const classesQuery = query(
@@ -92,6 +93,10 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
                     if (teacher) {
                         classTeacherMap.set(data.className, teacher);
                     }
+                    const schedule = data.schedule?.map((s: any) =>
+                        typeof s === 'string' ? s : `${s.day} ${s.periodId}`
+                    ) || [];
+                    classScheduleMap.set(data.className, schedule);
                 });
             }
 
@@ -127,6 +132,8 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
                     className: toClass,
                     subject: 'english',
                     staffId,
+                    teacher: staffId,
+                    schedule: classScheduleMap.get(toClass) || [],
                     enrollmentDate: prevEnrollmentDate || today,
                     createdAt: new Date().toISOString(),
                     underline: student.underline || false,

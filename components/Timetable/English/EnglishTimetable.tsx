@@ -178,11 +178,21 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
         const classSnap = await getDocs(classQuery);
         const classId = classSnap.empty ? `english_${className}` : classSnap.docs[0].id;
 
+        // class 정보에서 teacher/schedule 가져오기
+        const classDocData = classSnap.empty ? null : classSnap.docs[0].data();
+        const classTeacher = classDocData?.teacher || classDocData?.mainTeacher || '';
+        const classSchedule = classDocData?.schedule?.map((s: any) =>
+            typeof s === 'string' ? s : `${s.day} ${s.periodId}`
+        ) || [];
+
         const enrollmentRef = doc(db, 'students', studentId, 'enrollments', classId);
         await setDoc(enrollmentRef, {
             classId,
             className,
             subject: 'english',
+            teacher: classTeacher,
+            staffId: classTeacher,
+            schedule: classSchedule,
             enrollmentDate: enrollmentDate || now.split('T')[0],
             createdAt: now,
         });

@@ -114,6 +114,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student: studentProp, com
       withdrawalDate: undefined,
       withdrawalReason: undefined,
       withdrawalMemo: undefined,
+      withdrawalConsultation: undefined,
     });
   };
 
