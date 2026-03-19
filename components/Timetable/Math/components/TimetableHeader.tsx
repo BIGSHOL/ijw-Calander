@@ -1,9 +1,24 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { addDays } from 'date-fns';
 import {
-    ChevronLeft, ChevronRight, Search, X, Settings, Eye, Edit, SlidersHorizontal,
+    ChevronLeft, ChevronRight, Search, X, Settings, Eye, EyeOff, Edit, SlidersHorizontal,
     ArrowRightLeft, Copy, Upload, Save, Link2, Users, ChevronUp, ChevronDown, GripVertical, Download, Calendar as CalendarIcon
 } from 'lucide-react';
+import {
+    DndContext,
+    closestCenter,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    verticalListSortingStrategy,
+    useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { UnifiedStudent, TimetableClass } from '../../../../types';
 import { formatSchoolGrade } from '../../../../utils/studentUtils';
 import { formatDateKey } from '../../../../utils/dateUtils';
@@ -13,6 +28,35 @@ import WithdrawalStudentDetail from '../../../WithdrawalManagement/WithdrawalStu
 import { WithdrawalEntry } from '../../../../hooks/useWithdrawalFilters';
 import SubjectControls from '../../shared/SubjectControls';
 import type { TimetableSubjectType } from '../../../../types';
+
+// 드래그 가능한 강사 아이템
+const SortableTeacherItem = ({ id, isHidden, onToggleHidden }: { id: string; isHidden: boolean; onToggleHidden: () => void }) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 10 : 1,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <div ref={setNodeRef} style={style} className="flex items-center justify-between px-1.5 py-1 hover:bg-gray-50 rounded-sm">
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 shrink-0">
+                    <GripVertical size={12} />
+                </div>
+                <span className={`text-xs truncate ${isHidden ? 'text-gray-300 line-through' : 'text-gray-700'}`}>{id}</span>
+            </div>
+            <button
+                onClick={(e) => { e.stopPropagation(); onToggleHidden(); }}
+                className={`p-0.5 rounded shrink-0 ${isHidden ? 'text-gray-300 hover:text-gray-500' : 'text-blue-500 hover:text-blue-700'}`}
+                title={isHidden ? '표시' : '숨기기'}
+            >
+                {isHidden ? <EyeOff size={13} /> : <Eye size={13} />}
+            </button>
+        </div>
+    );
+};
 
 interface TimetableHeaderProps {
     weekLabel: string;
@@ -94,6 +138,9 @@ interface TimetableHeaderProps {
     // 강의실 필터
     roomFilter?: { main: boolean; barun: boolean; godeung: boolean };
     onRoomFilterChange?: (type: 'main' | 'barun' | 'godeung', value: boolean) => void;
+    // 강사 숨김 필터
+    hiddenTeachers?: string[];
+    onToggleTeacherHidden?: (teacher: string) => void;
 }
 
 const TimetableHeader: React.FC<TimetableHeaderProps> = ({
@@ -161,6 +208,8 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     setIsTimetableSettingsOpen,
     roomFilter,
     onRoomFilterChange,
+    hiddenTeachers = [],
+    onToggleTeacherHidden,
 }) => {
     // 드롭다운 상태
     const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
@@ -246,6 +295,21 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
         if (targetIndex >= 0 && targetIndex < newOrder.length) {
             [newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]];
             handleSaveTeacherOrder(newOrder);
+        }
+    };
+
+    // 강사 드래그 앤 드롭
+    const teacherDndSensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    );
+    const handleTeacherDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (over && active.id !== over.id) {
+            const oldIndex = mathConfig.teacherOrder.indexOf(active.id as string);
+            const newIndex = mathConfig.teacherOrder.indexOf(over.id as string);
+            if (oldIndex !== -1 && newIndex !== -1) {
+                handleSaveTeacherOrder(arrayMove(mathConfig.teacherOrder, oldIndex, newIndex));
+            }
         }
     };
 
@@ -943,33 +1007,26 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                 <Users size={12} />
                                                 강사 순서
                                             </div>
-                                            <div className="space-y-0.5 max-h-[150px] overflow-y-auto">
-                                                {mathConfig.teacherOrder.map((teacher, index) => (
-                                                    <div key={teacher} className="flex items-center justify-between px-2 py-1.5 hover:bg-gray-50 rounded-sm group">
-                                                        <div className="flex items-center gap-2">
-                                                            <GripVertical size={12} className="text-gray-300" />
-                                                            <span className="text-xs text-gray-700">{teacher}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <button
-                                                                onClick={() => moveTeacher(index, 'up')}
-                                                                disabled={index === 0}
-                                                                className="p-0.5 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                                                                title="위로 이동"
-                                                            >
-                                                                <ChevronUp size={14} className="text-gray-500" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => moveTeacher(index, 'down')}
-                                                                disabled={index === mathConfig.teacherOrder.length - 1}
-                                                                className="p-0.5 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                                                                title="아래로 이동"
-                                                            >
-                                                                <ChevronDown size={14} className="text-gray-500" />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                            <div className="space-y-0.5 max-h-[200px] overflow-y-auto">
+                                                <DndContext
+                                                    sensors={teacherDndSensors}
+                                                    collisionDetection={closestCenter}
+                                                    onDragEnd={handleTeacherDragEnd}
+                                                >
+                                                    <SortableContext
+                                                        items={mathConfig.teacherOrder}
+                                                        strategy={verticalListSortingStrategy}
+                                                    >
+                                                        {mathConfig.teacherOrder.map((teacher) => (
+                                                            <SortableTeacherItem
+                                                                key={teacher}
+                                                                id={teacher}
+                                                                isHidden={hiddenTeachers.includes(teacher)}
+                                                                onToggleHidden={() => onToggleTeacherHidden?.(teacher)}
+                                                            />
+                                                        ))}
+                                                    </SortableContext>
+                                                </DndContext>
                                             </div>
                                         </div>
                                     )}

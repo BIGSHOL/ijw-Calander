@@ -749,6 +749,14 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
                     roomFilter={roomFilter}
                     onRoomFilterChange={onRoomFilterChange}
+                    hiddenTeachers={mathIntegrationSettings.hiddenTeachers || []}
+                    onToggleTeacherHidden={(teacher: string) => {
+                        const current = mathIntegrationSettings.hiddenTeachers || [];
+                        const newHidden = current.includes(teacher)
+                            ? current.filter(t => t !== teacher)
+                            : [...current, teacher];
+                        updateMathIntegrationSettings({ ...mathIntegrationSettings, hiddenTeachers: newHidden });
+                    }}
                 />
 
                 {/* Timetable Content - viewType에 따라 분기 */}
@@ -1178,6 +1186,9 @@ const TimetableManager = ({
         setIsTeacherOrderModalOpen,
         handleSaveTeacherOrder,
     } = useMathConfig();
+
+    // Hidden teachers settings (강사 숨김 필터)
+    const { settings: outerMathSettings, updateSettings: updateOuterMathSettings } = useMathSettings();
 
     // Hook Integration: Class Operations
     const {
@@ -1625,11 +1636,14 @@ const TimetableManager = ({
     // Compute resources (all teachers from state, filtered by hidden)
     const allResources = useMemo(() => {
         if (viewType === 'teacher' || viewType === 'excel') {
-            // Show all visible teachers in saved order
-            return sortedTeachers;
+            // Show all visible teachers in saved order, excluding hiddenTeachers
+            const hidden = outerMathSettings.hiddenTeachers || [];
+            return hidden.length > 0
+                ? sortedTeachers.filter(t => !hidden.includes(t))
+                : sortedTeachers;
         }
         return [...new Set(filteredClasses.map(c => c.room).filter(Boolean))].sort();
-    }, [viewType, filteredClasses, sortedTeachers]);
+    }, [viewType, filteredClasses, sortedTeachers, outerMathSettings.hiddenTeachers]);
 
     // 메모이즈: 매 렌더마다 new Set() 생성 방지
     const pendingMovedStudentIds = useMemo(() =>

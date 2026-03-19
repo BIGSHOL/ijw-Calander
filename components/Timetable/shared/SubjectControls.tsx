@@ -31,7 +31,7 @@ export default function SubjectControls({
             <select
                 value={timetableSubject}
                 onChange={(e) => setTimetableSubject(e.target.value as TimetableSubjectType)}
-                className="px-2 py-0.5 rounded-sm bg-white text-gray-700 font-bold text-xs border border-gray-300 hover:bg-gray-100 transition-all cursor-pointer outline-none"
+                className="px-2 py-0.5 rounded-sm bg-accent text-primary font-bold text-xs hover:brightness-110 transition-all cursor-pointer border-none outline-none"
                 title="과목 선택"
             >
                 {hasPermission('timetable.math.view') && <option value="math">수학</option>}
@@ -55,7 +55,7 @@ export default function SubjectControls({
                             return canViewIntegrated ? 'class' : 'teacher';
                         });
                     }}
-                    className="px-2 py-0.5 rounded-sm bg-white border border-gray-300 text-gray-700 font-bold text-xs hover:bg-gray-100 active:scale-95 transition-all cursor-pointer"
+                    className="px-2 py-0.5 rounded-sm bg-white/10 border border-white/10 text-gray-300 font-bold text-xs hover:text-white hover:bg-white/15 active:scale-95 transition-all cursor-pointer"
                     title="보기방식 전환"
                 >
                     {viewType === 'class' ? <><ClipboardList size={12} className="inline" /> 통합뷰</>
@@ -82,7 +82,7 @@ export default function SubjectControls({
                             return 'teacher';
                         });
                     }}
-                    className="px-2 py-0.5 rounded-sm bg-white border border-gray-300 text-gray-700 font-bold text-xs hover:bg-gray-100 active:scale-95 transition-all cursor-pointer"
+                    className="px-2 py-0.5 rounded-sm bg-white/10 border border-white/10 text-gray-300 font-bold text-xs hover:text-white hover:bg-white/15 active:scale-95 transition-all cursor-pointer"
                     title="보기방식 전환"
                 >
                     {viewType === 'teacher' && mathViewMode === 'teacher-based' ? <><UserIcon size={12} className="inline" /> 강사별</>
@@ -97,14 +97,14 @@ export default function SubjectControls({
             {setIsTimetableSettingsOpen && (
                 <button
                     onClick={() => setIsTimetableSettingsOpen(true)}
-                    className="p-1 rounded-sm bg-white border border-gray-300 text-gray-600 hover:bg-gray-100 active:scale-95 transition-all cursor-pointer"
+                    className="p-1 rounded-sm text-gray-400 hover:text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer"
                     title="수업 설정"
                 >
                     <Settings size={14} />
                 </button>
             )}
 
-            <div className="w-px h-4 bg-gray-300 mx-0.5"></div>
+            <div className="w-px h-4 bg-white/20 mx-0.5"></div>
         </div>
     );
 }
