@@ -729,12 +729,10 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
     );
   }
 
-  // 과목별 분류
-  const mathClasses = groupedEnrollments.filter(g => g.subject === 'math');
-  const englishClasses = groupedEnrollments.filter(g => g.subject === 'english');
-
-  const completedMathClasses = completedClasses.filter(g => g.subject === 'math');
-  const completedEnglishClasses = completedClasses.filter(g => g.subject === 'english');
+  // 과목별 정렬 (math → highmath → english → science → korean → 기타)
+  const SUBJECT_ORDER: Record<string, number> = { math: 0, highmath: 1, english: 2, science: 3, korean: 4 };
+  const sortBySubject = <T extends { subject: string }>(list: T[]) =>
+    [...list].sort((a, b) => (SUBJECT_ORDER[a.subject] ?? 99) - (SUBJECT_ORDER[b.subject] ?? 99));
 
   // 수업 행 렌더링 함수 (현재 수강 중)
   const renderClassRow = (group: GroupedEnrollment, index: number) => {
@@ -1084,11 +1082,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           </div>
         ) : (
           <div>
-            {/* 수학 수업 */}
-            {mathClasses.map((group, index) => renderClassRow(group, index))}
-
-            {/* 영어 수업 */}
-            {englishClasses.map((group, index) => renderClassRow(group, index))}
+            {sortBySubject(groupedEnrollments).map((group, index) => renderClassRow(group, index))}
           </div>
         )}
       </div>
@@ -1270,11 +1264,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             </div>
           ) : (
             <div>
-              {/* 수학 수업 */}
-              {completedMathClasses.map((group, index) => renderCompletedClassRow(group, index))}
-
-              {/* 영어 수업 */}
-              {completedEnglishClasses.map((group, index) => renderCompletedClassRow(group, index))}
+              {sortBySubject(completedClasses).map((group, index) => renderCompletedClassRow(group, index))}
             </div>
           )}
         </div>
