@@ -10,7 +10,7 @@ const { GoogleGenAI, createPartFromFunctionResponse } = require("@google/genai")
 const logger = functions.logger;
 
 admin.initializeApp();
-const db = getFirestore("restore260202");
+const db = getFirestore("restore20260319");
 
 // KST(UTC+9) 기준 오늘 날짜 반환 (서버는 UTC 기준이므로 변환 필요)
 function getTodayKST() {

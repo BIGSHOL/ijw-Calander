@@ -64,7 +64,9 @@
       "Bash(pip install:*)",
       "Bash(npx cross-env:*)",
       "Bash(npx next build:*)",
-      "Bash(cut:*)"
+      "Bash(cut:*)",
+      "Bash(GOOGLE_APPLICATION_CREDENTIALS=\"\" npx tsx scripts/fixEnrollmentData.ts --dry)",
+      "Bash(gcloud auth:*)"
     ],
     "additionalDirectories": [
       "d:\\ijw-calander\\components\\Timetable\\English",

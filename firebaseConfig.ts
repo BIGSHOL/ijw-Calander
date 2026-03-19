@@ -43,7 +43,7 @@ import { getFirestore } from "firebase/firestore";
 const isEmbedContext = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('embed');
 
 let dbInstance;
-const DATABASE_ID = 'restore260202';  // 복원된 데이터베이스 사용
+const DATABASE_ID = 'restore20260319';  // 복원된 데이터베이스 사용
 try {
     if (isEmbedContext) {
         // 임베드 모드: persistentLocalCache 비활성화 (iframe에서 IndexedDB 차단 이슈 방지)
