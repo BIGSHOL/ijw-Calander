@@ -6893,3 +6893,111 @@ ${formattedTranscript}
         }
     });
 
+/**
+ * =========================================================
+ * Cloud Function: 녹음 파일 자동 정리 (120일 경과)
+ * =========================================================
+ * 매일 새벽 3시(KST) 실행.
+ * 3개 녹음 컬렉션에서 120일 이상 지난 문서의 Storage 파일을 삭제하고,
+ * Firestore 문서에 만료 표시를 남깁니다. (분석 결과는 영구 보존)
+ *
+ * 대상 컬렉션:
+ * - meeting_reports (회의록)
+ * - consultation_reports (상담 녹음) — crossAnalysis 문서는 파일 삭제 건너뜀
+ * - registration_recording_reports (등록 상담)
+ */
+exports.cleanupExpiredRecordings = functions
+    .region("asia-northeast3")
+    .runWith({ timeoutSeconds: 300, memory: "256MB" })
+    .pubsub.schedule("0 3 * * *")
+    .timeZone("Asia/Seoul")
+    .onRun(async (context) => {
+        const RETENTION_DAYS = 120;
+        const cutoffMs = Date.now() - (RETENTION_DAYS * 24 * 60 * 60 * 1000);
+        const bucket = admin.storage().bucket();
+        const summary = [];
+
+        const collections = [
+            { name: "meeting_reports", skipCrossAnalysis: false },
+            { name: "consultation_reports", skipCrossAnalysis: true },
+            { name: "registration_recording_reports", skipCrossAnalysis: false },
+        ];
+
+        for (const col of collections) {
+            const stats = { collection: col.name, processed: 0, deleted: 0, alreadyGone: 0, skippedCross: 0, errors: 0 };
+
+            try {
+                const snapshot = await db.collection(col.name)
+                    .where("createdAt", "<", cutoffMs)
+                    .limit(500)
+                    .get();
+
+                // storagePath가 있고 아직 만료 처리되지 않은 문서만 필터
+                const docs = snapshot.docs.filter(d => {
+                    const data = d.data();
+                    return data.storagePath && !data.fileExpired;
+                });
+
+                if (docs.length === 0) {
+                    logger.info(`[cleanupExpiredRecordings] ${col.name}: 정리 대상 없음`);
+                    summary.push(stats);
+                    continue;
+                }
+
+                logger.info(`[cleanupExpiredRecordings] ${col.name}: ${docs.length}건 정리 시작`);
+
+                const batch = db.batch();
+                let batchCount = 0;
+
+                for (const docSnap of docs) {
+                    const data = docSnap.data();
+                    const isCrossAnalysis = col.skipCrossAnalysis && data.crossAnalysis === true;
+
+                    // Storage 파일 삭제 (crossAnalysis가 아닌 경우만)
+                    if (!isCrossAnalysis) {
+                        try {
+                            await bucket.file(data.storagePath).delete();
+                            stats.deleted++;
+                        } catch (err) {
+                            if (err.code === 404 || err.message?.includes("No such object")) {
+                                stats.alreadyGone++;
+                            } else {
+                                logger.error(`[cleanupExpiredRecordings] ${col.name}/${docSnap.id} 파일 삭제 오류:`, err.message);
+                                stats.errors++;
+                                continue;
+                            }
+                        }
+                    } else {
+                        stats.skippedCross++;
+                    }
+
+                    // Firestore 문서 만료 표시 (분석 결과는 보존)
+                    batch.update(docSnap.ref, {
+                        storagePath: "",
+                        fileExpired: true,
+                        fileExpiredAt: Date.now(),
+                        updatedAt: Date.now(),
+                    });
+                    batchCount++;
+                    stats.processed++;
+
+                    if (batchCount >= 450) break;
+                }
+
+                if (batchCount > 0) {
+                    await batch.commit();
+                }
+
+                logger.info(`[cleanupExpiredRecordings] ${col.name}: 완료`, stats);
+            } catch (error) {
+                logger.error(`[cleanupExpiredRecordings] ${col.name} 처리 오류:`, error);
+                stats.errors++;
+            }
+
+            summary.push(stats);
+        }
+
+        logger.info("[cleanupExpiredRecordings] 전체 요약:", JSON.stringify(summary));
+        return null;
+    });
+

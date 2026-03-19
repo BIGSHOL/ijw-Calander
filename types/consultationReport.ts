@@ -73,6 +73,13 @@ export interface ConsultationReport {
   lastEditedByName?: string;   // 수정자 이름
   lastEditedAt?: number;       // 수정 시각 (timestamp ms)
 
+  // 교차 분석
+  crossAnalysis?: boolean;
+
+  // 파일 만료 (120일 경과 자동 삭제)
+  fileExpired?: boolean;
+  fileExpiredAt?: number;
+
   // 시스템 필드
   createdAt: number;
   updatedAt: number;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, FileText, Clock, AlertCircle, Loader2, Trash2, Pencil, Check, X, RefreshCw, Users } from 'lucide-react';
-import { useMeetingReports, useDeleteMeetingReport, useUpdateMeetingReportTitle, useReanalyzeMeetingReport } from '../../hooks/useMeetingRecording';
+import { useMeetingReports, useDeleteMeetingReport, useUpdateMeetingReportTitle, useReanalyzeMeetingReport, useRetryMeetingProcessing } from '../../hooks/useMeetingRecording';
 import { usePermissions } from '../../hooks/usePermissions';
 import { format } from 'date-fns';
 import type { MeetingReportStatus, UserProfile } from '../../types';
@@ -26,6 +26,7 @@ export function MeetingHistoryList({ onSelectReport, userProfile }: MeetingHisto
   const deleteMutation = useDeleteMeetingReport();
   const renameMutation = useUpdateMeetingReportTitle();
   const reanalyzeMutation = useReanalyzeMeetingReport();
+  const retryMutation = useRetryMeetingProcessing();
   const canDelete = hasPermission('recording.delete');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -40,6 +41,20 @@ export function MeetingHistoryList({ onSelectReport, userProfile }: MeetingHisto
     e.stopPropagation();
     if (!window.confirm('새 알고리즘으로 재분석하시겠습니까?\n기존 분석 결과가 덮어씌워집니다.')) return;
     reanalyzeMutation.mutate(reportId);
+  };
+
+  const handleRetry = (e: React.MouseEvent, report: any) => {
+    e.stopPropagation();
+    if (!window.confirm('음성 인식부터 다시 처리하시겠습니까?')) return;
+    retryMutation.mutate({
+      id: report.id,
+      storagePath: report.storagePath || '',
+      title: report.title || '',
+      attendees: report.attendees || [],
+      meetingDate: report.meetingDate || '',
+      recorder: report.recorder || '',
+      fileName: report.fileName || '',
+    });
   };
 
   const handleStartEdit = (e: React.MouseEvent, report: { id: string; title: string }) => {
@@ -161,6 +176,11 @@ export function MeetingHistoryList({ onSelectReport, userProfile }: MeetingHisto
                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${statusInfo.color}`}>
                       {statusInfo.label}
                     </span>
+                    {(report as any).fileExpired && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500">
+                        파일 만료
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400">
                     <span>{report.meetingDate}</span>
@@ -180,8 +200,8 @@ export function MeetingHistoryList({ onSelectReport, userProfile }: MeetingHisto
                   </div>
                 </div>
 
-                {/* 재분석 */}
-                {(report.status === 'completed' || report.status === 'failed') && (() => {
+                {/* 재분석 / 재처리 (파일 만료 시 숨김) */}
+                {!(report as any).fileExpired && (report.status === 'completed' || report.status === 'failed') && (() => {
                   const isReanalyzing = reanalyzeMutation.isPending && reanalyzeMutation.variables === report.id;
                   return (
                     <button
@@ -191,6 +211,19 @@ export function MeetingHistoryList({ onSelectReport, userProfile }: MeetingHisto
                       title="재분석"
                     >
                       {isReanalyzing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                    </button>
+                  );
+                })()}
+                {!(report as any).fileExpired && (report.status === 'uploading' || report.status === 'transcribing' || report.status === 'error') && (() => {
+                  const isRetrying = retryMutation.isPending && retryMutation.variables?.id === report.id;
+                  return (
+                    <button
+                      onClick={(e) => handleRetry(e, report)}
+                      disabled={isRetrying}
+                      className="flex-shrink-0 p-1.5 text-gray-300 hover:text-orange-500 hover:bg-orange-50 rounded transition-colors"
+                      title="다시 처리"
+                    >
+                      {isRetrying ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                     </button>
                   );
                 })()}

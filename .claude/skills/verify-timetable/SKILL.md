@@ -365,6 +365,26 @@ grep -n "pendingSchedule\|clearPending\|deleteField" hooks/useClassMutations.ts 
 
 **수정:** useEffect 추가 (마운트 시 1회), clearPending에서 deleteField() 호출
 
+### Step 18: Enrollment teacher/staffId/schedule 필드 검증
+
+**파일:** `components/Timetable/Math/hooks/useClassOperations.ts`, `components/Timetable/English/EnglishTimetable.tsx`
+
+**검사:** 학생 등록(enrollment 생성) 시 class 문서에서 teacher/schedule 정보를 가져와 enrollment에 teacher, staffId, schedule 필드를 포함하는지 확인합니다. 이 필드가 누락되면 출석부/수업관리에서 강사별 필터링이 불가능합니다.
+
+```bash
+grep -n "teacher:\|staffId:\|schedule:" components/Timetable/Math/hooks/useClassOperations.ts | grep -v "classSubject\|classId\|className" | head -10
+grep -n "teacher:\|staffId:\|schedule:" components/Timetable/English/EnglishTimetable.tsx | grep -v "classId\|className" | head -10
+```
+
+**PASS 기준:**
+- useClassOperations의 `setDoc(enrollmentRef, {` 블록에 `teacher`, `staffId`, `schedule` 필드 포함 (2곳: addStudent, restoreStudent)
+- EnglishTimetable의 enrollment 생성 블록에 동일 3개 필드 포함
+- class 문서에서 teacher/schedule 정보를 읽어오는 코드 존재 (`classDocData`, `classTeacher`, `classSchedule`)
+
+**FAIL 기준:** enrollment 생성 시 `classId`, `className`, `subject`, `enrollmentDate`, `createdAt`만 포함하고 teacher/staffId/schedule 누락
+
+**수정:** enrollment 생성 전 class doc에서 teacher/schedule을 읽어 enrollment에 포함
+
 ## Output Format
 
 | # | 검사 항목 | 파일 | 결과 | 상세 |
@@ -387,6 +407,7 @@ grep -n "pendingSchedule\|clearPending\|deleteField" hooks/useClassMutations.ts 
 | 16 | 고스트 카드 렌더링 | ClassCard.tsx + TimetableManager.tsx | PASS/FAIL | |
 | 17 | 퇴원 드롭존 | ClassCard.tsx + TimetableManager.tsx | PASS/FAIL | |
 | 18 | 스케줄 자동 적용 | TimetableManager.tsx + useClassMutations.ts | PASS/FAIL | |
+| 19 | Enrollment teacher/schedule 필드 | useClassOperations.ts + EnglishTimetable.tsx | PASS/FAIL | |
 
 ## Exceptions
 

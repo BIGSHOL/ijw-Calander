@@ -172,6 +172,28 @@ grep -n "textbookRequests" hooks/useTextbooks.ts | head -5
 **PASS 기준:** importBillings 내에 textbook_requests 컬렉션 참조 + isPaid 자동 업데이트 + textbookRequests 캐시 invalidation 존재
 **FAIL 기준:** 자동 매칭 로직 누락 (수납 가져오기 후 요청서 상태 미갱신)
 
+### Step 10: 영어 수업 강사 이동 시 Enrollment teacher 동기화 검증
+
+**파일:** `hooks/useEnglishClassUpdater.ts`
+
+**검사:** 영어 수업을 다른 강사로 이동(moveClasses)할 때, 해당 수업의 활성 enrollment 문서들의 teacher/staffId 필드가 새 강사로 동기화되는지 확인합니다.
+
+```bash
+grep -n "collectionGroup.*enrollments" hooks/useEnglishClassUpdater.ts | head -3
+grep -n "teacher.*targetTeacher\|staffId.*targetTeacher" hooks/useEnglishClassUpdater.ts | head -5
+grep -n "sourceTeacher.*targetTeacher\|batchCount" hooks/useEnglishClassUpdater.ts | head -5
+```
+
+**PASS 기준:**
+- `collectionGroup(db, 'enrollments')` 쿼리로 해당 수업의 enrollment 조회
+- `sourceTeacher !== targetTeacher` 조건부 실행
+- 활성 enrollment만 필터 (`!data.endDate && !data.withdrawalDate`)
+- `writeBatch`로 teacher/staffId 일괄 업데이트
+
+**FAIL 기준:** moveClasses 실행 시 class 문서만 이동하고 enrollment teacher가 이전 강사로 남아있음
+
+**수정:** moveClasses 내에 collectionGroup enrollment 쿼리 + writeBatch teacher 동기화 로직 추가
+
 ## Output Format
 
 | # | 검사 항목 | 범위 | 결과 | 상세 |
@@ -185,6 +207,7 @@ grep -n "textbookRequests" hooks/useTextbooks.ts | head -5
 | 7 | 수업 mutation 캐시 무효화 | useClassMutations.ts | PASS/FAIL | N개 invalidation |
 | 8 | 교재 요청서 시스템 구조 | TextbooksTab + TextbookRequestView | PASS/FAIL | |
 | 9 | 수납 자동 매칭 | useTextbooks.ts | PASS/FAIL | |
+| 10 | Enrollment teacher 동기화 | useEnglishClassUpdater.ts | PASS/FAIL | |
 
 ## Exceptions
 

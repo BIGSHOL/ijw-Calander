@@ -161,6 +161,11 @@ export function ReportHistoryList({ onSelectReport, userProfile }: ReportHistory
                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${statusInfo.color}`}>
                       {statusInfo.label}
                     </span>
+                    {(report as any).fileExpired && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-500">
+                        파일 만료
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400">
                     <span>{report.consultationDate}</span>
@@ -177,8 +182,8 @@ export function ReportHistoryList({ onSelectReport, userProfile }: ReportHistory
                   </div>
                 </div>
 
-                {/* 재분석 버튼 (완료/분석불가 상태에서만) */}
-                {(report.status === 'completed' || report.status === 'failed') && (() => {
+                {/* 재분석 버튼 (완료/분석불가 상태에서만, 파일 만료 시 숨김) */}
+                {!(report as any).fileExpired && (report.status === 'completed' || report.status === 'failed') && (() => {
                   const isReanalyzing = reanalyzeMutation.isPending && reanalyzeMutation.variables === report.id;
                   return (
                     <button

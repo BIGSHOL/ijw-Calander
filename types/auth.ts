@@ -101,6 +101,14 @@ export type PermissionId =
   | 'marketing.view' | 'marketing.edit'
   // Consultation Recording (상담녹음분석)
   | 'recording.edit' | 'recording.delete'
+  // Meeting Minutes (회의록)
+  | 'meeting.view' | 'meeting.edit' | 'meeting.delete'
+  // Student Consultations (학생상담)
+  | 'student_consultations.view' | 'student_consultations.create' | 'student_consultations.edit'
+  // Staff (직원관리)
+  | 'staff.view' | 'staff.edit' | 'staff.delete'
+  // Timetable Distribution (시간표배포)
+  | 'timetable_distribution.view' | 'timetable_distribution.edit'
   // AI Chatbot (AI 챗봇)
   | 'chatbot.access'
   // Tuition Calculator (수강료 계산)
@@ -190,6 +198,16 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'marketing.view': true, 'marketing.edit': true,
     // Tuition Calculator
     'tuition.view': true, 'tuition.edit': true, 'tuition.manage': true,
+    // Recording (상담녹음)
+    'recording.edit': true, 'recording.delete': false,
+    // Meeting Minutes (회의록)
+    'meeting.view': true, 'meeting.edit': true, 'meeting.delete': false,
+    // Student Consultations (학생상담)
+    'student_consultations.view': true, 'student_consultations.create': true, 'student_consultations.edit': true,
+    // Staff (직원관리)
+    'staff.view': true, 'staff.edit': true, 'staff.delete': false,
+    // Timetable Distribution (시간표배포)
+    'timetable_distribution.view': true, 'timetable_distribution.edit': true,
   },
   manager: {
     // Events
@@ -264,6 +282,16 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'marketing.view': true, 'marketing.edit': true,
     // Tuition Calculator
     'tuition.view': true, 'tuition.edit': true, 'tuition.manage': false,
+    // Recording (상담녹음)
+    'recording.edit': true, 'recording.delete': false,
+    // Meeting Minutes (회의록)
+    'meeting.view': true, 'meeting.edit': true, 'meeting.delete': false,
+    // Student Consultations (학생상담)
+    'student_consultations.view': true, 'student_consultations.create': true, 'student_consultations.edit': true,
+    // Staff (직원관리)
+    'staff.view': true, 'staff.edit': false, 'staff.delete': false,
+    // Timetable Distribution (시간표배포)
+    'timetable_distribution.view': true, 'timetable_distribution.edit': false,
   },
   math_lead: {
     // Events
@@ -335,6 +363,16 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'marketing.view': false, 'marketing.edit': false,
     // Tuition Calculator
     'tuition.view': false, 'tuition.edit': false, 'tuition.manage': false,
+    // Recording (상담녹음)
+    'recording.edit': false, 'recording.delete': false,
+    // Meeting Minutes (회의록)
+    'meeting.view': false, 'meeting.edit': false, 'meeting.delete': false,
+    // Student Consultations (학생상담)
+    'student_consultations.view': true, 'student_consultations.create': true, 'student_consultations.edit': true,
+    // Staff (직원관리)
+    'staff.view': false, 'staff.edit': false, 'staff.delete': false,
+    // Timetable Distribution (시간표배포)
+    'timetable_distribution.view': false, 'timetable_distribution.edit': false,
   },
   english_lead: {
     // Events
@@ -408,6 +446,16 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'marketing.view': false, 'marketing.edit': false,
     // Tuition Calculator
     'tuition.view': false, 'tuition.edit': false, 'tuition.manage': false,
+    // Recording (상담녹음)
+    'recording.edit': false, 'recording.delete': false,
+    // Meeting Minutes (회의록)
+    'meeting.view': false, 'meeting.edit': false, 'meeting.delete': false,
+    // Student Consultations (학생상담)
+    'student_consultations.view': true, 'student_consultations.create': true, 'student_consultations.edit': true,
+    // Staff (직원관리)
+    'staff.view': false, 'staff.edit': false, 'staff.delete': false,
+    // Timetable Distribution (시간표배포)
+    'timetable_distribution.view': false, 'timetable_distribution.edit': false,
   },
   math_teacher: {
     // Events
@@ -478,6 +526,16 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'marketing.view': false, 'marketing.edit': false,
     // Tuition Calculator
     'tuition.view': false, 'tuition.edit': false, 'tuition.manage': false,
+    // Recording (상담녹음)
+    'recording.edit': false, 'recording.delete': false,
+    // Meeting Minutes (회의록)
+    'meeting.view': false, 'meeting.edit': false, 'meeting.delete': false,
+    // Student Consultations (학생상담)
+    'student_consultations.view': true, 'student_consultations.create': true, 'student_consultations.edit': false,
+    // Staff (직원관리)
+    'staff.view': false, 'staff.edit': false, 'staff.delete': false,
+    // Timetable Distribution (시간표배포)
+    'timetable_distribution.view': false, 'timetable_distribution.edit': false,
   },
   english_teacher: {
     // Events
@@ -548,6 +606,16 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'marketing.view': false, 'marketing.edit': false,
     // Tuition Calculator
     'tuition.view': false, 'tuition.edit': false, 'tuition.manage': false,
+    // Recording (상담녹음)
+    'recording.edit': false, 'recording.delete': false,
+    // Meeting Minutes (회의록)
+    'meeting.view': false, 'meeting.edit': false, 'meeting.delete': false,
+    // Student Consultations (학생상담)
+    'student_consultations.view': true, 'student_consultations.create': true, 'student_consultations.edit': false,
+    // Staff (직원관리)
+    'staff.view': false, 'staff.edit': false, 'staff.delete': false,
+    // Timetable Distribution (시간표배포)
+    'timetable_distribution.view': false, 'timetable_distribution.edit': false,
   },
   user: {
     // Events (basic)
@@ -603,6 +671,16 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'marketing.view': false, 'marketing.edit': false,
     // Tuition Calculator
     'tuition.view': false, 'tuition.edit': false, 'tuition.manage': false,
+    // Recording (상담녹음)
+    'recording.edit': false, 'recording.delete': false,
+    // Meeting Minutes (회의록)
+    'meeting.view': false, 'meeting.edit': false, 'meeting.delete': false,
+    // Student Consultations (학생상담)
+    'student_consultations.view': false, 'student_consultations.create': false, 'student_consultations.edit': false,
+    // Staff (직원관리)
+    'staff.view': false, 'staff.edit': false, 'staff.delete': false,
+    // Timetable Distribution (시간표배포)
+    'timetable_distribution.view': false, 'timetable_distribution.edit': false,
   },
 };
 

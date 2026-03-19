@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Download, ChevronDown, ChevronUp, Clock, Users, Calendar, RefreshCw, Loader2, Pencil, Check, X } from 'lucide-react';
+import { FileText, Download, ChevronDown, ChevronUp, Clock, Users, Calendar, RefreshCw, Loader2, Pencil, Check, X, AlertCircle } from 'lucide-react';
 import type { MeetingReport, UserProfile } from '../../types';
 import { useReanalyzeMeetingReport } from '../../hooks/useMeetingRecording';
 import { useUpdateConsultationReportContent } from '../../hooks/useConsultationRecording';
@@ -165,15 +165,17 @@ export function MeetingReportViewer({ report, canEdit, currentUser }: MeetingRep
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleReanalyze}
-            disabled={reanalyzeMutation.isPending}
-            className="px-3 py-2 text-sm bg-white border border-accent-300 text-accent-700 rounded-sm hover:bg-accent-50 flex items-center gap-1.5 disabled:opacity-50"
-            title="새 알고리즘으로 재분석"
-          >
-            {reanalyzeMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-            재분석
-          </button>
+          {!report.fileExpired && (
+            <button
+              onClick={handleReanalyze}
+              disabled={reanalyzeMutation.isPending}
+              className="px-3 py-2 text-sm bg-white border border-accent-300 text-accent-700 rounded-sm hover:bg-accent-50 flex items-center gap-1.5 disabled:opacity-50"
+              title="새 알고리즘으로 재분석"
+            >
+              {reanalyzeMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+              재분석
+            </button>
+          )}
           <button
             onClick={handleDownload}
             className="px-3 py-2 text-sm bg-white border border-green-300 text-green-700 rounded-sm hover:bg-green-50 flex items-center gap-1.5"
@@ -183,6 +185,19 @@ export function MeetingReportViewer({ report, canEdit, currentUser }: MeetingRep
           </button>
         </div>
       </div>
+
+      {/* 파일 만료 안내 배너 */}
+      {report.fileExpired && (
+        <div className="mx-5 mt-4 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-sm flex items-center gap-2 text-xs text-gray-500">
+          <AlertCircle size={14} className="flex-shrink-0" />
+          <span>원본 녹음 파일이 보관 기간(120일) 경과로 자동 삭제되었습니다. 분석 보고서는 계속 열람할 수 있습니다.</span>
+          {report.fileExpiredAt && (
+            <span className="ml-auto text-gray-400 flex-shrink-0">
+              {format(new Date(report.fileExpiredAt), 'yyyy-MM-dd')} 삭제
+            </span>
+          )}
+        </div>
+      )}
 
       {/* 재분석 진행 중 배너 */}
       {reanalyzeMutation.isPending && (

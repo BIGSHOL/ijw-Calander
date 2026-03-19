@@ -222,6 +222,42 @@ export function useReanalyzeMeetingReport() {
 }
 
 /**
+ * 멈춘 회의록 재처리 (음성인식부터 다시 시작)
+ * uploading/transcribing 상태에서 멈춘 보고서에 사용
+ */
+export function useRetryMeetingProcessing() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (report: Pick<MeetingReport, 'id' | 'storagePath' | 'title' | 'attendees' | 'meetingDate' | 'recorder' | 'fileName'>) => {
+      if (!report.storagePath) {
+        throw new Error('storagePath가 없습니다. 파일을 다시 업로드해주세요.');
+      }
+      await processMeetingRecording({
+        reportId: report.id,
+        storagePath: report.storagePath,
+        title: report.title || '',
+        attendees: report.attendees || [],
+        meetingDate: report.meetingDate || '',
+        recorder: report.recorder || '',
+        fileName: report.fileName || '',
+      });
+      return report.id;
+    },
+    onMutate: async (report) => {
+      await queryClient.cancelQueries({ queryKey: ['meeting_reports'] });
+      queryClient.setQueriesData<MeetingReport[]>(
+        { queryKey: ['meeting_reports'] },
+        (old) => old?.map(r => r.id === report.id ? { ...r, status: 'transcribing' as const, statusMessage: '음성 인식을 다시 시작합니다...' } : r),
+      );
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['meeting_reports'] });
+    },
+  });
+}
+
+/**
  * 회의 녹음 리포트 삭제 (Firestore + Storage)
  */
 export function useDeleteMeetingReport() {

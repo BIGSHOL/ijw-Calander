@@ -16,7 +16,7 @@ import {
 import { db } from '../../firebaseConfig';
 import { setDoc, doc, onSnapshot, getDoc } from 'firebase/firestore';
 import { listenerRegistry } from '../../utils/firebaseCleanup';
-import { RotateCcw, Save, Shield, Layout, ChevronDown, ChevronRight, Check, X } from 'lucide-react';
+import { RotateCcw, Save, Shield, Layout, ChevronDown, ChevronRight, Check, X, Mic, Calculator } from 'lucide-react';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useQueryClient } from '@tanstack/react-query';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
@@ -198,6 +198,21 @@ const PERMISSION_GROUPS: { id: string; label: string; icon: string; categories: 
           { id: 'reports.create' as PermissionId, label: '생성' },
         ]
       },
+      {
+        id: 'student_consultations', label: '학생 상담', icon: '💬',
+        permissions: [
+          { id: 'student_consultations.view' as PermissionId, label: '조회' },
+          { id: 'student_consultations.create' as PermissionId, label: '생성' },
+          { id: 'student_consultations.edit' as PermissionId, label: '수정' },
+        ]
+      },
+      {
+        id: 'recording', label: '상담녹음분석', icon: '🎙️',
+        permissions: [
+          { id: 'recording.edit' as PermissionId, label: '수정' },
+          { id: 'recording.delete' as PermissionId, label: '삭제' },
+        ]
+      },
     ]
   },
   {
@@ -255,6 +270,22 @@ const PERMISSION_GROUPS: { id: string; label: string; icon: string; categories: 
           { id: 'analytics.export' as PermissionId, label: '내보내기' },
         ]
       },
+      {
+        id: 'staff_mgmt', label: '직원 관리', icon: '👔',
+        permissions: [
+          { id: 'staff.view' as PermissionId, label: '조회' },
+          { id: 'staff.edit' as PermissionId, label: '수정' },
+          { id: 'staff.delete' as PermissionId, label: '삭제' },
+        ]
+      },
+      {
+        id: 'meeting', label: '회의록', icon: '📝',
+        permissions: [
+          { id: 'meeting.view' as PermissionId, label: '조회' },
+          { id: 'meeting.edit' as PermissionId, label: '수정' },
+          { id: 'meeting.delete' as PermissionId, label: '삭제' },
+        ]
+      },
     ]
   },
   {
@@ -305,6 +336,13 @@ const PERMISSION_GROUPS: { id: string; label: string; icon: string; categories: 
           { id: 'shuttle.edit' as PermissionId, label: '수정' },
         ]
       },
+      {
+        id: 'timetable_distribution', label: '시간표 배포', icon: '📤',
+        permissions: [
+          { id: 'timetable_distribution.view' as PermissionId, label: '조회' },
+          { id: 'timetable_distribution.edit' as PermissionId, label: '수정' },
+        ]
+      },
     ]
   },
   {
@@ -339,13 +377,6 @@ const PERMISSION_GROUPS: { id: string; label: string; icon: string; categories: 
           { id: 'settings.holidays' as PermissionId, label: '공휴일' },
           { id: 'settings.role_permissions' as PermissionId, label: '역할권한' },
           { id: 'settings.manage_categories' as PermissionId, label: '카테고리' },
-        ]
-      },
-      {
-        id: 'recording', label: '상담녹음분석', icon: '🎙️',
-        permissions: [
-          { id: 'recording.edit' as PermissionId, label: '수정' },
-          { id: 'recording.delete' as PermissionId, label: '삭제' },
         ]
       },
       {
@@ -691,6 +722,12 @@ const RoleManagementPage: React.FC<RoleManagementPageProps> = ({
                                 )}
                                 <span className="text-sm">{category.icon}</span>
                                 <span className="text-xs font-bold text-gray-700">{category.label}</span>
+                                {(category.id === 'recording' || category.id === 'student_consultations' || category.id === 'meeting') && (
+                                  <Mic size={11} className="text-red-400 flex-shrink-0" />
+                                )}
+                                {(category.id === 'tuition' || category.id === 'textbooks') && (
+                                  <Calculator size={11} className="text-blue-400 flex-shrink-0" />
+                                )}
                                 <span className="text-xxs text-gray-400">({category.permissions.length})</span>
                               </div>
                               {/* 접힌 상태: 역할별 카테고리 요약 */}
