@@ -405,12 +405,12 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                     (() => {
                       const grouped = new Map<string, typeof rooms>();
                       rooms.forEach(r => {
-                        const key = r.building || r.floor || '기타';
+                        const key = r.category || '기타';
                         if (!grouped.has(key)) grouped.set(key, []);
                         grouped.get(key)!.push(r);
                       });
-                      return [...grouped.entries()].map(([building, rms]) => (
-                        <optgroup key={building} label={building}>
+                      return [...grouped.entries()].map(([category, rms]) => (
+                        <optgroup key={category} label={category}>
                           {rms.map(r => (
                             <option key={r.id} value={r.name}>{r.name} ({r.capacity}명)</option>
                           ))}

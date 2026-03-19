@@ -755,7 +755,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                         (() => {
                           const grouped = new Map<string, typeof roomsList>();
                           roomsList.forEach(r => {
-                            const key = r.building || r.floor || '기타';
+                            const key = r.category || '기타';
                             if (!grouped.has(key)) grouped.set(key, []);
                             grouped.get(key)!.push(r);
                           });
@@ -764,8 +764,8 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
                           return (
                             <>
                               {extraOption}
-                              {[...grouped.entries()].map(([building, rms]) => (
-                                <optgroup key={building} label={building}>
+                              {[...grouped.entries()].map(([category, rms]) => (
+                                <optgroup key={category} label={category}>
                                   {rms.map(r => (
                                     <option key={r.id} value={r.name}>{r.name} ({r.capacity}명)</option>
                                   ))}
