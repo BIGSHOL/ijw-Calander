@@ -500,8 +500,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'homework.view': true, 'homework.create': true, 'homework.edit': true,
     // Exams
     'exams.view': true, 'exams.create': false, 'exams.edit': false,
-    // Textbooks
-    'textbooks.view': true, 'textbooks.create': false, 'textbooks.edit': false, 'textbooks.admin': false,
+    // Textbooks (교재 요청서 작성 가능)
+    'textbooks.view': true, 'textbooks.create': true, 'textbooks.edit': false, 'textbooks.admin': false,
     // Contracts
     'contracts.view': false, 'contracts.create': false, 'contracts.edit': false,
     // Reports
@@ -580,8 +580,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'homework.view': true, 'homework.create': true, 'homework.edit': true,
     // Exams
     'exams.view': true, 'exams.create': false, 'exams.edit': false,
-    // Textbooks
-    'textbooks.view': true, 'textbooks.create': false, 'textbooks.edit': false, 'textbooks.admin': false,
+    // Textbooks (교재 요청서 작성 가능)
+    'textbooks.view': true, 'textbooks.create': true, 'textbooks.edit': false, 'textbooks.admin': false,
     // Contracts
     'contracts.view': false, 'contracts.create': false, 'contracts.edit': false,
     // Reports

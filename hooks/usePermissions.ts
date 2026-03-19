@@ -30,6 +30,9 @@ interface UsePermissionsReturn {
 /**
  * Fetch role permissions from Firestore
  * Uses getDoc instead of onSnapshot for cost optimization
+ *
+ * 새 권한 키가 코드에 추가되면 DB에 자동 동기화하여
+ * Firestore 규칙(hasPermission)에서도 올바르게 읽을 수 있도록 함
  */
 async function fetchRolePermissions(): Promise<RolePermissions> {
     const snapshot = await getDoc(doc(db, 'settings', 'rolePermissions'));
@@ -38,14 +41,36 @@ async function fetchRolePermissions(): Promise<RolePermissions> {
         const data = snapshot.data() as RolePermissions;
         // Merge with defaults to ensure all permissions exist
         const merged: RolePermissions = {};
+        let hasMissingKeys = false;
+
         for (const role of Object.keys(DEFAULT_ROLE_PERMISSIONS) as (keyof RolePermissions)[]) {
-            merged[role] = {
-                ...DEFAULT_ROLE_PERMISSIONS[role],
-                ...(data[role] || {})
-            };
+            const defaults = DEFAULT_ROLE_PERMISSIONS[role];
+            const saved = data[role] || {};
+            merged[role] = { ...defaults, ...saved };
+
+            // DB에 누락된 권한 키가 있는지 확인
+            if (!hasMissingKeys) {
+                for (const key of Object.keys(defaults)) {
+                    if (!(key in saved)) {
+                        hasMissingKeys = true;
+                        break;
+                    }
+                }
+            }
         }
+
+        // 누락된 키가 있으면 DB 자동 동기화 (Firestore 규칙 호환)
+        if (hasMissingKeys) {
+            setDoc(doc(db, 'settings', 'rolePermissions'), merged)
+                .catch(() => {}); // fire-and-forget
+        }
+
         return merged;
     }
+
+    // DB에 아예 없으면 기본값 저장
+    setDoc(doc(db, 'settings', 'rolePermissions'), DEFAULT_ROLE_PERMISSIONS)
+        .catch(() => {});
 
     return DEFAULT_ROLE_PERMISSIONS;
 }

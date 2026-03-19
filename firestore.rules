@@ -436,6 +436,24 @@ service cloud.firestore {
     // === Textbook Requests (교재 신청) ===
     match /textbook_requests/{docId} {
       allow read: if isAuthenticated();
+      allow create: if hasRole(['master', 'admin']) ||
+                       hasPermission('textbooks.create') ||
+                       hasPermission('textbooks.edit');
+      allow update, delete: if hasRole(['master', 'admin']) || hasPermission('textbooks.edit');
+    }
+
+    // === Textbooks (교재 목록) ===
+    match /textbooks/{docId} {
+      allow read: if isAuthenticated();
+      allow create: if hasRole(['master', 'admin']) ||
+                       hasPermission('textbooks.create') ||
+                       hasPermission('textbooks.edit');
+      allow update, delete: if hasRole(['master', 'admin']) || hasPermission('textbooks.edit');
+    }
+
+    // === Textbook Distributions (교재 배포) ===
+    match /textbook_distributions/{docId} {
+      allow read: if isAuthenticated();
       allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('textbooks.edit');
     }
 
@@ -443,6 +461,139 @@ service cloud.firestore {
     match /textbook_billings/{docId} {
       allow read: if hasRole(['master', 'admin']) || hasPermission('billing.view');
       allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('billing.edit');
+    }
+
+    // === Homework (숙제 관리) ===
+    match /homework/{docId} {
+      allow read: if isAuthenticated();
+      allow create: if hasRole(['master', 'admin']) ||
+                       hasPermission('homework.create') ||
+                       hasPermission('homework.edit');
+      allow update, delete: if hasRole(['master', 'admin']) || hasPermission('homework.edit');
+    }
+
+    // === Timetable Logs (시간표 변경 이력) ===
+    match /timetable_logs/{docId} {
+      allow read: if isAuthenticated();
+      // 시간표 편집 권한이 있으면 로그 기록 가능
+      allow create: if isAuthenticated() && (
+        hasRole(['master', 'admin']) ||
+        hasPermission('timetable.math.edit') ||
+        hasPermission('timetable.english.edit') ||
+        hasPermission('classes.edit')
+      );
+      allow update, delete: if false; // 로그는 수정/삭제 불가
+    }
+
+    // === Notices (공지사항) ===
+    match /notices/{docId} {
+      allow read: if isAuthenticated();
+      allow create: if hasRole(['master', 'admin']) ||
+                       hasPermission('notices.create') ||
+                       hasPermission('notices.edit');
+      allow update, delete: if hasRole(['master', 'admin']) || hasPermission('notices.edit');
+    }
+
+    // === Contracts (계약 관리) ===
+    match /contracts/{docId} {
+      allow read: if isAuthenticated();
+      allow create: if hasRole(['master', 'admin']) ||
+                       hasPermission('contracts.create') ||
+                       hasPermission('contracts.edit');
+      allow update, delete: if hasRole(['master', 'admin']) || hasPermission('contracts.edit');
+    }
+
+    // === Parent Portal (학부모 포털) ===
+    match /parent_messages/{docId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('parent_portal.manage');
+    }
+
+    match /parent_links/{docId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('parent_portal.manage');
+    }
+
+    // === Notifications (알림) ===
+    match /notification_templates/{docId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('notifications.send');
+    }
+
+    match /notification_logs/{docId} {
+      allow read: if isAuthenticated();
+      allow create: if hasRole(['master', 'admin']) || hasPermission('notifications.send');
+      allow update, delete: if false; // 발송 로그는 수정/삭제 불가
+    }
+
+    // === Payroll (급여 관리) ===
+    match /payroll/{docId} {
+      allow read: if hasRole(['master', 'admin']) || hasPermission('payroll.view');
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('payroll.edit');
+    }
+
+    // === Shuttle (셔틀 관리) ===
+    match /shuttle_routes/{docId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('shuttle.edit');
+    }
+
+    match /shuttle_assignments/{docId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('shuttle.edit');
+    }
+
+    match /shuttle_students/{docId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('shuttle.edit');
+    }
+
+    // === Marketing (마케팅) ===
+    match /marketing_leads/{docId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('marketing.edit');
+    }
+
+    match /promotions/{docId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('marketing.edit');
+    }
+
+    match /trial_classes/{docId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('marketing.edit');
+    }
+
+    // === Holidays (공휴일 - settings/holidays와 별개 컬렉션) ===
+    match /holidays/{docId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('settings.holidays');
+    }
+
+    // === Student Scores (학생 점수) ===
+    match /student_scores/{docId} {
+      allow read: if hasRole(['master', 'admin']) || hasPermission('grades.view');
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('grades.edit');
+    }
+
+    // === Gantt Categories & Departments ===
+    match /gantt_categories/{docId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if hasRole(['master', 'admin']);
+    }
+
+    match /gantt_departments/{docId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if hasRole(['master', 'admin']);
+    }
+
+    // === Registration Recording Reports (등록상담 녹음) ===
+    match /registration_recording_reports/{docId} {
+      allow read: if isAuthenticated();
+      allow create, update: if hasRole(['master', 'admin']) ||
+                               hasPermission('recording.edit') ||
+                               hasPermission('consultation.create');
+      allow delete: if hasRole(['master', 'admin']) || hasPermission('recording.delete');
     }
 
     // === Enrollment Terms (등록차수 관리) ===
