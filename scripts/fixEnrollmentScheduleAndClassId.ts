@@ -84,19 +84,20 @@ async function fix() {
       const issues: string[] = [];
 
       // === 스케줄 불일치 수정 ===
+      // attendanceDays 유무와 관계없이 schedule은 항상 class schedule과 일치해야 함
+      // (attendanceDays는 "이 학생이 출석하는 요일"이고, schedule은 "수업 전체 시간표")
       if (data.schedule && data.schedule.length > 0) {
-        if (!data.attendanceDays || data.attendanceDays.length === 0) {
-          const enrollSchedule = normalizeSchedule(data.schedule);
-          const classSchedule = normalizeSchedule(cls.schedule);
+        const enrollSchedule = normalizeSchedule(data.schedule);
+        const classSchedule = normalizeSchedule(cls.schedule);
 
-          if (JSON.stringify(enrollSchedule) !== JSON.stringify(classSchedule)) {
-            const classScheduleStrings = cls.schedule.map((s: any) => {
-              if (typeof s === 'string') return s;
-              return `${s.day} ${s.periodId}`;
-            });
-            updates.schedule = classScheduleStrings;
-            issues.push(`스케줄: [${enrollSchedule.join(',')}] → [${classScheduleStrings.join(',')}]`);
-          }
+        if (JSON.stringify(enrollSchedule) !== JSON.stringify(classSchedule)) {
+          const classScheduleStrings = cls.schedule.map((s: any) => {
+            if (typeof s === 'string') return s;
+            return `${s.day} ${s.periodId}`;
+          });
+          updates.schedule = classScheduleStrings;
+          const hasAttDays = data.attendanceDays && data.attendanceDays.length > 0;
+          issues.push(`스케줄: [${enrollSchedule.join(',')}] → [${classScheduleStrings.join(',')}]${hasAttDays ? ` (attendanceDays: ${JSON.stringify(data.attendanceDays)})` : ''}`);
         }
       }
 

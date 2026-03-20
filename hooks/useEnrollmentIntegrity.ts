@@ -112,9 +112,8 @@ async function runIntegrityCheck() {
       updates.staffId = cls.teacher;
     }
 
-    // 검사 3: schedule 불일치 (attendanceDays가 없는 경우만)
-    if (data.schedule && data.schedule.length > 0 &&
-        (!data.attendanceDays || data.attendanceDays.length === 0)) {
+    // 검사 3: schedule 불일치 (attendanceDays 유무 관계없이 항상 class schedule과 일치)
+    if (data.schedule && data.schedule.length > 0) {
       const enrollSchedule = normalizeSchedule(data.schedule);
       const classSchedule = normalizeSchedule(cls.schedule);
 
