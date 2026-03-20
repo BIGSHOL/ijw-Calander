@@ -79,8 +79,6 @@ const App: React.FC = () => {
   const gradesFilterState = useGradesFilterState();
   const darkModeState = useDarkMode();
 
-  // enrollment ↔ class 데이터 무결성 자동 검증 (하루 1회, master/admin만)
-  useEnrollmentIntegrity();
   const pendingMovesState = usePendingEventMoves();
 
   // Destructure states
@@ -149,6 +147,9 @@ const App: React.FC = () => {
   const { userProfile, setUserProfile, authLoading, handleLogout } = useAuth({
     setCurrentUser, systemConfig, onShowLogin: () => setIsLoginModalOpen(true),
   });
+
+  // enrollment ↔ class 데이터 무결성 자동 검증 (하루 1회, master/admin만)
+  useEnrollmentIntegrity(userProfile);
 
   // Simulation state
   const [simulationState, setSimulationState] = useState<SimulationState>({

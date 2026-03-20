@@ -13,7 +13,7 @@
 import { useEffect, useRef } from 'react';
 import { collection, collectionGroup, getDocs, updateDoc, query, where, doc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
-import { useAuth } from './useAuth';
+import { UserProfile } from '../types';
 
 // schedule 비교용 정규화
 function normalizeSchedule(schedule: any[]): string {
@@ -39,22 +39,22 @@ function shouldRunToday(): boolean {
  * 앱 로드 시 하루 1회 enrollment 무결성 검증 및 자동 수정
  * master/admin 역할만 실행 (쓰기 권한 필요)
  */
-export function useEnrollmentIntegrity() {
-  const { user, userRole } = useAuth();
+export function useEnrollmentIntegrity(userProfile: UserProfile | null) {
   const hasRun = useRef(false);
 
   useEffect(() => {
     if (hasRun.current) return;
-    if (!user || !userRole) return;
+    if (!userProfile) return;
     // master/admin만 실행 (Firestore 쓰기 권한)
-    if (userRole !== 'master' && userRole !== 'admin') return;
+    const role = userProfile.role;
+    if (role !== 'master' && role !== 'admin') return;
     if (!shouldRunToday()) return;
 
     hasRun.current = true;
     runIntegrityCheck().catch(() => {
       // 실패해도 앱 동작에 영향 없음
     });
-  }, [user, userRole]);
+  }, [userProfile]);
 }
 
 async function runIntegrityCheck() {
