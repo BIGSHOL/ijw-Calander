@@ -1463,11 +1463,27 @@ const TimetableManager = ({
 
     const handleWithdrawalConfirm = useCallback(async (scheduledDate?: string) => {
         if (!withdrawalModalInfo) return;
-        const { studentId, className } = withdrawalModalInfo;
+        const { studentId, classId, className } = withdrawalModalInfo;
         try {
-            const enrollmentRef = doc(db, 'students', studentId, 'enrollments', `math_${className}`);
             const effectiveDate = scheduledDate || getTodayKST();
-            await updateDoc(enrollmentRef, { withdrawalDate: effectiveDate });
+            // classId로 enrollment 찾기, 없으면 className으로 쿼리
+            const enrollmentsRef = collection(db, 'students', studentId, 'enrollments');
+            const enrollmentDoc = doc(enrollmentsRef, classId);
+            const { getDoc } = await import('firebase/firestore');
+            const snap = await getDoc(enrollmentDoc);
+            if (snap.exists()) {
+                await updateDoc(enrollmentDoc, { withdrawalDate: effectiveDate, endDate: effectiveDate });
+            } else {
+                // classId로 못 찾으면 className + subject로 쿼리
+                const q = query(enrollmentsRef, where('className', '==', className));
+                const qSnap = await getDocs(q);
+                const activeDoc = qSnap.docs.find(d => !d.data().endDate && !d.data().withdrawalDate);
+                if (activeDoc) {
+                    await updateDoc(activeDoc.ref, { withdrawalDate: effectiveDate, endDate: effectiveDate });
+                } else {
+                    throw new Error('enrollment 문서를 찾을 수 없습니다.');
+                }
+            }
             queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
             queryClient.invalidateQueries({ queryKey: ['students'] });
             queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });

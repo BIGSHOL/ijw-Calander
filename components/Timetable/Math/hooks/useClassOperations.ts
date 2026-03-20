@@ -407,11 +407,14 @@ export const useClassOperations = () => {
         if (classSnapshot.empty) {
             classSnapshot = await getDocs(query(classesRef, where('className', '==', className), where('subject', '==', 'highmath')));
         }
-        const classId = classSnapshot.empty ? `math_${className}` : classSnapshot.docs[0].id;
-        const classSubject = classSnapshot.empty ? 'math' : (classSnapshot.docs[0].data().subject || 'math');
+        if (classSnapshot.empty) {
+            throw new Error(`수업 "${className}"을(를) 찾을 수 없습니다. 수업을 먼저 생성해주세요.`);
+        }
+        const classId = classSnapshot.docs[0].id;
+        const classSubject = classSnapshot.docs[0].data().subject || 'math';
 
         // class 정보에서 teacher/schedule 가져오기
-        const classDocData = classSnapshot.empty ? null : classSnapshot.docs[0].data();
+        const classDocData = classSnapshot.docs[0].data();
         const classTeacher = classDocData?.teacher || '';
         const classSchedule = classDocData?.schedule?.map((s: any) =>
             typeof s === 'string' ? s : `${s.day} ${s.periodId}`

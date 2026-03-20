@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { doc, getDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, getDocs, query, where, collection, writeBatch } from 'firebase/firestore';
 import { useQueryClient } from '@tanstack/react-query';
 import { db } from '../../../../firebaseConfig';
 import { TimetableClass, TimetableStudent } from '../../../../types';
@@ -282,9 +282,20 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                 });
             });
 
-            // 실제 enrollment 문서 ID 조회 헬퍼
-            const getEnrollmentDocId = (studentId: string, classId: string, className: string) => {
-                return enrollmentDocIdMap.get(`${studentId}_${classId}`) || `math_${className}`;
+            // 실제 enrollment 문서 ID 조회 헬퍼 (비동기: 맵에 없으면 className으로 쿼리)
+            const getEnrollmentDocId = async (studentId: string, classId: string, className: string): Promise<string> => {
+                const cached = enrollmentDocIdMap.get(`${studentId}_${classId}`);
+                if (cached) return cached;
+                // classId로 직접 조회
+                const directRef = doc(db, 'students', studentId, 'enrollments', classId);
+                const directSnap = await getDoc(directRef);
+                if (directSnap.exists()) return classId;
+                // className으로 쿼리 fallback
+                const q = query(collection(db, 'students', studentId, 'enrollments'), where('className', '==', className));
+                const qSnap = await getDocs(q);
+                const activeDoc = qSnap.docs.find(d => !d.data().endDate && !d.data().withdrawalDate);
+                if (activeDoc) return activeDoc.id;
+                return classId; // 최종 fallback: classId 사용
             };
 
             // 기존 enrollment 데이터 읽기 (실제 문서 ID 사용)
@@ -294,7 +305,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                     const fromClass = localClasses.find(c => c.id === move.fromClassId);
                     if (!fromClass) return;
 
-                    const docId = getEnrollmentDocId(studentId, move.fromClassId, fromClass.className);
+                    const docId = await getEnrollmentDocId(studentId, move.fromClassId, fromClass.className);
                     const oldEnrollmentRef = doc(db, 'students', studentId, 'enrollments', docId);
                     const oldDoc = await getDoc(oldEnrollmentRef);
                     if (oldDoc.exists()) {
@@ -315,7 +326,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                     const cls = localClasses.find(c => c.id === move.fromClassId);
                     if (!cls) continue;
 
-                    const docId = getEnrollmentDocId(studentId, move.fromClassId, cls.className);
+                    const docId = await getEnrollmentDocId(studentId, move.fromClassId, cls.className);
                     const enrollmentRef = doc(db, 'students', studentId, 'enrollments', docId);
                     batch.set(enrollmentRef, {
                         attendanceDays: newAttendanceDays,
@@ -327,7 +338,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                     const toClass = localClasses.find(c => c.id === move.toClassId);
 
                     if (fromClass && toClass) {
-                        const oldDocId = getEnrollmentDocId(studentId, move.fromClassId, fromClass.className);
+                        const oldDocId = await getEnrollmentDocId(studentId, move.fromClassId, fromClass.className);
                         const oldEnrollmentRef = doc(db, 'students', studentId, 'enrollments', oldDocId);
                         const newEnrollmentRef = doc(db, 'students', studentId, 'enrollments', move.toClassId);
 
