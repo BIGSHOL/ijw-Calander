@@ -1,8 +1,8 @@
 [
   {
-    "origin": ["*"],
-    "method": ["GET", "POST", "PUT", "DELETE", "HEAD"],
+    "origin": ["https://ijw-calander.web.app", "https://ijw-calander.firebaseapp.com", "https://ijw-calander-dev.web.app"],
+    "method": ["GET"],
     "maxAgeSeconds": 3600,
-    "responseHeader": ["Content-Type", "Authorization", "Content-Length", "User-Agent", "x-goog-resumable"]
+    "responseHeader": ["Content-Type", "Content-Length"]
   }
 ]

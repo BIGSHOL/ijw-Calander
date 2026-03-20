@@ -58,7 +58,7 @@ export const useAuth = ({ setCurrentUser, systemConfig, onShowLogin }: UseAuthPa
           profileUnsubscribe = onSnapshot(staffQuery, async (snapshot) => {
             if (isCancelled) return;
             try {
-              const masterEmails = systemConfigRef.current?.masterEmails || ['st2000423@gmail.com'];
+              const masterEmails = systemConfigRef.current?.masterEmails || [];
               const isMasterEmail = user.email && masterEmails.includes(user.email);
 
               if (!snapshot.empty) {

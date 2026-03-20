@@ -3,7 +3,7 @@
     "rules": "storage.rules"
   },
   "firestore": {
-    "database": "restore260202",
+    "database": "restore20260319",
     "rules": "firestore.rules"
   },
   "hosting": [

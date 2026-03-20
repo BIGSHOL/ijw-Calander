@@ -79,9 +79,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
 
                 // Determine Role and Status
                 // Master 이메일은 환경변수에서 관리 (콤마로 구분된 복수 이메일 지원)
-                const masterEmails = (import.meta.env.VITE_MASTER_EMAILS || 'st2000423@gmail.com')
+                const masterEmails = (import.meta.env.VITE_MASTER_EMAILS || '')
                     .split(',')
-                    .map((e: string) => e.trim().toLowerCase());
+                    .map((e: string) => e.trim().toLowerCase())
+                    .filter(Boolean);
                 const isMaster = masterEmails.includes(email.toLowerCase());
 
                 // 이메일로 기존 staff 검색 (기존 직원이 계정 연동하는 경우)
