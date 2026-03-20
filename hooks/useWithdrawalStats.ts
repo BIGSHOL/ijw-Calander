@@ -399,8 +399,11 @@ export function useWithdrawalStats(
 
         // staffMap에 집계 (같은 강사+학생+과목 = 1번만)
         bySubjectClass.forEach(enrollment => {
-          // staffId가 없으면 teacher(이름)로 역매핑
-          const resolvedStaffId = enrollment.staffId || (enrollment.teacher ? nameToStaffId.get(enrollment.teacher) : undefined);
+          // staffId 해석: staffId가 실제 doc ID인지 이름인지 모르므로 양쪽 모두 시도
+          const classTeacher = enrollment.classId ? classMap.get(enrollment.classId) : null;
+          const rawId = enrollment.staffId || enrollment.teacher || classTeacher?.teacher || '';
+          // doc ID로 직접 찾거나, 이름으로 역매핑
+          const resolvedStaffId = staffMap.has(rawId) ? rawId : nameToStaffId.get(rawId);
           if (!resolvedStaffId) return;
           const existing = staffMap.get(resolvedStaffId);
           if (!existing) return;
@@ -421,10 +424,9 @@ export function useWithdrawalStats(
             existing.english++;
           }
           // 담임/부담임 판별: 수업의 teacher가 이 강사인지 확인
-          const classInfo = enrollment.classId ? classMap.get(enrollment.classId) : null;
-          const teacherName = staffNameMap.get(resolvedStaffId) || enrollment.teacher || '';
-          const isMainTeacher = classInfo
-            ? (classInfo.teacher === teacherName || classInfo.staffId === resolvedStaffId)
+          const staffName = staffNameMap.get(resolvedStaffId) || rawId;
+          const isMainTeacher = classTeacher
+            ? (classTeacher.teacher === staffName || classTeacher.teacher === rawId || classTeacher.staffId === resolvedStaffId)
             : true; // 수업 정보 없으면 기본 담임
 
           existing.students.push({
