@@ -209,34 +209,85 @@ export const useUpdateClass = () => {
         // classes 컬렉션 업데이트 실패 시 무시
       }
 
-      // 2. enrollments도 업데이트 (레거시 호환 - 인덱스 없으면 스킵)
+      // 2. enrollments도 업데이트
+      // className 기반 + classId 기반 이중 조회로 누락 방지
       // pendingSchedule이 있으면 enrollment schedule은 아직 업데이트하지 않음
       try {
+        // classId 조회 (classes에서 찾은 문서 ID)
+        const classDocIds = new Set<string>();
+        try {
+          const classesQuery2 = query(
+            collection(db, COL_CLASSES),
+            where('subject', '==', originalSubject),
+            where('className', '==', newClassName)
+          );
+          const classSnap2 = await getDocs(classesQuery2);
+          classSnap2.docs.forEach(d => classDocIds.add(d.id));
+        } catch { /* ignore */ }
+
+        // 2-1. className 기반 조회 (기존)
         const enrollmentsQuery = query(
           collectionGroup(db, 'enrollments'),
           where('subject', '==', originalSubject),
           where('className', '==', originalClassName)
         );
-
         const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
 
+        // 2-2. classId 기반 조회 (className이 이미 변경된 enrollment 포착)
+        const enrollmentDocPaths = new Set(enrollmentsSnapshot.docs.map(d => d.ref.path));
+        const additionalDocs: typeof enrollmentsSnapshot.docs = [];
+
+        for (const classDocId of classDocIds) {
+          try {
+            const classIdQuery = query(
+              collectionGroup(db, 'enrollments'),
+              where('classId', '==', classDocId)
+            );
+            const classIdSnap = await getDocs(classIdQuery);
+            classIdSnap.docs.forEach(d => {
+              if (!enrollmentDocPaths.has(d.ref.path)) {
+                // 활성 enrollment만 (종료된 것은 건너뛰기)
+                const data = d.data();
+                if (!data.endDate && !data.withdrawalDate) {
+                  additionalDocs.push(d);
+                  enrollmentDocPaths.add(d.ref.path);
+                }
+              }
+            });
+          } catch { /* ignore */ }
+        }
+
+        const allEnrollmentDocs = [...enrollmentsSnapshot.docs, ...additionalDocs];
+
         // 각 enrollment 업데이트
-        const enrollmentPromises = enrollmentsSnapshot.docs.map(async (docSnap) => {
+        const enrollmentPromises = allEnrollmentDocs.map(async (docSnap) => {
+          const data = docSnap.data();
+          // 종료된 enrollment은 건너뛰기
+          if (data.endDate || data.withdrawalDate) return;
+
           const enrollUpdate: Record<string, any> = {
             className: newClassName,
             staffId: newTeacher,
             teacher: newTeacher,
             updatedAt: new Date().toISOString(),
           };
+          // classId 보정
+          if (classDocIds.size > 0) {
+            const correctClassId = [...classDocIds][0];
+            if (data.classId !== correctClassId) {
+              enrollUpdate.classId = correctClassId;
+            }
+          }
           // pendingSchedule이 없으면 (즉시 적용) enrollment schedule도 업데이트
           if (!hasPendingSchedule) {
+            // attendanceDays가 있는 개별 스케줄 학생도 class schedule로 동기화
             enrollUpdate.schedule = newSchedule;
           }
           await updateDoc(docSnap.ref, enrollUpdate);
         });
 
         await Promise.all(enrollmentPromises);
-        enrollmentsUpdated = enrollmentsSnapshot.docs.length;
+        enrollmentsUpdated = allEnrollmentDocs.length;
       } catch {
         // enrollments 업데이트 실패 시 무시 (classes가 업데이트되면 괜찮음)
       }
@@ -311,7 +362,9 @@ export const useDeleteClass = () => {
         // classes 컬렉션 삭제 실패 시 무시
       }
 
-      // 2. 해당 className + subject와 일치하는 모든 enrollments 조회 및 삭제
+      // 2. 해당 className + subject와 일치하는 모든 enrollments에 endDate 설정
+      // 하드 삭제 대신 endDate 설정으로 이력 보존
+      const today = new Date().toISOString().split('T')[0];
       try {
         const enrollmentsQuery = query(
           collectionGroup(db, 'enrollments'),
@@ -322,12 +375,19 @@ export const useDeleteClass = () => {
         const snapshot = await getDocs(enrollmentsQuery);
 
         const promises = snapshot.docs.map(async (docSnap) => {
-          await deleteDoc(docSnap.ref);
+          const data = docSnap.data();
+          // 이미 종료된 enrollment은 건너뛰기
+          if (data.endDate || data.withdrawalDate) return;
+          await updateDoc(docSnap.ref, {
+            endDate: today,
+            withdrawalDate: today,
+            updatedAt: new Date().toISOString(),
+          });
         });
 
         await Promise.all(promises);
       } catch {
-        // enrollments 삭제 실패 시 무시
+        // enrollments 업데이트 실패 시 무시
       }
 
       logTimetableChange({

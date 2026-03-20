@@ -19,6 +19,7 @@ import { storage, STORAGE_KEYS } from './utils/localStorage';
 import { useStudents } from './hooks/useStudents';
 import { useClasses } from './hooks/useClasses';
 import { useGradePromotion } from './hooks/useGradePromotion';
+import { useEnrollmentIntegrity } from './hooks/useEnrollmentIntegrity';
 
 // State management hooks
 import {
@@ -77,6 +78,9 @@ const App: React.FC = () => {
   const { promoteGrades, isPromoting } = useGradePromotion();
   const gradesFilterState = useGradesFilterState();
   const darkModeState = useDarkMode();
+
+  // enrollment ↔ class 데이터 무결성 자동 검증 (하루 1회, master/admin만)
+  useEnrollmentIntegrity();
   const pendingMovesState = usePendingEventMoves();
 
   // Destructure states
