@@ -23,8 +23,8 @@ export const isMathTeacher = (member: StaffMember): boolean => {
     return true;
   }
 
-  // 또는 role='teacher'이고 subjects에 'math' 포함
-  if (member.role === 'teacher' && member.subjects?.includes('math')) {
+  // 또는 subjects에 'math' 포함 (직책 무관)
+  if (member.subjects?.includes('math')) {
     return true;
   }
 
@@ -40,8 +40,8 @@ export const isEnglishTeacher = (member: StaffMember): boolean => {
     return true;
   }
 
-  // 또는 role='teacher'이고 subjects에 'english' 포함
-  if (member.role === 'teacher' && member.subjects?.includes('english')) {
+  // 또는 subjects에 'english' 포함 (직책 무관)
+  if (member.subjects?.includes('english')) {
     return true;
   }
 
@@ -70,6 +70,11 @@ export const isAnyTeacher = (member: StaffMember): boolean => {
 
   // 또는 role='teacher'
   if (member.role === 'teacher') {
+    return true;
+  }
+
+  // 또는 subjects가 있으면 강사로 간주
+  if (member.subjects && member.subjects.length > 0) {
     return true;
   }
 

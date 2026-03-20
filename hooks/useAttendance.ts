@@ -113,10 +113,14 @@ export const useAttendanceStudents = (options?: {
             // OPTIMIZATION (async-parallel): staff + classes 병렬 조회로 로딩 시간 300-500ms 단축
 
             // Step 1 & 2: Staff + Classes 데이터 병렬 로드
-            const classesQuery = options?.subject
+            // math 선택 시 highmath도 함께 조회 (고등수학관 포함)
+            const subjectFilter = options?.subject === 'math'
+                ? ['math', 'highmath']
+                : options?.subject ? [options.subject] : null;
+            const classesQuery = subjectFilter
                 ? query(
                     collection(db, CLASSES_COLLECTION),
-                    where('subject', '==', options.subject),
+                    where('subject', 'in', subjectFilter),
                     where('isActive', '==', true)
                 )
                 : query(
@@ -173,8 +177,9 @@ export const useAttendanceStudents = (options?: {
 
             // Step 5: 해당 과목의 모든 enrollments 조회 (subject 기반 - useClasses와 동일한 방식)
             // className 필터 대신 subject 필터 사용 (Firestore 복합 인덱스 호환)
-            const enrollmentsQuery = options?.subject
-                ? query(collectionGroup(db, 'enrollments'), where('subject', '==', options.subject))
+            // math 선택 시 highmath도 함께 조회 (고등수학관 포함)
+            const enrollmentsQuery = subjectFilter
+                ? query(collectionGroup(db, 'enrollments'), where('subject', 'in', subjectFilter))
                 : collectionGroup(db, 'enrollments');
             const enrollmentsSnapshot = await getDocs(enrollmentsQuery);
 

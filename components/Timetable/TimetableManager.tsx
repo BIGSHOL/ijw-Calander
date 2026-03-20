@@ -30,7 +30,7 @@ import { ALL_WEEKDAYS, MATH_PERIODS, ENGLISH_PERIODS } from './constants';
 import { MathSimulationProvider, useMathSimulation } from './Math/context/SimulationContext';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import EmbedTokenManager from '../Embed/EmbedTokenManager';
-import { useMathSettings } from './Math/hooks/useMathSettings';
+import { useMathSettings, type MathIntegrationSettings } from './Math/hooks/useMathSettings';
 import ExportImageModal, { ExportGroup } from '../Common/ExportImageModal';
 import type { ExportGroupInfo } from './Math/MathClassTab';
 import WithdrawalStudentDetail from '../WithdrawalManagement/WithdrawalStudentDetail';
@@ -145,6 +145,9 @@ interface MathTimetableContentProps {
     // 강의실 필터
     roomFilter?: { main: boolean; barun: boolean; godeung: boolean };
     onRoomFilterChange?: (type: 'main' | 'barun' | 'godeung', value: boolean) => void;
+    // 통합뷰 설정 (외부에서 전달)
+    mathIntegrationSettings: MathIntegrationSettings;
+    updateMathIntegrationSettings: (settings: MathIntegrationSettings) => void;
 }
 
 const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
@@ -239,15 +242,14 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     undoLastMove,
     roomFilter,
     onRoomFilterChange,
+    mathIntegrationSettings,
+    updateMathIntegrationSettings,
 }) => {
     const simulation = useMathSimulation();
     const { isScenarioMode, currentScenarioName, enterScenarioMode, exitScenarioMode, loadFromLive, publishToLive } = simulation;
     const [isScenarioModalOpen, setIsScenarioModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const queryClient = useQueryClient();
-
-    // 통합뷰 전용: 설정 및 이미지 저장 모달
-    const { settings: mathIntegrationSettings, updateSettings: updateMathIntegrationSettings } = useMathSettings();
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const gridRef = React.useRef<HTMLDivElement>(null);
     // 엑셀뷰 토스트 알림 (Ctrl+Z, Del, Ctrl+C 등 피드백)
@@ -1982,6 +1984,8 @@ const TimetableManager = ({
                 undoLastMove={undoLastMove}
                 roomFilter={roomFilter}
                 onRoomFilterChange={handleRoomFilterChange}
+                mathIntegrationSettings={outerMathSettings}
+                updateMathIntegrationSettings={updateOuterMathSettings}
             />
             {/* 드래그 예정일 선택 모달 */}
             {dateModalInfo && (

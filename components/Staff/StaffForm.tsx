@@ -460,50 +460,51 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
             )}
           </div>
 
-          {/* Subjects (only for teachers) */}
+          {/* Subjects (all roles) */}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              담당 과목
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => handleSubjectToggle('math')}
+                className={`flex-1 py-1.5 px-3 rounded-sm border-2 text-sm transition-colors ${
+                  formData.subjects.includes('math')
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                    : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                }`}
+              >
+                수학
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSubjectToggle('highmath')}
+                className={`flex-1 py-1.5 px-3 rounded-sm border-2 text-sm transition-colors ${
+                  formData.subjects.includes('highmath')
+                    ? 'border-purple-500 bg-purple-50 text-purple-700 font-medium'
+                    : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                }`}
+              >
+                고등수학
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSubjectToggle('english')}
+                className={`flex-1 py-1.5 px-3 rounded-sm border-2 text-sm transition-colors ${
+                  formData.subjects.includes('english')
+                    ? 'border-pink-500 bg-pink-50 text-pink-700 font-medium'
+                    : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                }`}
+              >
+                영어
+              </button>
+            </div>
+          </div>
+
+          {/* 시간표 설정 (teacher only) */}
           {formData.role === 'teacher' && (
             <>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  담당 과목
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleSubjectToggle('math')}
-                    className={`flex-1 py-1.5 px-3 rounded-sm border-2 text-sm transition-colors ${
-                      formData.subjects.includes('math')
-                        ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
-                        : 'border-gray-300 text-gray-600 hover:border-gray-400'
-                    }`}
-                  >
-                    수학
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSubjectToggle('highmath')}
-                    className={`flex-1 py-1.5 px-3 rounded-sm border-2 text-sm transition-colors ${
-                      formData.subjects.includes('highmath')
-                        ? 'border-purple-500 bg-purple-50 text-purple-700 font-medium'
-                        : 'border-gray-300 text-gray-600 hover:border-gray-400'
-                    }`}
-                  >
-                    고등수학
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSubjectToggle('english')}
-                    className={`flex-1 py-1.5 px-3 rounded-sm border-2 text-sm transition-colors ${
-                      formData.subjects.includes('english')
-                        ? 'border-pink-500 bg-pink-50 text-pink-700 font-medium'
-                        : 'border-gray-300 text-gray-600 hover:border-gray-400'
-                    }`}
-                  >
-                    영어
-                  </button>
-                </div>
-              </div>
-
               {/* 시간표 설정 섹션 */}
               <div className="border-t border-gray-200 pt-3 mt-3">
                 <h3 className="text-xs font-bold text-gray-700 mb-2">시간표 설정</h3>

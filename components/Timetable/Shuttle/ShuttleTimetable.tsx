@@ -192,28 +192,42 @@ function ShuttleTimetable({
     );
 }
 
-/** 학생이 필터 조건에 맞는지 검사 (OR 조건) */
+/** 학생이 필터 조건에 맞는지 검사
+ * - 타입 필터 (등원/하원/이동) 와 위치 필터 (본원수학/본원영어/바른학습관) 그룹 간 AND
+ * - 같은 그룹 내에서는 OR
+ * - 예: 등원 + 바른학습관 → 등원 학생 중 바른학습관만 표시
+ */
 function matchesFilter(
     student: ShuttleStudentSlot,
     activeFilters: Set<ShuttleFilter>,
 ): boolean {
     if (activeFilters.size === 0) return true;
 
-    // 등원/하원 필터
-    if (activeFilters.has('boarding') && student.type === '등원') return true;
-    if (activeFilters.has('alighting') && student.type === '하원') return true;
+    // 타입 필터 그룹
+    const hasTypeFilter = activeFilters.has('boarding') || activeFilters.has('alighting') || activeFilters.has('transfer');
+    // 위치 필터 그룹
+    const hasLocationFilter = activeFilters.has('bonwon-english') || activeFilters.has('bonwon-math') || activeFilters.has('bareun');
 
-    // 강의실이동 필터: '이동' 타입만 매칭
-    if (activeFilters.has('transfer') && student.type === '이동') return true;
-
-    // 위치/과목 필터 (등원/하원만 대상, 이동은 제외)
-    if (student.type !== '이동') {
-        if (activeFilters.has('bonwon-english') && student.location === '본원' && student.subject === 'english') return true;
-        if (activeFilters.has('bonwon-math') && student.location === '본원' && student.subject !== 'english') return true;
-        if (activeFilters.has('bareun') && student.location === '바른학습관') return true;
+    // 타입 매칭 (OR within group)
+    let typeMatch = true;
+    if (hasTypeFilter) {
+        typeMatch = false;
+        if (activeFilters.has('boarding') && student.type === '등원') typeMatch = true;
+        if (activeFilters.has('alighting') && student.type === '하원') typeMatch = true;
+        if (activeFilters.has('transfer') && student.type === '이동') typeMatch = true;
     }
 
-    return false;
+    // 위치 매칭 (OR within group, 이동 타입은 위치 필터 적용하지 않음)
+    let locationMatch = true;
+    if (hasLocationFilter && student.type !== '이동') {
+        locationMatch = false;
+        if (activeFilters.has('bonwon-english') && student.location === '본원' && student.subject === 'english') locationMatch = true;
+        if (activeFilters.has('bonwon-math') && student.location === '본원' && student.subject !== 'english') locationMatch = true;
+        if (activeFilters.has('bareun') && student.location === '바른학습관') locationMatch = true;
+    }
+
+    // 그룹 간 AND
+    return typeMatch && locationMatch;
 }
 
 /** 시간대별 뷰 */
