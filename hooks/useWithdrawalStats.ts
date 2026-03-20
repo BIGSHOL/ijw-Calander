@@ -186,9 +186,13 @@ export function useWithdrawalStats(
         });
       });
 
-      // staffId → staffName 매핑
+      // staffId → staffName, staffName → staffId 양방향 매핑
       const staffNameMap = new Map<string, string>();
-      (staff || []).forEach(s => { staffNameMap.set(s.id, s.name); });
+      const nameToStaffId = new Map<string, string>();
+      (staff || []).forEach(s => {
+        staffNameMap.set(s.id, s.name);
+        nameToStaffId.set(s.name, s.id);
+      });
 
       // 3. 퇴원/수강종료 항목 추출
       interface WithdrawalEntry {
@@ -381,32 +385,33 @@ export function useWithdrawalStats(
           return endDate >= cutoffStr;
         });
 
-        // 같은 과목+요일 → 마지막 enrollment만 (같은 시간대 반이동 제거)
-        const bySubjectDays = new Map<string, Enrollment>();
+        // 같은 수업(classId) 내 중복 → 마지막 enrollment만 (재등록 등 제거)
+        const bySubjectClass = new Map<string, Enrollment>();
         recentEnrollments.forEach(enrollment => {
-          const daysKey = [...(enrollment.days || [])].sort().join(',');
-          const groupKey = `${enrollment.subject}_${daysKey}`;
-          const existing = bySubjectDays.get(groupKey);
+          const groupKey = `${enrollment.subject}_${enrollment.classId || ''}`;
+          const existing = bySubjectClass.get(groupKey);
           const date = enrollment.withdrawalDate || enrollment.endDate || '';
           const existingDate = existing ? (existing.withdrawalDate || existing.endDate || '') : '';
           if (!existing || date >= existingDate) {
-            bySubjectDays.set(groupKey, enrollment);
+            bySubjectClass.set(groupKey, enrollment);
           }
         });
 
         // staffMap에 집계 (같은 강사+학생+과목 = 1번만)
-        bySubjectDays.forEach(enrollment => {
-          if (!enrollment.staffId) return;
-          const existing = staffMap.get(enrollment.staffId);
+        bySubjectClass.forEach(enrollment => {
+          // staffId가 없으면 teacher(이름)로 역매핑
+          const resolvedStaffId = enrollment.staffId || (enrollment.teacher ? nameToStaffId.get(enrollment.teacher) : undefined);
+          if (!resolvedStaffId) return;
+          const existing = staffMap.get(resolvedStaffId);
           if (!existing) return;
 
           const subj = enrollment.subject as string;
           const dedupKey = `${entry.student.id}_${subj}`;
 
-          if (!staffStudentDedup.has(enrollment.staffId)) {
-            staffStudentDedup.set(enrollment.staffId, new Set());
+          if (!staffStudentDedup.has(resolvedStaffId)) {
+            staffStudentDedup.set(resolvedStaffId, new Set());
           }
-          const seen = staffStudentDedup.get(enrollment.staffId)!;
+          const seen = staffStudentDedup.get(resolvedStaffId)!;
           if (seen.has(dedupKey)) return;
           seen.add(dedupKey);
 
@@ -417,9 +422,9 @@ export function useWithdrawalStats(
           }
           // 담임/부담임 판별: 수업의 teacher가 이 강사인지 확인
           const classInfo = enrollment.classId ? classMap.get(enrollment.classId) : null;
-          const teacherName = staffNameMap.get(enrollment.staffId!) || '';
+          const teacherName = staffNameMap.get(resolvedStaffId) || enrollment.teacher || '';
           const isMainTeacher = classInfo
-            ? (classInfo.teacher === teacherName || classInfo.staffId === enrollment.staffId)
+            ? (classInfo.teacher === teacherName || classInfo.staffId === resolvedStaffId)
             : true; // 수업 정보 없으면 기본 담임
 
           existing.students.push({
