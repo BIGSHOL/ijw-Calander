@@ -364,6 +364,11 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                                 ...preservedData,
                                 classId: move.toClassId,
                                 className: toClass.className,
+                                // 새 반의 담임/부담임/스케줄로 덮어쓰기
+                                teacher: toClass.teacher || '',
+                                staffId: toClass.teacher || '',
+                                schedule: toClass.schedule || [],
+                                isSlotTeacher: false, // 부담임 여부는 새 반에서 재설정 필요
                                 attendanceDays: newAttendanceDays,
                                 // 예정이동: 이동일을 시작일로 설정 → 대기섹션 배치, 이동일 도래 시 초록배경으로 활성화
                                 // 즉시이동: 원래 입학일 보존
