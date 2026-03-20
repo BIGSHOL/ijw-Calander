@@ -21,30 +21,30 @@ cp .env.local.example .env.local
 
 ##### Firebase 설정
 ```env
-VITE_FIREBASE_API_KEY=***REMOVED_API_KEY_2***
+VITE_FIREBASE_API_KEY=your_firebase_api_key_here
 VITE_FIREBASE_AUTH_DOMAIN=ijw-calander.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=ijw-calander
 VITE_FIREBASE_STORAGE_BUCKET=ijw-calander.firebasestorage.app
-VITE_FIREBASE_MESSAGING_SENDER_ID=231563652148
-VITE_FIREBASE_APP_ID=1:231563652148:web:4a217812ef96fa3aae2e61
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id_here
+VITE_FIREBASE_APP_ID=your_app_id_here
 ```
 
 ##### Supabase 설정 (진도 추적 기능에 필수)
 ```env
-VITE_SUPABASE_URL=https://xihggqwpyekbszizxyoh.supabase.co
-VITE_SUPABASE_ANON_KEY=***REMOVED_SUPABASE_KEY***
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
 ```
 
 > ⚠️ **중요**: Supabase 설정이 없으면 수학 시간표의 진도 정보가 표시되지 않습니다!
 
 ##### 암호화 키
 ```env
-VITE_ENCRYPTION_KEY=***REMOVED_ENCRYPTION_KEY***
+VITE_ENCRYPTION_KEY=your_encryption_key_here
 ```
 
 ##### 마스터 계정
 ```env
-VITE_MASTER_EMAILS=jamesjaesung@gmail.com
+VITE_MASTER_EMAILS=your_master_email@example.com
 ```
 
 #### 선택 설정

@@ -6,25 +6,25 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, initializeFirestore, collection, getDocs, getDoc, setDoc, doc, query, orderBy, writeBatch } from 'firebase/firestore';
 
-// Source: ijw-textbook
+// Source: ijw-textbook - 환경변수에서 로드
 const sourceApp = initializeApp({
-  apiKey: "***REMOVED_API_KEY_4***",
+  apiKey: process.env.SOURCE_FIREBASE_API_KEY || "YOUR_SOURCE_API_KEY",
   authDomain: "ijw-textbook.firebaseapp.com",
   projectId: "ijw-textbook",
   storageBucket: "ijw-textbook.firebasestorage.app",
-  messagingSenderId: "151390597526",
-  appId: "1:151390597526:web:559a2b47e244b92f2O6db7"
+  messagingSenderId: process.env.SOURCE_FIREBASE_SENDER_ID || "YOUR_SOURCE_SENDER_ID",
+  appId: process.env.SOURCE_FIREBASE_APP_ID || "YOUR_SOURCE_APP_ID"
 }, 'source');
 const sourceDb = getFirestore(sourceApp);
 
-// Target: ijw-calander (restore260202 DB)
+// Target: ijw-calander (restore260202 DB) - 환경변수에서 로드
 const targetApp = initializeApp({
-  apiKey: "***REMOVED_API_KEY_1***",
+  apiKey: process.env.FIREBASE_API_KEY || "YOUR_API_KEY",
   authDomain: "ijw-calander.firebaseapp.com",
   projectId: "ijw-calander",
   storageBucket: "ijw-calander.firebasestorage.app",
-  messagingSenderId: "231563652148",
-  appId: "1:231563652148:web:4a217812ef96fa3aae2e61"
+  messagingSenderId: process.env.FIREBASE_SENDER_ID || "YOUR_SENDER_ID",
+  appId: process.env.FIREBASE_APP_ID || "YOUR_APP_ID"
 }, 'target');
 const targetDb = initializeFirestore(targetApp, {}, 'restore260202');
 

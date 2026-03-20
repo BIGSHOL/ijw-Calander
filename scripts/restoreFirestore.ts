@@ -16,15 +16,14 @@ import { getFirestore, collection, doc, setDoc, getDoc } from 'firebase/firestor
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Firebase 설정
+// Firebase 설정 - 환경변수에서 로드
 const firebaseConfig = {
-  apiKey: "***REMOVED_API_KEY_3***",
+  apiKey: process.env.FIREBASE_API_KEY || "YOUR_API_KEY",
   authDomain: "ijw-calander.firebaseapp.com",
   projectId: "ijw-calander",
   storageBucket: "ijw-calander.firebasestorage.app",
-  messagingSenderId: "528427751440",
-  appId: "1:528427751440:web:f59ce4b5cd9e1f2d6fb8ca",
-  measurementId: "G-VCPZJ9J9Y7"
+  messagingSenderId: process.env.FIREBASE_SENDER_ID || "YOUR_SENDER_ID",
+  appId: process.env.FIREBASE_APP_ID || "YOUR_APP_ID",
 };
 
 const app = initializeApp(firebaseConfig);
