@@ -26,7 +26,10 @@ dist-ssr
 .env
 .env.local
 .env.*
-!functions/.env
+functions/.env
+
+# Temporary files
+*.tmp.*
 
 # Firestore Backups (민감한 데이터 포함)
 backups/
