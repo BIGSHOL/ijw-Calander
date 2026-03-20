@@ -71,16 +71,10 @@ function refreshToken(refreshTok) {
 // GCS CORS 설정 (JSON API)
 function setCors(accessToken, bucketName = BUCKET_NAME) {
   return new Promise((resolve, reject) => {
-    const corsConfig = {
-      cors: [
-        {
-          origin: ['*'],
-          method: ['GET', 'POST', 'PUT', 'DELETE', 'HEAD'],
-          maxAgeSeconds: 3600,
-          responseHeader: ['Content-Type', 'Authorization', 'Content-Length', 'User-Agent', 'x-goog-resumable'],
-        },
-      ],
-    };
+    // cors.json 파일에서 설정 로드
+    const corsJsonPath = path.join(__dirname, 'cors.json');
+    const corsRules = JSON.parse(fs.readFileSync(corsJsonPath, 'utf8'));
+    const corsConfig = { cors: corsRules };
     const body = JSON.stringify(corsConfig);
 
     const req = https.request({
