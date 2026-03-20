@@ -115,6 +115,7 @@ const WithdrawalManagementTab: React.FC<WithdrawalManagementTabProps> = ({ curre
         variant="compact"
         theme="light"
         showBorder={true}
+        allowOverflow={true}
         className="justify-between px-3 md:px-4 relative"
       >
         {/* Left: Sub Tabs */}

@@ -61,8 +61,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     server: {
-      port: 3001,
-      strictPort: false,
+      port: 0,
       host: '0.0.0.0',
     },
     plugins: [react(), chunkOrderPlugin(), versionPlugin()],

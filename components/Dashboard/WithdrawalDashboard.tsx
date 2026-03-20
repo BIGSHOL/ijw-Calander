@@ -8,6 +8,7 @@ import {
   Phone,
   X,
   ChevronRight,
+  ChevronDown,
   TrendingDown,
   Users,
 } from 'lucide-react';
@@ -15,10 +16,13 @@ import {
   useWithdrawalStats,
   IncompleteConsultation,
   StaffWithdrawalStat,
+  StaffWithdrawalStudent,
 } from '../../hooks/useWithdrawalStats';
 import { useStaff } from '../../hooks/useStaff';
+import { useStudents } from '../../hooks/useStudents';
 import { usePermissions } from '../../hooks/usePermissions';
-import { UserProfile } from '../../types';
+import { UserProfile, UnifiedStudent } from '../../types';
+import StudentDetailModal from '../StudentManagement/StudentDetailModal';
 import {
   ComposedChart,
   Bar,
@@ -50,6 +54,7 @@ const WithdrawalDashboard: React.FC<WithdrawalDashboardProps> = ({
   const canManage = hasPermission('withdrawal.edit');
 
   const { staff } = useStaff();
+  const { students } = useStudents();
   const { stats, loading, refetch } = useWithdrawalStats(undefined, staff);
 
   // 현재 날짜 정보
@@ -406,6 +411,8 @@ const WithdrawalDashboard: React.FC<WithdrawalDashboardProps> = ({
       {showStaffModal && (
         <StaffStatsModal
           stats={stats.staffStats}
+          students={students}
+          currentUser={currentUser}
           onClose={() => setShowStaffModal(false)}
         />
       )}
@@ -531,76 +538,155 @@ const IncompleteConsultationModal: React.FC<IncompleteConsultationModalProps> = 
 // 강사별 통계 모달
 interface StaffStatsModalProps {
   stats: StaffWithdrawalStat[];
+  students: UnifiedStudent[];
+  currentUser?: UserProfile | null;
   onClose: () => void;
 }
 
-const StaffStatsModal: React.FC<StaffStatsModalProps> = ({ stats, onClose }) => {
+const StaffStatsModal: React.FC<StaffStatsModalProps> = ({ stats, students, currentUser, onClose }) => {
+  const [expandedStaff, setExpandedStaff] = useState<string | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<UnifiedStudent | null>(null);
+
+  const toggleStaff = (staffId: string) => {
+    setExpandedStaff(prev => prev === staffId ? null : staffId);
+  };
+
+  const handleStudentClick = (studentId: string) => {
+    const student = students.find(s => s.id === studentId);
+    if (student) setSelectedStudent(student);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
-      <div className="absolute inset-0 bg-primary/30 backdrop-blur-sm" />
-      <div
-        className="relative bg-white rounded-sm shadow-2xl max-w-2xl w-full mx-4 overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-primary/10 bg-primary">
-          <h2 className="text-lg font-bold text-white">강사별 퇴원 통계</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-sm transition-colors">
-            <X className="w-5 h-5 text-white" />
-          </button>
-        </div>
-        <div className="max-h-[70vh] overflow-y-auto p-6">
-          {stats.length === 0 ? (
-            <div className="text-center text-primary-700 py-8 text-sm">데이터 없음</div>
-          ) : (
-            <div className="space-y-3">
-              {stats.map((staff, idx) => (
-                <div
-                  key={staff.staffId}
-                  className={`flex items-center gap-4 p-3 rounded-sm transition-colors ${
-                    idx === 0 ? 'bg-red-50 border border-red-200' :
-                    idx === 1 ? 'bg-orange-50 border border-orange-200' :
-                    idx === 2 ? 'bg-amber-50 border border-amber-200' :
-                    'bg-white border border-gray-200 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className={`w-10 h-10 rounded-sm flex items-center justify-center text-sm font-bold ${
-                    idx === 0 ? 'bg-red-100 text-red-700' :
-                    idx === 1 ? 'bg-orange-100 text-orange-600' :
-                    idx === 2 ? 'bg-amber-100 text-amber-600' :
-                    'bg-gray-100 text-gray-500'
-                  }`}>
-                    {idx + 1}
-                  </div>
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
+        <div className="absolute inset-0 bg-primary/30 backdrop-blur-sm" />
+        <div
+          className="relative bg-white rounded-sm shadow-2xl max-w-2xl w-full mx-4 overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between px-6 py-4 border-b border-primary/10 bg-primary">
+            <h2 className="text-lg font-bold text-white">강사별 퇴원 통계</h2>
+            <button onClick={onClose} className="p-1.5 hover:bg-white/20 rounded-sm transition-colors">
+              <X className="w-5 h-5 text-white" />
+            </button>
+          </div>
+          <div className="max-h-[70vh] overflow-y-auto p-6">
+            {stats.length === 0 ? (
+              <div className="text-center text-primary-700 py-8 text-sm">데이터 없음</div>
+            ) : (
+              <div className="space-y-3">
+                {stats.map((staff, idx) => {
+                  const isExpanded = expandedStaff === staff.staffId;
+                  return (
+                    <div key={staff.staffId}>
+                      <div
+                        onClick={() => toggleStaff(staff.staffId)}
+                        className={`flex items-center gap-4 p-3 rounded-sm transition-colors cursor-pointer ${
+                          idx === 0 ? 'bg-red-50 border border-red-200' :
+                          idx === 1 ? 'bg-orange-50 border border-orange-200' :
+                          idx === 2 ? 'bg-amber-50 border border-amber-200' :
+                          'bg-white border border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className={`w-10 h-10 rounded-sm flex items-center justify-center text-sm font-bold ${
+                          idx === 0 ? 'bg-red-100 text-red-700' :
+                          idx === 1 ? 'bg-orange-100 text-orange-600' :
+                          idx === 2 ? 'bg-amber-100 text-amber-600' :
+                          'bg-gray-100 text-gray-500'
+                        }`}>
+                          {idx + 1}
+                        </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="text-base font-semibold text-gray-900 mb-1">
-                      {staff.staffName}
-                    </div>
-                    <div className="flex items-center gap-2 text-xs">
-                      {staff.mathCount > 0 && (
-                        <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
-                          수학 {staff.mathCount}명
-                        </span>
-                      )}
-                      {staff.englishCount > 0 && (
-                        <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded">
-                          영어 {staff.englishCount}명
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-base font-semibold text-gray-900 mb-1">
+                            {staff.staffName}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs">
+                            {staff.mathCount > 0 && (
+                              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
+                                수학 {staff.mathCount}명
+                              </span>
+                            )}
+                            {staff.englishCount > 0 && (
+                              <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded">
+                                영어 {staff.englishCount}명
+                              </span>
+                            )}
+                          </div>
+                        </div>
 
-                  <div className="text-right">
-                    <div className="text-xl font-bold text-red-600">{staff.totalCount}</div>
-                    <div className="text-xs text-primary-700">퇴원/종료</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                        <div className="text-right flex items-center gap-2">
+                          <div>
+                            <div className="text-xl font-bold text-red-600">{staff.totalCount}</div>
+                            <div className="text-xs text-primary-700">퇴원/종료</div>
+                          </div>
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4 text-gray-400" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-gray-400" />
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 학생 목록 */}
+                      {isExpanded && staff.students.length > 0 && (
+                        <div className="ml-14 mt-1 mb-2 border border-gray-100 rounded-sm overflow-hidden">
+                          {staff.students.map((st, stIdx) => (
+                            <div
+                              key={`${st.studentId}-${st.subject}-${stIdx}`}
+                              onClick={() => handleStudentClick(st.studentId)}
+                              className="flex items-center justify-between px-3 py-2 text-sm hover:bg-accent/5 cursor-pointer transition-colors border-b border-gray-50 last:border-b-0"
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-gray-900">{st.studentName}</span>
+                                {st.role && (
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                    st.role === '담임'
+                                      ? 'bg-primary/10 text-primary'
+                                      : 'bg-gray-100 text-gray-500'
+                                  }`}>
+                                    {st.role}
+                                  </span>
+                                )}
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                  st.subject === 'math' || st.subject === '수학'
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : 'bg-green-100 text-green-700'
+                                }`}>
+                                  {st.subjectLabel}
+                                </span>
+                                <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                                  st.type === 'withdrawn'
+                                    ? 'bg-red-50 text-red-600'
+                                    : 'bg-orange-50 text-orange-600'
+                                }`}>
+                                  {st.type === 'withdrawn' ? '퇴원' : '수강종료'}
+                                </span>
+                              </div>
+                              <span className="text-xs text-gray-400">{st.effectiveDate}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* 학생 상세 모달 */}
+      {selectedStudent && (
+        <StudentDetailModal
+          student={selectedStudent}
+          onClose={() => setSelectedStudent(null)}
+          readOnly
+          currentUser={currentUser}
+        />
+      )}
+    </>
   );
 };
 

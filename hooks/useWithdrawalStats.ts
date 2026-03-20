@@ -8,7 +8,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
-import { UnifiedStudent, Enrollment, StaffMember } from '../types';
+import { UnifiedStudent, Enrollment, StaffMember, UnifiedClass } from '../types';
 import { COL_STUDENTS } from './useStudents';
 import { WITHDRAWAL_REASON_LABEL, SUBJECT_LABEL } from '../constants/withdrawal';
 import { getEndedSubjects } from '../utils/enrollment';
@@ -55,12 +55,23 @@ export interface SubjectWithdrawalStat {
 /**
  * 강사별 퇴원 통계
  */
+export interface StaffWithdrawalStudent {
+  studentId: string;
+  studentName: string;
+  subject: string;
+  subjectLabel: string;
+  type: 'withdrawn' | 'subject-ended';
+  effectiveDate: string;
+  role?: '담임' | '부담임';
+}
+
 export interface StaffWithdrawalStat {
   staffId: string;
   staffName: string;
   mathCount: number;
   englishCount: number;
   totalCount: number;
+  students: StaffWithdrawalStudent[];
 }
 
 /**
@@ -163,6 +174,21 @@ export function useWithdrawalStats(
       allStudents.forEach(student => {
         student.enrollments = enrollmentsByStudent.get(student.id) || [];
       });
+
+      // 3. 수업 조회 (담임/부담임 판별용)
+      const classesSnap = await getDocs(collection(db, 'classes'));
+      const classMap = new Map<string, { teacher: string; staffId?: string }>();
+      classesSnap.docs.forEach(doc => {
+        const data = doc.data();
+        classMap.set(doc.id, {
+          teacher: data.teacher || '',
+          staffId: data.staffId || '',
+        });
+      });
+
+      // staffId → staffName 매핑
+      const staffNameMap = new Map<string, string>();
+      (staff || []).forEach(s => { staffNameMap.set(s.id, s.name); });
 
       // 3. 퇴원/수강종료 항목 추출
       interface WithdrawalEntry {
@@ -333,26 +359,78 @@ export function useWithdrawalStats(
         .sort((a, b) => b.count - a.count);
 
       // 9. 강사별 통계
-      const staffMap = new Map<string, { name: string; math: number; english: number }>();
+      const staffMap = new Map<string, { name: string; math: number; english: number; students: StaffWithdrawalStudent[] }>();
 
       // staff 목록으로 초기화
       (staff || []).filter(s => s.role === 'teacher' || s.role === '강사').forEach(member => {
-        staffMap.set(member.id, { name: member.name, math: 0, english: 0 });
+        staffMap.set(member.id, { name: member.name, math: 0, english: 0, students: [] });
       });
 
+      // 강사별 학생+과목 중복 방지용 Set
+      const staffStudentDedup = new Map<string, Set<string>>();
+
       entries.forEach(entry => {
-        entry.endedEnrollments.forEach(enrollment => {
-          if (enrollment.staffId) {
-            const existing = staffMap.get(enrollment.staffId);
-            if (existing) {
-              const subj = enrollment.subject as string;
-              if (subj === 'math' || subj === '수학') {
-                existing.math++;
-              } else if (subj === 'english' || subj === '영어') {
-                existing.english++;
-              }
-            }
+        // 퇴원일로부터 14일 이내 종료된 enrollment만 집계
+        const effDate = new Date(entry.effectiveDate);
+        const cutoff = new Date(effDate);
+        cutoff.setDate(cutoff.getDate() - 14);
+        const cutoffStr = formatLocalDate(cutoff);
+
+        const recentEnrollments = entry.endedEnrollments.filter(e => {
+          const endDate = e.withdrawalDate || e.endDate || '';
+          return endDate >= cutoffStr;
+        });
+
+        // 같은 과목+요일 → 마지막 enrollment만 (같은 시간대 반이동 제거)
+        const bySubjectDays = new Map<string, Enrollment>();
+        recentEnrollments.forEach(enrollment => {
+          const daysKey = [...(enrollment.days || [])].sort().join(',');
+          const groupKey = `${enrollment.subject}_${daysKey}`;
+          const existing = bySubjectDays.get(groupKey);
+          const date = enrollment.withdrawalDate || enrollment.endDate || '';
+          const existingDate = existing ? (existing.withdrawalDate || existing.endDate || '') : '';
+          if (!existing || date >= existingDate) {
+            bySubjectDays.set(groupKey, enrollment);
           }
+        });
+
+        // staffMap에 집계 (같은 강사+학생+과목 = 1번만)
+        bySubjectDays.forEach(enrollment => {
+          if (!enrollment.staffId) return;
+          const existing = staffMap.get(enrollment.staffId);
+          if (!existing) return;
+
+          const subj = enrollment.subject as string;
+          const dedupKey = `${entry.student.id}_${subj}`;
+
+          if (!staffStudentDedup.has(enrollment.staffId)) {
+            staffStudentDedup.set(enrollment.staffId, new Set());
+          }
+          const seen = staffStudentDedup.get(enrollment.staffId)!;
+          if (seen.has(dedupKey)) return;
+          seen.add(dedupKey);
+
+          if (subj === 'math' || subj === '수학') {
+            existing.math++;
+          } else if (subj === 'english' || subj === '영어') {
+            existing.english++;
+          }
+          // 담임/부담임 판별: 수업의 teacher가 이 강사인지 확인
+          const classInfo = enrollment.classId ? classMap.get(enrollment.classId) : null;
+          const teacherName = staffNameMap.get(enrollment.staffId!) || '';
+          const isMainTeacher = classInfo
+            ? (classInfo.teacher === teacherName || classInfo.staffId === enrollment.staffId)
+            : true; // 수업 정보 없으면 기본 담임
+
+          existing.students.push({
+            studentId: entry.student.id,
+            studentName: entry.student.name,
+            subject: subj,
+            subjectLabel: SUBJECT_LABEL[subj] || subj,
+            type: entry.type,
+            effectiveDate: entry.effectiveDate,
+            role: isMainTeacher ? '담임' : '부담임',
+          });
         });
       });
 
@@ -363,6 +441,7 @@ export function useWithdrawalStats(
           mathCount: data.math,
           englishCount: data.english,
           totalCount: data.math + data.english,
+          students: data.students.sort((a, b) => b.effectiveDate.localeCompare(a.effectiveDate)),
         }))
         .filter(s => s.totalCount > 0)
         .sort((a, b) => b.totalCount - a.totalCount);
