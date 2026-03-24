@@ -1,6 +1,7 @@
 import React from 'react';
 import { ScheduleCell } from './EnglishTeacherTab';
 import { MergedClass } from './BatchInputBar';
+import { useDraggable } from '../../../hooks/useDraggable';
 
 interface MoveSelectionModalProps {
     pendingMove: { source: any, target: any, sourceData: ScheduleCell } | null;
@@ -13,13 +14,14 @@ const MoveSelectionModal: React.FC<MoveSelectionModalProps> = ({
     setPendingMove,
     performMove,
 }) => {
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
     if (!pendingMove) return null;
 
     const { source, target, sourceData } = pendingMove;
 
     return (
         <div className="fixed inset-0 bg-black/50 z-[110] flex items-start justify-center pt-[8vh] p-4 animate-in fade-in duration-200" onClick={() => setPendingMove(null)}>
-            <div className="bg-white rounded-sm shadow-2xl w-[350px] max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div style={dragStyle} className="bg-white rounded-sm shadow-2xl w-[350px] max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
 
                 {/* Header */}
                 <div className="bg-primary text-white p-3 font-bold text-sm flex justify-between items-center">

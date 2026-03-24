@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { X, Link2, Search, User, Mail, AlertCircle } from 'lucide-react';
 import { StaffMember, UserProfile } from '../../types';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface StaffLinkModalProps {
   staff: StaffMember;
@@ -19,6 +20,7 @@ const StaffLinkModal: React.FC<StaffLinkModalProps> = ({
   onLink,
 }) => {
   useEscapeClose(onClose);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isLinking, setIsLinking] = useState(false);
@@ -62,7 +64,7 @@ const StaffLinkModal: React.FC<StaffLinkModalProps> = ({
         className="bg-white rounded-sm shadow-xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-100 rounded-sm flex items-center justify-center">
               <Link2 className="w-4 h-4 text-blue-600" />

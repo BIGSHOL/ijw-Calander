@@ -7,6 +7,7 @@ import { StaffMember } from '../../types';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { getTodayKST } from '../../utils/dateUtils';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface LoginModalProps {
     isOpen: boolean;
@@ -16,6 +17,7 @@ interface LoginModalProps {
 
 const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = true }) => {
     useEscapeClose(() => canClose && onClose());
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
     const [isSignUp, setIsSignUp] = useState(false);
     const [isForgotPassword, setIsForgotPassword] = useState(false);
@@ -220,7 +222,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                         {/* Login Mode: 로그인 정보 */}
                         {!isSignUp && !isForgotPassword && (
                             <div className="bg-white border border-gray-200 overflow-hidden">
-                                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                <div onMouseDown={handleDragMouseDown} className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-move select-none">
                                     <LogIn className="w-3 h-3 text-primary" />
                                     <h3 className="text-primary font-bold text-xs">로그인 정보</h3>
                                 </div>

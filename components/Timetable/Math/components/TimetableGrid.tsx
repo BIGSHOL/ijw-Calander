@@ -1360,12 +1360,20 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             onCellSelect={onCellSelect}
                                                                             onEnrollStudent={onEnrollStudent}
                                                                             selectedStudentIds={selectedStudentIds}
+                                                                            selectedStudentClassName={selectedStudentClassName}
                                                                             copiedStudentIds={copiedStudentIds}
+                                                                            copiedStudentClassName={copiedStudentClassName}
+                                                                            cutStudentIds={cutStudentIds}
+                                                                            cutStudentClassName={cutStudentClassName}
+                                                                            acHighlightStudentId={acHighlightStudentId}
+                                                                            onAcHighlightChange={onAcHighlightChange}
                                                                             onStudentSelect={onStudentSelect}
                                                                             onStudentMultiSelect={onStudentMultiSelect}
                                                                             mode={mode}
                                                                             onCancelScheduledEnrollment={onCancelScheduledEnrollment}
                     onWithdrawalDrop={onWithdrawalDrop}
+                    pendingExcelDeleteIds={pendingExcelDeleteIds}
+                    pendingExcelEnrollments={pendingExcelEnrollments}
                                                                         />
                                                                     ))
                                                                 )}
@@ -1459,12 +1467,20 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             onCellSelect={onCellSelect}
                                                                             onEnrollStudent={onEnrollStudent}
                                                                             selectedStudentIds={selectedStudentIds}
+                                                                            selectedStudentClassName={selectedStudentClassName}
                                                                             copiedStudentIds={copiedStudentIds}
+                                                                            copiedStudentClassName={copiedStudentClassName}
+                                                                            cutStudentIds={cutStudentIds}
+                                                                            cutStudentClassName={cutStudentClassName}
+                                                                            acHighlightStudentId={acHighlightStudentId}
+                                                                            onAcHighlightChange={onAcHighlightChange}
                                                                             onStudentSelect={onStudentSelect}
                                                                             onStudentMultiSelect={onStudentMultiSelect}
                                                                             mode={mode}
                                                                             onCancelScheduledEnrollment={onCancelScheduledEnrollment}
                     onWithdrawalDrop={onWithdrawalDrop}
+                    pendingExcelDeleteIds={pendingExcelDeleteIds}
+                    pendingExcelEnrollments={pendingExcelEnrollments}
                                                                         />
                                                                     ))
                                                                 )}
@@ -1573,9 +1589,21 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 isSelected={selectedClassId === cls.id}
                                                                                 onCellSelect={onCellSelect}
                                                                                 onEnrollStudent={onEnrollStudent}
+                                                                                selectedStudentIds={selectedStudentIds}
+                                                                                selectedStudentClassName={selectedStudentClassName}
+                                                                                copiedStudentIds={copiedStudentIds}
+                                                                                copiedStudentClassName={copiedStudentClassName}
+                                                                                cutStudentIds={cutStudentIds}
+                                                                                cutStudentClassName={cutStudentClassName}
+                                                                                acHighlightStudentId={acHighlightStudentId}
+                                                                                onAcHighlightChange={onAcHighlightChange}
+                                                                                onStudentSelect={onStudentSelect}
+                                                                                onStudentMultiSelect={onStudentMultiSelect}
                                                                                 mode={mode}
                                                                             onCancelScheduledEnrollment={onCancelScheduledEnrollment}
                     onWithdrawalDrop={onWithdrawalDrop}
+                    pendingExcelDeleteIds={pendingExcelDeleteIds}
+                    pendingExcelEnrollments={pendingExcelEnrollments}
                                                                             />
                                                                         ))
                                                                     )}
@@ -1695,12 +1723,20 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         onCellSelect={onCellSelect}
                                                                         onEnrollStudent={onEnrollStudent}
                                                                         selectedStudentIds={selectedStudentIds}
+                                                                        selectedStudentClassName={selectedStudentClassName}
                                                                         copiedStudentIds={copiedStudentIds}
+                                                                        copiedStudentClassName={copiedStudentClassName}
+                                                                        cutStudentIds={cutStudentIds}
+                                                                        cutStudentClassName={cutStudentClassName}
+                                                                        acHighlightStudentId={acHighlightStudentId}
+                                                                        onAcHighlightChange={onAcHighlightChange}
                                                                         onStudentSelect={onStudentSelect}
                                                                         onStudentMultiSelect={onStudentMultiSelect}
                                                                         mode={mode}
                                                                     onCancelScheduledEnrollment={onCancelScheduledEnrollment}
                     onWithdrawalDrop={onWithdrawalDrop}
+                    pendingExcelDeleteIds={pendingExcelDeleteIds}
+                    pendingExcelEnrollments={pendingExcelEnrollments}
                                                                     />
                                                                 ))
                                                             )}

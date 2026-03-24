@@ -6,6 +6,7 @@ import { useConsultationReportStatus } from '../../hooks/useConsultationRecordin
 import { getFollowUpUrgency, getFollowUpDaysLeft } from '../../hooks/useStudentConsultations';
 import { HighlightedReportText } from '../../utils/HighlightedReportText';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useDraggable } from '../../hooks/useDraggable';
 
 // Lazy load AddConsultationModal to avoid circular dependencies if any
 const AddConsultationModal = React.lazy(() => import('./AddConsultationModal'));
@@ -26,6 +27,7 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
     onClose,
 }) => {
     useEscapeClose(onClose);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
     const [followUpNotes, setFollowUpNotes] = useState('');
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -81,9 +83,9 @@ const ConsultationDetailModal: React.FC<ConsultationDetailModalProps> = ({
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4">
-            <div className="bg-white rounded-sm shadow-xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden">
+            <div style={dragStyle} className="bg-white rounded-sm shadow-xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden">
                 {/* 헤더 */}
-                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 sticky top-0 bg-white z-10">
+                <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 sticky top-0 bg-white z-10 cursor-move select-none">
                     <h2 className="text-sm font-bold text-primary">상담 상세 - {typeLabel}</h2>
                     <button
                         onClick={onClose}

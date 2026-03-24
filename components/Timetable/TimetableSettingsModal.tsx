@@ -3,6 +3,7 @@ import { X, Settings } from 'lucide-react';
 import ClassSettingsModal from '../ClassManagement/ClassSettingsModal';
 import { UserProfile } from '../../types';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useDraggable } from '../../hooks/useDraggable';
 // TeachersTab 제거됨 - 강사 관리는 시스템 관리의 사용자 관리(staff 컬렉션)에서 통합 관리
 
 interface TimetableSettingsModalProps {
@@ -18,6 +19,7 @@ const TimetableSettingsModal: React.FC<TimetableSettingsModalProps> = ({
   canEdit = true,
 }) => {
   useEscapeClose(onClose);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
   if (!isOpen) return null;
 
@@ -29,7 +31,7 @@ const TimetableSettingsModal: React.FC<TimetableSettingsModalProps> = ({
         className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
           <h2 className="text-sm font-bold text-primary flex items-center gap-1.5">
             <Settings size={16} />
             수업 설정

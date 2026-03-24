@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface SeminarEventModalProps {
   isOpen: boolean;
@@ -48,6 +49,7 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
 }) => {
   // Basic Event Fields
   const [title, setTitle] = useState('');
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
   const [description, setDescription] = useState('');
   const [departmentIds, setDepartmentIds] = useState<string[]>([]);
   const [startDate, setStartDate] = useState('');
@@ -266,9 +268,9 @@ const SeminarEventModal: React.FC<SeminarEventModalProps> = ({
 
   return (
     <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', transform: 'translateZ(0)', transition: 'none', zIndex: 9998 }}>
-      <div className="bg-white rounded-sm shadow-xl max-w-3xl p-0 relative max-h-[85vh] flex flex-col overflow-hidden border border-gray-200">
+      <div style={dragStyle} className="bg-white rounded-sm shadow-xl max-w-3xl p-0 relative max-h-[85vh] flex flex-col overflow-hidden border border-gray-200">
         {/* Header */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
           <h2 className="text-sm font-bold text-primary flex items-center gap-2">
             <Mic size={18} className="text-purple-500" />
             {isViewMode ? '세미나 상세' : (existingEvent ? '세미나 수정' : '새 세미나 추가')}

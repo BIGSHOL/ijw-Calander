@@ -27,6 +27,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface DeleteInvalidStudentsModalProps {
     onClose: () => void;
@@ -83,6 +84,7 @@ const DeleteInvalidStudentsModal: React.FC<DeleteInvalidStudentsModalProps> = ({
     const [step, setStep] = useState<'loading' | 'preview' | 'processing' | 'done'>('loading');
     const [students, setStudents] = useState<StudentDoc[]>([]);
     const [progress, setProgress] = useState(0);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
     const [error, setError] = useState<string | null>(null);
     const [results, setResults] = useState({ deleted: 0, fixed: 0 });
 
@@ -200,7 +202,7 @@ const DeleteInvalidStudentsModal: React.FC<DeleteInvalidStudentsModalProps> = ({
 
     return (
         <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] bg-black/50">
-            <div className="bg-white rounded-sm shadow-2xl w-[90%] max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+            <div style={dragStyle} className="bg-white rounded-sm shadow-2xl w-[90%] max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
                 {/* 헤더 */}
                 <div className="bg-red-600 px-6 py-4 flex items-center justify-between">
                     <h2 className="text-lg font-bold text-white flex items-center gap-2">
@@ -231,7 +233,7 @@ const DeleteInvalidStudentsModal: React.FC<DeleteInvalidStudentsModalProps> = ({
                         <div className="space-y-2">
                             {/* Section 1: 통계 요약 */}
                             <div className="bg-white border border-gray-200 overflow-hidden">
-                                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                <div onMouseDown={handleDragMouseDown} className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-move select-none">
                                     <BarChart3 className="w-3 h-3 text-primary" />
                                     <h3 className="text-primary font-bold text-xs">통계 요약</h3>
                                 </div>

@@ -7,7 +7,8 @@ import { useStudentFilters } from '../../hooks/useStudentFilters';
 import StudentList from './StudentList';
 import StudentDetail from './StudentDetail';
 import AddStudentModal from './AddStudentModal';
-import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft, Database, GitMerge, Trash2, AlertTriangle, Languages, Download, ExternalLink } from 'lucide-react';
+import { Users, Loader2, RefreshCw, UserPlus, ClipboardList, ArrowLeft, Database, GitMerge, Trash2, AlertTriangle, Languages, Download, ExternalLink, FileSpreadsheet } from 'lucide-react';
+import { utils, writeFile } from 'xlsx';
 import { formatDateKey } from '../../utils/dateUtils';
 
 // Performance: bundle-dynamic-imports - Modal components lazy load (~80-100KB bundle reduction)
@@ -155,6 +156,90 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
     URL.revokeObjectURL(url);
   };
 
+  // 엑셀 데이터 추출
+  const handleExportExcel = () => {
+    const statusLabel = (s: string) => {
+      if (s === 'active') return '재원';
+      if (s === 'on_hold') return '휴원';
+      if (s === 'withdrawn') return '퇴원';
+      if (s === 'prospect' || s === 'prospective') return '예비';
+      return s;
+    };
+    const subjectLabel = (s: string) => {
+      if (s === 'math') return '수학';
+      if (s === 'highmath') return '고등수학';
+      if (s === 'english') return '영어';
+      if (s === 'science') return '과학';
+      if (s === 'korean') return '국어';
+      return s;
+    };
+    const genderLabel = (g?: string) => {
+      if (g === 'male') return '남';
+      if (g === 'female') return '여';
+      return '';
+    };
+
+    const rows = filteredStudents.map(s => {
+      const activeEnrollments = (s.enrollments || []).filter(e => !e.withdrawalDate && !e.endDate);
+      const subjects = activeEnrollments.map(e => subjectLabel(e.subject)).join(', ');
+      const classNames = activeEnrollments.map(e => e.className).join(', ');
+      const teachers = activeEnrollments.map(e => e.teacher || '').filter(Boolean).join(', ');
+      const days = activeEnrollments.map(e => (e.days || []).join('/')).filter(Boolean).join(', ');
+
+      return {
+        '이름': s.name || '',
+        '영어이름': s.englishName || '',
+        '상태': statusLabel(s.status),
+        '학교': s.school || '',
+        '학년': s.grade || '',
+        '성별': genderLabel(s.gender),
+        '캠퍼스': s.campus === 'godeung' ? '고등수학관' : '본원',
+        '학생전화': s.studentPhone || '',
+        '보호자명': s.parentName || '',
+        '보호자관계': s.parentRelation || '',
+        '보호자전화': s.parentPhone || '',
+        '기타연락처': s.otherPhone || '',
+        '기타관계': s.otherPhoneRelation || '',
+        '집전화': s.homePhone || '',
+        '우편번호': s.zipCode || '',
+        '주소': s.address || '',
+        '상세주소': s.addressDetail || '',
+        '생년월일': s.birthDate || '',
+        '수강과목': subjects,
+        '수강반': classNames,
+        '담당강사': teachers,
+        '수업요일': days,
+        '등록일': s.startDate || '',
+        '퇴원일': s.withdrawalDate || s.endDate || '',
+        '퇴원사유': s.withdrawalReason || '',
+        '출결번호': s.attendanceNumber || '',
+        '학생코드': s.studentCode || '',
+        '이메일': s.studentEmail || '',
+        '졸업연도': s.graduationYear || '',
+        '입학동기': s.enrollmentReason || '',
+        '메모': s.memo || '',
+        '기타항목1': s.customField1 || '',
+        '기타항목2': s.customField2 || '',
+      };
+    });
+
+    const ws = utils.json_to_sheet(rows);
+
+    // 열 너비 자동 조정
+    const colWidths = Object.keys(rows[0] || {}).map(key => {
+      const maxLen = Math.max(
+        key.length,
+        ...rows.map(r => String((r as Record<string, string>)[key] || '').length)
+      );
+      return { wch: Math.min(Math.max(maxLen + 2, 8), 40) };
+    });
+    ws['!cols'] = colWidths;
+
+    const wb = utils.book_new();
+    utils.book_append_sheet(wb, ws, '학생데이터');
+    writeFile(wb, `학생데이터_${filteredStudents.length}명_${formatDateKey(new Date())}.xlsx`);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -254,6 +339,13 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
                 <UserPlus className="w-3.5 h-3.5" />
               </button>
             )}
+            <button
+              onClick={handleExportExcel}
+              className="p-1.5 text-emerald-400 hover:text-white hover:bg-white/10 rounded-sm transition-colors"
+              title="엑셀 내보내기"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+            </button>
             <button
               onClick={handleExportNames}
               className="p-1.5 text-emerald-400 hover:text-white hover:bg-white/10 rounded-sm transition-colors"

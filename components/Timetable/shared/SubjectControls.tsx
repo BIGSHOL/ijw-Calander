@@ -10,7 +10,7 @@ interface SubjectControlsProps {
     setTimetableSubject: (value: TimetableSubjectType) => void;
     viewType: 'teacher' | 'room' | 'class' | 'excel';
     setTimetableViewType?: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>;
-    mathViewMode?: 'day-based' | 'teacher-based';
+    mathViewMode?: string;
     setMathViewMode?: (value: string) => void;
     hasPermission: (perm: string) => boolean;
     setIsTimetableSettingsOpen?: (value: boolean) => void;
@@ -65,31 +65,35 @@ export default function SubjectControls({
                 </button>
             )}
 
-            {/* 수학/고등수학 뷰 전환 - 드롭다운 순환 */}
+            {/* 수학/고등수학 뷰 전환 - 강사별뷰 숨김, 엑셀뷰 2종 */}
             {(timetableSubject === 'math' || timetableSubject === 'highmath') && setTimetableViewType && setMathViewMode && (
                 <button
                     onClick={() => {
                         setTimetableViewType(prev => {
-                            if (prev === 'teacher' && mathViewMode === 'teacher-based') {
-                                setMathViewMode('day-based');
-                                return 'teacher';
-                            }
-                            if (prev === 'teacher' && mathViewMode === 'day-based') return 'room';
+                            // 강의실 → 통합뷰 → 엑셀(강사) → 엑셀(요일) → 강의실
+                            // 요일별/강사별뷰에 있던 경우 → 강의실로 리다이렉트
+                            if (prev === 'teacher') return 'room';
                             if (prev === 'room') return 'class';
-                            if (prev === 'class') return 'excel';
-                            // excel → teacher (강사별)
-                            setMathViewMode('teacher-based');
-                            return 'teacher';
+                            if (prev === 'class') {
+                                setMathViewMode('excel-teacher');
+                                return 'excel';
+                            }
+                            if (prev === 'excel' && mathViewMode === 'excel-teacher') {
+                                setMathViewMode('excel-day');
+                                return 'excel';
+                            }
+                            // excel-day → 강의실
+                            return 'room';
                         });
                     }}
                     className="px-2 py-0.5 rounded-sm bg-white/10 border border-white/10 text-gray-300 font-bold text-xs hover:text-white hover:bg-white/15 active:scale-95 transition-all cursor-pointer"
                     title="보기방식 전환"
                 >
-                    {viewType === 'teacher' && mathViewMode === 'teacher-based' ? <><UserIcon size={12} className="inline" /> 강사별</>
-                        : viewType === 'teacher' && mathViewMode === 'day-based' ? <><CalendarIcon size={12} className="inline" /> 요일별</>
-                        : viewType === 'room' ? <><Building size={12} className="inline" /> 강의실</>
+                    {viewType === 'room' ? <><Building size={12} className="inline" /> 강의실</>
                         : viewType === 'class' ? <><ClipboardList size={12} className="inline" /> 통합뷰</>
-                        : <><Table2 size={12} className="inline" /> 엑셀</>}
+                        : viewType === 'excel' && mathViewMode === 'excel-day' ? <><Table2 size={12} className="inline" /> 엑셀(요일)</>
+                        : viewType === 'excel' ? <><Table2 size={12} className="inline" /> 엑셀(강사)</>
+                        : <><Building size={12} className="inline" /> 강의실</>}
                 </button>
             )}
 

@@ -5,6 +5,7 @@ import { collection, writeBatch, doc, getDocs } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { ConsultationRecord, ConsultationSubject, ConsultationStatus, SchoolGrade } from '../../types';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface RegistrationMigrationModalProps {
   onClose: () => void;
@@ -176,6 +177,7 @@ const TABLE_HEADERS = (
 const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({ onClose, onSuccess }) => {
   const [step, setStep] = useState<'upload' | 'sheet-select' | 'preview' | 'migrating' | 'done'>('upload');
   const [loading, setLoading] = useState(false);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
   const [error, setError] = useState<string | null>(null);
   const [parsedRecords, setParsedRecords] = useState<ParsedRecord[]>([]);
   const [progress, setProgress] = useState(0);
@@ -481,9 +483,9 @@ const RegistrationMigrationModal: React.FC<RegistrationMigrationModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] bg-black/50 p-4">
-      <div className="bg-white rounded-sm shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
+      <div style={dragStyle} className="bg-white rounded-sm shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
           <div className="flex items-center gap-2">
             <Database className="w-5 h-5 text-accent" />
             <h2 className="text-sm font-bold text-primary">등록 상담 DB 불러오기</h2>

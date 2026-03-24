@@ -3,6 +3,7 @@ import { X, UserMinus, AlertTriangle, Calendar, FileText, Info } from 'lucide-re
 import { UnifiedStudent } from '../../types';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { formatDateKey } from '../../utils/dateUtils';
+import { useDraggable } from '../../hooks/useDraggable';
 
 // 퇴원 사유 옵션
 const WITHDRAWAL_REASONS = [
@@ -32,6 +33,7 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
   onConfirm,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
   // 활성 enrollment 체크 (퇴원/종료되지 않은 수업)
   const activeEnrollments = (student.enrollments || []).filter(
@@ -80,7 +82,7 @@ const WithdrawalModal: React.FC<WithdrawalModalProps> = ({
         className="bg-white rounded-sm shadow-xl w-full max-w-md"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-5 py-4 border-b border-gray-200 cursor-move select-none">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-red-100 rounded-sm flex items-center justify-center">
               <UserMinus className="w-5 h-5 text-red-600" />

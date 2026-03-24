@@ -6,6 +6,7 @@ import { setDoc, doc, deleteDoc, collection, onSnapshot, getDoc, getDocs, query,
 import { listenerRegistry } from '../../utils/firebaseCleanup';
 import { X, Check, Clock, Hash, DoorOpen, ChevronUp, ChevronDown, FlaskConical, Plus, Settings } from 'lucide-react';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface ClassSettingsModalProps {
     isOpen: boolean;
@@ -36,6 +37,7 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
     embedded = false
 }) => {
     useEscapeClose(onClose);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
     const queryClient = useQueryClient();
     const [activeTab, setActiveTab] = useState<TabType>('general');
 
@@ -275,7 +277,7 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
 
     // --- Shared Tab Navigation ---
     const renderTabNav = () => (
-        <div className="flex border-b border-gray-200 bg-gray-50 px-3 shrink-0">
+        <div onMouseDown={handleDragMouseDown} className="flex border-b border-gray-200 bg-gray-50 px-3 shrink-0 cursor-move select-none">
             <button
                 onClick={() => setActiveTab('general')}
                 className={`px-4 py-2 font-bold text-xs transition-all border-b-2 ${

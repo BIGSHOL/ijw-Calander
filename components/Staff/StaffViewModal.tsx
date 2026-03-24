@@ -8,6 +8,7 @@ import { SUBJECT_COLORS, SubjectType } from '../../utils/styleUtils';
 import StaffClassHistory from './StaffClassHistory';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface StaffViewModalProps {
   staff: StaffMember;
@@ -45,6 +46,7 @@ const APPROVAL_STYLES: Record<string, { label: string; bg: string; text: string;
 
 const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit, onDelete, canEdit = true, canDelete = true, currentUserUid }) => {
   useEscapeClose(onClose);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -226,9 +228,9 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4">
-      <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+      <div style={dragStyle} className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
           <div className="flex items-center gap-3">
             <div
               className="w-10 h-10 rounded-sm flex items-center justify-center text-lg font-bold shadow-md"

@@ -9,6 +9,7 @@ import { db } from '../../firebaseConfig';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { formatDateKey } from '../../utils/dateUtils';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface ParsedConsultation {
     no: number | string;
@@ -93,6 +94,7 @@ const parseExcelDate = (cellVal: any) => {
 
 const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({ onClose, onSuccess }) => {
     useEscapeClose(onClose);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
     const { students, loading: studentsLoading } = useStudents(true);
     const { staff: staffMembers, loading: staffLoading } = useStaff();
@@ -551,9 +553,9 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
-            <div className="bg-white rounded-sm shadow-2xl w-[900px] max-h-[85vh] flex flex-col overflow-hidden">
+            <div style={dragStyle} className="bg-white rounded-sm shadow-2xl w-[900px] max-h-[85vh] flex flex-col overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+                <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
                     <h2 className="text-sm font-bold text-primary flex items-center gap-2">
                         <Database size={18} className="text-accent" />
                         MakeEdu 상담 내역 마이그레이션

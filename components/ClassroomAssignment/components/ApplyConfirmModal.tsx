@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, Save, X } from 'lucide-react';
 import { RoomAssignmentUpdate } from '../types';
+import { useDraggable } from '../../../hooks/useDraggable';
 
 interface ApplyConfirmModalProps {
   changes: RoomAssignmentUpdate[];
@@ -13,10 +14,11 @@ export const ApplyConfirmModal: React.FC<ApplyConfirmModalProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] bg-black/50">
-      <div className="bg-white rounded-sm shadow-xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+      <div style={dragStyle} className="bg-white rounded-sm shadow-xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
           <h3 className="text-sm font-bold text-primary">강의실 배정 적용</h3>
           <button onClick={onCancel} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
             <X size={18} />

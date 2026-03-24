@@ -29,6 +29,35 @@ import { WithdrawalEntry } from '../../../../hooks/useWithdrawalFilters';
 import SubjectControls from '../../shared/SubjectControls';
 import type { TimetableSubjectType } from '../../../../types';
 
+// 드래그 가능한 요일 아이템
+const SortableWeekdayItem = ({ id, index, total, onMoveUp, onMoveDown }: { id: string; index: number; total: number; onMoveUp: () => void; onMoveDown: () => void }) => {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        zIndex: isDragging ? 10 : 1,
+        opacity: isDragging ? 0.5 : 1,
+    };
+    return (
+        <div ref={setNodeRef} style={style} className="flex items-center justify-between px-2 py-1 hover:bg-gray-50 rounded-sm group">
+            <div className="flex items-center gap-2">
+                <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500">
+                    <GripVertical size={12} />
+                </div>
+                <span className="text-xs text-gray-700 font-medium">{id}요일</span>
+            </div>
+            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={onMoveUp} disabled={index === 0} className="p-0.5 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed" title="위로 이동">
+                    <ChevronUp size={14} className="text-gray-500" />
+                </button>
+                <button onClick={onMoveDown} disabled={index === total - 1} className="p-0.5 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed" title="아래로 이동">
+                    <ChevronDown size={14} className="text-gray-500" />
+                </button>
+            </div>
+        </div>
+    );
+};
+
 // 드래그 가능한 강사 아이템
 const SortableTeacherItem = ({ id, isHidden, onToggleHidden }: { id: string; isHidden: boolean; onToggleHidden: () => void }) => {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
@@ -131,7 +160,7 @@ interface TimetableHeaderProps {
     timetableSubject?: TimetableSubjectType;
     setTimetableSubject?: (value: TimetableSubjectType) => void;
     setTimetableViewType?: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>;
-    mathViewMode?: 'day-based' | 'teacher-based';
+    mathViewMode?: string;
     setMathViewMode?: (value: string) => void;
     hasPermission?: (perm: string) => boolean;
     setIsTimetableSettingsOpen?: (value: boolean) => void;
@@ -285,6 +314,17 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
         if (targetIndex >= 0 && targetIndex < newOrder.length) {
             [newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]];
             handleSaveWeekdayOrder(newOrder);
+        }
+    };
+
+    // 요일 드래그 센서 & 핸들러
+    const weekdayDndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 3 } }));
+    const handleWeekdayDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (over && active.id !== over.id) {
+            const oldIndex = weekdayOrderList.indexOf(active.id as string);
+            const newIndex = weekdayOrderList.indexOf(over.id as string);
+            handleSaveWeekdayOrder(arrayMove(weekdayOrderList, oldIndex, newIndex));
         }
     };
 
@@ -868,34 +908,22 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                             <CalendarIcon size={12} />
                                             요일 순서
                                         </div>
-                                        <div className="space-y-0.5">
-                                            {weekdayOrderList.map((day, index) => (
-                                                <div key={day} className="flex items-center justify-between px-2 py-1 hover:bg-gray-50 rounded-sm group">
-                                                    <div className="flex items-center gap-2">
-                                                        <GripVertical size={12} className="text-gray-300" />
-                                                        <span className="text-xs text-gray-700 font-medium">{day}요일</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <button
-                                                            onClick={() => moveWeekday(index, 'up')}
-                                                            disabled={index === 0}
-                                                            className="p-0.5 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                                                            title="위로 이동"
-                                                        >
-                                                            <ChevronUp size={14} className="text-gray-500" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => moveWeekday(index, 'down')}
-                                                            disabled={index === weekdayOrderList.length - 1}
-                                                            className="p-0.5 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                                                            title="아래로 이동"
-                                                        >
-                                                            <ChevronDown size={14} className="text-gray-500" />
-                                                        </button>
-                                                    </div>
+                                        <DndContext sensors={weekdayDndSensors} collisionDetection={closestCenter} onDragEnd={handleWeekdayDragEnd}>
+                                            <SortableContext items={weekdayOrderList} strategy={verticalListSortingStrategy}>
+                                                <div className="space-y-0.5">
+                                                    {weekdayOrderList.map((day, index) => (
+                                                        <SortableWeekdayItem
+                                                            key={day}
+                                                            id={day}
+                                                            index={index}
+                                                            total={weekdayOrderList.length}
+                                                            onMoveUp={() => moveWeekday(index, 'up')}
+                                                            onMoveDown={() => moveWeekday(index, 'down')}
+                                                        />
+                                                    ))}
                                                 </div>
-                                            ))}
-                                        </div>
+                                            </SortableContext>
+                                        </DndContext>
                                     </div>
 
                                     {/* 표시 옵션 */}

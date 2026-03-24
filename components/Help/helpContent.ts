@@ -584,6 +584,11 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
       },
     ],
   },
+  'meeting-minutes': {
+    title: '회의록',
+    overview: 'AI 기반 회의록 관리 기능입니다.',
+    sections: [],
+  },
   logs: {
     title: '로그보기',
     overview: '시간표 변경 이력을 조회합니다. 수업 생성/수정/삭제, 학생 등록/이동 등의 기록을 확인할 수 있습니다.',

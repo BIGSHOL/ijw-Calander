@@ -11,6 +11,11 @@ export const CLASSROOM_COLORS: Record<SubjectType, {
     border: '#93c5fd',   // blue-300
     light: '#eff6ff',    // blue-50
   },
+  highmath: {
+    bg: '#1d4ed8',       // blue-700
+    border: '#60a5fa',   // blue-400
+    light: '#dbeafe',    // blue-100
+  },
   english: {
     bg: '#dc2626',       // red-600
     border: '#fca5a5',   // red-300

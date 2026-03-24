@@ -18,6 +18,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { X, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
 import { useEscapeClose } from '../../../hooks/useEscapeClose';
+import { useDraggable } from '../../../hooks/useDraggable';
 
 interface TeacherOrderModalProps {
     isOpen: boolean;
@@ -53,7 +54,7 @@ const SortableItem = ({ id, onMoveUp, onMoveDown, isFirst, isLast }: SortableIte
     };
 
     return (
-        <div ref={setNodeRef} style={style} className="flex items-center justify-between p-2 bg-white border rounded-sm mb-1.5 shadow-sm group hover:border-blue-300 transition-colors">
+        <div onMouseDown={handleDragMouseDown} ref={setNodeRef} style={style} className="flex items-center justify-between p-2 bg-white border rounded-sm mb-1.5 shadow-sm group hover:border-blue-300 transition-colors cursor-move select-none">
             <div className="flex items-center gap-2 flex-1">
                 <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 p-1">
                     <GripVertical size={16} />
@@ -83,6 +84,7 @@ const SortableItem = ({ id, onMoveUp, onMoveDown, isFirst, isLast }: SortableIte
 const TeacherOrderModal: React.FC<TeacherOrderModalProps> = ({ isOpen, onClose, currentOrder, allTeachers, onSave }) => {
     const [items, setItems] = useState<string[]>([]);
     const [isSaving, setIsSaving] = useState(false);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
     useEscapeClose(onClose);
 
@@ -143,7 +145,7 @@ const TeacherOrderModal: React.FC<TeacherOrderModalProps> = ({ isOpen, onClose, 
 
     return (
         <div className="fixed inset-0 bg-black/50 z-[110] flex items-start justify-center pt-[8vh]">
-            <div className="bg-white rounded-sm shadow-xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden">
+            <div style={dragStyle} className="bg-white rounded-sm shadow-xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden">
                 <div className="flex justify-between items-center p-4 border-b bg-gray-900 text-white rounded-sm">
                     <h2 className="text-base font-bold">강사 순서 설정</h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors">

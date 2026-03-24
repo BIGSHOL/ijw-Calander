@@ -9,6 +9,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { formatScheduleCompact, SubjectForSchedule } from '../Timetable/constants';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { formatDateKey } from '../../utils/dateUtils';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface AssignClassModalProps {
     isOpen: boolean;
@@ -21,6 +22,7 @@ const AVAILABLE_SUBJECTS: SubjectType[] = ['math', 'highmath', 'english', 'scien
 
 const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, student, onSuccess }) => {
     const queryClient = useQueryClient();
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
     const [selectedSubject, setSelectedSubject] = useState<SubjectType>('math');
     const [selectedClassName, setSelectedClassName] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
@@ -161,7 +163,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                 className="bg-white rounded-sm shadow-2xl w-[420px] max-h-[85vh] flex flex-col"
             >
                 {/* Header - Compact */}
-                <div className="px-3 py-2 border-b border-gray-200 flex items-center justify-between bg-primary text-white rounded-t-sm shrink-0">
+                <div onMouseDown={handleDragMouseDown} className="px-3 py-2 border-b border-gray-200 flex items-center justify-between bg-primary text-white rounded-t-sm shrink-0 cursor-move select-none">
                     <div className="flex items-center gap-1.5">
                         <BookOpen size={16} />
                         <h3 className="font-bold text-sm">수업 배정</h3>

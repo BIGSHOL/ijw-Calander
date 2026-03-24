@@ -6,6 +6,7 @@
 import React from 'react';
 import { Mail, X, User as UserIcon, Trash2, Send, Clock, FileText } from 'lucide-react';
 import { TaskMemo } from '../../types';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface MemoDetailModalProps {
   selectedMemo: TaskMemo | null;
@@ -22,12 +23,13 @@ export const MemoDetailModal: React.FC<MemoDetailModalProps> = ({
   handleMarkMemoRead,
   handleDeleteMemo,
 }) => {
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
   if (!selectedMemo) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
-      <div className="bg-white rounded-sm shadow-xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
+      <div style={dragStyle} className="bg-white rounded-sm shadow-xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0 cursor-move select-none">
           <h3 className="text-sm font-bold text-primary flex items-center gap-2">
             <Mail size={16} /> 받은 메모
           </h3>

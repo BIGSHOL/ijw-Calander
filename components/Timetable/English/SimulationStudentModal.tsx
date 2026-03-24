@@ -6,6 +6,7 @@ import { X, Search, UserPlus, UserMinus, Users, ArrowRight, FlaskConical, Save, 
 import { useScenario, ScenarioEnrollment } from './context/SimulationContext';
 import { UnifiedStudent } from '../../../types';
 import { useEscapeClose } from '../../../hooks/useEscapeClose';
+import { useDraggable } from '../../../hooks/useDraggable';
 
 interface SimulationStudentModalProps {
     className: string;
@@ -22,6 +23,7 @@ const SimulationStudentModal: React.FC<SimulationStudentModalProps> = ({
 }) => {
     const scenario = useScenario();
     const [searchTerm, setSearchTerm] = useState('');
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
     const [showAddPanel, setShowAddPanel] = useState(false);
 
     useEscapeClose(onClose);
@@ -135,7 +137,7 @@ const SimulationStudentModal: React.FC<SimulationStudentModalProps> = ({
                 <div className="flex-1 overflow-y-auto p-4 space-y-2">
                     {/* Section 1: 시뮬레이션 정보 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
-                        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                        <div onMouseDown={handleDragMouseDown} className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-move select-none">
                             <FlaskConical className="w-3 h-3 text-primary" />
                             <h3 className="text-primary font-bold text-xs">시뮬레이션 정보</h3>
                         </div>

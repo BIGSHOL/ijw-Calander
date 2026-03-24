@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { LevelTest, UserProfile } from '../../../../types';
 import { Zap, Loader2, X, FileText, Calendar } from 'lucide-react';
 import { useEscapeClose } from '../../../../hooks/useEscapeClose';
+import { useDraggable } from '../../../../hooks/useDraggable';
 
 interface LevelTestModalProps {
     onClose: () => void;
@@ -14,6 +15,7 @@ interface LevelTestModalProps {
 const LevelTestModal: React.FC<LevelTestModalProps> = ({ onClose, studentId, studentName, onAdd, currentUser }) => {
     const [subject, setSubject] = useState<'math' | 'english'>('math');
     const [testDate, setTestDate] = useState(new Date().toISOString().split('T')[0]);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
     const [testType, setTestType] = useState<'placement' | 'promotion' | 'diagnostic'>('placement');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -146,8 +148,8 @@ const LevelTestModal: React.FC<LevelTestModalProps> = ({ onClose, studentId, stu
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[3vh] z-[100]">
-            <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[94vh] flex flex-col overflow-hidden">
-                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
+            <div style={dragStyle} className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[94vh] flex flex-col overflow-hidden">
+                <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0 cursor-move select-none">
                     <h3 className="text-sm font-bold text-primary flex items-center gap-2">
                         <Zap size={16} className="text-indigo-600" />
                         레벨테스트 추가 - {studentName}

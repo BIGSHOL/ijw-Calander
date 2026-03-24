@@ -10,6 +10,7 @@ import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
 import { generateBulkStudentCodes } from '../../utils/studentCodeGenerator';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface StudentCodeMigrationModalProps {
   onClose: () => void;
@@ -22,6 +23,7 @@ const StudentCodeMigrationModal: React.FC<StudentCodeMigrationModalProps> = ({
 }) => {
   const [step, setStep] = useState<'confirm' | 'migrating' | 'done'>('confirm');
   const [loading, setLoading] = useState(false);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
 
@@ -132,7 +134,7 @@ const StudentCodeMigrationModal: React.FC<StudentCodeMigrationModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[8vh] bg-black/50">
-      <div className="bg-white rounded-sm shadow-2xl w-[90%] max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div style={dragStyle} className="bg-white rounded-sm shadow-2xl w-[90%] max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* 헤더 */}
         <div className="bg-primary px-6 py-4 flex items-center justify-between">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
@@ -169,7 +171,7 @@ const StudentCodeMigrationModal: React.FC<StudentCodeMigrationModalProps> = ({
                 <>
                   {/* Section 1: 마이그레이션 개요 */}
                   <div className="bg-white border border-gray-200 overflow-hidden">
-                    <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                    <div onMouseDown={handleDragMouseDown} className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-move select-none">
                       <Database className="w-3 h-3 text-primary" />
                       <h3 className="text-primary font-bold text-xs">마이그레이션 개요</h3>
                     </div>

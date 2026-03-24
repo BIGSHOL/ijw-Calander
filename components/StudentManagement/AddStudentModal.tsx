@@ -9,6 +9,7 @@ import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { getTodayKST } from '../../utils/dateUtils';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
 import { CampusType, CAMPUS_ID_PREFIX, CAMPUS_LABELS, CAMPUS_COLORS } from '../../utils/campusUtils';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface AddStudentModalProps {
     isOpen: boolean;
@@ -211,6 +212,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
     };
 
     useEscapeClose(handleClose);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
     if (!isOpen) return null;
 
@@ -226,7 +228,7 @@ const AddStudentModal: React.FC<AddStudentModalProps> = ({ isOpen, onClose, onSu
                 className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
             >
                 {/* 헤더 */}
-                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
+                <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0 cursor-move select-none">
                     <h2 className="text-sm font-bold text-primary flex items-center gap-2">
                         <UserPlus size={16} className="text-accent" />
                         새 학생 등록

@@ -2,6 +2,7 @@ import React from 'react';
 import { ExamType, ExamScope, EXAM_TYPE_LABELS, EXAM_SCOPE_LABELS } from '../../types';
 import { GRADE_OPTIONS } from '../../hooks/useClasses';
 import { X, Check, Loader2, Building2, Tag, Search, FileText, BookOpen } from 'lucide-react';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface Class {
   id: string;
@@ -68,12 +69,13 @@ const ExamCreateModal: React.FC<ExamCreateModalProps> = ({
   classes,
   availableSchools,
 }) => {
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
-      <div className="bg-white rounded-sm shadow-xl w-full max-w-lg mx-4 max-h-[85vh] flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+      <div style={dragStyle} className="bg-white rounded-sm shadow-xl w-full max-w-lg mx-4 max-h-[85vh] flex flex-col overflow-hidden">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
           <h2 className="text-sm font-bold text-primary">새 시험 등록</h2>
           <button
             onClick={onClose}

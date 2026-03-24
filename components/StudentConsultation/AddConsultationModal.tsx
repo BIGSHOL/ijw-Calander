@@ -7,6 +7,7 @@ import { X, Search, Loader2, User, Users, Clock, Calendar, MessageSquare, Edit2,
 import { SUBJECT_COLORS } from '../../utils/styleUtils';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { formatDateKey } from '../../utils/dateUtils';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface AddConsultationModalProps {
     onClose: () => void;
@@ -30,6 +31,7 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
     userProfile,
 }) => {
     useEscapeClose(onClose);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
     const currentUser = userProfile ? {
         uid: userProfile.uid,
@@ -217,7 +219,7 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
                 className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden"
             >
                 {/* 헤더 */}
-                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
+                <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0 cursor-move select-none">
                     <h2 className="text-sm font-bold text-primary flex items-center gap-2">
                         {isEditing ? <Edit2 className="w-4 h-4 text-accent" /> : <MessageSquare className="w-4 h-4 text-accent" />}
                         {isEditing ? '상담 기록 수정' : '새 상담 기록'}

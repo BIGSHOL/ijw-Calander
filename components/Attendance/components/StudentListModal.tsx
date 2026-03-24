@@ -3,6 +3,7 @@ import { Student } from '../types';
 import { X, UserPlus, UserMinus } from 'lucide-react';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
 import { useEscapeClose } from '../../../hooks/useEscapeClose';
+import { useDraggable } from '../../../hooks/useDraggable';
 
 interface Props {
   isOpen: boolean;
@@ -14,6 +15,7 @@ interface Props {
 
 const StudentListModal: React.FC<Props> = ({ isOpen, onClose, title, students, type }) => {
   useEscapeClose(onClose);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
   if (!isOpen) return null;
 
@@ -23,7 +25,7 @@ const StudentListModal: React.FC<Props> = ({ isOpen, onClose, title, students, t
         className="bg-white rounded-sm shadow-xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
           <h3 className="text-sm font-bold text-primary flex items-center gap-2">
             {type === 'new' ? <UserPlus size={16} /> : <UserMinus size={16} />}
             {title}

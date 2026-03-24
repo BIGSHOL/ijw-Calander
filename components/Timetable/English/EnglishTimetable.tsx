@@ -44,7 +44,7 @@ interface EnglishTimetableProps {
     timetableSubject?: TimetableSubjectType;
     setTimetableSubject?: (value: TimetableSubjectType) => void;
     setTimetableViewType?: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>;
-    mathViewMode?: 'day-based' | 'teacher-based';
+    mathViewMode?: string;
     setMathViewMode?: (value: string) => void;
     hasPermissionFn?: (perm: string) => boolean;
     setIsTimetableSettingsOpen?: (value: boolean) => void;

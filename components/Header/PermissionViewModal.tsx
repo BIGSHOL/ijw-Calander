@@ -7,6 +7,7 @@ import React from 'react';
 import { Eye, X, ClipboardList, Check, Shield } from 'lucide-react';
 import { UserProfile, ROLE_LABELS, AppTab, TAB_META } from '../../types';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface PermissionViewModalProps {
   isOpen: boolean;
@@ -24,6 +25,7 @@ export const PermissionViewModal: React.FC<PermissionViewModalProps> = ({
   rolePermissions,
 }) => {
   useEscapeClose(onClose);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
   if (!isOpen) return null;
 
@@ -93,8 +95,8 @@ export const PermissionViewModal: React.FC<PermissionViewModalProps> = ({
       <div
         className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]"
       />
-      <div className="fixed left-1/2 top-[8vh] -translate-x-1/2 w-[500px] max-h-[85vh] bg-white rounded-sm shadow-xl z-[110] flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+      <div style={dragStyle} className="fixed left-1/2 top-[8vh] -translate-x-1/2 w-[500px] max-h-[85vh] bg-white rounded-sm shadow-xl z-[110] flex flex-col overflow-hidden">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
           <h3 className="text-sm font-bold text-primary flex items-center gap-2">
             <Eye size={18} /> 내 권한
           </h3>

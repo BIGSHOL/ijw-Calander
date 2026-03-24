@@ -17,6 +17,7 @@ import { getKoreanErrorMessage } from '../../utils/errorMessages';
 import { StaffMember } from '../../types';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface StaffMergeModalProps {
   staff: StaffMember[];
@@ -46,6 +47,7 @@ const MERGE_FIELDS: (keyof StaffMember)[] = [
 
 const StaffMergeModal: React.FC<StaffMergeModalProps> = ({ staff, onClose }) => {
   const queryClient = useQueryClient();
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
   useEscapeClose(onClose);
 
   const [step, setStep] = useState<'preview' | 'processing' | 'done'>('preview');
@@ -269,9 +271,9 @@ const StaffMergeModal: React.FC<StaffMergeModalProps> = ({ staff, onClose }) => 
 
   return (
     <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col">
+      <div style={dragStyle} className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col">
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-4 py-3 border-b bg-primary/5">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-4 py-3 border-b bg-primary/5 cursor-move select-none">
           <div className="flex items-center gap-2">
             <GitMerge className="w-4 h-4 text-primary" />
             <h2 className="font-bold text-sm text-primary">직원 병합</h2>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Download, Loader2, Image as ImageIcon, ZoomIn, ZoomOut, Check, RotateCcw } from 'lucide-react';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useDraggable } from '../../hooks/useDraggable';
 // html-to-image는 동적 import로 로드 (한글 폰트 렌더링이 html2canvas보다 우수)
 
 // 그룹 정보 인터페이스 (행 선택용)
@@ -32,6 +33,7 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
   onGroupsChanged,
 }) => {
   useEscapeClose(onClose);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -236,9 +238,9 @@ const ExportImageModal: React.FC<ExportImageModalProps> = ({
       />
 
       {/* 모달 컨텐츠 */}
-      <div className="relative bg-white rounded-sm shadow-xl w-[95vw] max-w-6xl max-h-[85vh] flex flex-col overflow-hidden">
+      <div style={dragStyle} className="relative bg-white rounded-sm shadow-xl w-[95vw] max-w-6xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0 cursor-move select-none">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-sm">
               <ImageIcon size={20} className="text-blue-600" />

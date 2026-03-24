@@ -8,6 +8,7 @@ import { usePermissions } from '../../../hooks/usePermissions';
 import { useMathSimulationOptional } from './context/SimulationContext';
 import { useEscapeClose } from '../../../hooks/useEscapeClose';
 import { getKoreanErrorMessage } from '../../../utils/errorMessages';
+import { useDraggable } from '../../../hooks/useDraggable';
 
 // Math-specific constants
 const SCENARIO_COLLECTION = 'math_scenarios';
@@ -69,6 +70,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
 }) => {
     const [scenarios, setScenarios] = useState<ScenarioEntry[]>([]);
     const [loading, setLoading] = useState(true);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
     const [activeOperation, setActiveOperation] = useState<string | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editingName, setEditingName] = useState('');
@@ -415,9 +417,9 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
 
     return (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh] p-4">
-            <div className="bg-white rounded-sm shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
+            <div style={dragStyle} className="bg-white rounded-sm shadow-xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+                <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
                     <div className="flex items-center gap-2">
                         <FileText size={18} />
                         <h2 className="text-sm font-bold text-primary">시나리오 관리</h2>

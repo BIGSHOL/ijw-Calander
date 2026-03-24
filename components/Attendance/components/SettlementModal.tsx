@@ -3,6 +3,7 @@ import { IncentiveConfig, MonthlySettlement, SalaryConfig } from '../types';
 import { formatCurrency } from '../utils';
 import { X, Gift, CheckCircle2, Circle, DollarSign, Calendar, FileText, Clock, Lock, Unlock, AlertTriangle, Calculator, CreditCard, MessageSquare } from 'lucide-react';
 import { useEscapeClose } from '../../../hooks/useEscapeClose';
+import { useDraggable } from '../../../hooks/useDraggable';
 
 interface Props {
     isOpen: boolean;
@@ -21,6 +22,7 @@ const SettlementModal: React.FC<Props> = ({
 }) => {
     const [localData, setLocalData] = useState<MonthlySettlement>(data);
     const [showFinalizeConfirm, setShowFinalizeConfirm] = useState(false);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
     useEscapeClose(onClose);
 
@@ -99,7 +101,7 @@ const SettlementModal: React.FC<Props> = ({
                 className="bg-white rounded-sm shadow-xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden"
             >
                 {/* Header */}
-                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+                <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
                     <h2 className="text-sm font-bold text-primary flex items-center gap-2">
                         <DollarSign size={16} className="text-accent" />
                         {monthStr} 정산

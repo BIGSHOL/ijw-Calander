@@ -16,6 +16,7 @@ import { ScenarioClass } from '../Timetable/English/context/SimulationContext';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { useRooms } from '../../hooks/useRooms';
 import { getTodayKST } from '../../utils/dateUtils';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface EditClassModalProps {
   classInfo: ClassInfo;
@@ -29,6 +30,7 @@ const WEEKDAY_ORDER: Record<string, number> = { '월': 0, '화': 1, '수': 2, '�
 
 const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotTeachers, onClose, isSimulationMode = false }) => {
   useEscapeClose(() => onClose());
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
   const simulationContext = isSimulationMode ? useSimulationOptional() : null;
   const [className, setClassName] = useState(classInfo.className);
   const [teacher, setTeacher] = useState(classInfo.teacher);
@@ -622,7 +624,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4">
-      <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+      <div style={dragStyle} className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* 헤더 */}
         <div className="bg-primary text-white px-4 py-3">
           <div className="flex items-center justify-between mb-2">
@@ -702,7 +704,7 @@ const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotT
             <div className="space-y-2">
               {/* 기본 정보 섹션 */}
               <div className="bg-white border border-gray-200 overflow-hidden">
-                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                <div onMouseDown={handleDragMouseDown} className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-move select-none">
                   <User className="w-3 h-3 text-primary" />
                   <h3 className="text-primary font-bold text-xs">기본 정보</h3>
                 </div>

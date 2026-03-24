@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, User, Phone, School, Calendar, MapPin, BookOpen, MessageSquare, Banknote, FileText } from 'lucide-react';
 import { ConsultationRecord, CONSULTATION_STATUS_COLORS } from '../../types';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface RegistrationConsultationDetailModalProps {
     record: ConsultationRecord;
@@ -11,13 +12,14 @@ const RegistrationConsultationDetailModal: React.FC<RegistrationConsultationDeta
     record,
     onClose
 }) => {
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
     const statusColorClass = CONSULTATION_STATUS_COLORS[record.status] || 'bg-gray-100 text-gray-800';
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div style={dragStyle} className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
+                <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50 cursor-move select-none">
                     <div className="flex items-center gap-2">
                         <MessageSquare className="w-5 h-5 text-primary" />
                         <h2 className="text-sm font-bold text-primary">등록 상담 상세</h2>

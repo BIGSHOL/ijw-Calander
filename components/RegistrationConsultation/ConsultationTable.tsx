@@ -797,7 +797,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                         {/* 녹음 열 */}
                                         <td className="px-1 py-1.5 whitespace-nowrap text-center" style={{ minWidth: '36px', width: '36px' }}>
                                             {recordingSet.has(`${record.studentName}|${record.consultationDate}`) ? (
-                                                <Mic size={13} className="inline text-purple-500" title="녹음 분석 있음" />
+                                                <span title="녹음 분석 있음"><Mic size={13} className="inline text-purple-500" /></span>
                                             ) : (
                                                 <span className="text-gray-200">-</span>
                                             )}

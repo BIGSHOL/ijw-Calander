@@ -871,7 +871,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 !existingIds.has(s.id) &&
                 s.status !== 'withdrawn'
             )
-            .slice(0, 8);
+            .sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', 'ko'));
     }, [autoCompleteQuery, studentMap, cls, isExcelMode]);
 
     // 이 반에 대한 보류 등록 학생 (저장 전 가상 표시)
@@ -1742,7 +1742,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                             className="w-full px-1.5 py-0.5 text-xxs border border-gray-300 rounded focus:ring-1 focus:ring-blue-400 focus:border-blue-400 outline-none"
                         />
                         {showAutoComplete && autoCompleteResults.length > 0 && (
-                            <ul className="absolute z-50 left-0 right-0 bottom-full mb-0.5 bg-white border border-gray-300 rounded shadow-lg max-h-40 overflow-y-auto">
+                            <ul className="absolute z-50 left-0 right-0 bottom-full mb-0.5 bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto">
                                 {autoCompleteResults.map((s: any, idx: number) => (
                                     <li
                                         key={s.id}

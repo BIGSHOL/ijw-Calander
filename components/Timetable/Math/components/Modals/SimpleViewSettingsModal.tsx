@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, SlidersHorizontal } from 'lucide-react';
 import { useEscapeClose } from '../../../../../hooks/useEscapeClose';
+import { useDraggable } from '../../../../../hooks/useDraggable';
 
 interface SimpleViewSettingsModalProps {
     isOpen: boolean;
@@ -67,6 +68,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
     setShowSchedule,
 }) => {
     useEscapeClose(onClose);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
     if (!isOpen) return null;
 
@@ -106,7 +108,7 @@ const SimpleViewSettingsModal: React.FC<SimpleViewSettingsModalProps> = ({
                 className="bg-white rounded-sm shadow-xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden"
             >
                 {/* Header */}
-                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 sticky top-0 bg-white z-10">
+                <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 sticky top-0 bg-white z-10 cursor-move select-none">
                     <div className="flex items-center gap-2">
                         <SlidersHorizontal size={18} className="text-accent" />
                         <h3 className="text-sm font-bold text-primary">보기 설정</h3>

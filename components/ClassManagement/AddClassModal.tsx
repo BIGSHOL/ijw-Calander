@@ -10,6 +10,7 @@ import { useStaff } from '../../hooks/useStaff';
 import { SubjectType } from '../../types';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { useRooms } from '../../hooks/useRooms';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface AddClassModalProps {
   onClose: () => void;
@@ -35,6 +36,7 @@ const sortSlots = (slots: string[]): string[] => {
 
 const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject = 'math' }) => {
   useEscapeClose(onClose);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
   // 기본 정보
   const [className, setClassName] = useState('');
   const [subject, setSubject] = useState<SubjectType>(defaultSubject);
@@ -308,9 +310,9 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4">
-      <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+      <div style={dragStyle} className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-2 py-1.5 border-b border-gray-200">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-2 py-1.5 border-b border-gray-200 cursor-move select-none">
           <div className="flex items-center gap-2">
             <Plus className="w-4 h-4" />
             <h2 className="text-sm font-bold text-primary">새 수업 추가</h2>

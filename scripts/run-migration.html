@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Enrollment Migration Tool</title>
+<style>
+  body { font-family: monospace; max-width: 900px; margin: 40px auto; background: #1a1a2e; color: #eee; padding: 20px; }
+  button { padding: 12px 24px; font-size: 16px; cursor: pointer; border: none; border-radius: 6px; margin: 5px; font-weight: bold; }
+  .dryrun { background: #3498db; color: white; }
+  .execute { background: #e74c3c; color: white; }
+  .dryrun:hover { background: #2980b9; }
+  .execute:hover { background: #c0392b; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  pre { background: #16213e; padding: 20px; border-radius: 8px; overflow-x: auto; white-space: pre-wrap; max-height: 600px; overflow-y: auto; line-height: 1.5; }
+  h2 { color: #e94560; }
+  .warn { color: #f39c12; font-size: 14px; margin: 10px 0; }
+</style>
+</head>
+<body>
+<h2>Enrollment Migration Tool</h2>
+<p class="warn">1단계: DryRun으로 먼저 확인 → 2단계: 문제없으면 Execute 실행</p>
+<div>
+  <button class="dryrun" id="btnDryrun" onclick="runMigration('dryrun')">1. DryRun (미리보기)</button>
+  <button class="execute" id="btnExecute" onclick="runMigration('execute')">2. Execute (실행)</button>
+</div>
+<pre id="output">Ready...
+
+DryRun: 실제 데이터를 변경하지 않고 어떤 변경이 필요한지만 보여줍니다.
+Execute: 실제로 데이터를 수정합니다.</pre>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyCL4Nc06crDPPs_5TgdyOzphjEosDexNzQ",
+  authDomain: "ijw-calander.firebaseapp.com",
+  projectId: "ijw-calander",
+});
+
+async function runMigration(mode) {
+  const out = document.getElementById('output');
+  const btn1 = document.getElementById('btnDryrun');
+  const btn2 = document.getElementById('btnExecute');
+
+  if (mode === 'execute') {
+    if (!confirm('정말 실행하시겠습니까? 데이터가 수정됩니다.\n\n먼저 DryRun으로 확인하셨나요?')) return;
+  }
+
+  btn1.disabled = true;
+  btn2.disabled = true;
+  out.textContent = `[${mode.toUpperCase()}] 실행 중... (최대 9분 소요)\n`;
+
+  try {
+    const fn = firebase.app().functions('asia-northeast3');
+    const migrate = fn.httpsCallable('migrateEnrollmentsToSubcollection', { timeout: 540000 });
+    const result = await migrate({ mode });
+    const d = result.data;
+
+    let output = `=== ${d.mode.toUpperCase()} 결과 ===\n\n`;
+    output += `전체 학생 수: ${d.totalStudents}\n`;
+    output += `배열 필드 있는 학생: ${d.studentsWithArrayField}\n`;
+    output += `마이그레이션 대상: ${d.enrollmentsMigrated}건\n`;
+    output += `중복 발견: ${d.duplicatesFound}건\n`;
+    output += `중복 삭제: ${d.duplicatesDeleted || 0}건\n`;
+    output += `endDate 제거 대상 (수업에 있는데 종료됨): ${d.endDateCleared}건\n`;
+    output += `endDate 설정 대상 (수업에 없는데 활성): ${d.endDateSet}건\n`;
+    output += `메타데이터 동기화 (schedule/days/staffId): ${d.metadataSynced || 0}건\n`;
+    output += `doc ID 변환 (→ classId): ${d.docIdRenamed || 0}건\n`;
+
+    if (d.details && d.details.length > 0) {
+      output += `\n=== 상세 내역 (${d.details.length}건) ===\n`;
+      d.details.forEach(detail => { output += detail + '\n'; });
+    }
+
+    if (d.errors && d.errors.length > 0) {
+      output += `\n=== 에러 (${d.errors.length}건) ===\n`;
+      d.errors.forEach(err => { output += '❌ ' + err + '\n'; });
+    }
+
+    if (d.mode === 'dryrun') {
+      output += '\n⚠️ DryRun 모드: 실제 변경은 없습니다. Execute 버튼으로 실행하세요.';
+    } else {
+      output += '\n✅ Execute 완료: 데이터가 수정되었습니다.';
+    }
+
+    out.textContent = output;
+  } catch (e) {
+    out.textContent = 'Error: ' + e.message + '\n\n' + JSON.stringify(e, null, 2);
+  }
+  btn1.disabled = false;
+  btn2.disabled = false;
+}
+</script>
+</body>
+</html>

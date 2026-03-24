@@ -7,6 +7,7 @@ import ParticipantSelector from './ParticipantSelector';
 import EventModalActions from './EventModalActions';
 import SeminarPanel from './SeminarPanel';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface EventModalProps {
   isOpen: boolean;
@@ -72,13 +73,14 @@ const EventModal: React.FC<EventModalProps> = ({
   });
 
   useEscapeClose(onClose);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
   return (
     <div className="fixed inset-0 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)', transform: 'translateZ(0)', transition: 'none', zIndex: 9998, display: isOpen ? 'flex' : 'none' }}>
       {/* Main Event Modal */}
-      <div className="bg-white rounded-sm shadow-xl max-w-2xl relative max-h-[85vh] flex flex-col overflow-hidden">
+      <div style={dragStyle} className="bg-white rounded-sm shadow-xl max-w-2xl relative max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header - StudentDetailModal 스타일 */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0 cursor-move select-none">
           <h2 className="text-sm font-bold text-primary flex items-center gap-2">
             {existingEvent ? (state.isViewMode ? <Eye size={16} className="text-accent" /> : <Edit3 size={16} className="text-accent" />) : <Plus size={16} className="text-accent" />}
             {state.isViewMode ? '일정 상세' : (existingEvent ? '일정 수정' : '새 일정 추가')}

@@ -9,7 +9,7 @@ import { useTeachers } from '../../../hooks/useFirebaseQueries';
 import { ClassInfo, useClasses } from '../../../hooks/useClasses';
 import { SUBJECT_COLORS, SUBJECT_LABELS } from '../../../utils/styleUtils';
 import ClassDetailModal from '../../ClassManagement/ClassDetailModal';
-import { doc, getDoc, getDocs, collection, query, where, updateDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection, query, where, updateDoc, deleteDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -207,7 +207,7 @@ interface CoursesTabProps {
 
 interface GroupedEnrollment {
   className: string;
-  subject: 'math' | 'english' | 'science' | 'korean' | 'other';
+  subject: 'math' | 'highmath' | 'english' | 'science' | 'korean' | 'other';
   teachers: string[];
   days: string[];
   attendanceDays: string[]; // 학생 실제 등원 요일 (비어있으면 모든 수업 요일에 등원)
@@ -469,7 +469,12 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
   // 수강 일자 수정 (시작일/종료일)
   const handleDateChange = async (group: GroupedEnrollment, field: 'startDate' | 'endDate', newDate: string) => {
-    if (!canEditEnrollmentDates || !newDate) {
+    if (!canEditEnrollmentDates) {
+      setEditingDate(null);
+      return;
+    }
+    // startDate는 필수, endDate는 빈 값 허용 (종료일 삭제 = 재원중으로 복구)
+    if (field === 'startDate' && !newDate) {
       setEditingDate(null);
       return;
     }
@@ -478,21 +483,31 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
     setDeletingClass(key); // 로딩 상태 재활용
 
     try {
+      const buildUpdateData = () => {
+        const updateData: Record<string, any> = {};
+        if (field === 'startDate') {
+          updateData.startDate = newDate;
+          updateData.enrollmentDate = newDate; // 호환성 유지
+        } else {
+          if (newDate) {
+            updateData.endDate = newDate;
+            updateData.withdrawalDate = newDate;
+          } else {
+            // 종료일 삭제 (재원중으로 복구)
+            updateData.endDate = deleteField();
+            updateData.withdrawalDate = deleteField();
+          }
+        }
+        updateData.updatedAt = new Date().toISOString();
+        return updateData;
+      };
+
       if (group.enrollmentIds.length > 0) {
         for (const enrollmentId of group.enrollmentIds) {
           const docRef = doc(db, `students/${student.id}/enrollments`, enrollmentId);
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
-            const updateData: Record<string, any> = {};
-            if (field === 'startDate') {
-              updateData.startDate = newDate;
-              updateData.enrollmentDate = newDate; // 호환성 유지
-            } else {
-              updateData.endDate = newDate;
-              updateData.withdrawalDate = newDate; // 호환성 유지
-            }
-            updateData.updatedAt = new Date().toISOString();
-            await updateDoc(docRef, updateData);
+            await updateDoc(docRef, buildUpdateData());
           }
         }
       } else {
@@ -504,16 +519,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         );
         const snapshot = await getDocs(q);
         for (const docSnap of snapshot.docs) {
-          const updateData: Record<string, any> = {};
-          if (field === 'startDate') {
-            updateData.startDate = newDate;
-            updateData.enrollmentDate = newDate;
-          } else {
-            updateData.endDate = newDate;
-            updateData.withdrawalDate = newDate;
-          }
-          updateData.updatedAt = new Date().toISOString();
-          await updateDoc(docSnap.ref, updateData);
+          await updateDoc(docSnap.ref, buildUpdateData());
         }
       }
 
@@ -742,7 +748,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
       const teacher = getTeacherByIdOrName(staffId);
       return !teacher?.isHidden;
     }).map(staffId => getTeacherByIdOrName(staffId)?.name).filter(Boolean);
-    const subjectColor = SUBJECT_COLORS[group.subject];
+    const subjectColor = SUBJECT_COLORS[group.subject] || SUBJECT_COLORS.other;
     const key = `${group.subject}_${group.className}`;
     const isDeleting = deletingClass === key;
 
@@ -770,7 +776,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         </span>
 
         {/* 수업명 */}
-        <span className="w-52 shrink-0 text-xs text-primary truncate font-medium">
+        <span className={`${compact ? 'flex-1 min-w-0' : 'w-52 shrink-0'} text-xs text-primary truncate font-medium`}>
           {group.className}
         </span>
 
@@ -782,7 +788,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           </span>
         </div>
 
-        {/* 스케줄 (요일+교시 배지) - 학생의 등원 요일만 표시 */}
+        {/* 스케줄 (요일+교시 배지) - 학생의 등원 요일만 표시 - compact에서는 숨김 */}
+        {!compact && (
         <div className="w-40 min-w-0 overflow-hidden">
           <ScheduleBadge
             schedule={actualClass?.schedule?.filter(s => {
@@ -795,6 +802,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             subject={subjectForSchedule}
           />
         </div>
+        )}
 
         {/* 학생수 */}
         <div className="w-10 shrink-0 flex items-center justify-center gap-0.5">
@@ -804,56 +812,93 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           </span>
         </div>
 
-        {/* 시작일/종료일 (compact 모드가 아닐 때만) */}
-        {!compact && (
-          <>
-            {canEditEnrollmentDates && !readOnly && editingDate?.key === `${group.subject}_${group.className}` && editingDate?.field === 'startDate' ? (
-              <input
-                type="date"
-                className="w-24 shrink-0 text-xxs text-primary-700 text-center border border-blue-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
-                defaultValue={group.startDate || ''}
-                autoFocus
-                onBlur={(e) => {
-                  if (e.target.value && e.target.value !== group.startDate) {
-                    handleDateChange(group, 'startDate', e.target.value);
+        {/* 시작일/종료일 */}
+        <>
+          {canEditEnrollmentDates && !readOnly && editingDate?.key === `${group.subject}_${group.className}` && editingDate?.field === 'startDate' ? (
+            <input
+              type="date"
+              className="w-24 shrink-0 text-xxs text-primary-700 text-center border border-blue-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              defaultValue={group.startDate || ''}
+              autoFocus
+              onBlur={(e) => {
+                if (e.target.value && e.target.value !== group.startDate) {
+                  handleDateChange(group, 'startDate', e.target.value);
+                } else {
+                  setEditingDate(null);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                if (e.key === 'Escape') setEditingDate(null);
+              }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <span
+              className={`w-16 shrink-0 text-xxs text-primary-700 text-center ${canEditEnrollmentDates && !readOnly ? 'cursor-pointer hover:text-blue-600 hover:underline' : ''}`}
+              onClick={(e) => {
+                if (canEditEnrollmentDates && !readOnly) {
+                  e.stopPropagation();
+                  setEditingDate({ key: `${group.subject}_${group.className}`, field: 'startDate' });
+                }
+              }}
+              title={canEditEnrollmentDates && !readOnly ? '클릭하여 시작일 수정' : undefined}
+            >
+              {formatDate(group.startDate)}
+            </span>
+          )}
+          {canEditEnrollmentDates && !readOnly && editingDate?.key === `${group.subject}_${group.className}` && editingDate?.field === 'endDate' ? (
+            <input
+              type="date"
+              className="w-24 shrink-0 text-xxs text-primary-700 text-center border border-blue-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
+              defaultValue={group.endDate || ''}
+              autoFocus
+              onBlur={(e) => {
+                if (e.target.value !== (group.endDate || '')) {
+                  if (e.target.value) {
+                    handleDateChange(group, 'endDate', e.target.value);
                   } else {
-                    setEditingDate(null);
+                    // 빈 값 = 종료일 삭제 (재원중으로 복구)
+                    handleDateChange(group, 'endDate', '');
                   }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                  if (e.key === 'Escape') setEditingDate(null);
-                }}
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : (
-              <span
-                className={`w-16 shrink-0 text-xxs text-primary-700 text-center ${canEditEnrollmentDates && !readOnly ? 'cursor-pointer hover:text-blue-600 hover:underline' : ''}`}
-                onClick={(e) => {
-                  if (canEditEnrollmentDates && !readOnly) {
-                    e.stopPropagation();
-                    setEditingDate({ key: `${group.subject}_${group.className}`, field: 'startDate' });
-                  }
-                }}
-                title={canEditEnrollmentDates && !readOnly ? '클릭하여 시작일 수정' : undefined}
-              >
-                {formatDate(group.startDate)}
-              </span>
-            )}
-            {group.endDate ? (
-              <span
-                className="w-14 shrink-0 text-xxs font-bold text-orange-500 text-center"
-                title={`종료예정: ${group.endDate}`}
-              >
-                ~{formatDate(group.endDate)}
-              </span>
-            ) : (
-              <span className="w-14 shrink-0 text-xxs font-bold text-emerald-600 text-center">
-                재원중
-              </span>
-            )}
-          </>
-        )}
+                } else {
+                  setEditingDate(null);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                if (e.key === 'Escape') setEditingDate(null);
+              }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : group.endDate ? (
+            <span
+              className={`w-14 shrink-0 text-xxs font-bold text-orange-500 text-center ${canEditEnrollmentDates && !readOnly ? 'cursor-pointer hover:text-orange-700 hover:underline' : ''}`}
+              onClick={(e) => {
+                if (canEditEnrollmentDates && !readOnly) {
+                  e.stopPropagation();
+                  setEditingDate({ key: `${group.subject}_${group.className}`, field: 'endDate' });
+                }
+              }}
+              title={canEditEnrollmentDates && !readOnly ? '클릭하여 종료일 수정' : undefined}
+            >
+              ~{formatDate(group.endDate)}
+            </span>
+          ) : (
+            <span
+              className={`w-14 shrink-0 text-xxs font-bold text-emerald-600 text-center ${canEditEnrollmentDates && !readOnly ? 'cursor-pointer hover:text-blue-600 hover:underline' : ''}`}
+              onClick={(e) => {
+                if (canEditEnrollmentDates && !readOnly) {
+                  e.stopPropagation();
+                  setEditingDate({ key: `${group.subject}_${group.className}`, field: 'endDate' });
+                }
+              }}
+              title={canEditEnrollmentDates && !readOnly ? '클릭하여 종료일 설정' : undefined}
+            >
+              재원중
+            </span>
+          )}
+        </>
 
         {/* 삭제 버튼 - readOnly 모드에서는 숨김 */}
         {!readOnly && (
@@ -876,7 +921,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
   // 종료된 수업 행 렌더링 함수
   const renderCompletedClassRow = (group: GroupedEnrollment, index: number) => {
-    const subjectColor = SUBJECT_COLORS[group.subject];
+    const subjectColor = SUBJECT_COLORS[group.subject] || SUBJECT_COLORS.other;
     const firstTeacherStaffId = group.teachers[0];
     const firstTeacherName = getTeacherByIdOrName(firstTeacherStaffId)?.name;
     // staffId가 없을 때 수업 정보에서 teacher 가져오기 (영어 수업 호환성)
@@ -923,7 +968,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         </div>
 
         {/* 시작일 */}
-        {canEditEnrollmentDates && !readOnly && !compact && editingDate?.key === `completed_${group.subject}_${group.className}` && editingDate?.field === 'startDate' ? (
+        {canEditEnrollmentDates && !readOnly && editingDate?.key === `completed_${group.subject}_${group.className}` && editingDate?.field === 'startDate' ? (
           <input
             type="date"
             className="w-24 shrink-0 text-xxs text-primary-700 text-center border border-blue-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
@@ -944,21 +989,21 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           />
         ) : (
           <span
-            className={`w-16 shrink-0 text-xxs text-primary-700 text-center ${canEditEnrollmentDates && !readOnly && !compact ? 'cursor-pointer hover:text-blue-600 hover:underline' : ''}`}
+            className={`w-16 shrink-0 text-xxs text-primary-700 text-center ${canEditEnrollmentDates && !readOnly ? 'cursor-pointer hover:text-blue-600 hover:underline' : ''}`}
             onClick={(e) => {
-              if (canEditEnrollmentDates && !readOnly && !compact) {
+              if (canEditEnrollmentDates && !readOnly) {
                 e.stopPropagation();
                 setEditingDate({ key: `completed_${group.subject}_${group.className}`, field: 'startDate' });
               }
             }}
-            title={canEditEnrollmentDates && !readOnly && !compact ? '클릭하여 시작일 수정' : undefined}
+            title={canEditEnrollmentDates && !readOnly ? '클릭하여 시작일 수정' : undefined}
           >
             {formatDate(group.startDate)}
           </span>
         )}
 
         {/* 종료일 */}
-        {canEditEnrollmentDates && !readOnly && !compact && editingDate?.key === `completed_${group.subject}_${group.className}` && editingDate?.field === 'endDate' ? (
+        {canEditEnrollmentDates && !readOnly && editingDate?.key === `completed_${group.subject}_${group.className}` && editingDate?.field === 'endDate' ? (
           <input
             type="date"
             className="w-24 shrink-0 text-xxs text-primary-700 text-center border border-blue-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
@@ -979,14 +1024,14 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           />
         ) : (
           <span
-            className={`w-16 shrink-0 text-xxs text-primary-700 text-center ${canEditEnrollmentDates && !readOnly && !compact ? 'cursor-pointer hover:text-blue-600 hover:underline' : ''}`}
+            className={`w-16 shrink-0 text-xxs text-primary-700 text-center ${canEditEnrollmentDates && !readOnly ? 'cursor-pointer hover:text-blue-600 hover:underline' : ''}`}
             onClick={(e) => {
-              if (canEditEnrollmentDates && !readOnly && !compact) {
+              if (canEditEnrollmentDates && !readOnly) {
                 e.stopPropagation();
                 setEditingDate({ key: `completed_${group.subject}_${group.className}`, field: 'endDate' });
               }
             }}
-            title={canEditEnrollmentDates && !readOnly && !compact ? '클릭하여 종료일 수정' : undefined}
+            title={canEditEnrollmentDates && !readOnly ? '클릭하여 종료일 수정' : undefined}
           >
             {formatDate(group.endDate)}
           </span>
@@ -1054,16 +1099,12 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         {/* 테이블 헤더 */}
         <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-primary-700">
           <span className="w-8 shrink-0">과목</span>
-          <span className="w-52 shrink-0">수업명</span>
+          <span className={`${compact ? 'flex-1 min-w-0' : 'w-52'} shrink-0`}>수업명</span>
           <span className="w-14 shrink-0">강사</span>
-          <span className="w-40">스케줄</span>
+          {!compact && <span className="w-40">스케줄</span>}
           <span className="w-10 shrink-0 text-center">인원</span>
-          {!compact && (
-            <>
-              <span className="w-16 shrink-0 text-center">시작</span>
-              <span className="w-14 shrink-0 text-center">종료</span>
-            </>
-          )}
+          <span className="w-16 shrink-0 text-center">시작</span>
+          <span className="w-14 shrink-0 text-center">종료</span>
           <span className="w-5 shrink-0"></span>
         </div>
 
@@ -1126,7 +1167,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           ) : (
             <div>
               {scheduledEnrollments.map((group, index) => {
-                const subjectColor = SUBJECT_COLORS[group.subject];
+                const subjectColor = SUBJECT_COLORS[group.subject] || SUBJECT_COLORS.other;
                 const actualClass = allClasses.find(
                   c => c.className === group.className && c.subject === group.subject
                 );

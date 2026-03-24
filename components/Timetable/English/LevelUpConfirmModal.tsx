@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { db } from '../../../firebaseConfig';
 import { CLASS_COLLECTION } from './englishUtils';
 import { useEscapeClose } from '../../../hooks/useEscapeClose';
+import { useDraggable } from '../../../hooks/useDraggable';
 
 interface LevelUpConfirmModalProps {
     isOpen: boolean;
@@ -31,6 +32,7 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
 }) => {
     const isLevelDown = direction === 'down';
     const queryClient = useQueryClient();
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [updateCount, setUpdateCount] = useState<number | null>(null);
@@ -125,7 +127,7 @@ const LevelUpConfirmModal: React.FC<LevelUpConfirmModalProps> = ({
 
     return (
         <div className="fixed inset-0 bg-black/50 z-[110] flex items-start justify-center pt-[8vh]">
-            <div className="bg-white rounded-sm shadow-2xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden">
+            <div style={dragStyle} className="bg-white rounded-sm shadow-2xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden">
                 {/* Header */}
                 <div className={`flex justify-between items-center px-5 py-4 ${
                     isLevelDown

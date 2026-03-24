@@ -243,21 +243,15 @@ export function useTimetableState() {
     const saved = storage.getString(STORAGE_KEYS.TIMETABLE_VIEW_TYPE);
     return (saved as 'teacher' | 'room' | 'class' | 'excel') || 'class';
   });
-  const [mathViewMode, _setMathViewMode] = useState<'day-based' | 'teacher-based'>(() => {
+  const [mathViewMode, _setMathViewMode] = useState<string>(() => {
     const saved = storage.getString(STORAGE_KEYS.TIMETABLE_MATH_VIEW_MODE);
-    return (saved as 'day-based' | 'teacher-based') || 'teacher-based';
+    // 강사별뷰(teacher-based) 숨김 → 기본값 day-based
+    return saved === 'teacher-based' ? 'day-based' : (saved || 'day-based');
   });
 
   const setTimetableSubject = useCallback((value: TimetableSubjectType) => {
     _setTimetableSubject(value);
     storage.setString(STORAGE_KEYS.TIMETABLE_SUBJECT, value);
-    // subject별 기본 viewType 설정 (저장된 값이 없을 때)
-    const savedView = storage.getString(STORAGE_KEYS.TIMETABLE_VIEW_TYPE);
-    if (!savedView) {
-      const defaultView = value === 'english' ? 'excel' : 'class';
-      _setTimetableViewType(defaultView);
-      storage.setString(STORAGE_KEYS.TIMETABLE_VIEW_TYPE, defaultView);
-    }
   }, []);
 
   const setTimetableViewType: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>> = useCallback((value) => {
@@ -268,7 +262,7 @@ export function useTimetableState() {
     });
   }, []);
 
-  const setMathViewMode = useCallback((value: 'day-based' | 'teacher-based') => {
+  const setMathViewMode = useCallback((value: string) => {
     _setMathViewMode(value);
     storage.setString(STORAGE_KEYS.TIMETABLE_MATH_VIEW_MODE, value);
   }, []);

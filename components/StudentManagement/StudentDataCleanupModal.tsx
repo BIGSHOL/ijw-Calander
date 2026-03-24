@@ -13,6 +13,7 @@ import { db } from '../../firebaseConfig';
 import { UnifiedStudent } from '../../types';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useDraggable } from '../../hooks/useDraggable';
 
 type TabType = 'numericId' | 'noHistory';
 
@@ -44,6 +45,7 @@ type Step = 'analyzing' | 'ready' | 'deleting' | 'done';
 
 const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClose, students = [], initialTab = 'numericId' }) => {
   const queryClient = useQueryClient();
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
   const [step, setStep] = useState<Step>('analyzing');
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -318,7 +320,7 @@ const StudentDataCleanupModal: React.FC<StudentDataCleanupModalProps> = ({ onClo
         className="bg-white rounded-sm shadow-2xl w-[650px] max-h-[80vh] flex flex-col"
       >
         {/* Header */}
-        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-primary text-white rounded-t-sm">
+        <div onMouseDown={handleDragMouseDown} className="px-4 py-3 border-b border-gray-200 flex items-center justify-between bg-primary text-white rounded-t-sm cursor-move select-none">
           <div className="flex items-center gap-2">
             <Database className="w-5 h-5" />
             <h3 className="font-bold">학생 데이터 정리</h3>

@@ -11,6 +11,7 @@ import { db } from '../../firebaseConfig';
 import { setDoc, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useDraggable } from '../../hooks/useDraggable';
 
 // StaffMember를 UserProfile처럼 사용하기 위한 변환 헬퍼
 const staffToUserLike = (staff: StaffMember): UserProfile => ({
@@ -40,6 +41,7 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<TabType>('departments');
   const queryClient = useQueryClient();
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
   useEscapeClose(onClose);
 
@@ -214,7 +216,7 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
         className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden border border-gray-200"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
           <h2 className="text-sm font-bold text-primary flex items-center gap-1.5">
             <span className="text-accent">📅</span>
             연간 일정 설정

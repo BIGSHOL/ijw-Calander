@@ -66,8 +66,8 @@ export const useMathSettings = () => {
     const [localHiddenTeachers, setLocalHiddenTeachers] = useState<string[]>(() =>
         storage.getJSON<string[]>(STORAGE_KEYS.MATH_HIDDEN_TEACHERS, [])
     );
-    const [localRoomFilter, setLocalRoomFilter] = useState<'all' | 'main' | 'barun'>(() =>
-        storage.getString(STORAGE_KEYS.MATH_ROOM_FILTER) as 'all' | 'main' | 'barun' || 'all'
+    const [localRoomFilter, setLocalRoomFilter] = useState<'all' | 'main' | 'barun' | 'godeung'>(() =>
+        storage.getString(STORAGE_KEYS.MATH_ROOM_FILTER) as 'all' | 'main' | 'barun' | 'godeung' || 'all'
     );
 
     const migrationDone = useRef(false);

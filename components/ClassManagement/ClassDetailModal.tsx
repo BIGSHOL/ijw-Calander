@@ -18,6 +18,7 @@ import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { getTodayKST } from '../../utils/dateUtils';
 import { useClassOperations } from '../Timetable/Math/hooks/useClassOperations';
 import { useRooms } from '../../hooks/useRooms';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface ClassDetailModalProps {
   classInfo: ClassInfo;
@@ -44,6 +45,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
   initialSlotTeachers
 }) => {
   useEscapeClose(onClose);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
   const { className: initialClassName, subject, studentCount } = classInfo;
 
   // ==================== 공통 상태 ====================
@@ -489,9 +491,9 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
-      <div className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
+      <div style={dragStyle} className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-2 py-1.5 border-b border-gray-200">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-2 py-1.5 border-b border-gray-200 cursor-move select-none">
           <div className="flex items-center gap-2">
             <span className="px-1.5 py-0.5 bg-accent text-primary text-xxs font-bold">
               {SUBJECT_LABELS[subject as SubjectType] || subject}
@@ -508,7 +510,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
             ) : (
               <>
                 {canEdit && (
-                  <button onClick={() => { setActiveEditTab(activeViewTab === 'students' ? 'students' : 'info'); setIsEditMode(true); }} disabled={isPending} className="bg-accent hover:bg-[#e5a60f] text-primary px-1.5 py-0.5 text-xs font-semibold disabled:opacity-50 transition-colors flex items-center gap-1">
+                  <button onClick={() => { setActiveEditTab('schedule'); setIsEditMode(true); }} disabled={isPending} className="bg-accent hover:bg-[#e5a60f] text-primary px-1.5 py-0.5 text-xs font-semibold disabled:opacity-50 transition-colors flex items-center gap-1">
                     <Edit className="w-3 h-3" />수정
                   </button>
                 )}
@@ -527,14 +529,14 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
         <div className="flex items-center gap-4 px-2 py-1 border-b border-gray-200 bg-white">
           {isEditMode ? (
             <>
+              <button onClick={() => setActiveEditTab('schedule')} className={`flex items-center gap-1 text-xs font-medium transition-colors ${activeEditTab === 'schedule' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
+                <Calendar className="w-3 h-3" />스케줄
+              </button>
               <button onClick={() => setActiveEditTab('info')} className={`flex items-center gap-1 text-xs font-medium transition-colors ${activeEditTab === 'info' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
-                <BookOpen className="w-3 h-3" />기본 정보
+                <BookOpen className="w-3 h-3" />수업정보
               </button>
               <button onClick={() => !isSimulationMode && setActiveEditTab('students')} disabled={isSimulationMode} className={`flex items-center gap-1 text-xs font-medium transition-colors ${activeEditTab === 'students' ? 'text-primary' : isSimulationMode ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-gray-600'}`}>
                 <Users className="w-3 h-3" />학생({finalStudentCount})
-              </button>
-              <button onClick={() => setActiveEditTab('schedule')} className={`flex items-center gap-1 text-xs font-medium transition-colors ${activeEditTab === 'schedule' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
-                <Calendar className="w-3 h-3" />스케줄
               </button>
             </>
           ) : (

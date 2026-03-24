@@ -11,6 +11,7 @@ import { DEFAULT_ENGLISH_LEVELS, parseClassName, CLASS_COLLECTION, CLASS_DRAFT_C
 import StudentListTable from './StudentModal/StudentListTable';
 import StudentBatchActions from './StudentModal/StudentBatchActions';
 import { getKoreanErrorMessage } from '../../../utils/errorMessages';
+import { useDraggable } from '../../../hooks/useDraggable';
 
 interface StudentModalProps {
     isOpen: boolean;
@@ -38,6 +39,7 @@ const StudentModal: React.FC<StudentModalProps> = ({
 }) => {
     // React Query client for cache invalidation
     const queryClient = useQueryClient();
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
     // State
     const [students, setStudents] = useState<TimetableStudent[]>([]);
@@ -502,7 +504,7 @@ const StudentModal: React.FC<StudentModalProps> = ({
 
                     {/* Section 1: 수업 정보 */}
                     <div className="bg-white border border-gray-200 overflow-hidden">
-                        <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                        <div onMouseDown={handleDragMouseDown} className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-move select-none">
                             <BookOpen className="w-3 h-3 text-primary" />
                             <h3 className="text-primary font-bold text-xs">수업 정보</h3>
                         </div>

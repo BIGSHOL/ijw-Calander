@@ -7,6 +7,7 @@ import { listenerRegistry } from '../../../utils/firebaseCleanup';
 import { TimetableStudent, TimetableClass } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
+import { useDraggable } from '../../../hooks/useDraggable';
 
 interface MathStudentModalProps {
     isOpen: boolean;
@@ -30,6 +31,7 @@ const MathStudentModal: React.FC<MathStudentModalProps> = ({
     // Local State
     const [students, setStudents] = useState<TimetableStudent[]>([]);
     const [newStudentName, setNewStudentName] = useState('');
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
     const [newStudentSchool, setNewStudentSchool] = useState('');
     const [newStudentGrade, setNewStudentGrade] = useState('');
     const [hasChanges, setHasChanges] = useState(false);
@@ -192,7 +194,7 @@ const MathStudentModal: React.FC<MathStudentModalProps> = ({
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+                <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
                     <div className="flex items-center gap-2">
                         <Calculator className="inline-block w-5 h-5" />
                         <h2 className="text-sm font-bold text-primary">{mathClass.className} - 학생 관리</h2>

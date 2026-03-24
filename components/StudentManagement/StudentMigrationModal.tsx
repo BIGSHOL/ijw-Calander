@@ -13,6 +13,7 @@ import { db } from '../../firebaseConfig';
 import { UnifiedStudent } from '../../types';
 import { read, utils } from 'xlsx';
 import { generateAttendanceNumber } from '../../utils/attendanceNumberGenerator';
+import { useDraggable } from '../../hooks/useDraggable';
 
 // ============================================================
 // TYPE DEFINITIONS
@@ -199,6 +200,7 @@ const formatPhoneNumber = (phone?: string): string | undefined => {
 const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }) => {
   const [step, setStep] = useState<'load' | 'preview' | 'migrating' | 'done'>('load');
   const [loading, setLoading] = useState(false);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
 
@@ -756,7 +758,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
 
         {/* Section: 지원 파일 형식 */}
         <div className="bg-gray-50 border border-gray-200 rounded-sm overflow-hidden text-left">
-          <div className="px-4 py-2 bg-gray-100 border-b border-gray-200 flex items-center gap-2">
+          <div onMouseDown={handleDragMouseDown} className="px-4 py-2 bg-gray-100 border-b border-gray-200 flex items-center gap-2 cursor-move select-none">
             <FileSpreadsheet className="w-4 h-4 text-gray-700" />
             <h4 className="text-sm font-bold text-gray-900">지원 파일 형식</h4>
           </div>
@@ -815,7 +817,7 @@ const StudentMigrationModal: React.FC<StudentMigrationModalProps> = ({ onClose }
           <h4 className="text-sm font-bold text-gray-900">통계 요약</h4>
         </div>
         <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white p-4 rounded-sm border border-gray-200 shadow-sm">
+          <div style={dragStyle} className="bg-white p-4 rounded-sm border border-gray-200 shadow-sm">
             <div className="text-sm text-gray-500 mb-1">총 데이터</div>
             <div className="text-2xl font-bold text-gray-900">{totalCount}명</div>
           </div>

@@ -100,7 +100,7 @@ interface MathTimetableContentProps {
     handleMultiDrop: (studentIds: string[], fromClassId: string, toClassId: string, toZone?: string) => void;
     currentSubjectFilter: string;
     studentMap: Record<string, UnifiedStudent>;
-    timetableViewMode: 'day-based' | 'teacher-based';
+    timetableViewMode: string;
     classKeywords: ClassKeywordColor[];
     setSelectedClassInfo: (info: ClassInfo | null) => void;
     setSelectedStudentForModal: (student: UnifiedStudent | null) => void;
@@ -137,7 +137,7 @@ interface MathTimetableContentProps {
     timetableSubject?: TimetableSubjectType;
     setTimetableSubject?: (value: TimetableSubjectType) => void;
     setTimetableViewType?: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>;
-    mathViewMode?: 'day-based' | 'teacher-based';
+    mathViewMode?: string;
     setMathViewMode?: (value: string) => void;
     hasPermissionFn?: (perm: string) => boolean;
     setIsTimetableSettingsOpen?: (value: boolean) => void;
@@ -285,6 +285,14 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
 
     // 엑셀 자동완성 하이라이트: 포커싱 중인 학생 ID (다른 반에서 빨갛게 표시)
     const [acHighlightStudentId, setAcHighlightStudentId] = useState<string | null>(null);
+
+    // 엑셀 모드 학생 등록 (바로 DB 반영하지 않고 pending에 추가)
+    const handleEnrollStudentPending = useCallback((studentId: string, className: string) => {
+        if (pendingExcelEnrollments.some(e => e.studentId === studentId && e.className === className)) return;
+        setPendingExcelEnrollments(prev => [...prev, { studentId, className }]);
+        const name = studentMap[studentId]?.name || studentId;
+        showExcelToast(`등록 대기: ${name}`);
+    }, [pendingExcelEnrollments, studentMap, showExcelToast]);
 
     // 엑셀 모드 학생 선택 핸들러 (단일)
     const handleExcelStudentSelect = useCallback((studentId: string, className: string) => {
@@ -793,7 +801,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         onDrop={handleGridDrop}
                         currentSubjectFilter={currentSubjectFilter}
                         studentMap={studentMap}
-                        timetableViewMode={timetableViewMode}
+                        timetableViewMode={timetableViewMode === 'day-based' ? 'day-based' : 'teacher-based'}
                         classKeywords={classKeywords}
                         onStudentClick={handleStudentClick}
                         pendingMovedStudentIds={pendingMovedStudentIds}
@@ -836,7 +844,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         onDrop={handleGridDrop}
                         currentSubjectFilter={currentSubjectFilter}
                         studentMap={studentMap}
-                        timetableViewMode={timetableViewMode}
+                        timetableViewMode={timetableViewMode as 'day-based' | 'teacher-based'}
                         classKeywords={classKeywords}
                         onStudentClick={handleStudentClick}
                         pendingMovedStudentIds={pendingMovedStudentIds}
@@ -885,7 +893,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         onDrop={handleGridDrop}
                         currentSubjectFilter={currentSubjectFilter}
                         studentMap={studentMap}
-                        timetableViewMode="teacher-based"
+                        timetableViewMode={timetableViewMode === 'excel-day' ? 'day-based' : 'teacher-based'}
                         classKeywords={classKeywords}
                         onStudentClick={handleStudentClick}
                         pendingMovedStudentIds={pendingMovedStudentIds}
@@ -893,7 +901,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         isExcelMode={true}
                         selectedClassId={selectedClassId}
                         onCellSelect={setSelectedClassId}
-                        onEnrollStudent={enrollExistingStudent}
+                        onEnrollStudent={handleEnrollStudentPending}
                         selectedStudentIds={selectedStudentIds}
                         selectedStudentClassName={selectedStudentClassName}
                         copiedStudentIds={copiedStudent?.studentIds || null}
@@ -1109,9 +1117,9 @@ interface TimetableManagerProps {
     teachers?: Teacher[];  // Centralized from App.tsx
     classKeywords?: ClassKeywordColor[]; // For keyword color coding
     currentUser: any; // Using any for now to avoid circular dependency or import issues if common
-    // 수학 뷰 모드 (날짜별/강사별)
-    mathViewMode?: 'day-based' | 'teacher-based';
-    onMathViewModeChange?: (mode: 'day-based' | 'teacher-based') => void;
+    // 수학 뷰 모드 (날짜별/강사별/엑셀모드)
+    mathViewMode?: string;
+    onMathViewModeChange?: (mode: string) => void;
     // TimetableNavBar 통합용
     hasPermissionFn?: (perm: string) => boolean;
     setIsTimetableSettingsOpen?: (value: boolean) => void;
@@ -1302,11 +1310,19 @@ const TimetableManager = ({
     const setShowStudents = onShowStudentsChange ?? setInternalShowStudents;
 
     // Timetable View Mode: 'day-based' (월화수목금토일) vs 'teacher-based' (월목/화금/주말/수요일)
-    const [internalTimetableViewMode, setInternalTimetableViewMode] = useState<'day-based' | 'teacher-based'>(
-        viewSettings.timetableViewMode || 'teacher-based'
+    // 강사별뷰(teacher-based) 숨김 → 기본값을 day-based로 설정
+    const [internalTimetableViewMode, setInternalTimetableViewMode] = useState<string>(
+        viewSettings.timetableViewMode === 'teacher-based' ? 'day-based' : (viewSettings.timetableViewMode || 'day-based')
     );
     const timetableViewMode = externalMathViewMode ?? internalTimetableViewMode;
     const setTimetableViewMode = onMathViewModeChange ?? setInternalTimetableViewMode;
+
+    // 강사별뷰(teacher-based) 숨김: teacher view + teacher-based인 경우 day-based로 리다이렉트
+    useEffect(() => {
+        if (viewType === 'teacher' && timetableViewMode === 'teacher-based') {
+            setTimetableViewMode('day-based');
+        }
+    }, [viewType, timetableViewMode, setTimetableViewMode]);
 
     // 나머지 뷰 설정 (캐시된 viewSettings에서 초기화)
     const [showClassName, setShowClassName] = useState(viewSettings.showClassName ?? true);
@@ -1345,6 +1361,19 @@ const TimetableManager = ({
             return next;
         });
     }, []);
+
+    // 과목 변경 시 보기설정(필터) 초기화
+    const prevSubjectRef = React.useRef(subjectTab);
+    useEffect(() => {
+        if (prevSubjectRef.current !== subjectTab) {
+            prevSubjectRef.current = subjectTab;
+            // 요일 필터 초기화 (평일)
+            setInternalSelectedDays(['월', '화', '수', '목', '금']);
+            // 강의실 필터 초기화 (전체 선택)
+            setRoomFilter({ main: true, barun: true, godeung: true });
+            storage.setString(STORAGE_KEYS.MATH_ROOM_FILTER, JSON.stringify({ main: true, barun: true, godeung: true }));
+        }
+    }, [subjectTab]);
 
     // 뷰 설정이 변경될 때마다 로컬 스토리지에 저장
     useEffect(() => {

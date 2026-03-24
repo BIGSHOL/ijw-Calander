@@ -4,6 +4,7 @@ import { UserProfile } from '../../types';
 import DepartmentsTab from '../settings/DepartmentsTab';
 import GanttCategoriesTab from '../settings/GanttCategoriesTab';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface GanttSettingsModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ const GanttSettingsModal: React.FC<GanttSettingsModalProps> = ({
   currentUser,
 }) => {
   useEscapeClose(onClose);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
   const [activeTab, setActiveTab] = useState<TabType>('departments');
 
@@ -32,7 +34,7 @@ const GanttSettingsModal: React.FC<GanttSettingsModalProps> = ({
         className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden border border-gray-200"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0 cursor-move select-none">
           <h2 className="text-sm font-bold text-primary flex items-center gap-1.5">
             <span className="text-accent">⚙️</span>
             간트 차트 설정

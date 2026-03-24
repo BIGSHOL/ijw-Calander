@@ -2,6 +2,7 @@ import React from 'react';
 import { X, Calendar } from 'lucide-react';
 import SessionSettingsTab from './components/SessionSettingsTab';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface SessionSettingsModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ const SessionSettingsModal: React.FC<SessionSettingsModalProps> = ({
   onClose,
 }) => {
   useEscapeClose(onClose);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
   if (!isOpen) return null;
 
@@ -24,7 +26,7 @@ const SessionSettingsModal: React.FC<SessionSettingsModalProps> = ({
         className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
           <h2 className="text-sm font-bold text-primary flex items-center gap-1.5">
             <Calendar size={16} className="text-accent" />
             세션 기간 설정

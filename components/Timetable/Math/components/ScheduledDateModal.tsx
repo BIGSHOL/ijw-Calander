@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { formatDateKey, getTodayKST, getFirstClassDayOfWeek } from '../../../../utils/dateUtils';
 import { addDays, format } from 'date-fns';
 import { useEscapeClose } from '../../../../hooks/useEscapeClose';
+import { useDraggable } from '../../../../hooks/useDraggable';
 
 interface ScheduledDateModalProps {
     studentName: string;
@@ -34,6 +35,7 @@ const ScheduledDateModal: React.FC<ScheduledDateModalProps> = ({
 }) => {
     const [mode, setMode] = useState<'immediate' | 'scheduled'>('immediate');
     const [selectedDate, setSelectedDate] = useState('');
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
     // Dragging state
     const [position, setPosition] = useState({ x: 0, y: 0 });

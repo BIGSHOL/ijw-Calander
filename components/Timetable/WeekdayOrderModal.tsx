@@ -18,6 +18,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { X, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface WeekdayOrderModalProps {
     isOpen: boolean;
@@ -93,6 +94,7 @@ const SortableItem = ({ id, onMoveUp, onMoveDown, isFirst, isLast }: SortableIte
 const WeekdayOrderModal: React.FC<WeekdayOrderModalProps> = ({ isOpen, onClose, currentOrder, allWeekdays, onSave }) => {
     const [items, setItems] = useState<string[]>([]);
     const [isSaving, setIsSaving] = useState(false);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
     useEscapeClose(onClose);
 
@@ -153,8 +155,8 @@ const WeekdayOrderModal: React.FC<WeekdayOrderModalProps> = ({ isOpen, onClose, 
 
     return (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh]">
-            <div className="bg-white rounded-sm shadow-xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden">
-                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+            <div style={dragStyle} className="bg-white rounded-sm shadow-xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden">
+                <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
                     <h2 className="text-sm font-bold text-primary">요일 순서 설정</h2>
                     <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
                         <X size={18} />

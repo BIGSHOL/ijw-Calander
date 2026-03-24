@@ -19,6 +19,7 @@ import { useTabPermissions } from '../../hooks/useTabPermissions';
 // UsersTab 제거됨 - 직원 관리 페이지의 "시스템 사용자" 탭(UsersManagement)으로 통합
 import { NewDepartmentForm, CategoryManagementState, DepartmentFilterState, INITIAL_DEPARTMENT_FORM } from '../../types/departmentForm';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -50,6 +51,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onToggleArchived,
 }) => {
   useEscapeClose(onClose);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
   const { hasPermission } = usePermissions(currentUserProfile || null);
 
@@ -468,7 +470,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         >
 
           {/* Header */}
-          <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+          <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
             <h2 className="text-sm font-bold text-primary flex items-center gap-2">
               <FolderKanban size={20} className="text-accent" />
               시스템 관리

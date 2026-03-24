@@ -3,6 +3,7 @@ import { X, Play, CheckCircle, AlertCircle, Loader2, Database, TrendingUp, FileT
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface Props {
     isOpen: boolean;
@@ -11,6 +12,7 @@ interface Props {
 
 const AttendanceMigrationModal: React.FC<Props> = ({ isOpen, onClose }) => {
     const [isMigrating, setIsMigrating] = useState(false);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
     const [progress, setProgress] = useState(0);
     const [total, setTotal] = useState(0);
     const [logs, setLogs] = useState<string[]>([]);
@@ -101,9 +103,9 @@ const AttendanceMigrationModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
     return (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-start justify-center pt-[8vh]">
-            <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
+            <div style={dragStyle} className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+                <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
                     <h3 className="text-sm font-bold text-primary flex items-center gap-2">
                         <Database className="text-blue-500" size={18} />
                         데이터베이스 최적화

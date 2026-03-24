@@ -3,6 +3,7 @@ import { X, Upload, Check, AlertCircle, Loader2, FileText, Info, BarChart, Eye, 
 import { useStudents } from '../../hooks/useStudents';
 import { UnifiedStudent } from '../../types';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface ParsedEntry {
   koreanName: string;
@@ -74,6 +75,7 @@ const BulkEnglishNameUpdateModal: React.FC<BulkEnglishNameUpdateModalProps> = ({
 }) => {
   const { updateStudent } = useStudents();
   const [inputText, setInputText] = useState('');
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
   const [isProcessing, setIsProcessing] = useState(false);
   const [processedEntries, setProcessedEntries] = useState<ParsedEntry[]>([]);
   const [step, setStep] = useState<'input' | 'preview' | 'result'>('input');
@@ -173,9 +175,9 @@ const BulkEnglishNameUpdateModal: React.FC<BulkEnglishNameUpdateModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4">
-      <div className="bg-white rounded-sm shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+      <div style={dragStyle} className="bg-white rounded-sm shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
         {/* 헤더 */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-primary">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between p-4 border-b border-gray-200 bg-primary cursor-move select-none">
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-accent" />
             <h2 className="text-lg font-bold text-white">일괄 영어 이름 업데이트</h2>

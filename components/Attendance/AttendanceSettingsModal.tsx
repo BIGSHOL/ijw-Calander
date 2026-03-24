@@ -3,6 +3,7 @@ import { X, DollarSign, Settings } from 'lucide-react';
 import { Teacher } from '../../types';
 import SalarySettingsTab from './components/SalarySettingsTab';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface AttendanceSettingsModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ const AttendanceSettingsModal: React.FC<AttendanceSettingsModalProps> = ({
   initialStaffId,
 }) => {
   useEscapeClose(onClose);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
   if (!isOpen) return null;
 
@@ -31,7 +33,7 @@ const AttendanceSettingsModal: React.FC<AttendanceSettingsModalProps> = ({
         className="bg-white rounded-sm shadow-xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
           <h2 className="text-sm font-bold text-primary flex items-center gap-1.5">
             <DollarSign size={16} className="text-accent" />
             급여 설정

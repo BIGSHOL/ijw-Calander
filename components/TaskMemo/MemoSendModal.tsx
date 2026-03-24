@@ -7,6 +7,7 @@ import React from 'react';
 import { Send, X, Users, MessageSquare } from 'lucide-react';
 import { UserProfile } from '../../types';
 import { User } from 'firebase/auth';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface MemoSendModalProps {
   isOpen: boolean;
@@ -33,12 +34,13 @@ export const MemoSendModal: React.FC<MemoSendModalProps> = ({
   handleSendMemo,
   formatUserDisplay,
 }) => {
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
-      <div className="bg-white rounded-sm shadow-xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
+      <div style={dragStyle} className="bg-white rounded-sm shadow-xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0 cursor-move select-none">
           <h3 className="text-sm font-bold text-primary flex items-center gap-2">
             <Send size={16} /> 메모 보내기
           </h3>

@@ -4,6 +4,7 @@ import { getCurrentPeriod } from '../../../../hooks/useGradeProfile';
 import { MessageSquare, Loader2, X, Tag, FileText } from 'lucide-react';
 import { SUBJECT_COLORS, SubjectType } from '../../../../utils/styleUtils';
 import { useEscapeClose } from '../../../../hooks/useEscapeClose';
+import { useDraggable } from '../../../../hooks/useDraggable';
 
 interface CommentModalProps {
     onClose: () => void;
@@ -18,6 +19,7 @@ const CommentModal: React.FC<CommentModalProps> = ({ onClose, studentId, student
     const [category, setCategory] = useState<GradeCommentCategory>(editingComment?.category || 'strength');
     const [subject, setSubject] = useState<'math' | 'english' | 'all'>(editingComment?.subject || 'all');
     const [content, setContent] = useState(editingComment?.content || '');
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
     const [isSharedWithParent, setIsSharedWithParent] = useState(editingComment?.isSharedWithParent ?? false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -66,8 +68,8 @@ const CommentModal: React.FC<CommentModalProps> = ({ onClose, studentId, student
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
-            <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
-                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+            <div style={dragStyle} className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
+                <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
                     <h3 className="text-sm font-bold text-primary flex items-center gap-2">
                         <MessageSquare size={16} className="text-emerald-600" />
                         {editingComment ? '코멘트 수정' : '코멘트 추가'}

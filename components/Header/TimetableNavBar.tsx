@@ -12,8 +12,8 @@ interface TimetableNavBarProps {
   setTimetableSubject: (value: TimetableSubjectType) => void;
   timetableViewType: 'teacher' | 'room' | 'class' | 'excel';
   setTimetableViewType: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>;
-  mathViewMode: 'day-based' | 'teacher-based';
-  setMathViewMode: (value: 'day-based' | 'teacher-based') => void;
+  mathViewMode: string;
+  setMathViewMode: (value: string) => void;
   hasPermission: (perm: string) => boolean;
   setIsTimetableSettingsOpen: (value: boolean) => void;
 }

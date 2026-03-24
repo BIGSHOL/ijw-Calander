@@ -6,6 +6,7 @@ import { X, RotateCcw, Clock, User, AlertTriangle, Pencil, Trash2, Check, Databa
 import { CLASS_COLLECTION } from './englishUtils';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useEscapeClose } from '../../../hooks/useEscapeClose';
+import { useDraggable } from '../../../hooks/useDraggable';
 
 interface BackupEntry {
     id: string;
@@ -81,6 +82,7 @@ const validateBackupData = (backup: BackupEntry): { isValid: boolean; error?: st
 const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose, currentUser }) => {
     const [backups, setBackups] = useState<BackupEntry[]>([]);
     const [loading, setLoading] = useState(true);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
     const [restoring, setRestoring] = useState<string | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editingName, setEditingName] = useState('');
@@ -366,7 +368,7 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
                         <div className="space-y-3">
                             {/* Section 1: 백업 목록 */}
                             <div className="bg-white border border-gray-200 overflow-hidden">
-                                <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                                <div onMouseDown={handleDragMouseDown} className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-move select-none">
                                     <Database className="w-3 h-3 text-primary" />
                                     <h3 className="text-primary font-bold text-xs">백업 목록</h3>
                                 </div>

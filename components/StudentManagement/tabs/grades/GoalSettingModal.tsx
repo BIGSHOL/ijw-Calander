@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { GoalSetting } from '../../../../types';
 import { Target, Loader2, X, Calendar, TrendingUp, BookOpen } from 'lucide-react';
 import { useEscapeClose } from '../../../../hooks/useEscapeClose';
+import { useDraggable } from '../../../../hooks/useDraggable';
 
 interface GoalSettingModalProps {
     onClose: () => void;
@@ -14,6 +15,7 @@ interface GoalSettingModalProps {
 const GoalSettingModal: React.FC<GoalSettingModalProps> = ({ onClose, studentId, studentName, onAdd, exams }) => {
     const [subject, setSubject] = useState<'math' | 'english'>('math');
     const [examId, setExamId] = useState('');
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
     const [targetScore, setTargetScore] = useState('');
     const [maxScore, setMaxScore] = useState('100');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,8 +58,8 @@ const GoalSettingModal: React.FC<GoalSettingModalProps> = ({ onClose, studentId,
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
-            <div className="bg-white rounded-sm shadow-xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden">
-                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+            <div style={dragStyle} className="bg-white rounded-sm shadow-xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden">
+                <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
                     <h3 className="text-sm font-bold text-primary flex items-center gap-2">
                         <Target size={16} className="text-amber-600" />
                         시험 목표 설정

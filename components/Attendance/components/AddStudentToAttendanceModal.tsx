@@ -6,6 +6,7 @@ import { formatSchoolGrade } from '../../../utils/studentUtils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEscapeClose } from '../../../hooks/useEscapeClose';
 import { getTodayKST } from '../../../utils/dateUtils';
+import { useDraggable } from '../../../hooks/useDraggable';
 
 interface StudentInfo {
     id: string;
@@ -43,6 +44,7 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
     onStudentAdded,
 }) => {
     const queryClient = useQueryClient();
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -171,7 +173,7 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
                 </div>
 
                 {/* Header */}
-                <div className="px-4 pt-4 pb-3 border-b border-gray-200">
+                <div onMouseDown={handleDragMouseDown} className="px-4 pt-4 pb-3 border-b border-gray-200 cursor-move select-none">
                     <h3 className="text-base font-bold text-primary flex items-center gap-2">
                         <UserPlus size={18} />
                         학생 추가

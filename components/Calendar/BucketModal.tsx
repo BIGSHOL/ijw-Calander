@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Flag, Calendar, Star } from 'lucide-react';
 import { BucketItem } from '../../types';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface BucketModalProps {
     isOpen: boolean;
@@ -21,6 +22,7 @@ const BucketModal: React.FC<BucketModalProps> = ({
     targetMonth
 }) => {
     const [title, setTitle] = useState('');
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
     const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');
 
     useEscapeClose(onClose);
@@ -53,7 +55,7 @@ const BucketModal: React.FC<BucketModalProps> = ({
                 className="bg-white rounded-sm shadow-xl max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden"
             >
                 {/* Header */}
-                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+                <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
                     <div className="flex items-center gap-2">
                         <Flag size={16} className="text-accent" />
                         <span className="text-sm font-bold text-primary">

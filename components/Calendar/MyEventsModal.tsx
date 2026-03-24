@@ -3,6 +3,7 @@ import { CalendarEvent, UserProfile } from '../../types';
 import { format, parseISO, isAfter, isBefore } from 'date-fns';
 import { X, Calendar, Clock, MapPin, Filter } from 'lucide-react';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
+import { useDraggable } from '../../hooks/useDraggable';
 
 type StatusFilter = 'all' | 'pending' | 'joined' | 'declined';
 
@@ -28,6 +29,7 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
     const [filterStatus, setFilterStatus] = useState<StatusFilter>('all');
 
     useEscapeClose(onClose);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
 
     // Compute filtered events based on current user and selected status
     // NOTE: Hooks must be called before any conditional return
@@ -135,7 +137,7 @@ const MyEventsModal: React.FC<MyEventsModalProps> = ({
             >
 
                 {/* Header */}
-                <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+                <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
                     <h2 className="text-sm font-bold text-primary flex items-center gap-2">
                         <Calendar className="text-accent" size={18} />
                         {customTitle || '내 일정 모아보기'}

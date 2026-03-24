@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Resource, RESOURCE_TYPE_LABELS, RESOURCE_TYPE_ICONS, RESOURCE_CATEGORY_TREE, CATEGORY_SEPARATOR, EMOJI_LIST } from '../../types';
 import { X, Link2, Loader2, ChevronRight, AlertTriangle, CheckCircle2, FileText, FolderTree, Palette } from 'lucide-react';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface ResourceAddModalProps {
   isOpen: boolean;
@@ -51,6 +52,7 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
   currentUserId,
 }) => {
   const [title, setTitle] = useState('');
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
   const [url, setUrl] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<string>('other');
@@ -260,9 +262,9 @@ const ResourceAddModal: React.FC<ResourceAddModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]">
       {/* 모달 */}
-      <div className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+      <div style={dragStyle} className="bg-white rounded-sm shadow-xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-3 py-2 border-b border-gray-200 cursor-move select-none">
           <h2 className="text-sm font-bold text-primary flex items-center gap-2">
             <Link2 size={18} className="text-accent" />
             {editingResource ? '리소스 수정' : '리소스 추가'}

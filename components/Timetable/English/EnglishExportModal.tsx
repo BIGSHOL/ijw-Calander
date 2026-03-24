@@ -5,6 +5,7 @@ import html2canvas from 'html2canvas';
 import { Teacher, ClassKeywordColor } from '../../../types';
 import { EN_PERIODS, EN_WEEKDAYS, getCellKey, getTeacherColor, getContrastColor, formatClassNameWithBreaks } from './englishUtils';
 import { useEscapeClose } from '../../../hooks/useEscapeClose';
+import { useDraggable } from '../../../hooks/useDraggable';
 
 interface ScheduleCell {
   className?: string;
@@ -43,6 +44,7 @@ const EnglishExportModal: React.FC<EnglishExportModalProps> = ({
   // 내보내기용 요일 선택 (초기값: 현재 보이는 요일)
   const [selectedWeekdays, setSelectedWeekdays] = useState<Set<string>>(new Set(visibleWeekdays));
   const [isExporting, setIsExporting] = useState(false);
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
   const [currentExporting, setCurrentExporting] = useState<string | null>(null);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
 
@@ -283,9 +285,9 @@ const EnglishExportModal: React.FC<EnglishExportModalProps> = ({
       />
 
       {/* 모달 컨텐츠 */}
-      <div className="relative bg-white rounded-sm shadow-2xl w-[500px] max-h-[85vh] flex flex-col overflow-hidden">
+      <div style={dragStyle} className="relative bg-white rounded-sm shadow-2xl w-[500px] max-h-[85vh] flex flex-col overflow-hidden">
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between px-6 py-4 border-b border-gray-200 cursor-move select-none">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-blue-100 rounded-sm">
               <ImageIcon size={20} className="text-blue-600" />

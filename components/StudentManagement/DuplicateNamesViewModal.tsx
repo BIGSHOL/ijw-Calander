@@ -15,6 +15,7 @@ import { UnifiedStudent } from '../../types';
 import { doc, deleteDoc, setDoc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
+import { useDraggable } from '../../hooks/useDraggable';
 
 interface DuplicateNamesViewModalProps {
   onClose: () => void;
@@ -168,6 +169,7 @@ const getNormalizedId = (id: string, schoolCorrections?: Map<string, string>): s
 
 const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClose, students: externalStudents, onRefresh }) => {
   const queryClient = useQueryClient();
+  const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
   const { students: internalStudents, loading: internalLoading, refreshStudents: internalRefresh } = useStudents(!externalStudents); // 외부 데이터 없을 때만 로드
   const students = externalStudents || internalStudents;
   const loading = externalStudents ? false : internalLoading;
@@ -704,9 +706,9 @@ const DuplicateNamesViewModal: React.FC<DuplicateNamesViewModalProps> = ({ onClo
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100] p-4">
-      <div className="bg-white rounded-sm shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+      <div style={dragStyle} className="bg-white rounded-sm shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
         {/* 헤더 */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-primary rounded-t-sm">
+        <div onMouseDown={handleDragMouseDown} className="flex items-center justify-between p-4 border-b border-gray-200 bg-primary rounded-t-sm cursor-move select-none">
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-400" />
             <h2 className="text-lg font-bold text-white">중복 이름 학생 확인</h2>
