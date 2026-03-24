@@ -282,10 +282,6 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return orderedSelectedDays.filter(day => day === '화' || day === '금');
     }, [orderedSelectedDays]);
 
-    // 토/일: 주말 통합 테이블로 표시 (교시 컬럼 공유)
-    const hasSaturday = orderedSelectedDays.includes('토');
-    const hasSunday = orderedSelectedDays.includes('일');
-
     // 월/목 그룹: 각 선생님이 어떤 요일에 수업이 있는지 계산 (slotTeachers 포함)
     const monThuResourceDaysMap = useMemo(() => {
         const map = new Map<string, string[]>();
@@ -319,10 +315,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     }, [allResources, tueFriDays, resourceDayLookup]);
 
     // 주말(토+일) 통합: 각 선생님이 토/일 중 어떤 요일에 수업이 있는지
+    // selectedDays와 무관하게 항상 체크 (teacher-based 그룹 뷰에서 주말 테이블이 사라지지 않도록)
     const weekendResourceDaysMap = useMemo(() => {
         const map = new Map<string, string[]>();
-        if (!hasSaturday && !hasSunday) return map;
-        const weekendDays = [hasSaturday ? '토' : null, hasSunday ? '일' : null].filter(Boolean) as string[];
+        const weekendDays = ['토', '일'];
         allResources.forEach(resource => {
             const daysForResource = weekendDays.filter(day =>
                 resourceDayLookup.get(resource?.trim())?.has(day) ?? false
@@ -332,7 +328,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
             }
         });
         return map;
-    }, [allResources, hasSaturday, hasSunday, resourceDayLookup]);
+    }, [allResources, resourceDayLookup]);
 
     // 수요일 수업이 있는 선생님 (수요일 전용, slotTeachers 포함)
     const wednesdayResources = useMemo(() => {

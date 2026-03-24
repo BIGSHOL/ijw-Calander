@@ -241,6 +241,7 @@ interface ClassCardProps {
     isSelected?: boolean;
     onCellSelect?: (classId: string) => void;
     onEnrollStudent?: (studentId: string, className: string) => void;
+    onCancelPendingEnroll?: (studentId: string, className: string) => void;
     selectedStudentIds?: Set<string>;
     selectedStudentClassName?: string | null;
     copiedStudentIds?: string[] | null;
@@ -297,6 +298,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
     isSelected,
     onCellSelect,
     onEnrollStudent,
+    onCancelPendingEnroll,
     selectedStudentIds,
     selectedStudentClassName,
     copiedStudentIds,
@@ -1244,10 +1246,17 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 {pendingEnrollmentStudents.map(s => (
                                     <li
                                         key={`pending-enroll-${s.id}`}
-                                        className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap bg-green-100 text-green-700 border border-dashed border-green-400`}
-                                        title="저장 대기 중 (Ctrl+Z로 취소)"
+                                        className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap bg-green-100 text-green-700 border border-dashed border-green-400 flex items-center justify-between group/pending`}
+                                        title="저장 대기 중 (X 또는 Del로 취소)"
                                     >
-                                        + {s.name}{showSchool || showGrade ? `/${formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null)}` : ''}
+                                        <span className="truncate">+ {s.name}{showSchool || showGrade ? `/${formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null)}` : ''}</span>
+                                        {onCancelPendingEnroll && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); onCancelPendingEnroll(s.id, cls.className); }}
+                                                className="ml-0.5 text-green-500 hover:text-red-500 opacity-0 group-hover/pending:opacity-100 transition-opacity shrink-0"
+                                                title="등록 취소"
+                                            >×</button>
+                                        )}
                                     </li>
                                 ))}
                             </ul>
@@ -1536,10 +1545,17 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 {pendingEnrollmentStudents.map(s => (
                                     <li
                                         key={`pending-enroll-${s.id}`}
-                                        className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap bg-green-100 text-green-700 border border-dashed border-green-400`}
-                                        title="저장 대기 중 (Ctrl+Z로 취소)"
+                                        className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap bg-green-100 text-green-700 border border-dashed border-green-400 flex items-center justify-between group/pending`}
+                                        title="저장 대기 중 (X 또는 Del로 취소)"
                                     >
-                                        + {s.name}{showSchool || showGrade ? `/${formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null)}` : ''}
+                                        <span className="truncate">+ {s.name}{showSchool || showGrade ? `/${formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null)}` : ''}</span>
+                                        {onCancelPendingEnroll && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); onCancelPendingEnroll(s.id, cls.className); }}
+                                                className="ml-0.5 text-green-500 hover:text-red-500 opacity-0 group-hover/pending:opacity-100 transition-opacity shrink-0"
+                                                title="등록 취소"
+                                            >×</button>
+                                        )}
                                     </li>
                                 ))}
                                 {/* 단일셀: 6명 기본 높이 - 빈 슬롯으로 공간 확보 */}
