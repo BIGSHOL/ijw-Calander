@@ -110,7 +110,7 @@ interface MathTimetableContentProps {
     selectedClassInfo: ClassInfo | null;
     selectedStudentForModal: UnifiedStudent | null;
     canManageStudents: boolean;
-    mathConfig: { teacherOrder: string[]; weekdayOrder: string[] };
+    mathConfig: { teacherOrder: string[]; weekdayOrder: string[]; weekdayGroupOrder: string[] };
     handleSaveTeacherOrder: (order: string[]) => void;
     isTeacherOrderModalOpen: boolean;
     isViewSettingsOpen: boolean;
@@ -293,6 +293,13 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
         const name = studentMap[studentId]?.name || studentId;
         showExcelToast(`등록 대기: ${name}`);
     }, [pendingExcelEnrollments, studentMap, showExcelToast]);
+
+    // 엑셀 모드 보류 등록 취소
+    const handleCancelPendingEnroll = useCallback((studentId: string, className: string) => {
+        setPendingExcelEnrollments(prev => prev.filter(e => !(e.studentId === studentId && e.className === className)));
+        const name = studentMap[studentId]?.name || studentId;
+        showExcelToast(`취소: ${name} 등록`);
+    }, [studentMap, showExcelToast]);
 
     // 엑셀 모드 학생 선택 핸들러 (단일)
     const handleExcelStudentSelect = useCallback((studentId: string, className: string) => {
@@ -802,6 +809,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         currentSubjectFilter={currentSubjectFilter}
                         studentMap={studentMap}
                         timetableViewMode={timetableViewMode === 'day-based' ? 'day-based' : 'teacher-based'}
+                        weekdayGroupOrder={mathConfig.weekdayGroupOrder}
                         classKeywords={classKeywords}
                         onStudentClick={handleStudentClick}
                         pendingMovedStudentIds={pendingMovedStudentIds}
@@ -845,6 +853,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         currentSubjectFilter={currentSubjectFilter}
                         studentMap={studentMap}
                         timetableViewMode={timetableViewMode as 'day-based' | 'teacher-based'}
+                        weekdayGroupOrder={mathConfig.weekdayGroupOrder}
                         classKeywords={classKeywords}
                         onStudentClick={handleStudentClick}
                         pendingMovedStudentIds={pendingMovedStudentIds}
@@ -894,6 +903,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         currentSubjectFilter={currentSubjectFilter}
                         studentMap={studentMap}
                         timetableViewMode={timetableViewMode === 'excel-day' ? 'day-based' : 'teacher-based'}
+                        weekdayGroupOrder={mathConfig.weekdayGroupOrder}
                         classKeywords={classKeywords}
                         onStudentClick={handleStudentClick}
                         pendingMovedStudentIds={pendingMovedStudentIds}
@@ -902,6 +912,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         selectedClassId={selectedClassId}
                         onCellSelect={setSelectedClassId}
                         onEnrollStudent={handleEnrollStudentPending}
+                        onCancelPendingEnroll={handleCancelPendingEnroll}
                         selectedStudentIds={selectedStudentIds}
                         selectedStudentClassName={selectedStudentClassName}
                         copiedStudentIds={copiedStudent?.studentIds || null}

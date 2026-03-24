@@ -54,7 +54,7 @@ const SortableItem = ({ id, onMoveUp, onMoveDown, isFirst, isLast }: SortableIte
     };
 
     return (
-        <div onMouseDown={handleDragMouseDown} ref={setNodeRef} style={style} className="flex items-center justify-between p-2 bg-white border rounded-sm mb-1.5 shadow-sm group hover:border-blue-300 transition-colors cursor-move select-none">
+        <div ref={setNodeRef} style={style} className="flex items-center justify-between p-2 bg-white border rounded-sm mb-1.5 shadow-sm group hover:border-blue-300 transition-colors cursor-move select-none">
             <div className="flex items-center gap-2 flex-1">
                 <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 p-1">
                     <GripVertical size={16} />

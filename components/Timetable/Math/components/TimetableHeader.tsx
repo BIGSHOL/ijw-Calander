@@ -23,7 +23,7 @@ import { UnifiedStudent, TimetableClass } from '../../../../types';
 import { formatSchoolGrade } from '../../../../utils/studentUtils';
 import { formatDateKey } from '../../../../utils/dateUtils';
 import { getEndedSubjects } from '../../../../utils/enrollment';
-import { useMathConfig } from '../hooks/useMathConfig';
+import { useMathConfig, DEFAULT_WEEKDAY_GROUP_ORDER } from '../hooks/useMathConfig';
 import WithdrawalStudentDetail from '../../../WithdrawalManagement/WithdrawalStudentDetail';
 import { WithdrawalEntry } from '../../../../hooks/useWithdrawalFilters';
 import SubjectControls from '../../shared/SubjectControls';
@@ -44,7 +44,7 @@ const SortableWeekdayItem = ({ id, index, total, onMoveUp, onMoveDown }: { id: s
                 <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500">
                     <GripVertical size={12} />
                 </div>
-                <span className="text-xs text-gray-700 font-medium">{id}요일</span>
+                <span className="text-xs text-gray-700 font-medium">{id.length === 1 ? `${id}요일` : id}</span>
             </div>
             <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button onClick={onMoveUp} disabled={index === 0} className="p-0.5 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed" title="위로 이동">
@@ -299,13 +299,22 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     };
 
     // 강사 순서 관리 훅
-    const { mathConfig, handleSaveTeacherOrder, handleSaveWeekdayOrder } = useMathConfig();
+    const { mathConfig, handleSaveTeacherOrder, handleSaveWeekdayOrder, handleSaveWeekdayGroupOrder } = useMathConfig();
+
+    // 묶음 요일 뷰 여부 (excel-teacher → teacher-based 렌더링)
+    const isGroupedView = mathViewMode === 'excel-teacher';
 
     // 요일 순서 목록 (설정값 or 기본값)
     const weekdayOrderList = useMemo(() => {
         if (mathConfig.weekdayOrder.length > 0) return mathConfig.weekdayOrder;
         return ['월', '화', '수', '목', '금', '토', '일'];
     }, [mathConfig.weekdayOrder]);
+
+    // 요일 그룹 순서 목록 (묶음 뷰용)
+    const weekdayGroupOrderList = useMemo(() => {
+        if (mathConfig.weekdayGroupOrder.length > 0) return mathConfig.weekdayGroupOrder;
+        return DEFAULT_WEEKDAY_GROUP_ORDER;
+    }, [mathConfig.weekdayGroupOrder]);
 
     // 요일 순서 이동
     const moveWeekday = (index: number, direction: 'up' | 'down') => {
@@ -317,6 +326,16 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
         }
     };
 
+    // 요일 그룹 순서 이동
+    const moveWeekdayGroup = (index: number, direction: 'up' | 'down') => {
+        const newOrder = [...weekdayGroupOrderList];
+        const targetIndex = direction === 'up' ? index - 1 : index + 1;
+        if (targetIndex >= 0 && targetIndex < newOrder.length) {
+            [newOrder[index], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[index]];
+            handleSaveWeekdayGroupOrder(newOrder);
+        }
+    };
+
     // 요일 드래그 센서 & 핸들러
     const weekdayDndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 3 } }));
     const handleWeekdayDragEnd = (event: DragEndEvent) => {
@@ -325,6 +344,14 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
             const oldIndex = weekdayOrderList.indexOf(active.id as string);
             const newIndex = weekdayOrderList.indexOf(over.id as string);
             handleSaveWeekdayOrder(arrayMove(weekdayOrderList, oldIndex, newIndex));
+        }
+    };
+    const handleWeekdayGroupDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (over && active.id !== over.id) {
+            const oldIndex = weekdayGroupOrderList.indexOf(active.id as string);
+            const newIndex = weekdayGroupOrderList.indexOf(over.id as string);
+            handleSaveWeekdayGroupOrder(arrayMove(weekdayGroupOrderList, oldIndex, newIndex));
         }
     };
 
@@ -902,28 +929,47 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                         </div>
                                     )}
 
-                                    {/* 요일 순서 */}
+                                    {/* 요일 순서 (개별 요일 or 그룹) */}
                                     <div className="px-3 py-2 border-b border-gray-100">
                                         <div className="text-xxs font-bold text-gray-600 mb-2 flex items-center gap-1">
                                             <CalendarIcon size={12} />
-                                            요일 순서
+                                            {isGroupedView ? '그룹 순서' : '요일 순서'}
                                         </div>
-                                        <DndContext sensors={weekdayDndSensors} collisionDetection={closestCenter} onDragEnd={handleWeekdayDragEnd}>
-                                            <SortableContext items={weekdayOrderList} strategy={verticalListSortingStrategy}>
-                                                <div className="space-y-0.5">
-                                                    {weekdayOrderList.map((day, index) => (
-                                                        <SortableWeekdayItem
-                                                            key={day}
-                                                            id={day}
-                                                            index={index}
-                                                            total={weekdayOrderList.length}
-                                                            onMoveUp={() => moveWeekday(index, 'up')}
-                                                            onMoveDown={() => moveWeekday(index, 'down')}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            </SortableContext>
-                                        </DndContext>
+                                        {isGroupedView ? (
+                                            <DndContext sensors={weekdayDndSensors} collisionDetection={closestCenter} onDragEnd={handleWeekdayGroupDragEnd}>
+                                                <SortableContext items={weekdayGroupOrderList} strategy={verticalListSortingStrategy}>
+                                                    <div className="space-y-0.5">
+                                                        {weekdayGroupOrderList.map((group, index) => (
+                                                            <SortableWeekdayItem
+                                                                key={group}
+                                                                id={group}
+                                                                index={index}
+                                                                total={weekdayGroupOrderList.length}
+                                                                onMoveUp={() => moveWeekdayGroup(index, 'up')}
+                                                                onMoveDown={() => moveWeekdayGroup(index, 'down')}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </SortableContext>
+                                            </DndContext>
+                                        ) : (
+                                            <DndContext sensors={weekdayDndSensors} collisionDetection={closestCenter} onDragEnd={handleWeekdayDragEnd}>
+                                                <SortableContext items={weekdayOrderList} strategy={verticalListSortingStrategy}>
+                                                    <div className="space-y-0.5">
+                                                        {weekdayOrderList.map((day, index) => (
+                                                            <SortableWeekdayItem
+                                                                key={day}
+                                                                id={day}
+                                                                index={index}
+                                                                total={weekdayOrderList.length}
+                                                                onMoveUp={() => moveWeekday(index, 'up')}
+                                                                onMoveDown={() => moveWeekday(index, 'down')}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </SortableContext>
+                                            </DndContext>
+                                        )}
                                     </div>
 
                                     {/* 표시 옵션 */}

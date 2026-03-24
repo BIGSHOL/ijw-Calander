@@ -64,6 +64,7 @@ interface TimetableGridProps {
     selectedClassId?: string | null;
     onCellSelect?: (classId: string) => void;
     onEnrollStudent?: (studentId: string, className: string) => void;
+    onCancelPendingEnroll?: (studentId: string, className: string) => void;
     selectedStudentIds?: Set<string>;
     selectedStudentClassName?: string | null;
     copiedStudentIds?: string[] | null;
@@ -81,6 +82,8 @@ interface TimetableGridProps {
     // 엑셀 보류 삭제/등록 (시각적 표시)
     pendingExcelDeleteIds?: Set<string>;
     pendingExcelEnrollments?: Array<{ studentId: string; className: string; enrollmentDate?: string }>;
+    // 묶음 요일 그룹 순서 (teacher-based 뷰)
+    weekdayGroupOrder?: string[];
 }
 
 const TimetableGrid: React.FC<TimetableGridProps> = ({
@@ -122,6 +125,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     selectedClassId,
     onCellSelect,
     onEnrollStudent,
+    onCancelPendingEnroll,
     selectedStudentIds,
     selectedStudentClassName,
     copiedStudentIds,
@@ -136,6 +140,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     onWithdrawalDrop,
     pendingExcelDeleteIds,
     pendingExcelEnrollments,
+    weekdayGroupOrder,
 }) => {
     // 주차 기준일: 미래 주 → weekStart, 이번 주 → today, 과거 주 → weekEnd(일요일)
     const referenceDate = useMemo(() => {
@@ -376,7 +381,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         resources: string[],
         daysMap: Map<string, string[]>,
         title?: string,
-        isWednesdayTable?: boolean
+        isWednesdayTable?: boolean,
+        hidePeriodColumn?: boolean
     ) => {
         if (resources.length === 0) return null;
 
@@ -444,6 +450,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     isSelected={selectedClassId === cls.id}
                     onCellSelect={onCellSelect}
                     onEnrollStudent={onEnrollStudent}
+                                    onCancelPendingEnroll={onCancelPendingEnroll}
                     selectedStudentIds={selectedStudentIds}
                     selectedStudentClassName={selectedStudentClassName}
                     copiedStudentIds={copiedStudentIds}
@@ -464,7 +471,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         };
 
         // 테이블 총 폭 계산 (colgroup과 일치시켜 확장 방지)
-        const totalTableWidth = 90 + resources.reduce((acc, resource) => {
+        const periodColW = hidePeriodColumn ? 0 : 90;
+        const totalTableWidth = periodColW + resources.reduce((acc, resource) => {
             const daysForRes = isWednesdayTable ? ['수'] : (daysMap.get(resource) || []);
             const isMerged = daysForRes.length > 1 && !isWeekend;
             const colW = isMerged ? perDayWidth : parseInt(singleCellWidthStyle.width);
@@ -477,7 +485,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     <table className="border-collapse bg-gray-300" style={{ tableLayout: 'fixed', width: `${totalTableWidth}px` }}>
                         {/* colgroup으로 각 컬럼 너비 강제 */}
                         <colgroup>
-                            <col style={{ width: '90px' }} />
+                            {!hidePeriodColumn && <col style={{ width: '90px' }} />}
                             {resources.map(resource => {
                                 const daysForRes = isWednesdayTable ? ['수'] : (daysMap.get(resource) || []);
                                 return daysForRes.map((day) => {
@@ -490,23 +498,26 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                             {/* Group Title Row */}
                             {title && (
                                 <tr>
+                                    {!hidePeriodColumn ? (
+                                        <th
+                                            className={`${groupColors.bg} text-white px-3 py-2 font-bold text-sm text-left sticky left-0 z-30`}
+                                            colSpan={1}
+                                            style={{ width: '90px', minWidth: '90px' }}
+                                        >
+                                            {title}
+                                        </th>
+                                    ) : null}
                                     <th
-                                        className={`${groupColors.bg} text-white px-3 py-2 font-bold text-sm text-left sticky left-0 z-30`}
-                                        colSpan={1}
-                                        style={{ width: '90px', minWidth: '90px' }}
-                                    >
-                                        {title}
-                                    </th>
-                                    <th
-                                        className={`${groupColors.bg} text-white px-3 py-2 font-bold text-sm`}
+                                        className={`${groupColors.bg} text-white px-3 py-2 font-bold text-sm ${hidePeriodColumn ? 'text-left' : ''}`}
                                         colSpan={resources.reduce((acc, r) => acc + (isWednesdayTable ? 1 : (daysMap.get(r) || []).length), 0)}
                                     >
+                                        {hidePeriodColumn && title}
                                     </th>
                                 </tr>
                             )}
                             {/* Teacher/Room Row */}
                             <tr>
-                                <th
+                                {!hidePeriodColumn && <th
                                     className={`p-1.5 text-period-label font-bold ${groupColors.text} border-b border-gray-200 border-r-2 border-r-gray-400 sticky left-0 z-30`}
                                     rowSpan={2}
                                     style={{
@@ -519,7 +530,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                     }}
                                 >
                                     교시
-                                </th>
+                                </th>}
                                 {resources.map(resource => {
                                     const daysForResource = isWednesdayTable ? ['수'] : (daysMap.get(resource) || []);
                                     const colspan = daysForResource.length;
@@ -624,18 +635,20 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                             // 첫 번째 행: 교시 헤더(rowSpan=2) + 첫 번째 교시 셀들
                                             rows.push(
                                                 <tr key={`group-${groupId}-first`}>
-                                                    <td
-                                                        rowSpan={2}
-                                                        className={`p-1.5 text-period-label font-bold ${groupColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
-                                                        style={{
-                                                            width: '90px',
-                                                            minWidth: '90px',
-                                                            backgroundColor: bgHex
-                                                        }}
-                                                    >
-                                                        <div className="font-bold text-period-label text-gray-500">{groupInfo.label}</div>
-                                                        <div>{renderTime(groupInfo.time)}</div>
-                                                    </td>
+                                                    {!hidePeriodColumn && (
+                                                        <td
+                                                            rowSpan={2}
+                                                            className={`p-1.5 text-period-label font-bold ${groupColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
+                                                            style={{
+                                                                width: '90px',
+                                                                minWidth: '90px',
+                                                                backgroundColor: bgHex
+                                                            }}
+                                                        >
+                                                            <div className="font-bold text-period-label text-gray-500">{groupInfo.label}</div>
+                                                            <div>{renderTime(groupInfo.time)}</div>
+                                                        </td>
+                                                    )}
                                                     {resources.map(resource => {
                                                         const daysForResource = isWednesdayTable ? ['수'] : (daysMap.get(resource) || []);
                                                         const periodIndex = currentPeriods.indexOf(firstPeriod);
@@ -870,17 +883,19 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
                                                 rows.push(
                                                     <tr key={`period-${period}`}>
-                                                        <td
-                                                            className={`p-1.5 text-period-label font-bold ${groupColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
-                                                            style={{
-                                                                width: '90px',
-                                                                minWidth: '90px',
-                                                                backgroundColor: bgHex
-                                                            }}
-                                                        >
-                                                            <div className="font-bold text-period-label text-gray-500">{period}</div>
-                                                            <div>{renderTime(periodTime)}</div>
-                                                        </td>
+                                                        {!hidePeriodColumn && (
+                                                            <td
+                                                                className={`p-1.5 text-period-label font-bold ${groupColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
+                                                                style={{
+                                                                    width: '90px',
+                                                                    minWidth: '90px',
+                                                                    backgroundColor: bgHex
+                                                                }}
+                                                            >
+                                                                <div className="font-bold text-period-label text-gray-500">{period}</div>
+                                                                <div>{renderTime(periodTime)}</div>
+                                                            </td>
+                                                        )}
                                                         {resources.map(resource => {
                                                             const daysForResource = isWednesdayTable ? ['수'] : (daysMap.get(resource) || []);
                                                             const periodIndex = currentPeriods.indexOf(period);
@@ -1011,16 +1026,18 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
                                         return (
                                             <tr key={period}>
-                                                <td
-                                                    className={`p-1.5 text-period-label font-bold ${groupColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
-                                                    style={{
-                                                        width: '90px',
-                                                        minWidth: '90px',
-                                                        backgroundColor: bgHex
-                                                    }}
-                                                >
-                                                    <div>{renderTime(periodTimeDisplay)}</div>
-                                                </td>
+                                                {!hidePeriodColumn && (
+                                                    <td
+                                                        className={`p-1.5 text-period-label font-bold ${groupColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
+                                                        style={{
+                                                            width: '90px',
+                                                            minWidth: '90px',
+                                                            backgroundColor: bgHex
+                                                        }}
+                                                    >
+                                                        <div>{renderTime(periodTimeDisplay)}</div>
+                                                    </td>
+                                                )}
                                                 {resources.map(resource => {
                                                     const daysForResource = daysMap.get(resource) || [];
                                                     const periodIndex = currentPeriods.indexOf(period);
@@ -1137,7 +1154,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     }, [orderedSelectedDays, allResources, resourceDayLookup]);
 
     // 날짜 기반 뷰: 요일별 테이블 렌더링
-    const renderDayBasedTable = (day: string, resources: string[]) => {
+    const renderDayBasedTable = (day: string, resources: string[], hidePeriodColumn?: boolean) => {
         if (resources.length === 0) return null;
 
         const isWeekend = day === '토' || day === '일';
@@ -1157,7 +1174,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         const dayColors = getDayColors();
 
         // 테이블 총 폭 계산
-        const totalDayTableWidth = 90 + resources.length * parseInt(singleCellWidthStyle.width);
+        const periodColWidth = hidePeriodColumn ? 0 : 90;
+        const totalDayTableWidth = periodColWidth + resources.length * parseInt(singleCellWidthStyle.width);
 
         return (
             <div key={day} className="flex-shrink-0">
@@ -1165,7 +1183,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     <table className="border-collapse bg-gray-300" style={{ tableLayout: 'fixed', width: `${totalDayTableWidth}px` }}>
                         {/* colgroup으로 각 컬럼 너비 강제 */}
                         <colgroup>
-                            <col style={{ width: '90px' }} />
+                            {!hidePeriodColumn && <col style={{ width: '90px' }} />}
                             {resources.map(resource => (
                                 <col key={`col-${resource}`} style={{ width: singleCellWidthStyle.width }} />
                             ))}
@@ -1173,35 +1191,45 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                         <thead className="sticky top-0 z-20">
                             {/* Day Header Row */}
                             <tr>
-                                <th
-                                    className={`${dayColors.bg} text-white px-3 py-2 font-bold text-sm text-left sticky left-0 z-30`}
-                                    style={{ width: '90px', minWidth: '90px' }}
-                                >
-                                    {day}
-                                    {dateInfo && <span className="ml-1 text-xs opacity-80">({dateInfo.formatted})</span>}
-                                </th>
+                                {!hidePeriodColumn && (
+                                    <th
+                                        className={`${dayColors.bg} text-white px-3 py-2 font-bold text-sm text-left sticky left-0 z-30`}
+                                        style={{ width: '90px', minWidth: '90px' }}
+                                    >
+                                        {day}
+                                        {dateInfo && <span className="ml-1 text-xs opacity-80">({dateInfo.formatted})</span>}
+                                    </th>
+                                )}
                                 <th
                                     className={`${dayColors.bg} text-white px-3 py-2 font-bold text-sm`}
                                     colSpan={resources.length}
                                 >
+                                    {hidePeriodColumn && (
+                                        <span className="text-left block">
+                                            {day}
+                                            {dateInfo && <span className="ml-1 text-xs opacity-80">({dateInfo.formatted})</span>}
+                                        </span>
+                                    )}
                                 </th>
                             </tr>
                             {/* Teacher/Room Row */}
                             <tr>
-                                <th
-                                    className={`p-1.5 text-period-label font-bold ${dayColors.text} border-b border-gray-200 border-r-2 border-r-gray-400 sticky left-0 z-30`}
-                                    style={{
-                                        width: '90px',
-                                        minWidth: '90px',
-                                        backgroundColor: dayColors.light === 'bg-blue-50' ? '#eff6ff' :
-                                            dayColors.light === 'bg-amber-50' ? '#fffbeb' :
-                                                dayColors.light === 'bg-orange-50' ? '#fff7ed' :
-                                                    dayColors.light === 'bg-green-50' ? '#f0fdf4' :
-                                                        dayColors.light === 'bg-gray-50' ? '#f9fafb' : '#f3f4f6'
-                                    }}
-                                >
-                                    교시
-                                </th>
+                                {!hidePeriodColumn && (
+                                    <th
+                                        className={`p-1.5 text-period-label font-bold ${dayColors.text} border-b border-gray-200 border-r-2 border-r-gray-400 sticky left-0 z-30`}
+                                        style={{
+                                            width: '90px',
+                                            minWidth: '90px',
+                                            backgroundColor: dayColors.light === 'bg-blue-50' ? '#eff6ff' :
+                                                dayColors.light === 'bg-amber-50' ? '#fffbeb' :
+                                                    dayColors.light === 'bg-orange-50' ? '#fff7ed' :
+                                                        dayColors.light === 'bg-green-50' ? '#f0fdf4' :
+                                                            dayColors.light === 'bg-gray-50' ? '#f9fafb' : '#f3f4f6'
+                                        }}
+                                    >
+                                        교시
+                                    </th>
+                                )}
                                 {resources.map((resource, idx) => {
                                     const teacherData = teachers.find(t => t.name === resource);
                                     const bgColor = teacherData?.bgColor || '#3b82f6';
@@ -1268,18 +1296,20 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                             // 첫 번째 행: 교시 헤더(rowSpan=2) + 첫 번째 교시 셀들
                                             rows.push(
                                                 <tr key={`group-${groupId}-first`}>
-                                                    <td
-                                                        rowSpan={2}
-                                                        className={`p-1.5 text-period-label font-bold ${dayColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
-                                                        style={{
-                                                            width: '90px',
-                                                            minWidth: '90px',
-                                                            backgroundColor: bgHex
-                                                        }}
-                                                    >
-                                                        <div className="font-bold text-period-label text-gray-500">{groupInfo.label}</div>
-                                                        <div>{renderTime(groupInfo.time)}</div>
-                                                    </td>
+                                                    {!hidePeriodColumn && (
+                                                        <td
+                                                            rowSpan={2}
+                                                            className={`p-1.5 text-period-label font-bold ${dayColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
+                                                            style={{
+                                                                width: '90px',
+                                                                minWidth: '90px',
+                                                                backgroundColor: bgHex
+                                                            }}
+                                                        >
+                                                            <div className="font-bold text-period-label text-gray-500">{groupInfo.label}</div>
+                                                            <div>{renderTime(groupInfo.time)}</div>
+                                                        </td>
+                                                    )}
                                                     {resources.map((resource, resourceIdx) => {
                                                         const periodIndex = currentPeriods.indexOf(firstPeriod);
                                                         const cellClasses = getClassesForCell(filteredClasses, day, firstPeriod, resource, viewType);
@@ -1359,6 +1389,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             isSelected={selectedClassId === cls.id}
                                                                             onCellSelect={onCellSelect}
                                                                             onEnrollStudent={onEnrollStudent}
+                                    onCancelPendingEnroll={onCancelPendingEnroll}
                                                                             selectedStudentIds={selectedStudentIds}
                                                                             selectedStudentClassName={selectedStudentClassName}
                                                                             copiedStudentIds={copiedStudentIds}
@@ -1466,6 +1497,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             isSelected={selectedClassId === cls.id}
                                                                             onCellSelect={onCellSelect}
                                                                             onEnrollStudent={onEnrollStudent}
+                                    onCancelPendingEnroll={onCancelPendingEnroll}
                                                                             selectedStudentIds={selectedStudentIds}
                                                                             selectedStudentClassName={selectedStudentClassName}
                                                                             copiedStudentIds={copiedStudentIds}
@@ -1501,17 +1533,19 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
                                                 rows.push(
                                                     <tr key={`period-${period}`}>
-                                                        <td
-                                                            className={`p-1.5 text-period-label font-bold ${dayColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
-                                                            style={{
-                                                                width: '90px',
-                                                                minWidth: '90px',
-                                                                backgroundColor: bgHex
-                                                            }}
-                                                        >
-                                                            <div className="font-bold text-period-label text-gray-500">{period}</div>
-                                                            <div>{renderTime(periodTime)}</div>
-                                                        </td>
+                                                        {!hidePeriodColumn && (
+                                                            <td
+                                                                className={`p-1.5 text-period-label font-bold ${dayColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
+                                                                style={{
+                                                                    width: '90px',
+                                                                    minWidth: '90px',
+                                                                    backgroundColor: bgHex
+                                                                }}
+                                                            >
+                                                                <div className="font-bold text-period-label text-gray-500">{period}</div>
+                                                                <div>{renderTime(periodTime)}</div>
+                                                            </td>
+                                                        )}
                                                         {resources.map((resource, resourceIdx) => {
                                                             const cellClasses = getClassesForCell(filteredClasses, day, period, resource, viewType);
 
@@ -1589,6 +1623,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 isSelected={selectedClassId === cls.id}
                                                                                 onCellSelect={onCellSelect}
                                                                                 onEnrollStudent={onEnrollStudent}
+                                    onCancelPendingEnroll={onCancelPendingEnroll}
                                                                                 selectedStudentIds={selectedStudentIds}
                                                                                 selectedStudentClassName={selectedStudentClassName}
                                                                                 copiedStudentIds={copiedStudentIds}
@@ -1635,16 +1670,18 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
                                         return (
                                             <tr key={period}>
-                                                <td
-                                                    className={`p-1.5 text-period-label font-bold ${dayColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
-                                                    style={{
-                                                        width: '90px',
-                                                        minWidth: '90px',
-                                                        backgroundColor: bgHex
-                                                    }}
-                                                >
-                                                    <div>{renderTime(periodTimeDisplay)}</div>
-                                                </td>
+                                                {!hidePeriodColumn && (
+                                                    <td
+                                                        className={`p-1.5 text-period-label font-bold ${dayColors.text} text-center sticky left-0 z-10 border-b-2 border-b-gray-400 border-r-2 border-r-gray-400`}
+                                                        style={{
+                                                            width: '90px',
+                                                            minWidth: '90px',
+                                                            backgroundColor: bgHex
+                                                        }}
+                                                    >
+                                                        <div>{renderTime(periodTimeDisplay)}</div>
+                                                    </td>
+                                                )}
                                                 {resources.map((resource, resourceIdx) => {
                                                     const cellClasses = getClassesForCell(filteredClasses, day, period, resource, viewType);
 
@@ -1722,6 +1759,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         isSelected={selectedClassId === cls.id}
                                                                         onCellSelect={onCellSelect}
                                                                         onEnrollStudent={onEnrollStudent}
+                                    onCancelPendingEnroll={onCancelPendingEnroll}
                                                                         selectedStudentIds={selectedStudentIds}
                                                                         selectedStudentClassName={selectedStudentClassName}
                                                                         copiedStudentIds={copiedStudentIds}
@@ -1761,27 +1799,51 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return (
             <div className="overflow-auto h-full">
                 <div className="flex gap-4">
-                    {dayBasedData.map(({ day, resources }) => renderDayBasedTable(day, resources))}
+                    {dayBasedData.map(({ day, resources }, idx) => {
+                        // 이전 테이블과 같은 교시 구조이면 교시 컬럼 숨김
+                        const isWeekend = day === '토' || day === '일';
+                        const prevDay = idx > 0 ? dayBasedData[idx - 1].day : null;
+                        const prevIsWeekend = prevDay === '토' || prevDay === '일';
+                        // 평일끼리는 교시가 동일 → 두 번째부터 숨김, 주말은 별도
+                        const hidePeriod = idx > 0 && isWeekend === prevIsWeekend;
+                        return renderDayBasedTable(day, resources, hidePeriod);
+                    })}
                 </div>
             </div>
         );
     }
 
-    // teacher-based 뷰 (기존)
+    // teacher-based 뷰 (그룹 순서 적용)
+    const groupConfigs: Record<string, { resources: string[]; daysMap: Map<string, string[]>; isWednesday?: boolean; hasData: boolean }> = {
+        '월/목': { resources: monThuActiveResources, daysMap: monThuResourceDaysMap, hasData: monThuActiveResources.length > 0 },
+        '화/금': { resources: tueFriActiveResources, daysMap: tueFriResourceDaysMap, hasData: tueFriActiveResources.length > 0 },
+        '주말': { resources: weekendActiveResources, daysMap: weekendResourceDaysMap, hasData: weekendActiveResources.length > 0 },
+        '수요일': { resources: wednesdayResources, daysMap: wednesdayResourceDaysMap, isWednesday: true, hasData: hasWednesday && wednesdayResources.length > 0 },
+    };
+
+    const orderedGroups = (weekdayGroupOrder && weekdayGroupOrder.length > 0)
+        ? weekdayGroupOrder.filter(g => groupConfigs[g])
+        : ['월/목', '화/금', '주말', '수요일'];
+
+    // 앞에 평일 그룹이 이미 렌더링되었는지 추적 (교시 컬럼 숨김 용)
+    let prevWeekdayRendered = false;
+
     return (
         <div className="overflow-auto h-full">
             <div className="flex gap-4">
-                {/* 월/목 테이블 */}
-                {monThuActiveResources.length > 0 && renderTable(monThuActiveResources, monThuResourceDaysMap, '월/목')}
-
-                {/* 화/금 테이블 */}
-                {tueFriActiveResources.length > 0 && renderTable(tueFriActiveResources, tueFriResourceDaysMap, '화/금')}
-
-                {/* 주말 테이블 (토+일 통합) */}
-                {weekendActiveResources.length > 0 && renderTable(weekendActiveResources, weekendResourceDaysMap, '주말')}
-
-                {/* 수요일 테이블 */}
-                {hasWednesday && wednesdayResources.length > 0 && renderTable(wednesdayResources, wednesdayResourceDaysMap, '수요일', true)}
+                {orderedGroups.map(groupName => {
+                    const config = groupConfigs[groupName];
+                    if (!config || !config.hasData) return null;
+                    const isWeekend = groupName === '주말';
+                    // 주말은 교시가 다를 수 있으므로 항상 표시, 평일은 첫 번째만 표시
+                    const hidePeriod = !isWeekend && prevWeekdayRendered;
+                    if (!isWeekend) prevWeekdayRendered = true;
+                    return (
+                        <React.Fragment key={groupName}>
+                            {renderTable(config.resources, config.daysMap, groupName, config.isWednesday, hidePeriod)}
+                        </React.Fragment>
+                    );
+                })}
             </div>
         </div>
     );

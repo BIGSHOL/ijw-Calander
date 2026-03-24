@@ -2,15 +2,19 @@ import { useState, useEffect } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 
+export const DEFAULT_WEEKDAY_GROUP_ORDER = ['월/목', '화/금', '주말', '수요일'];
+
 export interface MathConfig {
     teacherOrder: string[];
     weekdayOrder: string[];
+    weekdayGroupOrder: string[];
 }
 
 export const useMathConfig = () => {
     const [mathConfig, setMathConfig] = useState<MathConfig>({
         teacherOrder: [],
-        weekdayOrder: []
+        weekdayOrder: [],
+        weekdayGroupOrder: [],
     });
     const [isLoading, setIsLoading] = useState(true);
     const [isTeacherOrderModalOpen, setIsTeacherOrderModalOpen] = useState(false);
@@ -26,6 +30,7 @@ export const useMathConfig = () => {
                     setMathConfig({
                         teacherOrder: data.teacherOrder || [],
                         weekdayOrder: data.weekdayOrder || [],
+                        weekdayGroupOrder: data.weekdayGroupOrder || [],
                     });
                 }
                 setIsLoading(false);
@@ -59,6 +64,15 @@ export const useMathConfig = () => {
         }
     };
 
+    const handleSaveWeekdayGroupOrder = async (newOrder: string[]) => {
+        try {
+            await setDoc(doc(db, 'settings', 'math_config'), { weekdayGroupOrder: newOrder }, { merge: true });
+        } catch (error) {
+            console.error('요일 그룹 순서 저장 실패:', error);
+            alert('요일 그룹 순서 저장에 실패했습니다.');
+        }
+    };
+
     return {
         mathConfig,
         isLoading,
@@ -67,6 +81,7 @@ export const useMathConfig = () => {
         isWeekdayOrderModalOpen,
         setIsWeekdayOrderModalOpen,
         handleSaveTeacherOrder,
-        handleSaveWeekdayOrder
+        handleSaveWeekdayOrder,
+        handleSaveWeekdayGroupOrder
     };
 };
