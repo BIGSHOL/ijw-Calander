@@ -444,7 +444,12 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                 const targetClass = filteredClasses.find(c => c.id === selectedClassId);
                 if (!targetClass) return;
 
-                const existingIds = new Set(targetClass.studentIds || targetClass.studentList?.map((s: any) => s.id) || []);
+                // 퇴원생은 재등록 가능하므로 활성 학생만 중복 체크
+                const existingIds = new Set(
+                  (targetClass.studentList || [])
+                    .filter((s: any) => !s.withdrawalDate)
+                    .map((s: any) => s.id)
+                );
                 const newStudentIds = copiedStudent.studentIds.filter(sid => !existingIds.has(sid));
                 const skipped = copiedStudent.studentIds.length - newStudentIds.length;
 

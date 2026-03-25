@@ -420,17 +420,40 @@ export const useClassOperations = () => {
             typeof s === 'string' ? s : `${s.day} ${s.periodId}`
         ) || [];
 
-        const enrollmentRef = doc(db, 'students', studentId, 'enrollments', classId);
-        await setDoc(enrollmentRef, {
-            classId,
-            className,
-            subject: classSubject,
-            teacher: classTeacher,
-            staffId: classTeacher,
-            schedule: classSchedule,
-            enrollmentDate: enrollmentDate || now.split('T')[0],
-            createdAt: now,
+        // 기존 퇴원/종료 enrollment이 있으면 부활 처리
+        const enrollmentsRef = collection(db, 'students', studentId, 'enrollments');
+        const existingQuery = query(enrollmentsRef, where('subject', '==', classSubject), where('className', '==', className));
+        const existingSnap = await getDocs(existingQuery);
+        const endedDoc = existingSnap.docs.find(d => {
+            const data = d.data();
+            return data.endDate || data.withdrawalDate;
         });
+
+        if (endedDoc) {
+            // 기존 퇴원 enrollment 부활: endDate/withdrawalDate 제거 + 시작일 갱신
+            await updateDoc(endedDoc.ref, {
+                endDate: null,
+                withdrawalDate: null,
+                enrollmentDate: enrollmentDate || now.split('T')[0],
+                startDate: enrollmentDate || now.split('T')[0],
+                staffId: classTeacher,
+                teacher: classTeacher,
+                schedule: classSchedule,
+                updatedAt: now,
+            });
+        } else {
+            const enrollmentRef = doc(db, 'students', studentId, 'enrollments', classId);
+            await setDoc(enrollmentRef, {
+                classId,
+                className,
+                subject: classSubject,
+                teacher: classTeacher,
+                staffId: classTeacher,
+                schedule: classSchedule,
+                enrollmentDate: enrollmentDate || now.split('T')[0],
+                createdAt: now,
+            });
+        }
 
         logTimetableChange({
             action: 'student_enroll', subject: classSubject, className, studentId, studentName: studentId,

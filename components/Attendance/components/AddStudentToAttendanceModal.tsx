@@ -19,6 +19,8 @@ interface StudentInfo {
         classId: string;
         className: string;
         subject?: 'math' | 'english';
+        endDate?: string;
+        withdrawalDate?: string;
     }>;
 }
 
@@ -63,10 +65,12 @@ const AddStudentToAttendanceModal: React.FC<Props> = ({
             if (existingStudentIds.includes(student.id)) {
                 current.push(student);
             }
-            // 2. 현재 선생님의 수업에 등록된 학생 (출석부에는 없음)
+            // 2. 현재 선생님의 수업에 등록된 학생 (출석부에는 없음, 퇴원생 제외)
             else if (student.enrollments?.some(e =>
                 e.staffId === currentStaffId &&
-                e.subject === currentSubject
+                e.subject === currentSubject &&
+                !e.endDate &&
+                !e.withdrawalDate
             )) {
                 teacher.push(student);
             }
