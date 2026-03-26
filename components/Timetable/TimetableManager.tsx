@@ -2093,6 +2093,7 @@ const TimetableManager = ({
                 onRoomFilterChange={handleRoomFilterChange}
                 mathIntegrationSettings={outerMathSettings}
                 updateMathIntegrationSettings={updateOuterMathSettings}
+                userDepartments={userDepartments}
             />
             {/* 드래그 예정일 선택 모달 (반이동 + 같은반 zone이동) */}
             {dateModalInfo && (
