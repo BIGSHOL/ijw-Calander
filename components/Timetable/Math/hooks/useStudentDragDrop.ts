@@ -322,16 +322,65 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                 const newAttendanceDays = move.toZone === 'common' ? [] : [move.toZone];
 
                 if (isSameClass) {
-                    // ===== zone만 변경 (같은 반): attendanceDays만 업데이트 =====
+                    // ===== zone만 변경 (같은 반): enrollment 분리 (소급 변경 방지) =====
+                    // 기존 enrollment 종료 + 새 enrollment 생성하여 과거 주차 데이터 보존
                     const cls = localClasses.find(c => c.id === move.fromClassId);
                     if (!cls) continue;
 
                     const docId = await getEnrollmentDocId(studentId, move.fromClassId, cls.className);
                     const enrollmentRef = doc(db, 'students', studentId, 'enrollments', docId);
+                    const existingData = enrollmentDataMap.get(`${studentId}_${move.fromClassId}`);
+
+                    // 기존 attendanceDays와 비교하여 변경 없으면 스킵
+                    const existingDays = existingData?.attendanceDays || [];
+                    const sortedExisting = [...existingDays].sort();
+                    const sortedNew = [...newAttendanceDays].sort();
+                    const isChanged = sortedExisting.length !== sortedNew.length ||
+                        sortedExisting.some((d: string, i: number) => d !== sortedNew[i]);
+
+                    if (!isChanged) continue;
+
+                    // enrollment 분리: 기존 종료 + 새 생성
+                    const yesterday = (() => {
+                        const d = new Date(defaultToday);
+                        d.setDate(d.getDate() - 1);
+                        return formatDateKey(d);
+                    })();
+
+                    // 1. 기존 enrollment에 endDate 설정 (어제 날짜로)
                     batch.set(enrollmentRef, {
-                        attendanceDays: newAttendanceDays,
+                        endDate: yesterday,
                         updatedAt: new Date().toISOString()
                     }, { merge: true });
+
+                    // 2. 새 enrollment 생성 (오늘부터, 새 attendanceDays 적용)
+                    const newDocId = `${move.fromClassId}_${Date.now()}_${studentId.substring(0, 4)}`;
+                    const newEnrollmentRef = doc(db, 'students', studentId, 'enrollments', newDocId);
+
+                    if (existingData) {
+                        const { endDate, withdrawalDate, isTransferred, ...preservedData } = existingData;
+                        batch.set(newEnrollmentRef, {
+                            ...preservedData,
+                            attendanceDays: newAttendanceDays,
+                            startDate: defaultToday,
+                            enrollmentDate: preservedData.enrollmentDate || defaultToday,
+                            createdAt: new Date().toISOString(),
+                            updatedAt: new Date().toISOString()
+                        });
+                    } else {
+                        batch.set(newEnrollmentRef, {
+                            classId: move.fromClassId,
+                            className: cls.className,
+                            subject: cls.subject === '고등수학' ? 'highmath' : 'math',
+                            teacher: cls.teacher || '',
+                            staffId: cls.teacher || '',
+                            schedule: cls.schedule || [],
+                            attendanceDays: newAttendanceDays,
+                            startDate: defaultToday,
+                            enrollmentDate: defaultToday,
+                            createdAt: new Date().toISOString()
+                        });
+                    }
                 } else {
                     // ===== 반이동 + attendanceDays 설정 =====
                     const fromClass = localClasses.find(c => c.id === move.fromClassId);
