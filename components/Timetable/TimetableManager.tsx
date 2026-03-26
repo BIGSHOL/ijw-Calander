@@ -1563,6 +1563,12 @@ const TimetableManager = ({
         return dates;
     }, [currentMonday]);
 
+    // 범용(Generic) 시간표용 주차 기준일
+    const genericReferenceDate = useMemo(() => {
+        if (!currentMonday) return undefined;
+        return getWeekReferenceDate(currentMonday);
+    }, [currentMonday]);
+
     // Week navigation
     const goToPrevWeek = () => setCurrentMonday(prev => subWeeks(prev, 1));
     const goToNextWeek = () => setCurrentMonday(prev => addWeeks(prev, 1));
@@ -1868,6 +1874,8 @@ const TimetableManager = ({
                     onStudentsUpdated={() => {
                         // Refresh logic if needed
                     }}
+                    studentMap={studentMap}
+                    referenceDate={genericReferenceDate}
                     // 과목/뷰 전환 (TimetableNavBar 통합)
                     timetableSubject={subjectTab}
                     setTimetableSubject={setSubjectTab}
@@ -1891,6 +1899,8 @@ const TimetableManager = ({
                     onStudentsUpdated={() => {
                         // Refresh logic if needed
                     }}
+                    studentMap={studentMap}
+                    referenceDate={genericReferenceDate}
                     // 과목/뷰 전환 (TimetableNavBar 통합)
                     timetableSubject={subjectTab}
                     setTimetableSubject={setSubjectTab}

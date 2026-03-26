@@ -16,7 +16,8 @@ export type { ClassStudentData } from '../../../../hooks/useSubjectClassStudents
 export function useClassStudents(
   subject: SubjectKey,
   classNames: string[],
-  studentMap: Record<string, any> = {}
+  studentMap: Record<string, any> = {},
+  referenceDate?: string
 ) {
   const config = getSubjectConfig(subject);
 
@@ -24,5 +25,6 @@ export function useClassStudents(
     subject: config.firebaseSubjectKey,
     classNames,
     studentMap,
+    referenceDate,
   });
 }

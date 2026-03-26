@@ -25,6 +25,10 @@ interface GenericTimetableProps {
   currentUser: any;
   viewType?: 'teacher' | 'room' | 'class';
   onStudentsUpdated?: () => void;
+  /** 전역 학생 데이터 맵 (주차별 날짜 기반 enrollment 판정용) */
+  studentMap?: Record<string, any>;
+  /** 주차 기준일 (YYYY-MM-DD) */
+  referenceDate?: string;
   // 과목/뷰 전환 (TimetableNavBar 통합)
   timetableSubject?: TimetableSubjectType;
   setTimetableSubject?: (value: TimetableSubjectType) => void;
@@ -51,6 +55,8 @@ function GenericTimetable({
   currentUser,
   viewType = 'teacher',
   onStudentsUpdated,
+  studentMap: externalStudentMap,
+  referenceDate,
   timetableSubject,
   setTimetableSubject,
   setTimetableViewType,
@@ -78,7 +84,8 @@ function GenericTimetable({
   const { classDataMap, isLoading: studentsLoading } = useClassStudents(
     subject,
     classNames,
-    {} // TODO: Pass global studentMap if available
+    externalStudentMap || {},
+    referenceDate,
   );
 
   // UI State
