@@ -14,6 +14,7 @@ interface SubjectControlsProps {
     setMathViewMode?: (value: string) => void;
     hasPermission: (perm: string) => boolean;
     setIsTimetableSettingsOpen?: (value: boolean) => void;
+    userDepartments?: ('math' | 'highmath' | 'english')[];
 }
 
 export default function SubjectControls({
@@ -25,6 +26,7 @@ export default function SubjectControls({
     setMathViewMode,
     hasPermission,
     setIsTimetableSettingsOpen,
+    userDepartments = ['math', 'highmath', 'english'],
 }: SubjectControlsProps) {
     return (
         <div className="flex items-center gap-1.5">
@@ -34,9 +36,9 @@ export default function SubjectControls({
                 className="px-2 py-0.5 rounded-sm bg-accent text-primary font-bold text-xs hover:brightness-110 transition-all cursor-pointer border-none outline-none"
                 title="과목 선택"
             >
-                {hasPermission('timetable.math.view') && <option value="math">수학</option>}
-                {hasPermission('timetable.math.view') && <option value="highmath">고등수학</option>}
-                {hasPermission('timetable.english.view') && <option value="english">영어</option>}
+                {hasPermission('timetable.math.view') && userDepartments.includes('math') && <option value="math">수학</option>}
+                {hasPermission('timetable.math.view') && userDepartments.includes('highmath') && <option value="highmath">고등수학</option>}
+                {hasPermission('timetable.english.view') && userDepartments.includes('english') && <option value="english">영어</option>}
                 {hasPermission('timetable.science.view') && <option value="science">과학</option>}
                 {hasPermission('timetable.korean.view') && <option value="korean">국어</option>}
                 {hasPermission('shuttle.view') && <option value="shuttle">셔틀버스</option>}

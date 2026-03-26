@@ -37,6 +37,7 @@ interface GenericTimetableProps {
   setMathViewMode?: (value: string) => void;
   hasPermissionFn?: (perm: string) => boolean;
   setIsTimetableSettingsOpen?: (value: boolean) => void;
+  userDepartments?: ('math' | 'highmath' | 'english')[];
 }
 
 /**
@@ -64,6 +65,7 @@ function GenericTimetable({
   setMathViewMode,
   hasPermissionFn,
   setIsTimetableSettingsOpen,
+  userDepartments,
 }: GenericTimetableProps) {
   // Performance Note (rerender-lazy-state-init):
   // Memoize config to avoid re-computation
@@ -144,6 +146,7 @@ function GenericTimetable({
             setMathViewMode={setMathViewMode}
             hasPermission={hasPermissionFn}
             setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
+            userDepartments={userDepartments}
           />
         </div>
       )}

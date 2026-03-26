@@ -404,15 +404,31 @@ export const useStudentFilters = (
     students: UnifiedStudent[],
     filters: StudentFilters,
     sortBy: 'name' | 'grade' | 'startDate',
-    oldWithdrawnStudents: UnifiedStudent[]
+    oldWithdrawnStudents: UnifiedStudent[],
+    userDepartments?: string[]
 ) => {
     // OPTIMIZATION: Each filter independently memoized
     // Only re-runs when its specific dependencies change
 
+    // 소속 필터 (departments): 사용자가 접근 가능한 과목의 학생만 표시
+    const deptFiltered = useMemo(() => {
+        if (!userDepartments || userDepartments.length === 0) return students;
+        // departments에 math/highmath 둘 다 없으면 수학 학생 안 보임
+        const allowedSubjects = new Set<string>();
+        if (userDepartments.includes('math') || userDepartments.includes('highmath')) {
+            allowedSubjects.add('math');
+            allowedSubjects.add('highmath');
+        }
+        if (userDepartments.includes('english')) allowedSubjects.add('english');
+        // 모든 과목 허용이면 필터 안 함
+        if (allowedSubjects.has('math') && allowedSubjects.has('english')) return students;
+        return filterBySubjects(students, [...allowedSubjects], 'OR');
+    }, [students, userDepartments]);
+
     // 캠퍼스 필터 (첫 번째 단계)
     const campusFiltered = useMemo(
-        () => filters.campus === 'all' ? students : students.filter(s => getCampus(s) === filters.campus),
-        [students, filters.campus]
+        () => filters.campus === 'all' ? deptFiltered : deptFiltered.filter(s => getCampus(s) === filters.campus),
+        [deptFiltered, filters.campus]
     );
 
     const searchFiltered = useMemo(

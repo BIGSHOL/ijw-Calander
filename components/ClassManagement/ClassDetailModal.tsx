@@ -30,7 +30,7 @@ interface ClassDetailModalProps {
   initialSlotTeachers?: Record<string, string>;
 }
 
-type ViewTabType = 'info' | 'students' | 'stats';
+type ViewTabType = 'schedule' | 'info' | 'students' | 'stats';
 type EditTabType = 'info' | 'schedule' | 'students';
 
 const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일'];
@@ -50,7 +50,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
 
   // ==================== 공통 상태 ====================
   const [isEditMode, setIsEditMode] = useState(false);
-  const [activeViewTab, setActiveViewTab] = useState<ViewTabType>('info');
+  const [activeViewTab, setActiveViewTab] = useState<ViewTabType>('schedule');
   const [activeEditTab, setActiveEditTab] = useState<EditTabType>('info');
 
   // ==================== 보기 모드 훅 ====================
@@ -540,6 +540,9 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
             </>
           ) : (
             <>
+              <button onClick={() => setActiveViewTab('schedule')} className={`flex items-center gap-1 text-xs font-medium transition-colors ${activeViewTab === 'schedule' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
+                <Calendar className="w-3 h-3" />스케줄
+              </button>
               <button onClick={() => setActiveViewTab('info')} className={`flex items-center gap-1 text-xs font-medium transition-colors ${activeViewTab === 'info' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
                 <BookOpen className="w-3 h-3" />수업정보
               </button>
@@ -944,25 +947,8 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
           {/* ==================== 보기 모드 컨텐츠 ==================== */}
           {!isEditMode && (
             <>
-              {activeViewTab === 'info' && (
+              {activeViewTab === 'schedule' && (
                 <div className="space-y-2">
-                  <div className="bg-white border border-gray-200 overflow-hidden">
-                    <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
-                      <User className="w-3 h-3 text-primary" />
-                      <h3 className="text-primary font-bold text-xs">기본 정보</h3>
-                    </div>
-                    <div className="divide-y divide-gray-100">
-                      <div className="flex items-center gap-2 px-1.5 py-0.5">
-                        <span className="w-12 shrink-0 text-xs font-medium text-primary-700">담임</span>
-                        <span className="flex-1 text-xs text-primary">{teacherDisplay ? getTeacherDisplayName(teacherDisplay) : '-'}</span>
-                      </div>
-                      <div className="flex items-center gap-2 px-1.5 py-0.5">
-                        <span className="w-12 shrink-0 text-xs font-medium text-primary-700">교실</span>
-                        <span className="flex-1 text-xs text-primary">{roomDisplay || '-'}</span>
-                      </div>
-                    </div>
-                  </div>
-
                   <div className="bg-white border border-gray-200 overflow-hidden">
                     <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
                       <Clock className="w-3 h-3 text-primary" />
@@ -985,10 +971,6 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
 
                     return (
                       <div className="bg-white border border-gray-200 overflow-hidden">
-                        <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
-                          <Calendar className="w-3 h-3 text-primary" />
-                          <h3 className="text-primary font-bold text-xs">스케줄</h3>
-                        </div>
                         <div className="grid bg-gray-100" style={{ gridTemplateColumns: `32px repeat(${WEEKDAYS_VIEW.length}, 1fr)` }}>
                           <div className="p-1 text-center text-xxs font-semibold text-gray-400 border-r border-gray-200"></div>
                           {WEEKDAYS_VIEW.map((day, idx) => <div key={day} className={`p-1 text-center text-xs font-semibold text-gray-600 ${idx < WEEKDAYS_VIEW.length - 1 ? 'border-r border-gray-200' : ''}`}>{day}</div>)}
@@ -1032,6 +1014,27 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                       </div>
                     );
                   })()}
+                </div>
+              )}
+
+              {activeViewTab === 'info' && (
+                <div className="space-y-2">
+                  <div className="bg-white border border-gray-200 overflow-hidden">
+                    <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
+                      <User className="w-3 h-3 text-primary" />
+                      <h3 className="text-primary font-bold text-xs">기본 정보</h3>
+                    </div>
+                    <div className="divide-y divide-gray-100">
+                      <div className="flex items-center gap-2 px-1.5 py-0.5">
+                        <span className="w-12 shrink-0 text-xs font-medium text-primary-700">담임</span>
+                        <span className="flex-1 text-xs text-primary">{teacherDisplay ? getTeacherDisplayName(teacherDisplay) : '-'}</span>
+                      </div>
+                      <div className="flex items-center gap-2 px-1.5 py-0.5">
+                        <span className="w-12 shrink-0 text-xs font-medium text-primary-700">교실</span>
+                        <span className="flex-1 text-xs text-primary">{roomDisplay || '-'}</span>
+                      </div>
+                    </div>
+                  </div>
 
                   {classDetail?.memo && (
                     <div className="bg-white border border-gray-200 overflow-hidden">

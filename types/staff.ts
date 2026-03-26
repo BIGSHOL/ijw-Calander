@@ -43,6 +43,9 @@ export interface StaffMember {
   primaryDepartmentId?: string;    // 주 소속 부서
   jobTitle?: string;               // 호칭
 
+  // === 소속 (시간표/학생관리 가시성 제어) ===
+  departments?: ('math' | 'highmath' | 'english')[];  // 기본값: ['math', 'highmath', 'english']
+
   // === 선생님 전용 필드 (role === 'teacher'일 때만 사용) ===
   // 시간표 표시 설정
   isHiddenInTimetable?: boolean;  // 시간표에서 숨김

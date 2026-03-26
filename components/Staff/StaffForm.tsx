@@ -69,6 +69,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
     role: 'teacher' as StaffMember['role'],
     jobTitle: '', // 호칭 (예: 대표, 팀장, 선생님)
     subjects: [] as ('math' | 'english' | 'highmath')[],
+    departments: ['math', 'highmath', 'english'] as ('math' | 'highmath' | 'english')[],
     hireDate: formatDateKey(new Date()),
     status: 'active' as StaffMember['status'],
     memo: '',
@@ -96,6 +97,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
         role: staff.role || 'teacher',
         jobTitle: staff.jobTitle || '',
         subjects: staff.subjects || [],
+        departments: staff.departments || ['math', 'highmath', 'english'],
         hireDate: staff.hireDate || formatDateKey(new Date()),
         status: staff.status || 'active',
         memo: staff.memo || '',
@@ -137,6 +139,15 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
         ? prev.subjects.filter((s) => s !== subject)
         : [...prev.subjects, subject];
       return { ...prev, subjects };
+    });
+  };
+
+  const handleDepartmentToggle = (dept: 'math' | 'highmath' | 'english') => {
+    setFormData((prev) => {
+      const departments = prev.departments.includes(dept)
+        ? prev.departments.filter((d) => d !== dept)
+        : [...prev.departments, dept];
+      return { ...prev, departments };
     });
   };
 
@@ -495,6 +506,49 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                   formData.subjects.includes('english')
                     ? 'border-pink-500 bg-pink-50 text-pink-700 font-medium'
                     : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                }`}
+              >
+                영어
+              </button>
+            </div>
+          </div>
+
+          {/* 소속 */}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              소속
+              <span className="text-xxs text-gray-400 font-normal ml-1">해제 시 해당 영역의 시간표/학생관리에서 숨겨집니다</span>
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => handleDepartmentToggle('math')}
+                className={`flex-1 py-1.5 px-3 rounded-sm border-2 text-sm transition-colors ${
+                  formData.departments.includes('math')
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                    : 'border-gray-300 text-gray-400 line-through hover:border-gray-400'
+                }`}
+              >
+                수학(본원)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDepartmentToggle('highmath')}
+                className={`flex-1 py-1.5 px-3 rounded-sm border-2 text-sm transition-colors ${
+                  formData.departments.includes('highmath')
+                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-medium'
+                    : 'border-gray-300 text-gray-400 line-through hover:border-gray-400'
+                }`}
+              >
+                수학(고등관)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDepartmentToggle('english')}
+                className={`flex-1 py-1.5 px-3 rounded-sm border-2 text-sm transition-colors ${
+                  formData.departments.includes('english')
+                    ? 'border-pink-500 bg-pink-50 text-pink-700 font-medium'
+                    : 'border-gray-300 text-gray-400 line-through hover:border-gray-400'
                 }`}
               >
                 영어

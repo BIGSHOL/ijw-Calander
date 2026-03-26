@@ -164,6 +164,7 @@ interface TimetableHeaderProps {
     setMathViewMode?: (value: string) => void;
     hasPermission?: (perm: string) => boolean;
     setIsTimetableSettingsOpen?: (value: boolean) => void;
+    userDepartments?: ('math' | 'highmath' | 'english')[];
     // 강의실 필터
     roomFilter?: { main: boolean; barun: boolean; godeung: boolean };
     onRoomFilterChange?: (type: 'main' | 'barun' | 'godeung', value: boolean) => void;
@@ -235,6 +236,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     setMathViewMode,
     hasPermission,
     setIsTimetableSettingsOpen,
+    userDepartments,
     roomFilter,
     onRoomFilterChange,
     hiddenTeachers = [],
@@ -512,12 +514,13 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                         setMathViewMode={setMathViewMode}
                         hasPermission={hasPermission}
                         setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
+                        userDepartments={userDepartments}
                     />
                 )}
 
                 {/* Left: Week Info */}
                 <div className="flex items-center gap-3 flex-shrink-0">
-                    <span className="text-gray-300 font-medium">{weekLabel}</span>
+                    <span className="text-gray-300 font-medium w-[14em] flex-shrink-0">{weekLabel}</span>
                     <div className="flex items-center gap-1">
                         <button
                             onClick={goToPrevWeek}

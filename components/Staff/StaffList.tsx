@@ -8,13 +8,19 @@ interface StaffListProps {
   onSelectStaff: (staff: StaffMember) => void;
 }
 
+const DEPARTMENT_OPTIONS = [
+  { key: 'math' as const, label: '수학(본원)', color: 'bg-blue-100 text-blue-700' },
+  { key: 'highmath' as const, label: '수학(고등관)', color: 'bg-indigo-100 text-indigo-700' },
+  { key: 'english' as const, label: '영어', color: 'bg-pink-100 text-pink-700' },
+];
+
 const StaffList: React.FC<StaffListProps> = ({
   staff,
   selectedStaff,
   onSelectStaff,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(100);
 
   // Pagination
   const totalPages = Math.ceil(staff.length / pageSize);
@@ -113,6 +119,9 @@ const StaffList: React.FC<StaffListProps> = ({
                   담당과목
                 </th>
                 <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
+                  소속
+                </th>
+                <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
                   시간표 정보
                 </th>
                 <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
@@ -191,6 +200,26 @@ const StaffList: React.FC<StaffListProps> = ({
                       {(!member.subjects || member.subjects.length === 0) && (
                         <span className="text-xxs text-gray-400">-</span>
                       )}
+                    </div>
+                  </td>
+                  <td className="px-2 py-1.5 whitespace-nowrap text-xs">
+                    <div className="flex gap-1">
+                      {DEPARTMENT_OPTIONS.map(dept => {
+                        const depts = member.departments || ['math', 'highmath', 'english'];
+                        const isActive = depts.includes(dept.key);
+                        return (
+                          <span
+                            key={dept.key}
+                            className={`text-xxs px-1.5 py-0.5 rounded ${
+                              isActive
+                                ? dept.color
+                                : 'bg-gray-50 text-gray-400 line-through'
+                            }`}
+                          >
+                            {dept.label}
+                          </span>
+                        );
+                      })}
                     </div>
                   </td>
                   <td className="px-2 py-1.5 whitespace-nowrap text-xs">

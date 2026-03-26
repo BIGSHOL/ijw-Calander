@@ -714,4 +714,7 @@ export interface UserProfile {
 
   // Attendance: Link to Staff Profile (for view_own filtering)
   staffId?: string; // ID from staff collection (allows any role to be linked to a staff member)
+
+  // 소속: 접근 가능한 과목 영역 (시간표/학생관리 가시성)
+  departments?: ('math' | 'highmath' | 'english')[];
 }

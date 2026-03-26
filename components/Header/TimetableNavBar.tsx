@@ -16,6 +16,7 @@ interface TimetableNavBarProps {
   setMathViewMode: (value: string) => void;
   hasPermission: (perm: string) => boolean;
   setIsTimetableSettingsOpen: (value: boolean) => void;
+  userDepartments?: ('math' | 'highmath' | 'english')[];
 }
 
 export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
@@ -27,6 +28,7 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
   setMathViewMode,
   hasPermission,
   setIsTimetableSettingsOpen,
+  userDepartments = ['math', 'highmath', 'english'],
 }) => {
   return (
     <div className="bg-primary h-10 flex items-center px-3 md:px-6 border-b border-gray-700 relative z-30 text-xs overflow-x-auto no-scrollbar">
@@ -43,13 +45,13 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
           className="px-2 py-0.5 rounded-sm bg-accent text-primary font-bold text-xs hover:brightness-110 transition-all cursor-pointer border-none outline-none"
           title="과목 선택"
         >
-          {hasPermission('timetable.math.view') && (
+          {hasPermission('timetable.math.view') && userDepartments.includes('math') && (
             <option value="math">수학</option>
           )}
-          {hasPermission('timetable.math.view') && (
+          {hasPermission('timetable.math.view') && userDepartments.includes('highmath') && (
             <option value="highmath">고등수학</option>
           )}
-          {hasPermission('timetable.english.view') && (
+          {hasPermission('timetable.english.view') && userDepartments.includes('english') && (
             <option value="english">영어</option>
           )}
           {hasPermission('timetable.science.view') && (

@@ -140,7 +140,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
   // OPTIMIZATION: Vercel React Best Practices (rerender-derived-state)
   // - 250+ 줄 useMemo → useStudentFilters 커스텀 훅으로 분리
   // - 각 필터가 독립적으로 메모이제이션되어 불필요한 재계산 방지
-  const filteredStudents = useStudentFilters(students, filters, sortBy, oldWithdrawnStudents);
+  const filteredStudents = useStudentFilters(students, filters, sortBy, oldWithdrawnStudents, currentUser?.departments);
 
   // 필터링된 학생 이름 내보내기
   const handleExportNames = () => {

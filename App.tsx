@@ -260,12 +260,14 @@ const App: React.FC = () => {
   // Permission Hook
   const { hasPermission, rolePermissions } = usePermissions(effectiveProfile || null);
 
-  // Guard: Timetable subject permission
+  // Guard: Timetable subject permission + departments
   useEffect(() => {
     if (!effectiveProfile || appMode !== 'timetable') return;
 
-    const canViewMath = hasPermission('timetable.math.view') || hasPermission('timetable.math.edit');
-    const canViewEnglish = hasPermission('timetable.english.view') || hasPermission('timetable.english.edit');
+    const userDepts = effectiveProfile.departments || ['math', 'highmath', 'english'];
+    const canViewMath = (hasPermission('timetable.math.view') || hasPermission('timetable.math.edit')) && userDepts.includes('math');
+    const canViewHighmath = (hasPermission('timetable.math.view') || hasPermission('timetable.math.edit')) && userDepts.includes('highmath');
+    const canViewEnglish = (hasPermission('timetable.english.view') || hasPermission('timetable.english.edit')) && userDepts.includes('english');
     const canViewScience = hasPermission('timetable.science.view') || hasPermission('timetable.science.edit');
     const canViewKorean = hasPermission('timetable.korean.view') || hasPermission('timetable.korean.edit');
     const canViewShuttle = hasPermission('shuttle.view');
@@ -273,7 +275,7 @@ const App: React.FC = () => {
     const canViewCurrent =
       timetableSubject === 'all' ||
       (timetableSubject === 'math' && canViewMath) ||
-      (timetableSubject === 'highmath' && canViewMath) ||
+      (timetableSubject === 'highmath' && canViewHighmath) ||
       (timetableSubject === 'english' && canViewEnglish) ||
       (timetableSubject === 'science' && canViewScience) ||
       (timetableSubject === 'korean' && canViewKorean) ||
@@ -282,6 +284,8 @@ const App: React.FC = () => {
     if (!canViewCurrent) {
       if (canViewMath) {
         setTimetableSubject('math');
+      } else if (canViewHighmath) {
+        setTimetableSubject('highmath');
       } else if (canViewEnglish) {
         setTimetableSubject('english');
       } else if (canViewScience) {

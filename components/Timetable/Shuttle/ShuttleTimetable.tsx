@@ -59,6 +59,7 @@ interface ShuttleTimetableProps {
     setTimetableViewType?: React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>;
     hasPermissionFn: (perm: string) => boolean;
     setIsTimetableSettingsOpen?: (value: boolean) => void;
+    userDepartments?: ('math' | 'highmath' | 'english')[];
 }
 
 function ShuttleTimetable({
@@ -67,6 +68,7 @@ function ShuttleTimetable({
     setTimetableViewType,
     hasPermissionFn,
     setIsTimetableSettingsOpen,
+    userDepartments,
 }: ShuttleTimetableProps) {
     const [isSyncing, setIsSyncing] = useState(false);
     const [activeFilters, setActiveFilters] = useState<Set<ShuttleFilter>>(new Set());
@@ -115,6 +117,7 @@ function ShuttleTimetable({
                         setTimetableViewType={setTimetableViewType}
                         hasPermission={hasPermissionFn}
                         setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
+                        userDepartments={userDepartments}
                     />
                 </div>
                 <div className="flex items-center justify-center flex-1">
@@ -138,6 +141,7 @@ function ShuttleTimetable({
                     setTimetableViewType={setTimetableViewType}
                     hasPermission={hasPermissionFn}
                     setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
+                    userDepartments={userDepartments}
                 />
 
                 <button

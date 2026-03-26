@@ -769,6 +769,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     setMathViewMode={setMathViewMode}
                     hasPermission={hasPermissionFn}
                     setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
+                    userDepartments={userDepartments}
                     roomFilter={roomFilter}
                     onRoomFilterChange={onRoomFilterChange}
                     hiddenTeachers={mathIntegrationSettings.hiddenTeachers || []}
@@ -1159,6 +1160,7 @@ const TimetableManager = ({
     setIsTimetableSettingsOpen: externalSetIsTimetableSettingsOpen,
 }: TimetableManagerProps) => {
     const queryClient = useQueryClient();
+    const userDepartments = currentUser?.departments || ['math', 'highmath', 'english'];
     const { hasPermission } = usePermissions(currentUser);
     const canEditMath = hasPermission('timetable.math.edit');
     const canEditEnglish = hasPermission('timetable.english.edit');
@@ -1289,12 +1291,12 @@ const TimetableManager = ({
 
     // View State (use external if provided)
     const [internalSelectedDays, setInternalSelectedDays] = useState<string[]>(
-        viewSettings.selectedDays || ['월', '화', '수', '목', '금']
+        viewSettings.selectedDays || ['월', '화', '수', '목', '금', '토', '일']
     );
     const selectedDays = externalSelectedDays ?? internalSelectedDays;
     const setSelectedDays = onSelectedDaysChange ?? setInternalSelectedDays;
 
-    const [internalViewType, setInternalViewType] = useState<'teacher' | 'room' | 'class' | 'excel'>('teacher');
+    const [internalViewType, setInternalViewType] = useState<'teacher' | 'room' | 'class' | 'excel'>(subjectTab === 'highmath' ? 'excel' : 'teacher');
     const viewType = externalViewType ?? internalViewType;
     const setViewType = onViewTypeChange ?? setInternalViewType;
 
@@ -1385,8 +1387,12 @@ const TimetableManager = ({
     useEffect(() => {
         if (prevSubjectRef.current !== subjectTab) {
             prevSubjectRef.current = subjectTab;
-            // 요일 필터 초기화 (평일)
-            setInternalSelectedDays(['월', '화', '수', '목', '금']);
+            // 요일 필터 초기화 (평일+주말)
+            setInternalSelectedDays(['월', '화', '수', '목', '금', '토', '일']);
+            // 고등수학 탭 진입 시 엑셀(요일) 뷰로 전환
+            if (subjectTab === 'highmath') {
+                setInternalViewType('excel');
+            }
             // 강의실 필터 초기화 (전체 선택)
             setRoomFilter({ main: true, barun: true, godeung: true });
             storage.setString(STORAGE_KEYS.MATH_ROOM_FILTER, JSON.stringify({ main: true, barun: true, godeung: true }));
@@ -1897,6 +1903,7 @@ const TimetableManager = ({
                     setMathViewMode={setTimetableViewMode as (value: string) => void}
                     hasPermissionFn={externalHasPermission || hasPermission}
                     setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
+                    userDepartments={userDepartments}
                 />
             </Suspense>
         );
@@ -1923,6 +1930,7 @@ const TimetableManager = ({
                     setMathViewMode={setTimetableViewMode as (value: string) => void}
                     hasPermissionFn={externalHasPermission || hasPermission}
                     setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
+                    userDepartments={userDepartments}
                 />
             </Suspense>
         );
@@ -1948,6 +1956,7 @@ const TimetableManager = ({
                     setMathViewMode={setTimetableViewMode as (value: string) => void}
                     hasPermissionFn={externalHasPermission || hasPermission}
                     setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
+                    userDepartments={userDepartments}
                 />
             </Suspense>
         );
@@ -1964,6 +1973,7 @@ const TimetableManager = ({
                     setMathViewMode={setTimetableViewMode as (value: string) => void}
                     hasPermissionFn={externalHasPermission || hasPermission}
                     setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
+                    userDepartments={userDepartments}
                 />
             </Suspense>
         );
@@ -1979,6 +1989,7 @@ const TimetableManager = ({
                     setTimetableViewType={setViewType as React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>}
                     hasPermissionFn={externalHasPermission || hasPermission}
                     setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
+                    userDepartments={userDepartments}
                 />
             </Suspense>
         );

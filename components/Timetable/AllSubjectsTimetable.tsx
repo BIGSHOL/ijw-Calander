@@ -31,6 +31,7 @@ interface AllSubjectsTimetableProps {
     setMathViewMode?: (value: string) => void;
     hasPermissionFn: (perm: string) => boolean;
     setIsTimetableSettingsOpen?: (value: boolean) => void;
+    userDepartments?: ('math' | 'highmath' | 'english')[];
 }
 
 interface CellData {
@@ -50,6 +51,7 @@ export default function AllSubjectsTimetable({
     setMathViewMode,
     hasPermissionFn,
     setIsTimetableSettingsOpen,
+    userDepartments,
 }: AllSubjectsTimetableProps) {
     const { classes, loading } = useTimetableClasses();
 
@@ -122,6 +124,7 @@ export default function AllSubjectsTimetable({
                         setMathViewMode={setMathViewMode}
                         hasPermission={hasPermissionFn}
                         setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
+                        userDepartments={userDepartments}
                     />
                     <span className="text-xs text-gray-400 font-medium">읽기 전용</span>
                 </div>

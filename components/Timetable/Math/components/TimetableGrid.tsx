@@ -282,6 +282,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return orderedSelectedDays.filter(day => day === '화' || day === '금');
     }, [orderedSelectedDays]);
 
+    // 토/일: 주말 통합 테이블로 표시 (교시 컬럼 공유)
+    const hasSaturday = orderedSelectedDays.includes('토');
+    const hasSunday = orderedSelectedDays.includes('일');
+
     // 월/목 그룹: 각 선생님이 어떤 요일에 수업이 있는지 계산 (slotTeachers 포함)
     const monThuResourceDaysMap = useMemo(() => {
         const map = new Map<string, string[]>();
@@ -315,10 +319,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     }, [allResources, tueFriDays, resourceDayLookup]);
 
     // 주말(토+일) 통합: 각 선생님이 토/일 중 어떤 요일에 수업이 있는지
-    // selectedDays와 무관하게 항상 체크 (teacher-based 그룹 뷰에서 주말 테이블이 사라지지 않도록)
     const weekendResourceDaysMap = useMemo(() => {
         const map = new Map<string, string[]>();
-        const weekendDays = ['토', '일'];
+        if (!hasSaturday && !hasSunday) return map;
+        const weekendDays = [hasSaturday ? '토' : null, hasSunday ? '일' : null].filter(Boolean) as string[];
         allResources.forEach(resource => {
             const daysForResource = weekendDays.filter(day =>
                 resourceDayLookup.get(resource?.trim())?.has(day) ?? false
@@ -328,7 +332,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
             }
         });
         return map;
-    }, [allResources, resourceDayLookup]);
+    }, [allResources, hasSaturday, hasSunday, resourceDayLookup]);
 
     // 수요일 수업이 있는 선생님 (수요일 전용, slotTeachers 포함)
     const wednesdayResources = useMemo(() => {
@@ -1795,15 +1799,9 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return (
             <div className="overflow-auto h-full">
                 <div className="flex gap-4">
-                    {dayBasedData.map(({ day, resources }, idx) => {
-                        // 이전 테이블과 같은 교시 구조이면 교시 컬럼 숨김
-                        const isWeekend = day === '토' || day === '일';
-                        const prevDay = idx > 0 ? dayBasedData[idx - 1].day : null;
-                        const prevIsWeekend = prevDay === '토' || prevDay === '일';
-                        // 평일끼리는 교시가 동일 → 두 번째부터 숨김, 주말은 별도
-                        const hidePeriod = idx > 0 && isWeekend === prevIsWeekend;
-                        return renderDayBasedTable(day, resources, hidePeriod);
-                    })}
+                    {dayBasedData.map(({ day, resources }) =>
+                        renderDayBasedTable(day, resources, false)
+                    )}
                 </div>
             </div>
         );
@@ -1821,22 +1819,16 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         ? weekdayGroupOrder.filter(g => groupConfigs[g])
         : ['월/목', '화/금', '주말', '수요일'];
 
-    // 앞에 평일 그룹이 이미 렌더링되었는지 추적 (교시 컬럼 숨김 용)
-    let prevWeekdayRendered = false;
+    const activeGroups = orderedGroups.filter(g => groupConfigs[g]?.hasData);
 
     return (
         <div className="overflow-auto h-full">
             <div className="flex gap-4">
-                {orderedGroups.map(groupName => {
+                {activeGroups.map((groupName) => {
                     const config = groupConfigs[groupName];
-                    if (!config || !config.hasData) return null;
-                    const isWeekend = groupName === '주말';
-                    // 주말은 교시가 다를 수 있으므로 항상 표시, 평일은 첫 번째만 표시
-                    const hidePeriod = !isWeekend && prevWeekdayRendered;
-                    if (!isWeekend) prevWeekdayRendered = true;
                     return (
                         <React.Fragment key={groupName}>
-                            {renderTable(config.resources, config.daysMap, groupName, config.isWednesday, hidePeriod)}
+                            {renderTable(config.resources, config.daysMap, groupName, config.isWednesday, false)}
                         </React.Fragment>
                     );
                 })}

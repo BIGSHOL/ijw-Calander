@@ -186,7 +186,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 {/* 수업 그룹 하단에 수업보고서 외부 링크 추가 */}
                 {group.id === 'class' && (
                   <a
-                    href="https://edutrix-delta.vercel.app/auth/login"
+                    href="https://edutrix.vercel.app/"
                     target="_blank"
                     rel="noopener noreferrer"
                     className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs font-medium transition-all text-gray-700 hover:bg-gray-100 hover:text-gray-900 ${isCollapsed ? 'justify-center' : ''}`}

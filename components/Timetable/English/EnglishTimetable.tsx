@@ -48,6 +48,7 @@ interface EnglishTimetableProps {
     setMathViewMode?: (value: string) => void;
     hasPermissionFn?: (perm: string) => boolean;
     setIsTimetableSettingsOpen?: (value: boolean) => void;
+    userDepartments?: ('math' | 'highmath' | 'english')[];
 }
 
 interface ScheduleCell {
@@ -64,7 +65,7 @@ interface ScheduleCell {
 type ScheduleData = Record<string, ScheduleCell>;
 
 // Inner component that uses SimulationContext
-const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [], classKeywords = [], currentUser, studentMap, currentWeekStart, weekLabel, goToPrevWeek, goToNextWeek, goToThisWeek, timetableSubject, setTimetableSubject, setTimetableViewType, mathViewMode, setMathViewMode, hasPermissionFn, setIsTimetableSettingsOpen }) => {
+const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [], classKeywords = [], currentUser, studentMap, currentWeekStart, weekLabel, goToPrevWeek, goToNextWeek, goToThisWeek, timetableSubject, setTimetableSubject, setTimetableViewType, mathViewMode, setMathViewMode, hasPermissionFn, setIsTimetableSettingsOpen, userDepartments }) => {
     // Removed local activeTab state, using viewType prop
     const [scheduleData, setScheduleData] = useState<ScheduleData>({});
     const [loading, setLoading] = useState(true);
@@ -791,7 +792,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
         <div className="bg-white shadow-xl border border-gray-200 h-full flex flex-col overflow-hidden">
             {/* 통합뷰/엑셀뷰: 수학 시간표와 동일한 1행 헤더 */}
             {(viewType === 'class' || viewType === 'excel') && (
-                <div className={`bg-gray-50 min-h-[2.5rem] flex items-center gap-3 pl-4 border-b border-gray-200 flex-shrink-0 text-xs transition-colors duration-300 min-w-0 overflow-x-auto ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
+                <div className={`bg-primary min-h-[2.5rem] flex items-center gap-3 pl-4 border-b border-gray-700 flex-shrink-0 text-xs transition-colors duration-300 min-w-0 overflow-x-auto ${isSimulationMode ? 'bg-orange-900 border-orange-700' : ''}`}>
                     {/* Left: 과목/뷰 전환 + 주차 네비게이션 + 학생 통계 */}
                     <div className="flex items-center gap-3 flex-shrink-0">
                         {timetableSubject && setTimetableSubject && hasPermissionFn && (
@@ -804,27 +805,28 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 setMathViewMode={setMathViewMode}
                                 hasPermission={hasPermissionFn}
                                 setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
+                                userDepartments={userDepartments}
                             />
                         )}
                         {weekLabel && goToPrevWeek && goToNextWeek && goToThisWeek && (
                             <>
-                                <span className="text-gray-600 font-medium">{weekLabel}</span>
+                                <span className="text-gray-300 font-medium w-[14em] flex-shrink-0">{weekLabel}</span>
                                 <div className="flex items-center gap-1">
                                     <button
                                         onClick={goToPrevWeek}
-                                        className="p-1 border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                                        className="p-1 border border-white/20 rounded-sm hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                                     >
                                         <ChevronLeft size={14} />
                                     </button>
                                     <button
                                         onClick={goToThisWeek}
-                                        className="px-2 py-0.5 text-xxs font-bold border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                                        className="px-2 py-0.5 text-xxs font-bold border border-white/20 rounded-sm hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                                     >
                                         이번주
                                     </button>
                                     <button
                                         onClick={goToNextWeek}
-                                        className="p-1 border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                                        className="p-1 border border-white/20 rounded-sm hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                                     >
                                         <ChevronRight size={14} />
                                     </button>
@@ -832,17 +834,17 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                             </>
                         )}
                         {/* 학생 통계 배지 (통일: 재원/신입/예정/퇴원) */}
-                        <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-300">
+                        <div className="flex items-center gap-2 ml-2 pl-2 border-l border-white/20">
                             {/* 재원 */}
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-green-50 border border-green-200 rounded-sm">
-                                <span className="text-xxs text-green-700 font-medium">재원</span>
-                                <span className="text-xs font-bold text-green-800">{studentStats.active}</span>
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-green-900/50 border border-green-700/50 rounded-sm">
+                                <span className="text-xxs text-green-400 font-medium">재원</span>
+                                <span className="text-xs font-bold text-green-300">{studentStats.active}</span>
                             </div>
                             {/* 신입 (30일 이내) */}
                             {studentStats.new1 > 0 && (
-                                <div className="flex items-center gap-1 px-2 py-0.5 bg-pink-50 border border-pink-200 rounded-sm">
-                                    <span className="text-xxs text-pink-700 font-medium">신입</span>
-                                    <span className="text-xs font-bold text-pink-800">{studentStats.new1}</span>
+                                <div className="flex items-center gap-1 px-2 py-0.5 bg-pink-900/50 border border-pink-700/50 rounded-sm">
+                                    <span className="text-xxs text-pink-400 font-medium">신입</span>
+                                    <span className="text-xs font-bold text-pink-300">{studentStats.new1}</span>
                                 </div>
                             )}
                             {/* 예정 (대기 + 퇴원예정) */}
@@ -875,9 +877,9 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                         </div>
                                     }
                                 >
-                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-sm cursor-pointer">
-                                        <span className="text-xxs text-amber-700 font-medium">예정</span>
-                                        <span className="text-xs font-bold text-amber-800">{studentStats.waiting + studentStats.withdrawnFuture}</span>
+                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-amber-900/50 border border-amber-700/50 rounded-sm cursor-pointer">
+                                        <span className="text-xxs text-amber-400 font-medium">예정</span>
+                                        <span className="text-xs font-bold text-amber-300">{studentStats.waiting + studentStats.withdrawnFuture}</span>
                                     </div>
                                 </PortalTooltip>
                             )}
@@ -895,9 +897,9 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                         </div>
                                     }
                                 >
-                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 border border-gray-300 rounded-sm cursor-pointer">
-                                        <span className="text-xxs text-gray-700 font-medium">퇴원</span>
-                                        <span className="text-xs font-bold text-gray-800">{studentStats.withdrawn}</span>
+                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-white/10 border border-white/20 rounded-sm cursor-pointer">
+                                        <span className="text-xxs text-gray-400 font-medium">퇴원</span>
+                                        <span className="text-xs font-bold text-gray-300">{studentStats.withdrawn}</span>
                                     </div>
                                 </PortalTooltip>
                             )}
@@ -905,7 +907,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                     </div>
 
                     {/* Center: 시간표 제목 */}
-                    <h1 className="flex-shrink-0 whitespace-nowrap text-sm font-black text-gray-800 tracking-tight flex items-center gap-2">
+                    <h1 className="flex-shrink-0 whitespace-nowrap text-sm font-black text-white tracking-tight flex items-center gap-2">
                         <span>
                             {isSimulationMode && currentScenarioName
                                 ? currentScenarioName
@@ -921,23 +923,23 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         {canSimulation && (
                             <>
                                 <div
-                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-sm border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-50 border-orange-300 hover:bg-orange-100' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
+                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-sm border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-900/50 border-orange-600 hover:bg-orange-800/50' : 'bg-white/10 border-white/20 hover:bg-white/15'}`}
                                     onClick={handleToggleSimulationMode}
                                 >
-                                    <ArrowRightLeft size={14} className={isSimulationMode ? 'text-orange-600' : 'text-gray-500'} />
-                                    <span className={`text-xs font-bold ${isSimulationMode ? 'text-orange-700' : 'text-gray-600'}`}>
+                                    <ArrowRightLeft size={14} className={isSimulationMode ? 'text-orange-400' : 'text-gray-400'} />
+                                    <span className={`text-xs font-bold ${isSimulationMode ? 'text-orange-300' : 'text-gray-300'}`}>
                                         {isSimulationMode ? '시뮬레이션 모드' : '실시간 모드'}
                                     </span>
                                 </div>
-                                <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                                <div className="w-px h-4 bg-white/20 mx-1"></div>
                             </>
                         )}
 
                         {/* 모드 토글 - 조회/수정 */}
-                        <div className="flex bg-gray-200 rounded-sm p-0.5">
+                        <div className="flex bg-white/10 rounded-sm p-0.5">
                             <button
                                 onClick={() => setMode('view')}
-                                className={`px-2.5 py-1 text-xs font-bold rounded-sm transition-all flex items-center gap-1 ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
+                                className={`px-2.5 py-1 text-xs font-bold rounded-sm transition-all flex items-center gap-1 ${mode === 'view' ? 'bg-accent text-primary shadow-sm' : 'text-gray-400 hover:bg-white/10'}`}
                             >
                                 <Eye size={12} />
                                 조회
@@ -945,7 +947,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                             {canEditEnglish && (
                                 <button
                                     onClick={() => setMode('edit')}
-                                    className={`px-2.5 py-1 text-xs font-bold rounded-sm transition-all flex items-center gap-1 ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
+                                    className={`px-2.5 py-1 text-xs font-bold rounded-sm transition-all flex items-center gap-1 ${mode === 'edit' ? 'bg-accent text-primary shadow-sm' : 'text-gray-400 hover:bg-white/10'}`}
                                 >
                                     <Edit size={12} />
                                     수정
@@ -953,7 +955,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                             )}
                         </div>
 
-                        <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                        <div className="w-px h-4 bg-white/20 mx-1"></div>
 
                         {/* 검색 */}
                         <div className="relative">
@@ -963,16 +965,16 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
                                 placeholder="수업명 검색..."
-                                className="pl-7 pr-6 py-1 w-32 text-xs border border-gray-300 rounded-sm bg-white text-gray-700 placeholder-gray-400 outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+                                className="pl-7 pr-6 py-1 w-32 text-xs border border-white/20 rounded-sm bg-white/10 text-gray-200 placeholder-gray-500 outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                             />
                         </div>
 
-                        <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                        <div className="w-px h-4 bg-white/20 mx-1"></div>
 
                         {/* 이미지 저장 (수학 통합뷰와 동일 위치) */}
                         <button
                             onClick={() => setIsClassExportModalOpen(true)}
-                            className="flex items-center gap-1 px-2 py-1 bg-white border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 text-xs font-bold"
+                            className="flex items-center gap-1 px-2 py-1 bg-white/10 border border-white/20 text-gray-300 rounded-sm hover:bg-white/15 text-xs font-bold"
                             title="시간표 이미지 저장"
                         >
                             <Download size={12} />
@@ -991,7 +993,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                     }
                                     setIsDisplayOptionsOpen(!isDisplayOptionsOpen);
                                 }}
-                                className="px-2 py-1 border border-gray-300 rounded-sm text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-1"
+                                className="px-2 py-1 border border-white/20 rounded-sm text-xs font-medium text-gray-300 hover:bg-white/10 transition-colors flex items-center gap-1"
                                 title="표시 옵션"
                             >
                                 <SlidersHorizontal size={12} />
@@ -1081,7 +1083,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         {/* 엑셀뷰: 보류 작업 저장/취소 */}
                         {viewType === 'excel' && (pendingExcelDeletes.length + pendingExcelEnrollments.length) > 0 && (
                             <>
-                                <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                                <div className="w-px h-4 bg-white/20 mx-1"></div>
                                 <div className="flex items-center gap-1 bg-orange-50 border border-orange-200 rounded-sm px-2 py-1">
                                     <span className="text-xs font-bold text-orange-600">
                                         {pendingExcelDeletes.length + pendingExcelEnrollments.length}건 변경
@@ -1108,7 +1110,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
 
             {/* 강사뷰: 통합뷰와 동일한 1행 헤더 */}
             {viewType === 'teacher' && (
-                <div className={`bg-gray-50 min-h-[2.5rem] flex items-center gap-3 pl-4 border-b border-gray-200 flex-shrink-0 text-xs transition-colors duration-300 min-w-0 overflow-x-auto ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
+                <div className={`bg-primary min-h-[2.5rem] flex items-center gap-3 pl-4 border-b border-gray-700 flex-shrink-0 text-xs transition-colors duration-300 min-w-0 overflow-x-auto ${isSimulationMode ? 'bg-orange-900 border-orange-700' : ''}`}>
                     {/* Left: 과목/뷰 전환 + 주차 네비게이션 + 학생 통계 */}
                     <div className="flex items-center gap-3 flex-shrink-0">
                         {timetableSubject && setTimetableSubject && hasPermissionFn && (
@@ -1121,27 +1123,28 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 setMathViewMode={setMathViewMode}
                                 hasPermission={hasPermissionFn}
                                 setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
+                                userDepartments={userDepartments}
                             />
                         )}
                         {weekLabel && goToPrevWeek && goToNextWeek && goToThisWeek && (
                             <>
-                                <span className="text-gray-600 font-medium">{weekLabel}</span>
+                                <span className="text-gray-300 font-medium w-[14em] flex-shrink-0">{weekLabel}</span>
                                 <div className="flex items-center gap-1">
                                     <button
                                         onClick={goToPrevWeek}
-                                        className="p-1 border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                                        className="p-1 border border-white/20 rounded-sm hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                                     >
                                         <ChevronLeft size={14} />
                                     </button>
                                     <button
                                         onClick={goToThisWeek}
-                                        className="px-2 py-0.5 text-xxs font-bold border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                                        className="px-2 py-0.5 text-xxs font-bold border border-white/20 rounded-sm hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                                     >
                                         이번주
                                     </button>
                                     <button
                                         onClick={goToNextWeek}
-                                        className="p-1 border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                                        className="p-1 border border-white/20 rounded-sm hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                                     >
                                         <ChevronRight size={14} />
                                     </button>
@@ -1149,17 +1152,17 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                             </>
                         )}
                         {/* 학생 통계 배지 (통일: 재원/신입/예정/퇴원) */}
-                        <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-300">
+                        <div className="flex items-center gap-2 ml-2 pl-2 border-l border-white/20">
                             {/* 재원 */}
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-green-50 border border-green-200 rounded-sm">
-                                <span className="text-xxs text-green-700 font-medium">재원</span>
-                                <span className="text-xs font-bold text-green-800">{studentStats.active}</span>
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-green-900/50 border border-green-700/50 rounded-sm">
+                                <span className="text-xxs text-green-400 font-medium">재원</span>
+                                <span className="text-xs font-bold text-green-300">{studentStats.active}</span>
                             </div>
                             {/* 신입 (30일 이내) */}
                             {studentStats.new1 > 0 && (
-                                <div className="flex items-center gap-1 px-2 py-0.5 bg-pink-50 border border-pink-200 rounded-sm">
-                                    <span className="text-xxs text-pink-700 font-medium">신입</span>
-                                    <span className="text-xs font-bold text-pink-800">{studentStats.new1}</span>
+                                <div className="flex items-center gap-1 px-2 py-0.5 bg-pink-900/50 border border-pink-700/50 rounded-sm">
+                                    <span className="text-xxs text-pink-400 font-medium">신입</span>
+                                    <span className="text-xs font-bold text-pink-300">{studentStats.new1}</span>
                                 </div>
                             )}
                             {/* 예정 (대기 + 퇴원예정) */}
@@ -1192,9 +1195,9 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                         </div>
                                     }
                                 >
-                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-sm cursor-pointer">
-                                        <span className="text-xxs text-amber-700 font-medium">예정</span>
-                                        <span className="text-xs font-bold text-amber-800">{studentStats.waiting + studentStats.withdrawnFuture}</span>
+                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-amber-900/50 border border-amber-700/50 rounded-sm cursor-pointer">
+                                        <span className="text-xxs text-amber-400 font-medium">예정</span>
+                                        <span className="text-xs font-bold text-amber-300">{studentStats.waiting + studentStats.withdrawnFuture}</span>
                                     </div>
                                 </PortalTooltip>
                             )}
@@ -1212,9 +1215,9 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                         </div>
                                     }
                                 >
-                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 border border-gray-300 rounded-sm cursor-pointer">
-                                        <span className="text-xxs text-gray-700 font-medium">퇴원</span>
-                                        <span className="text-xs font-bold text-gray-800">{studentStats.withdrawn}</span>
+                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-white/10 border border-white/20 rounded-sm cursor-pointer">
+                                        <span className="text-xxs text-gray-400 font-medium">퇴원</span>
+                                        <span className="text-xs font-bold text-gray-300">{studentStats.withdrawn}</span>
                                     </div>
                                 </PortalTooltip>
                             )}
@@ -1222,7 +1225,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                     </div>
 
                     {/* Center: 시간표 제목 */}
-                    <h1 className="flex-shrink-0 whitespace-nowrap text-sm font-black text-gray-800 tracking-tight flex items-center gap-2">
+                    <h1 className="flex-shrink-0 whitespace-nowrap text-sm font-black text-white tracking-tight flex items-center gap-2">
                         <span>
                             {isSimulationMode && currentScenarioName
                                 ? currentScenarioName
@@ -1238,23 +1241,23 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         {canSimulation && (
                             <>
                                 <div
-                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-sm border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-50 border-orange-300 hover:bg-orange-100' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
+                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-sm border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-900/50 border-orange-600 hover:bg-orange-800/50' : 'bg-white/10 border-white/20 hover:bg-white/15'}`}
                                     onClick={handleToggleSimulationMode}
                                 >
-                                    <ArrowRightLeft size={14} className={isSimulationMode ? 'text-orange-600' : 'text-gray-500'} />
-                                    <span className={`text-xs font-bold ${isSimulationMode ? 'text-orange-700' : 'text-gray-600'}`}>
+                                    <ArrowRightLeft size={14} className={isSimulationMode ? 'text-orange-400' : 'text-gray-400'} />
+                                    <span className={`text-xs font-bold ${isSimulationMode ? 'text-orange-300' : 'text-gray-300'}`}>
                                         {isSimulationMode ? '시뮬레이션 모드' : '실시간 모드'}
                                     </span>
                                 </div>
-                                <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                                <div className="w-px h-4 bg-white/20 mx-1"></div>
                             </>
                         )}
 
                         {/* 모드 토글 - 조회/수정 */}
-                        <div className="flex bg-gray-200 rounded-sm p-0.5">
+                        <div className="flex bg-white/10 rounded-sm p-0.5">
                             <button
                                 onClick={() => setMode('view')}
-                                className={`px-2.5 py-1 text-xs font-bold rounded-sm transition-all flex items-center gap-1 ${mode === 'view' ? 'bg-white text-green-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
+                                className={`px-2.5 py-1 text-xs font-bold rounded-sm transition-all flex items-center gap-1 ${mode === 'view' ? 'bg-accent text-primary shadow-sm' : 'text-gray-400 hover:bg-white/10'}`}
                             >
                                 <Eye size={12} />
                                 조회
@@ -1262,7 +1265,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                             {canEditEnglish && (
                                 <button
                                     onClick={() => setMode('edit')}
-                                    className={`px-2.5 py-1 text-xs font-bold rounded-sm transition-all flex items-center gap-1 ${mode === 'edit' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}
+                                    className={`px-2.5 py-1 text-xs font-bold rounded-sm transition-all flex items-center gap-1 ${mode === 'edit' ? 'bg-accent text-primary shadow-sm' : 'text-gray-400 hover:bg-white/10'}`}
                                 >
                                     <Edit size={12} />
                                     수정
@@ -1270,13 +1273,13 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                             )}
                         </div>
 
-                        <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                        <div className="w-px h-4 bg-white/20 mx-1"></div>
 
                         {/* 이미지 저장 */}
                         {canViewEnglish && (
                             <button
                                 onClick={() => setIsTeacherExportModalOpen(true)}
-                                className="flex items-center gap-1 px-2 py-1 bg-white border border-gray-300 text-gray-700 rounded-sm hover:bg-gray-50 text-xs font-bold"
+                                className="flex items-center gap-1 px-2 py-1 bg-white/10 border border-white/20 text-gray-300 rounded-sm hover:bg-white/15 text-xs font-bold"
                                 title="시간표 이미지 저장"
                             >
                                 <Download size={12} />
@@ -1287,7 +1290,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         {/* 보기 설정 */}
                         <button
                             onClick={() => setIsTeacherViewSettingsOpen(true)}
-                            className="px-2 py-1 border border-gray-300 rounded-sm text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-1"
+                            className="px-2 py-1 border border-white/20 rounded-sm text-xs font-medium text-gray-300 hover:bg-white/10 transition-colors flex items-center gap-1"
                             title="보기 설정"
                         >
                             <SlidersHorizontal size={12} />
@@ -1332,7 +1335,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
 
             {/* 강의실뷰: 통합뷰/강사뷰와 동일한 1행 헤더 */}
             {viewType === 'room' && (
-                <div className={`bg-gray-50 min-h-[2.5rem] flex items-center gap-3 pl-4 border-b border-gray-200 flex-shrink-0 text-xs transition-colors duration-300 min-w-0 overflow-x-auto ${isSimulationMode ? 'bg-orange-50 border-orange-200' : ''}`}>
+                <div className={`bg-primary min-h-[2.5rem] flex items-center gap-3 pl-4 border-b border-gray-700 flex-shrink-0 text-xs transition-colors duration-300 min-w-0 overflow-x-auto ${isSimulationMode ? 'bg-orange-900 border-orange-700' : ''}`}>
                     {/* Left: 과목/뷰 전환 + 주차 네비게이션 + 학생 통계 */}
                     <div className="flex items-center gap-3 flex-shrink-0">
                         {timetableSubject && setTimetableSubject && hasPermissionFn && (
@@ -1345,27 +1348,28 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 setMathViewMode={setMathViewMode}
                                 hasPermission={hasPermissionFn}
                                 setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
+                                userDepartments={userDepartments}
                             />
                         )}
                         {weekLabel && goToPrevWeek && goToNextWeek && goToThisWeek && (
                             <>
-                                <span className="text-gray-600 font-medium">{weekLabel}</span>
+                                <span className="text-gray-300 font-medium w-[14em] flex-shrink-0">{weekLabel}</span>
                                 <div className="flex items-center gap-1">
                                     <button
                                         onClick={goToPrevWeek}
-                                        className="p-1 border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                                        className="p-1 border border-white/20 rounded-sm hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                                     >
                                         <ChevronLeft size={14} />
                                     </button>
                                     <button
                                         onClick={goToThisWeek}
-                                        className="px-2 py-0.5 text-xxs font-bold border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                                        className="px-2 py-0.5 text-xxs font-bold border border-white/20 rounded-sm hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                                     >
                                         이번주
                                     </button>
                                     <button
                                         onClick={goToNextWeek}
-                                        className="p-1 border border-gray-300 rounded-sm hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                                        className="p-1 border border-white/20 rounded-sm hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
                                     >
                                         <ChevronRight size={14} />
                                     </button>
@@ -1373,17 +1377,17 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                             </>
                         )}
                         {/* 학생 통계 배지 (통일: 재원/신입/예정/퇴원) */}
-                        <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-300">
+                        <div className="flex items-center gap-2 ml-2 pl-2 border-l border-white/20">
                             {/* 재원 */}
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-green-50 border border-green-200 rounded-sm">
-                                <span className="text-xxs text-green-700 font-medium">재원</span>
-                                <span className="text-xs font-bold text-green-800">{studentStats.active}</span>
+                            <div className="flex items-center gap-1 px-2 py-0.5 bg-green-900/50 border border-green-700/50 rounded-sm">
+                                <span className="text-xxs text-green-400 font-medium">재원</span>
+                                <span className="text-xs font-bold text-green-300">{studentStats.active}</span>
                             </div>
                             {/* 신입 (30일 이내) */}
                             {studentStats.new1 > 0 && (
-                                <div className="flex items-center gap-1 px-2 py-0.5 bg-pink-50 border border-pink-200 rounded-sm">
-                                    <span className="text-xxs text-pink-700 font-medium">신입</span>
-                                    <span className="text-xs font-bold text-pink-800">{studentStats.new1}</span>
+                                <div className="flex items-center gap-1 px-2 py-0.5 bg-pink-900/50 border border-pink-700/50 rounded-sm">
+                                    <span className="text-xxs text-pink-400 font-medium">신입</span>
+                                    <span className="text-xs font-bold text-pink-300">{studentStats.new1}</span>
                                 </div>
                             )}
                             {/* 예정 (대기 + 퇴원예정) */}
@@ -1416,9 +1420,9 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                         </div>
                                     }
                                 >
-                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-sm cursor-pointer">
-                                        <span className="text-xxs text-amber-700 font-medium">예정</span>
-                                        <span className="text-xs font-bold text-amber-800">{studentStats.waiting + studentStats.withdrawnFuture}</span>
+                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-amber-900/50 border border-amber-700/50 rounded-sm cursor-pointer">
+                                        <span className="text-xxs text-amber-400 font-medium">예정</span>
+                                        <span className="text-xs font-bold text-amber-300">{studentStats.waiting + studentStats.withdrawnFuture}</span>
                                     </div>
                                 </PortalTooltip>
                             )}
@@ -1436,9 +1440,9 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                         </div>
                                     }
                                 >
-                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 border border-gray-300 rounded-sm cursor-pointer">
-                                        <span className="text-xxs text-gray-700 font-medium">퇴원</span>
-                                        <span className="text-xs font-bold text-gray-800">{studentStats.withdrawn}</span>
+                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-white/10 border border-white/20 rounded-sm cursor-pointer">
+                                        <span className="text-xxs text-gray-400 font-medium">퇴원</span>
+                                        <span className="text-xs font-bold text-gray-300">{studentStats.withdrawn}</span>
                                     </div>
                                 </PortalTooltip>
                             )}
@@ -1446,7 +1450,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                     </div>
 
                     {/* Center: 시간표 제목 */}
-                    <h1 className="flex-shrink-0 whitespace-nowrap text-sm font-black text-gray-800 tracking-tight flex items-center gap-2">
+                    <h1 className="flex-shrink-0 whitespace-nowrap text-sm font-black text-white tracking-tight flex items-center gap-2">
                         <span>
                             {isSimulationMode && currentScenarioName
                                 ? currentScenarioName
@@ -1462,28 +1466,28 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         {canSimulation && (
                             <>
                                 <div
-                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-sm border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-50 border-orange-300 hover:bg-orange-100' : 'bg-white border-gray-300 hover:bg-gray-50'}`}
+                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-sm border cursor-pointer transition-all ${isSimulationMode ? 'bg-orange-900/50 border-orange-600 hover:bg-orange-800/50' : 'bg-white/10 border-white/20 hover:bg-white/15'}`}
                                     onClick={handleToggleSimulationMode}
                                 >
-                                    <ArrowRightLeft size={14} className={isSimulationMode ? 'text-orange-600' : 'text-gray-500'} />
-                                    <span className={`text-xs font-bold ${isSimulationMode ? 'text-orange-700' : 'text-gray-600'}`}>
+                                    <ArrowRightLeft size={14} className={isSimulationMode ? 'text-orange-400' : 'text-gray-400'} />
+                                    <span className={`text-xs font-bold ${isSimulationMode ? 'text-orange-300' : 'text-gray-300'}`}>
                                         {isSimulationMode ? '시뮬레이션 모드' : '실시간 모드'}
                                     </span>
                                 </div>
-                                <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                                <div className="w-px h-4 bg-white/20 mx-1"></div>
                             </>
                         )}
                         {/* 보기 설정 */}
                         <button
                             onClick={() => setIsRoomViewSettingsOpen(true)}
-                            className="px-2 py-1 border border-gray-300 rounded-sm text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors flex items-center gap-1"
+                            className="px-2 py-1 border border-white/20 rounded-sm text-xs font-medium text-gray-300 hover:bg-white/10 transition-colors flex items-center gap-1"
                             title="보기 설정"
                         >
                             <SlidersHorizontal size={12} />
                             보기
                         </button>
                         {!isSimulationMode && (
-                            <span className="text-xs text-gray-400 font-medium px-2 py-1 bg-gray-100 border border-gray-200 rounded-sm">읽기 전용</span>
+                            <span className="text-xs text-gray-400 font-medium px-2 py-1 bg-white/10 border border-white/20 rounded-sm">읽기 전용</span>
                         )}
                     </div>
                     <div className="w-4 flex-shrink-0"></div>

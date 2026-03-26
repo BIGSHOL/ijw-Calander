@@ -92,6 +92,7 @@ export interface Teacher {
   textColor?: string;   // 퍼스널 글자색
   order?: number;
   defaultRoom?: string; // 기본 강의실 (자동 입력용)
+  departments?: string[]; // 소속 (시간표/학생관리 가시성)
 }
 
 // 수업 키워드 색상 설정
