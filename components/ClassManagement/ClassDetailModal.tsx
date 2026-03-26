@@ -321,13 +321,12 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
         newDays = [...currentDays, day].sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
       }
 
-      // 빈 배열이거나 전체 요일 선택 시 키 제거 (= 전체 등원)
-      if (newDays.length === 0) { const { [studentId]: _, ...rest } = prev; return rest; }
+      // 빈 배열이거나 전체 요일 선택 시 빈 배열로 유지 (mutation에서 변경 감지용)
+      if (newDays.length === 0) { return { ...prev, [studentId]: [] }; }
       const sortedNew = [...newDays].sort();
       const sortedAll = [...classDays].sort();
       if (sortedNew.length === sortedAll.length && sortedNew.every((d, i) => d === sortedAll[i])) {
-        const { [studentId]: _, ...rest } = prev;
-        return rest;
+        return { ...prev, [studentId]: [] };
       }
 
       return { ...prev, [studentId]: newDays };

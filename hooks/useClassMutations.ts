@@ -593,90 +593,6 @@ export const useManageClassStudents = () => {
         await Promise.all(removePromises);
       }
 
-      // 기존 학생 attendanceDays 업데이트 (추가/제거 대상이 아닌 학생들) - 수학용
-      // attendanceDays가 실제로 변경된 경우: 기존 enrollment 종료 + 새 enrollment 생성
-      // (등록일부터 소급 변경되지 않도록 분리)
-      const updateStudentIds = Object.keys(studentAttendanceDays).filter(
-        id => !addStudentIds.includes(id) && !removeStudentIds.includes(id)
-      );
-
-      if (updateStudentIds.length > 0) {
-        const today = getTodayKST();
-        const yesterday = (() => {
-          const d = new Date(today);
-          d.setDate(d.getDate() - 1);
-          return formatDateKST(d);
-        })();
-
-        // classId 조회 (새 enrollment doc ID 생성에 필요)
-        let classId = '';
-        const classQuery = query(collection(db, COL_CLASSES), where('className', '==', className), where('subject', '==', subject));
-        const classSnap = await getDocs(classQuery);
-        if (!classSnap.empty) {
-          classId = classSnap.docs[0].id;
-        }
-
-        const updatePromises = updateStudentIds.map(async (studentId) => {
-          const enrollmentsQuery = query(
-            collection(db, COL_STUDENTS, studentId, 'enrollments'),
-            where('subject', '==', subject),
-            where('className', '==', className)
-          );
-          const snapshot = await getDocs(enrollmentsQuery);
-
-          // 활성 enrollment만 대상 (이미 종료된 것은 건드리지 않음)
-          const activeDocs = snapshot.docs.filter(d => {
-            const data = d.data();
-            return !data.endDate && !data.withdrawalDate;
-          });
-
-          for (const docSnap of activeDocs) {
-            const existingData = docSnap.data();
-            const existingDays = existingData.attendanceDays || [];
-            const newDays = studentAttendanceDays[studentId] || [];
-
-            // 정렬 후 비교하여 실제 변경 여부 확인
-            const sortedExisting = [...existingDays].sort();
-            const sortedNew = [...newDays].sort();
-            const isChanged = sortedExisting.length !== sortedNew.length ||
-              sortedExisting.some((d: string, i: number) => d !== sortedNew[i]);
-
-            if (!isChanged) continue; // 변경 없으면 스킵
-
-            if (newDays.length > 0 && classId) {
-              // attendanceDays가 변경됨 → 기존 enrollment 종료 + 새 enrollment 생성
-              // 1. 기존 enrollment 종료 (어제 날짜로)
-              await updateDoc(docSnap.ref, {
-                endDate: yesterday,
-                updatedAt: new Date().toISOString(),
-              });
-
-              // 2. 새 enrollment 생성 (오늘부터, 새 attendanceDays 적용)
-              const newDocId = `${classId}_${Date.now()}`;
-              const newEnrollmentRef = doc(db, COL_STUDENTS, studentId, 'enrollments', newDocId);
-              await setDoc(newEnrollmentRef, {
-                className,
-                classId,
-                staffId: existingData.staffId || teacher,
-                teacher: existingData.teacher || teacher,
-                subject,
-                schedule: existingData.schedule || schedule,
-                startDate: today,
-                enrollmentDate: today,
-                attendanceDays: newDays,
-                createdAt: new Date().toISOString(),
-                ...(existingData.underline ? { underline: true } : {}),
-                ...(existingData.isSlotTeacher ? { isSlotTeacher: true } : {}),
-              });
-            } else {
-              // 전체 등원으로 복원 (빈 배열) → 단순 업데이트
-              await updateDoc(docSnap.ref, { attendanceDays: [] });
-            }
-          }
-        });
-        await Promise.all(updatePromises);
-      }
-
       // 기존 학생 underline 업데이트 (추가/제거 대상이 아닌 학생들) - 영어용
       const underlineStudentIds = Object.keys(studentUnderlines).filter(
         id => !addStudentIds.includes(id) && !removeStudentIds.includes(id)
@@ -791,6 +707,92 @@ export const useManageClassStudents = () => {
           await Promise.all(updateOps);
         });
         await Promise.all(enrollmentDatePromises);
+      }
+
+      // ===== attendanceDays 변경 처리 (맨 마지막에 실행: 다른 step들이 새 enrollment을 덮어쓰지 않도록) =====
+      // attendanceDays가 실제로 변경된 경우: 기존 enrollment 종료 + 새 enrollment 생성
+      // (등록일부터 소급 변경되지 않도록 분리)
+      const updateStudentIds = Object.keys(studentAttendanceDays).filter(
+        id => !addStudentIds.includes(id) && !removeStudentIds.includes(id)
+      );
+
+      if (updateStudentIds.length > 0) {
+        const today = getTodayKST();
+        const yesterday = (() => {
+          const d = new Date(today);
+          d.setDate(d.getDate() - 1);
+          return formatDateKST(d);
+        })();
+
+        // classId 조회 (새 enrollment doc ID 생성에 필요)
+        let classId = '';
+        const classQuery2 = query(collection(db, COL_CLASSES), where('className', '==', className), where('subject', '==', subject));
+        const classSnap2 = await getDocs(classQuery2);
+        if (!classSnap2.empty) {
+          classId = classSnap2.docs[0].id;
+        }
+
+        const updatePromises = updateStudentIds.map(async (studentId) => {
+          const enrollmentsQuery = query(
+            collection(db, COL_STUDENTS, studentId, 'enrollments'),
+            where('subject', '==', subject),
+            where('className', '==', className)
+          );
+          // 최신 상태 re-read (이전 step들의 업데이트 반영)
+          const snapshot = await getDocs(enrollmentsQuery);
+
+          // 활성 enrollment만 대상 (이미 종료된 것은 건드리지 않음)
+          const activeDocs = snapshot.docs.filter(d => {
+            const data = d.data();
+            return !data.endDate && !data.withdrawalDate;
+          });
+
+          for (const docSnap of activeDocs) {
+            const existingData = docSnap.data();
+            const existingDays = existingData.attendanceDays || [];
+            const newDays = studentAttendanceDays[studentId] || [];
+
+            // 정렬 후 비교하여 실제 변경 여부 확인
+            const sortedExisting = [...existingDays].sort();
+            const sortedNew = [...newDays].sort();
+            const isChanged = sortedExisting.length !== sortedNew.length ||
+              sortedExisting.some((d: string, i: number) => d !== sortedNew[i]);
+
+            if (!isChanged) continue; // 변경 없으면 스킵
+
+            if (!classId) {
+              // classId를 못 찾으면 단순 업데이트 (fallback)
+              await updateDoc(docSnap.ref, { attendanceDays: newDays });
+              continue;
+            }
+
+            // 기존 enrollment 종료 (어제 날짜로)
+            await updateDoc(docSnap.ref, {
+              endDate: yesterday,
+              updatedAt: new Date().toISOString(),
+            });
+
+            // 새 enrollment 생성 (오늘부터, 새 attendanceDays 적용)
+            const newDocId = `${classId}_${Date.now()}`;
+            const newEnrollmentRef = doc(db, COL_STUDENTS, studentId, 'enrollments', newDocId);
+            await setDoc(newEnrollmentRef, {
+              className,
+              classId,
+              staffId: existingData.staffId || teacher,
+              teacher: existingData.teacher || teacher,
+              subject,
+              schedule: existingData.schedule || schedule,
+              startDate: today,
+              enrollmentDate: today,
+              createdAt: new Date().toISOString(),
+              // attendanceDays: 특정 요일만 등원하는 경우만 저장
+              ...(newDays.length > 0 ? { attendanceDays: newDays } : {}),
+              ...(existingData.underline ? { underline: true } : {}),
+              ...(existingData.isSlotTeacher ? { isSlotTeacher: true } : {}),
+            });
+          }
+        });
+        await Promise.all(updatePromises);
       }
 
       // 로그 기록
