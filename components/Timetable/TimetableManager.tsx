@@ -1316,6 +1316,8 @@ const TimetableManager = ({
         fromClassName: string;
         toClassName: string;
         targetClassSchedule?: string[];
+        isZoneChange?: boolean; // 같은 반 내 zone 이동 여부
+        multiStudentIds?: string[]; // 멀티 이동 시 전체 학생 ID 목록
     } | null>(null);
     const prevPendingMovesLengthRef = React.useRef(0);
 
@@ -1743,21 +1745,51 @@ const TimetableManager = ({
         return map.size > 0 ? map : undefined;
     }, [pendingMoves]);
 
-    // 새 cross-class 이동 감지 → 예정일 모달 표시
+    // 새 이동 감지 → 예정일 모달 표시 (cross-class + 같은반 zone 이동 모두)
     useEffect(() => {
         if (pendingMoves.length > prevPendingMovesLengthRef.current) {
-            const lastMove = pendingMoves[pendingMoves.length - 1];
-            if (lastMove && lastMove.fromClassId !== lastMove.toClassId) {
-                const fromClass = classesWithEnrollments.find(c => c.id === lastMove.fromClassId);
-                const toClass = classesWithEnrollments.find(c => c.id === lastMove.toClassId);
-                const student = studentMap[lastMove.studentId];
-                setDateModalInfo({
-                    studentId: lastMove.studentId,
-                    studentName: student?.name || lastMove.studentId,
-                    fromClassName: fromClass?.className || '',
-                    toClassName: toClass?.className || '',
-                    targetClassSchedule: toClass?.schedule,
-                });
+            const newMoves = pendingMoves.slice(prevPendingMovesLengthRef.current);
+            const lastMove = newMoves[newMoves.length - 1];
+            if (lastMove) {
+                const isSameClass = lastMove.fromClassId === lastMove.toClassId;
+                if (isSameClass) {
+                    // 같은 반 내 zone 이동 → 날짜 설정 모달 표시
+                    const cls = classesWithEnrollments.find(c => c.id === lastMove.fromClassId);
+                    const student = studentMap[lastMove.studentId];
+                    const fromZoneLabel = lastMove.fromZone === 'common' ? '모든 요일' : `${lastMove.fromZone}만`;
+                    const toZoneLabel = lastMove.toZone === 'common' ? '모든 요일' : `${lastMove.toZone}만`;
+                    // 멀티 이동인 경우 모든 학생 ID 수집
+                    const multiIds = newMoves.length > 1
+                        ? newMoves.filter(m => m.fromClassId === m.toClassId).map(m => m.studentId)
+                        : undefined;
+                    const displayName = multiIds && multiIds.length > 1
+                        ? (() => {
+                            const names = multiIds.map(id => studentMap[id]?.name || id);
+                            return names.length <= 3 ? names.join(', ') : `${names.slice(0, 3).join(', ')} 외 ${names.length - 3}명`;
+                        })()
+                        : (student?.name || lastMove.studentId);
+                    setDateModalInfo({
+                        studentId: lastMove.studentId,
+                        studentName: displayName,
+                        fromClassName: `${cls?.className || ''} (${fromZoneLabel})`,
+                        toClassName: `${cls?.className || ''} (${toZoneLabel})`,
+                        targetClassSchedule: cls?.schedule,
+                        isZoneChange: true,
+                        multiStudentIds: multiIds,
+                    });
+                } else {
+                    // 다른 반 이동
+                    const fromClass = classesWithEnrollments.find(c => c.id === lastMove.fromClassId);
+                    const toClass = classesWithEnrollments.find(c => c.id === lastMove.toClassId);
+                    const student = studentMap[lastMove.studentId];
+                    setDateModalInfo({
+                        studentId: lastMove.studentId,
+                        studentName: student?.name || lastMove.studentId,
+                        fromClassName: fromClass?.className || '',
+                        toClassName: toClass?.className || '',
+                        targetClassSchedule: toClass?.schedule,
+                    });
+                }
             }
         }
         prevPendingMovesLengthRef.current = pendingMoves.length;
@@ -1765,7 +1797,14 @@ const TimetableManager = ({
 
     const handleDateModalConfirm = useCallback((scheduledDate?: string) => {
         if (dateModalInfo && scheduledDate) {
-            updatePendingMoveDate(dateModalInfo.studentId, scheduledDate);
+            // 멀티 학생 zone 이동인 경우 모든 학생에 적용
+            if (dateModalInfo.multiStudentIds && dateModalInfo.multiStudentIds.length > 1) {
+                dateModalInfo.multiStudentIds.forEach(sid => {
+                    updatePendingMoveDate(sid, scheduledDate);
+                });
+            } else {
+                updatePendingMoveDate(dateModalInfo.studentId, scheduledDate);
+            }
         }
         setDateModalInfo(null);
     }, [dateModalInfo, updatePendingMoveDate]);
@@ -2042,12 +2081,14 @@ const TimetableManager = ({
                 mathIntegrationSettings={outerMathSettings}
                 updateMathIntegrationSettings={updateOuterMathSettings}
             />
-            {/* 드래그 예정일 선택 모달 */}
+            {/* 드래그 예정일 선택 모달 (반이동 + 같은반 zone이동) */}
             {dateModalInfo && (
                 <ScheduledDateModal
                     studentName={dateModalInfo.studentName}
                     fromClassName={dateModalInfo.fromClassName}
                     toClassName={dateModalInfo.toClassName}
+                    title={dateModalInfo.isZoneChange ? '등원일 변경 날짜 설정' : undefined}
+                    actionVerb={dateModalInfo.isZoneChange ? '변경' : undefined}
                     onConfirm={handleDateModalConfirm}
                     onClose={handleDateModalClose}
                     weekStart={currentMonday}

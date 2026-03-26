@@ -340,20 +340,23 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
 
                     if (!isChanged) continue;
 
+                    // 예정일이 있으면 해당 날짜 사용, 없으면 오늘
+                    const effectiveDate = move.scheduledDate || defaultToday;
+
                     // enrollment 분리: 기존 종료 + 새 생성
                     const yesterday = (() => {
-                        const d = new Date(defaultToday);
+                        const d = new Date(effectiveDate);
                         d.setDate(d.getDate() - 1);
                         return formatDateKey(d);
                     })();
 
-                    // 1. 기존 enrollment에 endDate 설정 (어제 날짜로)
+                    // 1. 기존 enrollment에 endDate 설정 (변경일 전날로)
                     batch.set(enrollmentRef, {
                         endDate: yesterday,
                         updatedAt: new Date().toISOString()
                     }, { merge: true });
 
-                    // 2. 새 enrollment 생성 (오늘부터, 새 attendanceDays 적용)
+                    // 2. 새 enrollment 생성 (변경일부터, 새 attendanceDays 적용)
                     const newDocId = `${move.fromClassId}_${Date.now()}_${studentId.substring(0, 4)}`;
                     const newEnrollmentRef = doc(db, 'students', studentId, 'enrollments', newDocId);
 
@@ -362,8 +365,8 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                         batch.set(newEnrollmentRef, {
                             ...preservedData,
                             attendanceDays: newAttendanceDays,
-                            startDate: defaultToday,
-                            enrollmentDate: preservedData.enrollmentDate || defaultToday,
+                            startDate: effectiveDate,
+                            enrollmentDate: preservedData.enrollmentDate || effectiveDate,
                             createdAt: new Date().toISOString(),
                             updatedAt: new Date().toISOString()
                         });
@@ -376,8 +379,8 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                             staffId: cls.teacher || '',
                             schedule: cls.schedule || [],
                             attendanceDays: newAttendanceDays,
-                            startDate: defaultToday,
-                            enrollmentDate: defaultToday,
+                            startDate: effectiveDate,
+                            enrollmentDate: effectiveDate,
                             createdAt: new Date().toISOString()
                         });
                     }
