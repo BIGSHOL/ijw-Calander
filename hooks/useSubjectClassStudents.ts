@@ -77,7 +77,10 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
 
                 const withdrawalDate = convertTimestampToDate(enrollment.withdrawalDate);
                 const endDate = convertTimestampToDate(enrollment.endDate);
-                const hasEndDate = !!(withdrawalDate || endDate);
+                // 기준일(referenceDate) 대비 종료 여부 판단
+                // endDate가 있더라도 기준일 이후라면 아직 "활성" 상태
+                const effectiveEndDate = withdrawalDate || endDate;
+                const hasEndDate = effectiveEndDate ? effectiveEndDate < today : false;
 
                 if (!hasEndDate) {
                     if (!studentActiveClasses[studentId]) {
@@ -140,7 +143,9 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
 
                 const isScheduled = startDate && startDate > today;
 
-                const hasEndDate = !!(withdrawalDate || endDate);
+                // 기준일 대비 종료 여부 (endDate가 기준일 이후면 아직 활성)
+                const effectiveEndDate2 = withdrawalDate || endDate;
+                const hasEndDate = effectiveEndDate2 ? effectiveEndDate2 < today : false;
                 const activeClasses = studentActiveClasses[studentId] || new Set();
                 const endedClasses = studentEndedClasses[studentId] || new Set();
 
@@ -173,14 +178,26 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                 const existingData = enrollmentDataMap[className]?.[studentId];
                 if (existingData) {
                     const existingHasEnd = !!existingData.withdrawalDate;
+                    const existingIsScheduled = existingData.isScheduled;
                     if (!existingHasEnd && hasEndDate) {
                         // 기존이 활성, 현재가 종료 → 기존 유지 (활성 우선)
                         return;
                     }
                     if (existingHasEnd === hasEndDate) {
-                        // 같은 상태 → 최신 등록일 우선
-                        if (existingData.enrollmentDate && startDate && existingData.enrollmentDate >= startDate) {
+                        // 같은 상태(둘 다 활성 또는 둘 다 종료)
+                        // 활성 중에서: 현재 수강 중 > 미래 예정(isScheduled) 우선
+                        if (!existingIsScheduled && isScheduled) {
+                            // 기존이 현재 활성, 현재가 미래 예정 → 기존 유지
                             return;
+                        }
+                        if (existingIsScheduled && !isScheduled) {
+                            // 기존이 미래 예정, 현재가 현재 활성 → 덮어쓰기
+                            // fall through
+                        } else {
+                            // 같은 scheduled 상태 → 최신 등록일 우선
+                            if (existingData.enrollmentDate && startDate && existingData.enrollmentDate >= startDate) {
+                                return;
+                            }
                         }
                     }
                     // existingHasEnd && !hasEndDate → 기존이 종료, 현재가 활성 → 덮어쓰기 (활성 우선)
@@ -190,7 +207,8 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                     enrollmentDocId: enrollment.id,
                     underline: enrollment.underline,
                     enrollmentDate: startDate,
-                    withdrawalDate: withdrawalDate || endDate,
+                    // 기준일 기준으로 종료된 경우만 withdrawalDate 표시
+                    withdrawalDate: hasEndDate ? (withdrawalDate || endDate) : undefined,
                     onHold: isScheduled || enrollment.onHold,
                     attendanceDays: enrollment.attendanceDays || [],
                     isScheduled,
