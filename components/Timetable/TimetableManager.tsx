@@ -148,6 +148,7 @@ interface MathTimetableContentProps {
     // 통합뷰 설정 (외부에서 전달)
     mathIntegrationSettings: MathIntegrationSettings;
     updateMathIntegrationSettings: (settings: MathIntegrationSettings) => void;
+    userDepartments?: ('math' | 'highmath' | 'english')[];
 }
 
 const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
@@ -244,6 +245,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     onRoomFilterChange,
     mathIntegrationSettings,
     updateMathIntegrationSettings,
+    userDepartments,
 }) => {
     const simulation = useMathSimulation();
     const { isScenarioMode, currentScenarioName, enterScenarioMode, exitScenarioMode, loadFromLive, publishToLive } = simulation;
