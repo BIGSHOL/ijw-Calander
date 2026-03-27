@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { Plus, Trash2, ChevronLeft, ChevronRight, FileText, List, Download, Search, X, Check, Edit2, Paperclip, Image as ImageIcon } from 'lucide-react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useExpenses, useCreateExpense, useDeleteExpense, useToggleApproval, useUpdateReceipt, useUpdateReceiptUrls } from '../../hooks/useExpenses';
 import { Expense, ExpenseItem } from '../../types/expense';
 import { UserProfile } from '../../types/auth';
@@ -371,13 +371,26 @@ const ReceiptUploadModal: React.FC<{
     }
   }, [onUpdate]);
 
-  const removeImage = useCallback((idx: number) => {
+  const removeImage = useCallback(async (idx: number) => {
+    const url = images[idx];
+    // Storage에서 실제 파일 삭제
+    if (url) {
+      try {
+        const storageRef = ref(storage, url);
+        await deleteObject(storageRef);
+      } catch (err: any) {
+        // 파일이 이미 없으면 무시
+        if (err?.code !== 'storage/object-not-found') {
+          console.error('Storage 파일 삭제 실패:', err);
+        }
+      }
+    }
     setImages(prev => {
       const next = prev.filter((_, i) => i !== idx);
       onUpdate(next);
       return next;
     });
-  }, [onUpdate]);
+  }, [images, onUpdate]);
 
   // Ctrl+V 붙여넣기
   useEffect(() => {

@@ -691,6 +691,25 @@ service cloud.firestore {
       allow delete: if hasRole(['master']);
     }
 
+    // === 지출결의서 (Expenses) ===
+    match /expenses/{expenseId} {
+      allow read: if isAuthenticated() &&
+                     (hasRole(['master', 'admin']) ||
+                      hasPermission('expenses.view'));
+      allow create: if isAuthenticated() &&
+                       (hasRole(['master', 'admin']) ||
+                        hasPermission('expenses.edit'));
+      // 수정: expenses.edit 권한 + (작성자 본인 또는 master/admin)
+      allow update: if isAuthenticated() &&
+                       (hasRole(['master', 'admin']) ||
+                        (hasPermission('expenses.edit') &&
+                         resource.data.createdBy == request.auth.uid));
+      allow delete: if isAuthenticated() &&
+                       (hasRole(['master', 'admin']) ||
+                        (hasPermission('expenses.edit') &&
+                         resource.data.createdBy == request.auth.uid));
+    }
+
     // === Default: Role-Based Access for All Collections ===
     // 위에 명시적 규칙이 없는 컬렉션에 적용
     // master/admin만 쓰기 가능, 읽기는 인증된 사용자
