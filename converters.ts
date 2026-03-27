@@ -55,7 +55,8 @@ export const eventConverter = {
             반복그룹ID: event.recurrenceGroupId || '',
             반복순서: event.recurrenceIndex || 0,
             반복유형: event.recurrenceType || '',
-            연결그룹ID: event.relatedGroupId || '' // Linked Group ID
+            연결그룹ID: event.relatedGroupId || '', // Linked Group ID
+            구글캘린더ID: event.gcalEventId || '',
         };
         // Filter out any remaining undefined values
         Object.keys(data).forEach(key => {
@@ -96,7 +97,8 @@ export const eventConverter = {
             recurrenceGroupId: data.반복그룹ID || undefined,
             recurrenceIndex: data.반복순서 || undefined,
             recurrenceType: data.반복유형 || undefined,
-            relatedGroupId: data.연결그룹ID || undefined // Linked Group ID
+            relatedGroupId: data.연결그룹ID || undefined, // Linked Group ID
+            gcalEventId: data.구글캘린더ID || undefined,
         } as CalendarEvent;
     }
 };

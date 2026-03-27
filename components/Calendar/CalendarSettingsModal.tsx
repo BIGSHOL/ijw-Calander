@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Building2, Hash, Shield } from 'lucide-react';
+import { X, Building2, Hash, Shield, Calendar } from 'lucide-react';
 import { Department, UserProfile, StaffMember } from '../../types';
 import { NewDepartmentForm, CategoryManagementState, DepartmentFilterState, INITIAL_DEPARTMENT_FORM } from '../../types/departmentForm';
 import DepartmentsManagementTab from '../settings/tabs/DepartmentsManagementTab';
 import DepartmentPermissionsTab from '../settings/tabs/DepartmentPermissionsTab';
 import HashtagsTab from '../settings/HashtagsTab';
+import GoogleCalendarSyncTab from './GoogleCalendarSyncTab';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useDepartments, useSystemConfig, useStaffWithAccounts } from '../../hooks/useFirebaseQueries';
 import { db } from '../../firebaseConfig';
@@ -32,7 +33,7 @@ interface CalendarSettingsModalProps {
   currentUser: UserProfile | null;
 }
 
-type TabType = 'departments' | 'permissions' | 'hashtags';
+type TabType = 'departments' | 'permissions' | 'hashtags' | 'gcal-sync';
 
 const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
   isOpen,
@@ -282,6 +283,21 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
               해시태그 관리
             </div>
           </button>
+          {canManageAllDepts && (
+            <button
+              onClick={() => setActiveTab('gcal-sync')}
+              className={`px-4 py-2 font-bold text-xs transition-all border-b-2 ${
+                activeTab === 'gcal-sync'
+                  ? 'border-accent text-primary'
+                  : 'border-transparent text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              <div className="flex items-center gap-1.5">
+                <Calendar size={14} />
+                구글 캘린더
+              </div>
+            </button>
+          )}
         </div>
 
         {/* Content */}
@@ -342,6 +358,17 @@ const CalendarSettingsModal: React.FC<CalendarSettingsModalProps> = ({
               </div>
               <div className="p-2">
                 <HashtagsTab />
+              </div>
+            </div>
+          )}
+          {activeTab === 'gcal-sync' && canManageAllDepts && (
+            <div className="bg-white border border-gray-200 overflow-hidden">
+              <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
+                <Calendar className="w-3 h-3 text-primary" />
+                <h3 className="text-primary font-bold text-xs">구글 캘린더 연동</h3>
+              </div>
+              <div className="p-2">
+                <GoogleCalendarSyncTab />
               </div>
             </div>
           )}

@@ -30,6 +30,8 @@ export interface CalendarEvent {
   tags?: string[];             // 해시태그 ID 배열 (예: ['meeting', 'deadline'])
   eventType?: 'general' | 'seminar'; // 이벤트 유형
   seminarData?: SeminarEventData;    // 세미나 전용 데이터 (eventType === 'seminar'일 때)
+  // Google Calendar 연동
+  gcalEventId?: string;              // Google Calendar 이벤트 ID
 }
 
 export interface DragSelection {

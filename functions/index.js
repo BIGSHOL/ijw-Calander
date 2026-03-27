@@ -7001,3 +7001,8 @@ exports.cleanupExpiredRecordings = functions
         return null;
     });
 
+// ============ Google Calendar 동기화 ============
+const googleCalendarSync = require("./googleCalendarSync");
+exports.syncEventToGcal = googleCalendarSync.syncEventToGcal;
+exports.triggerGcalSync = googleCalendarSync.triggerGcalSync;
+

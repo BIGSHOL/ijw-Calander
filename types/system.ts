@@ -231,11 +231,33 @@ export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
   user: ['dashboard', 'notices', 'calendar', 'attendance', 'daily-attendance', 'help'],
 };
 
+// Google Calendar 동기화 설정
+
+/** 캘린더 ↔ 부서 매핑 (다중 지원) */
+export interface GCalSyncMapping {
+  calendarId: string;      // Google Calendar ID
+  departmentId: string;    // 매핑할 부서 ID
+  label?: string;          // 표시용 라벨 (예: "수학부 캘린더")
+}
+
+export interface GCalSyncSettings {
+  enabled: boolean;            // 동기화 활성화 여부
+  mappings: GCalSyncMapping[]; // 캘린더 ↔ 부서 매핑 목록
+  lastSyncAt?: string;         // 마지막 동기화 타임스탬프
+  lastSyncStatus?: 'success' | 'error' | 'running';
+  lastSyncError?: string;
+  serviceAccountEmail?: string; // 서비스 계정 이메일 (표시용)
+  // 하위 호환 (레거시)
+  calendarId?: string;
+  syncDepartmentId?: string;
+}
+
 export interface SystemConfig {
   eventLookbackYears?: number;
   categories?: string[];
   tabPermissions?: TabPermissionConfig;
   masterEmails?: string[]; // List of master account emails
+  gcalSync?: GCalSyncSettings; // Google Calendar 동기화 설정
 }
 
 // ============ DASHBOARD TYPES ============
