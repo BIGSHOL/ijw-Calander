@@ -129,7 +129,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .t-dot.on{background:#22c55e;animation:pulse 1.5s infinite}
 .t-dot.wait{background:#eab308;animation:pulse 1.5s infinite}
 .t-dot.err{background:#ef4444}
-.t-label{font-size:12px;font-weight:500;color:#6b7280}
+.t-label{font-size:12px;font-weight:500;color:#6b7280;flex:1}
+.t-scroll-btn{display:flex;align-items:center;gap:3px;padding:1px 6px;font-size:10px;border-radius:4px;border:1px solid #d1d5db;background:#fff;color:#9ca3af;cursor:pointer;transition:all .15s}
+.t-scroll-btn.on{background:#eff6ff;border-color:#93c5fd;color:#2563eb}
 .t-text{font-size:13px;line-height:1.6;color:#374151;white-space:pre-wrap}
 .t-text .dim{color:#9ca3af}
 .t-text .ph{color:#d1d5db}
@@ -162,6 +164,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   <div class="t-head">
     <div class="t-dot" id="tdot"></div>
     <span class="t-label" id="tlab">실시간 전사</span>
+    <button class="t-scroll-btn on" id="scrollBtn" onclick="toggleAutoScroll()">&#8595; 자동스크롤</button>
   </div>
   <div class="t-text" id="ttxt"><span class="ph">말씀하시면 여기에 텍스트가 표시됩니다...</span></div>
 </div>
@@ -177,21 +180,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <script>
 (function(){
   var recording=false, mr=null, chunks=[], sec=0, ti=null, mime='';
-  var ws=null, actx=null, proc=null, src=null, txts=[], interim='';
+  var ws=null, actx=null, proc=null, src=null, txts=[], interim='', autoScroll=true;
   var $=function(id){return document.getElementById(id)};
   var tmr=$('tmr'),btn=$('btn'),mic=$('mic'),stp=$('stp'),sts=$('sts');
-  var tbox=$('tbox'),tdot=$('tdot'),tlab=$('tlab'),ttxt=$('ttxt');
+  var tbox=$('tbox'),tdot=$('tdot'),tlab=$('tlab'),ttxt=$('ttxt'),scrollBtn=$('scrollBtn');
   var wrn=$('wrn'),done=$('done'),doneInfo=$('doneInfo'),errMsg=$('errMsg');
   var origin=window.opener?window.location.origin:'*';
 
   function fmt(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+
+  window.toggleAutoScroll=function(){autoScroll=!autoScroll;scrollBtn.className='t-scroll-btn'+(autoScroll?' on':'');if(autoScroll)tbox.scrollTop=tbox.scrollHeight};
 
   function updTxt(){
     var h=txts.join(' ');
     if(interim) h+=(txts.length?' ':'')+('<span class="dim">'+interim+'</span>');
     if(!h&&recording) h='<span class="ph">말씀하시면 여기에 텍스트가 표시됩니다...</span>';
     ttxt.innerHTML=h;
-    tbox.scrollTop=tbox.scrollHeight;
+    if(autoScroll) tbox.scrollTop=tbox.scrollHeight;
   }
 
   function showErr(msg){errMsg.textContent=msg;errMsg.style.display='block'}
@@ -200,7 +205,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   function connectStt(token,stream){
     tdot.className='t-dot wait';tlab.textContent='음성인식 연결 중...';
     try{
-      var p=new URLSearchParams({sample_rate:'16000',speech_model:'universal-streaming-multilingual',token:token});
+      var p=new URLSearchParams({sample_rate:'16000',speech_model:'whisper-rt',token:token});
       ws=new WebSocket('wss://streaming.assemblyai.com/v3/ws?'+p);
       ws.binaryType='arraybuffer';
       ws.onopen=function(){tdot.className='t-dot on';tlab.textContent='실시간 전사 (미리보기)'};
@@ -251,15 +256,45 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         var ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'_'+
           String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0')+String(d.getSeconds()).padStart(2,'0');
         var fn='녹음_'+ds+'.'+ext;
-        blob.arrayBuffer().then(function(ab){
-          if(window.opener){
-            window.opener.postMessage({type:'recording-complete',arrayBuffer:ab,mimeType:mime,fileName:fn,duration:sec,transcriptPreview:txts},origin,[ab]);
-          }
-          btn.style.display='none';sts.style.display='none';tmr.style.display='none';wrn.style.display='none';tbox.style.display='none';errMsg.style.display='none';
-          done.style.display='block';doneInfo.textContent=fmt(sec)+' · '+(blob.size/1024/1024).toFixed(1)+'MB';
-          setTimeout(function(){try{window.close()}catch(e){}},2500);
-        });
+
+        // 이중 안전: 항상 자동 다운로드 + 메인 창에 전달
+        downloadBlob(blob,fn);
+
+        if(window.opener&&!window.opener.closed){
+          blob.arrayBuffer().then(function(ab){
+            try{
+              window.opener.postMessage({type:'recording-complete',arrayBuffer:ab,mimeType:mime,fileName:fn,duration:sec,transcriptPreview:txts},origin,[ab]);
+            }catch(e){}
+            showComplete(blob,true);
+          });
+        }else{
+          showComplete(blob,false);
+        }
       };
+
+      // 자동 다운로드 헬퍼
+      function downloadBlob(b,name){
+        var a=document.createElement('a');
+        a.href=URL.createObjectURL(b);
+        a.download=name;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1000);
+      }
+
+      // 완료 UI 표시
+      function showComplete(b,hasOpener){
+        btn.style.display='none';sts.style.display='none';tmr.style.display='none';wrn.style.display='none';tbox.style.display='none';errMsg.style.display='none';
+        done.style.display='block';doneInfo.textContent=fmt(sec)+' · '+(b.size/1024/1024).toFixed(1)+'MB';
+        if(hasOpener){
+          $('doneInfo').textContent+=' (백업 파일 다운로드 + 자동 분석 시작)';
+          setTimeout(function(){try{window.close()}catch(e){}},2500);
+        }else{
+          $('doneInfo').textContent+=' (파일이 다운로드되었습니다)';
+          var lastSub=$('done').querySelectorAll('.sub');
+          if(lastSub.length>1) lastSub[lastSub.length-1].textContent='메인 화면에서 파일을 업로드해주세요';
+        }
+      }
       mr.start(1000);recording=true;
       btn.classList.add('rec');btn.disabled=false;mic.style.display='none';stp.style.display='block';
       sts.textContent='녹음 중 — 버튼을 눌러 정지';wrn.style.display='block';tbox.style.display='block';tmr.classList.add('rec');
@@ -286,6 +321,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   btn.onclick=function(){if(recording)stop();else start()};
 
   window.addEventListener('beforeunload',function(e){if(recording)e.preventDefault()});
+
+  // 메인 창 닫힘 감지 (녹음 중일 때)
+  var openerCheck=setInterval(function(){
+    if(!recording)return;
+    if(!window.opener||window.opener.closed){
+      clearInterval(openerCheck);
+      wrn.textContent='메인 화면이 닫혔습니다. 녹음 완료 후 파일이 자동 다운로드됩니다.';
+      wrn.style.background='#fef2f2';wrn.style.borderColor='#fecaca';wrn.style.color='#dc2626';
+    }
+  },2000);
 
   // 메인 창과의 통신
   window.addEventListener('message',function(ev){

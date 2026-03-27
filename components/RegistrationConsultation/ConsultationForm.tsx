@@ -707,6 +707,20 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
         }
     }, [recording, handleStartAnalysis]);
 
+    // 팝업 녹음 → 자동 분석 시작
+    const handlePopupRecording = useCallback(async () => {
+        try {
+            const file = await recording.startPopupRecording();
+            await handleStartAnalysis(file);
+        } catch (err: any) {
+            if (err?.message === 'POPUP_BLOCKED') {
+                // 팝업 차단 → 인라인 녹음 fallback
+                recording.startRecording();
+            }
+            // '녹음 창이 닫혔습니다' 등은 무시
+        }
+    }, [recording, handleStartAnalysis]);
+
     // Performance: rerender-functional-setstate - 안정적인 핸들러
     const handleChange = useCallback((field: keyof typeof formData, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -878,7 +892,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                         <div className="flex gap-2">
                                             <button
                                                 type="button"
-                                                onClick={() => recording.startRecording()}
+                                                onClick={handlePopupRecording}
                                                 className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-sm text-xs font-bold transition-colors"
                                             >
                                                 <Mic size={14} />
@@ -931,19 +945,31 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
 
                                 {recording.isRecording && (
                                     <div className="flex items-center gap-3">
-                                        <div className="flex items-center gap-2 flex-1">
-                                            <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
-                                            <span className="text-sm font-mono font-bold text-red-700">{formatDuration(recording.recordingDuration)}</span>
-                                            <span className="text-[10px] text-red-500">녹음 중...</span>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={handleStopAndAnalyze}
-                                            className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-sm text-xs font-bold transition-colors"
-                                        >
-                                            <Square size={12} fill="currentColor" />
-                                            정지 + AI 분석
-                                        </button>
+                                        {recording.isPopupRecording ? (
+                                            <>
+                                                <div className="flex items-center gap-2 flex-1">
+                                                    <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
+                                                    <span className="text-xs text-red-600 font-medium">별도 창에서 녹음 중...</span>
+                                                </div>
+                                                <span className="text-[10px] text-gray-400">녹음 창을 닫지 마세요</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="flex items-center gap-2 flex-1">
+                                                    <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
+                                                    <span className="text-sm font-mono font-bold text-red-700">{formatDuration(recording.recordingDuration)}</span>
+                                                    <span className="text-[10px] text-red-500">녹음 중...</span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleStopAndAnalyze}
+                                                    className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-sm text-xs font-bold transition-colors"
+                                                >
+                                                    <Square size={12} fill="currentColor" />
+                                                    정지 + AI 분석
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
                                 )}
 

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Upload, Mic, MicOff, Calendar, User, Users, X, Square, PenLine, ExternalLink } from 'lucide-react';
+import { Upload, Mic, MicOff, Calendar, User, Users, X, Square, PenLine, ExternalLink, ArrowDownFromLine } from 'lucide-react';
 import { useUploadMeetingRecording } from '../../hooks/useMeetingRecording';
 import { format } from 'date-fns';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -52,9 +52,18 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const [liveTranscript, setLiveTranscript] = useState<string[]>([]);
   const [interimText, setInterimText] = useState('');
+  const [autoScroll, setAutoScroll] = useState(true);
+  const transcriptRef = useRef<HTMLDivElement>(null);
   const [speechStatus, setSpeechStatus] = useState<'off' | 'starting' | 'active' | 'error'>('off');
   const chunkIndexRef = useRef(0);
   const [recoveryFile, setRecoveryFile] = useState<File | null>(null);
+
+  // 전사 자동 스크롤
+  useEffect(() => {
+    if (autoScroll && transcriptRef.current) {
+      transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
+    }
+  }, [liveTranscript, interimText, autoScroll]);
 
   // 참석자 태그 추가
   const addAttendee = (name: string) => {
@@ -132,7 +141,7 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
 
       const params = new URLSearchParams({
         sample_rate: '16000',
-        speech_model: 'universal-streaming-multilingual',
+        speech_model: 'whisper-rt',
         token,
       });
       const ws = new WebSocket(`wss://streaming.assemblyai.com/v3/ws?${params}`);
@@ -207,6 +216,29 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
     }
   }, []);
 
+  // 팝업 녹음 완료 → 자동 업로드+분석 시작
+  const autoSubmitFile = useCallback(async (file: File) => {
+    if (!title.trim() || !meetingDate) {
+      setSelectedFile(file);
+      setError('회의 제목과 날짜를 입력한 후 분석 시작을 눌러주세요.');
+      return;
+    }
+
+    try {
+      const result = await uploadAndProcess({
+        file,
+        title: title.trim(),
+        attendees,
+        meetingDate,
+        recorder: recorder.trim(),
+      });
+      onUploadStart(result.reportId);
+    } catch (err: any) {
+      setSelectedFile(file);
+      setError(getKoreanErrorMessage(err, '자동 업로드 중 오류가 발생했습니다. 분석 시작을 다시 눌러주세요.'));
+    }
+  }, [title, meetingDate, attendees, recorder, uploadAndProcess, onUploadStart]);
+
   // 팝업 녹음 시작
   const startPopupRecording = useCallback(() => {
     setError('');
@@ -214,8 +246,9 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
       '회의 녹음',
       {
         onComplete: (file) => {
-          setSelectedFile(file);
           setIsPopupRecording(false);
+          // 녹음 완료 → 자동으로 업로드+분석 시작
+          autoSubmitFile(file);
         },
         onError: (message) => {
           setError(message);
@@ -232,7 +265,7 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
       setSelectedFile(null);
     }
     return opened;
-  }, [getAssemblyToken]);
+  }, [getAssemblyToken, autoSubmitFile]);
 
   // 녹음 버튼: 팝업 우선, 차단 시 인라인 fallback
   const handleRecordClick = useCallback(() => {
@@ -514,22 +547,38 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
 
         {/* 실시간 전사 미리보기 */}
         {(isRecording || liveTranscript.length > 0) && (
-          <div className="bg-gray-50 border rounded-sm p-4 max-h-48 overflow-auto">
-            <div className="flex items-center gap-2 mb-2">
-              <div className={`w-2 h-2 rounded-full ${
-                speechStatus === 'active' ? 'bg-green-500 animate-pulse'
-                : speechStatus === 'starting' ? 'bg-yellow-500 animate-pulse'
-                : speechStatus === 'error' ? 'bg-red-500'
-                : isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-300'
-              }`} />
-              <span className="text-xs font-medium text-gray-500">
-                {speechStatus === 'error' ? '음성인식 미지원 — 녹음은 정상 진행 중'
-                  : speechStatus === 'starting' ? '음성인식 연결 중...'
-                  : isRecording ? '실시간 전사 (미리보기)'
-                  : '전사 미리보기 — 정확한 결과는 분석 후 확인'}
-              </span>
+          <div className="bg-gray-50 border rounded-sm p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${
+                  speechStatus === 'active' ? 'bg-green-500 animate-pulse'
+                  : speechStatus === 'starting' ? 'bg-yellow-500 animate-pulse'
+                  : speechStatus === 'error' ? 'bg-red-500'
+                  : isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-300'
+                }`} />
+                <span className="text-xs font-medium text-gray-500">
+                  {speechStatus === 'error' ? '음성인식 미지원 — 녹음은 정상 진행 중'
+                    : speechStatus === 'starting' ? '음성인식 연결 중...'
+                    : isRecording ? '실시간 전사 (미리보기)'
+                    : '전사 미리보기 — 정확한 결과는 분석 후 확인'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAutoScroll(v => !v)}
+                className={`flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded border transition-colors ${
+                  autoScroll ? 'bg-blue-50 border-blue-300 text-blue-600' : 'bg-white border-gray-300 text-gray-400'
+                }`}
+                title={autoScroll ? '자동 스크롤 끄기' : '자동 스크롤 켜기'}
+              >
+                <ArrowDownFromLine className="w-3 h-3" />
+                자동스크롤
+              </button>
             </div>
-            <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+            <div
+              ref={transcriptRef}
+              className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap max-h-48 overflow-auto"
+            >
               {liveTranscript.join(' ')}
               {interimText && <span className="text-gray-400">{liveTranscript.length > 0 ? ' ' : ''}{interimText}</span>}
               {!liveTranscript.length && !interimText && isRecording && (
