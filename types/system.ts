@@ -37,6 +37,8 @@ export type AppTab =
   | 'shuttle' | 'marketing' | 'timetable-distribution'
   // Phase 6: AI 분석
   | 'meeting-minutes'
+  // Phase 7: 경비 관리
+  | 'expenses'
   // 지원
   | 'logs';
 
@@ -90,6 +92,8 @@ export const TAB_META: Record<AppTab, Omit<TabMetadata, 'id'>> = {
   'timetable-distribution': { label: '시간표 배포', icon: '📤' },
   // AI 분석
   'meeting-minutes': { label: '회의록', icon: '📝' },
+  // 경비
+  expenses: { label: '지출 관리', icon: '💰' },
   // 지원
   help: { label: '도움말', icon: '❓' },
   logs: { label: '로그보기', icon: '📋' },
@@ -138,7 +142,7 @@ export const TAB_GROUPS: TabGroup[] = [
     id: 'admin',
     label: '관리',
     icon: '⚙️',
-    tabs: ['tuition-calculator', 'payment', 'staff', 'billing', 'resources', 'role-management', 'payroll', 'analytics', 'meeting-minutes'],
+    tabs: ['tuition-calculator', 'payment', 'staff', 'billing', 'resources', 'role-management', 'payroll', 'analytics', 'expenses', 'meeting-minutes'],
     order: 4,
   },
   {
@@ -185,7 +189,7 @@ export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
     'student-consultations', 'staff', 'billing', 'role-management', 'resources', 'withdrawal',
     'homework', 'exams', 'textbooks', 'contracts', 'reports', 'payroll', 'analytics',
     'parent-portal', 'sms-notifications', 'marketing', 'shuttle', 'timetable-distribution', 'help', 'logs',
-    'tuition-calculator', 'meeting-minutes',
+    'tuition-calculator', 'meeting-minutes', 'expenses',
   ],
   admin: [
     'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt',
@@ -193,7 +197,7 @@ export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
     'student-consultations', 'staff', 'billing', 'role-management', 'resources', 'withdrawal',
     'homework', 'exams', 'textbooks', 'contracts', 'reports', 'payroll', 'analytics',
     'parent-portal', 'sms-notifications', 'marketing', 'shuttle', 'timetable-distribution', 'help', 'logs',
-    'tuition-calculator', 'meeting-minutes',
+    'tuition-calculator', 'meeting-minutes', 'expenses',
   ],
   manager: [
     'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'daily-attendance',

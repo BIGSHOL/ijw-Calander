@@ -112,7 +112,9 @@ export type PermissionId =
   // AI Chatbot (AI 챗봇)
   | 'chatbot.access'
   // Tuition Calculator (수강료 계산)
-  | 'tuition.view' | 'tuition.edit' | 'tuition.manage';
+  | 'tuition.view' | 'tuition.edit' | 'tuition.manage'
+  // Expenses (지출관리)
+  | 'expenses.view' | 'expenses.edit';
 
 // Role-based permission configuration (stored in Firestore)
 export type RolePermissions = {
@@ -208,6 +210,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'staff.view': true, 'staff.edit': true, 'staff.delete': false,
     // Timetable Distribution (시간표배포)
     'timetable_distribution.view': true, 'timetable_distribution.edit': true,
+    // Expenses (지출관리)
+    'expenses.view': true, 'expenses.edit': true,
   },
   manager: {
     // Events
@@ -292,6 +296,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'staff.view': true, 'staff.edit': false, 'staff.delete': false,
     // Timetable Distribution (시간표배포)
     'timetable_distribution.view': true, 'timetable_distribution.edit': false,
+    // Expenses (지출관리)
+    'expenses.view': true, 'expenses.edit': true,
   },
   math_lead: {
     // Events
@@ -373,6 +379,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'staff.view': false, 'staff.edit': false, 'staff.delete': false,
     // Timetable Distribution (시간표배포)
     'timetable_distribution.view': false, 'timetable_distribution.edit': false,
+    // Expenses (지출관리)
+    'expenses.view': false, 'expenses.edit': false,
   },
   english_lead: {
     // Events
@@ -456,6 +464,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'staff.view': false, 'staff.edit': false, 'staff.delete': false,
     // Timetable Distribution (시간표배포)
     'timetable_distribution.view': false, 'timetable_distribution.edit': false,
+    // Expenses (지출관리)
+    'expenses.view': false, 'expenses.edit': false,
   },
   math_teacher: {
     // Events
@@ -536,6 +546,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'staff.view': false, 'staff.edit': false, 'staff.delete': false,
     // Timetable Distribution (시간표배포)
     'timetable_distribution.view': false, 'timetable_distribution.edit': false,
+    // Expenses (지출관리)
+    'expenses.view': false, 'expenses.edit': false,
   },
   english_teacher: {
     // Events
@@ -616,6 +628,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'staff.view': false, 'staff.edit': false, 'staff.delete': false,
     // Timetable Distribution (시간표배포)
     'timetable_distribution.view': false, 'timetable_distribution.edit': false,
+    // Expenses (지출관리)
+    'expenses.view': false, 'expenses.edit': false,
   },
   user: {
     // Events (basic)
@@ -681,6 +695,8 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     'staff.view': false, 'staff.edit': false, 'staff.delete': false,
     // Timetable Distribution (시간표배포)
     'timetable_distribution.view': false, 'timetable_distribution.edit': false,
+    // Expenses (지출관리)
+    'expenses.view': false, 'expenses.edit': false,
   },
 };
 

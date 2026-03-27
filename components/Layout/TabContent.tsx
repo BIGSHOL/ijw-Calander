@@ -29,6 +29,7 @@ const NoticesTab = React.lazy(() => import('../Notices').then(m => ({ default: m
 const ParentPortalTab = React.lazy(() => import('../ParentPortal').then(m => ({ default: m.ParentPortalTab })));
 const AnalyticsTab = React.lazy(() => import('../Analytics').then(m => ({ default: m.AnalyticsTab })));
 const PayrollTab = React.lazy(() => import('../Payroll').then(m => ({ default: m.PayrollTab })));
+const ExpensesTab = React.lazy(() => import('../Expenses').then(m => ({ default: m.ExpensesTab })));
 const HomeworkTab = React.lazy(() => import('../Homework').then(m => ({ default: m.HomeworkTab })));
 const NotificationsTab = React.lazy(() => import('../Notifications').then(m => ({ default: m.NotificationsTab })));
 const TextbooksTab = React.lazy(() => import('../Textbooks').then(m => ({ default: m.TextbooksTab })));
@@ -421,6 +422,12 @@ export const TabContent: React.FC<TabContentProps> = ({
         <Suspense fallback={<TabLoadingFallback />}>
           <div className="w-full flex-1 overflow-hidden">
             <PayrollTab />
+          </div>
+        </Suspense>
+      ) : appMode === 'expenses' ? (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <div className="w-full flex-1 overflow-hidden">
+            <ExpensesTab />
           </div>
         </Suspense>
       ) : appMode === 'homework' ? (
