@@ -165,6 +165,26 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
     return () => window.removeEventListener('beforeunload', handler);
   }, [isRecording]);
 
+  // 탭 비활성화 후 복귀 시 AudioContext resume (녹음 중단 방지)
+  useEffect(() => {
+    if (!isRecording) return;
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        if (audioContextRef.current?.state === 'suspended') {
+          audioContextRef.current.resume().catch(() => {});
+        }
+        // MediaRecorder가 비활성 중 멈춘 경우 감지
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'inactive') {
+          setError('탭 전환 중 녹음이 중단되었습니다. 녹음된 부분은 저장되었습니다.');
+          setIsRecording(false);
+          if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [isRecording]);
+
   // 이전 녹음 복구 확인
   useEffect(() => {
     checkRecovery('consultation').then(meta => {
@@ -300,10 +320,17 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       chunksRef.current = [];
       chunkIndexRef.current = 0;
-      const recorder = new MediaRecorder(stream);
+
+      // mimeType 명시적 지정 (브라우저 호환성)
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/mp4')
+          ? 'audio/mp4'
+          : 'audio/webm';
+      const recorder = new MediaRecorder(stream, { mimeType });
 
       // IndexedDB 복구 세션 시작
-      await startRecoverySession('consultation', 'audio/webm');
+      await startRecoverySession('consultation', mimeType);
 
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) {
@@ -315,13 +342,21 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
       };
 
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        const file = new File([blob], `녹음_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.webm`, {
-          type: 'audio/webm',
+        const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+        const blob = new Blob(chunksRef.current, { type: mimeType });
+        const file = new File([blob], `녹음_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.${ext}`, {
+          type: mimeType,
         });
         setSelectedFile(file);
         stream.getTracks().forEach(t => t.stop());
         // 복구 데이터는 분석 시작 시 삭제 (정지 후 나가도 복구 가능)
+      };
+
+      // MediaRecorder 에러 핸들링 (조용히 멈추는 것 방지)
+      recorder.onerror = (event: Event) => {
+        console.error('[MediaRecorder] 녹음 오류:', event);
+        setError('녹음 중 오류가 발생했습니다. 다시 시도해주세요.');
+        stopRecording();
       };
 
       // 1초마다 청크 생성 (IndexedDB 저장 간격)

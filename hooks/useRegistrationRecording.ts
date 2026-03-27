@@ -217,6 +217,21 @@ export function useRegistrationRecording() {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
 
+      // MediaRecorder 에러 핸들링 (조용히 멈추는 것 방지)
+      recorder.onerror = (event: Event) => {
+        console.error('[MediaRecorder] 녹음 오류:', event);
+        setError('녹음 중 오류가 발생했습니다. 다시 시도해주세요.');
+        if (recorder.state !== 'inactive') {
+          recorder.stream.getTracks().forEach(t => t.stop());
+          recorder.stop();
+        }
+        setIsRecording(false);
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+      };
+
       recorder.start(1000); // 1초마다 데이터 수집
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
