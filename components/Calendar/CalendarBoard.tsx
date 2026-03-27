@@ -461,6 +461,7 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
           onViewChange={onViewChange || (() => { })}
           departments={departments}
           onQuickAdd={onQuickAdd}
+          onEventClick={onEventClick}
           bucketItems={bucketItems}
           onAddBucket={onAddBucket}
           onEditBucket={onEditBucket}

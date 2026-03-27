@@ -2,8 +2,9 @@ import React, { useMemo, useState } from 'react';
 import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, startOfYear, addYears, subYears } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { CalendarEvent, BucketItem, Department } from '../../types';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Plus, Trash2, Flag, Pencil, ArrowRightCircle, Archive } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Plus, Trash2, Flag, Pencil, ArrowRightCircle, Archive, LayoutGrid, List } from 'lucide-react';
 import BucketModal from './BucketModal';
+import YearlyListView from './YearlyListView';
 
 interface YearlyViewProps {
     currentDate: Date;
@@ -13,6 +14,7 @@ interface YearlyViewProps {
     departments: Department[];
     showSidePanel?: boolean;
     onQuickAdd?: (date: Date) => void; // Quick Add: Click date to add event
+    onEventClick?: (event: CalendarEvent) => void;
     // Bucket List Props
     bucketItems?: BucketItem[];
     onAddBucket?: (title: string, targetMonth: string, priority: 'high' | 'medium' | 'low') => void;
@@ -29,6 +31,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
     departments,
     showSidePanel = true,
     onQuickAdd,
+    onEventClick,
     bucketItems = [],
     onAddBucket,
     onEditBucket,
@@ -39,6 +42,9 @@ const YearlyView: React.FC<YearlyViewProps> = ({
         const now = new Date();
         return isSameMonth(now, currentDate) ? now : startOfYear(currentDate);
     });
+
+    // 달력/목록 하위뷰 토글
+    const [subView, setSubView] = useState<'calendar' | 'list'>('calendar');
 
     // Bucket Modal State
     const [isBucketModalOpen, setIsBucketModalOpen] = useState(false);
@@ -65,12 +71,14 @@ const YearlyView: React.FC<YearlyViewProps> = ({
         return { deptCategoryMap: dMap, categoryColorMap: cMap };
     }, [departments]);
 
-    // 2. Calculate density map with Category info
+    // 2. Calculate density map with Category info (공휴일 태그 이벤트 제외)
     const densityMap = useMemo(() => {
         const map: Record<string, { total: number; categories: Record<string, number> }> = {};
 
         events.forEach(event => {
             if (!event.startDate) return;
+            // 공휴일 태그가 있는 이벤트는 히트맵에서 제외
+            if (event.tags?.includes('holiday')) return;
             const start = new Date(event.startDate);
             const end = event.endDate ? new Date(event.endDate) : start;
             const category = deptCategoryMap[event.departmentId] || 'Uncategorized';
@@ -187,9 +195,30 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                         </button>
                     </div>
 
-                    {/* Left Group: Controls */}
-                    <div className="flex items-center gap-2">
-
+                    {/* 달력/목록 토글 */}
+                    <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 rounded-sm border border-gray-200">
+                        <button
+                            onClick={() => setSubView('calendar')}
+                            className={`flex items-center gap-1 px-2 py-1 rounded-sm text-xs font-medium transition-all ${
+                                subView === 'calendar'
+                                    ? 'bg-white text-[#081429] shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            <LayoutGrid size={12} />
+                            달력
+                        </button>
+                        <button
+                            onClick={() => setSubView('list')}
+                            className={`flex items-center gap-1 px-2 py-1 rounded-sm text-xs font-medium transition-all ${
+                                subView === 'list'
+                                    ? 'bg-white text-[#081429] shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                        >
+                            <List size={12} />
+                            목록
+                        </button>
                     </div>
 
                     {/* Category Legend */}
@@ -203,6 +232,18 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                     </div>
                 </div>
 
+                {/* 목록뷰 */}
+                {subView === 'list' ? (
+                    <div className="flex-1 overflow-hidden">
+                        <YearlyListView
+                            currentDate={currentDate}
+                            events={events}
+                            departments={departments}
+                            onEventClick={onEventClick}
+                        />
+                    </div>
+                ) : (
+                <>
                 {/* 12 Month Grid */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-1 sm:gap-1.5 lg:gap-2">
@@ -540,6 +581,8 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                             </div>
                         </div>
                     </div>
+                )}
+                </>
                 )}
             </div>
 
