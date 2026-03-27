@@ -45,6 +45,23 @@ function formatStudentContext(ctx) {
     return `\n--- 학생 기본 정보 (사전 입력) ---\n${lines.join("\n")}\n--- 학생 정보 끝 ---\n\n위 학생 정보를 참고하여 분석 시 더 정확한 맥락을 파악해주세요. 특히 ASR에서 학생/학부모 이름이 잘못 인식된 경우 위 정보로 교정해주세요.\n`;
 }
 
+// Claude API 호출 재시도 래퍼 (529 Overloaded 등 일시적 오류 대응)
+async function fetchClaudeWithRetry(url, options, maxRetries = 3) {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        const response = await fetch(url, options);
+        if (response.ok || (response.status < 500 && response.status !== 429)) {
+            return response;
+        }
+        const retryable = response.status === 429 || response.status >= 500;
+        if (!retryable || attempt === maxRetries - 1) {
+            return response;
+        }
+        const delay = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 1000, 15000);
+        logger.warn(`[fetchClaudeWithRetry] ${response.status} 응답, ${Math.round(delay)}ms 후 재시도 (${attempt + 1}/${maxRetries})`);
+        await new Promise(r => setTimeout(r, delay));
+    }
+}
+
 // 인메모리 캐시 (인스턴스 재사용 시 Firestore 읽기 절약)
 const cache = { students: null, studentsAt: 0, classes: null, classesAt: 0, staff: null, staffAt: 0 };
 const CACHE_TTL = 5 * 60 * 1000; // 5분
@@ -5653,7 +5670,7 @@ exports.processConsultationRecording = functions
                 ? speakerLabels.map(s => `[화자 ${s.speaker}] ${s.text}`).join("\n")
                 : fullText;
 
-            const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
+            const claudeResponse = await fetchClaudeWithRetry("https://api.anthropic.com/v1/messages", {
                 method: "POST",
                 headers: {
                     "x-api-key": anthropicKey,
@@ -5868,7 +5885,7 @@ exports.reanalyzeConsultationReport = functions
                 ? speakerLabels.map(s => `[화자 ${s.speaker}] ${s.text}`).join("\n")
                 : transcription;
 
-            const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
+            const claudeResponse = await fetchClaudeWithRetry("https://api.anthropic.com/v1/messages", {
                 method: "POST",
                 headers: { "x-api-key": anthropicKey, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -6120,7 +6137,7 @@ exports.processRegistrationRecording = functions
 
             const [formResponse, analysisResponse] = await Promise.all([
                 // (A) 등록상담 폼 필드 추출 (기존)
-                fetch("https://api.anthropic.com/v1/messages", {
+                fetchClaudeWithRetry("https://api.anthropic.com/v1/messages", {
                     method: "POST",
                     headers: claudeHeaders,
                     body: JSON.stringify({
@@ -6203,7 +6220,7 @@ ${fullText}
                 }),
 
                 // (B) 상담녹음 심층분석 (processConsultationRecording과 동일 프롬프트)
-                fetch("https://api.anthropic.com/v1/messages", {
+                fetchClaudeWithRetry("https://api.anthropic.com/v1/messages", {
                     method: "POST",
                     headers: claudeHeaders,
                     body: JSON.stringify({
@@ -6638,7 +6655,7 @@ exports.processMeetingRecording = functions
 
             const attendeeStr = (attendees || []).join(", ") || "미지정";
 
-            const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
+            const claudeResponse = await fetchClaudeWithRetry("https://api.anthropic.com/v1/messages", {
                 method: "POST",
                 headers: {
                     "x-api-key": anthropicKey,
@@ -6801,7 +6818,7 @@ exports.reanalyzeMeetingReport = functions
 
             const attendeeStr = (attendees || []).join(", ") || "미지정";
 
-            const claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
+            const claudeResponse = await fetchClaudeWithRetry("https://api.anthropic.com/v1/messages", {
                 method: "POST",
                 headers: {
                     "x-api-key": anthropicKey,

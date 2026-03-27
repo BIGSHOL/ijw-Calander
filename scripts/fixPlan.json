@@ -1,0 +1,54 @@
+[
+  {
+    "studentId": "김혜서_달성초_초5",
+    "studentName": "김혜서",
+    "enrollmentId": "math_초등M_초5 의치대",
+    "className": "초등M 초6 BS2P",
+    "subject": "math",
+    "fixes": {
+      "classId": "cHfxRpKhiq5RjfordHsE"
+    },
+    "issues": [
+      "wrong_classId"
+    ]
+  },
+  {
+    "studentId": "박경현_옥산초_초4",
+    "studentName": "박경현",
+    "enrollmentId": "math_초등M 개별 JJ2I",
+    "className": "초등M 개별 JJ2I",
+    "subject": "math",
+    "fixes": {
+      "classId": "J1omMvuGJnHvFf5M2PKJ"
+    },
+    "issues": [
+      "wrong_classId"
+    ]
+  },
+  {
+    "studentId": "신효섭_칠성초_초4",
+    "studentName": "신효섭",
+    "enrollmentId": "35C5O8qNyrSTEnKwZ5J4",
+    "className": "초등M 개별 BS1L",
+    "subject": "math",
+    "fixes": {
+      "classId": "DnRp43ZCLWsz61jvW3gz"
+    },
+    "issues": [
+      "missing_classId"
+    ]
+  },
+  {
+    "studentId": "신효섭_칠성초_초4",
+    "studentName": "신효섭",
+    "enrollmentId": "jzMuCaIXi6eJDrWozKTw",
+    "className": "초등M 개별 JJ1G",
+    "subject": "math",
+    "fixes": {
+      "classId": "e6qQ61BdrEo6lYyCrMQe"
+    },
+    "issues": [
+      "missing_classId"
+    ]
+  }
+]
