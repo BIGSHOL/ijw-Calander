@@ -1,5 +1,5 @@
-import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
-import { format, startOfMonth, endOfMonth, differenceInDays } from 'date-fns';
+import React, { useMemo } from 'react';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addWeeks, isBefore, isAfter, isSameDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { CalendarEvent, Department } from '../../types';
 
@@ -10,30 +10,73 @@ interface YearlyListViewProps {
   onEventClick?: (event: CalendarEvent) => void;
 }
 
-interface MonthGroup {
-  month: Date;
-  monthIndex: number;
+interface WeekData {
+  weekStart: Date;
+  weekEnd: Date;
   label: string;
   events: CalendarEvent[];
 }
 
-function groupEventsByMonth(year: number, events: CalendarEvent[]): MonthGroup[] {
-  const groups: MonthGroup[] = [];
+interface MonthData {
+  month: Date;
+  label: string;
+  weeks: WeekData[];
+  totalEvents: number;
+}
+
+// 월별 주간 데이터 생성
+function buildMonthData(year: number, events: CalendarEvent[]): MonthData[] {
+  const months: MonthData[] = [];
+
   for (let m = 0; m < 12; m++) {
     const monthDate = new Date(year, m, 1);
     const mStart = startOfMonth(monthDate);
     const mEnd = endOfMonth(monthDate);
+
+    // 해당 월의 이벤트
     const monthEvents = events.filter(e => {
       const eStart = new Date(e.startDate);
       const eEnd = e.endDate ? new Date(e.endDate) : eStart;
       return eStart <= mEnd && eEnd >= mStart;
-    }).sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-    groups.push({ month: monthDate, monthIndex: m, label: `${m + 1}월`, events: monthEvents });
+    });
+
+    // 주간 분할 (최대 5주, 보통 4~5주)
+    const weeks: WeekData[] = [];
+    let weekStart = startOfWeek(mStart, { weekStartsOn: 0 });
+
+    while (isBefore(weekStart, mEnd) || isSameDay(weekStart, mStart)) {
+      const weekEnd = endOfWeek(weekStart, { weekStartsOn: 0 });
+
+      // 이 주에 해당하는 이벤트
+      const weekEvents = monthEvents.filter(e => {
+        const eStart = new Date(e.startDate);
+        const eEnd = e.endDate ? new Date(e.endDate) : eStart;
+        return eStart <= weekEnd && eEnd >= weekStart;
+      }).sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+
+      // 주간 라벨: 해당 월에 속하는 날짜 범위
+      const displayStart = isAfter(mStart, weekStart) ? mStart : weekStart;
+      const displayEnd = isBefore(mEnd, weekEnd) ? mEnd : weekEnd;
+      const label = `${format(displayStart, 'd')}~${format(displayEnd, 'd')}`;
+
+      weeks.push({ weekStart, weekEnd, label, events: weekEvents });
+
+      weekStart = addWeeks(weekStart, 1);
+      if (isAfter(weekStart, mEnd)) break;
+    }
+
+    months.push({
+      month: monthDate,
+      label: `${m + 1}월`,
+      weeks,
+      totalEvents: monthEvents.length,
+    });
   }
-  return groups;
+
+  return months;
 }
 
-const MONTH_CHIP_H = 28; // 월 칩 높이(px)
+const MAX_VISIBLE_EVENTS = 2; // 주간당 최대 표시 이벤트 수
 
 const YearlyListView: React.FC<YearlyListViewProps> = ({
   currentDate,
@@ -43,8 +86,7 @@ const YearlyListView: React.FC<YearlyListViewProps> = ({
 }) => {
   const currentYear = currentDate.getFullYear();
   const now = new Date();
-  const isCurrentYear = currentYear === now.getFullYear();
-  const currentMonthIndex = isCurrentYear ? now.getMonth() : -1;
+  const currentMonthIdx = currentYear === now.getFullYear() ? now.getMonth() : -1;
 
   const yearEvents = useMemo(() =>
     events.filter(e => {
@@ -53,190 +95,89 @@ const YearlyListView: React.FC<YearlyListViewProps> = ({
       return y === currentYear || ey === currentYear;
     }), [events, currentYear]);
 
-  const monthGroups = useMemo(() => groupEventsByMonth(currentYear, yearEvents), [currentYear, yearEvents]);
-
-  // 각 월 섹션의 ref
-  const monthSectionRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-
-  // 현재 스크롤 위치에서 지나간 월 추적
-  const [passedMonths, setPassedMonths] = useState<number[]>([]);
-  // 현재 보이는 월
-  const [activeMonth, setActiveMonth] = useState(currentMonthIndex >= 0 ? currentMonthIndex : 0);
-
-  // 스크롤 이벤트 핸들러
-  const handleScroll = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const scrollTop = container.scrollTop;
-    const chipBarHeight = MONTH_CHIP_H; // 칩바 영역 높이
-    const passed: number[] = [];
-    let active = 0;
-
-    for (let i = 0; i < 12; i++) {
-      const section = monthSectionRefs.current[i];
-      if (!section) continue;
-      const sectionTop = section.offsetTop - container.offsetTop;
-      if (sectionTop <= scrollTop + chipBarHeight + 4) {
-        passed.push(i);
-        active = i;
-      }
-    }
-
-    setPassedMonths(passed);
-    setActiveMonth(active);
-  }, []);
-
-  // 스크롤 리스너
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, [handleScroll]);
-
-  // 현재 월로 초기 스크롤
-  useEffect(() => {
-    if (currentMonthIndex >= 0) {
-      setTimeout(() => scrollToMonth(currentMonthIndex), 150);
-    }
-  }, [currentMonthIndex]);
-
-  // 월 클릭 시 스크롤
-  const scrollToMonth = (idx: number) => {
-    const section = monthSectionRefs.current[idx];
-    const container = scrollContainerRef.current;
-    if (!section || !container) return;
-    const sectionTop = section.offsetTop - container.offsetTop;
-    container.scrollTo({ top: sectionTop - MONTH_CHIP_H, behavior: 'smooth' });
-  };
-
+  const monthsData = useMemo(() => buildMonthData(currentYear, yearEvents), [currentYear, yearEvents]);
   const totalEvents = yearEvents.length;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* 연도 헤더 */}
-      <div className="flex-shrink-0 flex items-center justify-between bg-[#081429] text-white px-4 py-1.5">
+      <div className="flex-shrink-0 flex items-center justify-between bg-[#081429] text-white px-3 py-1">
         <span className="text-sm font-bold">{currentYear}년</span>
-        <span className="text-xs text-[#fdb813] font-medium">{totalEvents}개 일정</span>
+        <span className="text-[10px] text-[#fdb813] font-medium">{totalEvents}개</span>
       </div>
 
-      {/* 스티키 월 칩 바 */}
-      <div className="flex-shrink-0 flex items-center gap-0.5 px-2 py-1 bg-white border-b border-gray-200 overflow-x-auto" style={{ minHeight: MONTH_CHIP_H }}>
-        {monthGroups.map((g, idx) => {
-          const isActive = activeMonth === idx;
-          const isPassed = passedMonths.includes(idx);
-          const isCurrent = currentMonthIndex === idx;
-          return (
-            <button
-              key={idx}
-              onClick={() => scrollToMonth(idx)}
-              className={`flex-shrink-0 px-2 py-0.5 rounded-sm text-[11px] font-bold transition-all ${
-                isActive
-                  ? 'bg-[#081429] text-[#fdb813]'
-                  : isCurrent
-                    ? 'bg-[#fdb813] text-[#081429]'
-                    : isPassed
-                      ? 'bg-gray-200 text-gray-600'
-                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600'
-              }`}
-            >
-              {g.label}
-              {g.events.length > 0 && (
-                <span className={`ml-0.5 text-[9px] ${isActive ? 'text-[#fdb813]/70' : 'opacity-60'}`}>
-                  {g.events.length}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* 월별 이벤트 목록 (스크롤) */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto custom-scrollbar">
-        {monthGroups.map((group, idx) => {
-          const isCurrent = currentMonthIndex === idx;
-          const hasEvents = group.events.length > 0;
+      {/* 12개월 그리드 - 균등 분할 */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {monthsData.map((md, mIdx) => {
+          const isCurrent = currentMonthIdx === mIdx;
 
           return (
             <div
-              key={idx}
-              ref={el => { monthSectionRefs.current[idx] = el; }}
-              className={`border-b border-gray-100 ${isCurrent ? 'bg-amber-50/30' : ''}`}
+              key={mIdx}
+              className={`flex-1 min-h-0 flex border-b border-gray-200 last:border-b-0 overflow-hidden ${
+                isCurrent ? 'bg-amber-50/40' : ''
+              }`}
             >
-              {/* 월 구분 헤더 */}
-              <div className={`flex items-center justify-between px-4 py-1.5 ${
-                isCurrent ? 'bg-[#fdb813] text-[#081429]' : 'bg-gray-50 text-gray-700'
+              {/* 월 라벨 */}
+              <div className={`flex-shrink-0 w-10 flex flex-col items-center justify-center border-r border-gray-200 ${
+                isCurrent ? 'bg-[#fdb813] text-[#081429]' : 'bg-gray-50 text-gray-600'
               }`}>
-                <span className="text-xs font-bold">{group.label}</span>
-                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-sm ${
-                  hasEvents
-                    ? isCurrent ? 'bg-[#081429] text-[#fdb813]' : 'bg-gray-200 text-gray-600'
-                    : 'text-gray-400'
-                }`}>
-                  {group.events.length}개
-                </span>
+                <span className="text-[11px] font-bold leading-tight">{md.label}</span>
+                {md.totalEvents > 0 && (
+                  <span className={`text-[8px] font-medium mt-0.5 px-1 rounded-sm ${
+                    isCurrent ? 'bg-[#081429] text-[#fdb813]' : 'bg-gray-200 text-gray-500'
+                  }`}>
+                    {md.totalEvents}
+                  </span>
+                )}
               </div>
 
-              {/* 이벤트 목록 */}
-              {hasEvents ? (
-                <div className="divide-y divide-gray-50">
-                  {group.events.map(evt => {
-                    const dept = departments.find(d => d.id === evt.departmentId);
-                    const startDate = new Date(evt.startDate);
-                    const endDate = evt.endDate ? new Date(evt.endDate) : startDate;
-                    const isMultiDay = differenceInDays(endDate, startDate) > 0;
+              {/* 주간 영역 - 가로 균등 분할 */}
+              <div className="flex-1 flex min-w-0 overflow-hidden">
+                {md.weeks.map((week, wIdx) => (
+                  <div
+                    key={wIdx}
+                    className="flex-1 min-w-0 flex flex-col border-r border-gray-100 last:border-r-0 px-1 py-0.5 overflow-hidden"
+                  >
+                    {/* 주간 라벨 */}
+                    <div className="flex-shrink-0 text-[8px] text-gray-400 font-medium mb-0.5 truncate">
+                      {week.label}일
+                    </div>
 
-                    return (
-                      <div
-                        key={evt.id}
-                        onClick={() => onEventClick?.(evt)}
-                        className="flex items-start gap-2 px-4 py-2 hover:bg-gray-50 cursor-pointer transition-colors"
-                      >
-                        <div className="flex-shrink-0 w-9 text-center">
-                          <div className="text-base font-bold text-gray-800 leading-tight">
-                            {format(startDate, 'd')}
+                    {/* 이벤트 목록 */}
+                    <div className="flex-1 min-h-0 flex flex-col gap-px overflow-hidden">
+                      {week.events.slice(0, MAX_VISIBLE_EVENTS).map(evt => {
+                        const dept = departments.find(d => d.id === evt.departmentId);
+                        const color = dept?.color || evt.color || '#6b7280';
+
+                        return (
+                          <div
+                            key={evt.id}
+                            onClick={(e) => { e.stopPropagation(); onEventClick?.(evt); }}
+                            className="flex items-center gap-0.5 min-h-[14px] cursor-pointer hover:bg-gray-100 rounded-sm px-0.5 overflow-hidden"
+                            title={`${evt.title} (${format(new Date(evt.startDate), 'M/d')})`}
+                          >
+                            <div
+                              className="w-1 h-1 rounded-full flex-shrink-0"
+                              style={{ backgroundColor: color }}
+                            />
+                            <span className="text-[9px] text-gray-700 truncate leading-tight">
+                              {evt.title}
+                            </span>
                           </div>
-                          <div className="text-[9px] text-gray-400 font-medium">
-                            {format(startDate, 'EEE', { locale: ko })}
-                          </div>
+                        );
+                      })}
+
+                      {/* +N 더보기 */}
+                      {week.events.length > MAX_VISIBLE_EVENTS && (
+                        <div className="text-[8px] text-gray-400 font-medium px-0.5">
+                          +{week.events.length - MAX_VISIBLE_EVENTS}
                         </div>
-                        <div
-                          className="w-0.5 self-stretch rounded-full flex-shrink-0 mt-0.5"
-                          style={{ backgroundColor: dept?.color || evt.color || '#6b7280' }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-xs font-medium text-gray-900 truncate">
-                            {evt.title}
-                          </div>
-                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                            {dept && (
-                              <span
-                                className="text-[9px] px-1 py-0.5 rounded-sm font-bold"
-                                style={{
-                                  backgroundColor: (dept.color || '#6b7280') + '20',
-                                  color: dept.color || '#6b7280',
-                                }}
-                              >
-                                {dept.name}
-                              </span>
-                            )}
-                            {isMultiDay && (
-                              <span className="text-[9px] text-gray-400">~{format(endDate, 'M/d')}</span>
-                            )}
-                            {evt.startTime && (
-                              <span className="text-[9px] text-gray-400">{evt.startTime}</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="px-3 py-3 text-[10px] text-gray-300 text-center">일정 없음</div>
-              )}
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           );
         })}
