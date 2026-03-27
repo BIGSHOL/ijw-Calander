@@ -46,6 +46,9 @@ export interface StaffMember {
   // === 소속 (시간표/학생관리 가시성 제어) ===
   departments?: ('math' | 'highmath' | 'english')[];  // 기본값: ['math', 'highmath', 'english']
 
+  // === 지출결의서 역할 (마스터가 설정) ===
+  expenseRole?: 'director' | 'ceo' | 'executor';  // 원장 / 대표 / 집행자
+
   // === 선생님 전용 필드 (role === 'teacher'일 때만 사용) ===
   // 시간표 표시 설정
   isHiddenInTimetable?: boolean;  // 시간표에서 숨김

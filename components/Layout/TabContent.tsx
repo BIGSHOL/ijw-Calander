@@ -427,7 +427,7 @@ export const TabContent: React.FC<TabContentProps> = ({
       ) : appMode === 'expenses' ? (
         <Suspense fallback={<TabLoadingFallback />}>
           <div className="w-full flex-1 overflow-hidden">
-            <ExpensesTab />
+            <ExpensesTab currentUser={effectiveProfile} staffMember={effectiveStaffMember} />
           </div>
         </Suspense>
       ) : appMode === 'homework' ? (

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { collection, getDocs, doc, setDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { Expense } from '../types/expense';
 
@@ -27,6 +27,45 @@ export const useCreateExpense = () => {
       const ref = doc(db, COL, id);
       await setDoc(ref, { ...data, id, updatedAt: new Date().toISOString() });
       return id;
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['expenses'] }),
+  });
+};
+
+// 결재 체크 토글
+export const useToggleApproval = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, role, checked }: { id: string; role: 'author' | 'executor' | 'director' | 'ceo'; checked: boolean }) => {
+      const ref = doc(db, COL, id);
+      await updateDoc(ref, {
+        [`approvalChecks.${role}.checked`]: checked,
+        [`approvalChecks.${role}.date`]: checked ? new Date().toISOString().split('T')[0] : null,
+      });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['expenses'] }),
+  });
+};
+
+// 증빙자료 업데이트
+export const useUpdateReceipt = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, receiptUrl }: { id: string; receiptUrl: string }) => {
+      const ref = doc(db, COL, id);
+      await updateDoc(ref, { receiptUrl });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['expenses'] }),
+  });
+};
+
+// 증빙 이미지 URL 업데이트
+export const useUpdateReceiptUrls = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, receiptUrls }: { id: string; receiptUrls: string[] }) => {
+      const ref = doc(db, COL, id);
+      await updateDoc(ref, { receiptUrls });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['expenses'] }),
   });

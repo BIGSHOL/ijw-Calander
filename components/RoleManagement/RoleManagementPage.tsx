@@ -286,6 +286,13 @@ const PERMISSION_GROUPS: { id: string; label: string; icon: string; categories: 
           { id: 'meeting.delete' as PermissionId, label: '삭제' },
         ]
       },
+      {
+        id: 'expenses', label: '지출 관리', icon: '💰',
+        permissions: [
+          { id: 'expenses.view' as PermissionId, label: '조회' },
+          { id: 'expenses.edit' as PermissionId, label: '수정' },
+        ]
+      },
     ]
   },
   {

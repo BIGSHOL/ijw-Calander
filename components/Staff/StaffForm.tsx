@@ -84,6 +84,8 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
     // 시스템 권한 필드
     systemRole: 'user' as UserRole,
     approvalStatus: 'pending' as 'approved' | 'pending' | 'rejected',
+    // 지출결의서 역할
+    expenseRole: '' as '' | 'director' | 'ceo' | 'executor',
   });
 
   // Initialize form with staff data if editing
@@ -112,6 +114,8 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
         // 시스템 권한 필드
         systemRole: staff.systemRole || 'user',
         approvalStatus: staff.approvalStatus || 'pending',
+        // 지출결의서 역할
+        expenseRole: staff.expenseRole || '',
       });
     }
   }, [staff]);
@@ -702,6 +706,36 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                 <p className="text-xxs text-gray-500">
                   시스템 역할은 앱 내 기능 접근 권한을 결정합니다. 승인 상태가 '승인됨'이어야 로그인이 가능합니다.
                 </p>
+              </div>
+            </div>
+          )}
+
+          {/* 지출결의서 역할 설정 (MASTER/ADMIN만 표시) */}
+          {showSystemFields && (
+            <div className="border-t border-gray-200 pt-3 mt-3">
+              <h3 className="text-xs font-bold text-gray-700 mb-2 flex items-center gap-1.5">
+                💰 지출결의서 역할
+              </h3>
+              <div className="bg-green-50/50 rounded-sm p-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    결재 역할
+                  </label>
+                  <select
+                    name="expenseRole"
+                    value={formData.expenseRole}
+                    onChange={handleChange}
+                    className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+                  >
+                    <option value="">없음</option>
+                    <option value="director">원장</option>
+                    <option value="ceo">대표</option>
+                    <option value="executor">집행자</option>
+                  </select>
+                  <p className="text-xxs text-gray-500 mt-1">
+                    지출결의서 관리대장에서 해당 역할의 결재 권한을 부여합니다.
+                  </p>
+                </div>
               </div>
             </div>
           )}

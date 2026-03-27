@@ -20,13 +20,24 @@ export interface Expense {
   expenseDate: string;     // 지출일자 (YYYY-MM-DD)
   // 항목 (최대 7개 행)
   items: ExpenseItem[];
+  // 통화
+  currency?: string;       // 통화 기호 (₩, $, ¥ 등)
   // 정산
   paymentMethod: string;   // 정산방법 (카드결제/현금/계좌이체)
+  bankName?: string;       // 은행명 (계좌이체 시)
   accountNumber: string;   // 계좌번호
   // 결재 상태
   approvalStatus: 'pending' | 'approved' | 'rejected';
+  // 결재 체크 (작성/집행자/원장/대표)
+  approvalChecks?: {
+    author?: { checked: boolean; date?: string };
+    executor?: { checked: boolean; date?: string };
+    director?: { checked: boolean; date?: string };
+    ceo?: { checked: boolean; date?: string };
+  };
   // 증빙자료
-  receiptUrl?: string;     // 증빙자료 종류 (영수증/세금계산서/견적서 등)
+  receiptUrl?: string;     // 증빙자료 종류 (레거시, 하위호환)
+  receiptUrls?: string[];  // 증빙자료 이미지 URL 배열
   // 메타
   memo: string;            // 비고
   totalAmount: number;     // 합계 (자동계산)
