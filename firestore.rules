@@ -699,15 +699,12 @@ service cloud.firestore {
       allow create: if isAuthenticated() &&
                        (hasRole(['master', 'admin']) ||
                         hasPermission('expenses.edit'));
-      // 수정: expenses.edit 권한 + (작성자 본인 또는 master/admin)
       allow update: if isAuthenticated() &&
                        (hasRole(['master', 'admin']) ||
-                        (hasPermission('expenses.edit') &&
-                         resource.data.createdBy == request.auth.uid));
+                        hasPermission('expenses.edit'));
       allow delete: if isAuthenticated() &&
                        (hasRole(['master', 'admin']) ||
-                        (hasPermission('expenses.edit') &&
-                         resource.data.createdBy == request.auth.uid));
+                        hasPermission('expenses.edit'));
     }
 
     // === Default: Role-Based Access for All Collections ===
