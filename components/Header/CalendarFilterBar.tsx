@@ -96,7 +96,6 @@ export const CalendarFilterBar: React.FC<CalendarFilterBarProps> = ({
         {/* Column View Toggle (1단/2단/3단) */}
         <div className="flex bg-black/20 p-0.5 rounded-sm border border-white/5">
           {([1, 2, 3] as const)
-            .filter(cols => viewMode !== 'yearly' || cols !== 3)
             .map((cols) => (
               <button
                 key={cols}

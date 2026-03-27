@@ -79,6 +79,9 @@ interface TabContentProps {
     handleConvertBucketToEvent: any;
     showArchived: boolean;
     viewColumns: number;
+    listDirection: 'horizontal' | 'vertical';
+    setListDirection: (dir: 'horizontal' | 'vertical') => void;
+    setViewColumns: (cols: 1 | 2 | 3) => void;
   };
 
   // Timetable props
@@ -169,10 +172,17 @@ export const TabContent: React.FC<TabContentProps> = ({
           </div>
         </Suspense>
       ) : appMode === 'calendar' && calendarProps ? (
-        <div className="w-full flex-1 max-w-full mx-auto h-full print:p-0 flex flex-col xl:flex-row print:flex-row print:gap-2 overflow-x-auto">
+        <div className={`w-full flex-1 max-w-full mx-auto h-full print:p-0 flex print:flex-row print:gap-2 ${
+          calendarProps.listDirection === 'vertical' ? 'flex-col overflow-y-auto' : 'flex-col xl:flex-row overflow-x-auto'
+        }`}>
           <Suspense fallback={<TabLoadingFallback />}>
             {/* 1단: 현재 년도 */}
-            <div className={`flex-1 flex flex-col overflow-y-auto ${calendarProps.viewColumns >= 2 ? 'min-w-[320px] border-r-4 border-gray-400' : 'min-w-0'}`}>
+            <div className={`flex-1 flex flex-col overflow-y-auto ${calendarProps.viewColumns >= 2
+              ? calendarProps.listDirection === 'vertical'
+                ? 'min-h-[300px] border-b-4 border-gray-400'
+                : 'min-w-[320px] border-r-4 border-gray-400'
+              : 'min-w-0'
+            }`}>
               <CalendarBoard
                 currentDate={calendarProps.baseDate}
                 onDateChange={calendarProps.setBaseDate}
@@ -191,6 +201,14 @@ export const TabContent: React.FC<TabContentProps> = ({
                 onViewChange={calendarProps.setViewMode}
                 showSidePanel={calendarProps.viewColumns === 1}
                 onQuickAdd={calendarProps.handleQuickAdd}
+                listDirection={calendarProps.listDirection}
+                onListDirectionChange={calendarProps.setListDirection}
+                onSubViewChange={(sv) => {
+                  // 연간 달력뷰 전환 시 3단→2단 자동 축소
+                  if (sv === 'calendar' && calendarProps.viewColumns === 3) {
+                    calendarProps.setViewColumns(2 as any);
+                  }
+                }}
                 bucketItems={calendarProps.bucketItems}
                 onAddBucket={calendarProps.handleAddBucketItem}
                 onEditBucket={calendarProps.handleEditBucketItem}
@@ -201,7 +219,10 @@ export const TabContent: React.FC<TabContentProps> = ({
             </div>
 
             {/* 2단: 1년 전 */}
-            <div className={`flex-1 flex flex-col overflow-hidden min-w-[320px] transition-all duration-300 ${calendarProps.viewColumns >= 2 ? (calendarProps.viewColumns >= 3 ? 'border-r-4 border-gray-400' : '') : 'hidden'}`}>
+            <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${calendarProps.viewColumns >= 2
+              ? `${calendarProps.listDirection === 'vertical' ? 'min-h-[300px]' : 'min-w-[320px]'} ${calendarProps.viewColumns >= 3 ? (calendarProps.listDirection === 'vertical' ? 'border-b-4 border-gray-400' : 'border-r-4 border-gray-400') : ''}`
+              : 'hidden'
+            }`}>
               <CalendarBoard
                 currentDate={calendarProps.rightDate}
                 onDateChange={(date: Date) => calendarProps.setBaseDate(new Date(date.getFullYear() + 1, date.getMonth(), date.getDate()))}
@@ -225,7 +246,10 @@ export const TabContent: React.FC<TabContentProps> = ({
             </div>
 
             {/* 3단: 2년 전 */}
-            <div className={`flex-1 flex flex-col overflow-hidden min-w-[320px] transition-all duration-300 ${calendarProps.viewColumns >= 3 ? '' : 'hidden'}`}>
+            <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${calendarProps.viewColumns >= 3
+              ? (calendarProps.listDirection === 'vertical' ? 'min-h-[300px]' : 'min-w-[320px]')
+              : 'hidden'
+            }`}>
               <CalendarBoard
                 currentDate={calendarProps.thirdDate}
                 onDateChange={(date: Date) => calendarProps.setBaseDate(new Date(date.getFullYear() + 2, date.getMonth(), date.getDate()))}

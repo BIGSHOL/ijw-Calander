@@ -36,6 +36,9 @@ interface CalendarBoardProps {
   isPrimaryView?: boolean; // Only show "My Events" button on primary view
   showSidePanel?: boolean; // Control side panel visibility
   onQuickAdd?: (date: Date) => void; // Quick Add: Click date in yearly view
+  listDirection?: 'horizontal' | 'vertical';
+  onListDirectionChange?: (dir: 'horizontal' | 'vertical') => void;
+  onSubViewChange?: (subView: 'calendar' | 'list') => void;
   // Bucket List Props
   bucketItems?: { id: string; title: string; targetMonth: string; priority: 'high' | 'medium' | 'low'; createdAt: string; authorId?: string; authorName?: string }[];
   onAddBucket?: (title: string, targetMonth: string, priority: 'high' | 'medium' | 'low') => void;
@@ -234,6 +237,9 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
   isPrimaryView = true, // Default to true for backwards compatibility
   showSidePanel = true, // Default to true
   onQuickAdd, // Quick Add callback
+  listDirection,
+  onListDirectionChange,
+  onSubViewChange,
   bucketItems = [], // Bucket List
   onAddBucket,
   onEditBucket,
@@ -462,6 +468,9 @@ const CalendarBoard: React.FC<CalendarBoardProps> = ({
           departments={departments}
           onQuickAdd={onQuickAdd}
           onEventClick={onEventClick}
+          listDirection={listDirection}
+          onListDirectionChange={onListDirectionChange}
+          onSubViewChange={onSubViewChange}
           bucketItems={bucketItems}
           onAddBucket={onAddBucket}
           onEditBucket={onEditBucket}

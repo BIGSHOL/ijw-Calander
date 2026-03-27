@@ -15,10 +15,13 @@ import { usePermissions } from './usePermissions';
 // ============================================
 export type ViewMode = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
+export type ListDirection = 'horizontal' | 'vertical';
+
 export interface CalendarState {
   baseDate: Date;
   viewMode: ViewMode;
   viewColumns: 1 | 2 | 3;
+  listDirection: ListDirection;
   selectedDate: string;
   selectedEndDate: string;
   selectedDeptId: string;
@@ -55,6 +58,7 @@ export function useCalendarState() {
     }
     return 2;
   });
+  const [listDirection, setListDirection] = useState<ListDirection>('horizontal');
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [selectedEndDate, setSelectedEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [selectedDeptId, setSelectedDeptId] = useState<string>('');
@@ -88,12 +92,8 @@ export function useCalendarState() {
     storage.setString(STORAGE_KEYS.CALENDAR_VIEW_COLUMNS, viewColumns.toString());
   }, [viewColumns]);
 
-  // Force viewColumns to 2 if currently 3 when switching to yearly view
-  useEffect(() => {
-    if (viewMode === 'yearly' && viewColumns === 3) {
-      setViewColumns(2);
-    }
-  }, [viewMode, viewColumns]);
+  // 연간 달력뷰에서는 3단 불가 (목록뷰에서는 허용)
+  // 달력뷰로 전환 시 3단이면 2단으로 축소는 YearlyView에서 subView 변경 시 처리
 
   // Persist hidden departments
   const updateHiddenDeptIds = useCallback((ids: string[]) => {
@@ -106,6 +106,7 @@ export function useCalendarState() {
     baseDate,
     viewMode,
     viewColumns,
+    listDirection,
     selectedDate,
     selectedEndDate,
     selectedDeptId,
@@ -118,6 +119,7 @@ export function useCalendarState() {
     setBaseDate,
     setViewMode,
     setViewColumns,
+    setListDirection,
     setSelectedDate,
     setSelectedEndDate,
     setSelectedDeptId,

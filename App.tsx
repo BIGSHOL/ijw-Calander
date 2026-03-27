@@ -83,7 +83,7 @@ const App: React.FC = () => {
 
   // Destructure states
   const {
-    baseDate, setBaseDate, viewMode, setViewMode, viewColumns, setViewColumns,
+    baseDate, setBaseDate, viewMode, setViewMode, viewColumns, setViewColumns, listDirection, setListDirection,
     selectedDate, setSelectedDate, selectedEndDate, setSelectedEndDate,
     selectedDeptId, setSelectedDeptId, showArchived, setShowArchived,
     selectedCategory, setSelectedCategory, showFavoritesOnly, setShowFavoritesOnly,
@@ -791,6 +791,9 @@ const App: React.FC = () => {
                   handleConvertBucketToEvent,
                   showArchived,
                   viewColumns,
+                  setViewColumns,
+                  listDirection,
+                  setListDirection,
                 } : undefined}
                 timetableProps={appMode === 'timetable' ? {
                   timetableSubject: timetableSubject as any,
