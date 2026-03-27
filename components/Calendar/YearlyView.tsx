@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { format, addMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, startOfYear, addYears, subYears } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { CalendarEvent, BucketItem, Department } from '../../types';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Plus, Trash2, Flag, Pencil, ArrowRightCircle, Archive, LayoutGrid, List } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, Plus, Trash2, Flag, Pencil, ArrowRightCircle, Archive, LayoutGrid, List, Columns3, Rows3 } from 'lucide-react';
 import BucketModal from './BucketModal';
 import YearlyListView from './YearlyListView';
 
@@ -45,6 +45,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
 
     // 달력/목록 하위뷰 토글
     const [subView, setSubView] = useState<'calendar' | 'list'>('calendar');
+    const [listLayout, setListLayout] = useState<'vertical' | 'horizontal'>('vertical');
 
     // Bucket Modal State
     const [isBucketModalOpen, setIsBucketModalOpen] = useState(false);
@@ -196,29 +197,58 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                     </div>
 
                     {/* 달력/목록 토글 */}
-                    <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 rounded-sm border border-gray-200">
-                        <button
-                            onClick={() => setSubView('calendar')}
-                            className={`flex items-center gap-1 px-2 py-1 rounded-sm text-xs font-medium transition-all ${
-                                subView === 'calendar'
-                                    ? 'bg-white text-[#081429] shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-700'
-                            }`}
-                        >
-                            <LayoutGrid size={12} />
-                            달력
-                        </button>
-                        <button
-                            onClick={() => setSubView('list')}
-                            className={`flex items-center gap-1 px-2 py-1 rounded-sm text-xs font-medium transition-all ${
-                                subView === 'list'
-                                    ? 'bg-white text-[#081429] shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-700'
-                            }`}
-                        >
-                            <List size={12} />
-                            목록
-                        </button>
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 rounded-sm border border-gray-200">
+                            <button
+                                onClick={() => setSubView('calendar')}
+                                className={`flex items-center gap-1 px-2 py-1 rounded-sm text-xs font-medium transition-all ${
+                                    subView === 'calendar'
+                                        ? 'bg-white text-[#081429] shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                            >
+                                <LayoutGrid size={12} />
+                                달력
+                            </button>
+                            <button
+                                onClick={() => setSubView('list')}
+                                className={`flex items-center gap-1 px-2 py-1 rounded-sm text-xs font-medium transition-all ${
+                                    subView === 'list'
+                                        ? 'bg-white text-[#081429] shadow-sm'
+                                        : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                            >
+                                <List size={12} />
+                                목록
+                            </button>
+                        </div>
+                        {/* 목록뷰 레이아웃 토글 (목록 모드일 때만) */}
+                        {subView === 'list' && (
+                            <div className="flex items-center gap-0.5 p-0.5 bg-gray-100 rounded-sm border border-gray-200">
+                                <button
+                                    onClick={() => setListLayout('vertical')}
+                                    title="세로 분할 (좌우 3단)"
+                                    className={`p-1 rounded-sm transition-all ${
+                                        listLayout === 'vertical'
+                                            ? 'bg-white text-[#081429] shadow-sm'
+                                            : 'text-gray-400 hover:text-gray-600'
+                                    }`}
+                                >
+                                    <Columns3 size={14} />
+                                </button>
+                                <button
+                                    onClick={() => setListLayout('horizontal')}
+                                    title="가로 분할 (상하 3단)"
+                                    className={`p-1 rounded-sm transition-all ${
+                                        listLayout === 'horizontal'
+                                            ? 'bg-white text-[#081429] shadow-sm'
+                                            : 'text-gray-400 hover:text-gray-600'
+                                    }`}
+                                >
+                                    <Rows3 size={14} />
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     {/* Category Legend */}
@@ -240,6 +270,7 @@ const YearlyView: React.FC<YearlyViewProps> = ({
                             events={events}
                             departments={departments}
                             onEventClick={onEventClick}
+                            layout={listLayout}
                         />
                     </div>
                 ) : (

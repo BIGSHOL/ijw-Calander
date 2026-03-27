@@ -4,11 +4,14 @@ import { ko } from 'date-fns/locale';
 import { CalendarEvent, Department } from '../../types';
 import { Calendar as CalendarIcon, Clock } from 'lucide-react';
 
+type ListLayout = 'horizontal' | 'vertical';
+
 interface YearlyListViewProps {
   currentDate: Date;
   events: CalendarEvent[];
   departments: Department[];
   onEventClick?: (event: CalendarEvent) => void;
+  layout?: ListLayout;
 }
 
 interface MonthGroup {
@@ -48,7 +51,8 @@ const YearColumn: React.FC<{
   departments: Department[];
   onEventClick?: (event: CalendarEvent) => void;
   currentMonth?: number;
-}> = ({ year, events, departments, onEventClick, currentMonth }) => {
+  isHorizontalLayout?: boolean;
+}> = ({ year, events, departments, onEventClick, currentMonth, isHorizontalLayout }) => {
   const monthGroups = useMemo(() => groupEventsByMonth(year, events), [year, events]);
   const monthRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -63,7 +67,9 @@ const YearColumn: React.FC<{
   }, [currentMonth]);
 
   return (
-    <div className="flex-1 min-w-0 overflow-y-auto custom-scrollbar border-r border-gray-200 last:border-r-0">
+    <div className={`flex-1 min-w-0 overflow-y-auto custom-scrollbar ${
+      isHorizontalLayout ? 'border-b border-gray-200 last:border-b-0' : 'border-r border-gray-200 last:border-r-0'
+    }`}>
       {/* 연도 헤더 */}
       <div className="sticky top-0 z-10 bg-[#081429] text-white px-3 py-1.5 text-sm font-bold text-center">
         {year}년
@@ -174,6 +180,7 @@ const YearlyListView: React.FC<YearlyListViewProps> = ({
   events,
   departments,
   onEventClick,
+  layout = 'vertical',
 }) => {
   const currentYear = currentDate.getFullYear();
   const years = [currentYear - 1, currentYear, currentYear + 1];
@@ -193,8 +200,13 @@ const YearlyListView: React.FC<YearlyListViewProps> = ({
     return result;
   }, [events, years[0]]);
 
+  // 가로 분할: 세로로 3컬럼 나란히
+  // 세로 분할: 가로로 3행 쌓기
   return (
-    <div className="flex h-full overflow-hidden">
+    <div className={layout === 'vertical'
+      ? 'flex flex-row h-full overflow-hidden'
+      : 'flex flex-col h-full overflow-hidden'
+    }>
       {years.map(year => (
         <YearColumn
           key={year}
@@ -203,6 +215,7 @@ const YearlyListView: React.FC<YearlyListViewProps> = ({
           departments={departments}
           onEventClick={onEventClick}
           currentMonth={year === now.getFullYear() ? currentMonthIndex : undefined}
+          isHorizontalLayout={layout === 'horizontal'}
         />
       ))}
     </div>
