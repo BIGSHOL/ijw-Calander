@@ -5,6 +5,7 @@ import { collection, doc, getDocs, onSnapshot, orderBy, query, limit } from 'fir
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getApp } from 'firebase/app';
 import { db, storage } from '../firebaseConfig';
+import { openRecorderPopup } from '../utils/recorderPopup';
 import type { ConsultationReportSection, SpeakerUtterance } from '../types/consultationReport';
 
 const functions = getFunctions(getApp(), 'asia-northeast3');
@@ -199,9 +200,53 @@ export function useRegistrationRecording() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const [isRecording, setIsRecording] = useState(false);
+  const [isPopupRecording, setIsPopupRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // AssemblyAI 토큰 발급
+  const getAssemblyToken = useCallback(async (): Promise<string | null> => {
+    try {
+      const fns = getFunctions(getApp(), 'asia-northeast3');
+      const createToken = httpsCallable<Record<string, never>, { token: string }>(fns, 'createRealtimeToken');
+      const { data } = await createToken({});
+      return data.token;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // 팝업 녹음 시작 (우선)
+  const startPopupRecording = useCallback((): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const opened = openRecorderPopup(
+        '등록상담 녹음',
+        {
+          onComplete: (file) => {
+            setIsPopupRecording(false);
+            resolve(file);
+          },
+          onError: (message) => {
+            setIsPopupRecording(false);
+            reject(new Error(message));
+          },
+          onClose: () => {
+            setIsPopupRecording(false);
+            reject(new Error('녹음 창이 닫혔습니다.'));
+          },
+        },
+        getAssemblyToken,
+      );
+
+      if (!opened) {
+        reject(new Error('POPUP_BLOCKED'));
+      } else {
+        setIsPopupRecording(true);
+      }
+    });
+  }, [getAssemblyToken]);
+
+  // 인라인 녹음 (fallback)
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -346,11 +391,13 @@ export function useRegistrationRecording() {
     reportId,
     error,
     reset,
-    // 브라우저 녹음
-    isRecording,
+    // 브라우저 녹음 (팝업 우선, 인라인 fallback)
+    isRecording: isRecording || isPopupRecording,
+    isPopupRecording,
     recordingDuration,
     startRecording,
     stopRecording,
+    startPopupRecording,
   };
 }
 

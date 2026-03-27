@@ -1,11 +1,12 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Upload, Mic, MicOff, Calendar, User, Users, X, Square, PenLine } from 'lucide-react';
+import { Upload, Mic, MicOff, Calendar, User, Users, X, Square, PenLine, ExternalLink } from 'lucide-react';
 import { useUploadMeetingRecording } from '../../hooks/useMeetingRecording';
 import { format } from 'date-fns';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getApp } from 'firebase/app';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
 import { startRecoverySession, saveChunk, checkRecovery, recoverRecording, clearRecovery } from '../../utils/recordingRecovery';
+import { openRecorderPopup } from '../../utils/recorderPopup';
 
 const ACCEPTED_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/wav', 'audio/webm', 'audio/ogg'];
 const ACCEPTED_EXTENSIONS = ['.mp3', '.m4a', '.wav', '.webm', '.ogg'];
@@ -42,8 +43,9 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
   // 녹음 상태
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
+  const [isPopupRecording, setIsPopupRecording] = useState(false);
 
-  // 실시간 전사
+  // 실시간 전사 (인라인 fallback용)
   const wsRef = useRef<WebSocket | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
@@ -193,6 +195,53 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
     setSpeechStatus('off');
   };
 
+  // AssemblyAI 토큰 발급
+  const getAssemblyToken = useCallback(async (): Promise<string | null> => {
+    try {
+      const fns = getFunctions(getApp(), 'asia-northeast3');
+      const createToken = httpsCallable<Record<string, never>, { token: string }>(fns, 'createRealtimeToken');
+      const { data } = await createToken({});
+      return data.token;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // 팝업 녹음 시작
+  const startPopupRecording = useCallback(() => {
+    setError('');
+    const opened = openRecorderPopup(
+      '회의 녹음',
+      {
+        onComplete: (file) => {
+          setSelectedFile(file);
+          setIsPopupRecording(false);
+        },
+        onError: (message) => {
+          setError(message);
+          setIsPopupRecording(false);
+        },
+        onClose: () => {
+          setIsPopupRecording(false);
+        },
+      },
+      getAssemblyToken,
+    );
+    if (opened) {
+      setIsPopupRecording(true);
+      setSelectedFile(null);
+    }
+    return opened;
+  }, [getAssemblyToken]);
+
+  // 녹음 버튼: 팝업 우선, 차단 시 인라인 fallback
+  const handleRecordClick = useCallback(() => {
+    if (isRecording) { stopRecording(); return; }
+    const opened = startPopupRecording();
+    if (!opened) startRecording();
+  }, [isRecording, startPopupRecording]);
+
+  // 인라인 녹음 (fallback)
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -296,6 +345,7 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
   };
 
   const isSubmitting = isUploading || isProcessing;
+  const isBusy = isSubmitting || isPopupRecording;
 
   return (
     <div className="bg-white rounded-sm border shadow-sm">
@@ -419,27 +469,46 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
 
         {/* 녹음 버튼 */}
         <div className="flex flex-col items-center py-4">
-          <button
-            onClick={isRecording ? stopRecording : startRecording}
-            disabled={isSubmitting}
-            className={`
-              w-20 h-20 rounded-full flex items-center justify-center transition-all
-              ${isRecording
-                ? 'bg-red-100 border-2 border-red-400 text-red-600 animate-pulse hover:bg-red-200'
-                : 'bg-gray-100 border-2 border-gray-300 text-gray-500 hover:bg-gray-200 hover:border-gray-400'
-              }
-              ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-            `}
-          >
-            {isRecording ? <Square size={28} fill="currentColor" /> : <Mic size={28} />}
-          </button>
-          <p className="text-sm text-gray-500 mt-2">
-            {isRecording ? '녹음 중 — 누르면 정지' : '눌러서 녹음 시작'}
-          </p>
-          {(isRecording || recordSeconds > 0) && (
-            <p className={`text-2xl font-mono mt-1 ${isRecording ? 'text-red-500' : 'text-gray-400'}`}>
-              {formatTimer(recordSeconds)}
-            </p>
+          {isPopupRecording ? (
+            <>
+              <div className="w-20 h-20 rounded-full flex items-center justify-center bg-red-100 border-2 border-red-400 text-red-600 animate-pulse">
+                <ExternalLink size={28} />
+              </div>
+              <p className="text-sm text-red-500 mt-2 font-medium">
+                별도 창에서 녹음 중...
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                녹음 창을 닫지 마세요
+              </p>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={handleRecordClick}
+                disabled={isSubmitting}
+                className={`
+                  w-20 h-20 rounded-full flex items-center justify-center transition-all
+                  ${isRecording
+                    ? 'bg-red-100 border-2 border-red-400 text-red-600 animate-pulse hover:bg-red-200'
+                    : 'bg-gray-100 border-2 border-gray-300 text-gray-500 hover:bg-gray-200 hover:border-gray-400'
+                  }
+                  ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                `}
+              >
+                {isRecording ? <Square size={28} fill="currentColor" /> : <Mic size={28} />}
+              </button>
+              <p className="text-sm text-gray-500 mt-2">
+                {isRecording ? '녹음 중 — 누르면 정지' : '눌러서 녹음 시작'}
+              </p>
+              {isRecording && (
+                <p className="text-xs text-amber-500 mt-0.5">(인라인 모드 — 팝업 차단 시)</p>
+              )}
+              {(isRecording || recordSeconds > 0) && (
+                <p className={`text-2xl font-mono mt-1 ${isRecording ? 'text-red-500' : 'text-gray-400'}`}>
+                  {formatTimer(recordSeconds)}
+                </p>
+              )}
+            </>
           )}
         </div>
 
