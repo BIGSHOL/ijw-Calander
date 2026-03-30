@@ -6,6 +6,7 @@ export interface ExpenseItem {
   quantity: number;        // 수량
   unitPrice: number;       // 금액 (단가)
   totalPrice: number;      // 총액(VAT포함)
+  vatIncluded?: boolean;   // 부가세 10% 포함 여부
 }
 
 // 지출결의서

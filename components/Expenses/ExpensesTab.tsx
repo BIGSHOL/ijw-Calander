@@ -24,7 +24,7 @@ const CURRENCIES = [
   { symbol: '฿', label: '฿(바트)' },
   { symbol: 'A$', label: 'A$(호주달러)' },
 ];
-const EMPTY_ITEM: ExpenseItem = { purpose: '', vendor: '', description: '', quantity: 1, unitPrice: 0, totalPrice: 0 };
+const EMPTY_ITEM: ExpenseItem = { purpose: '', vendor: '', description: '', quantity: 1, unitPrice: 0, totalPrice: 0, vatIncluded: false };
 
 // ==================== 메인 컴포넌트 ====================
 interface ExpensesTabProps {
@@ -493,14 +493,16 @@ const ExpenseFormView: React.FC<{
   const [isSaving, setIsSaving] = useState(false);
 
   // 항목 수정
-  const updateItem = useCallback((idx: number, field: keyof ExpenseItem, value: string | number) => {
+  const updateItem = useCallback((idx: number, field: keyof ExpenseItem, value: string | number | boolean) => {
     setItems(prev => {
       const next = [...prev];
       next[idx] = { ...next[idx], [field]: value };
-      if (field === 'quantity' || field === 'unitPrice') {
+      if (field === 'quantity' || field === 'unitPrice' || field === 'vatIncluded') {
         const qty = field === 'quantity' ? Number(value) : next[idx].quantity;
         const price = field === 'unitPrice' ? Number(value) : next[idx].unitPrice;
-        next[idx].totalPrice = qty * price;
+        const vat = field === 'vatIncluded' ? !!value : !!next[idx].vatIncluded;
+        const base = qty * price;
+        next[idx].totalPrice = vat ? Math.round(base * 1.1) : base;
       }
       return next;
     });
@@ -637,9 +639,16 @@ const ExpenseFormView: React.FC<{
                   <input type="number" value={item.quantity || ''} onChange={e => updateItem(idx, 'quantity', Number(e.target.value))} placeholder="수량" className="px-1.5 py-1 text-[11px] border rounded text-right" />
                   <input type="number" value={item.unitPrice || ''} onChange={e => updateItem(idx, 'unitPrice', Number(e.target.value))} placeholder="금액" className="px-1.5 py-1 text-[11px] border rounded text-right" />
                 </div>
-                {item.totalPrice > 0 && (
-                  <div className="text-right text-[10px] font-bold text-amber-600 mt-1">총액: {currency}{item.totalPrice.toLocaleString()}</div>
-                )}
+                <div className="flex items-center justify-between mt-1">
+                  <label className="flex items-center gap-1 cursor-pointer">
+                    <input type="checkbox" checked={!!item.vatIncluded} onChange={e => updateItem(idx, 'vatIncluded', e.target.checked)}
+                      className="w-3 h-3 rounded border-gray-300 text-blue-600 focus:ring-blue-400" />
+                    <span className="text-[10px] text-gray-500">부가세 10% 포함</span>
+                  </label>
+                  {item.totalPrice > 0 && (
+                    <span className="text-[10px] font-bold text-amber-600">총액: {currency}{item.totalPrice.toLocaleString()}{item.vatIncluded ? ' (VAT포함)' : ''}</span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -660,8 +669,14 @@ const ExpenseFormView: React.FC<{
               <div><label className="block text-[11px] font-medium text-gray-500 mb-0.5">{paymentMethod === '계좌이체' ? '은행명' : '카드명'}</label>
                 <input value={bankName} onChange={e => setBankName(e.target.value)} placeholder={paymentMethod === '계좌이체' ? '예: 국민은행' : '예: 삼성카드'} className={inputCls} /></div>
             )}
-            <div><label className="block text-[11px] font-medium text-gray-500 mb-0.5">계좌번호</label>
-              <input value={accountNumber} onChange={e => setAccountNumber(e.target.value)} placeholder="계좌번호" className={inputCls} /></div>
+            {paymentMethod === '계좌이체' && (
+              <div><label className="block text-[11px] font-medium text-gray-500 mb-0.5">계좌번호</label>
+                <input value={accountNumber} onChange={e => setAccountNumber(e.target.value)} placeholder="계좌번호" className={inputCls} /></div>
+            )}
+            {(paymentMethod === '카드결제' || paymentMethod === '법인카드') && (
+              <div><label className="block text-[11px] font-medium text-gray-500 mb-0.5">카드번호 (끝 4자리)</label>
+                <input value={accountNumber} onChange={e => setAccountNumber(e.target.value)} placeholder="예: 9309" className={inputCls} /></div>
+            )}
             <div><label className="block text-[11px] font-medium text-gray-500 mb-0.5">비고</label>
               <input value={memo} onChange={e => setMemo(e.target.value)} placeholder="비고" className={inputCls} /></div>
           </div>
@@ -762,7 +777,10 @@ const ExpenseFormView: React.FC<{
                   <td className="border border-black px-2 py-3 text-center truncate">{item.description}</td>
                   <td className="border border-black px-2 py-3 text-center whitespace-nowrap">{item.quantity || ''}</td>
                   <td className="border border-black px-2 py-3 text-right whitespace-nowrap">{item.unitPrice ? `${currency}${item.unitPrice.toLocaleString()}` : ''}</td>
-                  <td className="border border-black px-2 py-3 text-right whitespace-nowrap">{item.totalPrice ? `${currency}${item.totalPrice.toLocaleString()}` : ''}</td>
+                  <td className="border border-black px-2 py-3 text-right whitespace-nowrap">
+                    {item.totalPrice ? `${currency}${item.totalPrice.toLocaleString()}` : ''}
+                    {item.vatIncluded && item.totalPrice > 0 && <span className="text-[8px] text-gray-500 ml-0.5">(VAT)</span>}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -786,8 +804,8 @@ const ExpenseFormView: React.FC<{
               <tr>
                 <td className="border border-black px-3 py-2 bg-gray-50 font-bold text-center whitespace-nowrap">정산방법</td>
                 <td className="border border-black px-3 py-2 truncate">{paymentMethod}</td>
-                <td className="border border-black px-3 py-2 bg-gray-50 font-bold text-center whitespace-nowrap">계좌번호</td>
-                <td className="border border-black px-3 py-2 truncate">{bankName ? `${bankName} ${accountNumber}` : accountNumber}</td>
+                <td className="border border-black px-3 py-2 bg-gray-50 font-bold text-center whitespace-nowrap">{paymentMethod === '계좌이체' ? '계좌번호' : paymentMethod === '현금' ? '' : '카드정보'}</td>
+                <td className="border border-black px-3 py-2 truncate">{paymentMethod === '현금' ? '' : bankName ? `${bankName} ${accountNumber}` : accountNumber}</td>
               </tr>
             </tbody>
           </table>
