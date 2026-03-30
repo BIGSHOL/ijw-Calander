@@ -538,6 +538,8 @@ const ExpenseFormView: React.FC<{
         },
         memo: memo.trim(),
         totalAmount,
+        receiptUrl: editData?.receiptUrl || '',
+        receiptUrls: editData?.receiptUrls || [],
         createdAt: editData?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         createdBy: editData?.createdBy || currentUser?.uid || '',
