@@ -741,7 +741,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                             <div style={{ height: `${NAME_SLOT_H * 2}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
                                                                                 <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{firstClasses[0].className}{firstClasses[0].room ? ` ${firstClasses[0].room}` : ''}</span>
                                                                             </div>
-                                                                            <div className="flex-1 overflow-hidden">
+                                                                            <div className="flex-1 min-h-0">
                                                                                 {renderCellClassCards(firstClasses, day, firstPeriodIndex, resource, colSpan, mergedDaysForCell, false)}
                                                                             </div>
                                                                         </div>
@@ -758,7 +758,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                     <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{secondClasses[0].className}</span>
                                                                                 )}
                                                                             </div>
-                                                                            <div className="flex-1 overflow-hidden">
+                                                                            <div className="flex-1 min-h-0">
                                                                                 {firstClasses.length > 0
                                                                                     ? renderCellClassCards(firstClasses, day, firstPeriodIndex, resource, colSpan, mergedDaysForCell, false)
                                                                                     : secondClasses.length > 0
@@ -1315,7 +1315,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         <div style={{ height: `${NAME_SLOT_H * 2}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
                                                                             <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{firstClasses[0].className}{firstClasses[0].room ? ` ${firstClasses[0].room}` : ''}</span>
                                                                         </div>
-                                                                        <div className="flex-1 overflow-hidden">
+                                                                        <div className="flex-1 min-h-0">
                                                                             {renderDayBasedClassCards(firstClasses, firstPeriodIndex, false)}
                                                                         </div>
                                                                     </div>
@@ -1332,7 +1332,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{secondClasses[0].className}</span>
                                                                             )}
                                                                         </div>
-                                                                        <div className="flex-1 overflow-hidden">
+                                                                        <div className="flex-1 min-h-0">
                                                                             {firstClasses.length > 0
                                                                                 ? renderDayBasedClassCards(firstClasses, firstPeriodIndex, false)
                                                                                 : secondClasses.length > 0
