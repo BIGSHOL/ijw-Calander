@@ -272,8 +272,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
     // td 내부 wrapper div 스타일 (td height는 CSS 최소값이므로 wrapper div로 실제 높이 제한)
     // 별도 테이블(월/목, 화/금, 수)의 행 높이를 통일하기 위해 필수
-    const cellWrapperStyle = (h: string | undefined): React.CSSProperties | undefined =>
-        h ? { height: h, maxHeight: h, overflowY: 'auto', overflowX: 'hidden' } : undefined;
+    // wrapper 스타일 없음 — 셀 높이는 내용에 맞게 자동 확장, 교시 컬럼은 별도 테이블이라 독립
+    const cellWrapperStyle = (_h: string | undefined): React.CSSProperties | undefined => undefined;
 
     // 수요일만
     const hasWednesday = orderedSelectedDays.includes('수');
