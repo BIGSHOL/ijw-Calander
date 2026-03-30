@@ -17,6 +17,7 @@ export default function TextbooksTab({ currentUser }: TextbooksTabProps) {
   const { catalog, saveCatalog, requests } = useTextbookRequests();
   const { hasPermission } = usePermissions(currentUser ?? null);
   const isAdmin = hasPermission('textbooks.admin');
+  const canEdit = hasPermission('textbooks.edit');
   const incompleteRequestCount = useMemo(
     () => requests.filter(r => !r.isCompleted || !r.isPaid || !r.isOrdered).length,
     [requests]
@@ -240,11 +241,11 @@ export default function TextbooksTab({ currentUser }: TextbooksTabProps) {
       <div className={`flex-1 overflow-auto ${viewMode === 'request' || viewMode === 'history' ? '' : 'p-4'}`}>
         {viewMode === 'request' ? (
           <Suspense fallback={<div className="text-center text-gray-400 text-sm py-8">로딩 중...</div>}>
-            <TextbookRequestView isAdmin={isAdmin} initialTab="create" onRequestCreated={() => setViewMode('history')} />
+            <TextbookRequestView isAdmin={isAdmin} canEdit={canEdit} currentUserName={currentUser?.displayName || currentUser?.name || currentUser?.koreanName} initialTab="create" onRequestCreated={() => setViewMode('history')} />
           </Suspense>
         ) : viewMode === 'history' ? (
           <Suspense fallback={<div className="text-center text-gray-400 text-sm py-8">로딩 중...</div>}>
-            <TextbookRequestView isAdmin={isAdmin} initialTab="history" />
+            <TextbookRequestView isAdmin={isAdmin} canEdit={canEdit} currentUserName={currentUser?.displayName || currentUser?.name || currentUser?.koreanName} initialTab="history" />
           </Suspense>
         ) : viewMode === 'list' ? (
           filteredCatalog.length === 0 ? (

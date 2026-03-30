@@ -310,11 +310,13 @@ const Pagination: React.FC<PaginationProps> = ({ page, totalPages, total, onPage
 
 interface TextbookRequestViewProps {
   isAdmin?: boolean;
+  canEdit?: boolean;
+  currentUserName?: string;
   initialTab?: SubTab;
   onRequestCreated?: () => void;
 }
 
-export default function TextbookRequestView({ isAdmin = false, initialTab, onRequestCreated }: TextbookRequestViewProps) {
+export default function TextbookRequestView({ isAdmin = false, canEdit = false, currentUserName, initialTab, onRequestCreated }: TextbookRequestViewProps) {
   const { requests, requestsLoading, accountSettings, catalog, createRequest, updateRequest, deleteRequest, copyToBillings, saveAccountSettings } =
     useTextbookRequests();
 
@@ -987,7 +989,7 @@ export default function TextbookRequestView({ isAdmin = false, initialTab, onReq
                         <th className="px-3 py-2 text-center font-medium text-gray-600">주문</th>
                         <th className="px-3 py-2 text-center font-medium text-gray-600">요청일</th>
                         <th className="px-3 py-2 text-center font-medium text-gray-600">저장</th>
-                        {effectiveAdmin && (
+                        {(effectiveAdmin || canEdit) && (
                           <th className="px-3 py-2 text-center font-medium text-gray-600">삭제</th>
                         )}
                       </tr>
@@ -1076,15 +1078,17 @@ export default function TextbookRequestView({ isAdmin = false, initialTab, onReq
                                 <Download size={14} />
                               </button>
                             </td>
-                            {effectiveAdmin && (
+                            {(effectiveAdmin || canEdit) && (
                               <td className="px-3 py-2.5 text-center">
-                                <button
-                                  onClick={() => handleDelete(r.id)}
-                                  className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                                  title="삭제"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
+                                {(effectiveAdmin || (canEdit && currentUserName && r.teacherName === currentUserName)) ? (
+                                  <button
+                                    onClick={() => handleDelete(r.id)}
+                                    className="p-1 rounded text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                    title="삭제"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                ) : null}
                               </td>
                             )}
                           </tr>
