@@ -942,15 +942,21 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                             <DndContext sensors={weekdayDndSensors} collisionDetection={closestCenter} onDragEnd={handleWeekdayGroupDragEnd}>
                                                 <SortableContext items={weekdayGroupOrderList} strategy={verticalListSortingStrategy}>
                                                     <div className="space-y-0.5">
-                                                        {weekdayGroupOrderList.map((group, index) => (
+                                                        {weekdayGroupOrderList.filter(g => g !== '주말').map((group, index, arr) => (
                                                             <SortableWeekdayItem
                                                                 key={group}
                                                                 id={group}
                                                                 index={index}
-                                                                total={weekdayGroupOrderList.length}
+                                                                total={arr.length}
                                                                 onMoveUp={() => moveWeekdayGroup(index, 'up')}
                                                                 onMoveDown={() => moveWeekdayGroup(index, 'down')}
                                                             />
+                                                        ))}
+                                                        {weekdayGroupOrderList.filter(g => g === '주말').map((group) => (
+                                                            <div key={group} className="flex items-center gap-1 px-1 py-0.5 rounded text-xs text-gray-400 bg-gray-50">
+                                                                <span className="flex-1">{group}</span>
+                                                                <span className="text-[10px]">고정</span>
+                                                            </div>
                                                         ))}
                                                     </div>
                                                 </SortableContext>

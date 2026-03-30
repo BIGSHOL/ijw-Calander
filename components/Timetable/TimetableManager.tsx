@@ -1162,8 +1162,12 @@ const TimetableManager = ({
     setIsTimetableSettingsOpen: externalSetIsTimetableSettingsOpen,
 }: TimetableManagerProps) => {
     const queryClient = useQueryClient();
-    const userDepartments = currentUser?.departments || ['math', 'highmath', 'english'];
-    console.log('[DEBUG] currentUser.departments:', currentUser?.departments, 'userDepartments:', userDepartments);
+    // master는 항상 전체 보기 (자동전체보기), 그 외는 소속 기반 필터링
+    const userDepartments: ('math' | 'highmath' | 'english')[] = currentUser?.role === 'master'
+        ? ['math', 'highmath', 'english']
+        : (currentUser?.departments && currentUser.departments.length > 0
+            ? currentUser.departments
+            : ['math', 'highmath', 'english']);
     const { hasPermission } = usePermissions(currentUser);
     const canEditMath = hasPermission('timetable.math.edit');
     const canEditEnglish = hasPermission('timetable.english.edit');

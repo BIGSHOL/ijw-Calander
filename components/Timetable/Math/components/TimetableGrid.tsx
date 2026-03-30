@@ -18,6 +18,9 @@ const renderTime = (time: string) => {
 // 빈 셀 배경색: 회색
 const EMPTY_CELL_BG = '#e5e7eb';
 
+// 교시 병합 셀의 반명 슬롯 높이 (sub-period당, px) — 반명 3줄까지 표시 가능
+const NAME_SLOT_H = 40;
+
 // hasClassOnDay replaced by resourceDayLookup (precomputed Map) inside component
 
 interface TimetableGridProps {
@@ -259,9 +262,9 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     const rowHeightValue = useMemo((): number | 'auto' => {
         if (!showStudents) return 'auto';
         if (rowHeight === 'compact') return 'auto';
-        const studentSlotH = rowHeight === 'short' ? 50 :
-            rowHeight === 'tall' ? 150 :
-                rowHeight === 'very-tall' ? 230 : 90;
+        const studentSlotH = rowHeight === 'short' ? 30 :
+            rowHeight === 'tall' ? 90 :
+                rowHeight === 'very-tall' ? 160 : 50;
         return cellSizePx + studentSlotH;
     }, [showStudents, rowHeight, cellSizePx]);
 
@@ -408,7 +411,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
             periodIndex: number,
             resource: string,
             colSpan: number,
-            mergedDaysForCell: string[]
+            mergedDaysForCell: string[],
+            overrideShowClassName?: boolean
         ) => {
             // 항상 첫 번째 수업을 대표로, 나머지는 mergedClasses로 통합
             const mergedClassesForCard = cellClasses.length > 1 ? cellClasses : undefined;
@@ -420,7 +424,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     span={getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)}
                     searchQuery={searchQuery}
                     showStudents={showStudents}
-                    showClassName={showClassName}
+                    showClassName={overrideShowClassName !== undefined ? overrideShowClassName : showClassName}
                     showSchool={showSchool}
                     showGrade={showGrade}
                     canEdit={getCanEdit(cls, resource)}
@@ -485,7 +489,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return (
             <div className="flex-shrink-0">
                 <div className="relative">
-                    <table className="border-collapse bg-gray-300" style={{ tableLayout: 'fixed', width: `${totalTableWidth}px` }}>
+                    <table className="border-collapse border-2 border-black" style={{ tableLayout: 'fixed', width: `${totalTableWidth}px` }}>
                         {/* colgroup으로 각 컬럼 너비 강제 */}
                         <colgroup>
                             {!hidePeriodColumn && <col style={{ width: '90px' }} />}
@@ -521,7 +525,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                             {/* Teacher/Room Row */}
                             <tr>
                                 {!hidePeriodColumn && <th
-                                    className={`p-1.5 text-period-label font-bold text-black border-b border-gray-200 border-r-2 border-r-black sticky left-0 z-30`}
+                                    className={`p-1.5 text-period-label font-bold text-black border-b border-b-black border-r-2 border-r-black sticky left-0 z-30`}
                                     rowSpan={2}
                                     style={{
                                         width: '90px',
@@ -550,12 +554,11 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                         <th
                                             key={resource}
                                             colSpan={colspan}
-                                            className="p-1.5 text-sm font-bold border-b border-r-2 border-r-black truncate"
+                                            className="p-1.5 text-sm font-bold border-b-2 border-b-black border-r-2 border-r-black truncate"
                                             style={{
                                                 ...headerWidthStyle,
                                                 backgroundColor: bgColor,
-                                                color: textColor,
-                                                borderBottomColor: bgColor
+                                                color: textColor
                                             }}
                                             title={resource}
                                         >
@@ -584,7 +587,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                         return (
                                             <th
                                                 key={`${resource}-${day}`}
-                                                className={`p-1.5 text-xxs font-bold text-center ${borderRightClass} ${isWeekend ? 'bg-orange-50 text-black' : day === '수' ? 'bg-green-50 text-black' : 'bg-gray-100 text-black'}`}
+                                                className={`p-1.5 text-xxs font-bold text-center border-b-2 border-b-black ${borderRightClass} ${isWeekend ? 'bg-orange-50 text-black' : day === '수' ? 'bg-green-50 text-black' : 'bg-gray-100 text-black'}`}
                                                 style={dayHeaderWidth}
                                             >
                                                 <div>{day}</div>
@@ -712,7 +715,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                             const bothEmpty = firstClasses.length === 0 && secondClasses.length === 0;
                                                             const sameClass = firstClasses.length > 0 && secondClasses.length > 0 && isSameClassNameSet(firstClasses, secondClasses);
                                                             const isLastDayForResource = (dayIndex + colSpan - 1) === daysForResource.length - 1;
-                                                            const borderRightClass = isLastDayForResource ? 'border-r-2 border-r-black' : 'border-r border-r-black';
+                                                            // 빈 셀은 내부 요일 세로줄 제거 (마지막 요일의 굵은 구분선만 유지)
+                                                            const borderRightClass = isLastDayForResource
+                                                                ? 'border-r-2 border-r-black'
+                                                                : (bothEmpty ? '' : 'border-r border-r-black');
 
                                                             cells.push(
                                                                 <td
@@ -723,22 +729,42 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 >
                                                                     <div style={cellWrapperStyle(cellStyle.height)}>
                                                                     {bothEmpty ? (
-                                                                        <div className="text-xxs text-gray-500 text-center py-1">
-                                                                            {viewType === 'room' ? resource : '빈 강의실'}
+                                                                        /* 빈 셀: 반명 슬롯 구조 유지 (빈 슬롯 2개 + 여백) */
+                                                                        <div className="flex flex-col h-full" style={{ backgroundColor: EMPTY_CELL_BG }}>
+                                                                            <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 border-b border-b-black" />
+                                                                            <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 border-b border-b-black" />
+                                                                            <div className="flex-1" />
                                                                         </div>
                                                                     ) : sameClass ? (
-                                                                        renderCellClassCards(firstClasses, day, firstPeriodIndex, resource, colSpan, mergedDaysForCell)
-                                                                    ) : (
+                                                                        /* 같은 수업: 반명 슬롯 2칸 합쳐서 표시 + 학생 영역 */
                                                                         <div className="flex flex-col h-full">
+                                                                            <div style={{ height: `${NAME_SLOT_H * 2}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
+                                                                                <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{firstClasses[0].className}{firstClasses[0].room ? ` ${firstClasses[0].room}` : ''}</span>
+                                                                            </div>
+                                                                            <div className="flex-1 overflow-hidden">
+                                                                                {renderCellClassCards(firstClasses, day, firstPeriodIndex, resource, colSpan, mergedDaysForCell, false)}
+                                                                            </div>
+                                                                        </div>
+                                                                    ) : (
+                                                                        /* 다른 수업 / 한쪽만 수업: 반명 슬롯 2개 + 학생 영역 */
+                                                                        <div className="flex flex-col h-full">
+                                                                            <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-b-black bg-white">
+                                                                                {firstClasses.length > 0 && (
+                                                                                    <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{firstClasses[0].className}</span>
+                                                                                )}
+                                                                            </div>
+                                                                            <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
+                                                                                {secondClasses.length > 0 && (
+                                                                                    <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{secondClasses[0].className}</span>
+                                                                                )}
+                                                                            </div>
                                                                             <div className="flex-1 overflow-hidden">
                                                                                 {firstClasses.length > 0
-                                                                                    ? renderCellClassCards(firstClasses, day, firstPeriodIndex, resource, colSpan, mergedDaysForCell)
-                                                                                    : <div className="h-full" style={{ backgroundColor: EMPTY_CELL_BG }} />}
-                                                                            </div>
-                                                                            <div className="flex-1 overflow-hidden border-t border-t-black">
-                                                                                {secondClasses.length > 0
-                                                                                    ? renderCellClassCards(secondClasses, day, secondPeriodIndex, resource, colSpan, mergedDaysForCell)
-                                                                                    : <div className="h-full" style={{ backgroundColor: EMPTY_CELL_BG }} />}
+                                                                                    ? renderCellClassCards(firstClasses, day, firstPeriodIndex, resource, colSpan, mergedDaysForCell, false)
+                                                                                    : secondClasses.length > 0
+                                                                                        ? renderCellClassCards(secondClasses, day, secondPeriodIndex, resource, colSpan, mergedDaysForCell, false)
+                                                                                        : null
+                                                                                }
                                                                             </div>
                                                                         </div>
                                                                     )}
@@ -1060,7 +1086,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return (
             <div key={day} className="flex-shrink-0">
                 <div className="relative">
-                    <table className="border-collapse bg-gray-300" style={{ tableLayout: 'fixed', width: `${totalDayTableWidth}px` }}>
+                    <table className="border-collapse border-2 border-black" style={{ tableLayout: 'fixed', width: `${totalDayTableWidth}px` }}>
                         {/* colgroup으로 각 컬럼 너비 강제 */}
                         <colgroup>
                             {!hidePeriodColumn && <col style={{ width: '90px' }} />}
@@ -1096,7 +1122,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                             <tr>
                                 {!hidePeriodColumn && (
                                     <th
-                                        className={`p-1.5 text-period-label font-bold text-black border-b border-gray-200 border-r-2 border-r-black sticky left-0 z-30`}
+                                        className={`p-1.5 text-period-label font-bold text-black border-b border-b-black border-r-2 border-r-black sticky left-0 z-30`}
                                         style={{
                                             width: '90px',
                                             minWidth: '90px',
@@ -1121,7 +1147,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                     return (
                                         <th
                                             key={resource}
-                                            className={`p-1.5 text-sm font-bold truncate ${borderRightClass}`}
+                                            className={`p-1.5 text-sm font-bold border-b-2 border-b-black truncate ${borderRightClass}`}
                                             style={{
                                                 ...singleCellWidthStyle,
                                                 backgroundColor: bgColor,
@@ -1206,9 +1232,12 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                         const bothEmpty = firstClasses.length === 0 && secondClasses.length === 0;
                                                         const sameClass = firstClasses.length > 0 && secondClasses.length > 0 && isSameClassNameSet(firstClasses, secondClasses);
                                                         const isLastResource = resourceIdx === resources.length - 1;
-                                                        const borderRightClass = isLastResource ? 'border-r-2 border-r-black' : 'border-r border-r-black';
+                                                        // 빈 셀은 내부 세로줄 제거
+                                                        const borderRightClass = isLastResource
+                                                            ? 'border-r-2 border-r-black'
+                                                            : (bothEmpty ? '' : 'border-r border-r-black');
 
-                                                        const renderDayBasedClassCards = (classes: TimetableClass[], periodIndex: number) => (
+                                                        const renderDayBasedClassCards = (classes: TimetableClass[], periodIndex: number, overrideShowClassName?: boolean) => (
                                                             classes.map((cls: TimetableClass) => (
                                                                 <ClassCard
                                                                     key={cls.id}
@@ -1216,7 +1245,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                     span={1}
                                                                     searchQuery={searchQuery}
                                                                     showStudents={showStudents}
-                                                                    showClassName={showClassName}
+                                                                    showClassName={overrideShowClassName !== undefined ? overrideShowClassName : showClassName}
                                                                     showSchool={showSchool}
                                                                     showGrade={showGrade}
                                                                     canEdit={getCanEdit(cls, resource)}
@@ -1274,22 +1303,42 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                             >
                                                                 <div style={cellWrapperStyle(cellStyle.height)}>
                                                                 {bothEmpty ? (
-                                                                    <div className="text-xxs text-gray-500 text-center py-1">
-                                                                        {viewType === 'room' ? resource : '빈 강의실'}
+                                                                    /* 빈 셀: 반명 슬롯 구조 유지 */
+                                                                    <div className="flex flex-col h-full" style={{ backgroundColor: EMPTY_CELL_BG }}>
+                                                                        <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 border-b border-b-black" />
+                                                                        <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 border-b border-b-black" />
+                                                                        <div className="flex-1" />
                                                                     </div>
                                                                 ) : sameClass ? (
-                                                                    renderDayBasedClassCards(firstClasses, firstPeriodIndex)
-                                                                ) : (
+                                                                    /* 같은 수업: 반명 슬롯 2칸 합쳐서 표시 + 학생 영역 */
                                                                     <div className="flex flex-col h-full">
+                                                                        <div style={{ height: `${NAME_SLOT_H * 2}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
+                                                                            <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{firstClasses[0].className}{firstClasses[0].room ? ` ${firstClasses[0].room}` : ''}</span>
+                                                                        </div>
+                                                                        <div className="flex-1 overflow-hidden">
+                                                                            {renderDayBasedClassCards(firstClasses, firstPeriodIndex, false)}
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    /* 다른 수업 / 한쪽만 수업: 반명 슬롯 2개 + 학생 영역 */
+                                                                    <div className="flex flex-col h-full">
+                                                                        <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-b-black bg-white">
+                                                                            {firstClasses.length > 0 && (
+                                                                                <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{firstClasses[0].className}</span>
+                                                                            )}
+                                                                        </div>
+                                                                        <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
+                                                                            {secondClasses.length > 0 && (
+                                                                                <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{secondClasses[0].className}</span>
+                                                                            )}
+                                                                        </div>
                                                                         <div className="flex-1 overflow-hidden">
                                                                             {firstClasses.length > 0
-                                                                                ? renderDayBasedClassCards(firstClasses, firstPeriodIndex)
-                                                                                : <div className="h-full" style={{ backgroundColor: EMPTY_CELL_BG }} />}
-                                                                        </div>
-                                                                        <div className="flex-1 overflow-hidden border-t border-t-black">
-                                                                            {secondClasses.length > 0
-                                                                                ? renderDayBasedClassCards(secondClasses, secondPeriodIndex)
-                                                                                : <div className="h-full" style={{ backgroundColor: EMPTY_CELL_BG }} />}
+                                                                                ? renderDayBasedClassCards(firstClasses, firstPeriodIndex, false)
+                                                                                : secondClasses.length > 0
+                                                                                    ? renderDayBasedClassCards(secondClasses, secondPeriodIndex, false)
+                                                                                    : null
+                                                                            }
                                                                         </div>
                                                                     </div>
                                                                 )}
@@ -1575,7 +1624,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     if (timetableViewMode === 'day-based') {
         return (
             <div className="overflow-auto h-full">
-                <div className="flex gap-4">
+                <div className="flex gap-0">
                     {dayBasedData.map(({ day, resources }) =>
                         renderDayBasedTable(day, resources, false)
                     )}
@@ -1592,23 +1641,135 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         '수요일': { resources: wednesdayResources, daysMap: wednesdayResourceDaysMap, isWednesday: true, hasData: hasWednesday && wednesdayResources.length > 0 },
     };
 
-    const orderedGroups = (weekdayGroupOrder && weekdayGroupOrder.length > 0)
+    const baseOrder = (weekdayGroupOrder && weekdayGroupOrder.length > 0)
         ? weekdayGroupOrder.filter(g => groupConfigs[g])
         : ['월/목', '화/금', '주말', '수요일'];
 
+    // 주말만 항상 맨 끝 고정
+    const nonWeekendGroups = baseOrder.filter(g => g !== '주말');
+    const orderedGroups = [...nonWeekendGroups, ...baseOrder.filter(g => g === '주말')];
+
     const activeGroups = orderedGroups.filter(g => groupConfigs[g]?.hasData);
+
+    // 평일 그룹 (교시 공유)과 주말 그룹 분리
+    const weekdayActiveGroups = activeGroups.filter(g => g !== '주말');
+    const weekendGroup = activeGroups.find(g => g === '주말');
+
+    // 평일 교시 전용 테이블 렌더링
+    const renderPeriodColumn = () => {
+        // 배경색
+        const bgHex = '#f3f4f6';
+
+        return (
+            <div className="flex-shrink-0 sticky left-0 z-30">
+                <table className="border-collapse border-2 border-black" style={{ tableLayout: 'fixed', width: '90px' }}>
+                    <colgroup>
+                        <col style={{ width: '90px' }} />
+                    </colgroup>
+                    <thead className="sticky top-0 z-20">
+                        {/* 빈 타이틀 행 (다른 테이블의 그룹 타이틀 행과 높이 맞춤) */}
+                        <tr>
+                            <th className="bg-gray-700 text-white px-3 py-2 font-bold text-sm text-left" style={{ width: '90px', minWidth: '90px' }}>
+                                &nbsp;
+                            </th>
+                        </tr>
+                        {/* 교시 헤더 (선생님 행 + 요일 행 합산 높이) */}
+                        <tr>
+                            <th
+                                className="p-1.5 text-period-label font-bold text-black border-b-2 border-b-black"
+                                style={{ width: '90px', minWidth: '90px', backgroundColor: bgHex }}
+                            >
+                                교시
+                            </th>
+                        </tr>
+                        {/* 날짜 행 자리 */}
+                        <tr>
+                            <th
+                                className="p-1.5 text-xxs font-bold text-center border-b-2 border-b-black bg-gray-100 text-black"
+                                style={{ width: '90px', minWidth: '90px' }}
+                            >
+                                &nbsp;
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody className="timetable-body">
+                        {(() => {
+                            const rows: React.ReactNode[] = [];
+                            const processedPeriods = new Set<string>();
+
+                            MATH_GROUPED_PERIODS.forEach(groupId => {
+                                const periodIds = MATH_GROUP_PERIOD_IDS[groupId];
+                                const [firstPeriod, secondPeriod] = periodIds;
+                                const hasFirst = currentPeriods.includes(firstPeriod);
+                                const hasSecond = currentPeriods.includes(secondPeriod);
+
+                                if (!hasFirst && !hasSecond) return;
+
+                                const groupInfo = MATH_GROUP_DISPLAY[groupId];
+
+                                if (hasFirst && hasSecond) {
+                                    processedPeriods.add(firstPeriod);
+                                    processedPeriods.add(secondPeriod);
+
+                                    const doubleHeightValue = isCompactMode ? 90 : (rowHeightValue as number) * 2;
+                                    rows.push(
+                                        <tr key={`period-col-group-${groupId}`}>
+                                            <td
+                                                className="p-1.5 text-period-label font-bold text-black text-center border-b-2 border-b-black"
+                                                style={{ width: '90px', minWidth: '90px', height: `${doubleHeightValue}px`, backgroundColor: bgHex }}
+                                            >
+                                                <div className="font-bold text-period-label text-black">{groupInfo.label}</div>
+                                                <div>{renderTime(groupInfo.time)}</div>
+                                            </td>
+                                        </tr>
+                                    );
+                                } else {
+                                    periodIds.forEach(period => {
+                                        if (!currentPeriods.includes(period) || processedPeriods.has(period)) return;
+                                        processedPeriods.add(period);
+                                        const periodTime = MATH_PERIOD_TIMES[period] || period;
+                                        const heightValue = isCompactMode ? 45 : rowHeightValue;
+                                        rows.push(
+                                            <tr key={`period-col-${period}`}>
+                                                <td
+                                                    className="p-1.5 text-period-label font-bold text-black text-center border-b-2 border-b-black"
+                                                    style={{ width: '90px', minWidth: '90px', height: `${heightValue}px`, backgroundColor: bgHex }}
+                                                >
+                                                    <div className="font-bold text-period-label text-black">{period}</div>
+                                                    <div>{renderTime(periodTime)}</div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    });
+                                }
+                            });
+
+                            return rows;
+                        })()}
+                    </tbody>
+                </table>
+            </div>
+        );
+    };
 
     return (
         <div className="overflow-auto h-full">
-            <div className="flex gap-4">
-                {activeGroups.map((groupName) => {
+            <div className="flex gap-0">
+                {/* 평일: 좌측 교시 컬럼 1개 공유 */}
+                {weekdayActiveGroups.length > 0 && renderPeriodColumn()}
+                {weekdayActiveGroups.map((groupName) => {
                     const config = groupConfigs[groupName];
                     return (
                         <React.Fragment key={groupName}>
-                            {renderTable(config.resources, config.daysMap, groupName, config.isWednesday, false)}
+                            {renderTable(config.resources, config.daysMap, groupName, config.isWednesday, true)}
                         </React.Fragment>
                     );
                 })}
+                {/* 주말: 자체 교시 컬럼 포함 */}
+                {weekendGroup && (() => {
+                    const config = groupConfigs[weekendGroup];
+                    return renderTable(config.resources, config.daysMap, weekendGroup, config.isWednesday, false);
+                })()}
             </div>
         </div>
     );

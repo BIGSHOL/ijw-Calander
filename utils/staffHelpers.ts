@@ -65,7 +65,7 @@ export const staffToUserProfile = (staff: StaffMember): UserProfile => {
     staffId: staff.id,
     allowedDepartments: [],
     canEdit: isApproved && hasValidRole,
-    departments: staff.departments || ['math', 'highmath', 'english'],
+    departments: staff.departments && staff.departments.length > 0 ? staff.departments : ['math', 'highmath', 'english'],
   };
 };
 
