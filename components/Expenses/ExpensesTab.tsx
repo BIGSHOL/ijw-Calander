@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { Plus, Trash2, ChevronLeft, ChevronRight, FileText, List, Download, Search, X, Check, Edit2, Paperclip, Image as ImageIcon } from 'lucide-react';
+import { Plus, Trash2, ChevronLeft, ChevronRight, FileText, List, Download, Search, X, Check, Paperclip, Image as ImageIcon } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useExpenses, useCreateExpense, useDeleteExpense, useToggleApproval, useUpdateReceipt, useUpdateReceiptUrls } from '../../hooks/useExpenses';
 import { Expense, ExpenseItem } from '../../types/expense';
@@ -212,7 +212,7 @@ const ExpenseListView: React.FC<{ onEdit: (e: Expense) => void; onNewClick: () =
               <th className="px-1 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap">대표</th>
               <th className="px-1 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap">집행자</th>
               <th className="px-1 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap">첨부</th>
-              <th className="px-1 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap">관리</th>
+              <th className="px-1 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap">삭제</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -273,10 +273,7 @@ const ExpenseListView: React.FC<{ onEdit: (e: Expense) => void; onNewClick: () =
                   )}
                 </td>
                 <td className="px-1 py-2 text-center" onClick={e => e.stopPropagation()}>
-                  <div className="flex items-center justify-center gap-0.5">
-                    <button onClick={() => onEdit(expense)} className="p-0.5 rounded text-blue-500 hover:bg-blue-50"><Edit2 size={12} /></button>
-                    <button onClick={() => handleDelete(expense.id)} className="p-0.5 rounded text-red-400 hover:bg-red-50"><Trash2 size={12} /></button>
-                  </div>
+                  <button onClick={() => handleDelete(expense.id)} className="p-0.5 rounded text-red-400 hover:bg-red-50"><Trash2 size={12} /></button>
                 </td>
               </tr>
               );
@@ -627,9 +624,9 @@ const ExpenseFormView: React.FC<{
               <div key={idx} className="bg-gray-50 rounded p-2 border border-gray-100">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] font-bold text-gray-400">No.{idx + 1}</span>
-                  {(item.purpose || item.vendor || item.description) && (
-                    <button onClick={() => setItems(prev => { const n = [...prev]; n[idx] = { ...EMPTY_ITEM }; return n; })}
-                      className="text-gray-300 hover:text-red-400"><X size={10} /></button>
+                  {items.length > 1 && (
+                    <button onClick={() => setItems(prev => prev.filter((_, i) => i !== idx))}
+                      className="text-gray-300 hover:text-red-400" title="항목 삭제"><X size={10} /></button>
                   )}
                 </div>
                 <div className="grid grid-cols-2 gap-1.5">
