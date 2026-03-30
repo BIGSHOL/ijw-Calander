@@ -236,8 +236,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
   const { hasPermission } = usePermissions(currentUser);
 
   // 권한 체크
-  const canManageClassHistory = currentUser?.role === 'master' || hasPermission('students.manage_class_history');
-  const canEditEnrollmentDates = currentUser?.role === 'master' || hasPermission('students.edit_enrollment_dates');
+  const canManageClassHistory = (currentUser?.role === 'master' || currentUser?.role === 'admin') || hasPermission('students.manage_class_history');
+  const canEditEnrollmentDates = (currentUser?.role === 'master' || currentUser?.role === 'admin') || hasPermission('students.edit_enrollment_dates');
 
   // 날짜 수정 상태 (key = subject_className, field = startDate/endDate)
   const [editingDate, setEditingDate] = useState<{ key: string; field: 'startDate' | 'endDate' } | null>(null);

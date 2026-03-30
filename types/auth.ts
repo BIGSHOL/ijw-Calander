@@ -201,13 +201,13 @@ export const DEFAULT_ROLE_PERMISSIONS: RolePermissions = {
     // Tuition Calculator
     'tuition.view': true, 'tuition.edit': true, 'tuition.manage': true,
     // Recording (상담녹음)
-    'recording.edit': true, 'recording.delete': false,
+    'recording.edit': true, 'recording.delete': true,
     // Meeting Minutes (회의록)
-    'meeting.view': true, 'meeting.edit': true, 'meeting.delete': false,
+    'meeting.view': true, 'meeting.edit': true, 'meeting.delete': true,
     // Student Consultations (학생상담)
     'student_consultations.view': true, 'student_consultations.create': true, 'student_consultations.edit': true,
     // Staff (직원관리)
-    'staff.view': true, 'staff.edit': true, 'staff.delete': false,
+    'staff.view': true, 'staff.edit': true, 'staff.delete': true,
     // Timetable Distribution (시간표배포)
     'timetable_distribution.view': true, 'timetable_distribution.edit': true,
     // Expenses (지출관리)

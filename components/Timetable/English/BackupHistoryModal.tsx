@@ -89,8 +89,8 @@ const BackupHistoryModal: React.FC<BackupHistoryModalProps> = ({ isOpen, onClose
     const [selectedBackup, setSelectedBackup] = useState<BackupEntry | null>(null);
 
     const { hasPermission } = usePermissions(currentUser);
-    const canRestore = hasPermission('timetable.english.backup.restore') || currentUser?.role === 'master';
-    const isMaster = currentUser?.role === 'master';
+    const canRestore = hasPermission('timetable.english.backup.restore') || currentUser?.role === 'master' || currentUser?.role === 'admin';
+    const isMaster = currentUser?.role === 'master' || currentUser?.role === 'admin';
 
     useEscapeClose(onClose);
 

@@ -100,7 +100,7 @@ const EventModalActions: React.FC<EventModalActionsProps> = ({
         // Author Display (Bottom Left) for new events
         <div className="flex flex-col justify-center">
           <span className="text-xxs text-gray-400 mb-0.5">작성자</span>
-          {(currentUser?.canManageEventAuthors || currentUser?.role === 'master') ? (
+          {(currentUser?.canManageEventAuthors || currentUser?.role === 'master' || currentUser?.role === 'admin') ? (
             <div className="relative">
               <select
                 value={authorId}

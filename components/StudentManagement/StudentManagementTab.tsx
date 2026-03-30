@@ -285,7 +285,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
                   <Database className="w-3.5 h-3.5" />
                 </button>
             )}
-            {currentUser?.role === 'master' && (
+            {(currentUser?.role === 'master' || currentUser?.role === 'admin') && (
                 <button
                   onClick={() => setShowMergeModal(true)}
                   className="p-1.5 text-white hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"
@@ -312,7 +312,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
             )}
-            {currentUser?.role === 'master' && (
+            {(currentUser?.role === 'master' || currentUser?.role === 'admin') && (
                 <button
                   onClick={() => setShowBulkEnglishNameModal(true)}
                   className="p-1.5 text-accent hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"
@@ -321,7 +321,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
                   <Languages className="w-3.5 h-3.5" />
                 </button>
             )}
-            {currentUser?.role === 'master' && (
+            {(currentUser?.role === 'master' || currentUser?.role === 'admin') && (
                 <button
                   onClick={() => setShowMakeEduSyncModal(true)}
                   className="p-1.5 text-cyan-400 hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"

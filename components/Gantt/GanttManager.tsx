@@ -318,7 +318,7 @@ const GanttManager: React.FC<GanttManagerProps> = ({ userProfile, allUsers }) =>
                     )}
 
                     {/* Settings Button */}
-                    {(userProfile?.role === 'master' || hasPermission('gantt.edit')) && (
+                    {(userProfile?.role === 'master' || userProfile?.role === 'admin' || hasPermission('gantt.edit')) && (
                         <button
                             onClick={() => setIsSettingsOpen(true)}
                             className="flex items-center justify-center w-8 h-8 text-gray-400 hover:text-white hover:bg-white/10 rounded-sm transition-colors"

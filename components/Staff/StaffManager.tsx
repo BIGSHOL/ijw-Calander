@@ -44,7 +44,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({
   const { staff, loading, error, refreshStaff, addStaff, updateStaff, deleteStaff } = useStaff();
   const { leaves, pendingCount } = useStaffLeaves();
 
-  const isMaster = currentUserProfile?.role === 'master';
+  const isMaster = currentUserProfile?.role === 'master' || currentUserProfile?.role === 'admin';
   const { hasPermission } = usePermissions(currentUserProfile ?? null);
   const canChangeRole = hasPermission('users.change_role');
   const canChangePermissions = hasPermission('users.change_permissions');

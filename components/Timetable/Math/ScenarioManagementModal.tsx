@@ -83,9 +83,9 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
     const [newScenarioDesc, setNewScenarioDesc] = useState('');
 
     const { hasPermission } = usePermissions(currentUser);
-    const canEdit = hasPermission('timetable.math.edit') || currentUser?.role === 'master';
-    const canManageSimulation = hasPermission('timetable.math.simulation') || currentUser?.role === 'master';
-    const isMaster = currentUser?.role === 'master';
+    const canEdit = hasPermission('timetable.math.edit') || currentUser?.role === 'master' || currentUser?.role === 'admin';
+    const canManageSimulation = hasPermission('timetable.math.simulation') || currentUser?.role === 'master' || currentUser?.role === 'admin';
+    const isMaster = currentUser?.role === 'master' || currentUser?.role === 'admin';
 
     // SimulationContext 사용 (새 구조)
     const simulation = useMathSimulationOptional();

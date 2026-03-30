@@ -53,12 +53,12 @@ export function checkProjectAccess(
         };
     }
 
-    // 2. Admin can view/edit all, delete own projects only
+    // 2. Admin can view/edit/delete all
     if (user.role === 'admin') {
         return {
             canView: true,
             canEdit: true,
-            canDelete: project.createdBy === user.uid,
+            canDelete: true,
             canManageMembers: true,
             accessReason: 'Admin role'
         };

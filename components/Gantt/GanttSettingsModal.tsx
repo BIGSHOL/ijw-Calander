@@ -86,7 +86,7 @@ const GanttSettingsModal: React.FC<GanttSettingsModalProps> = ({
                 <h3 className="text-primary font-bold text-xs">부서 관리</h3>
               </div>
               <div className="p-2">
-                <DepartmentsTab isMaster={currentUser?.role === 'master'} />
+                <DepartmentsTab isMaster={currentUser?.role === 'master' || currentUser?.role === 'admin'} />
               </div>
             </div>
           )}
@@ -97,7 +97,7 @@ const GanttSettingsModal: React.FC<GanttSettingsModalProps> = ({
                 <h3 className="text-primary font-bold text-xs">카테고리 관리</h3>
               </div>
               <div className="p-2">
-                <GanttCategoriesTab isMaster={currentUser?.role === 'master'} />
+                <GanttCategoriesTab isMaster={currentUser?.role === 'master' || currentUser?.role === 'admin'} />
               </div>
             </div>
           )}
