@@ -15,17 +15,8 @@ const renderTime = (time: string) => {
     return <>{time.slice(0, idx + 1)}<br />{time.slice(idx + 1)}</>;
 };
 
-// 빈 셀 배경색: teacher bgColor를 15% 투명도로 적용
-const getEmptyCellBg = (resource: string, teachers: Teacher[]): string => {
-    const t = teachers.find(t => t.name === resource);
-    if (!t?.bgColor) return '#e5e7eb'; // gray-200 fallback
-    // hex → rgba 15%
-    const hex = t.bgColor.replace('#', '');
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-    return `rgba(${r},${g},${b},0.15)`;
-};
+// 빈 셀 배경색: 회색
+const EMPTY_CELL_BG = '#e5e7eb';
 
 // hasClassOnDay replaced by resourceDayLookup (precomputed Map) inside component
 
@@ -639,17 +630,18 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
                                         const groupInfo = MATH_GROUP_DISPLAY[groupId];
 
-                                        // 두 교시 모두 있으면 헤더만 병합 (rowSpan=2), 셀은 각각 표시
+                                        // 두 교시 모두 있으면 1행으로 합쳐서 표시
                                         if (hasFirst && hasSecond) {
                                             processedPeriods.add(firstPeriod);
                                             processedPeriods.add(secondPeriod);
 
-                                            // 첫 번째 행: 교시 헤더(rowSpan=2) + 첫 번째 교시 셀들
+                                            const firstPeriodIndex = currentPeriods.indexOf(firstPeriod);
+                                            const secondPeriodIndex = currentPeriods.indexOf(secondPeriod);
+
                                             rows.push(
-                                                <tr key={`group-${groupId}-first`}>
+                                                <tr key={`group-${groupId}`}>
                                                     {!hidePeriodColumn && (
                                                         <td
-                                                            rowSpan={2}
                                                             className={`p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-2 border-b-black border-r-2 border-r-black`}
                                                             style={{
                                                                 width: '90px',
@@ -663,43 +655,23 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                     )}
                                                     {resources.map(resource => {
                                                         const daysForResource = isWednesdayTable ? ['수'] : (daysMap.get(resource) || []);
-                                                        const periodIndex = currentPeriods.indexOf(firstPeriod);
 
                                                         const cells: React.ReactNode[] = [];
                                                         let dayIndex = 0;
 
                                                         while (dayIndex < daysForResource.length) {
                                                             const day = daysForResource[dayIndex];
-                                                            const cellClasses = getClassesForCell(filteredClasses, day, firstPeriod, resource, viewType);
-
-                                                            // 수직 병합 확인
-                                                            const shouldSkipThisCell = cellClasses.some((cls: TimetableClass) =>
-                                                                shouldSkipCell(cls, day, periodIndex, cellClasses, currentPeriods, filteredClasses, viewType)
-                                                            );
-
-                                                            if (shouldSkipThisCell) {
-                                                                dayIndex++;
-                                                                continue;
-                                                            }
-
-                                                            // 수직 병합 span 계산
-                                                            const maxRowSpan = Math.max(1, ...cellClasses.map((cls: TimetableClass) =>
-                                                                getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)
-                                                            ));
+                                                            const firstClasses = getClassesForCell(filteredClasses, day, firstPeriod, resource, viewType);
+                                                            const secondClasses = getClassesForCell(filteredClasses, day, secondPeriod, resource, viewType);
 
                                                             // 수평 병합 확인 (같은 className 세트면 요일 병합)
                                                             let shouldSkipHorizontalMerge = false;
-                                                            if (!isWednesdayTable && cellClasses.length > 0 && dayIndex > 0) {
-                                                                for (let prevIdx = dayIndex - 1; prevIdx >= 0; prevIdx--) {
-                                                                    const prevDay = daysForResource[prevIdx];
-                                                                    const prevDayClasses = getClassesForCell(filteredClasses, prevDay, firstPeriod, resource, viewType);
-
-                                                                    if (isSameClassNameSet(cellClasses, prevDayClasses)) {
-                                                                        shouldSkipHorizontalMerge = true;
-                                                                        break;
-                                                                    } else {
-                                                                        break;
-                                                                    }
+                                                            if (!isWednesdayTable && (firstClasses.length > 0 || secondClasses.length > 0) && dayIndex > 0) {
+                                                                const prevDay = daysForResource[dayIndex - 1];
+                                                                const prevFirst = getClassesForCell(filteredClasses, prevDay, firstPeriod, resource, viewType);
+                                                                const prevSecond = getClassesForCell(filteredClasses, prevDay, secondPeriod, resource, viewType);
+                                                                if (isSameClassNameSet(firstClasses, prevFirst) && isSameClassNameSet(secondClasses, prevSecond)) {
+                                                                    shouldSkipHorizontalMerge = true;
                                                                 }
                                                             }
 
@@ -708,24 +680,17 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 continue;
                                                             }
 
-                                                            // 수평 병합 span 계산 (같은 className 세트 + 같은 rowSpan이면 병합)
+                                                            // 수평 병합 span
                                                             let colSpan = 1;
                                                             const mergedDaysForCell: string[] = [day];
-                                                            if (!isWednesdayTable && cellClasses.length > 0) {
+                                                            if (!isWednesdayTable && (firstClasses.length > 0 || secondClasses.length > 0)) {
                                                                 for (let nextIdx = dayIndex + 1; nextIdx < daysForResource.length; nextIdx++) {
                                                                     const nextDay = daysForResource[nextIdx];
-                                                                    const nextDayClasses = getClassesForCell(filteredClasses, nextDay, firstPeriod, resource, viewType);
-
-                                                                    if (isSameClassNameSet(cellClasses, nextDayClasses)) {
-                                                                        const nextRowSpan = Math.max(1, ...nextDayClasses.map((c: TimetableClass) =>
-                                                                            getConsecutiveSpan(c, nextDay, periodIndex, currentPeriods, filteredClasses, viewType)
-                                                                        ));
-                                                                        if (nextRowSpan === maxRowSpan) {
-                                                                            colSpan++;
-                                                                            mergedDaysForCell.push(nextDay);
-                                                                        } else {
-                                                                            break;
-                                                                        }
+                                                                    const nextFirst = getClassesForCell(filteredClasses, nextDay, firstPeriod, resource, viewType);
+                                                                    const nextSecond = getClassesForCell(filteredClasses, nextDay, secondPeriod, resource, viewType);
+                                                                    if (isSameClassNameSet(firstClasses, nextFirst) && isSameClassNameSet(secondClasses, nextSecond)) {
+                                                                        colSpan++;
+                                                                        mergedDaysForCell.push(nextDay);
                                                                     } else {
                                                                         break;
                                                                     }
@@ -735,145 +700,48 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                             const baseWidthStyle = colSpan > 1
                                                                 ? getMergedCellWidthStyle(colSpan)
                                                                 : singleCellWidthStyle;
-                                                            const heightValue = rowHeightValue;
-                                                            const compactRowHeight = 45;
-                                                            const hasClass = cellClasses.length > 0;
-                                                            const cellStyle = isCompactMode
-                                                                ? { ...baseWidthStyle, height: hasClass ? `${compactRowHeight * maxRowSpan}px` : undefined }
-                                                                : { ...baseWidthStyle, height: `${(heightValue as number) * maxRowSpan}px` };
+                                                            // 높이: 2교시분
+                                                            const doubleHeightValue = isCompactMode
+                                                                ? (firstClasses.length > 0 || secondClasses.length > 0 ? 90 : undefined)
+                                                                : (rowHeightValue as number) * 2;
+                                                            const cellStyle = {
+                                                                ...baseWidthStyle,
+                                                                height: doubleHeightValue ? `${doubleHeightValue}px` : undefined
+                                                            };
 
-                                                            const isEmpty = cellClasses.length === 0;
+                                                            const bothEmpty = firstClasses.length === 0 && secondClasses.length === 0;
+                                                            const sameClass = firstClasses.length > 0 && secondClasses.length > 0 && isSameClassNameSet(firstClasses, secondClasses);
                                                             const isLastDayForResource = (dayIndex + colSpan - 1) === daysForResource.length - 1;
                                                             const borderRightClass = isLastDayForResource ? 'border-r-2 border-r-black' : 'border-r border-r-black';
 
                                                             cells.push(
                                                                 <td
-                                                                    key={`${resource}-${day}-${firstPeriod}`}
+                                                                    key={`${resource}-${day}-${groupId}`}
                                                                     className={`p-0 align-top border-b-2 border-b-black overflow-hidden ${borderRightClass}`}
-                                                                    style={{ ...cellStyle, ...(isEmpty ? { backgroundColor: getEmptyCellBg(resource, teachers) } : {}) }}
-                                                                    rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
+                                                                    style={{ ...cellStyle, ...(bothEmpty ? { backgroundColor: EMPTY_CELL_BG } : {}) }}
                                                                     colSpan={colSpan > 1 ? colSpan : undefined}
                                                                 >
                                                                     <div style={cellWrapperStyle(cellStyle.height)}>
-                                                                    {isEmpty ? (
+                                                                    {bothEmpty ? (
                                                                         <div className="text-xxs text-gray-500 text-center py-1">
                                                                             {viewType === 'room' ? resource : '빈 강의실'}
                                                                         </div>
-                                                                    ) : renderCellClassCards(cellClasses, day, periodIndex, resource, colSpan, mergedDaysForCell)}
-                                                                    </div>
-                                                                </td>
-                                                            );
-
-                                                            dayIndex += colSpan;
-                                                        }
-
-                                                        return cells;
-                                                    })}
-                                                </tr>
-                                            );
-
-                                            // 두 번째 행: 교시 헤더 없음 (rowSpan으로 병합됨) + 두 번째 교시 셀들
-                                            rows.push(
-                                                <tr key={`group-${groupId}-second`}>
-                                                    {resources.map(resource => {
-                                                        const daysForResource = isWednesdayTable ? ['수'] : (daysMap.get(resource) || []);
-                                                        const periodIndex = currentPeriods.indexOf(secondPeriod);
-
-                                                        const cells: React.ReactNode[] = [];
-                                                        let dayIndex = 0;
-
-                                                        while (dayIndex < daysForResource.length) {
-                                                            const day = daysForResource[dayIndex];
-                                                            const cellClasses = getClassesForCell(filteredClasses, day, secondPeriod, resource, viewType);
-
-                                                            // 수직 병합 확인
-                                                            const shouldSkipThisCell = cellClasses.some((cls: TimetableClass) =>
-                                                                shouldSkipCell(cls, day, periodIndex, cellClasses, currentPeriods, filteredClasses, viewType)
-                                                            );
-
-                                                            if (shouldSkipThisCell) {
-                                                                dayIndex++;
-                                                                continue;
-                                                            }
-
-                                                            // 수직 병합 span 계산
-                                                            const maxRowSpan = Math.max(1, ...cellClasses.map((cls: TimetableClass) =>
-                                                                getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)
-                                                            ));
-
-                                                            // 수평 병합 확인 (같은 className 세트면 요일 병합)
-                                                            let shouldSkipHorizontalMerge = false;
-                                                            if (!isWednesdayTable && cellClasses.length > 0 && dayIndex > 0) {
-                                                                for (let prevIdx = dayIndex - 1; prevIdx >= 0; prevIdx--) {
-                                                                    const prevDay = daysForResource[prevIdx];
-                                                                    const prevDayClasses = getClassesForCell(filteredClasses, prevDay, secondPeriod, resource, viewType);
-
-                                                                    if (isSameClassNameSet(cellClasses, prevDayClasses)) {
-                                                                        shouldSkipHorizontalMerge = true;
-                                                                        break;
-                                                                    } else {
-                                                                        break;
-                                                                    }
-                                                                }
-                                                            }
-
-                                                            if (shouldSkipHorizontalMerge) {
-                                                                dayIndex++;
-                                                                continue;
-                                                            }
-
-                                                            // 수평 병합 span 계산 (같은 className 세트 + 같은 rowSpan이면 병합)
-                                                            let colSpan = 1;
-                                                            const mergedDaysForCell: string[] = [day];
-                                                            if (!isWednesdayTable && cellClasses.length > 0) {
-                                                                for (let nextIdx = dayIndex + 1; nextIdx < daysForResource.length; nextIdx++) {
-                                                                    const nextDay = daysForResource[nextIdx];
-                                                                    const nextDayClasses = getClassesForCell(filteredClasses, nextDay, secondPeriod, resource, viewType);
-
-                                                                    if (isSameClassNameSet(cellClasses, nextDayClasses)) {
-                                                                        const nextRowSpan = Math.max(1, ...nextDayClasses.map((c: TimetableClass) =>
-                                                                            getConsecutiveSpan(c, nextDay, periodIndex, currentPeriods, filteredClasses, viewType)
-                                                                        ));
-                                                                        if (nextRowSpan === maxRowSpan) {
-                                                                            colSpan++;
-                                                                            mergedDaysForCell.push(nextDay);
-                                                                        } else {
-                                                                            break;
-                                                                        }
-                                                                    } else {
-                                                                        break;
-                                                                    }
-                                                                }
-                                                            }
-
-                                                            const baseWidthStyle = colSpan > 1
-                                                                ? getMergedCellWidthStyle(colSpan)
-                                                                : singleCellWidthStyle;
-                                                            const heightValue = rowHeightValue;
-                                                            const compactRowHeight = 45;
-                                                            const hasClass = cellClasses.length > 0;
-                                                            const cellStyle = isCompactMode
-                                                                ? { ...baseWidthStyle, height: hasClass ? `${compactRowHeight * maxRowSpan}px` : undefined }
-                                                                : { ...baseWidthStyle, height: `${(heightValue as number) * maxRowSpan}px` };
-
-                                                            const isEmpty = cellClasses.length === 0;
-                                                            const isLastDayForResource = (dayIndex + colSpan - 1) === daysForResource.length - 1;
-                                                            const borderRightClass = isLastDayForResource ? 'border-r-2 border-r-black' : 'border-r border-r-black';
-
-                                                            cells.push(
-                                                                <td
-                                                                    key={`${resource}-${day}-${secondPeriod}`}
-                                                                    className={`p-0 align-top border-b-2 border-b-black overflow-hidden ${borderRightClass}`}
-                                                                    style={{ ...cellStyle, ...(isEmpty ? { backgroundColor: getEmptyCellBg(resource, teachers) } : {}) }}
-                                                                    rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
-                                                                    colSpan={colSpan > 1 ? colSpan : undefined}
-                                                                >
-                                                                    <div style={cellWrapperStyle(cellStyle.height)}>
-                                                                    {isEmpty ? (
-                                                                        <div className="text-xxs text-gray-500 text-center py-1">
-                                                                            {viewType === 'room' ? resource : '빈 강의실'}
+                                                                    ) : sameClass ? (
+                                                                        renderCellClassCards(firstClasses, day, firstPeriodIndex, resource, colSpan, mergedDaysForCell)
+                                                                    ) : (
+                                                                        <div className="flex flex-col h-full">
+                                                                            <div className="flex-1 overflow-hidden">
+                                                                                {firstClasses.length > 0
+                                                                                    ? renderCellClassCards(firstClasses, day, firstPeriodIndex, resource, colSpan, mergedDaysForCell)
+                                                                                    : <div className="h-full" style={{ backgroundColor: EMPTY_CELL_BG }} />}
+                                                                            </div>
+                                                                            <div className="flex-1 overflow-hidden border-t border-t-black">
+                                                                                {secondClasses.length > 0
+                                                                                    ? renderCellClassCards(secondClasses, day, secondPeriodIndex, resource, colSpan, mergedDaysForCell)
+                                                                                    : <div className="h-full" style={{ backgroundColor: EMPTY_CELL_BG }} />}
+                                                                            </div>
                                                                         </div>
-                                                                    ) : renderCellClassCards(cellClasses, day, periodIndex, resource, colSpan, mergedDaysForCell)}
+                                                                    )}
                                                                     </div>
                                                                 </td>
                                                             );
@@ -997,7 +865,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                     <td
                                                                         key={`${resource}-${day}-${period}`}
                                                                         className={`p-0 align-top border-b-2 border-b-black overflow-hidden ${borderRightClass}`}
-                                                                        style={{ ...cellStyle, ...(isEmpty ? { backgroundColor: getEmptyCellBg(resource, teachers) } : {}) }}
+                                                                        style={{ ...cellStyle, ...(isEmpty ? { backgroundColor: EMPTY_CELL_BG } : {}) }}
                                                                         rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                                         colSpan={colSpan > 1 ? colSpan : undefined}
                                                                     >
@@ -1117,7 +985,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                             <td
                                                                 key={`${resource}-${day}-${period}`}
                                                                 className={`p-0 align-top border-b-2 border-b-black overflow-hidden ${borderRightClass}`}
-                                                                style={{ ...cellStyle, ...(isEmpty ? { backgroundColor: getEmptyCellBg(resource, teachers) } : {}) }}
+                                                                style={{ ...cellStyle, ...(isEmpty ? { backgroundColor: EMPTY_CELL_BG } : {}) }}
                                                                 rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                                 colSpan={colSpan > 1 ? colSpan : undefined}
                                                             >
@@ -1300,17 +1168,18 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
                                         const groupInfo = MATH_GROUP_DISPLAY[groupId];
 
-                                        // 두 교시 모두 있으면 헤더만 병합 (rowSpan=2), 셀은 각각 표시
+                                        // 두 교시 모두 있으면 1행으로 합쳐서 표시
                                         if (hasFirst && hasSecond) {
                                             processedPeriods.add(firstPeriod);
                                             processedPeriods.add(secondPeriod);
 
-                                            // 첫 번째 행: 교시 헤더(rowSpan=2) + 첫 번째 교시 셀들
+                                            const firstPeriodIndex = currentPeriods.indexOf(firstPeriod);
+                                            const secondPeriodIndex = currentPeriods.indexOf(secondPeriod);
+
                                             rows.push(
-                                                <tr key={`group-${groupId}-first`}>
+                                                <tr key={`group-${groupId}`}>
                                                     {!hidePeriodColumn && (
                                                         <td
-                                                            rowSpan={2}
                                                             className={`p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-2 border-b-black border-r-2 border-r-black`}
                                                             style={{
                                                                 width: '90px',
@@ -1323,210 +1192,106 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                         </td>
                                                     )}
                                                     {resources.map((resource, resourceIdx) => {
-                                                        const periodIndex = currentPeriods.indexOf(firstPeriod);
-                                                        const cellClasses = getClassesForCell(filteredClasses, day, firstPeriod, resource, viewType);
+                                                        const firstClasses = getClassesForCell(filteredClasses, day, firstPeriod, resource, viewType);
+                                                        const secondClasses = getClassesForCell(filteredClasses, day, secondPeriod, resource, viewType);
 
-                                                        // 수직 병합 확인
-                                                        const shouldSkipThisCell = cellClasses.some((cls: TimetableClass) =>
-                                                            shouldSkipCell(cls, day, periodIndex, cellClasses, currentPeriods, filteredClasses, viewType)
-                                                        );
+                                                        const doubleHeightValue = isCompactMode
+                                                            ? ((firstClasses.length > 0 || secondClasses.length > 0) ? 90 : undefined)
+                                                            : (rowHeightValue as number) * 2;
+                                                        const cellStyle = {
+                                                            ...singleCellWidthStyle,
+                                                            height: doubleHeightValue ? `${doubleHeightValue}px` : undefined
+                                                        };
 
-                                                        if (shouldSkipThisCell) {
-                                                            return null;
-                                                        }
-
-                                                        // 수직 병합 span 계산
-                                                        const maxRowSpan = Math.max(1, ...cellClasses.map((cls: TimetableClass) =>
-                                                            getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)
-                                                        ));
-
-                                                        const heightValue = rowHeightValue;
-                                                        const compactRowHeight = 45;
-                                                        const hasClass = cellClasses.length > 0;
-                                                        const cellStyle = isCompactMode
-                                                            ? { ...singleCellWidthStyle, height: hasClass ? `${compactRowHeight * maxRowSpan}px` : undefined }
-                                                            : { ...singleCellWidthStyle, height: `${(heightValue as number) * maxRowSpan}px` };
-
-                                                        const isEmpty = cellClasses.length === 0;
+                                                        const bothEmpty = firstClasses.length === 0 && secondClasses.length === 0;
+                                                        const sameClass = firstClasses.length > 0 && secondClasses.length > 0 && isSameClassNameSet(firstClasses, secondClasses);
                                                         const isLastResource = resourceIdx === resources.length - 1;
                                                         const borderRightClass = isLastResource ? 'border-r-2 border-r-black' : 'border-r border-r-black';
 
-                                                        return (
-                                                            <td
-                                                                key={`${resource}-${firstPeriod}`}
-                                                                className={`p-0 align-top border-b-2 border-b-black overflow-hidden ${borderRightClass}`}
-                                                                style={{ ...cellStyle, ...(isEmpty ? { backgroundColor: getEmptyCellBg(resource, teachers) } : {}) }}
-                                                                rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
-                                                            >
-                                                                <div style={cellWrapperStyle(cellStyle.height)}>
-                                                                {isEmpty ? (
-                                                                    <div className="text-xxs text-gray-500 text-center py-1">
-                                                                        {viewType === 'room' ? resource : '빈 강의실'}
-                                                                    </div>
-                                                                ) : (
-                                                                    cellClasses.map((cls: TimetableClass) => (
-                                                                        <ClassCard
-                                                                            key={cls.id}
-                                                                            cls={cls}
-                                                                            span={getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)}
-                                                                            searchQuery={searchQuery}
-                                                                            showStudents={showStudents}
-                                                                            showClassName={showClassName}
-                                                                            showSchool={showSchool}
-                                                                            showGrade={showGrade}
-                                                                            canEdit={getCanEdit(cls, resource)}
-                                                                            isAssistantTeacher={isAssistantSlot(cls, resource)}
-                                                                            isDragOver={dragOverClassId === cls.id}
-                                                                            onClick={onClassClick}
-                                                                            onDragStart={onDragStart}
-                                                                            onDragOver={onDragOver}
-                                                                            onDragLeave={onDragLeave}
-                                                                            onDrop={onDrop}
-                                                                            studentMap={studentMap}
-                                                                            classKeywords={classKeywords}
-                                                                            onStudentClick={onStudentClick}
-                                                                            currentDay={day}
-                                                                            fontSize={fontSize}
-                                                                            rowHeight={rowHeight}
-                                                                                cellSizePx={cellSizePx}
-                                                                            showHoldStudents={showHoldStudents}
-                                                                            showWithdrawnStudents={showWithdrawnStudents}
-                                                                            pendingMovedStudentIds={pendingMovedStudentIds}
-                                                                            pendingMoveSchedules={pendingMoveSchedules}
-                                                                            latestTextbook={getLatestTextbook(cls)}
-                    latestReports={latestReports}
-                    studentTextbookMap={byStudentName}
-                                                                            referenceDate={referenceDate}
-                                                                            isExcelMode={isExcelMode}
-                                                                            isSelected={selectedClassId === cls.id}
-                                                                            onCellSelect={onCellSelect}
-                                                                            onEnrollStudent={onEnrollStudent}
-                                    onCancelPendingEnroll={onCancelPendingEnroll}
-                                                                            selectedStudentIds={selectedStudentIds}
-                                                                            selectedStudentClassName={selectedStudentClassName}
-                                                                            copiedStudentIds={copiedStudentIds}
-                                                                            copiedStudentClassName={copiedStudentClassName}
-                                                                            cutStudentIds={cutStudentIds}
-                                                                            cutStudentClassName={cutStudentClassName}
-                                                                            acHighlightStudentId={acHighlightStudentId}
-                                                                            onAcHighlightChange={onAcHighlightChange}
-                                                                            onStudentSelect={onStudentSelect}
-                                                                            onStudentMultiSelect={onStudentMultiSelect}
-                                                                            mode={mode}
-                                                                            onCancelScheduledEnrollment={onCancelScheduledEnrollment}
-                    onWithdrawalDrop={onWithdrawalDrop}
-                    pendingExcelDeleteIds={pendingExcelDeleteIds}
-                    pendingExcelEnrollments={pendingExcelEnrollments}
-                                                                        />
-                                                                    ))
-                                                                )}
-                                                                </div>
-                                                            </td>
+                                                        const renderDayBasedClassCards = (classes: TimetableClass[], periodIndex: number) => (
+                                                            classes.map((cls: TimetableClass) => (
+                                                                <ClassCard
+                                                                    key={cls.id}
+                                                                    cls={cls}
+                                                                    span={1}
+                                                                    searchQuery={searchQuery}
+                                                                    showStudents={showStudents}
+                                                                    showClassName={showClassName}
+                                                                    showSchool={showSchool}
+                                                                    showGrade={showGrade}
+                                                                    canEdit={getCanEdit(cls, resource)}
+                                                                    isAssistantTeacher={isAssistantSlot(cls, resource)}
+                                                                    isDragOver={dragOverClassId === cls.id}
+                                                                    onClick={onClassClick}
+                                                                    onDragStart={onDragStart}
+                                                                    onDragOver={onDragOver}
+                                                                    onDragLeave={onDragLeave}
+                                                                    onDrop={onDrop}
+                                                                    studentMap={studentMap}
+                                                                    classKeywords={classKeywords}
+                                                                    onStudentClick={onStudentClick}
+                                                                    currentDay={day}
+                                                                    fontSize={fontSize}
+                                                                    rowHeight={rowHeight}
+                                                                    cellSizePx={cellSizePx}
+                                                                    showHoldStudents={showHoldStudents}
+                                                                    showWithdrawnStudents={showWithdrawnStudents}
+                                                                    pendingMovedStudentIds={pendingMovedStudentIds}
+                                                                    pendingMoveSchedules={pendingMoveSchedules}
+                                                                    latestTextbook={getLatestTextbook(cls)}
+                                                                    latestReports={latestReports}
+                                                                    studentTextbookMap={byStudentName}
+                                                                    referenceDate={referenceDate}
+                                                                    isExcelMode={isExcelMode}
+                                                                    isSelected={selectedClassId === cls.id}
+                                                                    onCellSelect={onCellSelect}
+                                                                    onEnrollStudent={onEnrollStudent}
+                                                                    onCancelPendingEnroll={onCancelPendingEnroll}
+                                                                    selectedStudentIds={selectedStudentIds}
+                                                                    selectedStudentClassName={selectedStudentClassName}
+                                                                    copiedStudentIds={copiedStudentIds}
+                                                                    copiedStudentClassName={copiedStudentClassName}
+                                                                    cutStudentIds={cutStudentIds}
+                                                                    cutStudentClassName={cutStudentClassName}
+                                                                    acHighlightStudentId={acHighlightStudentId}
+                                                                    onAcHighlightChange={onAcHighlightChange}
+                                                                    onStudentSelect={onStudentSelect}
+                                                                    onStudentMultiSelect={onStudentMultiSelect}
+                                                                    mode={mode}
+                                                                    onCancelScheduledEnrollment={onCancelScheduledEnrollment}
+                                                                    onWithdrawalDrop={onWithdrawalDrop}
+                                                                    pendingExcelDeleteIds={pendingExcelDeleteIds}
+                                                                    pendingExcelEnrollments={pendingExcelEnrollments}
+                                                                />
+                                                            ))
                                                         );
-                                                    })}
-                                                </tr>
-                                            );
-
-                                            // 두 번째 행: 교시 헤더 없음 (rowSpan으로 병합됨) + 두 번째 교시 셀들
-                                            rows.push(
-                                                <tr key={`group-${groupId}-second`}>
-                                                    {resources.map((resource, resourceIdx) => {
-                                                        const periodIndex = currentPeriods.indexOf(secondPeriod);
-                                                        const cellClasses = getClassesForCell(filteredClasses, day, secondPeriod, resource, viewType);
-
-                                                        // 수직 병합 확인
-                                                        const shouldSkipThisCell = cellClasses.some((cls: TimetableClass) =>
-                                                            shouldSkipCell(cls, day, periodIndex, cellClasses, currentPeriods, filteredClasses, viewType)
-                                                        );
-
-                                                        if (shouldSkipThisCell) {
-                                                            return null;
-                                                        }
-
-                                                        // 수직 병합 span 계산
-                                                        const maxRowSpan = Math.max(1, ...cellClasses.map((cls: TimetableClass) =>
-                                                            getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)
-                                                        ));
-
-                                                        const heightValue = rowHeightValue;
-                                                        const compactRowHeight = 45;
-                                                        const hasClass = cellClasses.length > 0;
-                                                        const cellStyle = isCompactMode
-                                                            ? { ...singleCellWidthStyle, height: hasClass ? `${compactRowHeight * maxRowSpan}px` : undefined }
-                                                            : { ...singleCellWidthStyle, height: `${(heightValue as number) * maxRowSpan}px` };
-
-                                                        const isEmpty = cellClasses.length === 0;
-                                                        const isLastResource = resourceIdx === resources.length - 1;
-                                                        const borderRightClass = isLastResource ? 'border-r-2 border-r-black' : 'border-r border-r-black';
 
                                                         return (
                                                             <td
-                                                                key={`${resource}-${secondPeriod}`}
+                                                                key={`${resource}-${groupId}`}
                                                                 className={`p-0 align-top border-b-2 border-b-black overflow-hidden ${borderRightClass}`}
-                                                                style={{ ...cellStyle, ...(isEmpty ? { backgroundColor: getEmptyCellBg(resource, teachers) } : {}) }}
-                                                                rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
+                                                                style={{ ...cellStyle, ...(bothEmpty ? { backgroundColor: EMPTY_CELL_BG } : {}) }}
                                                             >
                                                                 <div style={cellWrapperStyle(cellStyle.height)}>
-                                                                {isEmpty ? (
+                                                                {bothEmpty ? (
                                                                     <div className="text-xxs text-gray-500 text-center py-1">
                                                                         {viewType === 'room' ? resource : '빈 강의실'}
                                                                     </div>
+                                                                ) : sameClass ? (
+                                                                    renderDayBasedClassCards(firstClasses, firstPeriodIndex)
                                                                 ) : (
-                                                                    cellClasses.map((cls: TimetableClass) => (
-                                                                        <ClassCard
-                                                                            key={cls.id}
-                                                                            cls={cls}
-                                                                            span={getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)}
-                                                                            searchQuery={searchQuery}
-                                                                            showStudents={showStudents}
-                                                                            showClassName={showClassName}
-                                                                            showSchool={showSchool}
-                                                                            showGrade={showGrade}
-                                                                            canEdit={getCanEdit(cls, resource)}
-                                                                            isAssistantTeacher={isAssistantSlot(cls, resource)}
-                                                                            isDragOver={dragOverClassId === cls.id}
-                                                                            onClick={onClassClick}
-                                                                            onDragStart={onDragStart}
-                                                                            onDragOver={onDragOver}
-                                                                            onDragLeave={onDragLeave}
-                                                                            onDrop={onDrop}
-                                                                            studentMap={studentMap}
-                                                                            classKeywords={classKeywords}
-                                                                            onStudentClick={onStudentClick}
-                                                                            currentDay={day}
-                                                                            fontSize={fontSize}
-                                                                            rowHeight={rowHeight}
-                                                                                cellSizePx={cellSizePx}
-                                                                            showHoldStudents={showHoldStudents}
-                                                                            showWithdrawnStudents={showWithdrawnStudents}
-                                                                            pendingMovedStudentIds={pendingMovedStudentIds}
-                                                                            pendingMoveSchedules={pendingMoveSchedules}
-                                                                            latestTextbook={getLatestTextbook(cls)}
-                    latestReports={latestReports}
-                    studentTextbookMap={byStudentName}
-                                                                            referenceDate={referenceDate}
-                                                                            isExcelMode={isExcelMode}
-                                                                            isSelected={selectedClassId === cls.id}
-                                                                            onCellSelect={onCellSelect}
-                                                                            onEnrollStudent={onEnrollStudent}
-                                    onCancelPendingEnroll={onCancelPendingEnroll}
-                                                                            selectedStudentIds={selectedStudentIds}
-                                                                            selectedStudentClassName={selectedStudentClassName}
-                                                                            copiedStudentIds={copiedStudentIds}
-                                                                            copiedStudentClassName={copiedStudentClassName}
-                                                                            cutStudentIds={cutStudentIds}
-                                                                            cutStudentClassName={cutStudentClassName}
-                                                                            acHighlightStudentId={acHighlightStudentId}
-                                                                            onAcHighlightChange={onAcHighlightChange}
-                                                                            onStudentSelect={onStudentSelect}
-                                                                            onStudentMultiSelect={onStudentMultiSelect}
-                                                                            mode={mode}
-                                                                            onCancelScheduledEnrollment={onCancelScheduledEnrollment}
-                    onWithdrawalDrop={onWithdrawalDrop}
-                    pendingExcelDeleteIds={pendingExcelDeleteIds}
-                    pendingExcelEnrollments={pendingExcelEnrollments}
-                                                                        />
-                                                                    ))
+                                                                    <div className="flex flex-col h-full">
+                                                                        <div className="flex-1 overflow-hidden">
+                                                                            {firstClasses.length > 0
+                                                                                ? renderDayBasedClassCards(firstClasses, firstPeriodIndex)
+                                                                                : <div className="h-full" style={{ backgroundColor: EMPTY_CELL_BG }} />}
+                                                                        </div>
+                                                                        <div className="flex-1 overflow-hidden border-t border-t-black">
+                                                                            {secondClasses.length > 0
+                                                                                ? renderDayBasedClassCards(secondClasses, secondPeriodIndex)
+                                                                                : <div className="h-full" style={{ backgroundColor: EMPTY_CELL_BG }} />}
+                                                                        </div>
+                                                                    </div>
                                                                 )}
                                                                 </div>
                                                             </td>
@@ -1590,7 +1355,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 <td
                                                                     key={`${resource}-${period}`}
                                                                     className={`p-0 align-top border-b-2 border-b-black overflow-hidden ${borderRightClass}`}
-                                                                    style={{ ...cellStyle, ...(isEmpty ? { backgroundColor: getEmptyCellBg(resource, teachers) } : {}) }}
+                                                                    style={{ ...cellStyle, ...(isEmpty ? { backgroundColor: EMPTY_CELL_BG } : {}) }}
                                                                     rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                                 >
                                                                     <div style={cellWrapperStyle(cellStyle.height)}>
@@ -1726,7 +1491,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                         <td
                                                             key={`${resource}-${period}`}
                                                             className={`p-0 align-top border-b-2 border-b-black overflow-hidden ${borderRightClass}`}
-                                                            style={{ ...cellStyle, ...(isEmpty ? { backgroundColor: getEmptyCellBg(resource, teachers) } : {}) }}
+                                                            style={{ ...cellStyle, ...(isEmpty ? { backgroundColor: EMPTY_CELL_BG } : {}) }}
                                                             rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                         >
                                                             <div style={cellWrapperStyle(cellStyle.height)}>
