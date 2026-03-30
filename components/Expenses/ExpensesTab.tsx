@@ -114,23 +114,8 @@ const ExpenseListView: React.FC<{ onEdit: (e: Expense) => void; onNewClick: () =
     return result;
   }, [expenses, searchTerm, dateFilter, deptFilter, methodFilter, approvalFilter]);
 
-  // 관리대장 표시용: 각 expense의 items를 flat하게 펼침
-  const flatRows = useMemo(() => {
-    const rows: { expense: Expense; item: ExpenseItem; itemIndex: number }[] = [];
-    filtered.forEach(expense => {
-      if (expense.items?.length > 0) {
-        expense.items.forEach((item, idx) => {
-          rows.push({ expense, item, itemIndex: idx });
-        });
-      } else {
-        rows.push({ expense, item: EMPTY_ITEM, itemIndex: 0 });
-      }
-    });
-    return rows;
-  }, [filtered]);
-
-  const totalPages = Math.max(1, Math.ceil(flatRows.length / PAGE_SIZE));
-  const pageRows = flatRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageExpenses = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const handleDelete = useCallback(async (id: string) => {
     if (!confirm('이 지출결의서를 삭제하시겠습니까?')) return;
@@ -139,11 +124,6 @@ const ExpenseListView: React.FC<{ onEdit: (e: Expense) => void; onNewClick: () =
 
   const handleApprovalToggle = useCallback(async (expense: Expense, role: 'author' | 'executor' | 'director' | 'ceo') => {
     const current = expense.approvalChecks?.[role]?.checked || false;
-    // 집행자가 체크한 건은 되돌릴 수 없음
-    if (role === 'executor' && current) {
-      alert('집행자 확인은 취소할 수 없습니다.');
-      return;
-    }
     const newChecked = !current;
     await toggleApproval.mutateAsync({ id: expense.id, role, checked: newChecked });
     // 대표 체크 시 원장도 자동 체크
@@ -206,32 +186,26 @@ const ExpenseListView: React.FC<{ onEdit: (e: Expense) => void; onNewClick: () =
       <div className="flex-1 overflow-auto bg-white rounded border">
         <table className="w-full text-xs table-fixed">
           <colgroup>
-            <col style={{ width: '7%' }} />
-            <col style={{ width: '5.5%' }} />
-            <col style={{ width: '5%' }} />
-            <col style={{ width: '9%' }} />
-            <col style={{ width: '15%' }} />
-            <col style={{ width: '4%' }} />
             <col style={{ width: '8%' }} />
-            <col style={{ width: '9%' }} />
-            <col style={{ width: '6.5%' }} />
-            <col style={{ width: '4%' }} />
-            <col style={{ width: '4%' }} />
-            <col style={{ width: '4%' }} />
-            <col style={{ width: '4%' }} />
+            <col style={{ width: '7%' }} />
+            <col style={{ width: '6%' }} />
+            <col style={{ width: '25%' }} />
+            <col style={{ width: '12%' }} />
+            <col style={{ width: '8%' }} />
             <col style={{ width: '5%' }} />
             <col style={{ width: '5%' }} />
+            <col style={{ width: '5%' }} />
+            <col style={{ width: '5%' }} />
+            <col style={{ width: '5%' }} />
+            <col style={{ width: '6%' }} />
           </colgroup>
           <thead className="bg-gray-50 border-b sticky top-0 z-10">
             <tr>
               <th className="pl-3 pr-1.5 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap">일자</th>
               <th className="px-1.5 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap">부서명</th>
               <th className="px-1.5 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap">성명</th>
-              <th className="px-1.5 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap">지출처</th>
-              <th className="px-1.5 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap">사용내역</th>
-              <th className="px-1.5 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap">수량</th>
-              <th className="px-1.5 py-1.5 text-right font-medium text-gray-600 whitespace-nowrap">단가</th>
-              <th className="px-1.5 py-1.5 text-right font-medium text-gray-600 whitespace-nowrap">금액</th>
+              <th className="px-1.5 py-1.5 text-left font-medium text-gray-600 whitespace-nowrap">제목</th>
+              <th className="px-1.5 py-1.5 text-right font-medium text-gray-600 whitespace-nowrap">총액</th>
               <th className="px-1.5 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap">증빙자료</th>
               <th className="px-1 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap">작성</th>
               <th className="px-1 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap">원장</th>
@@ -242,76 +216,67 @@ const ExpenseListView: React.FC<{ onEdit: (e: Expense) => void; onNewClick: () =
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {pageRows.length === 0 ? (
-              <tr><td colSpan={15} className="text-center py-12 text-gray-400">등록된 지출 내역이 없습니다.</td></tr>
-            ) : pageRows.map((row) => {
-              const checks = row.expense.approvalChecks || {};
-              const sym = row.expense.currency || '₩';
+            {pageExpenses.length === 0 ? (
+              <tr><td colSpan={12} className="text-center py-12 text-gray-400">등록된 지출 내역이 없습니다.</td></tr>
+            ) : pageExpenses.map((expense) => {
+              const checks = expense.approvalChecks || {};
+              const sym = expense.currency || '₩';
+              const itemCount = expense.items?.length || 0;
               return (
-              <tr key={`${row.expense.id}-${row.itemIndex}`} className="hover:bg-gray-50/80 transition-colors">
-                <td className="pl-3 pr-1.5 py-1.5 text-center text-gray-700 truncate">{row.itemIndex === 0 ? row.expense.expenseDate : ''}</td>
-                <td className="px-1.5 py-1.5 text-center text-gray-700 truncate">{row.itemIndex === 0 ? row.expense.department : ''}</td>
-                <td className="px-1.5 py-1.5 text-center text-gray-700 truncate">{row.itemIndex === 0 ? row.expense.author : ''}</td>
-                <td className="px-1.5 py-1.5 text-center text-gray-700 truncate">{row.item.vendor}</td>
-                <td className="px-1.5 py-1.5 text-center text-gray-700 truncate">{row.item.description || row.item.purpose}</td>
-                <td className="px-1.5 py-1.5 text-center text-gray-700">{row.item.quantity || ''}</td>
-                <td className="px-1.5 py-1.5 text-right text-gray-700 whitespace-nowrap">{formatAmount(row.item.unitPrice, sym)}</td>
-                <td className="px-1.5 py-1.5 text-right font-medium text-amber-700 whitespace-nowrap">{formatAmount(row.item.totalPrice || (row.item.quantity * row.item.unitPrice), sym)}</td>
-                <td className="px-1.5 py-1.5 text-center">
-                  {row.itemIndex === 0 && (
-                    <select
-                      value={row.expense.receiptUrl || ''}
-                      onChange={e => updateReceipt.mutate({ id: row.expense.id, receiptUrl: e.target.value })}
-                      className="text-[10px] bg-transparent border-0 text-center cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-400 rounded w-full px-0 py-0"
-                    >
-                      <option value="">-</option>
-                      {RECEIPT_TYPES.map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
+              <tr key={expense.id} className="hover:bg-gray-50/80 transition-colors cursor-pointer" onClick={() => onEdit(expense)}>
+                <td className="pl-3 pr-1.5 py-2 text-center text-gray-700 truncate">{expense.expenseDate}</td>
+                <td className="px-1.5 py-2 text-center text-gray-700 truncate">{expense.department}</td>
+                <td className="px-1.5 py-2 text-center text-gray-700 truncate">{expense.author}</td>
+                <td className="px-1.5 py-2 text-left text-gray-800 truncate">
+                  <span className="font-medium hover:text-blue-600">{expense.title || '(제목 없음)'}</span>
+                  {itemCount > 0 && <span className="ml-1.5 text-[10px] text-gray-400">({itemCount}건)</span>}
+                </td>
+                <td className="px-1.5 py-2 text-right font-medium text-amber-700 whitespace-nowrap">{formatAmount(expense.totalAmount || 0, sym)}</td>
+                <td className="px-1.5 py-2 text-center" onClick={e => e.stopPropagation()}>
+                  <select
+                    value={expense.receiptUrl || ''}
+                    onChange={e => updateReceipt.mutate({ id: expense.id, receiptUrl: e.target.value })}
+                    className="text-[10px] bg-transparent border-0 text-center cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-400 rounded w-full px-0 py-0"
+                  >
+                    <option value="">-</option>
+                    {RECEIPT_TYPES.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </td>
+                <td className="px-1 py-2 text-center">
+                  <span className={`text-xs ${checks.author?.checked ? 'text-green-600' : 'text-gray-300'}`}>{checks.author?.checked ? '✔' : '—'}</span>
+                </td>
+                <td className="px-1 py-2 text-center" onClick={e => e.stopPropagation()}>
+                  <button onClick={() => handleApprovalToggle(expense, 'director')}
+                    className={`text-xs px-1 py-0.5 rounded hover:bg-gray-100 ${checks.director?.checked ? 'text-green-600 font-bold' : 'text-gray-300'}`}>
+                    {checks.director?.checked ? '✔' : '—'}
+                  </button>
+                </td>
+                <td className="px-1 py-2 text-center" onClick={e => e.stopPropagation()}>
+                  <button onClick={() => handleApprovalToggle(expense, 'ceo')}
+                    className={`text-xs px-1 py-0.5 rounded hover:bg-gray-100 ${checks.ceo?.checked ? 'text-green-600 font-bold' : 'text-gray-300'}`}>
+                    {checks.ceo?.checked ? '✔' : '—'}
+                  </button>
+                </td>
+                <td className="px-1 py-2 text-center" onClick={e => e.stopPropagation()}>
+                  <button onClick={() => handleApprovalToggle(expense, 'executor')}
+                    className={`text-xs px-1 py-0.5 rounded hover:bg-gray-100 ${checks.executor?.checked ? 'text-green-600 font-bold' : 'text-gray-300'}`}>
+                    {checks.executor?.checked ? '✔' : '—'}
+                  </button>
+                </td>
+                <td className="px-1 py-2 text-center" onClick={e => e.stopPropagation()}>
+                  <button onClick={() => setAttachModalExpense(expense)}
+                    className={`text-xs px-1 py-0.5 rounded hover:bg-blue-50 ${(expense.receiptUrls?.length || 0) > 0 ? 'text-blue-600 font-bold' : 'text-gray-400'}`}>
+                    <Paperclip size={12} />
+                  </button>
+                  {(expense.receiptUrls?.length || 0) > 0 && (
+                    <span className="text-[9px] text-blue-500 ml-0.5">{expense.receiptUrls!.length}</span>
                   )}
                 </td>
-                {row.itemIndex === 0 ? (
-                  <>
-                    <td className="px-1 py-1.5 text-center">
-                      <span className={`text-xs ${checks.author?.checked ? 'text-green-600' : 'text-gray-300'}`}>{checks.author?.checked ? '✔' : '—'}</span>
-                    </td>
-                    <td className="px-1 py-1.5 text-center">
-                      <button onClick={() => handleApprovalToggle(row.expense, 'director')}
-                        className={`text-xs px-1 py-0.5 rounded hover:bg-gray-100 ${checks.director?.checked ? 'text-green-600 font-bold' : 'text-gray-300'}`}>
-                        {checks.director?.checked ? '✔' : '—'}
-                      </button>
-                    </td>
-                    <td className="px-1 py-1.5 text-center">
-                      <button onClick={() => handleApprovalToggle(row.expense, 'ceo')}
-                        className={`text-xs px-1 py-0.5 rounded hover:bg-gray-100 ${checks.ceo?.checked ? 'text-green-600 font-bold' : 'text-gray-300'}`}>
-                        {checks.ceo?.checked ? '✔' : '—'}
-                      </button>
-                    </td>
-                    <td className="px-1 py-1.5 text-center">
-                      <button onClick={() => handleApprovalToggle(row.expense, 'executor')}
-                        className={`text-xs px-1 py-0.5 rounded hover:bg-gray-100 ${checks.executor?.checked ? 'text-green-600 font-bold' : 'text-gray-300'}`}>
-                        {checks.executor?.checked ? '✔' : '—'}
-                      </button>
-                    </td>
-                    <td className="px-1 py-1.5 text-center">
-                      <button onClick={() => setAttachModalExpense(row.expense)}
-                        className={`text-xs px-1 py-0.5 rounded hover:bg-blue-50 ${(row.expense.receiptUrls?.length || 0) > 0 ? 'text-blue-600 font-bold' : 'text-gray-400'}`}>
-                        <Paperclip size={12} />
-                      </button>
-                      {(row.expense.receiptUrls?.length || 0) > 0 && (
-                        <span className="text-[9px] text-blue-500 ml-0.5">{row.expense.receiptUrls!.length}</span>
-                      )}
-                    </td>
-                  </>
-                ) : (
-                  <><td /><td /><td /><td /><td /></>
-                )}
-                <td className="px-1 py-1.5 text-center">
-                  {row.itemIndex === 0 && (
-                    <div className="flex items-center justify-center gap-0.5">
-                      <button onClick={() => onEdit(row.expense)} className="p-0.5 rounded text-blue-500 hover:bg-blue-50"><Edit2 size={12} /></button>
-                      <button onClick={() => handleDelete(row.expense.id)} className="p-0.5 rounded text-red-400 hover:bg-red-50"><Trash2 size={12} /></button>
-                    </div>
-                  )}
+                <td className="px-1 py-2 text-center" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center justify-center gap-0.5">
+                    <button onClick={() => onEdit(expense)} className="p-0.5 rounded text-blue-500 hover:bg-blue-50"><Edit2 size={12} /></button>
+                    <button onClick={() => handleDelete(expense.id)} className="p-0.5 rounded text-red-400 hover:bg-red-50"><Trash2 size={12} /></button>
+                  </div>
                 </td>
               </tr>
               );

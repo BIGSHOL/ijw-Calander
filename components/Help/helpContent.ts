@@ -793,6 +793,13 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
       },
     ],
   },
+  expenses: {
+    title: '지출 관리',
+    overview: '지출결의서를 작성하고 결재 프로세스를 관리합니다.',
+    sections: [
+      { title: '주요 기능', items: ['지출결의서 작성/수정/삭제', '4단계 결재 (담당자→원장→대표→집행자)', '증빙자료 첨부', 'PNG 다운로드'] },
+    ],
+  },
 };
 
 // 탭별 HelpEntry 생성 함수
