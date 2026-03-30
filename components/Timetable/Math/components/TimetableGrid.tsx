@@ -18,8 +18,8 @@ const renderTime = (time: string) => {
 // 빈 셀 배경색: 회색
 const EMPTY_CELL_BG = '#e5e7eb';
 
-// 교시 병합 셀의 반명 슬롯 높이 (sub-period당, px) — 반명 3줄까지 표시 가능
-const NAME_SLOT_H = 40;
+// 교시 병합 셀의 반명 슬롯 높이 (sub-period당, px) — 반명 2줄까지 표시
+const NAME_SLOT_H = 28;
 
 // hasClassOnDay replaced by resourceDayLookup (precomputed Map) inside component
 
@@ -273,7 +273,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     // td 내부 wrapper div 스타일 (td height는 CSS 최소값이므로 wrapper div로 실제 높이 제한)
     // 별도 테이블(월/목, 화/금, 수)의 행 높이를 통일하기 위해 필수
     const cellWrapperStyle = (h: string | undefined): React.CSSProperties | undefined =>
-        h ? { height: h, maxHeight: h, overflow: 'hidden' } : undefined;
+        h ? { minHeight: h } : undefined;
 
     // 수요일만
     const hasWednesday = orderedSelectedDays.includes('수');
@@ -1673,24 +1673,17 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                 &nbsp;
                             </th>
                         </tr>
-                        {/* 교시 헤더 (선생님 행 + 요일 행 합산 높이) */}
+                        {/* 교시 헤더 — 선생님 행 + 날짜 행을 rowSpan=2로 통합 */}
                         <tr>
                             <th
                                 className="p-1.5 text-period-label font-bold text-black border-b-2 border-b-black"
+                                rowSpan={2}
                                 style={{ width: '90px', minWidth: '90px', backgroundColor: bgHex }}
                             >
                                 교시
                             </th>
                         </tr>
-                        {/* 날짜 행 자리 */}
-                        <tr>
-                            <th
-                                className="p-1.5 text-xxs font-bold text-center border-b-2 border-b-black bg-gray-100 text-black"
-                                style={{ width: '90px', minWidth: '90px' }}
-                            >
-                                &nbsp;
-                            </th>
-                        </tr>
+                        <tr>{/* rowSpan으로 병합됨 — 빈 행 */}</tr>
                     </thead>
                     <tbody className="timetable-body">
                         {(() => {
