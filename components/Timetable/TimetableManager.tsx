@@ -1163,6 +1163,7 @@ const TimetableManager = ({
 }: TimetableManagerProps) => {
     const queryClient = useQueryClient();
     const userDepartments = currentUser?.departments || ['math', 'highmath', 'english'];
+    console.log('[DEBUG] currentUser.departments:', currentUser?.departments, 'userDepartments:', userDepartments);
     const { hasPermission } = usePermissions(currentUser);
     const canEditMath = hasPermission('timetable.math.edit');
     const canEditEnglish = hasPermission('timetable.english.edit');
@@ -1394,6 +1395,11 @@ const TimetableManager = ({
             // 고등수학 탭 진입 시 엑셀(요일) 뷰로 전환
             if (subjectTab === 'highmath') {
                 setInternalViewType('excel');
+                setTimetableViewMode('excel-day');
+            } else {
+                // 다른 과목 진입 시 기본 뷰로 리셋
+                setInternalViewType('teacher');
+                setTimetableViewMode('day-based');
             }
             // 강의실 필터 초기화 (전체 선택)
             setRoomFilter({ main: true, barun: true, godeung: true });
