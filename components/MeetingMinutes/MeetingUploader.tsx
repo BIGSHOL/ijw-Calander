@@ -218,16 +218,18 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
 
   // 팝업 녹음 완료 → 자동 업로드+분석 시작
   const autoSubmitFile = useCallback(async (file: File) => {
-    if (!title.trim() || !meetingDate) {
+    const effectiveTitle = title.trim() || meetingDate || new Date().toISOString().split('T')[0];
+    if (!meetingDate) {
       setSelectedFile(file);
-      setError('회의 제목과 날짜를 입력한 후 분석 시작을 눌러주세요.');
+      setError('회의 날짜를 입력한 후 분석 시작을 눌러주세요.');
       return;
     }
+    if (!title.trim()) setTitle(effectiveTitle);
 
     try {
       const result = await uploadAndProcess({
         file,
-        title: title.trim(),
+        title: effectiveTitle,
         attendees,
         meetingDate,
         recorder: recorder.trim(),
@@ -358,15 +360,16 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
   }, [handleFileSelect]);
 
   const handleSubmit = async () => {
-    if (!title.trim()) { setError('회의 제목을 입력해주세요.'); return; }
     if (!meetingDate) { setError('회의 날짜를 선택해주세요.'); return; }
     if (!selectedFile) { setError('녹음 파일을 선택해주세요.'); return; }
+    const effectiveTitle = title.trim() || meetingDate || new Date().toISOString().split('T')[0];
+    if (!title.trim()) setTitle(effectiveTitle);
 
     setError('');
     try {
       const result = await uploadAndProcess({
         file: selectedFile,
-        title: title.trim(),
+        title: effectiveTitle,
         attendees,
         meetingDate,
         recorder: recorder.trim(),
