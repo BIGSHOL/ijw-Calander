@@ -7072,7 +7072,7 @@ exports.notifyExpenseCreated = onDocumentCreated(
                 data: {
                     type: "expense_approval",
                     expenseId: event.params.expenseId,
-                    url: "/?tab=expenses",
+                    url: "/#expenses",
                 },
             };
 
@@ -7176,7 +7176,7 @@ exports.notifyExpenseApproval = onDocumentUpdated(
                 data: {
                     type: "expense_approved",
                     expenseId: event.params.expenseId,
-                    url: "/?tab=expenses",
+                    url: "/#expenses",
                 },
             };
 

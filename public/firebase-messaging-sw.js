@@ -36,23 +36,21 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const url = event.notification.data?.url || '/';
+  const targetUrl = event.notification.data?.url || '/';
+  const fullUrl = self.location.origin + targetUrl;
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // 이미 열린 탭이 있으면 포커스
+      // 이미 열린 탭이 있으면 해당 URL로 이동 + 포커스
       for (const client of windowClients) {
         if (client.url.includes(self.location.origin)) {
+          client.navigate(fullUrl);
           client.focus();
-          client.postMessage({
-            type: 'NOTIFICATION_CLICK',
-            data: event.notification.data,
-          });
           return;
         }
       }
       // 없으면 새 탭 열기
-      return clients.openWindow(url);
+      return clients.openWindow(fullUrl);
     })
   );
 });
