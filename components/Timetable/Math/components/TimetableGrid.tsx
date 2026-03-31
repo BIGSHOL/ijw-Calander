@@ -1651,118 +1651,21 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
     const activeGroups = orderedGroups.filter(g => groupConfigs[g]?.hasData);
 
-    // 평일 그룹 (교시 공유)과 주말 그룹 분리
-    const weekdayActiveGroups = activeGroups.filter(g => g !== '주말');
-    const weekendGroup = activeGroups.find(g => g === '주말');
-
-    // 평일 교시 전용 테이블 렌더링
-    const renderPeriodColumn = () => {
-        // 배경색
-        const bgHex = '#f3f4f6';
-
-        return (
-            <div className="flex-shrink-0 sticky left-0 z-30">
-                <table className="border-collapse border-2 border-black" style={{ tableLayout: 'fixed', width: '90px' }}>
-                    <colgroup>
-                        <col style={{ width: '90px' }} />
-                    </colgroup>
-                    <thead className="sticky top-0 z-20">
-                        {/* 빈 타이틀 행 (다른 테이블의 그룹 타이틀 행과 높이 맞춤) */}
-                        <tr>
-                            <th className="bg-gray-700 text-white px-3 py-2 font-bold text-sm text-left" style={{ width: '90px', minWidth: '90px' }}>
-                                &nbsp;
-                            </th>
-                        </tr>
-                        {/* 교시 헤더 — 선생님 행 + 날짜 행을 rowSpan=2로 통합 */}
-                        <tr>
-                            <th
-                                className="p-1.5 text-period-label font-bold text-black border-b-2 border-b-black"
-                                rowSpan={2}
-                                style={{ width: '90px', minWidth: '90px', backgroundColor: bgHex }}
-                            >
-                                교시
-                            </th>
-                        </tr>
-                        <tr>{/* rowSpan으로 병합됨 — 빈 행 */}</tr>
-                    </thead>
-                    <tbody className="timetable-body">
-                        {(() => {
-                            const rows: React.ReactNode[] = [];
-                            const processedPeriods = new Set<string>();
-
-                            MATH_GROUPED_PERIODS.forEach(groupId => {
-                                const periodIds = MATH_GROUP_PERIOD_IDS[groupId];
-                                const [firstPeriod, secondPeriod] = periodIds;
-                                const hasFirst = currentPeriods.includes(firstPeriod);
-                                const hasSecond = currentPeriods.includes(secondPeriod);
-
-                                if (!hasFirst && !hasSecond) return;
-
-                                const groupInfo = MATH_GROUP_DISPLAY[groupId];
-
-                                if (hasFirst && hasSecond) {
-                                    processedPeriods.add(firstPeriod);
-                                    processedPeriods.add(secondPeriod);
-
-                                    const doubleHeightValue = isCompactMode ? 90 : (rowHeightValue as number) * 2;
-                                    rows.push(
-                                        <tr key={`period-col-group-${groupId}`}>
-                                            <td
-                                                className="p-1.5 text-period-label font-bold text-black text-center border-b-2 border-b-black"
-                                                style={{ width: '90px', minWidth: '90px', height: `${doubleHeightValue}px`, backgroundColor: bgHex }}
-                                            >
-                                                <div className="font-bold text-period-label text-black">{groupInfo.label}</div>
-                                                <div>{renderTime(groupInfo.time)}</div>
-                                            </td>
-                                        </tr>
-                                    );
-                                } else {
-                                    periodIds.forEach(period => {
-                                        if (!currentPeriods.includes(period) || processedPeriods.has(period)) return;
-                                        processedPeriods.add(period);
-                                        const periodTime = MATH_PERIOD_TIMES[period] || period;
-                                        const heightValue = isCompactMode ? 45 : rowHeightValue;
-                                        rows.push(
-                                            <tr key={`period-col-${period}`}>
-                                                <td
-                                                    className="p-1.5 text-period-label font-bold text-black text-center border-b-2 border-b-black"
-                                                    style={{ width: '90px', minWidth: '90px', height: `${heightValue}px`, backgroundColor: bgHex }}
-                                                >
-                                                    <div className="font-bold text-period-label text-black">{period}</div>
-                                                    <div>{renderTime(periodTime)}</div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    });
-                                }
-                            });
-
-                            return rows;
-                        })()}
-                    </tbody>
-                </table>
-            </div>
-        );
-    };
-
     return (
         <div className="overflow-auto h-full">
             <div className="flex gap-0">
-                {/* 평일: 좌측 교시 컬럼 1개 공유 */}
-                {weekdayActiveGroups.length > 0 && renderPeriodColumn()}
-                {weekdayActiveGroups.map((groupName) => {
+                {activeGroups.map((groupName, idx) => {
                     const config = groupConfigs[groupName];
+                    const isWeekend = groupName === '주말';
+                    // 첫 번째 평일 그룹에만 교시 컬럼 표시, 나머지 평일은 숨김, 주말은 자체 교시 포함
+                    const isFirstWeekday = !isWeekend && idx === activeGroups.findIndex(g => g !== '주말');
+                    const hidePeriod = !isWeekend && !isFirstWeekday;
                     return (
                         <React.Fragment key={groupName}>
-                            {renderTable(config.resources, config.daysMap, groupName, config.isWednesday, true)}
+                            {renderTable(config.resources, config.daysMap, groupName, config.isWednesday, hidePeriod)}
                         </React.Fragment>
                     );
                 })}
-                {/* 주말: 자체 교시 컬럼 포함 */}
-                {weekendGroup && (() => {
-                    const config = groupConfigs[weekendGroup];
-                    return renderTable(config.resources, config.daysMap, weekendGroup, config.isWednesday, false);
-                })()}
             </div>
         </div>
     );
