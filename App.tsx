@@ -363,7 +363,11 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (currentUser) {
-      // Optional: Reset hidden departments
+      // 로그인 완료 후 URL 해시에 탭이 있으면 해당 탭으로 이동 (푸시 알림 클릭 등)
+      const hashTab = getTabFromHash();
+      if (hashTab && hashTab !== appMode) {
+        setAppMode(hashTab);
+      }
     }
   }, [currentUser]);
 
