@@ -515,6 +515,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                         hasPermission={hasPermission}
                         setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
                         userDepartments={userDepartments}
+                        isMaster={isMaster}
                     />
                 )}
 

@@ -15,6 +15,7 @@ interface SubjectControlsProps {
     hasPermission: (perm: string) => boolean;
     setIsTimetableSettingsOpen?: (value: boolean) => void;
     userDepartments?: ('math' | 'highmath' | 'english')[];
+    isMaster?: boolean;
 }
 
 export default function SubjectControls({
@@ -27,6 +28,7 @@ export default function SubjectControls({
     hasPermission,
     setIsTimetableSettingsOpen,
     userDepartments = ['math', 'highmath', 'english'],
+    isMaster,
 }: SubjectControlsProps) {
     return (
         <div className="flex items-center gap-1.5">
@@ -79,8 +81,12 @@ export default function SubjectControls({
                                 setMathViewMode('excel-teacher');
                                 return 'excel';
                             }
-                            if (prev === 'excel' && mathViewMode === 'excel-teacher') {
+                            if (prev === 'excel' && mathViewMode === 'excel-teacher' && isMaster) {
                                 setMathViewMode('excel-teacher-test');
+                                return 'excel';
+                            }
+                            if (prev === 'excel' && mathViewMode === 'excel-teacher' && !isMaster) {
+                                setMathViewMode('excel-day');
                                 return 'excel';
                             }
                             if (prev === 'excel' && mathViewMode === 'excel-teacher-test') {

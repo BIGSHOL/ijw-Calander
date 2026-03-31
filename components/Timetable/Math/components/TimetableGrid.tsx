@@ -1987,7 +1987,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                 <div className="font-bold text-period-label text-black">{groupInfo.label}</div>
                                 <div>{renderTime(groupInfo.time)}</div>
                             </td>
-                            {weekdayActiveGroups.map(gn => buildMergedPeriodCells(gn, groupConfigs[gn], firstPeriod, secondPeriod, fpi, spi, groupId))}
+                            {weekdayActiveGroups.flatMap(gn => buildMergedPeriodCells(gn, groupConfigs[gn], firstPeriod, secondPeriod, fpi, spi, groupId))}
                         </tr>
                     );
                 } else {
@@ -2004,7 +2004,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                     <div className="font-bold text-period-label text-black">{period}</div>
                                     <div>{renderTime(periodTime)}</div>
                                 </td>
-                                {weekdayActiveGroups.map(gn => buildSinglePeriodCells(gn, groupConfigs[gn], period, pi))}
+                                {weekdayActiveGroups.flatMap(gn => buildSinglePeriodCells(gn, groupConfigs[gn], period, pi))}
                             </tr>
                         );
                     });

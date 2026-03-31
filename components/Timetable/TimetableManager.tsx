@@ -733,6 +733,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     onPublishDraftToLive={handlePublishDraftToLive}
                     onOpenScenarioModal={() => setIsScenarioModalOpen(true)}
                     onOpenEmbedManager={() => setIsEmbedManagerOpen(true)}
+                    isMaster={currentUser?.role === 'master'}
                     studentMap={studentMap}
                     currentWeekStart={currentMonday}
                     filteredClasses={filteredClasses}
