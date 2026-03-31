@@ -842,7 +842,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                 onDragOver={isTimeColumnOnly ? undefined : handleDragOver}
                 onDrop={isTimeColumnOnly ? undefined : handleDrop}
                 onClick={isExcelMode && !isTimeColumnOnly ? (e) => { e.stopPropagation(); onCellSelect?.(); } : undefined}
-                className={`${cardWidthClass} h-full flex flex-col border-r border-gray-300 shrink-0 bg-white transition-all overflow-hidden relative ${isExcelMode && !isTimeColumnOnly ? 'cursor-pointer' : ''} ${isSelected ? 'ring-2 ring-blue-500 shadow-lg z-10' : ''}`}
+                className={`${cardWidthClass} h-full flex flex-col border-r border-r-black shrink-0 bg-white transition-all overflow-hidden relative ${isExcelMode && !isTimeColumnOnly ? 'cursor-pointer' : ''} ${isSelected ? 'ring-2 ring-blue-500 shadow-lg z-10' : ''}`}
             >
                 {/* 엑셀 모드: 선택된 학생이 있을 때 테두리 드래그 오버레이 */}
                 {hasSelectedInThisCard && (() => {
@@ -894,7 +894,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                     {(() => {
                         if (isTimeColumnOnly) {
                             return (
-                                <div className="text-center font-bold text-xs border-b border-orange-300 flex items-center justify-center h-[32px] bg-orange-100 text-orange-800 select-none shrink-0 overflow-hidden">
+                                <div className="text-center font-bold text-xs border-b-2 border-b-black flex items-center justify-center h-[32px] bg-orange-100 text-orange-800 select-none shrink-0 overflow-hidden">
                                     수업명
                                 </div>
                             );
@@ -903,7 +903,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                         return (
                             <div
                                 ref={headerRef}
-                                className={`text-center font-bold text-xs border-b border-gray-300 flex items-center justify-center h-[32px] leading-tight relative group shrink-0 overflow-hidden ${mode === 'view' ? 'cursor-help' : ''}`}
+                                className={`text-center font-bold text-xs border-b-2 border-b-black flex items-center justify-center h-[32px] leading-tight relative group shrink-0 overflow-hidden ${mode === 'view' ? 'cursor-help' : ''}`}
                                 title={classInfo.name}
                                 style={keywordColor ? { backgroundColor: keywordColor.bgColor, color: keywordColor.textColor } : { backgroundColor: '#EFF6FF', color: '#111827' }}
                                 onMouseEnter={() => isEnglish && mode !== 'edit' && setShowScheduleTooltip(true)}
@@ -1106,13 +1106,13 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
 
                     {/* Schedule Grid */}
                     {displayOptions?.showSchedule !== false && (
-                        <div className="border-b border-gray-300 flex-none">
-                            <div className="flex bg-gray-200 text-xxs font-bold border-b border-gray-400 h-[24px]">
+                        <div className="border-b-2 border-b-black flex-none">
+                            <div className="flex bg-gray-200 text-xxs font-bold border-b border-b-black h-[24px]">
                                 {!hideTime && (
-                                    <div className="w-[48px] flex items-center justify-center border-r border-gray-400 text-gray-600">시간</div>
+                                    <div className="w-[48px] flex items-center justify-center border-r border-r-black text-black">시간</div>
                                 )}
                                 {!isTimeColumnOnly && classInfo.finalDays.map((d) => (
-                                    <div key={d} className={`flex-1 flex items-center justify-center border-r border-gray-400 last:border-r-0 text-gray-700 ${d === '토' || d === '일' ? 'text-red-600' : ''}`}>
+                                    <div key={d} className={`flex-1 flex items-center justify-center border-r border-r-black last:border-r-0 text-black ${d === '토' || d === '일' ? 'text-red-600' : ''}`}>
                                         {d}
                                     </div>
                                 ))}
@@ -1139,7 +1139,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                 {/* Student List */}
                 {displayOptions?.showStudents ? (
                     isTimeColumnOnly ? (
-                        <div className="flex flex-col border-r border-gray-300">
+                        <div className="flex flex-col border-r border-r-black">
                             <div className="h-[230px] flex flex-col items-center justify-center bg-indigo-50 text-indigo-900 font-bold text-sm leading-relaxed select-none border-b border-indigo-100">
                                 <span>재</span><span>원</span><span>생</span>
                             </div>
@@ -1155,10 +1155,10 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                             )}
                         </div>
                     ) : (
-                        <div className="flex flex-col bg-white border-r border-gray-300">
+                        <div className="flex flex-col bg-white border-r border-r-black">
                             {/* 재원생 Section */}
                             <div className="h-[230px] flex flex-col border-b border-indigo-100">
-                                <div className="border-b border-gray-300 flex items-center justify-center h-[30px] shrink-0 bg-white">
+                                <div className="border-b border-b-black flex items-center justify-center h-[30px] shrink-0 bg-white">
                                     <div className="w-full h-full text-center text-[13px] font-bold bg-indigo-50 text-indigo-600 flex items-center justify-center gap-2">
                                         <Users size={14} />
                                         <span>

@@ -723,7 +723,7 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
             {/* Schedule Grid */}
             <div className="flex-1 overflow-auto bg-gray-100 select-none">
                 <div className="p-2">
-                    <table className="border-collapse bg-white shadow w-max table-fixed" style={{ borderColor: 'black' }}>
+                    <table className="border-collapse bg-white shadow w-max table-fixed border-2 border-black">
                         <thead className="sticky top-0 z-10">
                             <tr>
                                 <th className="p-2 border border-black bg-gray-100 text-xs font-bold text-black" rowSpan={2}>교시</th>
