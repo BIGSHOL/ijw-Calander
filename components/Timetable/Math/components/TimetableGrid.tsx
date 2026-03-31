@@ -222,11 +222,11 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     }, [columnWidth, widthFactor]);
 
     const mergedCellWidthCache = useMemo(() => {
-        const cache: Record<number, { width: string; minWidth: string; maxWidth: string; overflow: 'hidden' }> = {};
+        const cache: Record<number, { width: string; minWidth: string; maxWidth: string }> = {};
         const minPerDay = Math.round(perDayWidth * 0.5);
         for (let i = 1; i <= 7; i++) {
             const w = `${i * perDayWidth}px`;
-            cache[i] = { width: w, minWidth: `${i * minPerDay}px`, maxWidth: w, overflow: 'hidden' };
+            cache[i] = { width: w, minWidth: `${i * minPerDay}px`, maxWidth: w };
         }
         return cache;
     }, [perDayWidth]);
@@ -234,7 +234,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     const getMergedCellWidthStyle = (colspan: number) => {
         const minPerDay = Math.round(perDayWidth * 0.5);
         const w = `${colspan * perDayWidth}px`;
-        return mergedCellWidthCache[colspan] || { width: w, minWidth: `${colspan * minPerDay}px`, maxWidth: w, overflow: 'hidden' as const };
+        return mergedCellWidthCache[colspan] || { width: w, minWidth: `${colspan * minPerDay}px`, maxWidth: w };
     };
 
     // cellSize 픽셀 매핑: columnWidth + rowHeight 둘 다 반영
@@ -254,7 +254,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     const singleCellWidthStyle = useMemo(() => {
         const baseWidth = Math.round(cellSizePx * widthFactor);
         const minBase = Math.round(baseWidth * 0.5);
-        return { width: `${baseWidth}px`, minWidth: `${minBase}px`, maxWidth: `${baseWidth}px`, overflow: 'hidden' as const };
+        return { width: `${baseWidth}px`, minWidth: `${minBase}px`, maxWidth: `${baseWidth}px` };
     }, [cellSizePx, widthFactor]);
 
     // 교시당 높이 = 헤더(cellSizePx) + 학생 영역(studentSlotH)
@@ -726,7 +726,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                             cells.push(
                                                                 <td
                                                                     key={`${resource}-${day}-${groupId}`}
-                                                                    className={`p-0 align-top border-b-2 border-b-black overflow-hidden ${borderRightClass}`}
+                                                                    className={`p-0 align-top border-b-2 border-b-black ${borderRightClass}`}
                                                                     style={{ ...cellStyle, ...(bothEmpty ? { backgroundColor: EMPTY_CELL_BG } : {}) }}
                                                                     colSpan={colSpan > 1 ? colSpan : undefined}
                                                                 >
@@ -894,7 +894,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 cells.push(
                                                                     <td
                                                                         key={`${resource}-${day}-${period}`}
-                                                                        className={`p-0 align-top border-b-2 border-b-black overflow-hidden ${borderRightClass}`}
+                                                                        className={`p-0 align-top border-b-2 border-b-black ${borderRightClass}`}
                                                                         style={{ ...cellStyle, ...(isEmpty ? { backgroundColor: EMPTY_CELL_BG } : {}) }}
                                                                         rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                                         colSpan={colSpan > 1 ? colSpan : undefined}
@@ -1014,7 +1014,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                         cells.push(
                                                             <td
                                                                 key={`${resource}-${day}-${period}`}
-                                                                className={`p-0 align-top border-b-2 border-b-black overflow-hidden ${borderRightClass}`}
+                                                                className={`p-0 align-top border-b-2 border-b-black ${borderRightClass}`}
                                                                 style={{ ...cellStyle, ...(isEmpty ? { backgroundColor: EMPTY_CELL_BG } : {}) }}
                                                                 rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                                 colSpan={colSpan > 1 ? colSpan : undefined}
@@ -1302,7 +1302,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                         return (
                                                             <td
                                                                 key={`${resource}-${groupId}`}
-                                                                className={`p-0 align-top border-b-2 border-b-black overflow-hidden ${borderRightClass}`}
+                                                                className={`p-0 align-top border-b-2 border-b-black ${borderRightClass}`}
                                                                 style={{ ...cellStyle, ...(bothEmpty ? { backgroundColor: EMPTY_CELL_BG } : {}) }}
                                                             >
                                                                 <div style={cellWrapperStyle(cellStyle.height)}>
@@ -1407,7 +1407,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                             return (
                                                                 <td
                                                                     key={`${resource}-${period}`}
-                                                                    className={`p-0 align-top border-b-2 border-b-black overflow-hidden ${borderRightClass}`}
+                                                                    className={`p-0 align-top border-b-2 border-b-black ${borderRightClass}`}
                                                                     style={{ ...cellStyle, ...(isEmpty ? { backgroundColor: EMPTY_CELL_BG } : {}) }}
                                                                     rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                                 >
@@ -1543,7 +1543,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                     return (
                                                         <td
                                                             key={`${resource}-${period}`}
-                                                            className={`p-0 align-top border-b-2 border-b-black overflow-hidden ${borderRightClass}`}
+                                                            className={`p-0 align-top border-b-2 border-b-black ${borderRightClass}`}
                                                             style={{ ...cellStyle, ...(isEmpty ? { backgroundColor: EMPTY_CELL_BG } : {}) }}
                                                             rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
                                                         >
