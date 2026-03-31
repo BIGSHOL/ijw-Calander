@@ -93,7 +93,8 @@ export default function SubjectControls({
                                 setMathViewMode('excel-day');
                                 return 'excel';
                             }
-                            // excel-day → 강의실
+                            // excel-day → 강의실 (다음 진입 시 초기화)
+                            setMathViewMode('excel-teacher');
                             return 'room';
                         });
                     }}

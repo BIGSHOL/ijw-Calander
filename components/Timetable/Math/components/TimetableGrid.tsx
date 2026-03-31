@@ -1624,20 +1624,10 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         );
     };
 
-    // 뷰 모드에 따라 다른 레이아웃 렌더링
-    if (timetableViewMode === 'day-based') {
-        return (
-            <div className="overflow-auto h-full">
-                <div className="flex gap-0">
-                    {dayBasedData.map(({ day, resources }) =>
-                        renderDayBasedTable(day, resources, false)
-                    )}
-                </div>
-            </div>
-        );
-    }
+    // useRef는 조건부 early return보다 먼저 호출 (Rules of Hooks 준수)
+    const periodColRef = useRef<HTMLTableElement>(null);
 
-    // teacher-based 뷰 (그룹 순서 적용)
+    // teacher-based 뷰 (그룹 순서 적용) — day-based에서는 사용하지 않지만 hooks 순서 유지를 위해 항상 계산
     const groupConfigs: Record<string, { resources: string[]; daysMap: Map<string, string[]>; isWednesday?: boolean; hasData: boolean }> = {
         '월/목': { resources: monThuActiveResources, daysMap: monThuResourceDaysMap, hasData: monThuActiveResources.length > 0 },
         '화/금': { resources: tueFriActiveResources, daysMap: tueFriResourceDaysMap, hasData: tueFriActiveResources.length > 0 },
@@ -1657,7 +1647,18 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     const weekdayActiveGroups = activeGroups.filter(g => g !== '주말');
     const weekendGroup = activeGroups.find(g => g === '주말');
 
-    const periodColRef = useRef<HTMLTableElement>(null);
+    // 뷰 모드에 따라 다른 레이아웃 렌더링
+    if (timetableViewMode === 'day-based') {
+        return (
+            <div className="overflow-auto h-full">
+                <div className="flex gap-0">
+                    {dayBasedData.map(({ day, resources }) =>
+                        renderDayBasedTable(day, resources, false)
+                    )}
+                </div>
+            </div>
+        );
+    }
 
     // 교시 컬럼 전용 렌더링
     const renderPeriodColumn = () => {

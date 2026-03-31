@@ -861,7 +861,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         onDrop={handleGridDrop}
                         currentSubjectFilter={currentSubjectFilter}
                         studentMap={studentMap}
-                        timetableViewMode={timetableViewMode as 'day-based' | 'teacher-based'}
+                        timetableViewMode={timetableViewMode === 'day-based' ? 'day-based' : 'teacher-based'}
                         weekdayGroupOrder={mathConfig.weekdayGroupOrder}
                         classKeywords={classKeywords}
                         onStudentClick={handleStudentClick}
