@@ -74,22 +74,14 @@ export default function SubjectControls({
                 <button
                     onClick={() => {
                         setTimetableViewType(prev => {
-                            // 강의실 → 통합뷰 → 엑셀(강사) → 엑셀(강사)테스트 → 엑셀(요일) → 강의실
+                            // 강의실 → 통합뷰 → 엑셀(강사) → 엑셀(요일) → 강의실
                             if (prev === 'teacher') return 'room';
                             if (prev === 'room') return 'class';
                             if (prev === 'class') {
                                 setMathViewMode('excel-teacher');
                                 return 'excel';
                             }
-                            if (prev === 'excel' && mathViewMode === 'excel-teacher' && isMaster) {
-                                setMathViewMode('excel-teacher-test');
-                                return 'excel';
-                            }
-                            if (prev === 'excel' && mathViewMode === 'excel-teacher' && !isMaster) {
-                                setMathViewMode('excel-day');
-                                return 'excel';
-                            }
-                            if (prev === 'excel' && mathViewMode === 'excel-teacher-test') {
+                            if (prev === 'excel' && mathViewMode === 'excel-teacher') {
                                 setMathViewMode('excel-day');
                                 return 'excel';
                             }
@@ -104,7 +96,6 @@ export default function SubjectControls({
                     {viewType === 'room' ? <><Building size={12} className="inline" /> 강의실</>
                         : viewType === 'class' ? <><ClipboardList size={12} className="inline" /> 통합뷰</>
                         : viewType === 'excel' && mathViewMode === 'excel-day' ? <><Table2 size={12} className="inline" /> 엑셀(요일)</>
-                        : viewType === 'excel' && mathViewMode === 'excel-teacher-test' ? <><Table2 size={12} className="inline" /> 엑셀(강사)테스트</>
                         : viewType === 'excel' ? <><Table2 size={12} className="inline" /> 엑셀(강사)</>
                         : <><Building size={12} className="inline" /> 강의실</>}
                 </button>

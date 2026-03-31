@@ -117,13 +117,22 @@ const ExpenseListView: React.FC<{ onEdit: (e: Expense) => void; onNewClick: () =
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageExpenses = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  const handleDelete = useCallback(async (id: string) => {
-    if (!confirm('이 지출결의서를 삭제하시겠습니까?')) return;
-    await deleteMutation.mutateAsync(id);
-  }, [deleteMutation]);
-
   // 현재 사용자가 해당 결재 역할을 체크할 수 있는지 확인
   const isMasterOrAdmin = currentUser?.role === 'master' || currentUser?.role === 'admin';
+
+  const canDelete = useCallback((expense: Expense) => {
+    if (isMasterOrAdmin) return true;
+    return expense.createdBy === currentUser?.uid;
+  }, [isMasterOrAdmin, currentUser]);
+
+  const handleDelete = useCallback(async (expense: Expense) => {
+    if (!canDelete(expense)) {
+      alert('본인이 작성한 결의서만 삭제할 수 있습니다.');
+      return;
+    }
+    if (!confirm('이 지출결의서를 삭제하시겠습니까?')) return;
+    await deleteMutation.mutateAsync(expense.id);
+  }, [deleteMutation, canDelete]);
   const myExpenseRole = staffMember?.expenseRole; // 'director' | 'ceo' | 'executor' | ''
 
   const canToggleRole = useCallback((role: 'author' | 'executor' | 'director' | 'ceo') => {
@@ -141,10 +150,6 @@ const ExpenseListView: React.FC<{ onEdit: (e: Expense) => void; onNewClick: () =
     const current = expense.approvalChecks?.[role]?.checked || false;
     const newChecked = !current;
     await toggleApproval.mutateAsync({ id: expense.id, role, checked: newChecked });
-    // 대표 체크 시 원장도 자동 체크
-    if (role === 'ceo' && newChecked && !expense.approvalChecks?.director?.checked) {
-      await toggleApproval.mutateAsync({ id: expense.id, role: 'director', checked: true });
-    }
   }, [toggleApproval, canToggleRole]);
 
   const formatAmount = (n: number, sym?: string) => {
@@ -294,7 +299,10 @@ const ExpenseListView: React.FC<{ onEdit: (e: Expense) => void; onNewClick: () =
                   )}
                 </td>
                 <td className="px-1 py-2 text-center" onClick={e => e.stopPropagation()}>
-                  <button onClick={() => handleDelete(expense.id)} className="p-0.5 rounded text-red-400 hover:bg-red-50"><Trash2 size={12} /></button>
+                  <button onClick={() => handleDelete(expense)}
+                    disabled={!canDelete(expense)}
+                    title={canDelete(expense) ? '삭제' : '본인 작성 결의서만 삭제 가능'}
+                    className={`p-0.5 rounded ${canDelete(expense) ? 'text-red-400 hover:bg-red-50' : 'text-gray-200 cursor-not-allowed'}`}><Trash2 size={12} /></button>
                 </td>
               </tr>
               );

@@ -258,6 +258,8 @@ interface ClassCardProps {
     // 엑셀 보류 삭제/등록 (시각적 표시) - pendingExcelDeleteIds: composite key "studentId_className"
     pendingExcelDeleteIds?: Set<string>;
     pendingExcelEnrollments?: Array<{ studentId: string; className: string; enrollmentDate?: string }>;
+    // 통합 테이블: fixedCardHeight 대신 h-full로 부모 셀 채움
+    fillCell?: boolean;
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -314,6 +316,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
     onWithdrawalDrop,
     pendingExcelDeleteIds,
     pendingExcelEnrollments,
+    fillCell,
 }) => {
     // 주차 기준일: referenceDate가 있으면 해당 날짜, 없으면 오늘
     const refDateStr = referenceDate || formatDateKey(new Date());
@@ -952,11 +955,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
             onDrop={(e) => { if (canEdit) onDrop(e, cls.id, 'common'); }}
             onClick={isExcelMode ? (e) => { e.stopPropagation(); onCellSelect?.(cls.id); } : undefined}
             onDoubleClick={isExcelMode ? handleClassHeaderDoubleClick : undefined}
-            className={`relative flex flex-col ${fixedCardHeight ? '' : 'h-full '}overflow-hidden transition-all w-full max-w-full ${isDragOver ? 'ring-2 ring-indigo-400 shadow-lg shadow-indigo-200' : ''} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''} ${isExcelMode && isSelected ? 'ring-[3px] ring-blue-500 shadow-lg shadow-blue-200' : ''} ${isExcelMode ? 'cursor-pointer' : ''}`}
+            className={`relative flex flex-col ${(fixedCardHeight && !fillCell) ? '' : 'h-full '}overflow-hidden transition-all w-full max-w-full ${isDragOver ? 'ring-2 ring-indigo-400 shadow-lg shadow-indigo-200' : ''} ${hasSearchMatch ? 'ring-2 ring-yellow-400' : ''} ${isExcelMode && isSelected ? 'ring-[3px] ring-blue-500 shadow-lg shadow-blue-200' : ''} ${isExcelMode ? 'cursor-pointer' : ''}`}
             style={{
                 ...(isExcelMode && isSelected ? { backgroundColor: '#eff6ff' } : cardBgStyle),
-                ...(fixedCardHeight ? { height: `${fixedCardHeight}px`, maxHeight: `${fixedCardHeight}px` } : {}),
-                ...(compactMaxHeight ? { maxHeight: `${compactMaxHeight}px` } : {})
+                ...(fixedCardHeight && !fillCell ? { height: `${fixedCardHeight}px`, maxHeight: `${fixedCardHeight}px` } : {}),
+                ...(compactMaxHeight && !fillCell ? { maxHeight: `${compactMaxHeight}px` } : {})
             }}
         >
             {/* 엑셀 모드: 선택된 학생이 있을 때 테두리 드래그 오버레이 */}
@@ -1365,9 +1368,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
                             );
                         })()}
 
-                        {/* 대기 + 퇴원 (재원생 스크롤 영역 안에 배치) */}
+                        </div>
+
+                        {/* 대기 + 퇴원 (스크롤 영역 바깥, 셀 하단 고정) */}
                         {(showHoldStudents || showWithdrawnStudents) && (
-                            <div>
+                            <div className="flex-shrink-0 max-h-[100px] overflow-y-auto no-scrollbar">
                                 {showHoldStudents && allMergedHoldStudents.length > 0 && (
                                     <div className="px-0.5 py-0 bg-pink-50 border-b border-pink-200">
                                         <div className={`${fontSizeClass} font-bold text-pink-600 overflow-hidden whitespace-nowrap`}>{allMergedHoldStudents.length}명 - 대기</div>
@@ -1461,7 +1466,6 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 )}
                             </div>
                         )}
-                        </div>
 
                         {/* 퇴원 드롭존 (병합 셀) */}
                         {canEdit && onWithdrawalDrop && (
@@ -1560,9 +1564,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 ))}
                             </ul>
 
-                        {/* 대기 + 퇴원 (재원생 스크롤 영역 안에 배치) */}
+                        </div>
+
+                        {/* 대기 + 퇴원 (스크롤 영역 바깥, 셀 하단 고정) */}
                         {(showHoldStudents || showWithdrawnStudents) && (
-                            <div>
+                            <div className="flex-shrink-0 max-h-[100px] overflow-y-auto no-scrollbar">
                                 {/* 대기생 Section */}
                                 {showHoldStudents && holdStudents.length > 0 && (
                                     <div className="px-0.5 py-0 bg-pink-50 border-b border-pink-200">
@@ -1673,7 +1679,6 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 )}
                             </div>
                         )}
-                        </div>
 
                         {/* 퇴원 드롭존 (단일 셀) */}
                         {canEdit && onWithdrawalDrop && (
