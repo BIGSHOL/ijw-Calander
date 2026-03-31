@@ -20,6 +20,7 @@ import { useStudents } from './hooks/useStudents';
 import { useClasses } from './hooks/useClasses';
 import { useGradePromotion } from './hooks/useGradePromotion';
 import { useEnrollmentIntegrity } from './hooks/useEnrollmentIntegrity';
+import { usePushNotification } from './hooks/usePushNotification';
 
 // State management hooks
 import {
@@ -150,6 +151,11 @@ const App: React.FC = () => {
 
   // enrollment ↔ class 데이터 무결성 자동 검증 (하루 1회, master/admin만)
   useEnrollmentIntegrity(userProfile);
+
+  // 푸시 알림 토큰 관리 (프로필 드롭다운에서 수동 ON)
+  const { status: pushStatus, requestPermission, foregroundNotification, clearForegroundNotification, guideMessage: pushGuideMessage, needsPwaInstall } = usePushNotification(
+    staffWithAccounts.find(s => s.uid === currentUser?.uid)?.id
+  );
 
   // Simulation state
   const [simulationState, setSimulationState] = useState<SimulationState>({
@@ -655,6 +661,23 @@ const App: React.FC = () => {
     >
       <EdutrixReportsProvider />
       <VersionUpdateToast />
+
+      {/* 포그라운드 푸시 알림 토스트 */}
+      {foregroundNotification && (
+        <div className="fixed top-4 right-4 z-[9999] animate-slide-in-right">
+          <div className="bg-white rounded-lg shadow-2xl border border-blue-200 p-4 max-w-sm cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={() => { clearForegroundNotification(); window.location.href = foregroundNotification.data?.url || '/'; }}>
+            <div className="flex items-start gap-3">
+              <span className="text-2xl flex-shrink-0">🔔</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-gray-800 truncate">{foregroundNotification.notification?.title}</p>
+                <p className="text-xs text-gray-600 mt-0.5">{foregroundNotification.notification?.body}</p>
+              </div>
+              <button onClick={e => { e.stopPropagation(); clearForegroundNotification(); }} className="text-gray-400 hover:text-gray-600 flex-shrink-0">✕</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="h-screen overflow-hidden flex bg-[#f0f4f8]">
         <RoleSimulationBanner
           actualRole={userProfile?.role || null}
@@ -878,6 +901,10 @@ const App: React.FC = () => {
           currentStaffMember={currentStaffMember}
           setIsPermissionViewOpen={setIsPermissionViewOpen}
           handleLogout={handleLogout}
+          pushStatus={pushStatus}
+          onRequestPush={requestPermission}
+          pushGuideMessage={pushGuideMessage}
+          needsPwaInstall={needsPwaInstall}
           isPermissionViewOpen={isPermissionViewOpen}
           accessibleTabs={accessibleTabs}
           rolePermissions={rolePermissions}

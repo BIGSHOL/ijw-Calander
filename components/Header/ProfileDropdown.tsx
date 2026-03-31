@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Eye, EyeOff, LogOut, KeyRound, X } from 'lucide-react';
+import { Eye, EyeOff, LogOut, KeyRound, X, Bell, BellOff } from 'lucide-react';
 import { getAuth, reauthenticateWithCredential, EmailAuthProvider, updatePassword } from 'firebase/auth';
 import { UserProfile, ROLE_LABELS, StaffMember } from '../../types';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
@@ -21,6 +21,11 @@ interface ProfileDropdownProps {
   currentStaffMember: StaffMember | undefined;
   onOpenPermissionView: () => void;
   onLogout: () => void;
+  // 푸시 알림
+  pushStatus?: 'idle' | 'requesting' | 'granted' | 'denied' | 'unsupported';
+  onRequestPush?: () => void;
+  pushGuideMessage?: string | null;
+  needsPwaInstall?: boolean;
 }
 
 /** 비밀번호 변경 모달 */
@@ -190,6 +195,10 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
   currentStaffMember,
   onOpenPermissionView,
   onLogout,
+  pushStatus = 'idle',
+  onRequestPush,
+  pushGuideMessage,
+  needsPwaInstall,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -264,6 +273,47 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
             >
               <KeyRound size={16} aria-hidden="true" /> 비밀번호 변경
             </button>
+            {/* 푸시 알림 토글 */}
+            {onRequestPush && (
+              <div className="px-4 py-3 border-b border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-gray-700 font-medium">
+                    {pushStatus === 'granted' ? <Bell size={16} className="text-blue-500" /> : <BellOff size={16} className="text-gray-400" />}
+                    <span>푸시 알림</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (pushStatus !== 'granted') onRequestPush();
+                    }}
+                    disabled={pushStatus === 'requesting'}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${
+                      pushStatus === 'granted' ? 'bg-blue-500' : 'bg-gray-300 hover:bg-gray-400'
+                    } ${pushStatus === 'requesting' ? 'opacity-50' : ''}`}
+                    aria-label={pushStatus === 'granted' ? '푸시 알림 켜짐' : '푸시 알림 켜기'}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                      pushStatus === 'granted' ? 'translate-x-5' : ''
+                    }`} />
+                  </button>
+                </div>
+                {pushStatus === 'granted' && (
+                  <p className="text-[10px] text-green-600 mt-1">지출결의서 알림이 이 기기로 전송됩니다</p>
+                )}
+                {pushStatus === 'denied' && (
+                  <p className="text-[10px] text-red-500 mt-1 whitespace-pre-line">
+                    {pushGuideMessage || '브라우저에서 알림이 차단되어 있습니다. 주소창 🔒 → 알림 → 허용으로 변경해주세요.'}
+                  </p>
+                )}
+                {needsPwaInstall && (
+                  <p className="text-[10px] text-amber-600 mt-1 whitespace-pre-line">
+                    {pushGuideMessage || 'iPhone에서는 Safari 공유(□↑) → "홈 화면에 추가" 후 사용 가능합니다.'}
+                  </p>
+                )}
+                {pushStatus === 'requesting' && (
+                  <p className="text-[10px] text-blue-500 mt-1">알림 권한 요청 중...</p>
+                )}
+              </div>
+            )}
             <button
               onClick={() => {
                 onLogout();

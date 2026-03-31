@@ -34,6 +34,11 @@ interface ModalManagerProps {
   currentStaffMember?: StaffMember;
   setIsPermissionViewOpen: (open: boolean) => void;
   handleLogout: () => void;
+  // 푸시 알림
+  pushStatus?: 'idle' | 'requesting' | 'granted' | 'denied' | 'unsupported';
+  onRequestPush?: () => void;
+  pushGuideMessage?: string | null;
+  needsPwaInstall?: boolean;
 
   // Permission View
   isPermissionViewOpen: boolean;
@@ -117,6 +122,10 @@ export const ModalManager: React.FC<ModalManagerProps> = ({
   currentStaffMember,
   setIsPermissionViewOpen,
   handleLogout,
+  pushStatus,
+  onRequestPush,
+  pushGuideMessage,
+  needsPwaInstall,
   isPermissionViewOpen,
   accessibleTabs,
   rolePermissions,
@@ -194,6 +203,10 @@ export const ModalManager: React.FC<ModalManagerProps> = ({
         currentStaffMember={currentStaffMember}
         onOpenPermissionView={() => setIsPermissionViewOpen(true)}
         onLogout={handleLogout}
+        pushStatus={pushStatus}
+        onRequestPush={onRequestPush}
+        pushGuideMessage={pushGuideMessage}
+        needsPwaInstall={needsPwaInstall}
       />
 
       {/* Permission View Modal */}

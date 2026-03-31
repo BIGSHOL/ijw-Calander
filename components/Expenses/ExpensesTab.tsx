@@ -65,7 +65,7 @@ const ExpensesTab: React.FC<ExpensesTabProps> = ({ currentUser, staffMember }) =
 
       {/* 콘텐츠 */}
       {viewMode === 'list' ? (
-        <ExpenseListView onEdit={handleEdit} onNewClick={() => setViewMode('create')} />
+        <ExpenseListView onEdit={handleEdit} onNewClick={() => setViewMode('create')} staffMember={staffMember} currentUser={currentUser} />
       ) : (
         <ExpenseFormView editData={editingExpense} onBack={handleBackToList} currentUser={currentUser} staffMember={staffMember} />
       )}
@@ -74,7 +74,7 @@ const ExpensesTab: React.FC<ExpensesTabProps> = ({ currentUser, staffMember }) =
 };
 
 // ==================== 관리대장 목록 뷰 ====================
-const ExpenseListView: React.FC<{ onEdit: (e: Expense) => void; onNewClick: () => void }> = ({ onEdit, onNewClick }) => {
+const ExpenseListView: React.FC<{ onEdit: (e: Expense) => void; onNewClick: () => void; staffMember?: StaffMember; currentUser?: UserProfile | null }> = ({ onEdit, onNewClick, staffMember, currentUser }) => {
   const { data: expenses = [], isLoading } = useExpenses();
   const deleteMutation = useDeleteExpense();
   const toggleApproval = useToggleApproval();
@@ -122,7 +122,22 @@ const ExpenseListView: React.FC<{ onEdit: (e: Expense) => void; onNewClick: () =
     await deleteMutation.mutateAsync(id);
   }, [deleteMutation]);
 
+  // 현재 사용자가 해당 결재 역할을 체크할 수 있는지 확인
+  const isMasterOrAdmin = currentUser?.role === 'master' || currentUser?.role === 'admin';
+  const myExpenseRole = staffMember?.expenseRole; // 'director' | 'ceo' | 'executor' | ''
+
+  const canToggleRole = useCallback((role: 'author' | 'executor' | 'director' | 'ceo') => {
+    if (isMasterOrAdmin) return true;
+    if (role === 'author') return true; // 작성 체크는 누구나
+    return myExpenseRole === role;
+  }, [isMasterOrAdmin, myExpenseRole]);
+
   const handleApprovalToggle = useCallback(async (expense: Expense, role: 'author' | 'executor' | 'director' | 'ceo') => {
+    if (!canToggleRole(role)) {
+      const labels: Record<string, string> = { director: '원장', ceo: '대표', executor: '집행자' };
+      alert(`${labels[role]} 결재 권한이 없습니다. 직원 관리에서 지출결의 역할을 설정해주세요.`);
+      return;
+    }
     const current = expense.approvalChecks?.[role]?.checked || false;
     const newChecked = !current;
     await toggleApproval.mutateAsync({ id: expense.id, role, checked: newChecked });
@@ -130,7 +145,7 @@ const ExpenseListView: React.FC<{ onEdit: (e: Expense) => void; onNewClick: () =
     if (role === 'ceo' && newChecked && !expense.approvalChecks?.director?.checked) {
       await toggleApproval.mutateAsync({ id: expense.id, role: 'director', checked: true });
     }
-  }, [toggleApproval]);
+  }, [toggleApproval, canToggleRole]);
 
   const formatAmount = (n: number, sym?: string) => {
     const s = sym || '₩';
@@ -247,19 +262,25 @@ const ExpenseListView: React.FC<{ onEdit: (e: Expense) => void; onNewClick: () =
                 </td>
                 <td className="px-1 py-2 text-center" onClick={e => e.stopPropagation()}>
                   <button onClick={() => handleApprovalToggle(expense, 'director')}
-                    className={`text-xs px-1 py-0.5 rounded hover:bg-gray-100 ${checks.director?.checked ? 'text-green-600 font-bold' : 'text-gray-300'}`}>
+                    disabled={!canToggleRole('director')}
+                    title={canToggleRole('director') ? '원장 결재' : '원장 결재 권한 없음'}
+                    className={`text-xs px-1 py-0.5 rounded ${canToggleRole('director') ? 'hover:bg-gray-100 cursor-pointer' : 'cursor-not-allowed opacity-40'} ${checks.director?.checked ? 'text-green-600 font-bold' : 'text-gray-300'}`}>
                     {checks.director?.checked ? '✔' : '—'}
                   </button>
                 </td>
                 <td className="px-1 py-2 text-center" onClick={e => e.stopPropagation()}>
                   <button onClick={() => handleApprovalToggle(expense, 'ceo')}
-                    className={`text-xs px-1 py-0.5 rounded hover:bg-gray-100 ${checks.ceo?.checked ? 'text-green-600 font-bold' : 'text-gray-300'}`}>
+                    disabled={!canToggleRole('ceo')}
+                    title={canToggleRole('ceo') ? '대표 결재' : '대표 결재 권한 없음'}
+                    className={`text-xs px-1 py-0.5 rounded ${canToggleRole('ceo') ? 'hover:bg-gray-100 cursor-pointer' : 'cursor-not-allowed opacity-40'} ${checks.ceo?.checked ? 'text-green-600 font-bold' : 'text-gray-300'}`}>
                     {checks.ceo?.checked ? '✔' : '—'}
                   </button>
                 </td>
                 <td className="px-1 py-2 text-center" onClick={e => e.stopPropagation()}>
                   <button onClick={() => handleApprovalToggle(expense, 'executor')}
-                    className={`text-xs px-1 py-0.5 rounded hover:bg-gray-100 ${checks.executor?.checked ? 'text-green-600 font-bold' : 'text-gray-300'}`}>
+                    disabled={!canToggleRole('executor')}
+                    title={canToggleRole('executor') ? '집행자 결재' : '집행자 결재 권한 없음'}
+                    className={`text-xs px-1 py-0.5 rounded ${canToggleRole('executor') ? 'hover:bg-gray-100 cursor-pointer' : 'cursor-not-allowed opacity-40'} ${checks.executor?.checked ? 'text-green-600 font-bold' : 'text-gray-300'}`}>
                     {checks.executor?.checked ? '✔' : '—'}
                   </button>
                 </td>

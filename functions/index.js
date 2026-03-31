@@ -7018,6 +7018,203 @@ exports.cleanupExpiredRecordings = functions
         return null;
     });
 
+// ============ 지출결의서 푸시 알림 (v2 — named database 지원) ============
+const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
+
+/**
+ * 지출결의서 생성 시 결재 대상자(원장/대표/집행자)에게 푸시 알림 발송
+ */
+exports.notifyExpenseCreated = onDocumentCreated(
+    {
+        document: "expenses/{expenseId}",
+        database: "restore20260319",
+        region: "asia-northeast3",
+    },
+    async (event) => {
+        const expense = event.data?.data();
+        if (!expense) return null;
+
+        try {
+            const staffSnap = await db.collection("staff")
+                .where("expenseRole", "in", ["director", "ceo", "executor"])
+                .get();
+
+            if (staffSnap.empty) {
+                logger.info("[notifyExpenseCreated] 결재 대상자 없음");
+                return null;
+            }
+
+            const tokens = [];
+            staffSnap.docs.forEach((doc) => {
+                const staff = doc.data();
+                if (staff.fcmTokens && Array.isArray(staff.fcmTokens)) {
+                    tokens.push(...staff.fcmTokens.map((t) => ({
+                        token: t,
+                        staffId: doc.id,
+                    })));
+                }
+            });
+
+            if (tokens.length === 0) {
+                logger.info("[notifyExpenseCreated] FCM 토큰이 등록된 결재자 없음");
+                return null;
+            }
+
+            const amount = expense.totalAmount
+                ? String.fromCharCode(8361) + Number(expense.totalAmount).toLocaleString()
+                : "";
+
+            const message = {
+                notification: {
+                    title: "지출결의서 결재 요청",
+                    body: (expense.author || "") + "님이 '" + (expense.title || "(제목 없음)") + "' 결의서를 제출했습니다. " + amount,
+                },
+                data: {
+                    type: "expense_approval",
+                    expenseId: event.params.expenseId,
+                    url: "/?tab=expenses",
+                },
+            };
+
+            const results = await Promise.allSettled(
+                tokens.map(({ token }) =>
+                    admin.messaging().send({ ...message, token })
+                )
+            );
+
+            // 무효 토큰 정리
+            const invalidTokens = [];
+            results.forEach((result, idx) => {
+                if (result.status === "rejected") {
+                    const errorCode = result.reason?.code;
+                    if (
+                        errorCode === "messaging/invalid-registration-token" ||
+                        errorCode === "messaging/registration-token-not-registered"
+                    ) {
+                        invalidTokens.push(tokens[idx]);
+                    }
+                }
+            });
+
+            if (invalidTokens.length > 0) {
+                const batch = db.batch();
+                const staffTokenMap = {};
+                invalidTokens.forEach(({ staffId, token }) => {
+                    if (!staffTokenMap[staffId]) staffTokenMap[staffId] = [];
+                    staffTokenMap[staffId].push(token);
+                });
+                for (const [sid, deadTokens] of Object.entries(staffTokenMap)) {
+                    const ref = db.collection("staff").doc(sid);
+                    batch.update(ref, {
+                        fcmTokens: admin.firestore.FieldValue.arrayRemove(...deadTokens),
+                    });
+                }
+                await batch.commit();
+                logger.info("[notifyExpenseCreated] 무효 토큰 " + invalidTokens.length + "개 정리");
+            }
+
+            const successCount = results.filter((r) => r.status === "fulfilled").length;
+            logger.info("[notifyExpenseCreated] 발송 완료: " + successCount + "/" + tokens.length + "건 성공");
+            return null;
+        } catch (error) {
+            logger.error("[notifyExpenseCreated] 오류:", error);
+            return null;
+        }
+    }
+);
+
+/**
+ * 지출결의서 결재 완료 시 작성자에게 푸시 알림 발송
+ */
+exports.notifyExpenseApproval = onDocumentUpdated(
+    {
+        document: "expenses/{expenseId}",
+        database: "restore20260319",
+        region: "asia-northeast3",
+    },
+    async (event) => {
+        const before = event.data?.before?.data();
+        const after = event.data?.after?.data();
+        if (!before || !after) return null;
+
+        try {
+            const roleLabels = { director: "원장", ceo: "대표", executor: "집행자" };
+            const roles = ["director", "ceo", "executor"];
+
+            let newlyApprovedRole = null;
+            for (const role of roles) {
+                const wasBefore = before.approvalChecks?.[role]?.checked || false;
+                const isAfter = after.approvalChecks?.[role]?.checked || false;
+                if (!wasBefore && isAfter) {
+                    newlyApprovedRole = role;
+                    break;
+                }
+            }
+
+            if (!newlyApprovedRole) return null;
+
+            const authorUid = after.createdBy;
+            if (!authorUid) return null;
+
+            const authorStaffSnap = await db.collection("staff")
+                .where("uid", "==", authorUid)
+                .limit(1)
+                .get();
+
+            if (authorStaffSnap.empty) return null;
+
+            const authorStaff = authorStaffSnap.docs[0].data();
+            const tokens = authorStaff.fcmTokens || [];
+
+            if (tokens.length === 0) return null;
+
+            const message = {
+                notification: {
+                    title: "지출결의서 결재 완료",
+                    body: "'" + (after.title || "(제목 없음)") + "' 결의서가 " + roleLabels[newlyApprovedRole] + " 결재되었습니다.",
+                },
+                data: {
+                    type: "expense_approved",
+                    expenseId: event.params.expenseId,
+                    url: "/?tab=expenses",
+                },
+            };
+
+            const results = await Promise.allSettled(
+                tokens.map((token) =>
+                    admin.messaging().send({ ...message, token })
+                )
+            );
+
+            const invalidTokens = [];
+            results.forEach((result, idx) => {
+                if (result.status === "rejected") {
+                    const errorCode = result.reason?.code;
+                    if (
+                        errorCode === "messaging/invalid-registration-token" ||
+                        errorCode === "messaging/registration-token-not-registered"
+                    ) {
+                        invalidTokens.push(tokens[idx]);
+                    }
+                }
+            });
+
+            if (invalidTokens.length > 0) {
+                await db.collection("staff").doc(authorStaffSnap.docs[0].id).update({
+                    fcmTokens: admin.firestore.FieldValue.arrayRemove(...invalidTokens),
+                });
+            }
+
+            const successCount = results.filter((r) => r.status === "fulfilled").length;
+            logger.info("[notifyExpenseApproval] " + roleLabels[newlyApprovedRole] + " 결재 알림: " + successCount + "/" + tokens.length + "건");
+            return null;
+        } catch (error) {
+            logger.error("[notifyExpenseApproval] 오류:", error);
+            return null;
+        }
+    }
+);
+
 // ============ Google Calendar 동기화 ============
 const googleCalendarSync = require("./googleCalendarSync");
 exports.syncEventToGcal = googleCalendarSync.syncEventToGcal;

@@ -49,6 +49,9 @@ export interface StaffMember {
   // === 지출결의서 역할 (마스터가 설정) ===
   expenseRole?: '' | 'director' | 'ceo' | 'executor';  // 미지정 / 원장 / 대표 / 집행자
 
+  // === 푸시 알림 ===
+  fcmTokens?: string[];  // FCM 기기 토큰 배열 (기기/브라우저별 고유)
+
   // === 선생님 전용 필드 (role === 'teacher'일 때만 사용) ===
   // 시간표 표시 설정
   isHiddenInTimetable?: boolean;  // 시간표에서 숨김

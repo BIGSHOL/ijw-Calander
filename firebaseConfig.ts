@@ -66,6 +66,64 @@ export const auth = getAuth(app);
 import { getStorage } from "firebase/storage";
 export const storage = getStorage(app);
 
+// ======== Firebase Cloud Messaging (푸시 알림) ========
+import { getMessaging, getToken, onMessage, isSupported, type Messaging } from "firebase/messaging";
+
+let messagingInstance: Messaging | null = null;
+
+/**
+ * FCM Messaging 인스턴스 반환 (지원되는 브라우저에서만)
+ */
+export const getMessagingInstance = async (): Promise<Messaging | null> => {
+    if (messagingInstance) return messagingInstance;
+    const supported = await isSupported();
+    if (!supported) return null;
+    messagingInstance = getMessaging(app);
+    return messagingInstance;
+};
+
+/**
+ * FCM 토큰 발급 (알림 권한 허용 후 호출)
+ * VAPID 키는 Firebase Console > 프로젝트 설정 > Cloud Messaging > 웹 푸시 인증서에서 발급
+ */
+export const requestFcmToken = async (vapidKey: string): Promise<string | null> => {
+    try {
+        const messaging = await getMessagingInstance();
+        if (!messaging) return null;
+
+        // Service Worker 등록 및 활성화 대기
+        const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        // SW가 아직 installing/waiting 상태이면 active될 때까지 대기
+        if (!swRegistration.active) {
+            await new Promise<void>((resolve) => {
+                const sw = swRegistration.installing || swRegistration.waiting;
+                if (!sw) { resolve(); return; }
+                sw.addEventListener('statechange', () => {
+                    if (sw.state === 'activated') resolve();
+                });
+            });
+        }
+
+        const token = await getToken(messaging, {
+            vapidKey,
+            serviceWorkerRegistration: swRegistration,
+        });
+        return token || null;
+    } catch (err) {
+        console.error('FCM 토큰 발급 실패:', err);
+        return null;
+    }
+};
+
+/**
+ * 포그라운드 메시지 리스너 등록
+ */
+export const onForegroundMessage = async (callback: (payload: any) => void) => {
+    const messaging = await getMessagingInstance();
+    if (!messaging) return () => {};
+    return onMessage(messaging, callback);
+};
+
 // ======== 개발용 전역 진단 함수 ========
 // 브라우저 콘솔에서 window.diagnoseEnrollments() 로 호출
 import { collection, getDocs } from "firebase/firestore";
