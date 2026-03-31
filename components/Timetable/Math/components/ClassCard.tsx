@@ -1168,9 +1168,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
             {/* Student List */}
             {showStudents && (
                 isMergedCell ? (
-                    <div className="flex-1 flex flex-col overflow-hidden min-w-0 min-h-0">
+                    <div className="flex-1 overflow-y-auto no-scrollbar min-w-0 min-h-0">
                         <div
-                            className={`flex-1 px-1 py-0 transition-colors min-w-0 min-h-0 overflow-y-auto no-scrollbar fade-bottom overscroll-contain ${dragOverZone === 'common' ? 'bg-indigo-100 ring-2 ring-inset ring-indigo-400' : ''}`}
+                            className={`px-1 py-0 transition-colors min-w-0 ${dragOverZone === 'common' ? 'bg-indigo-100 ring-2 ring-inset ring-indigo-400' : ''}`}
                             onDragOver={(e) => {
                                 if (!canEdit) return;
                                 e.preventDefault();
@@ -1390,9 +1390,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
                             </div>
                         )}
 
-                        {/* 대기 + 퇴원 (토글에 따라 조건부 렌더링) */}
+                        {/* 대기 + 퇴원 (재원생 바로 아래 배치, 통합 스크롤) */}
                         {(showHoldStudents || showWithdrawnStudents) && (
-                            <div className="flex-shrink overflow-y-auto no-scrollbar min-h-0" style={{ maxHeight: `${Math.max(60, 3 * activeItemH + 20)}px` }}>
+                            <div>
                                 {showHoldStudents && allMergedHoldStudents.length > 0 && (
                                     <div className="px-0.5 py-0 bg-pink-50 border-b border-pink-200">
                                         <div className={`${fontSizeClass} font-bold text-pink-600 overflow-hidden whitespace-nowrap`}>{allMergedHoldStudents.length}명 - 대기</div>
@@ -1488,8 +1488,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         )}
                     </div>
                 ) : (
-                    <div className="flex-1 flex flex-col overflow-hidden min-w-0 min-h-0">
-                        <div className="flex-1 px-0.5 py-0.5 min-w-0 min-h-0 overflow-y-auto no-scrollbar fade-bottom overscroll-contain">
+                    <div className="flex-1 overflow-y-auto no-scrollbar min-w-0 min-h-0">
+                        <div className="px-0.5 py-0.5 min-w-0">
                             <div className={`${fontSizeClass} font-bold text-indigo-600 mb-0 overflow-hidden whitespace-nowrap`}>{activeStudents.length}명 - 재원생</div>
                             <ul className="flex flex-col min-w-0 list-none">
                                 {activeStudents.map(s => {
@@ -1558,10 +1558,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         )}
                                     </li>
                                 ))}
-                                {/* 단일셀: 6명 기본 높이 - 빈 슬롯으로 공간 확보 */}
-                                {Array.from({ length: Math.max(0, SINGLE_BASE - activeStudents.length - pendingEnrollmentStudents.length) }).map((_, i) => (
-                                    <li key={`pad-${i}`} className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] invisible select-none`}>&nbsp;</li>
-                                ))}
+                                {/* 빈 슬롯 제거: 대기/퇴원과 간격 방지 */}
                             </ul>
                         </div>
 
@@ -1589,9 +1586,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
                             </div>
                         )}
 
-                        {/* 하단 고정 영역: 대기 + 퇴원 (토글에 따라 조건부 렌더링) */}
+                        {/* 대기 + 퇴원 (재원생 바로 아래 배치, 통합 스크롤) */}
                         {(showHoldStudents || showWithdrawnStudents) && (
-                            <div className="flex-shrink overflow-y-auto no-scrollbar min-h-0" style={{ maxHeight: `${Math.max(60, 3 * activeItemH + 20)}px` }}>
+                            <div>
                                 {/* 대기생 Section */}
                                 {showHoldStudents && holdStudents.length > 0 && (
                                     <div className="px-0.5 py-0 bg-pink-50 border-b border-pink-200">
