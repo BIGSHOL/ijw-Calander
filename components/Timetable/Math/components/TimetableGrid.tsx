@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect, useCallback } from 'react';
 import { TimetableClass, Teacher, ClassKeywordColor } from '../../../../types';
 import { getClassesForCell, getConsecutiveSpan, shouldSkipCell, isSameClassNameSet } from '../utils/gridUtils';
 import ClassCard from './ClassCard';
@@ -388,7 +388,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         daysMap: Map<string, string[]>,
         title?: string,
         isWednesdayTable?: boolean,
-        hidePeriodColumn?: boolean
+        hidePeriodColumn?: boolean,
+        tableRef?: React.RefObject<HTMLTableElement | null>
     ) => {
         if (resources.length === 0) return null;
 
@@ -489,7 +490,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return (
             <div className="flex-shrink-0">
                 <div className="relative">
-                    <table className="border-collapse border-2 border-black" style={{ tableLayout: 'fixed', width: `${totalTableWidth}px` }}>
+                    <table ref={tableRef || undefined} className="border-collapse border-2 border-black" style={{ tableLayout: 'fixed', width: `${totalTableWidth}px` }}>
                         {/* colgroup으로 각 컬럼 너비 강제 */}
                         <colgroup>
                             {!hidePeriodColumn && <col style={{ width: '90px' }} />}
@@ -1650,22 +1651,111 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     const orderedGroups = [...nonWeekendGroups, ...baseOrder.filter(g => g === '주말')];
 
     const activeGroups = orderedGroups.filter(g => groupConfigs[g]?.hasData);
+    const weekdayActiveGroups = activeGroups.filter(g => g !== '주말');
+    const weekendGroup = activeGroups.find(g => g === '주말');
+
+    // 교시 컬럼 높이 동기화: 첫 번째 평일 테이블의 tbody 행 높이를 측정하여 교시 컬럼에 적용
+    const firstTableRef = useRef<HTMLTableElement>(null);
+    const periodColRef = useRef<HTMLTableElement>(null);
+    const [periodRowHeights, setPeriodRowHeights] = React.useState<number[]>([]);
+
+    const syncPeriodHeights = useCallback(() => {
+        if (!firstTableRef.current) return;
+        const tbodyRows = firstTableRef.current.querySelector('.timetable-body')?.querySelectorAll(':scope > tr');
+        if (!tbodyRows) return;
+        const heights = Array.from(tbodyRows).map(row => (row as HTMLElement).getBoundingClientRect().height);
+        setPeriodRowHeights(prev => {
+            if (prev.length === heights.length && prev.every((h, i) => Math.abs(h - heights[i]) < 1)) return prev;
+            return heights;
+        });
+    }, []);
+
+    useEffect(() => {
+        syncPeriodHeights();
+        const observer = new ResizeObserver(syncPeriodHeights);
+        if (firstTableRef.current) {
+            const tbodyRows = firstTableRef.current.querySelector('.timetable-body')?.querySelectorAll(':scope > tr');
+            tbodyRows?.forEach(row => observer.observe(row));
+        }
+        return () => observer.disconnect();
+    }, [syncPeriodHeights, filteredClasses, currentPeriods, showStudents, rowHeight]);
+
+    // 교시 컬럼 전용 렌더링
+    const renderPeriodColumn = () => {
+        const bgHex = '#f3f4f6';
+        const rows: { label: string; time: string }[] = [];
+        const processedPeriods = new Set<string>();
+
+        MATH_GROUPED_PERIODS.forEach(groupId => {
+            const periodIds = MATH_GROUP_PERIOD_IDS[groupId];
+            const [firstPeriod, secondPeriod] = periodIds;
+            const hasFirst = currentPeriods.includes(firstPeriod);
+            const hasSecond = currentPeriods.includes(secondPeriod);
+            if (!hasFirst && !hasSecond) return;
+            const groupInfo = MATH_GROUP_DISPLAY[groupId];
+            if (hasFirst && hasSecond) {
+                processedPeriods.add(firstPeriod);
+                processedPeriods.add(secondPeriod);
+                rows.push({ label: groupInfo.label, time: groupInfo.time });
+            } else {
+                periodIds.forEach(period => {
+                    if (!currentPeriods.includes(period) || processedPeriods.has(period)) return;
+                    processedPeriods.add(period);
+                    rows.push({ label: period, time: MATH_PERIOD_TIMES[period] || period });
+                });
+            }
+        });
+
+        return (
+            <div className="flex-shrink-0 sticky left-0 z-30">
+                <table ref={periodColRef} className="border-collapse border-2 border-black" style={{ tableLayout: 'fixed', width: '90px' }}>
+                    <colgroup><col style={{ width: '90px' }} /></colgroup>
+                    <thead className="sticky top-0 z-20">
+                        <tr>
+                            <th className="bg-gray-700 text-white px-3 py-2 font-bold text-sm text-left" style={{ width: '90px', minWidth: '90px' }}>&nbsp;</th>
+                        </tr>
+                        <tr>
+                            <th className="p-1.5 text-period-label font-bold text-black border-b-2 border-b-black" rowSpan={2} style={{ width: '90px', minWidth: '90px', backgroundColor: bgHex }}>교시</th>
+                        </tr>
+                        <tr />
+                    </thead>
+                    <tbody className="timetable-body">
+                        {rows.map((row, i) => (
+                            <tr key={`period-col-${i}`}>
+                                <td
+                                    className="p-1.5 text-period-label font-bold text-black text-center border-b-2 border-b-black"
+                                    style={{
+                                        width: '90px', minWidth: '90px', backgroundColor: bgHex,
+                                        height: periodRowHeights[i] ? `${periodRowHeights[i]}px` : undefined
+                                    }}
+                                >
+                                    <div className="font-bold text-period-label text-black">{row.label}</div>
+                                    <div>{renderTime(row.time)}</div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        );
+    };
 
     return (
         <div className="overflow-auto h-full">
             <div className="flex gap-0">
-                {activeGroups.map((groupName, idx) => {
+                {weekdayActiveGroups.length > 0 && renderPeriodColumn()}
+                {weekdayActiveGroups.map((groupName, idx) => {
                     const config = groupConfigs[groupName];
-                    const isWeekend = groupName === '주말';
-                    // 첫 번째 평일 그룹에만 교시 컬럼 표시, 나머지 평일은 숨김, 주말은 자체 교시 포함
-                    const isFirstWeekday = !isWeekend && idx === activeGroups.findIndex(g => g !== '주말');
-                    const hidePeriod = !isWeekend && !isFirstWeekday;
                     return (
                         <React.Fragment key={groupName}>
-                            {renderTable(config.resources, config.daysMap, groupName, config.isWednesday, hidePeriod)}
+                            {renderTable(config.resources, config.daysMap, groupName, config.isWednesday, true, idx === 0 ? firstTableRef : undefined)}
                         </React.Fragment>
                     );
                 })}
+                {weekendGroup && (() => {
+                    const config = groupConfigs[weekendGroup];
+                    return renderTable(config.resources, config.daysMap, weekendGroup, config.isWednesday, false);
+                })()}
             </div>
         </div>
     );
