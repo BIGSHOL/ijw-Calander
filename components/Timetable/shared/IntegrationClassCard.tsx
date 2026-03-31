@@ -1073,13 +1073,13 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
 
                     {/* Info Summary (Teacher/Room) */}
                     {(displayOptions?.showTeacher || displayOptions?.showRoom) && (
-                        <div className="bg-orange-50 border-b border-gray-300 text-xs flex flex-col">
+                        <div className={`bg-orange-50 ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-gray-300'} text-xs flex flex-col`}>
                             {displayOptions?.showTeacher && (() => {
                                 const mainTeacherData = teachersData.find(t => t.name === classInfo.mainTeacher || t.englishName === classInfo.mainTeacher);
                                 const displayTeacherName = isEnglish ? (mainTeacherData?.englishName || classInfo.mainTeacher) : classInfo.mainTeacher;
 
                                 return (
-                                    <div className={`flex border-b border-orange-200 h-[26px] ${isTimeColumnOnly ? 'bg-orange-100 justify-center items-center' : 'bg-orange-50'}`}>
+                                    <div className={`flex ${isEnglish ? 'border-b border-b-black' : 'border-b border-orange-200'} h-[26px] ${isTimeColumnOnly ? 'bg-orange-100 justify-center items-center' : 'bg-orange-50'}`}>
                                         {isTimeColumnOnly ? (
                                             <span className="font-bold text-orange-800">담임</span>
                                         ) : (
@@ -1140,16 +1140,20 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                 {displayOptions?.showStudents ? (
                     isTimeColumnOnly ? (
                         <div className="flex flex-col border-r border-r-black">
-                            <div className="h-[230px] flex flex-col items-center justify-center bg-indigo-50 text-indigo-900 font-bold text-sm leading-relaxed select-none border-b border-indigo-100">
+                            <div className={`flex-1 flex flex-col items-center justify-center bg-indigo-50 text-indigo-900 font-bold text-sm leading-relaxed select-none ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-indigo-100'}`}>
                                 <span>재</span><span>원</span><span>생</span>
                             </div>
                             {displayOptions?.showHoldStudents !== false && (
-                                <div className="flex items-center justify-center bg-pink-100 text-pink-700 font-bold text-xs h-[80px] border-b border-pink-200 select-none">
+                                <div className={`flex items-center justify-center bg-pink-100 text-pink-700 font-bold text-xs ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-pink-200'} select-none`}
+                                    style={isEnglish ? { minHeight: '24px', height: 'auto' } : { height: '80px' }}
+                                >
                                     대기
                                 </div>
                             )}
                             {displayOptions?.showWithdrawnStudents !== false && (
-                                <div className="flex items-center justify-center bg-gray-100 text-gray-600 font-bold text-xs h-[80px] select-none">
+                                <div className="flex items-center justify-center bg-gray-100 text-gray-600 font-bold text-xs select-none"
+                                    style={isEnglish ? { minHeight: '24px', height: 'auto' } : { height: '80px' }}
+                                >
                                     퇴원
                                 </div>
                             )}
@@ -1157,7 +1161,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                     ) : (
                         <div className="flex flex-col bg-white border-r border-r-black">
                             {/* 재원생 Section */}
-                            <div className="h-[230px] flex flex-col border-b border-indigo-100">
+                            <div className={`flex-1 flex flex-col ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-indigo-100'}`} style={isEnglish ? { minHeight: '80px' } : { height: '230px' }}>
                                 <div className="border-b border-b-black flex items-center justify-center h-[30px] shrink-0 bg-white">
                                     <div className="w-full h-full text-center text-[13px] font-bold bg-indigo-50 text-indigo-600 flex items-center justify-center gap-2">
                                         <Users size={14} />
@@ -1288,7 +1292,9 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
 
                             {/* 대기 Section (배정 예정 + 휴원) - showHoldStudents 옵션 적용 */}
                             {displayOptions?.showHoldStudents !== false && (
-                                <div className="h-[80px] flex flex-col bg-pink-50 border-b border-pink-200 px-2 py-1 overflow-y-auto custom-scrollbar">
+                                <div className={`flex flex-col bg-pink-50 ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-pink-200'} px-2 py-1 overflow-y-auto custom-scrollbar`}
+                                    style={isEnglish ? { minHeight: '24px', height: 'auto', maxHeight: '120px' } : { height: '80px' }}
+                                >
                                     {holdStudents.length === 0 && scheduledStudents.length === 0 ? (
                                         <span className="text-xxs text-pink-300 flex items-center justify-center h-full">-</span>
                                     ) : (
@@ -1358,7 +1364,9 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
 
                             {/* 퇴원생 Section - showWithdrawnStudents 옵션 적용 */}
                             {displayOptions?.showWithdrawnStudents !== false && (
-                                <div className="h-[80px] flex flex-col bg-gray-100 px-2 py-1 overflow-y-auto custom-scrollbar">
+                                <div className="flex flex-col bg-gray-100 px-2 py-1 overflow-y-auto custom-scrollbar"
+                                    style={isEnglish ? { minHeight: '24px', height: 'auto', maxHeight: '120px' } : { height: '80px' }}
+                                >
                                     {withdrawnStudents.length === 0 ? (
                                         <span className="text-xxs text-gray-500 flex items-center justify-center h-full">-</span>
                                     ) : (

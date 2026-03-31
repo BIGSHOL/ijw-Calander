@@ -272,7 +272,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
     // td 내부 wrapper div 스타일 (td height는 CSS 최소값이므로 wrapper div로 실제 높이 제한)
     // 별도 테이블(월/목, 화/금, 수)의 행 높이를 통일하기 위해 필수
-    // wrapper 스타일 없음 — 셀 높이는 내용에 맞게 자동 확장, 교시 컬럼은 별도 테이블이라 독립
+    // minHeight로 최소 높이만 보장, 퇴원/대기 학생이 넘치면 셀이 자동 확장
     const cellWrapperStyle = (_h: string | undefined): React.CSSProperties | undefined => undefined;
 
     // 수요일만
@@ -389,7 +389,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         title?: string,
         isWednesdayTable?: boolean,
         hidePeriodColumn?: boolean,
-        tableRef?: React.RefObject<HTMLTableElement | null>
+        tableRef?: React.Ref<HTMLTableElement>,
+        rowHeights?: number[]
     ) => {
         if (resources.length === 0) return null;
 
@@ -490,7 +491,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return (
             <div className="flex-shrink-0">
                 <div className="relative">
-                    <table ref={tableRef || undefined} className="border-collapse border-2 border-black" style={{ tableLayout: 'fixed', width: `${totalTableWidth}px` }}>
+                    <table ref={tableRef ?? undefined} className="border-collapse border-2 border-black" style={{ tableLayout: 'fixed', width: `${totalTableWidth}px` }}>
                         {/* colgroup으로 각 컬럼 너비 강제 */}
                         <colgroup>
                             {!hidePeriodColumn && <col style={{ width: '90px' }} />}
@@ -642,8 +643,9 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                             const firstPeriodIndex = currentPeriods.indexOf(firstPeriod);
                                             const secondPeriodIndex = currentPeriods.indexOf(secondPeriod);
 
+                                            const rowIdx = rows.length;
                                             rows.push(
-                                                <tr key={`group-${groupId}`}>
+                                                <tr key={`group-${groupId}`} style={rowHeights?.[rowIdx] ? { height: `${rowHeights[rowIdx]}px` } : undefined}>
                                                     {!hidePeriodColumn && (
                                                         <td
                                                             className={`p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-2 border-b-black border-r-2 border-r-black`}
@@ -788,8 +790,9 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
                                                 const periodTime = MATH_PERIOD_TIMES[period] || period;
 
+                                                const rowIdx = rows.length;
                                                 rows.push(
-                                                    <tr key={`period-${period}`}>
+                                                    <tr key={`period-${period}`} style={rowHeights?.[rowIdx] ? { height: `${rowHeights[rowIdx]}px` } : undefined}>
                                                         {!hidePeriodColumn && (
                                                             <td
                                                                 className={`p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-2 border-b-black border-r-2 border-r-black`}
@@ -1654,31 +1657,46 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     const weekdayActiveGroups = activeGroups.filter(g => g !== '주말');
     const weekendGroup = activeGroups.find(g => g === '주말');
 
-    // 교시 컬럼 높이 동기화: 첫 번째 평일 테이블의 tbody 행 높이를 측정하여 교시 컬럼에 적용
-    const firstTableRef = useRef<HTMLTableElement>(null);
+    // 교시 컬럼 높이 동기화: 모든 평일 테이블의 tbody 행 높이를 측정하여 최대값으로 통일
+    const weekdayTableRefs = useRef<(HTMLTableElement | null)[]>([]);
     const periodColRef = useRef<HTMLTableElement>(null);
-    const [periodRowHeights, setPeriodRowHeights] = React.useState<number[]>([]);
+    const [syncedRowHeights, setSyncedRowHeights] = React.useState<number[]>([]);
 
-    const syncPeriodHeights = useCallback(() => {
-        if (!firstTableRef.current) return;
-        const tbodyRows = firstTableRef.current.querySelector('.timetable-body')?.querySelectorAll(':scope > tr');
-        if (!tbodyRows) return;
-        const heights = Array.from(tbodyRows).map(row => (row as HTMLElement).getBoundingClientRect().height);
-        setPeriodRowHeights(prev => {
-            if (prev.length === heights.length && prev.every((h, i) => Math.abs(h - heights[i]) < 1)) return prev;
-            return heights;
+    const syncAllTableHeights = useCallback(() => {
+        const tables = weekdayTableRefs.current.filter(Boolean) as HTMLTableElement[];
+        if (tables.length === 0) return;
+
+        // 각 테이블의 tbody 행 높이 측정
+        const allRowHeights: number[][] = tables.map(table => {
+            const tbodyRows = table.querySelector('.timetable-body')?.querySelectorAll(':scope > tr');
+            if (!tbodyRows) return [];
+            return Array.from(tbodyRows).map(row => (row as HTMLElement).getBoundingClientRect().height);
+        });
+
+        // 교시별 최대 높이 계산 (모든 테이블에서 가장 큰 값)
+        const maxRows = Math.max(...allRowHeights.map(h => h.length));
+        const maxHeights: number[] = [];
+        for (let i = 0; i < maxRows; i++) {
+            maxHeights.push(Math.max(...allRowHeights.map(h => h[i] || 0)));
+        }
+
+        setSyncedRowHeights(prev => {
+            if (prev.length === maxHeights.length && prev.every((h, i) => Math.abs(h - maxHeights[i]) < 1)) return prev;
+            return maxHeights;
         });
     }, []);
 
     useEffect(() => {
-        syncPeriodHeights();
-        const observer = new ResizeObserver(syncPeriodHeights);
-        if (firstTableRef.current) {
-            const tbodyRows = firstTableRef.current.querySelector('.timetable-body')?.querySelectorAll(':scope > tr');
-            tbodyRows?.forEach(row => observer.observe(row));
-        }
+        syncAllTableHeights();
+        const observer = new ResizeObserver(syncAllTableHeights);
+        weekdayTableRefs.current.forEach(table => {
+            if (table) {
+                const tbodyRows = table.querySelector('.timetable-body')?.querySelectorAll(':scope > tr');
+                tbodyRows?.forEach(row => observer.observe(row));
+            }
+        });
         return () => observer.disconnect();
-    }, [syncPeriodHeights, filteredClasses, currentPeriods, showStudents, rowHeight]);
+    }, [syncAllTableHeights, filteredClasses, currentPeriods, showStudents, rowHeight]);
 
     // 교시 컬럼 전용 렌더링
     const renderPeriodColumn = () => {
@@ -1726,7 +1744,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                     className="p-1.5 text-period-label font-bold text-black text-center border-b-2 border-b-black"
                                     style={{
                                         width: '90px', minWidth: '90px', backgroundColor: bgHex,
-                                        height: periodRowHeights[i] ? `${periodRowHeights[i]}px` : undefined
+                                        height: syncedRowHeights[i] ? `${syncedRowHeights[i]}px` : undefined
                                     }}
                                 >
                                     <div className="font-bold text-period-label text-black">{row.label}</div>
@@ -1748,7 +1766,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     const config = groupConfigs[groupName];
                     return (
                         <React.Fragment key={groupName}>
-                            {renderTable(config.resources, config.daysMap, groupName, config.isWednesday, true, idx === 0 ? firstTableRef : undefined)}
+                            {renderTable(config.resources, config.daysMap, groupName, config.isWednesday, true, (el: HTMLTableElement | null) => { weekdayTableRefs.current[idx] = el; }, syncedRowHeights)}
                         </React.Fragment>
                     );
                 })}
