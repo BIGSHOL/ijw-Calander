@@ -588,7 +588,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                         {groupedClasses
                             .filter(group => !exportVisibleGroups || exportVisibleGroups.includes(group.periodIndex))
                             .map(group => (
-                            <div key={group.periodIndex} data-group-id={group.periodIndex} className="bg-white shadow border border-gray-300 overflow-hidden w-max max-w-full">
+                            <div key={group.periodIndex} data-group-id={group.periodIndex} className="bg-white shadow border border-black overflow-hidden w-max max-w-full">
                                 {/* Group Header */}
                                 <div className="bg-gray-800 text-white px-4 py-2 font-bold text-sm flex items-center gap-2">
                                     <span>🕒 {group.label}</span>
@@ -604,7 +604,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
 
                                 {/* Classes Row (Horizontal Scroll) */}
                                 <div className="overflow-x-auto custom-scrollbar">
-                                    <div className="flex items-stretch w-max border-b border-gray-200">
+                                    <div className="flex items-stretch w-max border-b border-black">
                                         {/* Sticky Time Column */}
                                         {group.classes.length > 0 && (
                                             <div className="sticky left-0 z-20 shadow-[4px_0_12px_-2px_rgba(0,0,0,0.1)] self-stretch">

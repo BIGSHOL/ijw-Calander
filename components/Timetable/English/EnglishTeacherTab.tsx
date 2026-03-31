@@ -723,10 +723,10 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
             {/* Schedule Grid */}
             <div className="flex-1 overflow-auto bg-gray-100 select-none">
                 <div className="p-2">
-                    <table className="border-collapse bg-white shadow w-max table-fixed">
+                    <table className="border-collapse bg-white shadow w-max table-fixed" style={{ borderColor: 'black' }}>
                         <thead className="sticky top-0 z-10">
                             <tr>
-                                <th className="p-2 border bg-gray-100 text-xs font-bold text-gray-600" rowSpan={2}>교시</th>
+                                <th className="p-2 border border-black bg-gray-100 text-xs font-bold text-black" rowSpan={2}>교시</th>
                                 {filteredTeachers.map((teacher, tIdx) => {
                                     const colors = getTeacherColor(teacher, teachersData);
                                     const teacherData = teachersData.find(t => t.name === teacher);
@@ -735,9 +735,9 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                         <th
                                             key={teacher}
                                             colSpan={filteredWeekdays.length}
-                                            className={`p-2 text-xs font-bold
-                                            ${tIdx === 0 ? 'border-l-2 border-l-gray-400' : 'border-l'}
-                                            border-r border-t border-b
+                                            className={`p-2 text-sm font-bold
+                                            ${tIdx === 0 ? 'border-l-[3px] border-l-black' : 'border-l border-l-black'}
+                                            border-r border-r-black border-t border-t-black border-b border-b-black
                                         `}
                                             style={{ backgroundColor: colors.bg, color: colors.text }}
                                         >
@@ -751,12 +751,12 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                     filteredWeekdays.map((day, dIdx) => (
                                         <th
                                             key={`${teacher}-${day}`}
-                                            className={`p-1 bg-gray-50 text-xxs text-gray-500
+                                            className={`p-1 bg-gray-50 text-xxs text-black font-bold
                                             ${viewSize === 'large' ? 'w-[100px]' : ''}
                                             ${viewSize === 'medium' ? 'w-[70px]' : ''}
                                             ${viewSize === 'small' ? 'w-[40px]' : ''}
-                                            ${dIdx === 0 ? 'border-l-2 border-l-gray-400' : 'border-l'}
-                                            border-r border-t border-b
+                                            ${dIdx === 0 ? 'border-l-[3px] border-l-black' : 'border-l border-l-black'}
+                                            border-r border-r-black border-t border-t-black border-b border-b-black
                                         `}
                                         >
                                             {weekDates[day] ? `${weekDates[day]} (${day})` : day}
@@ -768,9 +768,9 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                         <tbody>
                             {EN_PERIODS.map((period, pIdx) => (
                                 <tr key={period.id}>
-                                    <td className="p-2 border bg-gray-50 text-xs font-bold text-gray-600 text-center whitespace-nowrap">
+                                    <td className="p-2 border border-black bg-gray-50 text-xs font-bold text-black text-center whitespace-nowrap">
                                         <div>{period.label}</div>
-                                        <div className="text-micro text-gray-400">{period.time}</div>
+                                        <div className="text-micro text-gray-500">{period.time}</div>
                                         {period.weekendTime && (
                                             <div className="text-micro text-blue-400">토일 {period.weekendTime}</div>
                                         )}
@@ -829,8 +829,8 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                                     ${isMoveMode && !hasContent ? 'hover:bg-orange-50/30' : ''}
                                                     ${!isMoveMode ? 'cursor-pointer' : ''}
                                                     ${isHighlighted ? 'bg-blue-100 ring-2 ring-blue-400 z-10' : (!matchedKw && cellData?.className ? 'bg-green-50' : 'hover:bg-gray-50')}
-                                                    ${dIdx === 0 ? 'border-l-2 border-l-gray-400' : 'border-l'}
-                                                    border-r border-t border-b
+                                                    ${dIdx === 0 ? 'border-l-[3px] border-l-black' : 'border-l border-l-black'}
+                                                    border-r border-r-black border-t border-t-black border-b border-b-black
                                                     hover:z-50
                                                 `}
                                                     style={!isHighlighted ? cellBgStyle : {}}

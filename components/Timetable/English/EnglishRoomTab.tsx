@@ -201,17 +201,17 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
                         강의실 데이터가 없습니다.
                     </div>
                 ) : (
-                    <table className="border-collapse bg-white shadow w-max table-fixed">
+                    <table className="border-collapse bg-white shadow w-max table-fixed" style={{ borderColor: 'black' }}>
                         <thead className="sticky top-0 z-10">
                             <tr>
-                                <th className="p-2 border bg-gray-100 text-xs font-bold text-gray-600" rowSpan={2}>교시</th>
+                                <th className="p-2 border border-black bg-gray-100 text-xs font-bold text-black" rowSpan={2}>교시</th>
                                 {filteredRooms.map((room, rIdx) => (
                                     <th
                                         key={room}
                                         colSpan={filteredWeekdays.length}
-                                        className={`p-2 bg-indigo-600 text-white text-xs font-bold
-                                            ${rIdx === 0 ? 'border-l-2 border-l-gray-400' : 'border-l'}
-                                            border-r border-t border-b
+                                        className={`p-2 bg-indigo-600 text-white text-sm font-bold
+                                            ${rIdx === 0 ? 'border-l-[3px] border-l-black' : 'border-l border-l-black'}
+                                            border-r border-r-black border-t border-t-black border-b border-b-black
                                         `}
                                     >
                                         {room}
@@ -226,12 +226,12 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
                                     filteredWeekdays.map((day, dIdx) => (
                                         <th
                                             key={`${room}-${day}`}
-                                            className={`p-1 bg-gray-50 text-xxs text-gray-500
+                                            className={`p-1 bg-gray-50 text-xxs text-black font-bold
                                                 ${viewSize === 'large' ? 'w-[100px]' : ''}
                                                 ${viewSize === 'medium' ? 'w-[70px]' : ''}
                                                 ${viewSize === 'small' ? 'w-[40px]' : ''}
-                                                ${dIdx === 0 ? 'border-l-2 border-l-gray-400' : 'border-l'}
-                                                border-r border-t border-b
+                                                ${dIdx === 0 ? 'border-l-[3px] border-l-black' : 'border-l border-l-black'}
+                                                border-r border-r-black border-t border-t-black border-b border-b-black
                                             `}
                                         >
                                             {weekDates[day] ? `${weekDates[day]} (${day})` : day}
@@ -243,9 +243,9 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
                         <tbody>
                             {EN_PERIODS.map(period => (
                                 <tr key={period.id}>
-                                    <td className="p-2 border bg-gray-50 text-xs font-bold text-gray-600 text-center whitespace-nowrap">
+                                    <td className="p-2 border border-black bg-gray-50 text-xs font-bold text-black text-center whitespace-nowrap">
                                         <div>{period.label}</div>
-                                        <div className="text-micro text-gray-400">{period.time}</div>
+                                        <div className="text-micro text-gray-500">{period.time}</div>
                                     </td>
                                     {filteredRooms.map((room, rIdx) => (
                                         filteredWeekdays.map((day, dIdx) => {
@@ -286,8 +286,8 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
                                                 <td
                                                     key={cellKey}
                                                     className={`p-1 text-center relative ${cellHeightClass} ${!matchedKw && cellData?.className ? 'bg-indigo-50' : ''}
-                                                        ${dIdx === 0 ? 'border-l-2 border-l-gray-400' : 'border-l'}
-                                                        border-r border-t border-b
+                                                        ${dIdx === 0 ? 'border-l-[3px] border-l-black' : 'border-l border-l-black'}
+                                                        border-r border-r-black border-t border-t-black border-b border-b-black
                                                     `}
                                                     style={cellBgStyle}
                                                 >
