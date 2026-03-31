@@ -913,7 +913,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         studentMap={studentMap}
                         timetableViewMode={timetableViewMode === 'excel-day' ? 'day-based' : 'teacher-based'}
                         weekdayGroupOrder={mathConfig.weekdayGroupOrder}
-                        isUnifiedTable={timetableViewMode === 'excel-teacher-test'}
+                        isUnifiedTable={timetableViewMode === 'excel-teacher-test' && currentUser?.role === 'master'}
                         classKeywords={classKeywords}
                         onStudentClick={handleStudentClick}
                         pendingMovedStudentIds={pendingMovedStudentIds}
@@ -1352,6 +1352,13 @@ const TimetableManager = ({
             setTimetableViewMode('day-based');
         }
     }, [viewType, timetableViewMode, setTimetableViewMode]);
+
+    // 비마스터가 excel-teacher-test 모드일 때 excel-teacher로 리셋
+    useEffect(() => {
+        if (timetableViewMode === 'excel-teacher-test' && currentUser?.role !== 'master') {
+            setTimetableViewMode('excel-teacher');
+        }
+    }, [timetableViewMode, currentUser, setTimetableViewMode]);
 
     // 나머지 뷰 설정 (캐시된 viewSettings에서 초기화)
     const [showClassName, setShowClassName] = useState(viewSettings.showClassName ?? true);
