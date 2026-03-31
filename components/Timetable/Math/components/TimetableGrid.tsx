@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { TimetableClass, Teacher, ClassKeywordColor } from '../../../../types';
 import { getClassesForCell, getConsecutiveSpan, shouldSkipCell, isSameClassNameSet } from '../utils/gridUtils';
 import ClassCard from './ClassCard';
@@ -90,6 +90,8 @@ interface TimetableGridProps {
     pendingExcelEnrollments?: Array<{ studentId: string; className: string; enrollmentDate?: string }>;
     // 묶음 요일 그룹 순서 (teacher-based 뷰)
     weekdayGroupOrder?: string[];
+    // 통합 테이블 모드 (모든 요일 그룹을 하나의 table로 렌더링)
+    isUnifiedTable?: boolean;
 }
 
 const TimetableGrid: React.FC<TimetableGridProps> = ({
@@ -147,6 +149,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     pendingExcelDeleteIds,
     pendingExcelEnrollments,
     weekdayGroupOrder,
+    isUnifiedTable,
 }) => {
     // 주차 기준일: 미래 주 → weekStart, 이번 주 → today, 과거 주 → weekEnd(일요일)
     const referenceDate = useMemo(() => {
@@ -389,8 +392,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         title?: string,
         isWednesdayTable?: boolean,
         hidePeriodColumn?: boolean,
-        tableRef?: React.Ref<HTMLTableElement>,
-        rowHeights?: number[]
+        tableRef?: React.Ref<HTMLTableElement>
     ) => {
         if (resources.length === 0) return null;
 
@@ -643,9 +645,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                             const firstPeriodIndex = currentPeriods.indexOf(firstPeriod);
                                             const secondPeriodIndex = currentPeriods.indexOf(secondPeriod);
 
-                                            const rowIdx = rows.length;
                                             rows.push(
-                                                <tr key={`group-${groupId}`} style={rowHeights?.[rowIdx] ? { height: `${rowHeights[rowIdx]}px` } : undefined}>
+                                                <tr key={`group-${groupId}`}>
                                                     {!hidePeriodColumn && (
                                                         <td
                                                             className={`p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-2 border-b-black border-r-2 border-r-black`}
@@ -790,9 +791,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
                                                 const periodTime = MATH_PERIOD_TIMES[period] || period;
 
-                                                const rowIdx = rows.length;
                                                 rows.push(
-                                                    <tr key={`period-${period}`} style={rowHeights?.[rowIdx] ? { height: `${rowHeights[rowIdx]}px` } : undefined}>
+                                                    <tr key={`period-${period}`}>
                                                         {!hidePeriodColumn && (
                                                             <td
                                                                 className={`p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-2 border-b-black border-r-2 border-r-black`}
@@ -1657,46 +1657,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     const weekdayActiveGroups = activeGroups.filter(g => g !== '주말');
     const weekendGroup = activeGroups.find(g => g === '주말');
 
-    // 교시 컬럼 높이 동기화: 모든 평일 테이블의 tbody 행 높이를 측정하여 최대값으로 통일
-    const weekdayTableRefs = useRef<(HTMLTableElement | null)[]>([]);
     const periodColRef = useRef<HTMLTableElement>(null);
-    const [syncedRowHeights, setSyncedRowHeights] = React.useState<number[]>([]);
-
-    const syncAllTableHeights = useCallback(() => {
-        const tables = weekdayTableRefs.current.filter(Boolean) as HTMLTableElement[];
-        if (tables.length === 0) return;
-
-        // 각 테이블의 tbody 행 높이 측정
-        const allRowHeights: number[][] = tables.map(table => {
-            const tbodyRows = table.querySelector('.timetable-body')?.querySelectorAll(':scope > tr');
-            if (!tbodyRows) return [];
-            return Array.from(tbodyRows).map(row => (row as HTMLElement).getBoundingClientRect().height);
-        });
-
-        // 교시별 최대 높이 계산 (모든 테이블에서 가장 큰 값)
-        const maxRows = Math.max(...allRowHeights.map(h => h.length));
-        const maxHeights: number[] = [];
-        for (let i = 0; i < maxRows; i++) {
-            maxHeights.push(Math.max(...allRowHeights.map(h => h[i] || 0)));
-        }
-
-        setSyncedRowHeights(prev => {
-            if (prev.length === maxHeights.length && prev.every((h, i) => Math.abs(h - maxHeights[i]) < 1)) return prev;
-            return maxHeights;
-        });
-    }, []);
-
-    useEffect(() => {
-        syncAllTableHeights();
-        const observer = new ResizeObserver(syncAllTableHeights);
-        weekdayTableRefs.current.forEach(table => {
-            if (table) {
-                const tbodyRows = table.querySelector('.timetable-body')?.querySelectorAll(':scope > tr');
-                tbodyRows?.forEach(row => observer.observe(row));
-            }
-        });
-        return () => observer.disconnect();
-    }, [syncAllTableHeights, filteredClasses, currentPeriods, showStudents, rowHeight]);
 
     // 교시 컬럼 전용 렌더링
     const renderPeriodColumn = () => {
@@ -1743,8 +1704,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                 <td
                                     className="p-1.5 text-period-label font-bold text-black text-center border-b-2 border-b-black"
                                     style={{
-                                        width: '90px', minWidth: '90px', backgroundColor: bgHex,
-                                        height: syncedRowHeights[i] ? `${syncedRowHeights[i]}px` : undefined
+                                        width: '90px', minWidth: '90px', backgroundColor: bgHex
                                     }}
                                 >
                                     <div className="font-bold text-period-label text-black">{row.label}</div>
@@ -1758,6 +1718,385 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         );
     };
 
+    // ============================================================
+    // 통합 테이블 렌더링: 모든 요일 그룹을 하나의 <table>로 구성
+    // → 같은 <tr>에 있으므로 교시별 행 높이가 자동으로 동일
+    // ============================================================
+    const renderUnifiedTable = () => {
+        if (weekdayActiveGroups.length === 0) return null;
+
+        // 그룹별 색상
+        const getGroupColors = (title: string) => {
+            if (title === '월/목') return { bg: 'bg-blue-600', light: '#eff6ff' };
+            if (title === '화/금') return { bg: 'bg-purple-600', light: '#f5f3ff' };
+            if (title === '수요일') return { bg: 'bg-green-600', light: '#f0fdf4' };
+            return { bg: 'bg-gray-600', light: '#f3f4f6' };
+        };
+
+        // 그룹별 열 수 계산
+        const groupColumnInfo = weekdayActiveGroups.map(groupName => {
+            const config = groupConfigs[groupName];
+            const cols: { resource: string; day: string; isLast: boolean; isMerged: boolean }[] = [];
+            config.resources.forEach(resource => {
+                const days = config.isWednesday ? ['수'] : (config.daysMap.get(resource) || []);
+                days.forEach((day, i) => {
+                    cols.push({ resource, day, isLast: i === days.length - 1, isMerged: days.length > 1 });
+                });
+            });
+            return { groupName, config, cols, colCount: cols.length };
+        });
+
+        const totalDataCols = groupColumnInfo.reduce((a, g) => a + g.colCount, 0);
+
+        // 셀 렌더 헬퍼 (renderTable 내부의 renderCellClassCards와 동일)
+        const renderCards = (
+            cellClasses: TimetableClass[], day: string, periodIndex: number,
+            resource: string, colSpan: number, mergedDays: string[], overrideShowClassName?: boolean
+        ) => {
+            const mergedClassesForCard = cellClasses.length > 1 ? cellClasses : undefined;
+            const cls = cellClasses[0];
+            return (
+                <ClassCard
+                    cls={cls}
+                    span={getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)}
+                    searchQuery={searchQuery} showStudents={showStudents}
+                    showClassName={overrideShowClassName !== undefined ? overrideShowClassName : showClassName}
+                    showSchool={showSchool} showGrade={showGrade}
+                    canEdit={getCanEdit(cls, resource)} isAssistantTeacher={isAssistantSlot(cls, resource)}
+                    isDragOver={mergedClassesForCard ? cellClasses.some(c => dragOverClassId === c.id) : dragOverClassId === cls.id}
+                    onClick={onClassClick} onDragStart={onDragStart} onDragOver={onDragOver}
+                    onDragLeave={onDragLeave} onDrop={onDrop} studentMap={studentMap}
+                    classKeywords={classKeywords} onStudentClick={onStudentClick}
+                    currentDay={colSpan === 1 ? day : undefined}
+                    mergedDays={colSpan > 1 ? mergedDays : undefined}
+                    fontSize={fontSize} rowHeight={rowHeight} cellSizePx={cellSizePx}
+                    showHoldStudents={showHoldStudents} showWithdrawnStudents={showWithdrawnStudents}
+                    pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveSchedules={pendingMoveSchedules}
+                    mergedClasses={mergedClassesForCard} showMergedLabel={!!mergedClassesForCard}
+                    latestTextbook={getLatestTextbook(cls)} latestReports={latestReports}
+                    studentTextbookMap={byStudentName} referenceDate={referenceDate}
+                    isExcelMode={isExcelMode} isSelected={selectedClassId === cls.id}
+                    onCellSelect={onCellSelect} onEnrollStudent={onEnrollStudent}
+                    onCancelPendingEnroll={onCancelPendingEnroll}
+                    selectedStudentIds={selectedStudentIds} selectedStudentClassName={selectedStudentClassName}
+                    copiedStudentIds={copiedStudentIds} copiedStudentClassName={copiedStudentClassName}
+                    cutStudentIds={cutStudentIds} cutStudentClassName={cutStudentClassName}
+                    acHighlightStudentId={acHighlightStudentId} onAcHighlightChange={onAcHighlightChange}
+                    onStudentSelect={onStudentSelect} onStudentMultiSelect={onStudentMultiSelect}
+                    mode={mode} onCancelScheduledEnrollment={onCancelScheduledEnrollment}
+                    onWithdrawalDrop={onWithdrawalDrop}
+                    pendingExcelDeleteIds={pendingExcelDeleteIds}
+                    pendingExcelEnrollments={pendingExcelEnrollments}
+                />
+            );
+        };
+
+        // 그룹 내 셀 빌드: merged period (2교시 합쳐진 행)
+        const buildMergedPeriodCells = (
+            groupName: string, config: typeof groupConfigs[string],
+            firstPeriod: string, secondPeriod: string,
+            firstPeriodIndex: number, secondPeriodIndex: number, groupId: string
+        ) => {
+            return config.resources.flatMap(resource => {
+                const daysForResource = config.isWednesday ? ['수'] : (config.daysMap.get(resource) || []);
+                const cells: React.ReactNode[] = [];
+                let dayIndex = 0;
+
+                while (dayIndex < daysForResource.length) {
+                    const day = daysForResource[dayIndex];
+                    const firstClasses = getClassesForCell(filteredClasses, day, firstPeriod, resource, viewType);
+                    const secondClasses = getClassesForCell(filteredClasses, day, secondPeriod, resource, viewType);
+
+                    // 수평 병합 확인
+                    let shouldSkip = false;
+                    if (!config.isWednesday && (firstClasses.length > 0 || secondClasses.length > 0) && dayIndex > 0) {
+                        const prevDay = daysForResource[dayIndex - 1];
+                        if (isSameClassNameSet(firstClasses, getClassesForCell(filteredClasses, prevDay, firstPeriod, resource, viewType))
+                            && isSameClassNameSet(secondClasses, getClassesForCell(filteredClasses, prevDay, secondPeriod, resource, viewType))) {
+                            shouldSkip = true;
+                        }
+                    }
+                    if (shouldSkip) { dayIndex++; continue; }
+
+                    let colSpan = 1;
+                    const mergedDays = [day];
+                    if (!config.isWednesday && (firstClasses.length > 0 || secondClasses.length > 0)) {
+                        for (let n = dayIndex + 1; n < daysForResource.length; n++) {
+                            const nd = daysForResource[n];
+                            if (isSameClassNameSet(firstClasses, getClassesForCell(filteredClasses, nd, firstPeriod, resource, viewType))
+                                && isSameClassNameSet(secondClasses, getClassesForCell(filteredClasses, nd, secondPeriod, resource, viewType))) {
+                                colSpan++; mergedDays.push(nd);
+                            } else break;
+                        }
+                    }
+
+                    const baseW = colSpan > 1 ? getMergedCellWidthStyle(colSpan) : singleCellWidthStyle;
+                    const doubleH = isCompactMode
+                        ? (firstClasses.length > 0 || secondClasses.length > 0 ? 90 : undefined)
+                        : (rowHeightValue as number) * 2;
+                    const cellStyle = { ...baseW, height: doubleH ? `${doubleH}px` : undefined };
+                    const bothEmpty = firstClasses.length === 0 && secondClasses.length === 0;
+                    const sameClass = firstClasses.length > 0 && secondClasses.length > 0 && isSameClassNameSet(firstClasses, secondClasses);
+                    const isLastDay = (dayIndex + colSpan - 1) === daysForResource.length - 1;
+                    const borderR = isLastDay ? 'border-r-2 border-r-black' : (bothEmpty ? '' : 'border-r border-r-black');
+
+                    cells.push(
+                        <td key={`${groupName}-${resource}-${day}-${groupId}`}
+                            className={`p-0 align-top border-b-2 border-b-black ${borderR}`}
+                            style={{ ...cellStyle, ...(bothEmpty ? { backgroundColor: EMPTY_CELL_BG } : {}) }}
+                            colSpan={colSpan > 1 ? colSpan : undefined}
+                        >
+                            <div style={cellWrapperStyle(cellStyle.height)}>
+                            {bothEmpty ? (
+                                <div className="flex flex-col h-full" style={{ backgroundColor: EMPTY_CELL_BG }}>
+                                    <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 border-b border-b-black" />
+                                    <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 border-b border-b-black" />
+                                    <div className="flex-1" />
+                                </div>
+                            ) : sameClass ? (
+                                <div className="flex flex-col h-full">
+                                    <div style={{ height: `${NAME_SLOT_H * 2}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
+                                        <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{firstClasses[0].className}{firstClasses[0].room ? ` ${firstClasses[0].room}` : ''}</span>
+                                    </div>
+                                    <div className="flex-1 min-h-0">
+                                        {renderCards(firstClasses, day, firstPeriodIndex, resource, colSpan, mergedDays, false)}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col h-full">
+                                    <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-b-black bg-white">
+                                        {firstClasses.length > 0 && <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{firstClasses[0].className}</span>}
+                                    </div>
+                                    <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
+                                        {secondClasses.length > 0 && <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{secondClasses[0].className}</span>}
+                                    </div>
+                                    <div className="flex-1 min-h-0">
+                                        {firstClasses.length > 0 ? renderCards(firstClasses, day, firstPeriodIndex, resource, colSpan, mergedDays, false)
+                                         : secondClasses.length > 0 ? renderCards(secondClasses, day, secondPeriodIndex, resource, colSpan, mergedDays, false)
+                                         : null}
+                                    </div>
+                                </div>
+                            )}
+                            </div>
+                        </td>
+                    );
+                    dayIndex += colSpan;
+                }
+                return cells;
+            });
+        };
+
+        // 그룹 내 셀 빌드: 개별 교시 행
+        const buildSinglePeriodCells = (
+            groupName: string, config: typeof groupConfigs[string],
+            period: string, periodIndex: number
+        ) => {
+            return config.resources.flatMap(resource => {
+                const daysForResource = config.isWednesday ? ['수'] : (config.daysMap.get(resource) || []);
+                const cells: React.ReactNode[] = [];
+                let dayIndex = 0;
+
+                while (dayIndex < daysForResource.length) {
+                    const day = daysForResource[dayIndex];
+                    const cellClasses = getClassesForCell(filteredClasses, day, period, resource, viewType);
+
+                    const shouldSkipThisCell = cellClasses.some(cls =>
+                        shouldSkipCell(cls, day, periodIndex, cellClasses, currentPeriods, filteredClasses, viewType));
+                    if (shouldSkipThisCell) { dayIndex++; continue; }
+
+                    const maxRowSpan = Math.max(1, ...cellClasses.map(cls =>
+                        getConsecutiveSpan(cls, day, periodIndex, currentPeriods, filteredClasses, viewType)));
+
+                    // 수평 병합 확인
+                    let shouldSkipH = false;
+                    if (!config.isWednesday && cellClasses.length > 0 && dayIndex > 0) {
+                        const prevClasses = getClassesForCell(filteredClasses, daysForResource[dayIndex - 1], period, resource, viewType);
+                        if (isSameClassNameSet(cellClasses, prevClasses)) shouldSkipH = true;
+                    }
+                    if (shouldSkipH) { dayIndex++; continue; }
+
+                    let colSpan = 1;
+                    const mergedDays = [day];
+                    if (!config.isWednesday && cellClasses.length > 0) {
+                        for (let n = dayIndex + 1; n < daysForResource.length; n++) {
+                            const nd = daysForResource[n];
+                            const nc = getClassesForCell(filteredClasses, nd, period, resource, viewType);
+                            if (isSameClassNameSet(cellClasses, nc)) {
+                                const nrs = Math.max(1, ...nc.map(c => getConsecutiveSpan(c, nd, periodIndex, currentPeriods, filteredClasses, viewType)));
+                                if (nrs === maxRowSpan) { colSpan++; mergedDays.push(nd); } else break;
+                            } else break;
+                        }
+                    }
+
+                    const baseW = colSpan > 1 ? getMergedCellWidthStyle(colSpan) : singleCellWidthStyle;
+                    const hasClass = cellClasses.length > 0;
+                    const compactH = 45;
+                    const cellStyle = isCompactMode
+                        ? { ...baseW, height: hasClass ? `${compactH * maxRowSpan}px` : undefined }
+                        : { ...baseW, height: `${(rowHeightValue as number) * maxRowSpan}px` };
+                    const isEmpty = !hasClass;
+                    const isLastDay = (dayIndex + colSpan - 1) === daysForResource.length - 1;
+                    const borderR = isLastDay ? 'border-r-2 border-r-black' : 'border-r border-r-black';
+
+                    cells.push(
+                        <td key={`${groupName}-${resource}-${day}-${period}`}
+                            className={`p-0 align-top border-b-2 border-b-black ${borderR}`}
+                            style={{ ...cellStyle, ...(isEmpty ? { backgroundColor: EMPTY_CELL_BG } : {}) }}
+                            rowSpan={maxRowSpan > 1 ? maxRowSpan : undefined}
+                            colSpan={colSpan > 1 ? colSpan : undefined}
+                        >
+                            <div style={cellWrapperStyle(cellStyle.height)}>
+                            {isEmpty ? (
+                                <div className="text-xxs text-gray-500 text-center py-1">
+                                    {viewType === 'room' ? resource : '빈 강의실'}
+                                </div>
+                            ) : renderCards(cellClasses, day, periodIndex, resource, colSpan, mergedDays)}
+                            </div>
+                        </td>
+                    );
+                    dayIndex += colSpan;
+                }
+                return cells;
+            });
+        };
+
+        // tbody 행 빌드
+        const buildRows = () => {
+            const rows: React.ReactNode[] = [];
+            const processedPeriods = new Set<string>();
+            const bgHex = '#f3f4f6';
+
+            MATH_GROUPED_PERIODS.forEach(groupId => {
+                const periodIds = MATH_GROUP_PERIOD_IDS[groupId];
+                const [firstPeriod, secondPeriod] = periodIds;
+                const hasFirst = currentPeriods.includes(firstPeriod);
+                const hasSecond = currentPeriods.includes(secondPeriod);
+                if (!hasFirst && !hasSecond) return;
+                const groupInfo = MATH_GROUP_DISPLAY[groupId];
+
+                if (hasFirst && hasSecond) {
+                    processedPeriods.add(firstPeriod);
+                    processedPeriods.add(secondPeriod);
+                    const fpi = currentPeriods.indexOf(firstPeriod);
+                    const spi = currentPeriods.indexOf(secondPeriod);
+
+                    rows.push(
+                        <tr key={`unified-group-${groupId}`}>
+                            <td className="p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-2 border-b-black border-r-2 border-r-black"
+                                style={{ width: '90px', minWidth: '90px', backgroundColor: bgHex }}>
+                                <div className="font-bold text-period-label text-black">{groupInfo.label}</div>
+                                <div>{renderTime(groupInfo.time)}</div>
+                            </td>
+                            {weekdayActiveGroups.map(gn => buildMergedPeriodCells(gn, groupConfigs[gn], firstPeriod, secondPeriod, fpi, spi, groupId))}
+                        </tr>
+                    );
+                } else {
+                    periodIds.forEach(period => {
+                        if (!currentPeriods.includes(period) || processedPeriods.has(period)) return;
+                        processedPeriods.add(period);
+                        const periodTime = MATH_PERIOD_TIMES[period] || period;
+                        const pi = currentPeriods.indexOf(period);
+
+                        rows.push(
+                            <tr key={`unified-period-${period}`}>
+                                <td className="p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-2 border-b-black border-r-2 border-r-black"
+                                    style={{ width: '90px', minWidth: '90px', backgroundColor: bgHex }}>
+                                    <div className="font-bold text-period-label text-black">{period}</div>
+                                    <div>{renderTime(periodTime)}</div>
+                                </td>
+                                {weekdayActiveGroups.map(gn => buildSinglePeriodCells(gn, groupConfigs[gn], period, pi))}
+                            </tr>
+                        );
+                    });
+                }
+            });
+            return rows;
+        };
+
+        // 테이블 총 폭 계산
+        const totalTableWidth = 90 + groupColumnInfo.reduce((acc, g) => {
+            return acc + g.cols.reduce((a, c) => a + (c.isMerged ? perDayWidth : parseInt(singleCellWidthStyle.width)), 0);
+        }, 0);
+
+        return (
+            <div className="overflow-auto h-full">
+                <table className="border-collapse border-2 border-black" style={{ tableLayout: 'fixed', width: `${totalTableWidth}px` }}>
+                    <colgroup>
+                        <col style={{ width: '90px' }} />
+                        {groupColumnInfo.flatMap(g => g.cols.map(c => (
+                            <col key={`col-${g.groupName}-${c.resource}-${c.day}`} style={{ width: c.isMerged ? `${perDayWidth}px` : singleCellWidthStyle.width }} />
+                        )))}
+                    </colgroup>
+                    <thead className="sticky top-0 z-20">
+                        {/* Row 1: 그룹 타이틀 */}
+                        <tr>
+                            <th className="bg-gray-700 text-white px-3 py-2 font-bold text-sm text-left sticky left-0 z-30"
+                                style={{ width: '90px', minWidth: '90px' }}>&nbsp;</th>
+                            {groupColumnInfo.map(g => {
+                                const gc = getGroupColors(g.groupName);
+                                return (
+                                    <th key={g.groupName} className={`${gc.bg} text-white px-3 py-2 font-bold text-sm`}
+                                        colSpan={g.colCount}>{g.groupName}</th>
+                                );
+                            })}
+                        </tr>
+                        {/* Row 2: 강사명 */}
+                        <tr>
+                            <th className="p-1.5 text-period-label font-bold text-black border-b border-b-black border-r-2 border-r-black sticky left-0 z-30"
+                                rowSpan={2} style={{ width: '90px', minWidth: '90px', backgroundColor: '#f3f4f6' }}>교시</th>
+                            {groupColumnInfo.flatMap(g => {
+                                const seen = new Set<string>();
+                                return g.config.resources.map(resource => {
+                                    if (seen.has(resource)) return null;
+                                    seen.add(resource);
+                                    const days = g.config.isWednesday ? ['수'] : (g.config.daysMap.get(resource) || []);
+                                    const colspan = days.length;
+                                    const td = teachers.find(t => t.name === resource);
+                                    const headerW = colspan > 1 ? getMergedCellWidthStyle(colspan) : singleCellWidthStyle;
+                                    return (
+                                        <th key={`${g.groupName}-${resource}`} colSpan={colspan}
+                                            className="p-1.5 text-sm font-bold border-b-2 border-b-black border-r-2 border-r-black truncate"
+                                            style={{ ...headerW, backgroundColor: td?.bgColor || '#3b82f6', color: td?.textColor || '#fff' }}
+                                            title={resource}>{resource}</th>
+                                    );
+                                });
+                            })}
+                        </tr>
+                        {/* Row 3: 요일 */}
+                        <tr>
+                            {groupColumnInfo.flatMap(g => g.cols.map((c, i) => {
+                                const borderR = c.isLast ? 'border-r-2 border-r-black' : 'border-r border-r-black';
+                                const dayW = c.isMerged ? getMergedCellWidthStyle(1) : singleCellWidthStyle;
+                                const dateInfo = weekDates[c.day];
+                                return (
+                                    <th key={`${g.groupName}-${c.resource}-${c.day}`}
+                                        className={`p-1.5 text-xxs font-bold text-center border-b-2 border-b-black ${borderR} bg-gray-100 text-black`}
+                                        style={dayW}>
+                                        <div>{c.day}</div>
+                                        {dateInfo && <div className="text-xxs opacity-70">{dateInfo.formatted}</div>}
+                                    </th>
+                                );
+                            }))}
+                        </tr>
+                    </thead>
+                    <tbody className="timetable-body">
+                        {buildRows()}
+                    </tbody>
+                </table>
+                {/* 주말 테이블은 별도 유지 */}
+                {weekendGroup && (() => {
+                    const config = groupConfigs[weekendGroup];
+                    return renderTable(config.resources, config.daysMap, weekendGroup, config.isWednesday, false);
+                })()}
+            </div>
+        );
+    };
+
+    // 통합 테이블 모드인 경우 (day-based 뷰는 이미 위에서 early return됨)
+    if (isUnifiedTable) {
+        return renderUnifiedTable();
+    }
+
     return (
         <div className="overflow-auto h-full">
             <div className="flex gap-0">
@@ -1766,7 +2105,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     const config = groupConfigs[groupName];
                     return (
                         <React.Fragment key={groupName}>
-                            {renderTable(config.resources, config.daysMap, groupName, config.isWednesday, true, (el: HTMLTableElement | null) => { weekdayTableRefs.current[idx] = el; }, syncedRowHeights)}
+                            {renderTable(config.resources, config.daysMap, groupName, config.isWednesday, true)}
                         </React.Fragment>
                     );
                 })}

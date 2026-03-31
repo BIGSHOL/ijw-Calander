@@ -912,6 +912,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         studentMap={studentMap}
                         timetableViewMode={timetableViewMode === 'excel-day' ? 'day-based' : 'teacher-based'}
                         weekdayGroupOrder={mathConfig.weekdayGroupOrder}
+                        isUnifiedTable={timetableViewMode === 'excel-teacher-test'}
                         classKeywords={classKeywords}
                         onStudentClick={handleStudentClick}
                         pendingMovedStudentIds={pendingMovedStudentIds}
