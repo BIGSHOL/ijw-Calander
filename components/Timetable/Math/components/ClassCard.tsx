@@ -675,13 +675,13 @@ const ClassCard: React.FC<ClassCardProps> = ({
         if (studentFilter.grades.length > 0) {
             if (!student.grade || !studentFilter.grades.includes(student.grade)) return false;
         }
-        if (studentFilter.shuttle !== 'all' && shuttleStudentNames) {
+        if (studentFilter.shuttle !== 'all' && shuttleStudentNames && cls.subject !== '고등수학') {
             const isShuttle = shuttleStudentNames.has(student.name);
             if (studentFilter.shuttle === 'yes' && !isShuttle) return false;
             if (studentFilter.shuttle === 'no' && isShuttle) return false;
         }
         return true;
-    }, [studentFilter, shuttleStudentNames]);
+    }, [studentFilter, shuttleStudentNames, cls.subject]);
 
     // 학생이 병합된 모든 요일에 등원하는지 확인
     const isStudentAttendingAllMergedDays = (student: any): boolean => {

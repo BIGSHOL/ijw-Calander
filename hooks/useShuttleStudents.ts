@@ -141,6 +141,7 @@ export function useShuttleStudents(enabled = false) {
                 if (data.withdrawalDate) return;
                 if (!data.className || !data.subject) return;
                 if (data.subject === 'shuttle') return;
+                if (data.subject === 'highmath') return;
 
                 if (!studentEnrollments.has(studentId)) {
                     studentEnrollments.set(studentId, []);

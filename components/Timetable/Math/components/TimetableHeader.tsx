@@ -251,6 +251,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
 }) => {
     // 드롭다운 상태
     const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
+    const [showDevMenu, setShowDevMenu] = useState(false);
     const viewDropdownRef = useRef<HTMLDivElement>(null);
     const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false);
     const moreDropdownRef = useRef<HTMLDivElement>(null);
@@ -899,50 +900,8 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                 보기
                             </button>
                             {isViewDropdownOpen && (
-                                <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-sm shadow-lg z-50 w-[320px] max-h-[400px] overflow-y-auto">
-                                    {/* 요일 표시 */}
-                                    {selectedDays && setSelectedDays && (
-                                        <div className="px-3 py-2 border-b border-gray-100">
-                                            <div className="text-xxs font-bold text-gray-600 mb-2">요일 표시</div>
-                                            <div className="flex gap-1">
-                                                <button
-                                                    onClick={() => {
-                                                        const weekdays = ['월', '화', '수', '목', '금'];
-                                                        const hasWeekdays = weekdays.some(d => selectedDays.includes(d));
-                                                        if (hasWeekdays) {
-                                                            setSelectedDays(selectedDays.filter(d => !weekdays.includes(d)));
-                                                        } else {
-                                                            setSelectedDays([...new Set([...selectedDays, ...weekdays])]);
-                                                        }
-                                                    }}
-                                                    className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${['월', '화', '수', '목', '금'].some(d => selectedDays.includes(d))
-                                                            ? 'bg-accent text-primary border-accent'
-                                                            : 'bg-gray-100 text-gray-400 border-gray-200'
-                                                        }`}
-                                                >
-                                                    평일
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        const weekends = ['토', '일'];
-                                                        const hasWeekends = weekends.some(d => selectedDays.includes(d));
-                                                        if (hasWeekends) {
-                                                            setSelectedDays(selectedDays.filter(d => !weekends.includes(d)));
-                                                        } else {
-                                                            setSelectedDays([...new Set([...selectedDays, ...weekends])]);
-                                                        }
-                                                    }}
-                                                    className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${['토', '일'].some(d => selectedDays.includes(d))
-                                                            ? 'bg-accent text-primary border-accent'
-                                                            : 'bg-gray-100 text-gray-400 border-gray-200'
-                                                        }`}
-                                                >
-                                                    주말
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {/* 강의실 필터 */}
+                                <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-sm shadow-lg z-50 w-[320px] max-h-[500px] overflow-y-auto">
+                                    {/* === 1. 강의실 === */}
                                     {roomFilter && onRoomFilterChange && (
                                         <div className="px-3 py-2 border-b border-gray-100">
                                             <div className="text-xxs font-bold text-gray-600 mb-2">강의실</div>
@@ -969,285 +928,339 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                         </div>
                                     )}
 
-                                    {/* 학생 필터 */}
-                                    {onStudentFilterChange && studentFilter && (
+                                    {/* === 2. 셔틀 === */}
+                                    {onStudentFilterChange && studentFilter && shuttleStudentNames && shuttleStudentNames.size > 0 && (
                                         <div className="px-3 py-2 border-b border-gray-100">
-                                            <div className="text-xxs font-bold text-gray-600 mb-2">학생 필터</div>
-
-                                            {/* 학교 필터 */}
-                                            {availableSchools.length > 0 && (
-                                                <div className="mb-1.5">
-                                                    <div className="text-xxs text-gray-500 mb-0.5">학교</div>
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {availableSchools.map(school => {
-                                                            const isSelected = studentFilter.schools.includes(school);
-                                                            return (
-                                                                <button
-                                                                    key={school}
-                                                                    onClick={() => {
-                                                                        const newSchools = isSelected
-                                                                            ? studentFilter.schools.filter(s => s !== school)
-                                                                            : [...studentFilter.schools, school];
-                                                                        onStudentFilterChange({ ...studentFilter, schools: newSchools });
-                                                                    }}
-                                                                    className={`py-0.5 px-1.5 rounded text-xxs border ${
-                                                                        isSelected
-                                                                            ? 'bg-blue-500 text-white border-blue-500'
-                                                                            : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
-                                                                    }`}
-                                                                >
-                                                                    {school}
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* 학년 필터 */}
-                                            {availableGrades.length > 0 && (
-                                                <div className="mb-1.5">
-                                                    <div className="text-xxs text-gray-500 mb-0.5">학년</div>
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {availableGrades.map(grade => {
-                                                            const isSelected = studentFilter.grades.includes(grade);
-                                                            return (
-                                                                <button
-                                                                    key={grade}
-                                                                    onClick={() => {
-                                                                        const newGrades = isSelected
-                                                                            ? studentFilter.grades.filter(g => g !== grade)
-                                                                            : [...studentFilter.grades, grade];
-                                                                        onStudentFilterChange({ ...studentFilter, grades: newGrades });
-                                                                    }}
-                                                                    className={`py-0.5 px-1.5 rounded text-xxs border ${
-                                                                        isSelected
-                                                                            ? 'bg-blue-500 text-white border-blue-500'
-                                                                            : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
-                                                                    }`}
-                                                                >
-                                                                    {grade}
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* 셔틀 필터 */}
-                                            {shuttleStudentNames && shuttleStudentNames.size > 0 && (
-                                                <div className="mb-1.5">
-                                                    <div className="text-xxs text-gray-500 mb-0.5">셔틀</div>
-                                                    <div className="flex gap-1">
-                                                        {(['all', 'yes', 'no'] as const).map(val => (
-                                                            <button
-                                                                key={val}
-                                                                onClick={() => onStudentFilterChange({ ...studentFilter, shuttle: val })}
-                                                                className={`py-0.5 px-1.5 rounded text-xxs border ${
-                                                                    studentFilter.shuttle === val
-                                                                        ? 'bg-blue-500 text-white border-blue-500'
-                                                                        : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
-                                                                }`}
-                                                            >
-                                                                {val === 'all' ? '전체' : val === 'yes' ? '탑승' : '미탑승'}
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* 필터 초기화 */}
-                                            {(studentFilter.schools.length > 0 || studentFilter.grades.length > 0 || studentFilter.shuttle !== 'all') && (
-                                                <button
-                                                    onClick={() => onStudentFilterChange({ schools: [], grades: [], shuttle: 'all' })}
-                                                    className="text-xxs text-red-500 hover:text-red-700 underline"
-                                                >
-                                                    필터 초기화
-                                                </button>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* 요일 순서 (개별 요일 or 그룹) */}
-                                    <div className="px-3 py-2 border-b border-gray-100">
-                                        <div className="text-xxs font-bold text-gray-600 mb-2 flex items-center gap-1">
-                                            <CalendarIcon size={12} />
-                                            {isGroupedView ? '그룹 순서' : '요일 순서'}
-                                        </div>
-                                        {isGroupedView ? (
-                                            <DndContext sensors={weekdayDndSensors} collisionDetection={closestCenter} onDragEnd={handleWeekdayGroupDragEnd}>
-                                                <SortableContext items={weekdayGroupOrderList} strategy={verticalListSortingStrategy}>
-                                                    <div className="space-y-0.5">
-                                                        {weekdayGroupOrderList.filter(g => g !== '주말').map((group, index, arr) => (
-                                                            <SortableWeekdayItem
-                                                                key={group}
-                                                                id={group}
-                                                                index={index}
-                                                                total={arr.length}
-                                                                onMoveUp={() => moveWeekdayGroup(index, 'up')}
-                                                                onMoveDown={() => moveWeekdayGroup(index, 'down')}
-                                                            />
-                                                        ))}
-                                                        {weekdayGroupOrderList.filter(g => g === '주말').map((group) => (
-                                                            <div key={group} className="flex items-center gap-1 px-1 py-0.5 rounded text-xs text-gray-400 bg-gray-50">
-                                                                <span className="flex-1">{group}</span>
-                                                                <span className="text-[10px]">고정</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </SortableContext>
-                                            </DndContext>
-                                        ) : (
-                                            <DndContext sensors={weekdayDndSensors} collisionDetection={closestCenter} onDragEnd={handleWeekdayDragEnd}>
-                                                <SortableContext items={weekdayOrderList} strategy={verticalListSortingStrategy}>
-                                                    <div className="space-y-0.5">
-                                                        {weekdayOrderList.map((day, index) => (
-                                                            <SortableWeekdayItem
-                                                                key={day}
-                                                                id={day}
-                                                                index={index}
-                                                                total={weekdayOrderList.length}
-                                                                onMoveUp={() => moveWeekday(index, 'up')}
-                                                                onMoveDown={() => moveWeekday(index, 'down')}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                </SortableContext>
-                                            </DndContext>
-                                        )}
-                                    </div>
-
-                                    {/* 표시 옵션 */}
-                                    <div className="px-3 py-2 border-b border-gray-100">
-                                        <div className="text-xxs font-bold text-gray-600 mb-2">표시 옵션</div>
-                                        <div className="grid grid-cols-3 gap-1">
-                                            {showStudents !== undefined && setShowStudents && (
-                                                <button
-                                                    onClick={() => setShowStudents(!showStudents)}
-                                                    className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${showStudents ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                            <div className="text-xxs font-bold text-gray-600 mb-2">셔틀</div>
+                                            <div className="flex gap-1">
+                                                {(['all', 'yes', 'no'] as const).map(val => (
+                                                    <button
+                                                        key={val}
+                                                        onClick={() => onStudentFilterChange({ ...studentFilter, shuttle: val })}
+                                                        className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${
+                                                            studentFilter.shuttle === val
+                                                                ? 'bg-blue-500 text-white border-blue-500'
+                                                                : 'bg-gray-100 text-gray-400 border-gray-200'
                                                         }`}
-                                                >
-                                                    학생목록
-                                                </button>
-                                            )}
-                                            {showClassName !== undefined && setShowClassName && (
-                                                <button
-                                                    onClick={() => setShowClassName(!showClassName)}
-                                                    className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${showClassName ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
-                                                        }`}
-                                                >
-                                                    수업명
-                                                </button>
-                                            )}
-                                            {showSchool !== undefined && setShowSchool && (
-                                                <button
-                                                    onClick={() => setShowSchool(!showSchool)}
-                                                    className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${showSchool ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
-                                                        }`}
-                                                >
-                                                    학교
-                                                </button>
-                                            )}
-                                            {showGrade !== undefined && setShowGrade && (
-                                                <button
-                                                    onClick={() => setShowGrade(!showGrade)}
-                                                    className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${showGrade ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
-                                                        }`}
-                                                >
-                                                    학년
-                                                </button>
-                                            )}
-                                            {showHoldStudents !== undefined && setShowHoldStudents && (
-                                                <button
-                                                    onClick={() => setShowHoldStudents(!showHoldStudents)}
-                                                    className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${showHoldStudents ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
-                                                        }`}
-                                                >
-                                                    대기
-                                                </button>
-                                            )}
-                                            {showWithdrawnStudents !== undefined && setShowWithdrawnStudents && (
-                                                <button
-                                                    onClick={() => setShowWithdrawnStudents(!showWithdrawnStudents)}
-                                                    className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${showWithdrawnStudents ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
-                                                        }`}
-                                                >
-                                                    퇴원
-                                                </button>
-                                            )}
-                                        </div>
-                                    </div>
-                                    {/* 크기 설정 */}
-                                    {cellSize && setCellSize && fontSize && setFontSize && (
-                                        <div className="px-3 py-2">
-                                            <div className="text-xxs font-bold text-gray-600 mb-2">크기 설정</div>
-                                            {/* 사이즈 */}
-                                            <div className="mb-2">
-                                                <div className="text-xxs text-gray-500 mb-1">사이즈</div>
-                                                <div className="flex gap-0.5">
-                                                    {(['xs', 'sm', 'md', 'lg', 'xl'] as const).map(s => (
-                                                        <button
-                                                            key={s}
-                                                            onClick={() => setCellSize(s)}
-                                                            className={`flex-1 py-1 text-micro rounded-sm border ${cellSize === s
-                                                                    ? 'bg-accent text-primary border-accent font-bold'
-                                                                    : 'border-gray-300 text-gray-500 hover:bg-gray-50'
-                                                                }`}
-                                                        >
-                                                            {s === 'xs' ? '가장작음' : s === 'sm' ? '작음' : s === 'md' ? '보통' : s === 'lg' ? '큼' : '매우큼'}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            {/* 글자 크기 */}
-                                            <div>
-                                                <div className="text-xxs text-gray-500 mb-1">글자 크기</div>
-                                                <div className="flex gap-1">
-                                                    {(['small', 'normal', 'large'] as const).map(f => (
-                                                        <button
-                                                            key={f}
-                                                            onClick={() => setFontSize(f)}
-                                                            className={`flex-1 py-1 text-xxs rounded-sm border ${fontSize === f
-                                                                    ? 'bg-accent text-primary border-accent font-bold'
-                                                                    : 'border-gray-300 text-gray-500 hover:bg-gray-50'
-                                                                }`}
-                                                        >
-                                                            {f === 'small' ? '작게' : f === 'normal' ? '보통' : '크게'}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {/* 강사 순서 설정 - 강사뷰/엑셀뷰에서 표시 */}
-                                    {(viewType === 'teacher' || viewType === 'excel') && mathConfig.teacherOrder.length > 0 && (
-                                        <div className="px-3 py-2 border-t border-gray-100">
-                                            <div className="text-xxs font-bold text-gray-600 mb-2 flex items-center gap-1">
-                                                <Users size={12} />
-                                                강사 순서
-                                            </div>
-                                            <div className="space-y-0.5 max-h-[200px] overflow-y-auto">
-                                                <DndContext
-                                                    sensors={teacherDndSensors}
-                                                    collisionDetection={closestCenter}
-                                                    onDragEnd={handleTeacherDragEnd}
-                                                >
-                                                    <SortableContext
-                                                        items={mathConfig.teacherOrder}
-                                                        strategy={verticalListSortingStrategy}
                                                     >
-                                                        {mathConfig.teacherOrder.map((teacher) => (
-                                                            <SortableTeacherItem
-                                                                key={teacher}
-                                                                id={teacher}
-                                                                isHidden={hiddenTeachers.includes(teacher)}
-                                                                onToggleHidden={() => onToggleTeacherHidden?.(teacher)}
-                                                            />
-                                                        ))}
-                                                    </SortableContext>
-                                                </DndContext>
+                                                        {val === 'all' ? '전체' : val === 'yes' ? '탑승' : '미탑승'}
+                                                    </button>
+                                                ))}
                                             </div>
                                         </div>
+                                    )}
+
+                                    {/* === 3. 학년 === */}
+                                    {onStudentFilterChange && studentFilter && availableGrades.length > 0 && (
+                                        <div className="px-3 py-2 border-b border-gray-100">
+                                            <div className="text-xxs font-bold text-gray-600 mb-2">학년</div>
+                                            <div className="flex flex-wrap gap-1">
+                                                {availableGrades.map(grade => {
+                                                    const isSelected = studentFilter.grades.includes(grade);
+                                                    return (
+                                                        <button
+                                                            key={grade}
+                                                            onClick={() => {
+                                                                const newGrades = isSelected
+                                                                    ? studentFilter.grades.filter(g => g !== grade)
+                                                                    : [...studentFilter.grades, grade];
+                                                                onStudentFilterChange({ ...studentFilter, grades: newGrades });
+                                                            }}
+                                                            className={`py-0.5 px-1.5 rounded text-xxs border ${
+                                                                isSelected
+                                                                    ? 'bg-blue-500 text-white border-blue-500'
+                                                                    : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                                                            }`}
+                                                        >
+                                                            {grade}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* === 4. 학교 === */}
+                                    {onStudentFilterChange && studentFilter && availableSchools.length > 0 && (
+                                        <div className="px-3 py-2 border-b border-gray-100">
+                                            <div className="text-xxs font-bold text-gray-600 mb-2">학교</div>
+                                            <div className="flex flex-wrap gap-1">
+                                                {availableSchools.map(school => {
+                                                    const isSelected = studentFilter.schools.includes(school);
+                                                    return (
+                                                        <button
+                                                            key={school}
+                                                            onClick={() => {
+                                                                const newSchools = isSelected
+                                                                    ? studentFilter.schools.filter(s => s !== school)
+                                                                    : [...studentFilter.schools, school];
+                                                                onStudentFilterChange({ ...studentFilter, schools: newSchools });
+                                                            }}
+                                                            className={`py-0.5 px-1.5 rounded text-xxs border ${
+                                                                isSelected
+                                                                    ? 'bg-blue-500 text-white border-blue-500'
+                                                                    : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                                                            }`}
+                                                        >
+                                                            {school}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* 필터 초기화 */}
+                                    {onStudentFilterChange && studentFilter && (studentFilter.schools.length > 0 || studentFilter.grades.length > 0 || studentFilter.shuttle !== 'all') && (
+                                        <div className="px-3 py-1 border-b border-gray-100">
+                                            <button
+                                                onClick={() => onStudentFilterChange({ schools: [], grades: [], shuttle: 'all' })}
+                                                className="text-xxs text-red-500 hover:text-red-700 underline"
+                                            >
+                                                필터 초기화
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {/* === 개발자 메뉴 토글 === */}
+                                    <div className="px-3 py-1.5 border-b border-gray-100">
+                                        <button
+                                            onClick={() => setShowDevMenu(!showDevMenu)}
+                                            className="text-xxs text-gray-400 hover:text-gray-600 flex items-center gap-1"
+                                        >
+                                            <SlidersHorizontal size={10} />
+                                            <span>고급 설정</span>
+                                            <ChevronDown size={10} className={`transition-transform ${showDevMenu ? 'rotate-180' : ''}`} />
+                                        </button>
+                                    </div>
+
+                                    {showDevMenu && (
+                                        <>
+                                            {/* === 개발자 1. 크기 설정 === */}
+                                            {cellSize && setCellSize && fontSize && setFontSize && (
+                                                <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
+                                                    <div className="text-xxs font-bold text-gray-600 mb-2">크기 설정</div>
+                                                    <div className="mb-2">
+                                                        <div className="text-xxs text-gray-500 mb-1">사이즈</div>
+                                                        <div className="flex gap-0.5">
+                                                            {(['xs', 'sm', 'md', 'lg', 'xl'] as const).map(s => (
+                                                                <button
+                                                                    key={s}
+                                                                    onClick={() => setCellSize(s)}
+                                                                    className={`flex-1 py-1 text-micro rounded-sm border ${cellSize === s
+                                                                            ? 'bg-accent text-primary border-accent font-bold'
+                                                                            : 'border-gray-300 text-gray-500 hover:bg-gray-50'
+                                                                        }`}
+                                                                >
+                                                                    {s === 'xs' ? '가장작음' : s === 'sm' ? '작음' : s === 'md' ? '보통' : s === 'lg' ? '큼' : '매우큼'}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-xxs text-gray-500 mb-1">글자 크기</div>
+                                                        <div className="flex gap-1">
+                                                            {(['small', 'normal', 'large'] as const).map(f => (
+                                                                <button
+                                                                    key={f}
+                                                                    onClick={() => setFontSize(f)}
+                                                                    className={`flex-1 py-1 text-xxs rounded-sm border ${fontSize === f
+                                                                            ? 'bg-accent text-primary border-accent font-bold'
+                                                                            : 'border-gray-300 text-gray-500 hover:bg-gray-50'
+                                                                        }`}
+                                                                >
+                                                                    {f === 'small' ? '작게' : f === 'normal' ? '보통' : '크게'}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* === 개발자 2. 요일 표시 === */}
+                                            {selectedDays && setSelectedDays && (
+                                                <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
+                                                    <div className="text-xxs font-bold text-gray-600 mb-2">요일 표시</div>
+                                                    <div className="flex gap-1">
+                                                        <button
+                                                            onClick={() => {
+                                                                const weekdays = ['월', '화', '수', '목', '금'];
+                                                                const hasWeekdays = weekdays.some(d => selectedDays.includes(d));
+                                                                if (hasWeekdays) {
+                                                                    setSelectedDays(selectedDays.filter(d => !weekdays.includes(d)));
+                                                                } else {
+                                                                    setSelectedDays([...new Set([...selectedDays, ...weekdays])]);
+                                                                }
+                                                            }}
+                                                            className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${['월', '화', '수', '목', '금'].some(d => selectedDays.includes(d))
+                                                                    ? 'bg-accent text-primary border-accent'
+                                                                    : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                                }`}
+                                                        >
+                                                            평일
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                const weekends = ['토', '일'];
+                                                                const hasWeekends = weekends.some(d => selectedDays.includes(d));
+                                                                if (hasWeekends) {
+                                                                    setSelectedDays(selectedDays.filter(d => !weekends.includes(d)));
+                                                                } else {
+                                                                    setSelectedDays([...new Set([...selectedDays, ...weekends])]);
+                                                                }
+                                                            }}
+                                                            className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${['토', '일'].some(d => selectedDays.includes(d))
+                                                                    ? 'bg-accent text-primary border-accent'
+                                                                    : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                                }`}
+                                                        >
+                                                            주말
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* === 개발자 3. 요일 순서 === */}
+                                            <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
+                                                <div className="text-xxs font-bold text-gray-600 mb-2 flex items-center gap-1">
+                                                    <CalendarIcon size={12} />
+                                                    {isGroupedView ? '그룹 순서' : '요일 순서'}
+                                                </div>
+                                                {isGroupedView ? (
+                                                    <DndContext sensors={weekdayDndSensors} collisionDetection={closestCenter} onDragEnd={handleWeekdayGroupDragEnd}>
+                                                        <SortableContext items={weekdayGroupOrderList} strategy={verticalListSortingStrategy}>
+                                                            <div className="space-y-0.5">
+                                                                {weekdayGroupOrderList.filter(g => g !== '주말').map((group, index, arr) => (
+                                                                    <SortableWeekdayItem
+                                                                        key={group}
+                                                                        id={group}
+                                                                        index={index}
+                                                                        total={arr.length}
+                                                                        onMoveUp={() => moveWeekdayGroup(index, 'up')}
+                                                                        onMoveDown={() => moveWeekdayGroup(index, 'down')}
+                                                                    />
+                                                                ))}
+                                                                {weekdayGroupOrderList.filter(g => g === '주말').map((group) => (
+                                                                    <div key={group} className="flex items-center gap-1 px-1 py-0.5 rounded text-xs text-gray-400 bg-gray-50">
+                                                                        <span className="flex-1">{group}</span>
+                                                                        <span className="text-[10px]">고정</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </SortableContext>
+                                                    </DndContext>
+                                                ) : (
+                                                    <DndContext sensors={weekdayDndSensors} collisionDetection={closestCenter} onDragEnd={handleWeekdayDragEnd}>
+                                                        <SortableContext items={weekdayOrderList} strategy={verticalListSortingStrategy}>
+                                                            <div className="space-y-0.5">
+                                                                {weekdayOrderList.map((day, index) => (
+                                                                    <SortableWeekdayItem
+                                                                        key={day}
+                                                                        id={day}
+                                                                        index={index}
+                                                                        total={weekdayOrderList.length}
+                                                                        onMoveUp={() => moveWeekday(index, 'up')}
+                                                                        onMoveDown={() => moveWeekday(index, 'down')}
+                                                                    />
+                                                                ))}
+                                                            </div>
+                                                        </SortableContext>
+                                                    </DndContext>
+                                                )}
+                                            </div>
+
+                                            {/* === 개발자 4. 강사 순서 === */}
+                                            {(viewType === 'teacher' || viewType === 'excel') && mathConfig.teacherOrder.length > 0 && (
+                                                <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
+                                                    <div className="text-xxs font-bold text-gray-600 mb-2 flex items-center gap-1">
+                                                        <Users size={12} />
+                                                        강사 순서
+                                                    </div>
+                                                    <div className="space-y-0.5 max-h-[200px] overflow-y-auto">
+                                                        <DndContext
+                                                            sensors={teacherDndSensors}
+                                                            collisionDetection={closestCenter}
+                                                            onDragEnd={handleTeacherDragEnd}
+                                                        >
+                                                            <SortableContext
+                                                                items={mathConfig.teacherOrder}
+                                                                strategy={verticalListSortingStrategy}
+                                                            >
+                                                                {mathConfig.teacherOrder.map((teacher) => (
+                                                                    <SortableTeacherItem
+                                                                        key={teacher}
+                                                                        id={teacher}
+                                                                        isHidden={hiddenTeachers.includes(teacher)}
+                                                                        onToggleHidden={() => onToggleTeacherHidden?.(teacher)}
+                                                                    />
+                                                                ))}
+                                                            </SortableContext>
+                                                        </DndContext>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* === 개발자 5. 표시 옵션 === */}
+                                            <div className="px-3 py-2 bg-gray-50">
+                                                <div className="text-xxs font-bold text-gray-600 mb-2">표시 옵션</div>
+                                                <div className="grid grid-cols-3 gap-1">
+                                                    {showStudents !== undefined && setShowStudents && (
+                                                        <button
+                                                            onClick={() => setShowStudents(!showStudents)}
+                                                            className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${showStudents ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                                }`}
+                                                        >
+                                                            학생목록
+                                                        </button>
+                                                    )}
+                                                    {showClassName !== undefined && setShowClassName && (
+                                                        <button
+                                                            onClick={() => setShowClassName(!showClassName)}
+                                                            className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${showClassName ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                                }`}
+                                                        >
+                                                            수업명
+                                                        </button>
+                                                    )}
+                                                    {showSchool !== undefined && setShowSchool && (
+                                                        <button
+                                                            onClick={() => setShowSchool(!showSchool)}
+                                                            className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${showSchool ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                                }`}
+                                                        >
+                                                            학교
+                                                        </button>
+                                                    )}
+                                                    {showGrade !== undefined && setShowGrade && (
+                                                        <button
+                                                            onClick={() => setShowGrade(!showGrade)}
+                                                            className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${showGrade ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                                }`}
+                                                        >
+                                                            학년
+                                                        </button>
+                                                    )}
+                                                    {showHoldStudents !== undefined && setShowHoldStudents && (
+                                                        <button
+                                                            onClick={() => setShowHoldStudents(!showHoldStudents)}
+                                                            className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${showHoldStudents ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                                }`}
+                                                        >
+                                                            대기
+                                                        </button>
+                                                    )}
+                                                    {showWithdrawnStudents !== undefined && setShowWithdrawnStudents && (
+                                                        <button
+                                                            onClick={() => setShowWithdrawnStudents(!showWithdrawnStudents)}
+                                                            className={`py-1.5 px-2 rounded-sm text-xxs font-bold border ${showWithdrawnStudents ? 'bg-accent text-primary border-accent' : 'bg-gray-100 text-gray-400 border-gray-200'
+                                                                }`}
+                                                        >
+                                                            퇴원
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </>
                                     )}
                                 </div>
                             )}
