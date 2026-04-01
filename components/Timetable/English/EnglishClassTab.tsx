@@ -2,6 +2,7 @@
 // 영어 통합 시간표 탭 - 수업별 컬럼 뷰 (Refactored to match academy-app style with Logic Port)
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Settings, ArrowRightLeft, Copy, Upload, Save, GraduationCap, RotateCcw, Download } from 'lucide-react';
 import { storage, STORAGE_KEYS } from '../../../utils/localStorage';
 import { getWeekReferenceDate } from '../../../utils/dateUtils';
@@ -756,22 +757,24 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                 onClose={() => setIsLevelSettingsOpen(false)}
             />
 
-            {/* 수업 상세 모달 */}
-            {selectedClassDetail && (
+            {/* 수업 상세 모달 — createPortal로 body에 렌더링 (overflow-hidden 회피) */}
+            {selectedClassDetail && createPortal(
                 <ClassDetailModal
                     classInfo={selectedClassDetail}
                     onClose={() => setSelectedClassDetail(null)}
-                />
+                />,
+                document.body
             )}
 
-            {/* 학생 상세 모달 - 학생관리 권한에 따라 조회/수정 모드 결정 */}
-            {selectedStudent && (
+            {/* 학생 상세 모달 — createPortal로 body에 렌더링 */}
+            {selectedStudent && createPortal(
                 <StudentDetailModal
                     student={selectedStudent}
                     onClose={() => setSelectedStudent(null)}
                     readOnly={!canManageStudents}
                     currentUser={currentUser}
-                />
+                />,
+                document.body
             )}
 
             {/* 시뮬레이션 모드 수업 편집 모달 */}
