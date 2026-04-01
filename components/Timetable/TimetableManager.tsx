@@ -14,6 +14,7 @@ import { useClassOperations } from './Math/hooks/useClassOperations';
 import { useStudentDragDrop } from './Math/hooks/useStudentDragDrop';
 import { useMathClassStudents } from './Math/hooks/useMathClassStudents';
 import { useStudents } from '../../hooks/useStudents';
+import { useShuttleNames } from '../../hooks/useShuttleNames';
 import { UnifiedStudent } from '../../types';
 import TimetableHeader from './Math/components/TimetableHeader';
 import TimetableGrid from './Math/components/TimetableGrid';
@@ -145,6 +146,10 @@ interface MathTimetableContentProps {
     // 강의실 필터
     roomFilter?: { main: boolean; barun: boolean; godeung: boolean };
     onRoomFilterChange?: (type: 'main' | 'barun' | 'godeung', value: boolean) => void;
+    // 학생 필터
+    studentFilter?: { schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no' };
+    onStudentFilterChange?: (filter: { schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no' }) => void;
+    shuttleStudentNames?: Set<string>;
     // 통합뷰 설정 (외부에서 전달)
     mathIntegrationSettings: MathIntegrationSettings;
     updateMathIntegrationSettings: (settings: MathIntegrationSettings) => void;
@@ -243,6 +248,9 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     undoLastMove,
     roomFilter,
     onRoomFilterChange,
+    studentFilter,
+    onStudentFilterChange,
+    shuttleStudentNames,
     mathIntegrationSettings,
     updateMathIntegrationSettings,
     userDepartments,
@@ -775,6 +783,9 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     userDepartments={userDepartments}
                     roomFilter={roomFilter}
                     onRoomFilterChange={onRoomFilterChange}
+                    studentFilter={studentFilter}
+                    onStudentFilterChange={onStudentFilterChange}
+                    shuttleStudentNames={shuttleStudentNames}
                     hiddenTeachers={mathIntegrationSettings.hiddenTeachers || []}
                     onToggleTeacherHidden={(teacher: string) => {
                         const current = mathIntegrationSettings.hiddenTeachers || [];
@@ -825,6 +836,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         pendingMoveSchedules={pendingMoveSchedules}
                         onCancelScheduledEnrollment={!isScenarioMode ? onCancelScheduledEnrollment : undefined}
                         onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
+                        studentFilter={studentFilter}
+                        shuttleStudentNames={shuttleStudentNames}
                     />
                 </div>
                 )}
@@ -869,6 +882,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         pendingMoveSchedules={pendingMoveSchedules}
                         onCancelScheduledEnrollment={!isScenarioMode ? onCancelScheduledEnrollment : undefined}
                         onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
+                        studentFilter={studentFilter}
+                        shuttleStudentNames={shuttleStudentNames}
                     />
                 </div>
                 )}
@@ -936,6 +951,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
                         pendingExcelDeleteIds={pendingExcelDeleteIds}
                         pendingExcelEnrollments={pendingExcelEnrollments.length > 0 ? pendingExcelEnrollments : undefined}
+                        studentFilter={studentFilter}
+                        shuttleStudentNames={shuttleStudentNames}
                     />
                 </div>
                 )}
@@ -1391,6 +1408,10 @@ const TimetableManager = ({
             return next;
         });
     }, []);
+
+    // 학생 필터 (학교/학년/셔틀)
+    const { data: shuttleStudentNames } = useShuttleNames();
+    const [studentFilter, setStudentFilter] = useState<{ schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no' }>({ schools: [], grades: [], shuttle: 'all' });
 
     // 과목 변경 시 보기설정(필터) 초기화
     const prevSubjectRef = React.useRef(subjectTab);
@@ -2104,6 +2125,9 @@ const TimetableManager = ({
                 undoLastMove={undoLastMove}
                 roomFilter={roomFilter}
                 onRoomFilterChange={handleRoomFilterChange}
+                studentFilter={studentFilter}
+                onStudentFilterChange={setStudentFilter}
+                shuttleStudentNames={shuttleStudentNames}
                 mathIntegrationSettings={outerMathSettings}
                 updateMathIntegrationSettings={updateOuterMathSettings}
                 userDepartments={userDepartments}

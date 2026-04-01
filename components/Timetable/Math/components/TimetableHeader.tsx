@@ -168,6 +168,10 @@ interface TimetableHeaderProps {
     // 강의실 필터
     roomFilter?: { main: boolean; barun: boolean; godeung: boolean };
     onRoomFilterChange?: (type: 'main' | 'barun' | 'godeung', value: boolean) => void;
+    // 학생 필터
+    studentFilter?: { schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no' };
+    onStudentFilterChange?: (filter: { schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no' }) => void;
+    shuttleStudentNames?: Set<string>;
     // 강사 숨김 필터
     hiddenTeachers?: string[];
     onToggleTeacherHidden?: (teacher: string) => void;
@@ -239,6 +243,9 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     userDepartments,
     roomFilter,
     onRoomFilterChange,
+    studentFilter,
+    onStudentFilterChange,
+    shuttleStudentNames,
     hiddenTeachers = [],
     onToggleTeacherHidden,
 }) => {
@@ -299,6 +306,35 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
 
         setSelectedWithdrawalEntry(entry);
     };
+
+    // 학생 필터: 사용 가능한 학교/학년 목록 계산
+    const { availableSchools, availableGrades } = useMemo(() => {
+        const schools = new Set<string>();
+        const grades = new Set<string>();
+        filteredClasses.forEach(cls => {
+            (cls.studentIds || []).forEach(id => {
+                const s = studentMap[id];
+                if (s?.school) schools.add(s.school);
+                if (s?.grade) grades.add(s.grade);
+            });
+            cls.studentList?.forEach(s => {
+                if (s.school) schools.add(s.school);
+                if (s.grade) grades.add(s.grade);
+            });
+        });
+        return {
+            availableSchools: [...schools].sort((a, b) => a.localeCompare(b, 'ko')),
+            availableGrades: [...grades].sort((a, b) => {
+                const gradeOrder = (g: string) => {
+                    if (g.startsWith('초')) return 10 + parseInt(g.replace(/\D/g, '') || '0');
+                    if (g.startsWith('중')) return 20 + parseInt(g.replace(/\D/g, '') || '0');
+                    if (g.startsWith('고')) return 30 + parseInt(g.replace(/\D/g, '') || '0');
+                    return 50;
+                };
+                return gradeOrder(a) - gradeOrder(b);
+            }),
+        };
+    }, [filteredClasses, studentMap]);
 
     // 강사 순서 관리 훅
     const { mathConfig, handleSaveTeacherOrder, handleSaveWeekdayOrder, handleSaveWeekdayGroupOrder } = useMathConfig();
@@ -930,6 +966,105 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                     고등
                                                 </button>
                                             </div>
+                                        </div>
+                                    )}
+
+                                    {/* 학생 필터 */}
+                                    {onStudentFilterChange && studentFilter && (
+                                        <div className="px-3 py-2 border-b border-gray-100">
+                                            <div className="text-xxs font-bold text-gray-600 mb-2">학생 필터</div>
+
+                                            {/* 학교 필터 */}
+                                            {availableSchools.length > 0 && (
+                                                <div className="mb-1.5">
+                                                    <div className="text-xxs text-gray-500 mb-0.5">학교</div>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {availableSchools.map(school => {
+                                                            const isSelected = studentFilter.schools.includes(school);
+                                                            return (
+                                                                <button
+                                                                    key={school}
+                                                                    onClick={() => {
+                                                                        const newSchools = isSelected
+                                                                            ? studentFilter.schools.filter(s => s !== school)
+                                                                            : [...studentFilter.schools, school];
+                                                                        onStudentFilterChange({ ...studentFilter, schools: newSchools });
+                                                                    }}
+                                                                    className={`py-0.5 px-1.5 rounded text-xxs border ${
+                                                                        isSelected
+                                                                            ? 'bg-blue-500 text-white border-blue-500'
+                                                                            : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                                                                    }`}
+                                                                >
+                                                                    {school}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* 학년 필터 */}
+                                            {availableGrades.length > 0 && (
+                                                <div className="mb-1.5">
+                                                    <div className="text-xxs text-gray-500 mb-0.5">학년</div>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {availableGrades.map(grade => {
+                                                            const isSelected = studentFilter.grades.includes(grade);
+                                                            return (
+                                                                <button
+                                                                    key={grade}
+                                                                    onClick={() => {
+                                                                        const newGrades = isSelected
+                                                                            ? studentFilter.grades.filter(g => g !== grade)
+                                                                            : [...studentFilter.grades, grade];
+                                                                        onStudentFilterChange({ ...studentFilter, grades: newGrades });
+                                                                    }}
+                                                                    className={`py-0.5 px-1.5 rounded text-xxs border ${
+                                                                        isSelected
+                                                                            ? 'bg-blue-500 text-white border-blue-500'
+                                                                            : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                                                                    }`}
+                                                                >
+                                                                    {grade}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* 셔틀 필터 */}
+                                            {shuttleStudentNames && shuttleStudentNames.size > 0 && (
+                                                <div className="mb-1.5">
+                                                    <div className="text-xxs text-gray-500 mb-0.5">셔틀</div>
+                                                    <div className="flex gap-1">
+                                                        {(['all', 'yes', 'no'] as const).map(val => (
+                                                            <button
+                                                                key={val}
+                                                                onClick={() => onStudentFilterChange({ ...studentFilter, shuttle: val })}
+                                                                className={`py-0.5 px-1.5 rounded text-xxs border ${
+                                                                    studentFilter.shuttle === val
+                                                                        ? 'bg-blue-500 text-white border-blue-500'
+                                                                        : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                                                                }`}
+                                                            >
+                                                                {val === 'all' ? '전체' : val === 'yes' ? '탑승' : '미탑승'}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* 필터 초기화 */}
+                                            {(studentFilter.schools.length > 0 || studentFilter.grades.length > 0 || studentFilter.shuttle !== 'all') && (
+                                                <button
+                                                    onClick={() => onStudentFilterChange({ schools: [], grades: [], shuttle: 'all' })}
+                                                    className="text-xxs text-red-500 hover:text-red-700 underline"
+                                                >
+                                                    필터 초기화
+                                                </button>
+                                            )}
                                         </div>
                                     )}
 

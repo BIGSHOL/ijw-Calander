@@ -92,6 +92,9 @@ interface TimetableGridProps {
     weekdayGroupOrder?: string[];
     // 통합 테이블 모드 (모든 요일 그룹을 하나의 table로 렌더링)
     isUnifiedTable?: boolean;
+    // 학생 필터
+    studentFilter?: { schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no' };
+    shuttleStudentNames?: Set<string>;
 }
 
 const TimetableGrid: React.FC<TimetableGridProps> = ({
@@ -150,6 +153,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     pendingExcelEnrollments,
     weekdayGroupOrder,
     isUnifiedTable,
+    studentFilter,
+    shuttleStudentNames,
 }) => {
     // 주차 기준일: 미래 주 → weekStart, 이번 주 → today, 과거 주 → weekEnd(일요일)
     const referenceDate = useMemo(() => {
@@ -477,6 +482,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     onWithdrawalDrop={onWithdrawalDrop}
                     pendingExcelDeleteIds={pendingExcelDeleteIds}
                     pendingExcelEnrollments={pendingExcelEnrollments}
+                    studentFilter={studentFilter}
+                    shuttleStudentNames={shuttleStudentNames}
                 />
             );
         };
@@ -1295,6 +1302,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                     onWithdrawalDrop={onWithdrawalDrop}
                                                                     pendingExcelDeleteIds={pendingExcelDeleteIds}
                                                                     pendingExcelEnrollments={pendingExcelEnrollments}
+                                                                    studentFilter={studentFilter}
+                                                                    shuttleStudentNames={shuttleStudentNames}
                                                                 />
                                                             ))
                                                         );
@@ -1469,6 +1478,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     onWithdrawalDrop={onWithdrawalDrop}
                     pendingExcelDeleteIds={pendingExcelDeleteIds}
                     pendingExcelEnrollments={pendingExcelEnrollments}
+                    studentFilter={studentFilter}
+                    shuttleStudentNames={shuttleStudentNames}
                                                                             />
                                                                         ))
                                                                     )}
@@ -1605,6 +1616,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     onWithdrawalDrop={onWithdrawalDrop}
                     pendingExcelDeleteIds={pendingExcelDeleteIds}
                     pendingExcelEnrollments={pendingExcelEnrollments}
+                    studentFilter={studentFilter}
+                    shuttleStudentNames={shuttleStudentNames}
                                                                     />
                                                                 ))
                                                             )}
@@ -1806,6 +1819,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     onWithdrawalDrop={onWithdrawalDrop}
                     pendingExcelDeleteIds={pendingExcelDeleteIds}
                     pendingExcelEnrollments={pendingExcelEnrollments}
+                    studentFilter={studentFilter}
+                    shuttleStudentNames={shuttleStudentNames}
                     fillCell={cardFillCell}
                 />
             );

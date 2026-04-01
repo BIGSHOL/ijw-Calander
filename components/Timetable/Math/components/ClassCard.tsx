@@ -260,6 +260,9 @@ interface ClassCardProps {
     pendingExcelEnrollments?: Array<{ studentId: string; className: string; enrollmentDate?: string }>;
     // 통합 테이블: fixedCardHeight 대신 h-full로 부모 셀 채움
     fillCell?: boolean;
+    // 학생 필터
+    studentFilter?: { schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no' };
+    shuttleStudentNames?: Set<string>;
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -317,6 +320,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
     pendingExcelDeleteIds,
     pendingExcelEnrollments,
     fillCell,
+    studentFilter,
+    shuttleStudentNames,
 }) => {
     // 주차 기준일: referenceDate가 있으면 해당 날짜, 없으면 오늘
     const refDateStr = referenceDate || formatDateKey(new Date());
@@ -661,6 +666,23 @@ const ClassCard: React.FC<ClassCardProps> = ({
         return allStudentsList;
     }, [cls, mergedClasses, isMergedClass, studentMap, classNameToIndex, refDateStr]);
 
+    // 학생 필터 함수 (학교/학년/셔틀)
+    const filterStudent = useCallback((student: any): boolean => {
+        if (!studentFilter) return true;
+        if (studentFilter.schools.length > 0) {
+            if (!student.school || !studentFilter.schools.includes(student.school)) return false;
+        }
+        if (studentFilter.grades.length > 0) {
+            if (!student.grade || !studentFilter.grades.includes(student.grade)) return false;
+        }
+        if (studentFilter.shuttle !== 'all' && shuttleStudentNames) {
+            const isShuttle = shuttleStudentNames.has(student.name);
+            if (studentFilter.shuttle === 'yes' && !isShuttle) return false;
+            if (studentFilter.shuttle === 'no' && isShuttle) return false;
+        }
+        return true;
+    }, [studentFilter, shuttleStudentNames]);
+
     // 학생이 병합된 모든 요일에 등원하는지 확인
     const isStudentAttendingAllMergedDays = (student: any): boolean => {
         const attendanceDays = student.attendanceDays;
@@ -707,14 +729,17 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 if (aIsWS !== bIsWS) return aIsWS - bIsWS;
                 const wA = getEnrollmentWeight(a), wB = getEnrollmentWeight(b);
                 return wA !== wB ? wA - wB : (a.name || '').localeCompare(b.name || '', 'ko');
-            });
+            })
+            .filter(filterStudent);
         const commonHold = allStudents
             .filter(s => s.onHold && !s.withdrawalDate && isStudentAttendingAllMergedDays(s))
-            .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
+            .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
+            .filter(filterStudent);
         // 퇴원 학생: 과거/오늘 날짜 + 반이동이 아닌 실제 퇴원만
         const commonWithdrawn = allStudents
             .filter(s => s.withdrawalDate && s.withdrawalDate <= today && !s.isTransferred)
-            .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
+            .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
+            .filter(filterStudent);
         // 퇴원예정: 재원생 섹션에서 가로줄로 표시하므로 별도 섹션은 빈 배열
         const commonWithdrawnFuture: any[] = [];
 
@@ -730,10 +755,12 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     if (aIsWS !== bIsWS) return aIsWS - bIsWS;
                     const wA = getEnrollmentWeight(a), wB = getEnrollmentWeight(b);
                     return wA !== wB ? wA - wB : (a.name || '').localeCompare(b.name || '', 'ko');
-                });
+                })
+                .filter(filterStudent);
             const hold = allStudents
                 .filter(s => s.onHold && !s.withdrawalDate && !isStudentAttendingAllMergedDays(s) && isStudentAttendingDay(s, day))
-                .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
+                .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
+                .filter(filterStudent);
             // 퇴원 학생은 commonWithdrawn에서 통합 표시 (요일별 분리 X)
             partial[day] = { active, hold, withdrawn: [] };
         });
@@ -742,7 +769,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
             commonStudents: { active: commonActive, hold: commonHold, withdrawn: commonWithdrawn, withdrawnFuture: commonWithdrawnFuture },
             partialStudentsByDay: partial
         };
-    }, [isMergedCell, mergedDays, allStudents, refDateStr, refDateMs]);
+    }, [isMergedCell, mergedDays, allStudents, refDateStr, refDateMs, filterStudent]);
 
     // 단일 셀: 해당 요일에 등원하는 학생만 (기존 로직)
     const { activeStudents, holdStudents, withdrawnStudents, withdrawnFutureStudents } = useMemo(() => {
@@ -780,22 +807,25 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 if (aIsWS !== bIsWS) return aIsWS - bIsWS;
                 const wA = getEnrollmentWeight(a), wB = getEnrollmentWeight(b);
                 return wA !== wB ? wA - wB : (a.name || '').localeCompare(b.name || '', 'ko');
-            });
+            })
+            .filter(filterStudent);
 
         const hold = allStudents
             .filter(s => s.onHold && !s.withdrawalDate && (filterDay ? isStudentAttendingDay(s, filterDay) : true))
-            .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
+            .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
+            .filter(filterStudent);
 
         // 퇴원 학생: 과거/오늘 날짜 + 반이동이 아닌 실제 퇴원만
         const withdrawn = allStudents
             .filter(s => s.withdrawalDate && s.withdrawalDate <= today && !s.isTransferred)
-            .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
+            .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
+            .filter(filterStudent);
 
         // 퇴원예정: 재원생 섹션에서 가로줄로 표시하므로 별도 섹션은 빈 배열
         const withdrawnFuture: any[] = [];
 
         return { activeStudents: active, holdStudents: hold, withdrawnStudents: withdrawn, withdrawnFutureStudents: withdrawnFuture };
-    }, [isMergedCell, allStudents, currentDay, refDateStr, refDateMs]);
+    }, [isMergedCell, allStudents, currentDay, refDateStr, refDateMs, filterStudent]);
 
     // 병합 셀에서 부분 등원 학생이 있는지 확인
     const hasPartialStudents = isMergedCell && partialStudentsByDay &&
