@@ -2412,17 +2412,17 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     <thead className="sticky top-0 z-20">
                         {/* Row 1: 그룹 타이틀 */}
                         <tr>
-                            <th className="bg-gray-700 text-white px-3 py-2 font-bold text-sm text-left sticky left-0 z-30 border-2 border-black"
+                            <th className="bg-gray-700 text-white px-3 py-2 font-bold text-sm text-left sticky left-0 z-30 border-t-2 border-b-2 border-r-2 border-black"
                                 style={{ width: '90px', minWidth: '90px' }}>&nbsp;</th>
                             {groupColumnInfo.map(g => {
                                 const gc = getGroupColors(g.groupName);
                                 return (
-                                    <th key={g.groupName} className={`${gc.bg} text-white px-3 py-2 font-bold text-sm border-2 border-black`}
+                                    <th key={g.groupName} className={`${gc.bg} text-white px-3 py-2 font-bold text-sm border-t-2 border-b-2 border-r-[4px] border-black`}
                                         colSpan={g.colCount}>{g.groupName}</th>
                                 );
                             })}
                             {hasWeekendCols && (
-                                <th className="bg-orange-500 text-white px-3 py-2 font-bold text-sm border-2 border-black"
+                                <th className="bg-orange-500 text-white px-3 py-2 font-bold text-sm border-t-2 border-b-2 border-r-2 border-black"
                                     colSpan={weekendColInfo!.colCount + 1}>주말</th>
                             )}
                         </tr>
