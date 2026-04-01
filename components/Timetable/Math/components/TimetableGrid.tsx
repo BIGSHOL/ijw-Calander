@@ -2221,7 +2221,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                     const headerW = colspan > 1 ? getMergedCellWidthStyle(colspan) : singleCellWidthStyle;
                                     return (
                                         <th key={`${g.groupName}-${resource}`} colSpan={colspan}
-                                            className="p-1.5 text-sm font-bold border-b-[3px] border-b-black border-r-[3px] border-r-black truncate"
+                                            className="p-1.5 text-sm font-bold border-b-2 border-b-black border-r-2 border-r-black truncate"
                                             style={{ ...headerW, backgroundColor: td?.bgColor || '#3b82f6', color: td?.textColor || '#fff' }}
                                             title={resource}>{resource}</th>
                                     );
@@ -2242,7 +2242,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                             const headerW = colspan > 1 ? getMergedCellWidthStyle(colspan) : singleCellWidthStyle;
                                             return (
                                                 <th key={`weekend-${resource}`} colSpan={colspan}
-                                                    className="p-1.5 text-sm font-bold border-b-[3px] border-b-black border-r-[3px] border-r-black truncate"
+                                                    className="p-1.5 text-sm font-bold border-b-2 border-b-black border-r-2 border-r-black truncate"
                                                     style={{ ...headerW, backgroundColor: td?.bgColor || '#f97316', color: td?.textColor || '#fff' }}
                                                     title={resource}>{resource}</th>
                                             );
