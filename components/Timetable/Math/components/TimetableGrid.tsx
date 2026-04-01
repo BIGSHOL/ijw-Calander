@@ -1873,7 +1873,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     const bothEmpty = firstClasses.length === 0 && secondClasses.length === 0;
                     const sameClass = firstClasses.length > 0 && secondClasses.length > 0 && isSameClassNameSet(firstClasses, secondClasses);
                     const isLastDay = (dayIndex + colSpan - 1) === daysForResource.length - 1;
-                    const borderR = isLastDay ? 'border-r-[3px] border-r-black' : (bothEmpty ? '' : 'border-r border-r-black');
+                    const borderR = isLastDay ? 'border-r-2 border-r-black' : (bothEmpty ? '' : 'border-r border-r-black');
 
                     cells.push(
                         <td key={`${groupName}-${resource}-${day}-${groupId}`}
@@ -1971,7 +1971,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                         : { ...baseW, height: `${(rowHeightValue as number) * maxRowSpan}px` };
                     const isEmpty = !hasClass;
                     const isLastDay = (dayIndex + colSpan - 1) === daysForResource.length - 1;
-                    const borderR = isLastDay ? 'border-r-[3px] border-r-black' : 'border-r border-r-black';
+                    const borderR = isLastDay ? 'border-r-2 border-r-black' : 'border-r border-r-black';
 
                     cells.push(
                         <td key={`${groupName}-${resource}-${day}-${period}`}
@@ -2050,7 +2050,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     const cellClasses = getClassesForCell(filteredClasses, day, period, resource, viewType);
                     const isEmpty = cellClasses.length === 0;
                     const isLastDay = daysForResource.indexOf(day) === daysForResource.length - 1;
-                    const borderR = isLastDay ? 'border-r-[3px] border-r-black' : 'border-r border-r-black';
+                    const borderR = isLastDay ? 'border-r-2 border-r-black' : 'border-r border-r-black';
                     const borderB = 'border-b border-b-black';
 
                     // 주말 셀 높이: 평일과 동일한 rowHeightValue 적용 (교시 크기 통일)
@@ -2100,7 +2100,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                         const weekendTime2 = WEEKEND_PERIOD_TIMES[secondPeriod] || '';
                         rows.push(
                             <tr key={`unified-group-${groupId}-1`}>
-                                <td className="p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-[3px] border-b-black border-r-[3px] border-r-black"
+                                <td className="p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-[3px] border-b-black border-r-2 border-r-black"
                                     rowSpan={2} style={{ width: '90px', minWidth: '90px', backgroundColor: bgHex }}>
                                     <div className="font-bold text-period-label text-black">{groupInfo.label}</div>
                                     <div>{renderTime(groupInfo.time)}</div>
@@ -2132,7 +2132,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                         // 주말 없음: 기존 1행 방식
                         rows.push(
                             <tr key={`unified-group-${groupId}`}>
-                                <td className="p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-[3px] border-b-black border-r-[3px] border-r-black"
+                                <td className="p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-[3px] border-b-black border-r-2 border-r-black"
                                     style={{ width: '90px', minWidth: '90px', backgroundColor: bgHex }}>
                                     <div className="font-bold text-period-label text-black">{groupInfo.label}</div>
                                     <div>{renderTime(groupInfo.time)}</div>
@@ -2150,7 +2150,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
                         rows.push(
                             <tr key={`unified-period-${period}`}>
-                                <td className="p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-[3px] border-b-black border-r-[3px] border-r-black"
+                                <td className="p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-[3px] border-b-black border-r-2 border-r-black"
                                     style={{ width: '90px', minWidth: '90px', backgroundColor: bgHex }}>
                                     <div className="font-bold text-period-label text-black">{period}</div>
                                     <div>{renderTime(periodTime)}</div>
@@ -2213,7 +2213,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                         </tr>
                         {/* Row 2: 강사명 */}
                         <tr>
-                            <th className="p-1.5 text-period-label font-bold text-black border-b border-b-black border-r-[3px] border-r-black sticky left-0 z-30"
+                            <th className="p-1.5 text-period-label font-bold text-black border-b border-b-black border-r-2 border-r-black sticky left-0 z-30"
                                 rowSpan={2} style={{ width: '90px', minWidth: '90px', backgroundColor: '#f3f4f6' }}>교시</th>
                             {groupColumnInfo.flatMap(g => {
                                 const seen = new Set<string>();
@@ -2259,26 +2259,24 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                         {/* Row 3: 요일 */}
                         <tr>
                             {groupColumnInfo.flatMap(g => g.cols.map((c, i) => {
-                                const borderR = c.isLast ? 'border-r-[3px] border-r-black' : 'border-r border-r-black';
                                 const dayW = c.isMerged ? getMergedCellWidthStyle(1) : singleCellWidthStyle;
                                 const dateInfo = weekDates[c.day];
                                 return (
                                     <th key={`${g.groupName}-${c.resource}-${c.day}`}
-                                        className={`p-1.5 text-xxs font-bold text-center border-b-[3px] border-b-black ${borderR} bg-gray-100 text-black`}
-                                        style={dayW}>
+                                        className={`p-1.5 text-xxs font-bold text-center bg-gray-100 text-black`}
+                                        style={{ ...dayW, borderTop: '3px solid black', borderBottom: '3px solid black', borderRight: '3px solid black' }}>
                                         <div>{c.day}</div>
                                         {dateInfo && <div className="text-xxs opacity-70">{dateInfo.formatted}</div>}
                                     </th>
                                 );
                             }))}
                             {hasWeekendCols && weekendColInfo!.cols.map(c => {
-                                const borderR = c.isLast ? 'border-r-[3px] border-r-black' : 'border-r border-r-black';
                                 const dayW = c.isMerged ? getMergedCellWidthStyle(1) : singleCellWidthStyle;
                                 const dateInfo = weekDates[c.day];
                                 return (
                                     <th key={`weekend-${c.resource}-${c.day}`}
-                                        className={`p-1.5 text-xxs font-bold text-center border-b-[3px] border-b-black ${borderR} bg-orange-50 text-black`}
-                                        style={dayW}>
+                                        className={`p-1.5 text-xxs font-bold text-center bg-orange-50 text-black`}
+                                        style={{ ...dayW, borderTop: '3px solid black', borderBottom: '3px solid black', borderRight: '3px solid black' }}>
                                         <div>{c.day}</div>
                                         {dateInfo && <div className="text-xxs opacity-70">{dateInfo.formatted}</div>}
                                     </th>
