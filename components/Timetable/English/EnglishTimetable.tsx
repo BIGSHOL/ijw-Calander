@@ -281,8 +281,9 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                     if (del.type === 'withdrawn') {
                         await deleteDoc(enrollDoc.ref);
                     } else {
-                        const today = new Date().toISOString().split('T')[0];
-                        await updateDoc(enrollDoc.ref, { withdrawalDate: today, endDate: today });
+                        const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+                        const withdrawDate = yesterday.toISOString().split('T')[0];
+                        await updateDoc(enrollDoc.ref, { withdrawalDate: withdrawDate, endDate: withdrawDate });
                     }
                 }
             }

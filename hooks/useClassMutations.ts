@@ -570,7 +570,9 @@ export const useManageClassStudents = () => {
       // 이렇게 하면 출석부에서 해당 월의 수강 기록을 유지하면서, 이후 월에서는 제외됨
       if (removeStudentIds.length > 0) {
         // KST 기준 오늘 날짜
-        const today = getTodayKST();
+        // 전날로 설정하여 즉시 퇴원 처리
+        const yd = new Date(); yd.setDate(yd.getDate() - 1);
+        const yesterday = yd.toISOString().split('T')[0];
         const removePromises = removeStudentIds.map(async (studentId) => {
           // 해당 학생의 enrollments에서 className + subject 일치하는 것 찾아서 endDate 설정
           const enrollmentsQuery = query(
@@ -582,8 +584,8 @@ export const useManageClassStudents = () => {
 
           const updatePromises = snapshot.docs.map(async (docSnap) => {
             await updateDoc(docSnap.ref, {
-              endDate: today,
-              withdrawalDate: today,  // useClassDetail 필터링 + 시간표 퇴원 섹션 표시용
+              endDate: yesterday,
+              withdrawalDate: yesterday,  // useClassDetail 필터링 + 시간표 퇴원 섹션 표시용
               updatedAt: new Date().toISOString()
             });
           });

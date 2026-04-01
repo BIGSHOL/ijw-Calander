@@ -237,7 +237,8 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                                                     return;
                                                 }
                                                 if (window.confirm("퇴원 처리 하시겠습니까?")) {
-                                                    onUpdate(student.id, { withdrawalDate: new Date().toISOString().split('T')[0], onHold: false, enrollmentDate: undefined, isMoved: false });
+                                                    const yd = new Date(); yd.setDate(yd.getDate() - 1);
+                                                    onUpdate(student.id, { withdrawalDate: yd.toISOString().split('T')[0], onHold: false, enrollmentDate: undefined, isMoved: false });
                                                 }
                                             }}
                                             className="px-2 py-0.5 text-xxs rounded-sm border border-gray-200 text-gray-400 hover:bg-gray-800 hover:text-white hover:border-gray-800 transition-colors"
