@@ -899,7 +899,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                     {(() => {
                         if (isTimeColumnOnly) {
                             return (
-                                <div className={`text-center font-bold text-xs ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-orange-300'} flex items-center justify-center h-[32px] bg-orange-100 text-orange-800 select-none shrink-0 overflow-hidden`}>
+                                <div className={`text-center font-bold text-xs ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-orange-300'} flex items-center justify-center ${isEnglish ? 'h-[44px]' : 'h-[32px]'} bg-orange-100 text-orange-800 select-none shrink-0 overflow-hidden`}>
                                     수업명
                                 </div>
                             );
@@ -908,7 +908,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                         return (
                             <div
                                 ref={headerRef}
-                                className={`text-center font-bold text-xs ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-gray-300'} flex items-center justify-center ${isEnglish ? 'min-h-[32px] py-0.5' : 'h-[32px]'} leading-tight relative group shrink-0 overflow-hidden ${mode === 'view' ? 'cursor-help' : ''}`}
+                                className={`text-center font-bold text-xs ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-gray-300'} flex items-center justify-center ${isEnglish ? 'h-[44px]' : 'h-[32px]'} leading-tight relative group shrink-0 overflow-hidden ${mode === 'view' ? 'cursor-help' : ''}`}
                                 title={classInfo.name}
                                 style={keywordColor ? { backgroundColor: keywordColor.bgColor, color: keywordColor.textColor } : { backgroundColor: '#EFF6FF', color: '#111827' }}
                                 onMouseEnter={() => isEnglish && mode !== 'edit' && setShowScheduleTooltip(true)}
@@ -1149,27 +1149,27 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                 {/* Student List */}
                 {displayOptions?.showStudents ? (
                     isTimeColumnOnly ? (
-                        <div className={`flex-1 flex flex-col ${isEnglish ? 'border-r-2 border-r-black' : 'border-r border-gray-300'}`}>
+                        <div className="flex-1 flex flex-col">
                             <div className={`flex-1 flex flex-col items-center justify-center bg-indigo-50 text-indigo-900 font-bold text-sm leading-relaxed select-none ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-indigo-100'}`}>
                                 <span>재</span><span>원</span><span>생</span>
                             </div>
                             {displayOptions?.showHoldStudents !== false && (
                                 <div className={`flex items-center justify-center bg-pink-100 text-pink-700 font-bold text-xs ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-pink-200'} select-none shrink-0`}
-                                    style={isEnglish ? { minHeight: '24px' } : { height: holdSectionHeight ?? 80 }}
+                                    style={{ height: holdSectionHeight ?? (isEnglish ? 24 : 80) }}
                                 >
                                     대기
                                 </div>
                             )}
                             {displayOptions?.showWithdrawnStudents !== false && (
                                 <div className="flex items-center justify-center bg-gray-100 text-gray-600 font-bold text-xs select-none shrink-0"
-                                    style={isEnglish ? { minHeight: '24px' } : { height: withdrawnSectionHeight ?? 80 }}
+                                    style={{ height: withdrawnSectionHeight ?? (isEnglish ? 24 : 80) }}
                                 >
                                     퇴원
                                 </div>
                             )}
                         </div>
                     ) : (
-                        <div className={`flex-1 flex flex-col bg-white ${isEnglish ? 'border-r-2 border-r-black' : 'border-r border-gray-300'}`}>
+                        <div className="flex-1 flex flex-col bg-white">
                             {/* 재원생 Section */}
                             <div className={`flex-1 flex flex-col ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-indigo-100'}`} style={isEnglish ? { minHeight: '80px' } : { height: '230px' }}>
                                 <div className={`${isEnglish ? 'border-b border-b-black' : 'border-b border-gray-300'} flex items-center justify-center h-[30px] shrink-0 bg-white`}>
@@ -1305,7 +1305,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                             {/* 대기 Section (배정 예정 + 휴원) - showHoldStudents 옵션 적용 */}
                             {displayOptions?.showHoldStudents !== false && (
                                 <div className={`flex flex-col bg-pink-50 ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-pink-200'} px-2 py-1 ${isEnglish ? '' : 'overflow-y-auto custom-scrollbar'} shrink-0`}
-                                    style={isEnglish ? { minHeight: '24px' } : { height: holdSectionHeight ?? 80 }}
+                                    style={{ height: holdSectionHeight ?? (isEnglish ? 24 : 80) }}
                                 >
                                     {holdStudents.length === 0 && scheduledStudents.length === 0 ? (
                                         <span className="text-xxs text-pink-300 flex items-center justify-center h-full">-</span>
@@ -1377,7 +1377,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                             {/* 퇴원생 Section - showWithdrawnStudents 옵션 적용 */}
                             {displayOptions?.showWithdrawnStudents !== false && (
                                 <div className={`flex flex-col bg-gray-100 px-2 py-1 ${isEnglish ? '' : 'overflow-y-auto custom-scrollbar'} shrink-0`}
-                                    style={isEnglish ? { minHeight: '24px' } : { height: withdrawnSectionHeight ?? 80 }}
+                                    style={{ height: withdrawnSectionHeight ?? (isEnglish ? 24 : 80) }}
                                 >
                                     {withdrawnStudents.length === 0 ? (
                                         <span className="text-xxs text-gray-500 flex items-center justify-center h-full">-</span>

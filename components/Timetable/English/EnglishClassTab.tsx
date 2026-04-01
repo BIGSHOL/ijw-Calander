@@ -360,9 +360,9 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                 const holdCount = students.filter((s: any) => s.onHold && !s.withdrawalDate && !s.isScheduled).length;
                 const scheduledCount = students.filter((s: any) => s.isScheduled && !s.withdrawalDate).length;
                 const withdrawnCount = students.filter((s: any) => s.withdrawalDate && !s.isTransferred).length;
-                const totalHold = Math.min(scheduledCount, 3) + Math.min(holdCount, 3);
+                const totalHold = scheduledCount + holdCount;
                 maxHold = Math.max(maxHold, totalHold);
-                maxWithdrawn = Math.max(maxWithdrawn, Math.min(withdrawnCount, 3));
+                maxWithdrawn = Math.max(maxWithdrawn, withdrawnCount);
             });
             heightMap[group.periodIndex] = {
                 holdHeight: Math.max(MIN_HEIGHT, PADDING + maxHold * LINE_HEIGHT),
