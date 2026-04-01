@@ -1864,6 +1864,8 @@ export default React.memo(ClassCard, (prevProps, nextProps) => {
         prevProps.mode === nextProps.mode &&
         prevProps.acHighlightStudentId === nextProps.acHighlightStudentId &&
         prevProps.cutStudentIds === nextProps.cutStudentIds &&
-        prevProps.cutStudentClassName === nextProps.cutStudentClassName
+        prevProps.cutStudentClassName === nextProps.cutStudentClassName &&
+        prevProps.studentFilter === nextProps.studentFilter &&
+        prevProps.shuttleStudentNames === nextProps.shuttleStudentNames
     );
 });

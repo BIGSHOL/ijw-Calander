@@ -50,8 +50,8 @@ const IntegrationMiniGridRow: React.FC<IntegrationMiniGridRowProps> = ({
     if (onlyTime) {
         // 시간 컬럼만 표시 (sticky용)
         return (
-            <div className="flex border-b border-b-black h-[24px]">
-                <div className="w-[48px] border-r border-r-black flex flex-col items-center justify-center bg-gray-50 shrink-0 py-0.5">
+            <div className="flex border-b border-gray-300 h-[24px]">
+                <div className="w-[48px] border-r border-gray-400 flex flex-col items-center justify-center bg-gray-50 shrink-0 py-0.5">
                     <span className="text-micro font-bold text-gray-700 tracking-tighter leading-none">{startTime}</span>
                     <span className="text-micro text-gray-500 tracking-tighter leading-none">~{endTime}</span>
                 </div>
@@ -60,10 +60,10 @@ const IntegrationMiniGridRow: React.FC<IntegrationMiniGridRowProps> = ({
     }
 
     return (
-        <div className="flex border-b border-b-black h-[24px]">
+        <div className="flex border-b border-gray-300 h-[24px]">
             {/* 시간 컬럼 */}
             {!hideTime && (
-                <div className="w-[48px] border-r border-r-black flex flex-col items-center justify-center bg-gray-50 shrink-0 py-0.5">
+                <div className="w-[48px] border-r border-gray-400 flex flex-col items-center justify-center bg-gray-50 shrink-0 py-0.5">
                     <span className="text-micro font-bold text-gray-700 tracking-tighter leading-none">{startTime}</span>
                     <span className="text-micro text-gray-500 tracking-tighter leading-none">~{endTime}</span>
                 </div>
@@ -107,7 +107,7 @@ const IntegrationMiniGridRow: React.FC<IntegrationMiniGridRowProps> = ({
                 return (
                     <div
                         key={day}
-                        className={`flex-1 border-r border-r-black last:border-r-0 flex flex-col justify-center items-center text-center px-0.5 overflow-hidden text-xxs ${isWeekend && !cell?.teacher ? 'bg-gray-100' : ''}`}
+                        className={`flex-1 border-r border-gray-300 last:border-r-0 flex flex-col justify-center items-center text-center px-0.5 overflow-hidden text-xxs ${isWeekend && !cell?.teacher ? 'bg-gray-100' : ''}`}
                         style={cellStyle}
                         title={displayName}
                     >

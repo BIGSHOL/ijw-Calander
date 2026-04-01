@@ -842,7 +842,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                 onDragOver={isTimeColumnOnly ? undefined : handleDragOver}
                 onDrop={isTimeColumnOnly ? undefined : handleDrop}
                 onClick={isExcelMode && !isTimeColumnOnly ? (e) => { e.stopPropagation(); onCellSelect?.(); } : undefined}
-                className={`${cardWidthClass} h-full flex flex-col border-r border-gray-300 shrink-0 bg-white transition-all overflow-hidden relative ${isExcelMode && !isTimeColumnOnly ? 'cursor-pointer' : ''} ${isSelected ? 'ring-2 ring-blue-500 shadow-lg z-10' : ''}`}
+                className={`${cardWidthClass} h-full flex flex-col ${isEnglish ? 'border-r border-r-black' : 'border-r border-gray-300'} shrink-0 bg-white transition-all overflow-hidden relative ${isExcelMode && !isTimeColumnOnly ? 'cursor-pointer' : ''} ${isSelected ? 'ring-2 ring-blue-500 shadow-lg z-10' : ''}`}
             >
                 {/* 엑셀 모드: 선택된 학생이 있을 때 테두리 드래그 오버레이 */}
                 {hasSelectedInThisCard && (() => {
@@ -894,7 +894,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                     {(() => {
                         if (isTimeColumnOnly) {
                             return (
-                                <div className="text-center font-bold text-xs border-b border-orange-300 flex items-center justify-center h-[32px] bg-orange-100 text-orange-800 select-none shrink-0 overflow-hidden">
+                                <div className={`text-center font-bold text-xs ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-orange-300'} flex items-center justify-center h-[32px] bg-orange-100 text-orange-800 select-none shrink-0 overflow-hidden`}>
                                     수업명
                                 </div>
                             );
@@ -903,7 +903,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                         return (
                             <div
                                 ref={headerRef}
-                                className={`text-center font-bold text-xs border-b border-gray-300 flex items-center justify-center h-[32px] leading-tight relative group shrink-0 overflow-hidden ${mode === 'view' ? 'cursor-help' : ''}`}
+                                className={`text-center font-bold text-xs ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-gray-300'} flex items-center justify-center h-[32px] leading-tight relative group shrink-0 overflow-hidden ${mode === 'view' ? 'cursor-help' : ''}`}
                                 title={classInfo.name}
                                 style={keywordColor ? { backgroundColor: keywordColor.bgColor, color: keywordColor.textColor } : { backgroundColor: '#EFF6FF', color: '#111827' }}
                                 onMouseEnter={() => isEnglish && mode !== 'edit' && setShowScheduleTooltip(true)}
@@ -1073,7 +1073,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
 
                     {/* Info Summary (Teacher/Room) */}
                     {(displayOptions?.showTeacher || displayOptions?.showRoom) && (
-                        <div className="bg-orange-50 border-b border-gray-300 text-xs flex flex-col">
+                        <div className={`bg-orange-50 ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-gray-300'} text-xs flex flex-col`}>
                             {displayOptions?.showTeacher && (() => {
                                 const mainTeacherData = teachersData.find(t => t.name === classInfo.mainTeacher || t.englishName === classInfo.mainTeacher);
                                 const displayTeacherName = isEnglish ? (mainTeacherData?.englishName || classInfo.mainTeacher) : classInfo.mainTeacher;
@@ -1139,7 +1139,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                 {/* Student List */}
                 {displayOptions?.showStudents ? (
                     isTimeColumnOnly ? (
-                        <div className="flex-1 flex flex-col border-r border-r-black">
+                        <div className={`flex-1 flex flex-col ${isEnglish ? 'border-r border-r-black' : 'border-r border-gray-300'}`}>
                             <div className={`flex-1 flex flex-col items-center justify-center bg-indigo-50 text-indigo-900 font-bold text-sm leading-relaxed select-none ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-indigo-100'}`}>
                                 <span>재</span><span>원</span><span>생</span>
                             </div>
@@ -1159,10 +1159,10 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                             )}
                         </div>
                     ) : (
-                        <div className="flex-1 flex flex-col bg-white border-r border-r-black">
+                        <div className={`flex-1 flex flex-col bg-white ${isEnglish ? 'border-r border-r-black' : 'border-r border-gray-300'}`}>
                             {/* 재원생 Section */}
                             <div className={`flex-1 flex flex-col ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-indigo-100'}`} style={isEnglish ? { minHeight: '80px' } : { height: '230px' }}>
-                                <div className="border-b border-b-black flex items-center justify-center h-[30px] shrink-0 bg-white">
+                                <div className={`${isEnglish ? 'border-b border-b-black' : 'border-b border-gray-300'} flex items-center justify-center h-[30px] shrink-0 bg-white`}>
                                     <div className="w-full h-full text-center text-[13px] font-bold bg-indigo-50 text-indigo-600 flex items-center justify-center gap-2">
                                         <Users size={14} />
                                         <span>
