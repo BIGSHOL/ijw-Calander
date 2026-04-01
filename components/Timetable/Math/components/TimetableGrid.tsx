@@ -1655,13 +1655,231 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
     // 뷰 모드에 따라 다른 레이아웃 렌더링
     if (timetableViewMode === 'day-based') {
+        const allDays = dayBasedData.filter(d => d.resources.length > 0);
+        if (allDays.length === 0) return null;
+
+        const getDayColors = (day: string) => {
+            if (day === '토' || day === '일') return { bg: 'bg-orange-500' };
+            if (day === '수') return { bg: 'bg-green-500' };
+            if (day === '월') return { bg: 'bg-blue-500' };
+            if (day === '화') return { bg: 'bg-pink-500' };
+            if (day === '목') return { bg: 'bg-emerald-500' };
+            if (day === '금') return { bg: 'bg-indigo-500' };
+            return { bg: 'bg-gray-500' };
+        };
+
+        const totalWidth = 90 + allDays.reduce((acc, d) => acc + d.resources.length * parseInt(singleCellWidthStyle.width), 0);
+        const bgHex = '#f3f4f6';
+
+        const renderDayCard = (cls: TimetableClass, day: string, periodIndex: number, resource: string, overrideShowClassName?: boolean) => (
+            <ClassCard
+                key={cls.id} cls={cls} span={1}
+                searchQuery={searchQuery} showStudents={showStudents}
+                showClassName={overrideShowClassName !== undefined ? overrideShowClassName : showClassName}
+                showSchool={showSchool} showGrade={showGrade}
+                canEdit={getCanEdit(cls, resource)}
+                isAssistantTeacher={isAssistantSlot(cls, resource)}
+                isDragOver={dragOverClassId === cls.id}
+                onClick={onClassClick} onDragStart={onDragStart}
+                onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
+                studentMap={studentMap} classKeywords={classKeywords}
+                onStudentClick={onStudentClick} currentDay={day}
+                fontSize={fontSize} rowHeight={rowHeight} cellSizePx={cellSizePx}
+                showHoldStudents={showHoldStudents} showWithdrawnStudents={showWithdrawnStudents}
+                pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveSchedules={pendingMoveSchedules}
+                latestTextbook={getLatestTextbook(cls)} latestReports={latestReports}
+                studentTextbookMap={byStudentName} referenceDate={referenceDate}
+                isExcelMode={isExcelMode} isSelected={selectedClassId === cls.id}
+                onCellSelect={onCellSelect} onEnrollStudent={onEnrollStudent}
+                onCancelPendingEnroll={onCancelPendingEnroll}
+                selectedStudentIds={selectedStudentIds} selectedStudentClassName={selectedStudentClassName}
+                copiedStudentIds={copiedStudentIds} copiedStudentClassName={copiedStudentClassName}
+                cutStudentIds={cutStudentIds} cutStudentClassName={cutStudentClassName}
+                acHighlightStudentId={acHighlightStudentId} onAcHighlightChange={onAcHighlightChange}
+                onStudentSelect={onStudentSelect} onStudentMultiSelect={onStudentMultiSelect}
+                mode={mode} onCancelScheduledEnrollment={onCancelScheduledEnrollment}
+                onWithdrawalDrop={onWithdrawalDrop}
+                pendingExcelDeleteIds={pendingExcelDeleteIds} pendingExcelEnrollments={pendingExcelEnrollments}
+                studentFilter={studentFilter} shuttleStudentNames={shuttleStudentNames}
+            />
+        );
+
+        const buildDayCells = (day: string, resources: string[], firstPeriod: string, secondPeriod: string, groupId: string) => {
+            const firstPeriodIndex = currentPeriods.indexOf(firstPeriod);
+            const secondPeriodIndex = currentPeriods.indexOf(secondPeriod);
+            const doubleH = rowHeightValue !== 'auto' ? `${(rowHeightValue as number) * 2}px` : undefined;
+
+            return resources.map((resource, rIdx) => {
+                const firstClasses = getClassesForCell(filteredClasses, day, firstPeriod, resource, viewType);
+                const secondClasses = getClassesForCell(filteredClasses, day, secondPeriod, resource, viewType);
+                const bothEmpty = firstClasses.length === 0 && secondClasses.length === 0;
+                const sameClass = firstClasses.length > 0 && secondClasses.length > 0 && isSameClassNameSet(firstClasses, secondClasses);
+                const isLastInDay = rIdx === resources.length - 1;
+                const borderR = isLastInDay ? 'border-r-2 border-r-black' : (bothEmpty ? '' : 'border-r border-r-black');
+                const cellStyle = { ...singleCellWidthStyle, ...(doubleH ? { height: doubleH } : {}) };
+
+                return (
+                    <td key={`${day}-${resource}-${groupId}`}
+                        className={`p-0 align-top border-b-[3px] border-b-black ${borderR}`}
+                        style={{ ...cellStyle, ...(bothEmpty ? { backgroundColor: EMPTY_CELL_BG } : {}) }}>
+                        <div style={{ height: '100%' }}>
+                        {bothEmpty ? (
+                            <div className="flex flex-col h-full" style={{ backgroundColor: EMPTY_CELL_BG }}>
+                                <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 border-b border-b-black" />
+                                <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 border-b border-b-black" />
+                                <div className="flex-1" />
+                            </div>
+                        ) : sameClass ? (
+                            <div className="flex flex-col h-full">
+                                <div style={{ height: `${NAME_SLOT_H * 2}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
+                                    <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{firstClasses[0].className}{firstClasses[0].room ? ` ${firstClasses[0].room}` : ''}</span>
+                                </div>
+                                <div className="flex-1 min-h-0">
+                                    {firstClasses.map(cls => renderDayCard(cls, day, firstPeriodIndex, resource, false))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col h-full">
+                                <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-b-black bg-white">
+                                    {firstClasses.length > 0 && <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{firstClasses[0].className}</span>}
+                                </div>
+                                <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
+                                    {secondClasses.length > 0 && <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{secondClasses[0].className}</span>}
+                                </div>
+                                <div className="flex-1 min-h-0">
+                                    {firstClasses.length > 0
+                                        ? firstClasses.map(cls => renderDayCard(cls, day, firstPeriodIndex, resource, false))
+                                        : secondClasses.length > 0
+                                            ? secondClasses.map(cls => renderDayCard(cls, day, secondPeriodIndex, resource, false))
+                                            : null}
+                                </div>
+                            </div>
+                        )}
+                        </div>
+                    </td>
+                );
+            });
+        };
+
+        const buildDaySingleCells = (day: string, resources: string[], period: string) => {
+            const periodIndex = currentPeriods.indexOf(period);
+            const cellH = rowHeightValue !== 'auto' ? `${rowHeightValue as number}px` : undefined;
+
+            return resources.map((resource, rIdx) => {
+                const cellClasses = getClassesForCell(filteredClasses, day, period, resource, viewType);
+                const isEmpty = cellClasses.length === 0;
+                const isLastInDay = rIdx === resources.length - 1;
+                const borderR = isLastInDay ? 'border-r-2 border-r-black' : 'border-r border-r-black';
+                const cellStyle = { ...singleCellWidthStyle, ...(cellH ? { height: cellH } : {}) };
+
+                return (
+                    <td key={`${day}-${resource}-${period}`}
+                        className={`p-0 align-top border-b-[3px] border-b-black ${borderR}`}
+                        style={{ ...cellStyle, ...(isEmpty ? { backgroundColor: EMPTY_CELL_BG } : {}) }}>
+                        <div style={{ height: '100%' }}>
+                        {isEmpty ? (
+                            <div className="text-xxs text-gray-500 text-center py-1">빈 강의실</div>
+                        ) : cellClasses.map(cls => renderDayCard(cls, day, periodIndex, resource))}
+                        </div>
+                    </td>
+                );
+            });
+        };
+
+        const buildUnifiedDayRows = () => {
+            const rows: React.ReactNode[] = [];
+            const processedPeriods = new Set<string>();
+
+            MATH_GROUPED_PERIODS.forEach(groupId => {
+                const periodIds = MATH_GROUP_PERIOD_IDS[groupId];
+                const [firstPeriod, secondPeriod] = periodIds;
+                const hasFirst = currentPeriods.includes(firstPeriod);
+                const hasSecond = currentPeriods.includes(secondPeriod);
+                if (!hasFirst && !hasSecond) return;
+                const groupInfo = MATH_GROUP_DISPLAY[groupId];
+
+                if (hasFirst && hasSecond) {
+                    processedPeriods.add(firstPeriod);
+                    processedPeriods.add(secondPeriod);
+                    rows.push(
+                        <tr key={`group-${groupId}`}>
+                            <td className="p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-[3px] border-b-black border-r-2 border-r-black"
+                                style={{ width: '90px', minWidth: '90px', backgroundColor: bgHex }}>
+                                <div className="font-bold text-period-label text-black">{groupInfo.label}</div>
+                                <div>{renderTime(groupInfo.time)}</div>
+                            </td>
+                            {allDays.flatMap(({ day, resources }) => buildDayCells(day, resources, firstPeriod, secondPeriod, groupId))}
+                        </tr>
+                    );
+                } else {
+                    periodIds.forEach(period => {
+                        if (!currentPeriods.includes(period) || processedPeriods.has(period)) return;
+                        processedPeriods.add(period);
+                        const periodTime = MATH_PERIOD_TIMES[period] || period;
+                        rows.push(
+                            <tr key={`period-${period}`}>
+                                <td className="p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-[3px] border-b-black border-r-2 border-r-black"
+                                    style={{ width: '90px', minWidth: '90px', backgroundColor: bgHex }}>
+                                    <div className="font-bold text-period-label text-black">{period}</div>
+                                    <div>{renderTime(periodTime)}</div>
+                                </td>
+                                {allDays.flatMap(({ day, resources }) => buildDaySingleCells(day, resources, period))}
+                            </tr>
+                        );
+                    });
+                }
+            });
+            return rows;
+        };
+
         return (
             <div className="overflow-auto h-full">
-                <div className="flex gap-0">
-                    {dayBasedData.map(({ day, resources }, index) =>
-                        renderDayBasedTable(day, resources, index > 0)
-                    )}
-                </div>
+                <table className="border-collapse border-[3px] border-black" style={{ tableLayout: 'fixed', width: `${totalWidth}px` }}>
+                    <colgroup>
+                        <col style={{ width: '90px' }} />
+                        {allDays.flatMap(d => d.resources.map(r => (
+                            <col key={`col-${d.day}-${r}`} style={{ width: singleCellWidthStyle.width }} />
+                        )))}
+                    </colgroup>
+                    <thead className="sticky top-0 z-20">
+                        <tr>
+                            <th className="bg-gray-700 text-white px-3 py-2 font-bold text-sm text-left sticky left-0 z-30"
+                                style={{ width: '90px', minWidth: '90px', borderTop: '3px solid black', borderBottom: '3px solid black', borderRight: '3px solid black' }}>&nbsp;</th>
+                            {allDays.map(({ day, resources }) => {
+                                const dc = getDayColors(day);
+                                const dateInfo = weekDates[day];
+                                return (
+                                    <th key={day} className={`${dc.bg} text-white px-3 py-2 font-bold text-sm`}
+                                        colSpan={resources.length}
+                                        style={{ borderTop: '3px solid black', borderBottom: '3px solid black', borderRight: '3px solid black' }}>
+                                        {day}
+                                        {dateInfo && <span className="ml-1 text-xs opacity-80">({dateInfo.formatted})</span>}
+                                    </th>
+                                );
+                            })}
+                        </tr>
+                        <tr>
+                            <th className="p-1.5 text-period-label font-bold text-black border-b-2 border-b-black border-r-2 border-r-black sticky left-0 z-30"
+                                style={{ width: '90px', minWidth: '90px', backgroundColor: bgHex }}>교시</th>
+                            {allDays.flatMap(({ day, resources }) =>
+                                resources.map((resource, rIdx) => {
+                                    const td = teachers.find(t => t.name === resource);
+                                    const isLastInDay = rIdx === resources.length - 1;
+                                    const borderR = isLastInDay ? 'border-r-2 border-r-black' : 'border-r border-r-black';
+                                    return (
+                                        <th key={`${day}-${resource}`}
+                                            className={`p-1.5 text-sm font-bold border-b-2 border-b-black ${borderR} truncate`}
+                                            style={{ ...singleCellWidthStyle, backgroundColor: td?.bgColor || '#3b82f6', color: td?.textColor || '#fff' }}
+                                            title={resource}>{resource}</th>
+                                    );
+                                })
+                            )}
+                        </tr>
+                    </thead>
+                    <tbody className="timetable-body">
+                        {buildUnifiedDayRows()}
+                    </tbody>
+                </table>
             </div>
         );
     }
