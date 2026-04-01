@@ -324,7 +324,16 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
             });
         });
         return {
-            availableSchools: [...schools].sort((a, b) => a.localeCompare(b, 'ko')),
+            availableSchools: [...schools].sort((a, b) => {
+                const schoolOrder = (s: string) => {
+                    if (s.includes('초')) return 10;
+                    if (s.includes('중')) return 20;
+                    if (s.includes('고')) return 30;
+                    return 40;
+                };
+                const diff = schoolOrder(a) - schoolOrder(b);
+                return diff !== 0 ? diff : a.localeCompare(b, 'ko');
+            }),
             availableGrades: [...grades].sort((a, b) => {
                 const gradeOrder = (g: string) => {
                     if (g.startsWith('초')) return 10 + parseInt(g.replace(/\D/g, '') || '0');
