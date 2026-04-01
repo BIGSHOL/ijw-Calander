@@ -2260,7 +2260,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                 const dayW = c.isMerged ? getMergedCellWidthStyle(1) : singleCellWidthStyle;
                                 const dateInfo = weekDates[c.day];
                                 const isLastColInGroup = i === g.cols.length - 1;
-                                const borderRClass = isLastColInGroup ? 'border-r-[4px]' : 'border-r';
+                                const borderRClass = isLastColInGroup ? 'border-r-[4px]' : 'border-r-2';
                                 return (
                                     <th key={`${g.groupName}-${c.resource}-${c.day}`}
                                         className={`p-1.5 text-xxs font-bold text-center bg-gray-100 text-black border-t-2 border-b-2 ${borderRClass} border-black`}
@@ -2274,7 +2274,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                 const dayW = c.isMerged ? getMergedCellWidthStyle(1) : singleCellWidthStyle;
                                 const dateInfo = weekDates[c.day];
                                 const isLastCol = i === weekendColInfo!.cols.length - 1;
-                                const borderRClass = isLastCol ? 'border-r-[4px]' : 'border-r';
+                                const borderRClass = isLastCol ? 'border-r-[4px]' : 'border-r-2';
                                 return (
                                     <th key={`weekend-${c.resource}-${c.day}`}
                                         className={`p-1.5 text-xxs font-bold text-center bg-orange-50 text-black border-t-2 border-b-2 ${borderRClass} border-black`}
