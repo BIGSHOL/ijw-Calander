@@ -1834,7 +1834,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
         return (
             <div className="overflow-auto h-full">
-                <div style={{ width: `${totalWidth + 200}px` }}>
+                <div style={{ width: `${totalWidth + 1200}px` }}>
                 <table className="border-collapse border-[3px] border-black" style={{ tableLayout: 'fixed', width: `${totalWidth}px` }}>
                     <colgroup>
                         <col style={{ width: '90px' }} />
@@ -1882,7 +1882,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     </tbody>
                 </table>
                 </div>
-                <div className="h-[200px] shrink-0" />
+                <div className="h-[400px] shrink-0" />
             </div>
         );
     }
@@ -2401,7 +2401,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
         return (
             <div className="overflow-auto h-full">
-                <div style={{ width: `${totalTableWidth + 200}px` }}>
+                <div style={{ width: `${totalTableWidth + 1200}px` }}>
                 <table className="border-separate border border-black" style={{ borderSpacing: '0px', tableLayout: 'fixed', width: `${totalTableWidth}px` }}>
                     <colgroup>
                         <col style={{ width: '90px' }} />
@@ -2513,7 +2513,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     </tbody>
                 </table>
                 </div>
-                <div className="h-[200px] shrink-0" />
+                <div className="h-[400px] shrink-0" />
             </div>
         );
     };
@@ -2539,9 +2539,9 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     const config = groupConfigs[weekendGroup];
                     return renderTable(config.resources, config.daysMap, weekendGroup, config.isWednesday, false);
                 })()}
-                <div className="w-[200px] shrink-0" />
+                <div className="w-[1200px] shrink-0" />
             </div>
-            <div className="h-[200px] shrink-0" />
+            <div className="h-[400px] shrink-0" />
         </div>
     );
 };
