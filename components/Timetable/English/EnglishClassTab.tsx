@@ -346,6 +346,32 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
         return groups;
     }, [classes, hiddenClasses, mode, settings]);
 
+    // 그룹별 대기/퇴원 섹션 동기화 높이 계산
+    const groupSectionHeights = useMemo(() => {
+        const LINE_HEIGHT = 22;
+        const PADDING = 8;
+        const MIN_HEIGHT = 24;
+        const heightMap: Record<number, { holdHeight: number; withdrawnHeight: number }> = {};
+        groupedClasses.forEach(group => {
+            let maxHold = 0;
+            let maxWithdrawn = 0;
+            group.classes.forEach(cls => {
+                const students = classDataMap[cls.name]?.studentList || [];
+                const holdCount = students.filter((s: any) => s.onHold && !s.withdrawalDate && !s.isScheduled).length;
+                const scheduledCount = students.filter((s: any) => s.isScheduled && !s.withdrawalDate).length;
+                const withdrawnCount = students.filter((s: any) => s.withdrawalDate && !s.isTransferred).length;
+                const totalHold = Math.min(scheduledCount, 3) + Math.min(holdCount, 3);
+                maxHold = Math.max(maxHold, totalHold);
+                maxWithdrawn = Math.max(maxWithdrawn, Math.min(withdrawnCount, 3));
+            });
+            heightMap[group.periodIndex] = {
+                holdHeight: Math.max(MIN_HEIGHT, PADDING + maxHold * LINE_HEIGHT),
+                withdrawnHeight: Math.max(MIN_HEIGHT, PADDING + maxWithdrawn * LINE_HEIGHT),
+            };
+        });
+        return heightMap;
+    }, [groupedClasses, classDataMap]);
+
     // 그룹 정보 업데이트 (이미지 내보내기용)
     // 이전 그룹 ID를 추적하여 실제 변경 시에만 상태 업데이트 (무한 루프 방지)
     const prevGroupIdsRef = useRef<string>('');
@@ -622,6 +648,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                     englishLevels={englishLevels}
                                                     hiddenTeacherList={settings.hiddenTeachers}
                                                     currentWeekStart={currentWeekStart}
+                                                    holdSectionHeight={groupSectionHeights[group.periodIndex]?.holdHeight}
+                                                    withdrawnSectionHeight={groupSectionHeights[group.periodIndex]?.withdrawnHeight}
                                                 />
                                             </div>
                                         )}
@@ -695,6 +723,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 onAcHighlightChange={isExcelMode ? excelOnAcHighlightChange : undefined}
                                                 pendingExcelDeleteIds={isExcelMode ? excelPendingExcelDeleteIds : undefined}
                                                 pendingExcelEnrollments={isExcelMode ? excelPendingExcelEnrollments : undefined}
+                                                holdSectionHeight={groupSectionHeights[group.periodIndex]?.holdHeight}
+                                                withdrawnSectionHeight={groupSectionHeights[group.periodIndex]?.withdrawnHeight}
                                             />
                                         ))}
                                     </div>

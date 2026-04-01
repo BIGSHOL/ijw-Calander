@@ -1376,12 +1376,11 @@ const TimetableManager = ({
     const [showSchool, setShowSchool] = useState(viewSettings.showSchool ?? true);
     const [showGrade, setShowGrade] = useState(viewSettings.showGrade ?? true);
     const [showEmptyRooms, setShowEmptyRooms] = useState(viewSettings.showEmptyRooms ?? false);
-    const [cellSize, setCellSize] = useState<'xs' | 'sm' | 'md' | 'lg' | 'xl'>(
-        viewSettings.cellSize || 'md'
-    );
-    // cellSize에서 파생되는 columnWidth / rowHeight (하위 호환)
-    const columnWidth = ({ xs: 'compact', sm: 'narrow', md: 'normal', lg: 'wide', xl: 'x-wide' } as const)[cellSize];
-    const rowHeight = ({ xs: 'compact', sm: 'short', md: 'normal', lg: 'tall', xl: 'very-tall' } as const)[cellSize];
+    const cellSize = 'md' as const;
+    const setCellSize = undefined;
+    // cellSize 항상 'md' 고정
+    const columnWidth = 'normal' as const;
+    const rowHeight = 'normal' as const;
     const [fontSize, setFontSize] = useState<'small' | 'normal' | 'large'>(
         viewSettings.fontSize || 'normal'
     );

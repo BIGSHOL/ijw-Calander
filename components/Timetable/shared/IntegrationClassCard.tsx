@@ -325,6 +325,9 @@ interface IntegrationClassCardProps {
     pendingExcelEnrollments?: Array<{ studentId: string; className: string; enrollmentDate?: string }>;
     acHighlightStudentId?: string | null;
     onAcHighlightChange?: (studentId: string | null) => void;
+    // 대기/퇴원 섹션 동기화 높이 (같은 행의 모든 카드 동일)
+    holdSectionHeight?: number;
+    withdrawnSectionHeight?: number;
 }
 
 // 주말 실제 시간대 (영어용)
@@ -385,6 +388,8 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     pendingExcelEnrollments: excelPendingExcelEnrollments,
     acHighlightStudentId: excelAcHighlightStudentId,
     onAcHighlightChange: excelOnAcHighlightChange,
+    holdSectionHeight,
+    withdrawnSectionHeight,
 }) => {
     const cardWidthClass = isTimeColumnOnly ? 'w-[49px]' : (hideTime ? 'w-[160px]' : 'w-[190px]');
     const isEnglish = subject === 'english';
@@ -842,7 +847,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                 onDragOver={isTimeColumnOnly ? undefined : handleDragOver}
                 onDrop={isTimeColumnOnly ? undefined : handleDrop}
                 onClick={isExcelMode && !isTimeColumnOnly ? (e) => { e.stopPropagation(); onCellSelect?.(); } : undefined}
-                className={`${cardWidthClass} h-full flex flex-col ${isEnglish ? 'border-r border-r-black' : 'border-r border-gray-300'} shrink-0 bg-white transition-all overflow-hidden relative ${isExcelMode && !isTimeColumnOnly ? 'cursor-pointer' : ''} ${isSelected ? 'ring-2 ring-blue-500 shadow-lg z-10' : ''}`}
+                className={`${cardWidthClass} ${isEnglish ? '' : 'h-full'} flex flex-col ${isEnglish ? 'border-r border-r-black' : 'border-r border-gray-300'} shrink-0 bg-white transition-all overflow-hidden relative ${isExcelMode && !isTimeColumnOnly ? 'cursor-pointer' : ''} ${isSelected ? 'ring-2 ring-blue-500 shadow-lg z-10' : ''}`}
             >
                 {/* 엑셀 모드: 선택된 학생이 있을 때 테두리 드래그 오버레이 */}
                 {hasSelectedInThisCard && (() => {
@@ -888,7 +893,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                 {/* 수업 상세 클릭 영역 */}
                 <div
                     onClick={handleClassDetailClick}
-                    className={mode === 'edit' && !isTimeColumnOnly ? 'cursor-pointer hover:brightness-95' : ''}
+                    className={`shrink-0 ${mode === 'edit' && !isTimeColumnOnly ? 'cursor-pointer hover:brightness-95' : ''}`}
                 >
                     {/* Header - 수업명 */}
                     {(() => {
@@ -1144,15 +1149,15 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                 <span>재</span><span>원</span><span>생</span>
                             </div>
                             {displayOptions?.showHoldStudents !== false && (
-                                <div className={`flex items-center justify-center bg-pink-100 text-pink-700 font-bold text-xs ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-pink-200'} select-none`}
-                                    style={isEnglish ? { minHeight: '24px', height: 'auto' } : { height: '80px' }}
+                                <div className={`flex items-center justify-center bg-pink-100 text-pink-700 font-bold text-xs ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-pink-200'} select-none shrink-0`}
+                                    style={{ height: holdSectionHeight ?? (isEnglish ? 40 : 80) }}
                                 >
                                     대기
                                 </div>
                             )}
                             {displayOptions?.showWithdrawnStudents !== false && (
-                                <div className="flex items-center justify-center bg-gray-100 text-gray-600 font-bold text-xs select-none"
-                                    style={isEnglish ? { minHeight: '24px', height: 'auto' } : { height: '80px' }}
+                                <div className="flex items-center justify-center bg-gray-100 text-gray-600 font-bold text-xs select-none shrink-0"
+                                    style={{ height: withdrawnSectionHeight ?? (isEnglish ? 40 : 80) }}
                                 >
                                     퇴원
                                 </div>
@@ -1290,10 +1295,12 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                 )}
                             </div>
 
+                            {/* 대기/퇴원 하단 고정 */}
+                            <div className="mt-auto shrink-0">
                             {/* 대기 Section (배정 예정 + 휴원) - showHoldStudents 옵션 적용 */}
                             {displayOptions?.showHoldStudents !== false && (
-                                <div className={`flex flex-col bg-pink-50 ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-pink-200'} px-2 py-1 overflow-y-auto custom-scrollbar`}
-                                    style={isEnglish ? { minHeight: '24px', height: 'auto', maxHeight: '120px' } : { height: '80px' }}
+                                <div className={`flex flex-col bg-pink-50 ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-pink-200'} px-2 py-1 overflow-y-auto custom-scrollbar shrink-0`}
+                                    style={{ height: holdSectionHeight ?? (isEnglish ? 40 : 80) }}
                                 >
                                     {holdStudents.length === 0 && scheduledStudents.length === 0 ? (
                                         <span className="text-xxs text-pink-300 flex items-center justify-center h-full">-</span>
@@ -1364,8 +1371,8 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
 
                             {/* 퇴원생 Section - showWithdrawnStudents 옵션 적용 */}
                             {displayOptions?.showWithdrawnStudents !== false && (
-                                <div className="flex flex-col bg-gray-100 px-2 py-1 overflow-y-auto custom-scrollbar"
-                                    style={isEnglish ? { minHeight: '24px', height: 'auto', maxHeight: '120px' } : { height: '80px' }}
+                                <div className="flex flex-col bg-gray-100 px-2 py-1 overflow-y-auto custom-scrollbar shrink-0"
+                                    style={{ height: withdrawnSectionHeight ?? (isEnglish ? 40 : 80) }}
                                 >
                                     {withdrawnStudents.length === 0 ? (
                                         <span className="text-xxs text-gray-500 flex items-center justify-center h-full">-</span>
@@ -1408,6 +1415,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                     )}
                                 </div>
                             )}
+                            </div>
                         </div>
                     )
                 ) : null}
