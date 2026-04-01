@@ -2198,17 +2198,19 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                         {/* Row 1: 그룹 타이틀 */}
                         <tr>
                             <th className="bg-gray-700 text-white px-3 py-2 font-bold text-sm text-left sticky left-0 z-30"
-                                style={{ width: '90px', minWidth: '90px' }}>&nbsp;</th>
+                                style={{ width: '90px', minWidth: '90px', borderTop: '3px solid black', borderBottom: '3px solid black', borderRight: '3px solid black' }}>&nbsp;</th>
                             {groupColumnInfo.map(g => {
                                 const gc = getGroupColors(g.groupName);
                                 return (
                                     <th key={g.groupName} className={`${gc.bg} text-white px-3 py-2 font-bold text-sm`}
-                                        colSpan={g.colCount}>{g.groupName}</th>
+                                        colSpan={g.colCount}
+                                        style={{ borderTop: '3px solid black', borderBottom: '3px solid black', borderRight: '3px solid black' }}>{g.groupName}</th>
                                 );
                             })}
                             {hasWeekendCols && (
                                 <th className="bg-orange-500 text-white px-3 py-2 font-bold text-sm"
-                                    colSpan={weekendColInfo!.colCount + 1}>주말</th>
+                                    colSpan={weekendColInfo!.colCount + 1}
+                                    style={{ borderTop: '3px solid black', borderBottom: '3px solid black', borderRight: '3px solid black' }}>주말</th>
                             )}
                         </tr>
                         {/* Row 2: 강사명 */}
@@ -2226,7 +2228,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                     const headerW = colspan > 1 ? getMergedCellWidthStyle(colspan) : singleCellWidthStyle;
                                     return (
                                         <th key={`${g.groupName}-${resource}`} colSpan={colspan}
-                                            className="p-1.5 text-sm font-bold border-b-[3px] border-b-black border-r-[3px] border-r-black truncate"
+                                            className="p-1.5 text-sm font-bold border-b-2 border-b-black border-r-2 border-r-black truncate"
                                             style={{ ...headerW, backgroundColor: td?.bgColor || '#3b82f6', color: td?.textColor || '#fff' }}
                                             title={resource}>{resource}</th>
                                     );
@@ -2247,7 +2249,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                             const headerW = colspan > 1 ? getMergedCellWidthStyle(colspan) : singleCellWidthStyle;
                                             return (
                                                 <th key={`weekend-${resource}`} colSpan={colspan}
-                                                    className="p-1.5 text-sm font-bold border-b-[3px] border-b-black border-r-[3px] border-r-black truncate"
+                                                    className="p-1.5 text-sm font-bold border-b-2 border-b-black border-r-2 border-r-black truncate"
                                                     style={{ ...headerW, backgroundColor: td?.bgColor || '#f97316', color: td?.textColor || '#fff' }}
                                                     title={resource}>{resource}</th>
                                             );
