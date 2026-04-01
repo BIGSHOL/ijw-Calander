@@ -1826,6 +1826,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
             firstPeriodIndex: number, secondPeriodIndex: number, groupId: string,
             extraRowSpan?: number
         ) => {
+            const lastResource = config.resources[config.resources.length - 1];
             return config.resources.flatMap(resource => {
                 const daysForResource = config.isWednesday ? ['수'] : (config.daysMap.get(resource) || []);
                 const cells: React.ReactNode[] = [];
@@ -1866,7 +1867,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     const bothEmpty = firstClasses.length === 0 && secondClasses.length === 0;
                     const sameClass = firstClasses.length > 0 && secondClasses.length > 0 && isSameClassNameSet(firstClasses, secondClasses);
                     const isLastDay = (dayIndex + colSpan - 1) === daysForResource.length - 1;
-                    const borderR = isLastDay ? 'border-r-2 border-r-black' : (bothEmpty ? '' : 'border-r border-r-black');
+                    const isGroupBoundary = isLastDay && resource === lastResource;
+                    const borderR = isGroupBoundary ? 'border-r-[3px] border-r-black' : (isLastDay ? 'border-r-2 border-r-black' : (bothEmpty ? '' : 'border-r border-r-black'));
 
                     cells.push(
                         <td key={`${groupName}-${resource}-${day}-${groupId}`}
@@ -1919,6 +1921,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
             groupName: string, config: typeof groupConfigs[string],
             period: string, periodIndex: number
         ) => {
+            const lastResource = config.resources[config.resources.length - 1];
             return config.resources.flatMap(resource => {
                 const daysForResource = config.isWednesday ? ['수'] : (config.daysMap.get(resource) || []);
                 const cells: React.ReactNode[] = [];
@@ -1964,7 +1967,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                         : { ...baseW, height: `${(rowHeightValue as number) * maxRowSpan}px` };
                     const isEmpty = !hasClass;
                     const isLastDay = (dayIndex + colSpan - 1) === daysForResource.length - 1;
-                    const borderR = isLastDay ? 'border-r-2 border-r-black' : 'border-r border-r-black';
+                    const isGroupBoundary = isLastDay && resource === lastResource;
+                    const borderR = isGroupBoundary ? 'border-r-[3px] border-r-black' : (isLastDay ? 'border-r-2 border-r-black' : 'border-r border-r-black');
 
                     cells.push(
                         <td key={`${groupName}-${resource}-${day}-${period}`}
@@ -2190,20 +2194,18 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     <thead className="sticky top-0 z-20">
                         {/* Row 1: 그룹 타이틀 */}
                         <tr>
-                            <th className="bg-gray-700 text-white px-3 py-2 font-bold text-sm text-left sticky left-0 z-30"
-                                style={{ width: '90px', minWidth: '90px', borderTop: '3px solid black', borderBottom: '3px solid black', borderRight: '3px solid black' }}>&nbsp;</th>
+                            <th className="bg-gray-700 text-white px-3 py-2 font-bold text-sm text-left sticky left-0 z-30 border-t-[3px] border-b-[3px] border-r-[3px] border-black"
+                                style={{ width: '90px', minWidth: '90px' }}>&nbsp;</th>
                             {groupColumnInfo.map(g => {
                                 const gc = getGroupColors(g.groupName);
                                 return (
-                                    <th key={g.groupName} className={`${gc.bg} text-white px-3 py-2 font-bold text-sm`}
-                                        colSpan={g.colCount}
-                                        style={{ borderTop: '3px solid black', borderBottom: '3px solid black', borderRight: '3px solid black' }}>{g.groupName}</th>
+                                    <th key={g.groupName} className={`${gc.bg} text-white px-3 py-2 font-bold text-sm border-t-[3px] border-b-[3px] border-r-[3px] border-black`}
+                                        colSpan={g.colCount}>{g.groupName}</th>
                                 );
                             })}
                             {hasWeekendCols && (
-                                <th className="bg-orange-500 text-white px-3 py-2 font-bold text-sm"
-                                    colSpan={weekendColInfo!.colCount + 1}
-                                    style={{ borderTop: '3px solid black', borderBottom: '3px solid black', borderRight: '3px solid black' }}>주말</th>
+                                <th className="bg-orange-500 text-white px-3 py-2 font-bold text-sm border-t-[3px] border-b-[3px] border-r-[3px] border-black"
+                                    colSpan={weekendColInfo!.colCount + 1}>주말</th>
                             )}
                         </tr>
                         {/* Row 2: 강사명 */}
@@ -2212,16 +2214,17 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                 rowSpan={2} style={{ width: '90px', minWidth: '90px', backgroundColor: '#f3f4f6' }}>교시</th>
                             {groupColumnInfo.flatMap(g => {
                                 const seen = new Set<string>();
-                                return g.config.resources.map(resource => {
-                                    if (seen.has(resource)) return null;
-                                    seen.add(resource);
+                                const uniqueResources = g.config.resources.filter(r => { if (seen.has(r)) return false; seen.add(r); return true; });
+                                return uniqueResources.map((resource, idx) => {
                                     const days = g.config.isWednesday ? ['수'] : (g.config.daysMap.get(resource) || []);
                                     const colspan = days.length;
                                     const td = teachers.find(t => t.name === resource);
                                     const headerW = colspan > 1 ? getMergedCellWidthStyle(colspan) : singleCellWidthStyle;
+                                    const isLastInGroup = idx === uniqueResources.length - 1;
+                                    const borderRClass = isLastInGroup ? 'border-r-[3px]' : 'border-r-2';
                                     return (
                                         <th key={`${g.groupName}-${resource}`} colSpan={colspan}
-                                            className="p-1.5 text-sm font-bold border-b-2 border-b-black border-r-2 border-r-black truncate"
+                                            className={`p-1.5 text-sm font-bold border-b-2 border-b-black ${borderRClass} border-r-black truncate`}
                                             style={{ ...headerW, backgroundColor: td?.bgColor || '#3b82f6', color: td?.textColor || '#fff' }}
                                             title={resource}>{resource}</th>
                                     );
@@ -2256,22 +2259,26 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                             {groupColumnInfo.flatMap(g => g.cols.map((c, i) => {
                                 const dayW = c.isMerged ? getMergedCellWidthStyle(1) : singleCellWidthStyle;
                                 const dateInfo = weekDates[c.day];
+                                const isLastColInGroup = i === g.cols.length - 1;
+                                const borderRClass = isLastColInGroup ? 'border-r-[3px]' : 'border-r';
                                 return (
                                     <th key={`${g.groupName}-${c.resource}-${c.day}`}
-                                        className={`p-1.5 text-xxs font-bold text-center bg-gray-100 text-black`}
-                                        style={{ ...dayW, borderTop: '3px solid black', borderBottom: '3px solid black', borderRight: '3px solid black' }}>
+                                        className={`p-1.5 text-xxs font-bold text-center bg-gray-100 text-black border-t-2 border-b-2 ${borderRClass} border-black`}
+                                        style={dayW}>
                                         <div>{c.day}</div>
                                         {dateInfo && <div className="text-xxs opacity-70">{dateInfo.formatted}</div>}
                                     </th>
                                 );
                             }))}
-                            {hasWeekendCols && weekendColInfo!.cols.map(c => {
+                            {hasWeekendCols && weekendColInfo!.cols.map((c, i) => {
                                 const dayW = c.isMerged ? getMergedCellWidthStyle(1) : singleCellWidthStyle;
                                 const dateInfo = weekDates[c.day];
+                                const isLastCol = i === weekendColInfo!.cols.length - 1;
+                                const borderRClass = isLastCol ? 'border-r-[3px]' : 'border-r';
                                 return (
                                     <th key={`weekend-${c.resource}-${c.day}`}
-                                        className={`p-1.5 text-xxs font-bold text-center bg-orange-50 text-black`}
-                                        style={{ ...dayW, borderTop: '3px solid black', borderBottom: '3px solid black', borderRight: '3px solid black' }}>
+                                        className={`p-1.5 text-xxs font-bold text-center bg-orange-50 text-black border-t-2 border-b-2 ${borderRClass} border-black`}
+                                        style={dayW}>
                                         <div>{c.day}</div>
                                         {dateInfo && <div className="text-xxs opacity-70">{dateInfo.formatted}</div>}
                                     </th>
