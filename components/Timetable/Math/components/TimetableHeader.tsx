@@ -1045,43 +1045,23 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
 
                                     {showDevMenu && (
                                         <>
-                                            {/* === 개발자 1. 크기 설정 === */}
-                                            {cellSize && setCellSize && fontSize && setFontSize && (
+                                            {/* === 개발자 1. 글자 크기 설정 === */}
+                                            {fontSize && setFontSize && (
                                                 <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
-                                                    <div className="text-xxs font-bold text-gray-600 mb-2">크기 설정</div>
-                                                    <div className="mb-2">
-                                                        <div className="text-xxs text-gray-500 mb-1">사이즈</div>
-                                                        <div className="flex gap-0.5">
-                                                            {(['xs', 'sm', 'md', 'lg', 'xl'] as const).map(s => (
-                                                                <button
-                                                                    key={s}
-                                                                    onClick={() => setCellSize(s)}
-                                                                    className={`flex-1 py-1 text-micro rounded-sm border ${cellSize === s
-                                                                            ? 'bg-accent text-primary border-accent font-bold'
-                                                                            : 'border-gray-300 text-gray-500 hover:bg-gray-50'
-                                                                        }`}
-                                                                >
-                                                                    {s === 'xs' ? '가장작음' : s === 'sm' ? '작음' : s === 'md' ? '보통' : s === 'lg' ? '큼' : '매우큼'}
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <div className="text-xxs text-gray-500 mb-1">글자 크기</div>
-                                                        <div className="flex gap-1">
-                                                            {(['small', 'normal', 'large'] as const).map(f => (
-                                                                <button
-                                                                    key={f}
-                                                                    onClick={() => setFontSize(f)}
-                                                                    className={`flex-1 py-1 text-xxs rounded-sm border ${fontSize === f
-                                                                            ? 'bg-accent text-primary border-accent font-bold'
-                                                                            : 'border-gray-300 text-gray-500 hover:bg-gray-50'
-                                                                        }`}
-                                                                >
-                                                                    {f === 'small' ? '작게' : f === 'normal' ? '보통' : '크게'}
-                                                                </button>
-                                                            ))}
-                                                        </div>
+                                                    <div className="text-xxs font-bold text-gray-600 mb-2">글자 크기</div>
+                                                    <div className="flex gap-1">
+                                                        {(['small', 'normal', 'large'] as const).map(f => (
+                                                            <button
+                                                                key={f}
+                                                                onClick={() => setFontSize(f)}
+                                                                className={`flex-1 py-1 text-xxs rounded-sm border ${fontSize === f
+                                                                        ? 'bg-accent text-primary border-accent font-bold'
+                                                                        : 'border-gray-300 text-gray-500 hover:bg-gray-50'
+                                                                    }`}
+                                                            >
+                                                                {f === 'small' ? '작게' : f === 'normal' ? '보통' : '크게'}
+                                                            </button>
+                                                        ))}
                                                     </div>
                                                 </div>
                                             )}
