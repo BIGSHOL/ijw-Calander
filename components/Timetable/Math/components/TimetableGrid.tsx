@@ -1110,38 +1110,31 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                             <tr>
                                 {!hidePeriodColumn && (
                                     <th
-                                        className={`${dayColors.bg} text-white px-3 py-2 font-bold text-sm text-left sticky left-0 z-30`}
+                                        className="bg-gray-700 text-white px-3 py-2 font-bold text-sm text-left sticky left-0 z-30"
                                         style={{ width: '90px', minWidth: '90px' }}
                                     >
-                                        {day}
-                                        {dateInfo && <span className="ml-1 text-xs opacity-80">({dateInfo.formatted})</span>}
+                                        &nbsp;
                                     </th>
                                 )}
                                 <th
                                     className={`${dayColors.bg} text-white px-3 py-2 font-bold text-sm`}
                                     colSpan={resources.length}
                                 >
-                                    {hidePeriodColumn && (
-                                        <span className="text-left block">
-                                            {day}
-                                            {dateInfo && <span className="ml-1 text-xs opacity-80">({dateInfo.formatted})</span>}
-                                        </span>
-                                    )}
+                                    <span className="text-left block">
+                                        {day}
+                                        {dateInfo && <span className="ml-1 text-xs opacity-80">({dateInfo.formatted})</span>}
+                                    </span>
                                 </th>
                             </tr>
                             {/* Teacher/Room Row */}
                             <tr>
                                 {!hidePeriodColumn && (
                                     <th
-                                        className={`p-1.5 text-period-label font-bold text-black border-b border-b-black border-r-[3px] border-r-black sticky left-0 z-30`}
+                                        className="p-1.5 text-period-label font-bold text-black border-b border-b-black border-r-2 border-r-black sticky left-0 z-30"
                                         style={{
                                             width: '90px',
                                             minWidth: '90px',
-                                            backgroundColor: dayColors.light === 'bg-blue-50' ? '#eff6ff' :
-                                                dayColors.light === 'bg-amber-50' ? '#fffbeb' :
-                                                    dayColors.light === 'bg-orange-50' ? '#fff7ed' :
-                                                        dayColors.light === 'bg-green-50' ? '#f0fdf4' :
-                                                            dayColors.light === 'bg-gray-50' ? '#f9fafb' : '#f3f4f6'
+                                            backgroundColor: '#f3f4f6'
                                         }}
                                     >
                                         교시
@@ -1665,8 +1658,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return (
             <div className="overflow-auto h-full">
                 <div className="flex gap-0">
-                    {dayBasedData.map(({ day, resources }) =>
-                        renderDayBasedTable(day, resources, false)
+                    {dayBasedData.map(({ day, resources }, index) =>
+                        renderDayBasedTable(day, resources, index > 0)
                     )}
                 </div>
             </div>
