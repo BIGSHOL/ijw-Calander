@@ -1939,6 +1939,7 @@ const TimetableManager = ({
                     hasPermissionFn={externalHasPermission || hasPermission}
                     setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
                     userDepartments={userDepartments}
+                    shuttleStudentNames={shuttleStudentNames}
                 />
             </Suspense>
         );

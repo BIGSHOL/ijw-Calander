@@ -88,6 +88,8 @@ interface EnglishClassTabProps {
     onAcHighlightChange?: (studentId: string | null) => void;
     pendingExcelDeleteIds?: Set<string>;
     pendingExcelEnrollments?: Array<{ studentId: string; className: string; enrollmentDate?: string }>;
+    shuttleStudentNames?: Set<string>;
+    shuttleOnly?: boolean;
 }
 
 // ClassInfo removed (imported from hooks)
@@ -141,6 +143,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     onAcHighlightChange: excelOnAcHighlightChange,
     pendingExcelDeleteIds: excelPendingExcelDeleteIds,
     pendingExcelEnrollments: excelPendingExcelEnrollments,
+    shuttleStudentNames,
+    shuttleOnly,
 }) => {
     const { hasPermission } = usePermissions(currentUser);
     const canEditEnglish = hasPermission('timetable.english.edit');
@@ -650,6 +654,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                     currentWeekStart={currentWeekStart}
                                                     holdSectionHeight={groupSectionHeights[group.periodIndex]?.holdHeight}
                                                     withdrawnSectionHeight={groupSectionHeights[group.periodIndex]?.withdrawnHeight}
+                                                    shuttleStudentNames={shuttleStudentNames}
+                                                    shuttleOnly={shuttleOnly}
                                                 />
                                             </div>
                                         )}
@@ -725,6 +731,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 pendingExcelEnrollments={isExcelMode ? excelPendingExcelEnrollments : undefined}
                                                 holdSectionHeight={groupSectionHeights[group.periodIndex]?.holdHeight}
                                                 withdrawnSectionHeight={groupSectionHeights[group.periodIndex]?.withdrawnHeight}
+                                                shuttleStudentNames={shuttleStudentNames}
+                                                shuttleOnly={shuttleOnly}
                                             />
                                         ))}
                                     </div>

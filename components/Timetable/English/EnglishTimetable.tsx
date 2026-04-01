@@ -17,7 +17,7 @@ import TeacherOrderModal from './TeacherOrderModal';
 import BackupHistoryModal from './BackupHistoryModal';
 import ScenarioManagementModal from './ScenarioManagementModal';
 import { SimulationProvider, useSimulation } from './context/SimulationContext';
-import { History, Undo2, Redo2, ChevronDown, ChevronUp, Focus, ChevronLeft, ChevronRight, Search, Eye, Edit, Settings, ArrowRightLeft, Copy, Upload, Save, SlidersHorizontal, Download, X, Users, Home, User, CalendarDays } from 'lucide-react';
+import { History, Undo2, Redo2, ChevronDown, ChevronUp, Focus, ChevronLeft, ChevronRight, Search, Eye, Edit, Settings, ArrowRightLeft, Copy, Upload, Save, SlidersHorizontal, Download, X, Users, Home, User, CalendarDays, Bus } from 'lucide-react';
 import { useEnglishStats } from './hooks/useEnglishStats';
 import { useEnglishSettings } from './hooks/useEnglishSettings';
 import PortalTooltip from '../../Common/PortalTooltip';
@@ -49,6 +49,7 @@ interface EnglishTimetableProps {
     hasPermissionFn?: (perm: string) => boolean;
     setIsTimetableSettingsOpen?: (value: boolean) => void;
     userDepartments?: ('math' | 'highmath' | 'english')[];
+    shuttleStudentNames?: Set<string>;
 }
 
 interface ScheduleCell {
@@ -65,8 +66,9 @@ interface ScheduleCell {
 type ScheduleData = Record<string, ScheduleCell>;
 
 // Inner component that uses SimulationContext
-const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [], classKeywords = [], currentUser, studentMap, currentWeekStart, weekLabel, goToPrevWeek, goToNextWeek, goToThisWeek, timetableSubject, setTimetableSubject, setTimetableViewType, mathViewMode, setMathViewMode, hasPermissionFn, setIsTimetableSettingsOpen, userDepartments }) => {
+const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [], classKeywords = [], currentUser, studentMap, currentWeekStart, weekLabel, goToPrevWeek, goToNextWeek, goToThisWeek, timetableSubject, setTimetableSubject, setTimetableViewType, mathViewMode, setMathViewMode, hasPermissionFn, setIsTimetableSettingsOpen, userDepartments, shuttleStudentNames }) => {
     // Removed local activeTab state, using viewType prop
+    const [shuttleOnly, setShuttleOnly] = useState(false);
     const [scheduleData, setScheduleData] = useState<ScheduleData>({});
     const [loading, setLoading] = useState(true);
     const [teachers, setTeachers] = useState<string[]>([]);
@@ -1075,6 +1077,22 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                             <CalendarDays size={14} className="text-gray-500" />
                                             <span className="text-xs text-gray-700">스케줄</span>
                                         </label>
+
+                                        {shuttleStudentNames && shuttleStudentNames.size > 0 && (
+                                            <>
+                                                <div className="border-t border-gray-200 my-1" />
+                                                <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={shuttleOnly}
+                                                        onChange={(e) => setShuttleOnly(e.target.checked)}
+                                                        className="rounded-sm border-gray-300 text-yellow-600 focus:ring-yellow-500"
+                                                    />
+                                                    <Bus size={14} className="text-yellow-500" />
+                                                    <span className="text-xs text-gray-700">셔틀탑승만</span>
+                                                </label>
+                                            </>
+                                        )}
                                     </div>
                                 </>
                             )}
@@ -1660,6 +1678,8 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 setIsLevelSettingsOpen={setIsLevelSettingsOpen}
                                 isExportModalOpen={isClassExportModalOpen}
                                 setIsExportModalOpen={setIsClassExportModalOpen}
+                                shuttleStudentNames={shuttleStudentNames}
+                                shuttleOnly={shuttleOnly}
                             />
                         )}
                         {viewType === 'excel' && (
@@ -1715,6 +1735,8 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                     onAcHighlightChange={setAcHighlightStudentId}
                                     pendingExcelDeleteIds={pendingExcelDeleteIds}
                                     pendingExcelEnrollments={pendingExcelEnrollments}
+                                    shuttleStudentNames={shuttleStudentNames}
+                                    shuttleOnly={shuttleOnly}
                                 />
                             </div>
                         )}

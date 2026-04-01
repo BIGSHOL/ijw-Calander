@@ -328,6 +328,9 @@ interface IntegrationClassCardProps {
     // 대기/퇴원 섹션 동기화 높이 (같은 행의 모든 카드 동일)
     holdSectionHeight?: number;
     withdrawnSectionHeight?: number;
+    // 셔틀 필터
+    shuttleStudentNames?: Set<string>;
+    shuttleOnly?: boolean;
 }
 
 // 주말 실제 시간대 (영어용)
@@ -390,6 +393,8 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     onAcHighlightChange: excelOnAcHighlightChange,
     holdSectionHeight,
     withdrawnSectionHeight,
+    shuttleStudentNames,
+    shuttleOnly,
 }) => {
     const cardWidthClass = isTimeColumnOnly ? 'w-[49px]' : (hideTime ? 'w-[160px]' : 'w-[190px]');
     const isEnglish = subject === 'english';
@@ -710,6 +715,15 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
         !s.isTransferred
     );
 
+    // 셔틀 필터 적용
+    const shuttleFilter = (s: TimetableStudent) =>
+        !shuttleOnly || !shuttleStudentNames || shuttleStudentNames.has(s.name);
+
+    const filteredActiveStudents = shuttleOnly ? activeStudents.filter(shuttleFilter) : activeStudents;
+    const filteredHoldStudents = shuttleOnly ? holdStudents.filter(shuttleFilter) : holdStudents;
+    const filteredScheduledStudents = shuttleOnly ? scheduledStudents.filter(shuttleFilter) : scheduledStudents;
+    const filteredWithdrawnStudents = shuttleOnly ? withdrawnStudents.filter(shuttleFilter) : withdrawnStudents;
+
     // 신입생 판별 (영어용)
     const isNewStudent = (enrollmentDate: string): number => {
         const days = Math.ceil((Date.now() - new Date(enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
@@ -723,7 +737,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
         const classDays = classInfo.finalDays || [];
         const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
 
-        return [...activeStudents].sort((a, b) => {
+        return [...filteredActiveStudents].sort((a, b) => {
             if (isEnglish) {
                 // 영어: 반이동 학생 → underline → 일반 → 신입생
                 const getWeight = (s: TimetableStudent) => {
@@ -847,7 +861,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                 onDragOver={isTimeColumnOnly ? undefined : handleDragOver}
                 onDrop={isTimeColumnOnly ? undefined : handleDrop}
                 onClick={isExcelMode && !isTimeColumnOnly ? (e) => { e.stopPropagation(); onCellSelect?.(); } : undefined}
-                className={`${cardWidthClass} ${isEnglish ? '' : 'h-full'} flex flex-col ${isEnglish ? 'border-r-2 border-r-black' : 'border-r border-gray-300'} shrink-0 bg-white transition-all overflow-hidden relative ${isExcelMode && !isTimeColumnOnly ? 'cursor-pointer' : ''} ${isSelected ? 'ring-2 ring-blue-500 shadow-lg z-10' : ''}`}
+                className={`${cardWidthClass} ${isEnglish && isTimeColumnOnly ? 'h-full' : isEnglish ? '' : 'h-full'} flex flex-col ${isEnglish ? 'border-r-2 border-r-black' : 'border-r border-gray-300'} shrink-0 bg-white transition-all overflow-hidden relative ${isExcelMode && !isTimeColumnOnly ? 'cursor-pointer' : ''} ${isSelected ? 'ring-2 ring-blue-500 shadow-lg z-10' : ''}`}
             >
                 {/* 엑셀 모드: 선택된 학생이 있을 때 테두리 드래그 오버레이 */}
                 {hasSelectedInThisCard && (() => {
@@ -1176,9 +1190,9 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                     <div className="w-full h-full text-center text-[13px] font-bold bg-indigo-50 text-indigo-600 flex items-center justify-center gap-2">
                                         <Users size={14} />
                                         <span>
-                                            {studentCount}
-                                            {(holdStudents.length + scheduledStudents.length) > 0 && (
-                                                <span className="text-violet-500">+{holdStudents.length + scheduledStudents.length}</span>
+                                            {shuttleOnly ? filteredActiveStudents.length : studentCount}
+                                            {(filteredHoldStudents.length + filteredScheduledStudents.length) > 0 && (
+                                                <span className="text-violet-500">+{filteredHoldStudents.length + filteredScheduledStudents.length}</span>
                                             )}
                                             명
                                         </span>
@@ -1307,12 +1321,12 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                 <div className={`flex flex-col bg-pink-50 ${isEnglish ? 'border-b-2 border-b-black' : 'border-b border-pink-200'} px-2 py-1 ${isEnglish ? '' : 'overflow-y-auto custom-scrollbar'} shrink-0`}
                                     style={{ height: holdSectionHeight ?? (isEnglish ? 24 : 80) }}
                                 >
-                                    {holdStudents.length === 0 && scheduledStudents.length === 0 ? (
+                                    {filteredHoldStudents.length === 0 && filteredScheduledStudents.length === 0 ? (
                                         <span className="text-xxs text-pink-300 flex items-center justify-center h-full">-</span>
                                     ) : (
                                         <>
                                             {/* 배정 예정 학생 */}
-                                            {(isEnglish ? scheduledStudents : scheduledStudents.slice(0, 3)).map((student) => (
+                                            {(isEnglish ? filteredScheduledStudents : filteredScheduledStudents.slice(0, 3)).map((student) => (
                                                 <div
                                                     key={student.id}
                                                     className="flex items-center text-[12px] py-0.5 px-1 bg-amber-50 text-amber-800 mb-0.5 cursor-pointer hover:bg-amber-100 group"
@@ -1344,11 +1358,11 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                     )}
                                                 </div>
                                             ))}
-                                            {!isEnglish && scheduledStudents.length > 3 && (
-                                                <span className="text-micro text-amber-500">+{scheduledStudents.length - 3}명 예정</span>
+                                            {!isEnglish && filteredScheduledStudents.length > 3 && (
+                                                <span className="text-micro text-amber-500">+{filteredScheduledStudents.length - 3}명 예정</span>
                                             )}
                                             {/* 휴원 학생 */}
-                                            {(isEnglish ? holdStudents : holdStudents.slice(0, 3)).map((student) => (
+                                            {(isEnglish ? filteredHoldStudents : filteredHoldStudents.slice(0, 3)).map((student) => (
                                                 <div
                                                     key={student.id}
                                                     className="flex items-center text-[12px] py-0.5 px-1 bg-amber-50 text-amber-800 mb-0.5 cursor-pointer hover:bg-amber-100"
@@ -1366,8 +1380,8 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                     )}
                                                 </div>
                                             ))}
-                                            {!isEnglish && holdStudents.length > 3 && (
-                                                <span className="text-micro text-amber-500">+{holdStudents.length - 3}명 휴원</span>
+                                            {!isEnglish && filteredHoldStudents.length > 3 && (
+                                                <span className="text-micro text-amber-500">+{filteredHoldStudents.length - 3}명 휴원</span>
                                             )}
                                         </>
                                     )}
@@ -1379,11 +1393,11 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                 <div className={`flex flex-col bg-gray-100 px-2 py-1 ${isEnglish ? '' : 'overflow-y-auto custom-scrollbar'} shrink-0`}
                                     style={{ height: withdrawnSectionHeight ?? (isEnglish ? 24 : 80) }}
                                 >
-                                    {withdrawnStudents.length === 0 ? (
+                                    {filteredWithdrawnStudents.length === 0 ? (
                                         <span className="text-xxs text-gray-500 flex items-center justify-center h-full">-</span>
                                     ) : (
                                         <>
-                                            {(isEnglish ? withdrawnStudents : withdrawnStudents.slice(0, 3)).map((student) => (
+                                            {(isEnglish ? filteredWithdrawnStudents : filteredWithdrawnStudents.slice(0, 3)).map((student) => (
                                                 <div
                                                     key={student.id}
                                                     className="flex items-center text-[12px] py-0.5 px-1 bg-black text-white mb-0.5 cursor-pointer hover:bg-gray-800 group relative"
@@ -1413,8 +1427,8 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                     )}
                                                 </div>
                                             ))}
-                                            {!isEnglish && withdrawnStudents.length > 3 && (
-                                                <span className="text-micro text-gray-400">+{withdrawnStudents.length - 3}명</span>
+                                            {!isEnglish && filteredWithdrawnStudents.length > 3 && (
+                                                <span className="text-micro text-gray-400">+{filteredWithdrawnStudents.length - 3}명</span>
                                             )}
                                         </>
                                     )}
