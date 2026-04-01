@@ -939,7 +939,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                         onClick={() => onStudentFilterChange({ ...studentFilter, shuttle: val })}
                                                         className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${
                                                             studentFilter.shuttle === val
-                                                                ? 'bg-blue-500 text-white border-blue-500'
+                                                                ? 'bg-yellow-400 text-yellow-900 border-yellow-500'
                                                                 : 'bg-gray-100 text-gray-400 border-gray-200'
                                                         }`}
                                                     >
