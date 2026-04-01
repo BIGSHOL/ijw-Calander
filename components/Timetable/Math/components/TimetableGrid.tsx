@@ -588,7 +588,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                         const isLastDayForResource = dayIndex === daysForResource.length - 1;
                                         const dateInfo = weekDates[day];
                                         // 강사 구분은 굵은선, 요일 사이는 얇은선
-                                        const borderRightClass = isLastDayForResource ? 'border-r-[3px] border-r-black' : 'border-r border-r-black';
+                                        const borderRightClass = 'border-r-[3px] border-r-black';
                                         // 병합 요일(월/목 등)은 좁게, 단독 요일(수)과 주말은 넓게
                                         const isMergedDay = daysForResource.length > 1 && !isWeekend;
                                         const dayHeaderWidth = isMergedDay
@@ -656,7 +656,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                 <tr key={`group-${groupId}`}>
                                                     {!hidePeriodColumn && (
                                                         <td
-                                                            className={`p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-[3px] border-b-black border-r-[3px] border-r-black`}
+                                                            className={`p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-[3px] border-b-black border-r-2 border-r-black`}
                                                             style={{
                                                                 width: '90px',
                                                                 minWidth: '90px',
@@ -728,7 +728,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                             const isLastDayForResource = (dayIndex + colSpan - 1) === daysForResource.length - 1;
                                                             // 빈 셀은 내부 요일 세로줄 제거 (마지막 요일의 굵은 구분선만 유지)
                                                             const borderRightClass = isLastDayForResource
-                                                                ? 'border-r-[3px] border-r-black'
+                                                                ? 'border-r-2 border-r-black'
                                                                 : (bothEmpty ? '' : 'border-r border-r-black');
 
                                                             cells.push(
@@ -802,7 +802,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                     <tr key={`period-${period}`}>
                                                         {!hidePeriodColumn && (
                                                             <td
-                                                                className={`p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-[3px] border-b-black border-r-[3px] border-r-black`}
+                                                                className={`p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-[3px] border-b-black border-r-2 border-r-black`}
                                                                 style={{
                                                                     width: '90px',
                                                                     minWidth: '90px',
@@ -896,7 +896,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
 
                                                                 const isEmpty = cellClasses.length === 0;
                                                                 const isLastDayForResource = (dayIndex + colSpan - 1) === daysForResource.length - 1;
-                                                                const borderRightClass = isLastDayForResource ? 'border-r-[3px] border-r-black' : 'border-r border-r-black';
+                                                                const borderRightClass = isLastDayForResource ? 'border-r-2 border-r-black' : 'border-r border-r-black';
 
                                                                 cells.push(
                                                                     <td
@@ -1217,7 +1217,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                 <tr key={`group-${groupId}`}>
                                                     {!hidePeriodColumn && (
                                                         <td
-                                                            className={`p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-[3px] border-b-black border-r-[3px] border-r-black`}
+                                                            className={`p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-[3px] border-b-black border-r-2 border-r-black`}
                                                             style={{
                                                                 width: '90px',
                                                                 minWidth: '90px',
@@ -1374,7 +1374,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                     <tr key={`period-${period}`}>
                                                         {!hidePeriodColumn && (
                                                             <td
-                                                                className={`p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-[3px] border-b-black border-r-[3px] border-r-black`}
+                                                                className={`p-1.5 text-period-label font-bold text-black text-center sticky left-0 z-10 border-b-[3px] border-b-black border-r-2 border-r-black`}
                                                                 style={{
                                                                     width: '90px',
                                                                     minWidth: '90px',
