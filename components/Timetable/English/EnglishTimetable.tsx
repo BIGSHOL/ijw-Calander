@@ -17,7 +17,7 @@ import TeacherOrderModal from './TeacherOrderModal';
 import BackupHistoryModal from './BackupHistoryModal';
 import ScenarioManagementModal from './ScenarioManagementModal';
 import { SimulationProvider, useSimulation } from './context/SimulationContext';
-import { History, Undo2, Redo2, ChevronDown, ChevronUp, Focus, ChevronLeft, ChevronRight, Search, Eye, Edit, Settings, ArrowRightLeft, Copy, Upload, Save, SlidersHorizontal, Download, X, Users, Home, User, CalendarDays, Bus } from 'lucide-react';
+import { History, Undo2, Redo2, ChevronDown, ChevronUp, Focus, ChevronLeft, ChevronRight, Search, Eye, Edit, Settings, ArrowRightLeft, Copy, Upload, Save, SlidersHorizontal, Download, X, Users, Home, User, CalendarDays, Bus, School, GraduationCap } from 'lucide-react';
 import { useEnglishStats } from './hooks/useEnglishStats';
 import { useEnglishSettings } from './hooks/useEnglishSettings';
 import PortalTooltip from '../../Common/PortalTooltip';
@@ -1077,6 +1077,42 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                             />
                                             <CalendarDays size={14} className="text-gray-500" />
                                             <span className="text-xs text-gray-700">스케줄</span>
+                                        </label>
+
+                                        <div className="border-t border-gray-200 my-1" />
+
+                                        <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={settings.displayOptions?.showSchool !== false}
+                                                onChange={(e) => updateSettings({
+                                                    ...settings,
+                                                    displayOptions: {
+                                                        ...settings.displayOptions!,
+                                                        showSchool: e.target.checked
+                                                    }
+                                                })}
+                                                className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                            />
+                                            <School size={14} className="text-gray-500" />
+                                            <span className="text-xs text-gray-700">학교</span>
+                                        </label>
+
+                                        <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={settings.displayOptions?.showGrade !== false}
+                                                onChange={(e) => updateSettings({
+                                                    ...settings,
+                                                    displayOptions: {
+                                                        ...settings.displayOptions!,
+                                                        showGrade: e.target.checked
+                                                    }
+                                                })}
+                                                className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                            />
+                                            <GraduationCap size={14} className="text-gray-500" />
+                                            <span className="text-xs text-gray-700">학년</span>
                                         </label>
 
                                         {shuttleStudentNames && shuttleStudentNames.size > 0 && (
