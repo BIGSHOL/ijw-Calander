@@ -331,6 +331,9 @@ interface IntegrationClassCardProps {
     // 셔틀 필터
     shuttleStudentNames?: Set<string>;
     shuttleOnly?: boolean;
+    // 학교/학년 필터
+    schoolFilter?: string[];
+    gradeFilter?: string[];
 }
 
 // 주말 실제 시간대 (영어용)
@@ -395,6 +398,8 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     withdrawnSectionHeight,
     shuttleStudentNames,
     shuttleOnly,
+    schoolFilter,
+    gradeFilter,
 }) => {
     const cardWidthClass = isTimeColumnOnly ? 'w-[49px]' : (hideTime ? 'w-[160px]' : 'w-[190px]');
     const isEnglish = subject === 'english';
@@ -715,14 +720,19 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
         !s.isTransferred
     );
 
-    // 셔틀 필터 적용
-    const shuttleFilter = (s: TimetableStudent) =>
-        !shuttleOnly || !shuttleStudentNames || shuttleStudentNames.has(s.name);
+    // 학생 필터 적용 (셔틀 + 학교 + 학년)
+    const hasFilter = shuttleOnly || (schoolFilter && schoolFilter.length > 0) || (gradeFilter && gradeFilter.length > 0);
+    const studentPassesFilter = (s: TimetableStudent) => {
+        if (shuttleOnly && shuttleStudentNames && !shuttleStudentNames.has(s.name)) return false;
+        if (schoolFilter && schoolFilter.length > 0 && (!s.school || !schoolFilter.includes(s.school))) return false;
+        if (gradeFilter && gradeFilter.length > 0 && (!s.grade || !gradeFilter.includes(s.grade))) return false;
+        return true;
+    };
 
-    const filteredActiveStudents = shuttleOnly ? activeStudents.filter(shuttleFilter) : activeStudents;
-    const filteredHoldStudents = shuttleOnly ? holdStudents.filter(shuttleFilter) : holdStudents;
-    const filteredScheduledStudents = shuttleOnly ? scheduledStudents.filter(shuttleFilter) : scheduledStudents;
-    const filteredWithdrawnStudents = shuttleOnly ? withdrawnStudents.filter(shuttleFilter) : withdrawnStudents;
+    const filteredActiveStudents = hasFilter ? activeStudents.filter(studentPassesFilter) : activeStudents;
+    const filteredHoldStudents = hasFilter ? holdStudents.filter(studentPassesFilter) : holdStudents;
+    const filteredScheduledStudents = hasFilter ? scheduledStudents.filter(studentPassesFilter) : scheduledStudents;
+    const filteredWithdrawnStudents = hasFilter ? withdrawnStudents.filter(studentPassesFilter) : withdrawnStudents;
 
     // 신입생 판별 (영어용)
     const isNewStudent = (enrollmentDate: string): number => {

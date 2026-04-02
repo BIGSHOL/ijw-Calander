@@ -91,6 +91,8 @@ interface EnglishClassTabProps {
     pendingExcelEnrollments?: Array<{ studentId: string; className: string; enrollmentDate?: string }>;
     shuttleStudentNames?: Set<string>;
     shuttleOnly?: boolean;
+    schoolFilter?: string[];
+    gradeFilter?: string[];
 }
 
 // ClassInfo removed (imported from hooks)
@@ -146,6 +148,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     pendingExcelEnrollments: excelPendingExcelEnrollments,
     shuttleStudentNames,
     shuttleOnly,
+    schoolFilter,
+    gradeFilter,
 }) => {
     const { hasPermission } = usePermissions(currentUser);
     const canEditEnglish = hasPermission('timetable.english.edit');
@@ -657,6 +661,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                     withdrawnSectionHeight={groupSectionHeights[group.periodIndex]?.withdrawnHeight}
                                                     shuttleStudentNames={shuttleStudentNames}
                                                     shuttleOnly={shuttleOnly}
+                                                    schoolFilter={schoolFilter}
+                                                    gradeFilter={gradeFilter}
                                                 />
                                             </div>
                                         )}

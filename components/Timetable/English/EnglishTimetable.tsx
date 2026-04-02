@@ -17,7 +17,7 @@ import TeacherOrderModal from './TeacherOrderModal';
 import BackupHistoryModal from './BackupHistoryModal';
 import ScenarioManagementModal from './ScenarioManagementModal';
 import { SimulationProvider, useSimulation } from './context/SimulationContext';
-import { History, Undo2, Redo2, ChevronDown, ChevronUp, Focus, ChevronLeft, ChevronRight, Search, Eye, Edit, Settings, ArrowRightLeft, Copy, Upload, Save, SlidersHorizontal, Download, X, Users, Home, User, CalendarDays, Bus, School, GraduationCap } from 'lucide-react';
+import { History, Undo2, Redo2, ChevronDown, ChevronUp, Focus, ChevronLeft, ChevronRight, Search, Eye, Edit, Settings, ArrowRightLeft, Copy, Upload, Save, SlidersHorizontal, Download, X, Users, Home, User, CalendarDays, Bus } from 'lucide-react';
 import { useEnglishStats } from './hooks/useEnglishStats';
 import { useEnglishSettings } from './hooks/useEnglishSettings';
 import PortalTooltip from '../../Common/PortalTooltip';
@@ -69,6 +69,8 @@ type ScheduleData = Record<string, ScheduleCell>;
 const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [], classKeywords = [], currentUser, studentMap, currentWeekStart, weekLabel, goToPrevWeek, goToNextWeek, goToThisWeek, timetableSubject, setTimetableSubject, setTimetableViewType, mathViewMode, setMathViewMode, hasPermissionFn, setIsTimetableSettingsOpen, userDepartments, shuttleStudentNames }) => {
     // Removed local activeTab state, using viewType prop
     const [shuttleOnly, setShuttleOnly] = useState(false);
+    const [schoolFilter, setSchoolFilter] = useState<string[]>([]);
+    const [gradeFilter, setGradeFilter] = useState<string[]>([]);
     const [scheduleData, setScheduleData] = useState<ScheduleData>({});
     const [loading, setLoading] = useState(true);
     const [teachers, setTeachers] = useState<string[]>([]);
@@ -324,6 +326,33 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
 
     // 영어 시간표 설정 (표시 옵션 포함)
     const { settings, updateSettings } = useEnglishSettings();
+
+    // 학교/학년 필터용 목록 (studentMap에서 추출)
+    const { availableSchools, availableGrades } = useMemo(() => {
+        const schools = new Set<string>();
+        const grades = new Set<string>();
+        Object.values(studentMap).forEach((s: any) => {
+            if (s.school) schools.add(s.school);
+            if (s.grade) grades.add(s.grade);
+        });
+        const schoolOrder = (s: string) => {
+            if (s.includes('초')) return 10;
+            if (s.includes('중')) return 20;
+            if (s.includes('고')) return 30;
+            return 40;
+        };
+        return {
+            availableSchools: [...schools].sort((a, b) => {
+                const diff = schoolOrder(a) - schoolOrder(b);
+                return diff !== 0 ? diff : a.localeCompare(b, 'ko');
+            }),
+            availableGrades: [...grades].sort((a, b) => {
+                const numA = parseInt(a) || 99;
+                const numB = parseInt(b) || 99;
+                return numA - numB;
+            }),
+        };
+    }, [studentMap]);
 
     // Ctrl+Z / Ctrl+Y 키보드 단축키 (시뮬레이션 모드에서만)
     useEffect(() => {
@@ -996,11 +1025,14 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                     }
                                     setIsDisplayOptionsOpen(!isDisplayOptionsOpen);
                                 }}
-                                className="px-2 py-1 border border-white/20 rounded-sm text-xs font-medium text-gray-300 hover:bg-white/10 transition-colors flex items-center gap-1"
-                                title="표시 옵션"
+                                className={`px-2 py-1 border rounded-sm text-xs font-medium transition-colors flex items-center gap-1 ${(schoolFilter.length > 0 || gradeFilter.length > 0 || shuttleOnly) ? 'border-yellow-400 text-yellow-300 bg-yellow-400/10' : 'border-white/20 text-gray-300 hover:bg-white/10'}`}
+                                title="보기 필터"
                             >
                                 <SlidersHorizontal size={12} />
                                 보기
+                                {(schoolFilter.length > 0 || gradeFilter.length > 0 || shuttleOnly) && (
+                                    <span className="bg-yellow-400 text-yellow-900 text-[10px] font-bold px-1 rounded-full leading-none py-0.5">{schoolFilter.length + gradeFilter.length + (shuttleOnly ? 1 : 0)}</span>
+                                )}
                             </button>
 
                             {isDisplayOptionsOpen && displayOptionsPos && (
@@ -1011,124 +1043,59 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                         style={{ top: displayOptionsPos.top, left: displayOptionsPos.left }}
                                         onClick={(e) => e.stopPropagation()}
                                     >
-                                        <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={settings.displayOptions?.showStudents ?? true}
-                                                onChange={(e) => updateSettings({
-                                                    ...settings,
-                                                    displayOptions: {
-                                                        ...settings.displayOptions!,
-                                                        showStudents: e.target.checked
-                                                    }
-                                                })}
-                                                className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                            />
-                                            <Users size={14} className="text-gray-500" />
-                                            <span className="text-xs text-gray-700">학생 목록</span>
-                                        </label>
+                                        {/* 학년 필터 */}
+                                        {availableGrades.length > 0 && (
+                                            <div className="px-3 py-2 border-b border-gray-100">
+                                                <div className="text-xxs font-bold text-gray-600 mb-1.5">학년</div>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {availableGrades.map(grade => {
+                                                        const isSelected = gradeFilter.includes(grade);
+                                                        return (
+                                                            <button key={grade}
+                                                                onClick={() => setGradeFilter(prev => isSelected ? prev.filter(g => g !== grade) : [...prev, grade])}
+                                                                className={`py-0.5 px-1.5 rounded text-xxs border ${isSelected ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}
+                                                            >{grade}</button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
 
-                                        <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={settings.displayOptions?.showRoom ?? true}
-                                                onChange={(e) => updateSettings({
-                                                    ...settings,
-                                                    displayOptions: {
-                                                        ...settings.displayOptions!,
-                                                        showRoom: e.target.checked
-                                                    }
-                                                })}
-                                                className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                            />
-                                            <Home size={14} className="text-gray-500" />
-                                            <span className="text-xs text-gray-700">강의실</span>
-                                        </label>
+                                        {/* 학교 필터 */}
+                                        {availableSchools.length > 0 && (
+                                            <div className="px-3 py-2 border-b border-gray-100">
+                                                <div className="text-xxs font-bold text-gray-600 mb-1.5">학교</div>
+                                                <div className="flex flex-wrap gap-1 max-h-[120px] overflow-y-auto">
+                                                    {availableSchools.map(school => {
+                                                        const isSelected = schoolFilter.includes(school);
+                                                        return (
+                                                            <button key={school}
+                                                                onClick={() => setSchoolFilter(prev => isSelected ? prev.filter(s => s !== school) : [...prev, school])}
+                                                                className={`py-0.5 px-1.5 rounded text-xxs border ${isSelected ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}
+                                                            >{school}</button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
 
-                                        <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={settings.displayOptions?.showTeacher ?? true}
-                                                onChange={(e) => updateSettings({
-                                                    ...settings,
-                                                    displayOptions: {
-                                                        ...settings.displayOptions!,
-                                                        showTeacher: e.target.checked
-                                                    }
-                                                })}
-                                                className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                            />
-                                            <User size={14} className="text-gray-500" />
-                                            <span className="text-xs text-gray-700">담임 정보</span>
-                                        </label>
-
-                                        <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={settings.displayOptions?.showSchedule ?? true}
-                                                onChange={(e) => updateSettings({
-                                                    ...settings,
-                                                    displayOptions: {
-                                                        ...settings.displayOptions!,
-                                                        showSchedule: e.target.checked
-                                                    }
-                                                })}
-                                                className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                            />
-                                            <CalendarDays size={14} className="text-gray-500" />
-                                            <span className="text-xs text-gray-700">스케줄</span>
-                                        </label>
-
-                                        <div className="border-t border-gray-200 my-1" />
-
-                                        <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={settings.displayOptions?.showSchool !== false}
-                                                onChange={(e) => updateSettings({
-                                                    ...settings,
-                                                    displayOptions: {
-                                                        ...settings.displayOptions!,
-                                                        showSchool: e.target.checked
-                                                    }
-                                                })}
-                                                className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                            />
-                                            <School size={14} className="text-gray-500" />
-                                            <span className="text-xs text-gray-700">학교</span>
-                                        </label>
-
-                                        <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={settings.displayOptions?.showGrade !== false}
-                                                onChange={(e) => updateSettings({
-                                                    ...settings,
-                                                    displayOptions: {
-                                                        ...settings.displayOptions!,
-                                                        showGrade: e.target.checked
-                                                    }
-                                                })}
-                                                className="rounded-sm border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                            />
-                                            <GraduationCap size={14} className="text-gray-500" />
-                                            <span className="text-xs text-gray-700">학년</span>
-                                        </label>
-
+                                        {/* 셔틀 필터 */}
                                         {shuttleStudentNames && shuttleStudentNames.size > 0 && (
-                                            <>
-                                                <div className="border-t border-gray-200 my-1" />
-                                                <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={shuttleOnly}
-                                                        onChange={(e) => setShuttleOnly(e.target.checked)}
-                                                        className="rounded-sm border-gray-300 text-yellow-600 focus:ring-yellow-500"
-                                                    />
-                                                    <Bus size={14} className="text-yellow-500" />
-                                                    <span className="text-xs text-gray-700">셔틀탑승만</span>
-                                                </label>
-                                            </>
+                                            <label className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-50 cursor-pointer">
+                                                <input type="checkbox" checked={shuttleOnly}
+                                                    onChange={(e) => setShuttleOnly(e.target.checked)}
+                                                    className="rounded-sm border-gray-300 text-yellow-600 focus:ring-yellow-500" />
+                                                <Bus size={14} className="text-yellow-500" />
+                                                <span className="text-xs text-gray-700">셔틀탑승만</span>
+                                            </label>
+                                        )}
+
+                                        {/* 필터 초기화 */}
+                                        {(schoolFilter.length > 0 || gradeFilter.length > 0 || shuttleOnly) && (
+                                            <div className="px-3 py-1.5 border-t border-gray-100">
+                                                <button onClick={() => { setSchoolFilter([]); setGradeFilter([]); setShuttleOnly(false); }}
+                                                    className="text-xxs text-red-500 hover:text-red-700">필터 초기화</button>
+                                            </div>
                                         )}
                                     </div>
                                 </>
@@ -1717,6 +1684,8 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 setIsExportModalOpen={setIsClassExportModalOpen}
                                 shuttleStudentNames={shuttleStudentNames}
                                 shuttleOnly={shuttleOnly}
+                                schoolFilter={schoolFilter}
+                                gradeFilter={gradeFilter}
                             />
                         )}
                         {viewType === 'excel' && (
@@ -1774,6 +1743,8 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                     pendingExcelEnrollments={pendingExcelEnrollments}
                                     shuttleStudentNames={shuttleStudentNames}
                                     shuttleOnly={shuttleOnly}
+                                schoolFilter={schoolFilter}
+                                gradeFilter={gradeFilter}
                                 />
                             </div>
                         )}
