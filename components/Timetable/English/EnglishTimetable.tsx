@@ -348,11 +348,11 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
             }),
             availableGrades: [...grades].sort((a, b) => {
                 const gradeOrder = (g: string) => {
-                    if (g.includes('초')) return 10 + (parseInt(g) || 0);
-                    if (g.includes('중')) return 20 + (parseInt(g) || 0);
-                    if (g.includes('고')) return 30 + (parseInt(g) || 0);
-                    const num = parseInt(g);
-                    return num ? num : 99;
+                    const num = parseInt(g.replace(/[^0-9]/g, '')) || 0;
+                    if (g.includes('초')) return 10 + num;
+                    if (g.includes('중')) return 20 + num;
+                    if (g.includes('고')) return 30 + num;
+                    return 40 + num;
                 };
                 return gradeOrder(a) - gradeOrder(b);
             }),
