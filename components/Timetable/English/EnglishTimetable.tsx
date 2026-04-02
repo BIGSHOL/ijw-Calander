@@ -347,9 +347,14 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                 return diff !== 0 ? diff : a.localeCompare(b, 'ko');
             }),
             availableGrades: [...grades].sort((a, b) => {
-                const numA = parseInt(a) || 99;
-                const numB = parseInt(b) || 99;
-                return numA - numB;
+                const gradeOrder = (g: string) => {
+                    if (g.includes('초')) return 10 + (parseInt(g) || 0);
+                    if (g.includes('중')) return 20 + (parseInt(g) || 0);
+                    if (g.includes('고')) return 30 + (parseInt(g) || 0);
+                    const num = parseInt(g);
+                    return num ? num : 99;
+                };
+                return gradeOrder(a) - gradeOrder(b);
             }),
         };
     }, [studentMap]);

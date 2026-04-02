@@ -740,6 +740,8 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 withdrawnSectionHeight={groupSectionHeights[group.periodIndex]?.withdrawnHeight}
                                                 shuttleStudentNames={shuttleStudentNames}
                                                 shuttleOnly={shuttleOnly}
+                                                schoolFilter={schoolFilter}
+                                                gradeFilter={gradeFilter}
                                             />
                                         ))}
                                     </div>
