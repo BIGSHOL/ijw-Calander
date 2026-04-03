@@ -4,7 +4,7 @@ import { RecordingUploader } from './RecordingUploader';
 import { RecordingStatusTracker } from './RecordingStatusTracker';
 import { ReportViewer } from './ReportViewer';
 import { ReportHistoryList } from './ReportHistoryList';
-import { useConsultationReportStatus } from '../../hooks/useConsultationRecording';
+import { useConsultationReportStatus, useReanalyzeReport } from '../../hooks/useConsultationRecording';
 import { usePermissions } from '../../hooks/usePermissions';
 import type { UserProfile } from '../../types';
 
@@ -20,6 +20,13 @@ export default function ConsultationRecordingTab({ userProfile }: ConsultationRe
   const { report } = useConsultationReportStatus(activeReportId);
   const { hasPermission } = usePermissions(userProfile);
   const canEditReport = hasPermission('recording.edit');
+  const reanalyze = useReanalyzeReport();
+
+  const handleRetry = () => {
+    if (activeReportId) {
+      reanalyze.mutate(activeReportId);
+    }
+  };
 
   const handleSelectFromHistory = (reportId: string) => {
     setActiveReportId(reportId);
@@ -97,12 +104,21 @@ export default function ConsultationRecordingTab({ userProfile }: ConsultationRe
                 <div className="bg-red-50 border border-red-200 rounded-sm p-5 text-center">
                   <p className="text-red-800 font-medium">분석 중 오류가 발생했습니다</p>
                   <p className="text-red-600 text-sm mt-1">{report.errorMessage}</p>
-                  <button
-                    onClick={() => setActiveReportId(null)}
-                    className="mt-4 px-4 py-2 bg-red-100 text-red-800 rounded-sm text-sm hover:bg-red-200"
-                  >
-                    다시 시도
-                  </button>
+                  <div className="mt-4 flex gap-2 justify-center">
+                    <button
+                      onClick={handleRetry}
+                      disabled={reanalyze.isPending}
+                      className="px-4 py-2 bg-red-600 text-white rounded-sm text-sm hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {reanalyze.isPending ? '재분석 중...' : '다시 시도'}
+                    </button>
+                    <button
+                      onClick={() => setActiveReportId(null)}
+                      className="px-4 py-2 bg-gray-100 text-gray-600 rounded-sm text-sm hover:bg-gray-200"
+                    >
+                      새 파일로 시도
+                    </button>
+                  </div>
                 </div>
               )}
 
