@@ -112,7 +112,7 @@ export function MeetingReportViewer({ report, canEdit, currentUser }: MeetingRep
       lines.push('');
       if (report.speakerLabels?.length) {
         if (report.speakerRoles && Object.keys(report.speakerRoles).length > 0) {
-          lines.push(`[화자 식별] ${Object.entries(report.speakerRoles).map(([k, v]) => `화자 ${k} = ${v}`).join(', ')}`);
+          lines.push(`[참석자] ${Object.values(report.speakerRoles).join(', ')}`);
           lines.push('');
         }
         report.speakerLabels.forEach(s => {
@@ -306,7 +306,7 @@ export function MeetingReportViewer({ report, canEdit, currentUser }: MeetingRep
                       <div className="flex flex-wrap gap-2 mb-3 pb-2 border-b">
                         {Object.entries(report.speakerRoles).map(([key, role]) => (
                           <span key={key} className="px-2 py-0.5 text-xs rounded-full bg-accent-50 text-accent-700 font-medium">
-                            화자 {key} = {role}
+                            {role}
                           </span>
                         ))}
                       </div>
