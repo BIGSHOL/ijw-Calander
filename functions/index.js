@@ -2710,8 +2710,9 @@ exports.scrapeMakeEduBusData = functions
                     "User-Agent": UA,
                     "Cookie": cookieStr,
                     "Referer": `${baseUrl}/login.do`,
+                    "X-Requested-With": "XMLHttpRequest",
                 },
-                body: `membId=${encodeURIComponent(userId)}&password=${encodeURIComponent(userPwd)}`,
+                body: new URLSearchParams({ membId: userId, password: userPwd, rememberMeYn: "N" }).toString(),
                 redirect: "manual",
             });
 
@@ -2728,7 +2729,8 @@ exports.scrapeMakeEduBusData = functions
             logger.info("[scrapeMakeEduBusData] All cookies:", cookieStr);
 
             // 로그인 성공 여부 확인 (OK 응답 또는 302 리다이렉트)
-            const loginOk = loginBody.includes("OK") || loginRes.status === 302 || loginRes.status === 200;
+            let loginJson; try { loginJson = JSON.parse(loginBody); } catch {}
+            const loginOk = loginJson?.result === "OK" || loginBody.includes('"result":"OK"');
             if (!loginOk && sessionCookies.length === 0) {
                 throw new functions.https.HttpsError("unauthenticated",
                     `MakeEdu 로그인 실패 (status: ${loginRes.status})`);
@@ -2894,8 +2896,9 @@ async function scrapeMakeEduStudentsInternal(overrideUser, overridePwd) {
                     "User-Agent": UA,
                     "Cookie": cookieStr,
                     "Referer": `${baseUrl}/login.do`,
+                    "X-Requested-With": "XMLHttpRequest",
                 },
-                body: `membId=${encodeURIComponent(userId)}&password=${encodeURIComponent(userPwd)}`,
+                body: new URLSearchParams({ membId: userId, password: userPwd, rememberMeYn: "N" }).toString(),
                 redirect: "manual",
             });
             const loginSetCookies = loginRes.headers.getSetCookie?.() || [];
@@ -2905,9 +2908,12 @@ async function scrapeMakeEduStudentsInternal(overrideUser, overridePwd) {
             }
             cookieStr = sessionCookies.join("; ");
             const loginBody = await loginRes.text();
-            logger.info("[scrapeMakeEduNewStudents] Login status:", loginRes.status);
+            logger.info("[scrapeMakeEduNewStudents] Login status:", loginRes.status,
+                "body preview:", loginBody.substring(0, 300),
+                "cookies:", cookieStr.substring(0, 200));
 
-            const loginOk = loginBody.includes("OK") || loginRes.status === 302 || loginRes.status === 200;
+            let loginJson; try { loginJson = JSON.parse(loginBody); } catch {}
+            const loginOk = loginJson?.result === "OK" || loginBody.includes('"result":"OK"');
             if (!loginOk && sessionCookies.length === 0) {
                 throw new functions.https.HttpsError("unauthenticated",
                     `MakeEdu 로그인 실패 (status: ${loginRes.status})`);
@@ -5006,8 +5012,9 @@ async function scrapeMakeEduShuttleStudentsInternal() {
             "User-Agent": UA,
             "Cookie": cookieStr,
             "Referer": `${baseUrl}/login.do`,
+            "X-Requested-With": "XMLHttpRequest",
         },
-        body: `membId=${encodeURIComponent(userId)}&password=${encodeURIComponent(userPwd)}`,
+        body: new URLSearchParams({ membId: userId, password: userPwd, rememberMeYn: "N" }).toString(),
         redirect: "manual",
     });
     const loginSetCookies = loginRes.headers.getSetCookie?.() || [];
@@ -5018,7 +5025,8 @@ async function scrapeMakeEduShuttleStudentsInternal() {
     cookieStr = sessionCookies.join("; ");
     const loginBody = await loginRes.text();
 
-    const loginOk = loginBody.includes("OK") || loginRes.status === 302 || loginRes.status === 200;
+    let loginJson; try { loginJson = JSON.parse(loginBody); } catch {}
+            const loginOk = loginJson?.result === "OK" || loginBody.includes('"result":"OK"');
     if (!loginOk && sessionCookies.length === 0) {
         throw new functions.https.HttpsError("unauthenticated",
             `MakeEdu 로그인 실패 (status: ${loginRes.status})`);
