@@ -7,10 +7,59 @@ const admin = require("firebase-admin");
 const { getFirestore } = require("firebase-admin/firestore");
 const CryptoJS = require("crypto-js");
 const { GoogleGenAI, createPartFromFunctionResponse } = require("@google/genai");
+const puppeteer = require("puppeteer-core");
+const chromium = require("@sparticuz/chromium");
 const logger = functions.logger;
 
 admin.initializeApp();
 const db = getFirestore("restore20260319");
+
+/**
+ * Puppeteer로 MakeEdu 로그인 후 쿠키 문자열 반환
+ * fetch 기반 로그인이 NO_REJECT로 차단되어 헤드리스 브라우저 사용
+ */
+async function makeEduLoginWithPuppeteer(userId, userPwd) {
+    const baseUrl = "https://school.makeedu.co.kr";
+    let browser = null;
+    try {
+        browser = await puppeteer.launch({
+            args: chromium.args,
+            defaultViewport: chromium.defaultViewport,
+            executablePath: await chromium.executablePath(),
+            headless: chromium.headless,
+        });
+        const page = await browser.newPage();
+        await page.goto(baseUrl, { waitUntil: "networkidle2", timeout: 30000 });
+        await new Promise(r => setTimeout(r, 2000));
+
+        // 로그인 입력
+        const usernameInput = await page.$('input[type="text"], input[name*="id"], input[id*="id"]');
+        const passwordInput = await page.$('input[type="password"]');
+        if (usernameInput) await usernameInput.type(userId, { delay: 50 });
+        if (passwordInput) await passwordInput.type(userPwd, { delay: 50 });
+
+        // 로그인 버튼 클릭
+        let loginButton = await page.$('input[type="submit"], button[type="submit"]');
+        if (!loginButton) {
+            await page.evaluate(() => {
+                const buttons = Array.from(document.querySelectorAll('a, button, input[type="button"], input[type="submit"]'));
+                const btn = buttons.find(b => (b.textContent || b.value || '').trim().includes('로그인'));
+                if (btn) btn.click();
+            });
+        } else {
+            await loginButton.click();
+        }
+        await new Promise(r => setTimeout(r, 5000));
+
+        // 쿠키 추출
+        const cookies = await page.cookies();
+        const cookieStr = cookies.map(c => `${c.name}=${c.value}`).join("; ");
+        logger.info("[makeEduLoginWithPuppeteer] Login cookies:", cookies.length, "items");
+        return cookieStr;
+    } finally {
+        if (browser) await browser.close();
+    }
+}
 
 // KST(UTC+9) 기준 오늘 날짜 반환 (서버는 UTC 기준이므로 변환 필요)
 function getTodayKST() {
@@ -2669,7 +2718,7 @@ function parseEngClassName(name) {
  */
 exports.scrapeMakeEduBusData = functions
     .region("asia-northeast3")
-    .runWith({ timeoutSeconds: 300, memory: "512MB", secrets: ["MAKEEDU_USERNAME", "MAKEEDU_PASSWORD"] })
+    .runWith({ timeoutSeconds: 540, memory: "2GB", secrets: ["MAKEEDU_USERNAME", "MAKEEDU_PASSWORD"] })
     .https.onCall(async (data, context) => {
         logger.info("[scrapeMakeEduBusData] Start");
 
@@ -2692,48 +2741,13 @@ exports.scrapeMakeEduBusData = functions
                 redirect: "manual",
             });
 
-            const sessionCookies = [];
-            const sessionSetCookies = sessionRes.headers.getSetCookie?.() || [];
-            for (const h of sessionSetCookies) {
-                const cookie = h.split(";")[0];
-                if (cookie) sessionCookies.push(cookie);
-            }
-            let cookieStr = sessionCookies.join("; ");
-            logger.info("[scrapeMakeEduBusData] Session cookies:", sessionCookies.length, cookieStr);
-
-            // 3. MakeEdu 로그인 (membId, password)
-            logger.info("[scrapeMakeEduBusData] Logging in...");
-            const loginRes = await fetch(`${baseUrl}/loginPopProc.do`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "User-Agent": UA,
-                    "Cookie": cookieStr,
-                    "Referer": `${baseUrl}/login.do`,
-                    "X-Requested-With": "XMLHttpRequest",
-                },
-                body: new URLSearchParams({ membId: userId, password: userPwd, rememberMeYn: "N" }).toString(),
-                redirect: "manual",
-            });
-
-            // 로그인 응답에서 추가 쿠키 수집
-            const loginSetCookies = loginRes.headers.getSetCookie?.() || [];
-            for (const h of loginSetCookies) {
-                const cookie = h.split(";")[0];
-                if (cookie) sessionCookies.push(cookie);
-            }
-            cookieStr = sessionCookies.join("; ");
-
-            const loginBody = await loginRes.text();
-            logger.info("[scrapeMakeEduBusData] Login status:", loginRes.status, "Body:", loginBody.substring(0, 300));
-            logger.info("[scrapeMakeEduBusData] All cookies:", cookieStr);
-
-            // 로그인 성공 여부 확인 (OK 응답 또는 302 리다이렉트)
-            let loginJson; try { loginJson = JSON.parse(loginBody); } catch {}
-            const loginOk = loginJson?.result === "OK" || loginBody.includes('"result":"OK"');
-            if (!loginOk && sessionCookies.length === 0) {
-                throw new functions.https.HttpsError("unauthenticated",
-                    `MakeEdu 로그인 실패 (status: ${loginRes.status})`);
+            // 3. Puppeteer로 로그인 후 쿠키 획득
+            logger.info("[scrapeMakeEduBusData] Logging in with Puppeteer...");
+            let cookieStr;
+            try {
+                cookieStr = await makeEduLoginWithPuppeteer(userId, userPwd);
+            } catch (loginErr) {
+                throw new functions.https.HttpsError("unauthenticated", `MakeEdu 로그인 실패: ${loginErr.message}`);
             }
 
             // 4. 버스 등록 페이지 가져오기
@@ -2871,52 +2885,20 @@ async function scrapeMakeEduStudentsInternal(overrideUser, overridePwd) {
     }
 
             const baseUrl = "https://school.makeedu.co.kr";
-            const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+            const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
-            // 1. 세션 쿠키 획득
-            logger.info("[scrapeMakeEduNewStudents] Getting session...");
-            const sessionRes = await fetch(`${baseUrl}/login.do`, {
-                headers: { "User-Agent": UA },
-                redirect: "manual",
-            });
-            const sessionCookies = [];
-            const sessionSetCookies = sessionRes.headers.getSetCookie?.() || [];
-            for (const h of sessionSetCookies) {
-                const cookie = h.split(";")[0];
-                if (cookie) sessionCookies.push(cookie);
-            }
-            let cookieStr = sessionCookies.join("; ");
-
-            // 2. 로그인
-            logger.info("[scrapeMakeEduNewStudents] Logging in...");
-            const loginRes = await fetch(`${baseUrl}/loginPopProc.do`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "User-Agent": UA,
-                    "Cookie": cookieStr,
-                    "Referer": `${baseUrl}/login.do`,
-                    "X-Requested-With": "XMLHttpRequest",
-                },
-                body: new URLSearchParams({ membId: userId, password: userPwd, rememberMeYn: "N" }).toString(),
-                redirect: "manual",
-            });
-            const loginSetCookies = loginRes.headers.getSetCookie?.() || [];
-            for (const h of loginSetCookies) {
-                const cookie = h.split(";")[0];
-                if (cookie) sessionCookies.push(cookie);
-            }
-            cookieStr = sessionCookies.join("; ");
-            const loginBody = await loginRes.text();
-            logger.info("[scrapeMakeEduNewStudents] Login status:", loginRes.status,
-                "body preview:", loginBody.substring(0, 300),
-                "cookies:", cookieStr.substring(0, 200));
-
-            let loginJson; try { loginJson = JSON.parse(loginBody); } catch {}
-            const loginOk = loginJson?.result === "OK" || loginBody.includes('"result":"OK"');
-            if (!loginOk && sessionCookies.length === 0) {
+            // 1+2. Puppeteer로 로그인 후 쿠키 획득
+            logger.info("[scrapeMakeEduNewStudents] Logging in with Puppeteer...");
+            let cookieStr;
+            try {
+                cookieStr = await makeEduLoginWithPuppeteer(userId, userPwd);
+            } catch (loginErr) {
+                logger.error("[scrapeMakeEduNewStudents] Puppeteer login failed:", loginErr.message);
                 throw new functions.https.HttpsError("unauthenticated",
-                    `MakeEdu 로그인 실패 (status: ${loginRes.status})`);
+                    `MakeEdu 로그인 실패: ${loginErr.message}`);
+            }
+            if (!cookieStr) {
+                throw new functions.https.HttpsError("unauthenticated", "MakeEdu 로그인 실패: 쿠키를 얻지 못함");
             }
 
             // 3. 메인 페이지에서 학생 관련 URL 탐색
@@ -3314,7 +3296,7 @@ async function scrapeMakeEduStudentsInternal(overrideUser, overridePwd) {
  */
 exports.scrapeMakeEduNewStudents = functions
     .region("asia-northeast3")
-    .runWith({ timeoutSeconds: 300, memory: "512MB", secrets: ["MAKEEDU_USERNAME", "MAKEEDU_PASSWORD"] })
+    .runWith({ timeoutSeconds: 540, memory: "2GB", secrets: ["MAKEEDU_USERNAME", "MAKEEDU_PASSWORD"] })
     .https.onCall(async (data, context) => {
         logger.info("[scrapeMakeEduNewStudents] Start (onCall)");
         try {
@@ -3333,7 +3315,7 @@ exports.scrapeMakeEduNewStudents = functions
  */
 exports.scrapeMakeEduGodeungStudents = functions
     .region("asia-northeast3")
-    .runWith({ timeoutSeconds: 300, memory: "512MB", secrets: ["MAKEEDU_GD_USERNAME", "MAKEEDU_GD_PASSWORD"] })
+    .runWith({ timeoutSeconds: 540, memory: "2GB", secrets: ["MAKEEDU_GD_USERNAME", "MAKEEDU_GD_PASSWORD"] })
     .https.onCall(async (data, context) => {
         logger.info("[scrapeMakeEduGodeungStudents] Start (onCall)");
         try {
@@ -3361,7 +3343,7 @@ exports.scrapeMakeEduGodeungStudents = functions
  */
 exports.scheduledMakeEduSync = functions
     .region("asia-northeast3")
-    .runWith({ timeoutSeconds: 540, memory: "512MB", secrets: ["MAKEEDU_USERNAME", "MAKEEDU_PASSWORD"] })
+    .runWith({ timeoutSeconds: 540, memory: "2GB", secrets: ["MAKEEDU_USERNAME", "MAKEEDU_PASSWORD"] })
     .pubsub.schedule("every 30 minutes")
     .timeZone("Asia/Seoul")
     .onRun(async (context) => {
@@ -3692,7 +3674,7 @@ async function saveGodeungSyncLog(results, syncStart) {
  */
 exports.scheduledMakeEduGodeungSync = functions
     .region("asia-northeast3")
-    .runWith({ timeoutSeconds: 540, memory: "512MB", secrets: ["MAKEEDU_GD_USERNAME", "MAKEEDU_GD_PASSWORD"] })
+    .runWith({ timeoutSeconds: 540, memory: "2GB", secrets: ["MAKEEDU_GD_USERNAME", "MAKEEDU_GD_PASSWORD"] })
     .pubsub.schedule("every 60 minutes")
     .timeZone("Asia/Seoul")
     .onRun(async (context) => {
@@ -4987,49 +4969,15 @@ async function scrapeMakeEduShuttleStudentsInternal() {
     }
 
     const baseUrl = "https://school.makeedu.co.kr";
-    const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+    const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
-    // 1. 세션 쿠키 획득
-    logger.info("[scrapeMakeEduShuttle] Getting session...");
-    const sessionRes = await fetch(`${baseUrl}/login.do`, {
-        headers: { "User-Agent": UA },
-        redirect: "manual",
-    });
-    const sessionCookies = [];
-    const sessionSetCookies = sessionRes.headers.getSetCookie?.() || [];
-    for (const h of sessionSetCookies) {
-        const cookie = h.split(";")[0];
-        if (cookie) sessionCookies.push(cookie);
-    }
-    let cookieStr = sessionCookies.join("; ");
-
-    // 2. 로그인
-    logger.info("[scrapeMakeEduShuttle] Logging in...");
-    const loginRes = await fetch(`${baseUrl}/loginPopProc.do`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": UA,
-            "Cookie": cookieStr,
-            "Referer": `${baseUrl}/login.do`,
-            "X-Requested-With": "XMLHttpRequest",
-        },
-        body: new URLSearchParams({ membId: userId, password: userPwd, rememberMeYn: "N" }).toString(),
-        redirect: "manual",
-    });
-    const loginSetCookies = loginRes.headers.getSetCookie?.() || [];
-    for (const h of loginSetCookies) {
-        const cookie = h.split(";")[0];
-        if (cookie) sessionCookies.push(cookie);
-    }
-    cookieStr = sessionCookies.join("; ");
-    const loginBody = await loginRes.text();
-
-    let loginJson; try { loginJson = JSON.parse(loginBody); } catch {}
-            const loginOk = loginJson?.result === "OK" || loginBody.includes('"result":"OK"');
-    if (!loginOk && sessionCookies.length === 0) {
-        throw new functions.https.HttpsError("unauthenticated",
-            `MakeEdu 로그인 실패 (status: ${loginRes.status})`);
+    // 1+2. Puppeteer로 로그인 후 쿠키 획득
+    logger.info("[scrapeMakeEduShuttle] Logging in with Puppeteer...");
+    let cookieStr;
+    try {
+        cookieStr = await makeEduLoginWithPuppeteer(userId, userPwd);
+    } catch (loginErr) {
+        throw new Error(`MakeEdu 로그인 실패: ${loginErr.message}`);
     }
 
     // 3. 메인 페이지에서 학생 관련 URL 탐색
@@ -5335,7 +5283,7 @@ async function scrapeMakeEduShuttleStudentsInternal() {
  */
 exports.scrapeMakeEduShuttleStudents = functions
     .region("asia-northeast3")
-    .runWith({ timeoutSeconds: 300, memory: "512MB", secrets: ["MAKEEDU_USERNAME", "MAKEEDU_PASSWORD"] })
+    .runWith({ timeoutSeconds: 540, memory: "2GB", secrets: ["MAKEEDU_USERNAME", "MAKEEDU_PASSWORD"] })
     .https.onCall(async (data, context) => {
         logger.info("[scrapeMakeEduShuttleStudents] Start (onCall)");
         try {
