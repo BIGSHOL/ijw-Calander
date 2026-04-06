@@ -2665,11 +2665,11 @@ function parseEngClassName(name) {
 
 /**
  * MakeEdu 버스 등록 페이지 크롤링하여 Firestore에 저장
- * .env 파일의 MAKEEDU_USERNAME / MAKEEDU_PASSWORD 사용
+ * Secret Manager의 MAKEEDU_USERNAME / MAKEEDU_PASSWORD 사용
  */
 exports.scrapeMakeEduBusData = functions
     .region("asia-northeast3")
-    .runWith({ timeoutSeconds: 300, memory: "512MB" })
+    .runWith({ timeoutSeconds: 300, memory: "512MB", secrets: ["MAKEEDU_USERNAME", "MAKEEDU_PASSWORD"] })
     .https.onCall(async (data, context) => {
         logger.info("[scrapeMakeEduBusData] Start");
 
@@ -2679,7 +2679,7 @@ exports.scrapeMakeEduBusData = functions
             const userPwd = process.env.MAKEEDU_PASSWORD;
             if (!userId || !userPwd) {
                 throw new functions.https.HttpsError("not-found",
-                    "MakeEdu 로그인 정보가 .env에 설정되지 않았습니다.");
+                    "MakeEdu 로그인 정보가 설정되지 않았습니다. (Secret Manager 또는 .env 확인)");
             }
 
             const baseUrl = "https://school.makeedu.co.kr";
@@ -2865,7 +2865,7 @@ async function scrapeMakeEduStudentsInternal(overrideUser, overridePwd) {
     const userId = overrideUser || process.env.MAKEEDU_USERNAME;
     const userPwd = overridePwd || process.env.MAKEEDU_PASSWORD;
     if (!userId || !userPwd) {
-        throw new Error("MakeEdu 로그인 정보가 .env에 설정되지 않았습니다.");
+        throw new Error("MakeEdu 로그인 정보가 설정되지 않았습니다. (Secret Manager 또는 .env 확인)");
     }
 
             const baseUrl = "https://school.makeedu.co.kr";
@@ -3308,7 +3308,7 @@ async function scrapeMakeEduStudentsInternal(overrideUser, overridePwd) {
  */
 exports.scrapeMakeEduNewStudents = functions
     .region("asia-northeast3")
-    .runWith({ timeoutSeconds: 300, memory: "512MB" })
+    .runWith({ timeoutSeconds: 300, memory: "512MB", secrets: ["MAKEEDU_USERNAME", "MAKEEDU_PASSWORD"] })
     .https.onCall(async (data, context) => {
         logger.info("[scrapeMakeEduNewStudents] Start (onCall)");
         try {
@@ -3322,12 +3322,12 @@ exports.scrapeMakeEduNewStudents = functions
 
 /**
  * 고등수학관 MakeEdu 신규원생 스크래핑 (별도 계정 사용)
- * - MAKEEDU_GD_USERNAME / MAKEEDU_GD_PASSWORD 환경변수 사용
+ * - Secret Manager의 MAKEEDU_GD_USERNAME / MAKEEDU_GD_PASSWORD 사용
  * - 본원 스크래핑과 동일한 로직, 다른 크리덴셜
  */
 exports.scrapeMakeEduGodeungStudents = functions
     .region("asia-northeast3")
-    .runWith({ timeoutSeconds: 300, memory: "512MB" })
+    .runWith({ timeoutSeconds: 300, memory: "512MB", secrets: ["MAKEEDU_GD_USERNAME", "MAKEEDU_GD_PASSWORD"] })
     .https.onCall(async (data, context) => {
         logger.info("[scrapeMakeEduGodeungStudents] Start (onCall)");
         try {
@@ -3335,7 +3335,7 @@ exports.scrapeMakeEduGodeungStudents = functions
             const gdPwd = process.env.MAKEEDU_GD_PASSWORD;
             if (!gdUser || !gdPwd) {
                 throw new functions.https.HttpsError("failed-precondition",
-                    "고등수학관 MakeEdu 로그인 정보가 .env에 설정되지 않았습니다. (MAKEEDU_GD_USERNAME / MAKEEDU_GD_PASSWORD)");
+                    "고등수학관 MakeEdu 로그인 정보가 설정되지 않았습니다. (Secret Manager 또는 .env 확인)");
             }
             return await scrapeMakeEduStudentsInternal(gdUser, gdPwd);
         } catch (error) {
@@ -3355,7 +3355,7 @@ exports.scrapeMakeEduGodeungStudents = functions
  */
 exports.scheduledMakeEduSync = functions
     .region("asia-northeast3")
-    .runWith({ timeoutSeconds: 540, memory: "512MB" })
+    .runWith({ timeoutSeconds: 540, memory: "512MB", secrets: ["MAKEEDU_USERNAME", "MAKEEDU_PASSWORD"] })
     .pubsub.schedule("every 30 minutes")
     .timeZone("Asia/Seoul")
     .onRun(async (context) => {
@@ -3686,7 +3686,7 @@ async function saveGodeungSyncLog(results, syncStart) {
  */
 exports.scheduledMakeEduGodeungSync = functions
     .region("asia-northeast3")
-    .runWith({ timeoutSeconds: 540, memory: "512MB" })
+    .runWith({ timeoutSeconds: 540, memory: "512MB", secrets: ["MAKEEDU_GD_USERNAME", "MAKEEDU_GD_PASSWORD"] })
     .pubsub.schedule("every 60 minutes")
     .timeZone("Asia/Seoul")
     .onRun(async (context) => {
@@ -4977,7 +4977,7 @@ async function scrapeMakeEduShuttleStudentsInternal() {
     const userId = process.env.MAKEEDU_USERNAME;
     const userPwd = process.env.MAKEEDU_PASSWORD;
     if (!userId || !userPwd) {
-        throw new Error("MakeEdu 로그인 정보가 .env에 설정되지 않았습니다.");
+        throw new Error("MakeEdu 로그인 정보가 설정되지 않았습니다. (Secret Manager 또는 .env 확인)");
     }
 
     const baseUrl = "https://school.makeedu.co.kr";
@@ -5327,7 +5327,7 @@ async function scrapeMakeEduShuttleStudentsInternal() {
  */
 exports.scrapeMakeEduShuttleStudents = functions
     .region("asia-northeast3")
-    .runWith({ timeoutSeconds: 300, memory: "512MB" })
+    .runWith({ timeoutSeconds: 300, memory: "512MB", secrets: ["MAKEEDU_USERNAME", "MAKEEDU_PASSWORD"] })
     .https.onCall(async (data, context) => {
         logger.info("[scrapeMakeEduShuttleStudents] Start (onCall)");
         try {
