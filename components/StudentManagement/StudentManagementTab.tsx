@@ -323,7 +323,7 @@ const StudentManagementTab: React.FC<StudentManagementTabProps> = ({ filters, so
                   <Languages className="w-3.5 h-3.5" />
                 </button>
             )}
-            {(currentUser?.role === 'master' || currentUser?.role === 'admin') && (
+            {(currentUser?.role === 'master' || currentUser?.role === 'admin' || currentUser?.role === 'manager') && (
                 <button
                   onClick={() => setShowMakeEduSyncModal(true)}
                   className="p-1.5 text-cyan-400 hover:bg-white/10 rounded-sm transition-colors flex items-center gap-1"
