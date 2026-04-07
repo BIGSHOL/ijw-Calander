@@ -106,30 +106,48 @@ export const useEnglishStats = (
                 // Skip if already counted this student (moved after baseStudent check)
                 countedStudents.add(studentId);
 
-                // Withdrawn check (from enrollment data)
+                // endDate 또는 withdrawalDate로 종료 여부 판단
                 const enrollmentWithdrawalDate = convertTimestampToDate(enrollment.withdrawalDate);
-                if (enrollmentWithdrawalDate) {
+                const enrollmentEndDate = convertTimestampToDate(enrollment.endDate);
+                const effectiveEndDate = enrollmentWithdrawalDate || enrollmentEndDate;
+
+                if (effectiveEndDate) {
                     const studentInfo: StudentInfo = {
                         id: studentId,
                         name: baseStudent.name,
                         school: baseStudent.school,
                         grade: baseStudent.grade,
-                        withdrawalDate: enrollmentWithdrawalDate
+                        withdrawalDate: effectiveEndDate
                     };
 
-                    if (enrollmentWithdrawalDate > today) {
+                    if (effectiveEndDate > today) {
                         // 퇴원 예정 (미래)
                         withdrawnFuture++;
                         withdrawnFutureStudents.push(studentInfo);
                     } else {
-                        // 이미 퇴원 (과거/오늘)
-                        const withdrawnDate = new Date(enrollmentWithdrawalDate);
+                        // 이미 퇴원 (과거/오늘) — 30일 이내만 카운트
+                        const withdrawnDate = new Date(effectiveEndDate);
                         const daysSinceWithdrawal = Math.floor((now.getTime() - withdrawnDate.getTime()) / (1000 * 60 * 60 * 24));
                         if (daysSinceWithdrawal <= 30) {
                             withdrawn++;
                             withdrawnStudents.push(studentInfo);
                         }
                     }
+                    return;
+                }
+
+                // 배정 예정 학생 (미래 enrollmentDate)
+                const enrollStartDate = convertTimestampToDate(enrollment.enrollmentDate) ||
+                    convertTimestampToDate(enrollment.startDate);
+                if (enrollStartDate && enrollStartDate > today) {
+                    waiting++;
+                    waitingStudents.push({
+                        id: studentId,
+                        name: baseStudent.name,
+                        school: baseStudent.school,
+                        grade: baseStudent.grade,
+                        enrollmentDate: enrollStartDate
+                    });
                     return;
                 }
 
@@ -141,7 +159,7 @@ export const useEnglishStats = (
                         name: baseStudent.name,
                         school: baseStudent.school,
                         grade: baseStudent.grade,
-                        enrollmentDate: convertTimestampToDate(enrollment.enrollmentDate) || baseStudent.startDate
+                        enrollmentDate: enrollStartDate || baseStudent.startDate
                     });
                     return;
                 }
@@ -151,13 +169,9 @@ export const useEnglishStats = (
 
                 active++;
 
-                // New student check - 우선순위: 영어 과목 수강 시작일 > 학생 전체 등록일
-                // (학생이 등록 후 나중에 영어 과목을 추가할 수 있으므로 영어 과목 기준)
-                const enrollmentDate = convertTimestampToDate(enrollment.enrollmentDate) ||
-                    baseStudent.startDate ||
-                    convertTimestampToDate(enrollment.startDate);
-                if (enrollmentDate) {
-                    const enrollDate = new Date(enrollmentDate);
+                // New student check
+                if (enrollStartDate) {
+                    const enrollDate = new Date(enrollStartDate);
                     const daysSinceEnroll = Math.floor((now.getTime() - enrollDate.getTime()) / (1000 * 60 * 60 * 24));
                     if (daysSinceEnroll <= 30) {
                         new1++;
