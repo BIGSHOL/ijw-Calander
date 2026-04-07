@@ -874,12 +874,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
             onCellSelect?.(cls.id);
             return;
         }
-        if (canEdit) {
-            // 합반 수업에서는 각 수업 영역에서 개별 클릭 처리하므로 전체 헤더 클릭은 무시
-            if (isMergedClass && uniqueMergedNames.length > 1) return;
-            e.stopPropagation();
-            onClick(cls);
-        }
+        // 수업 상세 모달 열기 (조회/편집 모두 가능)
+        if (isMergedClass && uniqueMergedNames.length > 1) return;
+        e.stopPropagation();
+        onClick(cls);
     };
 
     // 엑셀 모드: 더블클릭 시 기존 모달 열기

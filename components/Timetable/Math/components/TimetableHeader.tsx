@@ -463,30 +463,37 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
             ? formatDateKey(addDays(currentWeekStart, 6))
             : today;
 
-        // 각 수업의 학생 목록에서 학생 ID 수집 (ClassCard 로직과 완전히 동일)
+        // 각 수업의 학생 목록에서 학생 ID 수집
         filteredClasses.forEach(cls => {
             cls.studentList?.forEach(student => {
-                // 재원생: 퇴원일/종료일 없고 대기 아님
-                if (!student.withdrawalDate && !student.endDate && !student.onHold) {
-                    activeStudentIds.add(student.id);
+                const effectiveEnd = student.withdrawalDate || student.endDate;
+                const enrollDate = student.enrollmentDate || student.startDate;
 
-                    // 신입 체크 (30일 이내 등록)
-                    const enrollDate = student.enrollmentDate || student.startDate;
-                    if (enrollDate) {
-                        const enrollDateObj = new Date(enrollDate);
-                        const daysSinceEnroll = Math.floor((now.getTime() - enrollDateObj.getTime()) / (1000 * 60 * 60 * 24));
-                        if (daysSinceEnroll >= 0 && daysSinceEnroll <= 30) {
-                            newStudentIds.add(student.id);
+                if (!effectiveEnd && !student.onHold) {
+                    // 배정 예정 학생 (미래 시작일)
+                    if (enrollDate && enrollDate > today) {
+                        const daysUntil = Math.floor((new Date(enrollDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                        if (daysUntil <= 30) onHoldStudentIds.add(student.id); // 예정(30일 이내)
+                    } else {
+                        // 재원생
+                        activeStudentIds.add(student.id);
+                        // 신입 체크 (등록 30일 이내)
+                        if (enrollDate) {
+                            const daysSince = Math.floor((now.getTime() - new Date(enrollDate).getTime()) / (1000 * 60 * 60 * 24));
+                            if (daysSince >= 0 && daysSince <= 30) newStudentIds.add(student.id);
                         }
                     }
                 }
-                // 대기생: 대기 상태이고 퇴원일/종료일 없음
-                else if (student.onHold && !student.withdrawalDate && !student.endDate) {
+                // 대기생 (onHold)
+                else if (student.onHold && !effectiveEnd) {
                     onHoldStudentIds.add(student.id);
                 }
-                // 퇴원생: 퇴원일 또는 종료일 있음
-                else if (student.withdrawalDate || student.endDate) {
-                    withdrawnStudentIds.add(student.id);
+                // 퇴원생 (30일 이내만)
+                else if (effectiveEnd) {
+                    const daysSince = Math.floor((now.getTime() - new Date(effectiveEnd).getTime()) / (1000 * 60 * 60 * 24));
+                    if (effectiveEnd > today || daysSince <= 30) {
+                        withdrawnStudentIds.add(student.id);
+                    }
                 }
             });
         });
@@ -512,8 +519,13 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
         const withdrawnFutureStudents: Array<{ id: string; name: string; school: string; grade: string; withdrawalDate?: string }> = [];
 
         withdrawnStudentIds.forEach(studentId => {
+            // studentList에서 직접 찾기 (studentMap보다 정확한 enrollment 데이터)
+            let effectiveDate: string | undefined;
+            filteredClasses.forEach(cls => {
+                const s = cls.studentList?.find((st: any) => st.id === studentId);
+                if (s) effectiveDate = s.withdrawalDate || s.endDate;
+            });
             const student = studentMap[studentId];
-            const effectiveDate = student?.withdrawalDate || student?.endDate;
             if (student && effectiveDate) {
                 const studentInfo = {
                     id: student.id,
@@ -523,12 +535,11 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                     withdrawalDate: effectiveDate
                 };
 
-                if (effectiveDate <= today) {
-                    // 오늘이거나 과거 퇴원/종료
-                    withdrawnStudents.push(studentInfo);
-                } else {
-                    // 미래 퇴원/종료 예정
+                if (effectiveDate > today) {
                     withdrawnFutureStudents.push(studentInfo);
+                } else {
+                    const daysSince = Math.floor((now.getTime() - new Date(effectiveDate).getTime()) / (1000 * 60 * 60 * 24));
+                    if (daysSince <= 30) withdrawnStudents.push(studentInfo);
                 }
             }
         });
