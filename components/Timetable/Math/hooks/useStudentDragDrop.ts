@@ -401,9 +401,12 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                         // 기존 enrollment 종료 처리 (문서가 존재하는 경우에만)
                         // batch.update 대신 batch.set({ merge: true })를 사용하여 문서 없을 때도 안전
                         if (existingData) {
+                            const _ydDrag = new Date(effectiveDate);
+                            _ydDrag.setDate(_ydDrag.getDate() - 1);
+                            const dragYesterday = formatDateKey(_ydDrag);
                             batch.set(oldEnrollmentRef, {
-                                endDate: effectiveDate,
-                                withdrawalDate: effectiveDate,
+                                endDate: dragYesterday,
+                                withdrawalDate: dragYesterday,
                                 isTransferred: true,
                                 updatedAt: new Date().toISOString()
                             }, { merge: true });
@@ -422,9 +425,8 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                                 schedule: toClass.schedule || [],
                                 isSlotTeacher: false, // 부담임 여부는 새 반에서 재설정 필요
                                 attendanceDays: newAttendanceDays,
-                                // 예정이동: 이동일을 시작일로 설정 → 대기섹션 배치, 이동일 도래 시 초록배경으로 활성화
-                                // 즉시이동: 원래 입학일 보존
-                                enrollmentDate: move.scheduledDate ? effectiveDate : (preservedData.enrollmentDate || effectiveDate),
+                                // 이동 시 시작일은 이동일(오늘)로 설정
+                                enrollmentDate: effectiveDate,
                                 createdAt: new Date().toISOString(),
                                 updatedAt: new Date().toISOString()
                             });

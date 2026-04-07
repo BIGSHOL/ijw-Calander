@@ -136,7 +136,7 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
                     staffId,
                     teacher: staffId,
                     schedule: classScheduleMap.get(toClass) || [],
-                    enrollmentDate: prevEnrollmentDate || today,
+                    enrollmentDate: today, // 이동 시 새 수업 시작일은 오늘
                     createdAt: new Date().toISOString(),
                     underline: student.underline || false,
                     attendanceDays: student.attendanceDays || [],

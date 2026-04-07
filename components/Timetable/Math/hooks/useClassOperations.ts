@@ -350,9 +350,11 @@ export const useClassOperations = () => {
         // Update Student Status
         const studentRef = doc(db, 'students', studentId);
         const now = new Date().toISOString();
+        const _ydW = new Date(); _ydW.setDate(_ydW.getDate() - 1);
+        const yesterdayStr = _ydW.toISOString().split('T')[0];
         await updateDoc(studentRef, {
             status: 'withdrawn',
-            endDate: now.split('T')[0],
+            endDate: yesterdayStr,
             updatedAt: now
         });
 
@@ -360,14 +362,14 @@ export const useClassOperations = () => {
         const enrollDoc = await findEnrollmentDoc(studentId, MATH_SUBJECTS, className);
         if (enrollDoc) {
             await updateDoc(enrollDoc.ref, {
-                withdrawalDate: now.split('T')[0]
+                withdrawalDate: yesterdayStr
             });
         }
 
         logTimetableChange({
             action: 'student_withdraw', subject: enrollDoc?.data()?.subject || 'math', className, studentId, studentName: studentId,
             details: `퇴원 처리: ${studentId} ← ${className}`,
-            before: { status: 'active' }, after: { status: 'withdrawn', withdrawalDate: now.split('T')[0] },
+            before: { status: 'active' }, after: { status: 'withdrawn', withdrawalDate: yesterdayStr },
         });
 
         // 캐시 무효화 - 실시간 반영
@@ -482,7 +484,8 @@ export const useClassOperations = () => {
             return data.className !== className && !data.withdrawalDate && !data.endDate;
         }).length;
 
-        const today = new Date().toISOString().split('T')[0];
+        const _ydS = new Date(); _ydS.setDate(_ydS.getDate() - 1);
+        const today = _ydS.toISOString().split('T')[0]; // 전날로 설정
 
         // 쿼리 결과에서 해당 className enrollment 찾기 (doc ID 형식 무관)
         const targetDoc = allDocs.find(d => d.data().className === className && !d.data().endDate && !d.data().withdrawalDate)
