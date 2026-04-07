@@ -11,6 +11,8 @@ import { SubjectType } from '../../types';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { useRooms } from '../../hooks/useRooms';
 import { useDraggable } from '../../hooks/useDraggable';
+import SubjectBadges from '../Common/SubjectBadges';
+import { formatSchoolGrade } from '../../utils/studentUtils';
 
 interface AddClassModalProps {
   onClose: () => void;
@@ -672,8 +674,13 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                         onChange={() => toggleStudent(student.id)}
                         className="w-3 h-3 text-accent rounded focus:ring-accent"
                       />
-                      <span className="text-xs text-gray-800">{student.name}</span>
-                      <span className="text-xxs text-gray-400">{student.grade}</span>
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-gray-800">{student.name}</span>
+                          <span className="text-xxs text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
+                        </div>
+                        <SubjectBadges enrollments={student.enrollments} />
+                      </div>
                     </label>
                   ))
                 )}

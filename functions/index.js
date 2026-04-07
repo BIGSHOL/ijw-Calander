@@ -30,31 +30,50 @@ async function makeEduLoginWithPuppeteer(userId, userPwd) {
         });
         const page = await browser.newPage();
         await page.goto(baseUrl, { waitUntil: "networkidle2", timeout: 30000 });
-        await new Promise(r => setTimeout(r, 2000));
+        await new Promise(r => setTimeout(r, 3000));
 
-        // 로그인 입력
-        const usernameInput = await page.$('input[type="text"], input[name*="id"], input[id*="id"]');
-        const passwordInput = await page.$('input[type="password"]');
-        if (usernameInput) await usernameInput.type(userId, { delay: 50 });
-        if (passwordInput) await passwordInput.type(userPwd, { delay: 50 });
+        const pageUrl = page.url();
+        logger.info("[makeEduLoginWithPuppeteer] Page loaded:", pageUrl);
 
-        // 로그인 버튼 클릭
-        let loginButton = await page.$('input[type="submit"], button[type="submit"]');
-        if (!loginButton) {
-            await page.evaluate(() => {
-                const buttons = Array.from(document.querySelectorAll('a, button, input[type="button"], input[type="submit"]'));
-                const btn = buttons.find(b => (b.textContent || b.value || '').trim().includes('로그인'));
-                if (btn) btn.click();
-            });
-        } else {
-            await loginButton.click();
+        // 로그인 폼 분석
+        const formInfo = await page.evaluate(() => {
+            const inputs = Array.from(document.querySelectorAll("input"));
+            return inputs.map(i => ({ type: i.type, name: i.name, id: i.id, placeholder: i.placeholder }));
+        });
+        logger.info("[makeEduLoginWithPuppeteer] Form inputs:", JSON.stringify(formInfo));
+
+        // DOM 직접 조작으로 값 설정 + 로그인 실행 (한 번의 evaluate에서 모두 처리)
+        await page.evaluate((id, pw) => {
+            document.querySelector('input[name="membId"]').value = id;
+            document.querySelector('input[name="password"]').value = pw;
+        }, userId, userPwd);
+        logger.info("[makeEduLoginWithPuppeteer] Set credentials via DOM");
+
+        // 로그인 버튼 클릭 후 네비게이션 대기
+        try {
+            await Promise.all([
+                page.waitForNavigation({ waitUntil: "networkidle2", timeout: 15000 }),
+                page.evaluate(() => {
+                    if (typeof fn_login === "function") { fn_login(); return; }
+                    const btn = document.querySelector('input[type="submit"], button[type="submit"]');
+                    if (btn) { btn.click(); return; }
+                    const buttons = Array.from(document.querySelectorAll('a, button'));
+                    const loginBtn = buttons.find(b => (b.textContent || '').trim().includes('로그인'));
+                    if (loginBtn) loginBtn.click();
+                }),
+            ]);
+        } catch (navErr) {
+            logger.info("[makeEduLoginWithPuppeteer] Navigation after login:", navErr.message);
+            await new Promise(r => setTimeout(r, 5000));
         }
-        await new Promise(r => setTimeout(r, 5000));
+
+        const finalUrl = page.url();
+        logger.info("[makeEduLoginWithPuppeteer] After login URL:", finalUrl);
 
         // 쿠키 추출
         const cookies = await page.cookies();
         const cookieStr = cookies.map(c => `${c.name}=${c.value}`).join("; ");
-        logger.info("[makeEduLoginWithPuppeteer] Login cookies:", cookies.length, "items");
+        logger.info("[makeEduLoginWithPuppeteer] Cookies:", cookies.length, "items,", cookies.map(c => c.name).join(","));
         return cookieStr;
     } finally {
         if (browser) await browser.close();
