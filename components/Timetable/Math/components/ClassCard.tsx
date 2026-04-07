@@ -796,10 +796,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
         // 미래 예정 학생은 아직 재원생으로 표시 (영어 통합뷰와 동일)
         const isFutureWithdrawal = (s: any) => s.withdrawalDate && s.withdrawalDate > today;
+        const isEnded = (s: any) => (s.withdrawalDate && s.withdrawalDate <= today) || (s.endDate && s.endDate <= today);
 
         // 퇴원예정 학생도 재원생에 포함 (가로줄로 표시, 통합뷰와 동일)
         const active = allStudents
-            .filter(s => (!s.withdrawalDate || isFutureWithdrawal(s)) && !s.onHold && (filterDay ? isStudentAttendingDay(s, filterDay) : true))
+            .filter(s => !isEnded(s) && (!s.withdrawalDate || isFutureWithdrawal(s)) && !s.onHold && (filterDay ? isStudentAttendingDay(s, filterDay) : true))
             .sort((a, b) => {
                 // 퇴원예정 학생은 하단에 배치
                 const aIsWS = isFutureWithdrawal(a) && !a.isTransferred ? 1 : 0;
@@ -811,15 +812,16 @@ const ClassCard: React.FC<ClassCardProps> = ({
             .filter(filterStudent);
 
         const hold = allStudents
-            .filter(s => s.onHold && !s.withdrawalDate && (filterDay ? isStudentAttendingDay(s, filterDay) : true))
+            .filter(s => s.onHold && !s.withdrawalDate && !s.endDate && (filterDay ? isStudentAttendingDay(s, filterDay) : true))
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
             .filter(filterStudent);
 
         // 퇴원 학생: 과거/오늘 날짜 + 반이동이 아닌 실제 퇴원만 (1개월 이내만)
         const withdrawn = allStudents
             .filter(s => {
-                if (!s.withdrawalDate || s.withdrawalDate > today || s.isTransferred) return false;
-                const daysSince = Math.floor((Date.now() - new Date(s.withdrawalDate).getTime()) / (1000 * 60 * 60 * 24));
+                const effectiveEnd = s.withdrawalDate || s.endDate;
+                if (!effectiveEnd || effectiveEnd > today || s.isTransferred) return false;
+                const daysSince = Math.floor((Date.now() - new Date(effectiveEnd).getTime()) / (1000 * 60 * 60 * 24));
                 return daysSince <= 30;
             })
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
@@ -874,10 +876,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
             onCellSelect?.(cls.id);
             return;
         }
-        // 수업 상세 모달 열기 (조회/편집 모두 가능)
-        if (isMergedClass && uniqueMergedNames.length > 1) return;
-        e.stopPropagation();
-        onClick(cls);
+        if (canEdit) {
+            if (isMergedClass && uniqueMergedNames.length > 1) return;
+            e.stopPropagation();
+            onClick(cls);
+        }
     };
 
     // 엑셀 모드: 더블클릭 시 기존 모달 열기

@@ -569,6 +569,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
 
     // 메모이즈된 콜백: TimetableGrid에 전달되는 인라인 함수를 안정화하여 불필요한 리렌더링 방지
     const handleClassClick = useCallback((cls: TimetableClass) => {
+        if (!canEditMath) return;
         const classInfo: ClassInfo = {
             className: cls.className,
             subject: cls.subject === '수학' ? 'math' : cls.subject === '고등수학' ? 'highmath' : 'english',
@@ -579,7 +580,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
             id: cls.id,
         };
         setSelectedClassInfo(classInfo);
-    }, [setSelectedClassInfo]);
+    }, [canEditMath, setSelectedClassInfo]);
 
     const handleStudentClick = useCallback((studentId: string) => {
         const student = studentMap[studentId];
