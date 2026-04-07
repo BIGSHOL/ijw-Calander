@@ -83,103 +83,101 @@ export const useEnglishStats = (
         // Track unique students to avoid double-counting (a student can have multiple enrollments)
         const countedStudents = new Set<string>();
 
+        // 학생별로 영어 enrollment 중 가장 우선되는 상태를 결정
         Object.entries(studentMap).forEach(([studentId, student]) => {
             if (!student.enrollments) return;
+            const baseStudent = studentMap[studentId];
+            if (!baseStudent) return;
 
-            student.enrollments.forEach((enrollment: any) => {
-                if (enrollment.subject !== 'english') return;
+            // 이 학생의 영어 enrollment 중 활성인 것이 있는지 먼저 확인
+            const englishEnrollments = (student.enrollments as any[]).filter((e: any) =>
+                e.subject === 'english' && e.className && classNames.has(e.className)
+            );
+            if (englishEnrollments.length === 0) return;
+            if (countedStudents.has(studentId)) return;
+            countedStudents.add(studentId);
 
-                const className = enrollment.className as string;
-
-                // Only process if this class is in our scheduleData
-                if (!className || !classNames.has(className)) return;
-
-                // Skip if already counted this student
-                if (countedStudents.has(studentId)) return;
-
-                // Get student base info
-                const baseStudent = studentMap[studentId];
-
-                // If student not in studentMap, skip
-                if (!baseStudent) return;
-
-                // Skip if already counted this student (moved after baseStudent check)
-                countedStudents.add(studentId);
-
-                // endDate 또는 withdrawalDate로 종료 여부 판단
-                const enrollmentWithdrawalDate = convertTimestampToDate(enrollment.withdrawalDate);
-                const enrollmentEndDate = convertTimestampToDate(enrollment.endDate);
-                const effectiveEndDate = enrollmentWithdrawalDate || enrollmentEndDate;
-
-                if (effectiveEndDate) {
-                    const studentInfo: StudentInfo = {
-                        id: studentId,
-                        name: baseStudent.name,
-                        school: baseStudent.school,
-                        grade: baseStudent.grade,
-                        withdrawalDate: effectiveEndDate
-                    };
-
-                    if (effectiveEndDate > today) {
-                        // 퇴원 예정 (미래)
-                        withdrawnFuture++;
-                        withdrawnFutureStudents.push(studentInfo);
-                    } else {
-                        // 이미 퇴원 (과거/오늘) — 30일 이내만 카운트
-                        const withdrawnDate = new Date(effectiveEndDate);
-                        const daysSinceWithdrawal = Math.floor((now.getTime() - withdrawnDate.getTime()) / (1000 * 60 * 60 * 24));
-                        if (daysSinceWithdrawal <= 30) {
-                            withdrawn++;
-                            withdrawnStudents.push(studentInfo);
-                        }
-                    }
-                    return;
-                }
-
-                // 배정 예정 학생 (미래 enrollmentDate)
-                const enrollStartDate = convertTimestampToDate(enrollment.enrollmentDate) ||
-                    convertTimestampToDate(enrollment.startDate);
-                if (enrollStartDate && enrollStartDate > today) {
-                    waiting++;
-                    waitingStudents.push({
-                        id: studentId,
-                        name: baseStudent.name,
-                        school: baseStudent.school,
-                        grade: baseStudent.grade,
-                        enrollmentDate: enrollStartDate
-                    });
-                    return;
-                }
-
-                // On hold check (대기생)
-                if (enrollment.onHold) {
-                    waiting++;
-                    waitingStudents.push({
-                        id: studentId,
-                        name: baseStudent.name,
-                        school: baseStudent.school,
-                        grade: baseStudent.grade,
-                        enrollmentDate: enrollStartDate || baseStudent.startDate
-                    });
-                    return;
-                }
-
-                // Check student status from studentMap (must be 'active')
-                if (baseStudent.status !== 'active') return;
-
-                active++;
-
-                // New student check
-                if (enrollStartDate) {
-                    const enrollDate = new Date(enrollStartDate);
-                    const daysSinceEnroll = Math.floor((now.getTime() - enrollDate.getTime()) / (1000 * 60 * 60 * 24));
-                    if (daysSinceEnroll <= 30) {
-                        new1++;
-                    } else if (daysSinceEnroll <= 60) {
-                        new2++;
-                    }
-                }
+            // 활성 enrollment 찾기 (endDate/withdrawalDate 없고, 미래 시작이 아닌 것)
+            const activeEnrollment = englishEnrollments.find((e: any) => {
+                const wd = convertTimestampToDate(e.withdrawalDate);
+                const ed = convertTimestampToDate(e.endDate);
+                if (wd || ed) return false;
+                const start = convertTimestampToDate(e.enrollmentDate) || convertTimestampToDate(e.startDate);
+                if (start && start > today) return false;
+                if (e.onHold) return false;
+                return true;
             });
+
+            if (activeEnrollment) {
+                if (baseStudent.status !== 'active') return;
+                active++;
+                const enrollStartDate = convertTimestampToDate(activeEnrollment.enrollmentDate) ||
+                    convertTimestampToDate(activeEnrollment.startDate);
+                if (enrollStartDate) {
+                    const daysSinceEnroll = Math.floor((now.getTime() - new Date(enrollStartDate).getTime()) / (1000 * 60 * 60 * 24));
+                    if (daysSinceEnroll >= 0 && daysSinceEnroll <= 30) new1++;
+                    else if (daysSinceEnroll > 30 && daysSinceEnroll <= 60) new2++;
+                }
+                return;
+            }
+
+            // 대기(onHold) enrollment
+            const holdEnrollment = englishEnrollments.find((e: any) => {
+                const wd = convertTimestampToDate(e.withdrawalDate);
+                const ed = convertTimestampToDate(e.endDate);
+                return !wd && !ed && e.onHold;
+            });
+            if (holdEnrollment) {
+                waiting++;
+                waitingStudents.push({
+                    id: studentId, name: baseStudent.name, school: baseStudent.school, grade: baseStudent.grade,
+                    enrollmentDate: convertTimestampToDate(holdEnrollment.enrollmentDate) || baseStudent.startDate
+                });
+                return;
+            }
+
+            // 배정 예정 (미래 시작일, 30일 이내)
+            const scheduledEnrollment = englishEnrollments.find((e: any) => {
+                const wd = convertTimestampToDate(e.withdrawalDate);
+                const ed = convertTimestampToDate(e.endDate);
+                if (wd || ed) return false;
+                const start = convertTimestampToDate(e.enrollmentDate) || convertTimestampToDate(e.startDate);
+                return start && start > today;
+            });
+            if (scheduledEnrollment) {
+                const start = convertTimestampToDate(scheduledEnrollment.enrollmentDate) || convertTimestampToDate(scheduledEnrollment.startDate);
+                const daysUntil = Math.floor((new Date(start!).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                if (daysUntil <= 30) {
+                    waiting++;
+                    waitingStudents.push({
+                        id: studentId, name: baseStudent.name, school: baseStudent.school, grade: baseStudent.grade,
+                        enrollmentDate: start
+                    });
+                }
+                return;
+            }
+
+            // 퇴원 — 가장 최근 종료된 enrollment 기준
+            const endedEnrollments = englishEnrollments
+                .map((e: any) => convertTimestampToDate(e.withdrawalDate) || convertTimestampToDate(e.endDate))
+                .filter(Boolean) as string[];
+            if (endedEnrollments.length > 0) {
+                const latestEnd = endedEnrollments.sort().reverse()[0];
+                const studentInfo: StudentInfo = {
+                    id: studentId, name: baseStudent.name, school: baseStudent.school, grade: baseStudent.grade,
+                    withdrawalDate: latestEnd
+                };
+                if (latestEnd > today) {
+                    withdrawnFuture++;
+                    withdrawnFutureStudents.push(studentInfo);
+                } else {
+                    const daysSince = Math.floor((now.getTime() - new Date(latestEnd).getTime()) / (1000 * 60 * 60 * 24));
+                    if (daysSince <= 30) {
+                        withdrawn++;
+                        withdrawnStudents.push(studentInfo);
+                    }
+                }
+            }
         });
 
         return {

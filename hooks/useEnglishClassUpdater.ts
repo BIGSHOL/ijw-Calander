@@ -326,7 +326,8 @@ export const useEnglishClassUpdater = () => {
             const className = classData.className;
             const subject = classData.subject || 'english';
             if (className) {
-                const today = new Date().toISOString().split('T')[0];
+                const _yd = new Date(); _yd.setDate(_yd.getDate() - 1);
+                const today = _yd.toISOString().split('T')[0]; // 전날로 설정하여 즉시 퇴원 처리
                 const enrollQuery = query(
                     collectionGroup(db, 'enrollments'),
                     where('className', '==', className),
