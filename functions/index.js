@@ -601,7 +601,8 @@ exports.migrateEnrollmentsToSubcollection = functions
                     : finalSubSnap;
 
                 // 2c. class studentList와 비교하여 endDate 정합성 확인
-                const todayStr = new Date().toISOString().split("T")[0];
+                const _yd = new Date(); _yd.setDate(_yd.getDate() - 1);
+                const todayStr = _yd.toISOString().split("T")[0]; // 전날로 설정
                 for (const enrollDoc of cleanSubSnap.docs) {
                     const enrollData = enrollDoc.data();
                     const classId = enrollData.classId;
@@ -1611,6 +1612,8 @@ async function applyScenarioToLive(scenarioId, scenario) {
     const scenarioEnrollments = scenario.enrollments || {};
 
     const today = getTodayKST();
+    const _ydFunc = new Date(); _ydFunc.setDate(_ydFunc.getDate() - 1);
+    const yesterday = _ydFunc.toISOString().split("T")[0];
 
     // 1. Get current live classes
     const liveClassesSnapshot = await db.collection("classes")
@@ -1774,8 +1777,8 @@ async function applyScenarioToLive(scenarioId, scenario) {
         const chunk = toEndDate.slice(i, i + 500);
         for (const item of chunk) {
             batch.update(item.docRef, {
-                endDate: today,
-                withdrawalDate: today,
+                endDate: yesterday,
+                withdrawalDate: yesterday,
             });
         }
         await batch.commit();

@@ -72,6 +72,8 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
 
             // === 실시간 모드: Firebase 업데이트 ===
             const today = new Date().toISOString().split('T')[0];
+            const _yd = new Date(); _yd.setDate(_yd.getDate() - 1);
+            const yesterday = _yd.toISOString().split('T')[0];
 
             // === 0. 대상 수업들의 teacher 정보 조회 (staffId 연동용) ===
             const targetClassNames = [...new Set(Array.from(moveChanges.values()).map(c => c.toClass))];
@@ -117,7 +119,7 @@ export const useEnglishChanges = (isSimulationMode: boolean) => {
 
                 const endDatePromises = fromSnapshot.docs.map(docSnap =>
                     updateDoc(docSnap.ref, {
-                        endDate: today,
+                        endDate: yesterday,
                         updatedAt: new Date().toISOString()
                     })
                 );

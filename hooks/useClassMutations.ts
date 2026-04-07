@@ -364,7 +364,8 @@ export const useDeleteClass = () => {
 
       // 2. 해당 className + subject와 일치하는 모든 enrollments에 endDate 설정
       // 하드 삭제 대신 endDate 설정으로 이력 보존
-      const today = new Date().toISOString().split('T')[0];
+      const yd = new Date(); yd.setDate(yd.getDate() - 1);
+      const yesterday = yd.toISOString().split('T')[0];
       try {
         const enrollmentsQuery = query(
           collectionGroup(db, 'enrollments'),
@@ -379,8 +380,8 @@ export const useDeleteClass = () => {
           // 이미 종료된 enrollment은 건너뛰기
           if (data.endDate || data.withdrawalDate) return;
           await updateDoc(docSnap.ref, {
-            endDate: today,
-            withdrawalDate: today,
+            endDate: yesterday,
+            withdrawalDate: yesterday,
             updatedAt: new Date().toISOString(),
           });
         });

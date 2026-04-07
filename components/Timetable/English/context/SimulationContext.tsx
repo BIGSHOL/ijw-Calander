@@ -1317,7 +1317,8 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
         query(collectionGroup(db, 'enrollments'), where('subject', '==', 'english'))
       );
 
-      const today = formatDateKey(new Date()); // YYYY-MM-DD
+      const _yd = new Date(); _yd.setDate(_yd.getDate() - 1);
+      const today = formatDateKey(_yd); // 전날로 설정하여 즉시 퇴원 처리
 
       // 반 이름 변경 감지: 같은 classId인데 className이 바뀐 경우 (레벨업 등)
       // oldClassName → newClassName 매핑

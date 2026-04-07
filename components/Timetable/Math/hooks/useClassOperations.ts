@@ -231,7 +231,8 @@ export const useClassOperations = () => {
 
         // 해당 수업의 활성 enrollment도 종료 처리
         if (classData?.className && classData?.subject) {
-            const today = new Date().toISOString().split('T')[0];
+            const _yd = new Date(); _yd.setDate(_yd.getDate() - 1);
+            const today = _yd.toISOString().split('T')[0]; // 전날로 설정하여 즉시 퇴원 처리
             const enrollQuery = query(
                 collectionGroup(db, 'enrollments'),
                 where('className', '==', classData.className),

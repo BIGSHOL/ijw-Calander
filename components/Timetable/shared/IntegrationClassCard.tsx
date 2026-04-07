@@ -701,8 +701,13 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
         setDisplayStudents(currentList);
     }, [students, moveChanges, classInfo.name, referenceDate]);
 
-    // 배정 예정 학생 (미래 enrollmentDate)
-    const scheduledStudents = displayStudents.filter(s => (s as any).isScheduled && !s.withdrawalDate);
+    // 배정 예정 학생 (미래 enrollmentDate, 등록일 전 1개월 이내만)
+    const scheduledStudents = displayStudents.filter(s => {
+        if (!(s as any).isScheduled || s.withdrawalDate) return false;
+        if (!s.enrollmentDate) return true;
+        const daysUntil = Math.floor((new Date(s.enrollmentDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        return daysUntil <= 30;
+    });
     // 퇴원 예정 학생 (withdrawalDate가 있지만 아직 미래인 경우)
     const withdrawalScheduledStudents = displayStudents.filter(s => (s as any).isWithdrawalScheduled && !s.isTransferred);
     // 활성 학생 (배정 예정 제외, 퇴원 예정은 활성에 포함하되 마킹)
@@ -713,12 +718,12 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     );
     // 대기 학생 (onHold)
     const holdStudents = displayStudents.filter(s => s.onHold && !s.withdrawalDate && !(s as any).isScheduled);
-    // 퇴원 학생 (이미 퇴원한 학생만, 퇴원 예정 제외, 반이동은 제외)
-    const withdrawnStudents = displayStudents.filter(s =>
-        s.withdrawalDate &&
-        !(s as any).isWithdrawalScheduled &&
-        !s.isTransferred
-    );
+    // 퇴원 학생 (이미 퇴원한 학생만, 퇴원 예정 제외, 반이동은 제외, 1개월 이내만)
+    const withdrawnStudents = displayStudents.filter(s => {
+        if (!s.withdrawalDate || (s as any).isWithdrawalScheduled || s.isTransferred) return false;
+        const daysSince = Math.floor((Date.now() - new Date(s.withdrawalDate).getTime()) / (1000 * 60 * 60 * 24));
+        return daysSince <= 30;
+    });
 
     // 학생 필터 적용 (셔틀 + 학교 + 학년)
     const hasFilter = shuttleOnly || (schoolFilter && schoolFilter.length > 0) || (gradeFilter && gradeFilter.length > 0);
