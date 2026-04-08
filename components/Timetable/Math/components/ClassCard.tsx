@@ -811,7 +811,17 @@ const ClassCard: React.FC<ClassCardProps> = ({
             .filter(filterStudent);
 
         const hold = allStudents
-            .filter(s => s.onHold && !s.withdrawalDate && (filterDay ? isStudentAttendingDay(s, filterDay) : true))
+            .filter(s => {
+                if (!s.onHold || s.withdrawalDate) return false;
+                if (filterDay && !isStudentAttendingDay(s, filterDay)) return false;
+                // 수업시작일 기준 30일 전까지만 표시
+                const enrollDate = s.enrollmentDate || s.startDate;
+                if (enrollDate) {
+                    const daysUntil = Math.floor((new Date(enrollDate).getTime() - refDateMs) / (1000 * 60 * 60 * 24));
+                    return daysUntil <= 30;
+                }
+                return true;
+            })
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
             .filter(filterStudent);
 

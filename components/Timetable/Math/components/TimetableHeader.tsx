@@ -467,22 +467,34 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                 if (processedStudents.has(student.id)) return;
                 processedStudents.set(student.id, student);
 
-                if (student.withdrawalDate) {
-                    // 퇴원 처리됨 (useSubjectClassStudents에서 판단)
+                if (student.withdrawalDate && !student.isTransferred) {
+                    // 실제 퇴원 (반이동은 제외)
+                    return;
+                }
+                if (student.withdrawalDate && student.isTransferred) {
+                    // 반이동 학생 — 퇴원이 아님, 스킵 (다른 반에서 재원생으로 카운트)
                     return;
                 }
                 if (student.onHold) {
-                    // 대기/예정
-                    onHoldStudentIds.add(student.id);
+                    // 대기/예정 — 수업시작일 기준 30일 전까지만
+                    const enrollDate = student.enrollmentDate || student.startDate;
+                    if (enrollDate) {
+                        const daysUntil = Math.floor((new Date(enrollDate).getTime() - refDate.getTime()) / (1000 * 60 * 60 * 24));
+                        if (daysUntil <= 30) onHoldStudentIds.add(student.id);
+                    } else {
+                        onHoldStudentIds.add(student.id);
+                    }
                     return;
                 }
                 // 재원생
                 activeStudentIds.add(student.id);
-                // 신입 (등록 30일 이내)
-                const enrollDate = student.enrollmentDate || student.startDate;
-                if (enrollDate) {
-                    const daysSince = Math.floor((refDate.getTime() - new Date(enrollDate).getTime()) / (1000 * 60 * 60 * 24));
-                    if (daysSince >= 0 && daysSince <= 30) newStudentIds.add(student.id);
+                // 신입 (등록 30일 이내, 반이동 제외)
+                if (!student.isTransferredIn) {
+                    const enrollDate = student.enrollmentDate || student.startDate;
+                    if (enrollDate) {
+                        const daysSince = Math.floor((refDate.getTime() - new Date(enrollDate).getTime()) / (1000 * 60 * 60 * 24));
+                        if (daysSince >= 0 && daysSince <= 30) newStudentIds.add(student.id);
+                    }
                 }
             });
         });
@@ -492,7 +504,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
         const withdrawnFutureStudents: Array<{ id: string; name: string; school: string; grade: string; withdrawalDate?: string }> = [];
 
         processedStudents.forEach((student, studentId) => {
-            if (!student.withdrawalDate) return;
+            if (!student.withdrawalDate || student.isTransferred) return; // 반이동 제외
             const base = studentMap[studentId] || student;
             const info = { id: studentId, name: base.name || student.name, school: base.school || '', grade: base.grade || '', withdrawalDate: student.withdrawalDate };
 
