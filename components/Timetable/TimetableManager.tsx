@@ -151,6 +151,7 @@ interface MathTimetableContentProps {
     studentFilter?: { schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no'; attendance?: 'all' | 'late' | 'absent' | 'late_absent' };
     onStudentFilterChange?: (filter: { schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no'; attendance?: 'all' | 'late' | 'absent' | 'late_absent' }) => void;
     shuttleStudentNames?: Set<string>;
+    weeklyAbsent?: { late: Set<string>; absent: Set<string> };
     // 통합뷰 설정 (외부에서 전달)
     mathIntegrationSettings: MathIntegrationSettings;
     updateMathIntegrationSettings: (settings: MathIntegrationSettings) => void;
@@ -252,6 +253,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     studentFilter,
     onStudentFilterChange,
     shuttleStudentNames,
+    weeklyAbsent,
     mathIntegrationSettings,
     updateMathIntegrationSettings,
     userDepartments,
@@ -2134,6 +2136,7 @@ const TimetableManager = ({
                 studentFilter={studentFilter}
                 onStudentFilterChange={setStudentFilter}
                 shuttleStudentNames={shuttleStudentNames}
+                weeklyAbsent={weeklyAbsent}
                 mathIntegrationSettings={outerMathSettings}
                 updateMathIntegrationSettings={updateOuterMathSettings}
                 userDepartments={userDepartments}
