@@ -796,11 +796,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
         // 미래 예정 학생은 아직 재원생으로 표시 (영어 통합뷰와 동일)
         const isFutureWithdrawal = (s: any) => s.withdrawalDate && s.withdrawalDate > today;
-        const isEnded = (s: any) => (s.withdrawalDate && s.withdrawalDate <= today) || (s.endDate && s.endDate <= today);
 
         // 퇴원예정 학생도 재원생에 포함 (가로줄로 표시, 통합뷰와 동일)
         const active = allStudents
-            .filter(s => !isEnded(s) && (!s.withdrawalDate || isFutureWithdrawal(s)) && !s.onHold && (filterDay ? isStudentAttendingDay(s, filterDay) : true))
+            .filter(s => (!s.withdrawalDate || isFutureWithdrawal(s)) && !s.onHold && (filterDay ? isStudentAttendingDay(s, filterDay) : true))
             .sort((a, b) => {
                 // 퇴원예정 학생은 하단에 배치
                 const aIsWS = isFutureWithdrawal(a) && !a.isTransferred ? 1 : 0;
@@ -812,16 +811,15 @@ const ClassCard: React.FC<ClassCardProps> = ({
             .filter(filterStudent);
 
         const hold = allStudents
-            .filter(s => s.onHold && !s.withdrawalDate && !s.endDate && (filterDay ? isStudentAttendingDay(s, filterDay) : true))
+            .filter(s => s.onHold && !s.withdrawalDate && (filterDay ? isStudentAttendingDay(s, filterDay) : true))
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
             .filter(filterStudent);
 
         // 퇴원 학생: 과거/오늘 날짜 + 반이동이 아닌 실제 퇴원만 (1개월 이내만)
         const withdrawn = allStudents
             .filter(s => {
-                const effectiveEnd = s.withdrawalDate || s.endDate;
-                if (!effectiveEnd || effectiveEnd > today || s.isTransferred) return false;
-                const daysSince = Math.floor((Date.now() - new Date(effectiveEnd).getTime()) / (1000 * 60 * 60 * 24));
+                if (!s.withdrawalDate || s.withdrawalDate > today || s.isTransferred) return false;
+                const daysSince = Math.floor((Date.now() - new Date(s.withdrawalDate).getTime()) / (1000 * 60 * 60 * 24));
                 return daysSince <= 30;
             })
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))

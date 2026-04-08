@@ -78,9 +78,8 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                 const withdrawalDate = convertTimestampToDate(enrollment.withdrawalDate);
                 const endDate = convertTimestampToDate(enrollment.endDate);
                 // 기준일(referenceDate) 대비 종료 여부 판단
-                // endDate가 있더라도 기준일 이후라면 아직 "활성" 상태
                 const effectiveEndDate = withdrawalDate || endDate;
-                const hasEndDate = effectiveEndDate ? effectiveEndDate < today : false;
+                const hasEndDate = effectiveEndDate ? effectiveEndDate <= today : false;
 
                 if (!hasEndDate) {
                     if (!studentActiveClasses[studentId]) {
@@ -143,9 +142,9 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
 
                 const isScheduled = startDate && startDate > today;
 
-                // 기준일 대비 종료 여부 (endDate가 기준일 이후면 아직 활성)
+                // 기준일 대비 종료 여부 (endDate가 기준일과 같거나 이전이면 종료)
                 const effectiveEndDate2 = withdrawalDate || endDate;
-                const hasEndDate = effectiveEndDate2 ? effectiveEndDate2 < today : false;
+                const hasEndDate = effectiveEndDate2 ? effectiveEndDate2 <= today : false;
                 const activeClasses = studentActiveClasses[studentId] || new Set();
                 const endedClasses = studentEndedClasses[studentId] || new Set();
 
