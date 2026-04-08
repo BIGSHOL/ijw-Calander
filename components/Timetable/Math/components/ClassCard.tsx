@@ -815,11 +815,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
             .filter(filterStudent);
 
-        // 퇴원 학생: 과거/오늘 날짜 + 반이동이 아닌 실제 퇴원만 (1개월 이내만)
+        // 퇴원 학생: 과거/오늘 날짜 + 반이동이 아닌 실제 퇴원만 (기준일 기준 30일 이내)
         const withdrawn = allStudents
             .filter(s => {
                 if (!s.withdrawalDate || s.withdrawalDate > today || s.isTransferred) return false;
-                const daysSince = Math.floor((Date.now() - new Date(s.withdrawalDate).getTime()) / (1000 * 60 * 60 * 24));
+                const daysSince = Math.floor((refDateMs - new Date(s.withdrawalDate).getTime()) / (1000 * 60 * 60 * 24));
                 return daysSince <= 30;
             })
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))

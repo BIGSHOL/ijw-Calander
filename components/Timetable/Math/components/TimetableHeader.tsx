@@ -450,97 +450,71 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     }, [isViewDropdownOpen, isMoreDropdownOpen, isWithdrawnDropdownOpen, isPendingDropdownOpen]);
 
     // 학생 수 카운트 계산 (현재 시간표에 등록된 학생만, 중복 제거)
+    // useSubjectClassStudents가 이미 기준일 기반으로 withdrawalDate/onHold를 설정
     const studentCounts = useMemo(() => {
-        // 시간표에 등록된 학생 ID 수집 (중복 제거를 위해 Set 사용)
         const activeStudentIds = new Set<string>();
-        const newStudentIds = new Set<string>();  // 신입 (30일 이내)
+        const newStudentIds = new Set<string>();
         const onHoldStudentIds = new Set<string>();
-        const withdrawnStudentIds = new Set<string>();
 
-        const now = new Date();
-        const today = formatDateKey(now);
-        const weekEnd = currentWeekStart
-            ? formatDateKey(addDays(currentWeekStart, 6))
-            : today;
+        const today = currentWeekStart ? formatDateKey(currentWeekStart) : formatDateKey(new Date());
+        const refDate = new Date(today);
 
-        // 각 수업의 학생 목록에서 학생 ID 수집
+        // studentList 데이터 신뢰: withdrawalDate 있으면 퇴원, onHold면 대기
+        const processedStudents = new Map<string, any>();
+
         filteredClasses.forEach(cls => {
-            cls.studentList?.forEach(student => {
-                const effectiveEnd = student.withdrawalDate || student.endDate;
-                const enrollDate = student.enrollmentDate || student.startDate;
+            cls.studentList?.forEach((student: any) => {
+                if (processedStudents.has(student.id)) return;
+                processedStudents.set(student.id, student);
 
-                if (!effectiveEnd && !student.onHold) {
-                    // 배정 예정 학생 (미래 시작일)
-                    if (enrollDate && enrollDate > today) {
-                        const daysUntil = Math.floor((new Date(enrollDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                        if (daysUntil <= 30) onHoldStudentIds.add(student.id); // 예정(30일 이내)
-                    } else {
-                        // 재원생
-                        activeStudentIds.add(student.id);
-                        // 신입 체크 (등록 30일 이내)
-                        if (enrollDate) {
-                            const daysSince = Math.floor((now.getTime() - new Date(enrollDate).getTime()) / (1000 * 60 * 60 * 24));
-                            if (daysSince >= 0 && daysSince <= 30) newStudentIds.add(student.id);
-                        }
-                    }
+                if (student.withdrawalDate) {
+                    // 퇴원 처리됨 (useSubjectClassStudents에서 판단)
+                    return;
                 }
-                // 대기생 (onHold)
-                else if (student.onHold && !effectiveEnd) {
+                if (student.onHold) {
+                    // 대기/예정
                     onHoldStudentIds.add(student.id);
+                    return;
                 }
-                // 퇴원생 (30일 이내만)
-                else if (effectiveEnd) {
-                    const daysSince = Math.floor((now.getTime() - new Date(effectiveEnd).getTime()) / (1000 * 60 * 60 * 24));
-                    if (effectiveEnd > today || daysSince <= 30) {
-                        withdrawnStudentIds.add(student.id);
-                    }
+                // 재원생
+                activeStudentIds.add(student.id);
+                // 신입 (등록 30일 이내)
+                const enrollDate = student.enrollmentDate || student.startDate;
+                if (enrollDate) {
+                    const daysSince = Math.floor((refDate.getTime() - new Date(enrollDate).getTime()) / (1000 * 60 * 60 * 24));
+                    if (daysSince >= 0 && daysSince <= 30) newStudentIds.add(student.id);
                 }
             });
         });
 
-        // 대기 학생 목록 (상세 정보 포함)
-        const onHoldStudents: Array<{ id: string; name: string; school: string; grade: string; enrollmentDate?: string }> = [];
-        onHoldStudentIds.forEach(studentId => {
-            const student = studentMap[studentId];
-            if (student) {
-                onHoldStudents.push({
-                    id: student.id,
-                    name: student.name,
-                    school: student.school || '',
-                    grade: student.grade || '',
-                    enrollmentDate: student.enrollmentDate
-                });
+        // 퇴원 학생: 30일 이내만
+        const withdrawnStudents: Array<{ id: string; name: string; school: string; grade: string; withdrawalDate?: string }> = [];
+        const withdrawnFutureStudents: Array<{ id: string; name: string; school: string; grade: string; withdrawalDate?: string }> = [];
+
+        processedStudents.forEach((student, studentId) => {
+            if (!student.withdrawalDate) return;
+            const base = studentMap[studentId] || student;
+            const info = { id: studentId, name: base.name || student.name, school: base.school || '', grade: base.grade || '', withdrawalDate: student.withdrawalDate };
+
+            if (student.withdrawalDate > today) {
+                withdrawnFutureStudents.push(info);
+            } else {
+                const daysSince = Math.floor((refDate.getTime() - new Date(student.withdrawalDate).getTime()) / (1000 * 60 * 60 * 24));
+                if (daysSince <= 30) withdrawnStudents.push(info);
             }
         });
 
-        // 퇴원 학생 목록 (퇴원일/종료일이 오늘이거나 과거)
-        const withdrawnStudents: Array<{ id: string; name: string; school: string; grade: string; withdrawalDate?: string }> = [];
-        // 퇴원 예정 학생 목록 (퇴원일/종료일이 미래)
-        const withdrawnFutureStudents: Array<{ id: string; name: string; school: string; grade: string; withdrawalDate?: string }> = [];
-
-        withdrawnStudentIds.forEach(studentId => {
-            // studentList에서 직접 찾기 (studentMap보다 정확한 enrollment 데이터)
-            let effectiveDate: string | undefined;
-            filteredClasses.forEach(cls => {
-                const s = cls.studentList?.find((st: any) => st.id === studentId);
-                if (s) effectiveDate = s.withdrawalDate || s.endDate;
-            });
-            const student = studentMap[studentId];
-            if (student && effectiveDate) {
-                const studentInfo = {
-                    id: student.id,
-                    name: student.name,
-                    school: student.school || '',
-                    grade: student.grade || '',
-                    withdrawalDate: effectiveDate
-                };
-
-                if (effectiveDate > today) {
-                    withdrawnFutureStudents.push(studentInfo);
-                } else {
-                    const daysSince = Math.floor((now.getTime() - new Date(effectiveDate).getTime()) / (1000 * 60 * 60 * 24));
-                    if (daysSince <= 30) withdrawnStudents.push(studentInfo);
-                }
+        // 대기 학생 목록
+        const onHoldStudents: Array<{ id: string; name: string; school: string; grade: string; enrollmentDate?: string }> = [];
+        onHoldStudentIds.forEach(studentId => {
+            const base = studentMap[studentId];
+            const student = processedStudents.get(studentId);
+            if (base || student) {
+                onHoldStudents.push({
+                    id: studentId, name: base?.name || student?.name || '',
+                    school: base?.school || '', grade: base?.grade || '',
+                    enrollmentDate: student?.enrollmentDate
+                });
             }
         });
 
