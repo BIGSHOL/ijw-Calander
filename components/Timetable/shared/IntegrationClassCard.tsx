@@ -871,7 +871,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     };
 
     const handleClassDetailClick = (e: React.MouseEvent) => {
-        if (onClassClick && !isTimeColumnOnly) {
+        if (mode === 'edit' && onClassClick && !isTimeColumnOnly) {
             e.stopPropagation();
             onClassClick();
         }
