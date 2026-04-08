@@ -701,11 +701,13 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
         setDisplayStudents(currentList);
     }, [students, moveChanges, classInfo.name, referenceDate]);
 
-    // 배정 예정 학생 (미래 enrollmentDate, 등록일 전 1개월 이내만)
+    const refMs = new Date(referenceDate).getTime();
+
+    // 배정 예정 학생 (미래 enrollmentDate, 등록일 전 30일 이내만)
     const scheduledStudents = displayStudents.filter(s => {
         if (!(s as any).isScheduled || s.withdrawalDate) return false;
         if (!s.enrollmentDate) return true;
-        const daysUntil = Math.floor((new Date(s.enrollmentDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        const daysUntil = Math.floor((new Date(s.enrollmentDate).getTime() - refMs) / (1000 * 60 * 60 * 24));
         return daysUntil <= 30;
     });
     // 퇴원 예정 학생 (withdrawalDate가 있지만 아직 미래인 경우)
@@ -716,12 +718,20 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
         !s.onHold &&
         !(s as any).isScheduled
     );
-    // 대기 학생 (onHold)
-    const holdStudents = displayStudents.filter(s => s.onHold && !s.withdrawalDate && !(s as any).isScheduled);
-    // 퇴원 학생 (이미 퇴원한 학생만, 퇴원 예정 제외, 반이동은 제외, 1개월 이내만)
+    // 대기 학생 (onHold, 수업시작일 30일 전까지만)
+    const holdStudents = displayStudents.filter(s => {
+        if (!s.onHold || s.withdrawalDate || (s as any).isScheduled) return false;
+        const enrollDate = s.enrollmentDate;
+        if (enrollDate) {
+            const daysUntil = Math.floor((new Date(enrollDate).getTime() - refMs) / (1000 * 60 * 60 * 24));
+            return daysUntil <= 30;
+        }
+        return true;
+    });
+    // 퇴원 학생 (반이동 제외, 기준일 기준 30일 이내만)
     const withdrawnStudents = displayStudents.filter(s => {
         if (!s.withdrawalDate || (s as any).isWithdrawalScheduled || s.isTransferred) return false;
-        const daysSince = Math.floor((Date.now() - new Date(s.withdrawalDate).getTime()) / (1000 * 60 * 60 * 24));
+        const daysSince = Math.floor((refMs - new Date(s.withdrawalDate).getTime()) / (1000 * 60 * 60 * 24));
         return daysSince <= 30;
     });
 
@@ -861,7 +871,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     };
 
     const handleClassDetailClick = (e: React.MouseEvent) => {
-        if (mode === 'edit' && onClassClick && !isTimeColumnOnly) {
+        if (onClassClick && !isTimeColumnOnly) {
             e.stopPropagation();
             onClassClick();
         }
