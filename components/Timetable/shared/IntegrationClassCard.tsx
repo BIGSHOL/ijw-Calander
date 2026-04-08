@@ -8,6 +8,7 @@ import { Teacher, TimetableStudent, ClassKeywordColor, EnglishLevel } from '../.
 import IntegrationMiniGridRow, { PeriodInfo, ScheduleCell } from './IntegrationMiniGridRow';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
 import { formatDateKey, getWeekReferenceDate } from '../../../utils/dateUtils';
+import SubjectBadges from '../../Common/SubjectBadges';
 import LevelUpConfirmModal from '../English/LevelUpConfirmModal';
 import { isValidLevel, numberLevelUp, classLevelUp, isMaxLevel, numberLevelDown, classLevelDown, isMinLevel, canNumberLevelDown, canNumberLevelUp, EN_PERIODS, INJAE_PERIODS } from '../English/englishUtils';
 import { collection, getDocs, writeBatch, doc, query, where, collectionGroup } from 'firebase/firestore';
@@ -1635,11 +1636,7 @@ const AutoCompleteDropdown: React.FC<{
                                 {formatSchoolGrade(s.school, s.grade)}
                             </span>
                         </div>
-                        {classNames.length > 0 && (
-                            <div className="text-[9px] text-blue-500 truncate mt-0.5">
-                                {classNames.join(', ')}
-                            </div>
-                        )}
+                        <SubjectBadges enrollments={(s as any).enrollments} />
                     </div>
                 );
             })}
