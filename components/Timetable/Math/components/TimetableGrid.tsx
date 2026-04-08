@@ -2091,6 +2091,14 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     const isGroupBoundary = isLastDay && resource === lastResource;
                     const borderR = isGroupBoundary ? 'border-r-[4px] border-r-black' : (isLastDay ? 'border-r-2 border-r-black' : (bothEmpty ? '' : 'border-r border-r-black'));
 
+                    // 반이름 클릭 핸들러 (엑셀뷰: 셀 선택, 더블클릭: 상세)
+                    const handleNameClick = (cls: TimetableClass) => {
+                        if (isExcelMode) onCellSelect?.(cls.id);
+                    };
+                    const handleNameDblClick = (cls: TimetableClass) => {
+                        if (isExcelMode) onClassClick(cls);
+                    };
+
                     cells.push(
                         <td key={`${groupName}-${resource}-${day}-${groupId}`}
                             className={`p-0 align-top border-b-[4px] border-b-black ${borderR}`}
@@ -2106,8 +2114,12 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                 </div>
                             ) : sameClass ? (
                                 <div className="flex flex-col h-full">
-                                    <div style={{ height: `${NAME_SLOT_H * 2}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
-                                        <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{firstClasses[0].className}{firstClasses[0].room ? ` ${firstClasses[0].room}` : ''}</span>
+                                    <div style={{ height: `${NAME_SLOT_H * 2}px` }}
+                                        className={`shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white ${isExcelMode ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                                        onClick={() => handleNameClick(firstClasses[0])}
+                                        onDoubleClick={() => handleNameDblClick(firstClasses[0])}
+                                    >
+                                        <span className="text-xs font-bold text-black leading-tight text-center px-0.5 select-none">{firstClasses[0].className}{firstClasses[0].room ? ` ${firstClasses[0].room}` : ''}</span>
                                     </div>
                                     <div className="flex-1 min-h-0">
                                         {renderCards(firstClasses, day, firstPeriodIndex, resource, colSpan, mergedDays, false, true)}
@@ -2115,11 +2127,19 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                 </div>
                             ) : (
                                 <div className="flex flex-col h-full">
-                                    <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-b-black bg-white">
-                                        {firstClasses.length > 0 && <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{firstClasses[0].className}</span>}
+                                    <div style={{ height: `${NAME_SLOT_H}px` }}
+                                        className={`shrink-0 flex items-center justify-center overflow-hidden border-b border-b-black bg-white ${isExcelMode && firstClasses.length > 0 ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                                        onClick={() => firstClasses.length > 0 && handleNameClick(firstClasses[0])}
+                                        onDoubleClick={() => firstClasses.length > 0 && handleNameDblClick(firstClasses[0])}
+                                    >
+                                        {firstClasses.length > 0 && <span className="text-xs font-bold text-black leading-tight text-center px-0.5 select-none">{firstClasses[0].className}</span>}
                                     </div>
-                                    <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
-                                        {secondClasses.length > 0 && <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{secondClasses[0].className}</span>}
+                                    <div style={{ height: `${NAME_SLOT_H}px` }}
+                                        className={`shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white ${isExcelMode && secondClasses.length > 0 ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+                                        onClick={() => secondClasses.length > 0 && handleNameClick(secondClasses[0])}
+                                        onDoubleClick={() => secondClasses.length > 0 && handleNameDblClick(secondClasses[0])}
+                                    >
+                                        {secondClasses.length > 0 && <span className="text-xs font-bold text-black leading-tight text-center px-0.5 select-none">{secondClasses[0].className}</span>}
                                     </div>
                                     <div className="flex-1 min-h-0">
                                         {firstClasses.length > 0 ? renderCards(firstClasses, day, firstPeriodIndex, resource, colSpan, mergedDays, false, true)

@@ -1156,7 +1156,16 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                             </div>
 
                                             {/* === 개발자 4. 강사 순서 === */}
-                                            {(viewType === 'teacher' || viewType === 'excel') && mathConfig.teacherOrder.length > 0 && (
+                                            {(viewType === 'teacher' || viewType === 'excel') && (() => {
+                                                // 실제 시간표의 선생님 + teacherOrder 병합
+                                                const actualTeachers = new Set<string>();
+                                                filteredClasses.forEach(cls => { if (cls.teacher) actualTeachers.add(cls.teacher); });
+                                                const mergedOrder = [
+                                                    ...mathConfig.teacherOrder.filter(t => actualTeachers.has(t)),
+                                                    ...[...actualTeachers].filter(t => !mathConfig.teacherOrder.includes(t)).sort((a, b) => a.localeCompare(b, 'ko')),
+                                                ];
+                                                if (mergedOrder.length === 0) return null;
+                                                return (
                                                 <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
                                                     <div className="text-xxs font-bold text-gray-600 mb-2 flex items-center gap-1">
                                                         <Users size={12} />
@@ -1166,13 +1175,22 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                         <DndContext
                                                             sensors={teacherDndSensors}
                                                             collisionDetection={closestCenter}
-                                                            onDragEnd={handleTeacherDragEnd}
+                                                            onDragEnd={(event) => {
+                                                                const { active, over } = event;
+                                                                if (over && active.id !== over.id) {
+                                                                    const oldIdx = mergedOrder.indexOf(active.id as string);
+                                                                    const newIdx = mergedOrder.indexOf(over.id as string);
+                                                                    if (oldIdx !== -1 && newIdx !== -1) {
+                                                                        handleSaveTeacherOrder(arrayMove(mergedOrder, oldIdx, newIdx));
+                                                                    }
+                                                                }
+                                                            }}
                                                         >
                                                             <SortableContext
-                                                                items={mathConfig.teacherOrder}
+                                                                items={mergedOrder}
                                                                 strategy={verticalListSortingStrategy}
                                                             >
-                                                                {mathConfig.teacherOrder.map((teacher) => (
+                                                                {mergedOrder.map((teacher) => (
                                                                     <SortableTeacherItem
                                                                         key={teacher}
                                                                         id={teacher}
@@ -1184,7 +1202,8 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                         </DndContext>
                                                     </div>
                                                 </div>
-                                            )}
+                                                );
+                                            })()}
 
                                             {/* === 개발자 5. 표시 옵션 === */}
                                             <div className="px-3 py-2 bg-gray-50">
