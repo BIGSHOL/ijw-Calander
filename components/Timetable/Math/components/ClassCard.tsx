@@ -263,6 +263,7 @@ interface ClassCardProps {
     // 학생 필터
     studentFilter?: { schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no' };
     shuttleStudentNames?: Set<string>;
+    weeklyAbsent?: { late: Set<string>; absent: Set<string> };
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
@@ -322,6 +323,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
     fillCell,
     studentFilter,
     shuttleStudentNames,
+    weeklyAbsent,
 }) => {
     // 주차 기준일: referenceDate가 있으면 해당 날짜, 없으면 오늘
     const refDateStr = referenceDate || formatDateKey(new Date());
@@ -666,7 +668,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
         return allStudentsList;
     }, [cls, mergedClasses, isMergedClass, studentMap, classNameToIndex, refDateStr]);
 
-    // 학생 필터 함수 (학교/학년/셔틀)
+    // 학생 필터 함수 (학교/학년/셔틀/출석)
     const filterStudent = useCallback((student: any): boolean => {
         if (!studentFilter) return true;
         if (studentFilter.schools.length > 0) {
@@ -680,8 +682,15 @@ const ClassCard: React.FC<ClassCardProps> = ({
             if (studentFilter.shuttle === 'yes' && !isShuttle) return false;
             if (studentFilter.shuttle === 'no' && isShuttle) return false;
         }
+        if (studentFilter.attendance && studentFilter.attendance !== 'all' && weeklyAbsent) {
+            const isLate = weeklyAbsent.late.has(student.name);
+            const isAbsent = weeklyAbsent.absent.has(student.name);
+            if (studentFilter.attendance === 'late' && !isLate) return false;
+            if (studentFilter.attendance === 'absent' && !isAbsent) return false;
+            if (studentFilter.attendance === 'late_absent' && !isLate && !isAbsent) return false;
+        }
         return true;
-    }, [studentFilter, shuttleStudentNames, cls.subject]);
+    }, [studentFilter, shuttleStudentNames, cls.subject, weeklyAbsent]);
 
     // 학생이 병합된 모든 요일에 등원하는지 확인
     const isStudentAttendingAllMergedDays = (student: any): boolean => {

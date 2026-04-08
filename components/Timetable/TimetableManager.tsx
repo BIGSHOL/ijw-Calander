@@ -15,6 +15,7 @@ import { useStudentDragDrop } from './Math/hooks/useStudentDragDrop';
 import { useMathClassStudents } from './Math/hooks/useMathClassStudents';
 import { useStudents } from '../../hooks/useStudents';
 import { useShuttleNames } from '../../hooks/useShuttleNames';
+import { useWeeklyAbsentStudents } from '../../hooks/useWeeklyAbsentStudents';
 import { UnifiedStudent } from '../../types';
 import TimetableHeader from './Math/components/TimetableHeader';
 import TimetableGrid from './Math/components/TimetableGrid';
@@ -147,8 +148,8 @@ interface MathTimetableContentProps {
     roomFilter?: { main: boolean; barun: boolean; godeung: boolean };
     onRoomFilterChange?: (type: 'main' | 'barun' | 'godeung', value: boolean) => void;
     // 학생 필터
-    studentFilter?: { schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no' };
-    onStudentFilterChange?: (filter: { schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no' }) => void;
+    studentFilter?: { schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no'; attendance?: 'all' | 'late' | 'absent' | 'late_absent' };
+    onStudentFilterChange?: (filter: { schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no'; attendance?: 'all' | 'late' | 'absent' | 'late_absent' }) => void;
     shuttleStudentNames?: Set<string>;
     // 통합뷰 설정 (외부에서 전달)
     mathIntegrationSettings: MathIntegrationSettings;
@@ -786,6 +787,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     studentFilter={studentFilter}
                     onStudentFilterChange={onStudentFilterChange}
                     shuttleStudentNames={shuttleStudentNames}
+                    weeklyAbsent={weeklyAbsent}
                     hiddenTeachers={mathIntegrationSettings.hiddenTeachers || []}
                     onToggleTeacherHidden={(teacher: string) => {
                         const current = mathIntegrationSettings.hiddenTeachers || [];
@@ -838,6 +840,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
                         studentFilter={studentFilter}
                         shuttleStudentNames={shuttleStudentNames}
+                        weeklyAbsent={weeklyAbsent}
                     />
                 </div>
                 )}
@@ -884,6 +887,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
                         studentFilter={studentFilter}
                         shuttleStudentNames={shuttleStudentNames}
+                        weeklyAbsent={weeklyAbsent}
                     />
                 </div>
                 )}
@@ -953,6 +957,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         pendingExcelEnrollments={pendingExcelEnrollments.length > 0 ? pendingExcelEnrollments : undefined}
                         studentFilter={studentFilter}
                         shuttleStudentNames={shuttleStudentNames}
+                        weeklyAbsent={weeklyAbsent}
                     />
                 </div>
                 )}
@@ -1408,9 +1413,10 @@ const TimetableManager = ({
         });
     }, []);
 
-    // 학생 필터 (학교/학년/셔틀)
+    // 학생 필터 (학교/학년/셔틀/출석)
     const { data: shuttleStudentNames } = useShuttleNames();
-    const [studentFilter, setStudentFilter] = useState<{ schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no' }>({ schools: [], grades: [], shuttle: 'all' });
+    const { data: weeklyAbsent } = useWeeklyAbsentStudents(currentMonday);
+    const [studentFilter, setStudentFilter] = useState<{ schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no'; attendance?: 'all' | 'late' | 'absent' | 'late_absent' }>({ schools: [], grades: [], shuttle: 'all' });
 
     // 과목 변경 시 보기설정(필터) 초기화
     const prevSubjectRef = React.useRef(subjectTab);

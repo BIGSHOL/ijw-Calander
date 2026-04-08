@@ -357,6 +357,34 @@ export async function fetchAllLatestReports(): Promise<Map<string, EdutrixReport
 }
 
 /**
+ * 특정 주차의 지각/결석 학생 이름 Set 반환 (수학+고등수학)
+ */
+export async function fetchWeeklyAbsentStudents(weekStart: string, weekEnd: string): Promise<{ late: Set<string>; absent: Set<string> }> {
+    const late = new Set<string>();
+    const absent = new Set<string>();
+    if (!supabase) return { late, absent };
+
+    // reports + hs_reports 모두 조회
+    for (const table of ['reports', 'hs_reports'] as const) {
+        const { data } = await supabase
+            .from(table)
+            .select('lateness, students(name)')
+            .gte('date', weekStart)
+            .lte('date', weekEnd)
+            .not('lateness', 'is', null);
+
+        (data || []).forEach((row: any) => {
+            const name = row.students?.name;
+            if (!name) return;
+            const val = mapReportToAttendanceValue(row.lateness);
+            if (val === 0) absent.add(name);
+            else if (val === 2) late.add(name);
+        });
+    }
+    return { late, absent };
+}
+
+/**
  * 보고서의 lateness 필드를 출석 numeric 값으로 변환합니다.
  * IJW 출석 시스템: 0=결석, 1=출석, 2=지각
  */

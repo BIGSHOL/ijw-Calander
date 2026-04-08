@@ -95,6 +95,7 @@ interface TimetableGridProps {
     // 학생 필터
     studentFilter?: { schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no' };
     shuttleStudentNames?: Set<string>;
+    weeklyAbsent?: { late: Set<string>; absent: Set<string> };
 }
 
 const TimetableGrid: React.FC<TimetableGridProps> = ({
@@ -155,6 +156,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     isUnifiedTable,
     studentFilter,
     shuttleStudentNames,
+    weeklyAbsent,
 }) => {
     // 주차 기준일: 미래 주 → weekStart, 이번 주 → today, 과거 주 → weekEnd(일요일)
     const referenceDate = useMemo(() => {
@@ -483,7 +485,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     pendingExcelDeleteIds={pendingExcelDeleteIds}
                     pendingExcelEnrollments={pendingExcelEnrollments}
                     studentFilter={studentFilter}
-                    shuttleStudentNames={shuttleStudentNames}
+                    shuttleStudentNames={shuttleStudentNames} weeklyAbsent={weeklyAbsent}
                 />
             );
         };
@@ -1296,7 +1298,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                     pendingExcelDeleteIds={pendingExcelDeleteIds}
                                                                     pendingExcelEnrollments={pendingExcelEnrollments}
                                                                     studentFilter={studentFilter}
-                                                                    shuttleStudentNames={shuttleStudentNames}
+                                                                    shuttleStudentNames={shuttleStudentNames} weeklyAbsent={weeklyAbsent}
                                                                 />
                                                             ))
                                                         );
@@ -1472,7 +1474,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     pendingExcelDeleteIds={pendingExcelDeleteIds}
                     pendingExcelEnrollments={pendingExcelEnrollments}
                     studentFilter={studentFilter}
-                    shuttleStudentNames={shuttleStudentNames}
+                    shuttleStudentNames={shuttleStudentNames} weeklyAbsent={weeklyAbsent}
                                                                             />
                                                                         ))
                                                                     )}
@@ -1610,7 +1612,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     pendingExcelDeleteIds={pendingExcelDeleteIds}
                     pendingExcelEnrollments={pendingExcelEnrollments}
                     studentFilter={studentFilter}
-                    shuttleStudentNames={shuttleStudentNames}
+                    shuttleStudentNames={shuttleStudentNames} weeklyAbsent={weeklyAbsent}
                                                                     />
                                                                 ))
                                                             )}
@@ -1700,7 +1702,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                 mode={mode} onCancelScheduledEnrollment={onCancelScheduledEnrollment}
                 onWithdrawalDrop={onWithdrawalDrop}
                 pendingExcelDeleteIds={pendingExcelDeleteIds} pendingExcelEnrollments={pendingExcelEnrollments}
-                studentFilter={studentFilter} shuttleStudentNames={shuttleStudentNames}
+                studentFilter={studentFilter} shuttleStudentNames={shuttleStudentNames} weeklyAbsent={weeklyAbsent}
             />
         );
 
@@ -2034,7 +2036,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     pendingExcelDeleteIds={pendingExcelDeleteIds}
                     pendingExcelEnrollments={pendingExcelEnrollments}
                     studentFilter={studentFilter}
-                    shuttleStudentNames={shuttleStudentNames}
+                    shuttleStudentNames={shuttleStudentNames} weeklyAbsent={weeklyAbsent}
                     fillCell={cardFillCell}
                 />
             );

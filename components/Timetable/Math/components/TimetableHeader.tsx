@@ -169,9 +169,10 @@ interface TimetableHeaderProps {
     roomFilter?: { main: boolean; barun: boolean; godeung: boolean };
     onRoomFilterChange?: (type: 'main' | 'barun' | 'godeung', value: boolean) => void;
     // 학생 필터
-    studentFilter?: { schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no' };
-    onStudentFilterChange?: (filter: { schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no' }) => void;
+    studentFilter?: { schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no'; attendance?: 'all' | 'late' | 'absent' | 'late_absent' };
+    onStudentFilterChange?: (filter: { schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no'; attendance?: 'all' | 'late' | 'absent' | 'late_absent' }) => void;
     shuttleStudentNames?: Set<string>;
+    weeklyAbsent?: { late: Set<string>; absent: Set<string> };
     // 강사 숨김 필터
     hiddenTeachers?: string[];
     onToggleTeacherHidden?: (teacher: string) => void;
@@ -246,6 +247,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     studentFilter,
     onStudentFilterChange,
     shuttleStudentNames,
+    weeklyAbsent,
     hiddenTeachers = [],
     onToggleTeacherHidden,
 }) => {
@@ -1016,11 +1018,33 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                         </div>
                                     )}
 
+                                    {/* === 출석 필터 (지각/결석) === */}
+                                    {onStudentFilterChange && studentFilter && weeklyAbsent && (weeklyAbsent.late.size > 0 || weeklyAbsent.absent.size > 0) && (
+                                        <div className="px-3 py-2 border-b border-gray-100">
+                                            <div className="text-xxs font-bold text-gray-600 mb-2">출석 필터 (이번 주)</div>
+                                            <div className="flex flex-wrap gap-1">
+                                                {([
+                                                    { val: 'all' as const, label: '전체', color: 'bg-gray-100 text-gray-600 border-gray-300' },
+                                                    { val: 'late' as const, label: `지각 (${weeklyAbsent.late.size})`, color: 'bg-orange-500 text-white border-orange-500' },
+                                                    { val: 'absent' as const, label: `결석 (${weeklyAbsent.absent.size})`, color: 'bg-red-500 text-white border-red-500' },
+                                                    { val: 'late_absent' as const, label: '지각+결석', color: 'bg-purple-500 text-white border-purple-500' },
+                                                ] as const).map(({ val, label, color }) => (
+                                                    <button key={val}
+                                                        onClick={() => onStudentFilterChange({ ...studentFilter, attendance: val })}
+                                                        className={`py-0.5 px-1.5 rounded text-xxs border ${
+                                                            (studentFilter.attendance || 'all') === val ? color : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                                                        }`}
+                                                    >{label}</button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* 필터 초기화 */}
-                                    {onStudentFilterChange && studentFilter && (studentFilter.schools.length > 0 || studentFilter.grades.length > 0 || studentFilter.shuttle !== 'all') && (
+                                    {onStudentFilterChange && studentFilter && (studentFilter.schools.length > 0 || studentFilter.grades.length > 0 || studentFilter.shuttle !== 'all' || (studentFilter.attendance && studentFilter.attendance !== 'all')) && (
                                         <div className="px-3 py-1 border-b border-gray-100">
                                             <button
-                                                onClick={() => onStudentFilterChange({ schools: [], grades: [], shuttle: 'all' })}
+                                                onClick={() => onStudentFilterChange({ schools: [], grades: [], shuttle: 'all', attendance: 'all' })}
                                                 className="text-xxs text-red-500 hover:text-red-700 underline"
                                             >
                                                 필터 초기화
