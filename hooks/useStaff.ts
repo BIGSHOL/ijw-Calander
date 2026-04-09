@@ -15,6 +15,8 @@ import {
   where,
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
+import { getApp } from 'firebase/app';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { StaffMember } from '../types';
 
 export const COL_STAFF = 'staff';
@@ -233,11 +235,15 @@ export function useStaff() {
     },
   });
 
-  // Delete staff mutation
+  // Delete staff mutation (Cloud Function으로 Auth 계정까지 완전 삭제)
   const deleteStaffMutation = useMutation({
     mutationFn: async (id: string) => {
-      const docRef = doc(db, COL_STAFF, id);
-      await deleteDoc(docRef);
+      const fns = getFunctions(getApp(), 'asia-northeast3');
+      const deleteStaffAccount = httpsCallable<{ staffId: string }, { success: boolean; message: string }>(fns, 'deleteStaffAccount');
+      const result = await deleteStaffAccount({ staffId: id });
+      if (!result.data.success) {
+        throw new Error(result.data.message);
+      }
       return id;
     },
     onSuccess: () => {

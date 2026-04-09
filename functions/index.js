@@ -1396,6 +1396,114 @@ exports.linkOrCreateStaffAccount = functions
     });
 
 /**
+ * Cloud Function: 직원 삭제 (Firebase Auth 계정 + staffIndex + staff 문서)
+ * 관리자만 호출 가능. Firebase Auth 계정까지 완전 삭제하여 재로그인 차단.
+ *
+ * @param {string} staffId - staff 문서 ID
+ * @returns {{ success: boolean, message: string }}
+ */
+exports.deleteStaffAccount = functions
+    .region("asia-northeast3")
+    .https.onCall(async (data, context) => {
+        const logger = functions.logger;
+
+        // 1. 인증 확인
+        if (!context.auth) {
+            throw new functions.https.HttpsError(
+                "unauthenticated",
+                "로그인이 필요합니다."
+            );
+        }
+
+        const callerUid = context.auth.uid;
+
+        // 2. 호출자 권한 확인
+        const callerSnap = await db.collection("staff")
+            .where("uid", "==", callerUid)
+            .limit(1)
+            .get();
+        if (callerSnap.empty) {
+            throw new functions.https.HttpsError(
+                "permission-denied",
+                "사용자 정보를 찾을 수 없습니다."
+            );
+        }
+
+        const callerData = callerSnap.docs[0].data();
+        const callerRole = callerData.systemRole || callerData.role;
+        if (!["master", "admin"].includes(callerRole)) {
+            throw new functions.https.HttpsError(
+                "permission-denied",
+                "직원 삭제 권한이 없습니다. (관리자만 가능)"
+            );
+        }
+
+        // 3. 입력 검증
+        const { staffId } = data;
+        if (!staffId || typeof staffId !== "string") {
+            throw new functions.https.HttpsError(
+                "invalid-argument",
+                "직원 ID가 필요합니다."
+            );
+        }
+
+        // 4. staff 문서 조회
+        const staffRef = db.collection("staff").doc(staffId);
+        const staffDoc = await staffRef.get();
+        if (!staffDoc.exists) {
+            throw new functions.https.HttpsError(
+                "not-found",
+                "직원 정보를 찾을 수 없습니다."
+            );
+        }
+
+        const staffData = staffDoc.data();
+        const targetUid = staffData.uid;
+
+        // 5. 자기 자신 삭제 방지
+        if (targetUid === callerUid) {
+            throw new functions.https.HttpsError(
+                "failed-precondition",
+                "자기 자신은 삭제할 수 없습니다."
+            );
+        }
+
+        const batch = db.batch();
+
+        // 6. staffIndex 삭제
+        if (targetUid) {
+            const indexRef = db.collection("staffIndex").doc(targetUid);
+            batch.delete(indexRef);
+        }
+
+        // 7. staff 문서 삭제
+        batch.delete(staffRef);
+
+        await batch.commit();
+
+        // 8. Firebase Auth 계정 삭제 (uid가 있는 경우만)
+        if (targetUid) {
+            try {
+                await admin.auth().deleteUser(targetUid);
+                logger.info(`[deleteStaffAccount] Deleted Auth account uid:${targetUid} by ${callerUid}`);
+            } catch (authError) {
+                // Auth 계정이 이미 없는 경우는 무시
+                if (authError.code !== "auth/user-not-found") {
+                    logger.error(`[deleteStaffAccount] Auth delete failed:`, authError);
+                    // Firestore는 이미 삭제됨. Auth 실패는 경고만
+                }
+            }
+        }
+
+        logger.info(`[deleteStaffAccount] Deleted staff ${staffId} (uid:${targetUid || 'none'}) by ${callerUid}`);
+
+        return {
+            success: true,
+            message: "직원 계정이 완전히 삭제되었습니다."
+        };
+    });
+
+/**
  * Cloud Function: 서버 측 전화번호 암호화
  * 클라이언트에 암호화 키를 노출하지 않고 서버에서 암호화 수행
  *
