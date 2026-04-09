@@ -62,6 +62,7 @@ interface MathTimetableContentProps {
     scheduledMovesCount: number;
     scheduledStudentDates?: Map<string, string>;  // studentId → scheduledDate (시뮬레이션 드래그 차단용)
     pendingMovedStudentIds?: Set<string>;
+    pendingMoveFromMap?: Map<string, Set<string>>;  // classId → 출발지 학생 IDs
     pendingMoveSchedules?: Map<string, string | undefined>;  // studentId → scheduledDate (툴팁용)
     handleSavePendingMoves: () => void;
     handleCancelPendingMoves: () => void;
@@ -172,6 +173,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     scheduledMovesCount,
     scheduledStudentDates,
     pendingMovedStudentIds,
+    pendingMoveFromMap,
     pendingMoveSchedules,
     handleSavePendingMoves,
     handleCancelPendingMoves,
@@ -836,7 +838,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         weekdayGroupOrder={mathConfig.weekdayGroupOrder}
                         classKeywords={classKeywords}
                         onStudentClick={handleStudentClick}
-                        pendingMovedStudentIds={pendingMovedStudentIds}
+                        pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap}
                         pendingMoveSchedules={pendingMoveSchedules}
                         onCancelScheduledEnrollment={!isScenarioMode ? onCancelScheduledEnrollment : undefined}
                         onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
@@ -883,7 +885,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         weekdayGroupOrder={mathConfig.weekdayGroupOrder}
                         classKeywords={classKeywords}
                         onStudentClick={handleStudentClick}
-                        pendingMovedStudentIds={pendingMovedStudentIds}
+                        pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap}
                         pendingMoveSchedules={pendingMoveSchedules}
                         onCancelScheduledEnrollment={!isScenarioMode ? onCancelScheduledEnrollment : undefined}
                         onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
@@ -937,7 +939,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         isUnifiedTable={true}
                         classKeywords={classKeywords}
                         onStudentClick={handleStudentClick}
-                        pendingMovedStudentIds={pendingMovedStudentIds}
+                        pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap}
                         pendingMoveSchedules={pendingMoveSchedules}
                         isExcelMode={true}
                         selectedClassId={selectedClassId}
@@ -1771,6 +1773,19 @@ const TimetableManager = ({
         [pendingMoves]
     );
 
+    // 이동 출발지 classId → studentId Set (취소선 표시용)
+    const pendingMoveFromMap = useMemo(() => {
+        if (pendingMoves.length === 0) return undefined;
+        const map = new Map<string, Set<string>>();
+        pendingMoves.forEach(m => {
+            if (m.fromClassId !== m.toClassId) { // 다른 반으로 이동한 경우만
+                if (!map.has(m.fromClassId)) map.set(m.fromClassId, new Set());
+                map.get(m.fromClassId)!.add(m.studentId);
+            }
+        });
+        return map;
+    }, [pendingMoves]);
+
     // 예정일 스케줄 Map (studentId → scheduledDate, 툴팁 표시용)
     const pendingMoveSchedules = useMemo(() => {
         if (pendingMoves.length === 0) return undefined;
@@ -2054,7 +2069,7 @@ const TimetableManager = ({
                 pendingMovesCount={pendingMoves.length}
                 scheduledMovesCount={scheduledMovesCount}
                 scheduledStudentDates={scheduledStudentDates}
-                pendingMovedStudentIds={pendingMovedStudentIds}
+                pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap}
                 pendingMoveSchedules={pendingMoveSchedules}
                 handleSavePendingMoves={handleSavePendingMoves}
                 handleCancelPendingMoves={handleCancelPendingMoves}

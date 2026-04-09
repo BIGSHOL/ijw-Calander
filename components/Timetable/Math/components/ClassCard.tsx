@@ -25,6 +25,7 @@ interface StudentItemProps {
     enrollmentStyle: { bg: string; text: string } | null;
     themeText: string;
     isPendingMoved?: boolean;
+    isPendingMovedFrom?: boolean;  // 이동 출발지 (취소선 표시)
     pendingScheduledDate?: string;  // 예정일 (있으면 툴팁에 표시)
     isTransferScheduled?: boolean;  // 반이동예정 (미래 withdrawalDate + isTransferred)
     transferScheduledDate?: string;  // 반이동예정일
@@ -61,6 +62,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
     enrollmentStyle,
     themeText,
     isPendingMoved = false,
+    isPendingMovedFrom = false,
     pendingScheduledDate,
     isTransferScheduled = false,
     transferScheduledDate,
@@ -154,7 +156,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
             ${isPendingExcelDelete ? '!bg-red-200 !text-red-500 line-through opacity-50' : ''}
             ${isExcelMode && !isPendingExcelDelete ? 'cursor-pointer select-none' : isDraggable ? 'cursor-grab' : isClickable ? 'cursor-pointer' : ''}
             ${!isPendingExcelDelete && isStudentSelected ? '!bg-blue-200 !text-blue-900 font-bold ring-1 ring-blue-400' : !isPendingExcelDelete && isCutStudent ? '!bg-amber-100 !text-amber-800 ring-1 ring-dashed ring-amber-400 opacity-70' : !isPendingExcelDelete && isCopiedStudent ? '!bg-green-100 !text-green-800 ring-1 ring-green-400' : ''}
-            ${!isPendingExcelDelete && !isStudentSelected && !isCutStudent && !isCopiedStudent ? (isPendingMoved ? 'bg-purple-400 text-white font-bold' : isTransferScheduled ? 'bg-purple-200 text-purple-800 font-bold' : isWithdrawalScheduled ? 'bg-orange-100 text-orange-800 line-through' : isAcHighlighted ? '!bg-red-200 !text-red-700 font-bold ring-2 ring-red-400 animate-pulse' : isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText) : ''}
+            ${!isPendingExcelDelete && !isStudentSelected && !isCutStudent && !isCopiedStudent ? (isPendingMovedFrom ? 'bg-gray-200 text-gray-400 line-through opacity-60' : isPendingMoved ? 'bg-purple-400 text-white font-bold' : isTransferScheduled ? 'bg-purple-200 text-purple-800 font-bold' : isWithdrawalScheduled ? 'bg-orange-100 text-orange-800 line-through' : isAcHighlighted ? '!bg-red-200 !text-red-700 font-bold ring-2 ring-red-400 animate-pulse' : isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText) : ''}
             ${!isPendingExcelDelete && !isStudentSelected && !isCutStudent && !isCopiedStudent && !isPendingMoved && !isTransferScheduled && !isWithdrawalScheduled && !isHighlighted && !enrollmentStyle ? 'opacity-80' : ''}`}
             style={hoverStyle}
             title={
@@ -228,6 +230,7 @@ interface ClassCardProps {
     showHoldStudents?: boolean;  // 대기 학생 표시 여부
     showWithdrawnStudents?: boolean;  // 퇴원 학생 표시 여부
     pendingMovedStudentIds?: Set<string>;  // 드래그 이동 대기 중인 학생 ID
+    pendingMoveFromMap?: Map<string, Set<string>>;  // classId → 출발지 학생 IDs
     pendingMoveSchedules?: Map<string, string | undefined>;  // studentId → scheduledDate
     mergedClasses?: TimetableClass[];  // 합반수업: 같은 슬롯의 모든 수업 목록
     showMergedLabel?: boolean;  // 반반 레이아웃용 합반 라벨 표시
@@ -291,6 +294,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
     showHoldStudents = true,
     showWithdrawnStudents = true,
     pendingMovedStudentIds,
+    pendingMoveFromMap,
     pendingMoveSchedules,
     mergedClasses,
     showMergedLabel = false,
@@ -1273,6 +1277,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             enrollmentStyle={enrollmentStyle}
                                             themeText={theme.studentText || 'text-gray-800'}
                                             isPendingMoved={pendingMovedStudentIds?.has(s.id)}
+                                            isPendingMovedFrom={!!pendingMoveFromMap?.get(cls.id)?.has(s.id)}
                                             pendingScheduledDate={pendingMoveSchedules?.get(s.id) || undefined}
                                             isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
                                             transferScheduledDate={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
@@ -1361,6 +1366,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                 enrollmentStyle={enrollmentStyle}
                                                                 themeText={theme.studentText || 'text-gray-800'}
                                                                 isPendingMoved={pendingMovedStudentIds?.has(s.id)}
+                                            isPendingMovedFrom={!!pendingMoveFromMap?.get(cls.id)?.has(s.id)}
                                                                 pendingScheduledDate={pendingMoveSchedules?.get(s.id) || undefined}
                                                                 isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
                                                                 transferScheduledDate={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
@@ -1573,6 +1579,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             enrollmentStyle={enrollmentStyle}
                                             themeText={theme.studentText || 'text-gray-800'}
                                             isPendingMoved={pendingMovedStudentIds?.has(s.id)}
+                                            isPendingMovedFrom={!!pendingMoveFromMap?.get(cls.id)?.has(s.id)}
                                             pendingScheduledDate={pendingMoveSchedules?.get(s.id) || undefined}
                                             isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
                                             transferScheduledDate={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}

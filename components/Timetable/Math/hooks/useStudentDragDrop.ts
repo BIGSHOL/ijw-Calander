@@ -203,9 +203,8 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
 
         setLocalClasses(prev => prev.map(cls => {
             if (cls.id === fromClassId) {
-                const newIds = (cls.studentIds || []).filter(id => id !== studentId);
-                const newStudentList = (cls.studentList || []).filter(s => s.id !== studentId);
-                return { ...cls, studentIds: newIds, studentList: newStudentList };
+                // 이전 위치: 학생 제거하지 않고 유지 (취소선으로 표시됨)
+                return cls;
             }
             if (cls.id === toClassId) {
                 const newIds = [...(cls.studentIds || [])];

@@ -96,6 +96,7 @@ interface TimetableGridProps {
     studentFilter?: { schools: string[]; grades: string[]; shuttle: 'all' | 'yes' | 'no' };
     shuttleStudentNames?: Set<string>;
     weeklyAbsent?: { late: Set<string>; absent: Set<string> };
+    pendingMoveFromMap?: Map<string, Set<string>>;
 }
 
 const TimetableGrid: React.FC<TimetableGridProps> = ({
@@ -157,6 +158,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     studentFilter,
     shuttleStudentNames,
     weeklyAbsent,
+    pendingMoveFromMap,
 }) => {
     // 주차 기준일: 미래 주 → weekStart, 이번 주 → today, 과거 주 → weekEnd(일요일)
     const referenceDate = useMemo(() => {
@@ -456,7 +458,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     cellSizePx={cellSizePx}
                     showHoldStudents={showHoldStudents}
                     showWithdrawnStudents={showWithdrawnStudents}
-                    pendingMovedStudentIds={pendingMovedStudentIds}
+                    pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap}
                     pendingMoveSchedules={pendingMoveSchedules}
                     mergedClasses={mergedClassesForCard}
                     showMergedLabel={!!mergedClassesForCard}
@@ -1271,7 +1273,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                     cellSizePx={cellSizePx}
                                                                     showHoldStudents={showHoldStudents}
                                                                     showWithdrawnStudents={showWithdrawnStudents}
-                                                                    pendingMovedStudentIds={pendingMovedStudentIds}
+                                                                    pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap}
                                                                     pendingMoveSchedules={pendingMoveSchedules}
                                                                     latestTextbook={getLatestTextbook(cls)}
                                                                     latestReports={latestReports}
@@ -1448,7 +1450,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 cellSizePx={cellSizePx}
                                                                                 showHoldStudents={showHoldStudents}
                                                                                 showWithdrawnStudents={showWithdrawnStudents}
-                                                                                pendingMovedStudentIds={pendingMovedStudentIds}
+                                                                                pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap}
                                                                                 pendingMoveSchedules={pendingMoveSchedules}
                                                                                 latestTextbook={getLatestTextbook(cls)}
                     latestReports={latestReports}
@@ -1586,7 +1588,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 cellSizePx={cellSizePx}
                                                                         showHoldStudents={showHoldStudents}
                                                                         showWithdrawnStudents={showWithdrawnStudents}
-                                                                        pendingMovedStudentIds={pendingMovedStudentIds}
+                                                                        pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap}
                                                                         pendingMoveSchedules={pendingMoveSchedules}
                                                                         latestTextbook={getLatestTextbook(cls)}
                     latestReports={latestReports}
@@ -1688,7 +1690,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                 onStudentClick={onStudentClick} currentDay={day}
                 fontSize={fontSize} rowHeight={rowHeight} cellSizePx={cellSizePx}
                 showHoldStudents={showHoldStudents} showWithdrawnStudents={showWithdrawnStudents}
-                pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveSchedules={pendingMoveSchedules}
+                pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap} pendingMoveSchedules={pendingMoveSchedules}
                 latestTextbook={getLatestTextbook(cls)} latestReports={latestReports}
                 studentTextbookMap={byStudentName} referenceDate={referenceDate}
                 isExcelMode={isExcelMode} isSelected={selectedClassId === cls.id}
@@ -2019,7 +2021,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     mergedDays={colSpan > 1 ? mergedDays : undefined}
                     fontSize={fontSize} rowHeight={rowHeight} cellSizePx={cellSizePx}
                     showHoldStudents={showHoldStudents} showWithdrawnStudents={showWithdrawnStudents}
-                    pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveSchedules={pendingMoveSchedules}
+                    pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap} pendingMoveSchedules={pendingMoveSchedules}
                     mergedClasses={mergedClassesForCard} showMergedLabel={!!mergedClassesForCard}
                     latestTextbook={getLatestTextbook(cls)} latestReports={latestReports}
                     studentTextbookMap={byStudentName} referenceDate={referenceDate}
