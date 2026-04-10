@@ -68,8 +68,8 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
     phone: '',
     role: 'teacher' as StaffMember['role'],
     jobTitle: '', // 호칭 (예: 대표, 팀장, 선생님)
-    subjects: [] as ('math' | 'english' | 'highmath')[],
-    departments: ['math', 'highmath', 'english'] as ('math' | 'highmath' | 'english')[],
+    subjects: [] as ('math' | 'english' | 'highmath' | 'science' | 'korean')[],
+    departments: ['math', 'highmath', 'english', 'science', 'korean'] as ('math' | 'highmath' | 'english' | 'science' | 'korean')[],
     hireDate: formatDateKey(new Date()),
     status: 'active' as StaffMember['status'],
     memo: '',
@@ -99,7 +99,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
         role: staff.role || 'teacher',
         jobTitle: staff.jobTitle || '',
         subjects: staff.subjects || [],
-        departments: staff.departments || ['math', 'highmath', 'english'],
+        departments: staff.departments || ['math', 'highmath', 'english', 'science', 'korean'],
         hireDate: staff.hireDate || formatDateKey(new Date()),
         status: staff.status || 'active',
         memo: staff.memo || '',
@@ -137,7 +137,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubjectToggle = (subject: 'math' | 'english' | 'highmath') => {
+  const handleSubjectToggle = (subject: 'math' | 'english' | 'highmath' | 'science' | 'korean') => {
     setFormData((prev) => {
       const subjects = prev.subjects.includes(subject)
         ? prev.subjects.filter((s) => s !== subject)
@@ -146,7 +146,7 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
     });
   };
 
-  const handleDepartmentToggle = (dept: 'math' | 'highmath' | 'english') => {
+  const handleDepartmentToggle = (dept: 'math' | 'highmath' | 'english' | 'science' | 'korean') => {
     setFormData((prev) => {
       const departments = prev.departments.includes(dept)
         ? prev.departments.filter((d) => d !== dept)
@@ -514,6 +514,28 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
               >
                 영어
               </button>
+              <button
+                type="button"
+                onClick={() => handleSubjectToggle('science')}
+                className={`flex-1 py-1.5 px-3 rounded-sm border-2 text-sm transition-colors ${
+                  formData.subjects.includes('science')
+                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700 font-medium'
+                    : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                }`}
+              >
+                과학
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSubjectToggle('korean')}
+                className={`flex-1 py-1.5 px-3 rounded-sm border-2 text-sm transition-colors ${
+                  formData.subjects.includes('korean')
+                    ? 'border-red-500 bg-red-50 text-red-700 font-medium'
+                    : 'border-gray-300 text-gray-600 hover:border-gray-400'
+                }`}
+              >
+                국어
+              </button>
             </div>
           </div>
 
@@ -556,6 +578,28 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                 }`}
               >
                 영어
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDepartmentToggle('science')}
+                className={`flex-1 py-1.5 px-3 rounded-sm border-2 text-sm transition-colors ${
+                  formData.departments.includes('science')
+                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700 font-medium'
+                    : 'border-gray-300 text-gray-400 line-through hover:border-gray-400'
+                }`}
+              >
+                과학
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDepartmentToggle('korean')}
+                className={`flex-1 py-1.5 px-3 rounded-sm border-2 text-sm transition-colors ${
+                  formData.departments.includes('korean')
+                    ? 'border-red-500 bg-red-50 text-red-700 font-medium'
+                    : 'border-gray-300 text-gray-400 line-through hover:border-gray-400'
+                }`}
+              >
+                국어
               </button>
             </div>
           </div>

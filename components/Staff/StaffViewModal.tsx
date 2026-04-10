@@ -4,7 +4,7 @@ import { StaffMember, STAFF_ROLE_LABELS, STAFF_STATUS_LABELS, ROLE_LABELS, UserR
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { auth } from '../../firebaseConfig';
-import { SUBJECT_COLORS, SubjectType } from '../../utils/styleUtils';
+import { SUBJECT_COLORS, SUBJECT_LABELS, SubjectType } from '../../utils/styleUtils';
 import StaffClassHistory from './StaffClassHistory';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
@@ -437,7 +437,7 @@ const StaffViewModal: React.FC<StaffViewModalProps> = ({ staff, onClose, onEdit,
                           SUBJECT_COLORS[subject as SubjectType]?.badge || SUBJECT_COLORS.other.badge
                         }`}
                       >
-                        {subject === 'math' ? '수학' : subject === 'highmath' ? '고등수학' : '영어'}
+                        {SUBJECT_LABELS[subject as SubjectType] || subject}
                       </span>
                     ))}
                   </div>

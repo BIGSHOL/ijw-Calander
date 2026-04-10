@@ -26,7 +26,7 @@ export interface StaffMember {
   email?: string;
   phone?: string;
   role: 'teacher' | 'admin' | 'staff' | '강사';
-  subjects?: ('math' | 'english' | 'highmath')[];
+  subjects?: ('math' | 'english' | 'highmath' | 'science' | 'korean')[];
   hireDate: string;
   status: 'active' | 'inactive' | 'resigned';
   workSchedule?: WeeklySchedule;
@@ -44,7 +44,7 @@ export interface StaffMember {
   jobTitle?: string;               // 호칭
 
   // === 소속 (시간표/학생관리 가시성 제어) ===
-  departments?: ('math' | 'highmath' | 'english')[];  // 기본값: ['math', 'highmath', 'english']
+  departments?: ('math' | 'highmath' | 'english' | 'science' | 'korean')[];  // 기본값: ['math', 'highmath', 'english', 'science', 'korean']
 
   // === 지출결의서 역할 (마스터가 설정) ===
   expenseRole?: '' | 'director' | 'ceo' | 'executor';  // 미지정 / 원장 / 대표 / 집행자

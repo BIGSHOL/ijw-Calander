@@ -12,7 +12,20 @@ const DEPARTMENT_OPTIONS = [
   { key: 'math' as const, label: '수학(본원)', color: 'bg-blue-100 text-blue-700' },
   { key: 'highmath' as const, label: '수학(고등관)', color: 'bg-indigo-100 text-indigo-700' },
   { key: 'english' as const, label: '영어', color: 'bg-pink-100 text-pink-700' },
+  { key: 'science' as const, label: '과학', color: 'bg-emerald-100 text-emerald-700' },
+  { key: 'korean' as const, label: '국어', color: 'bg-red-100 text-red-700' },
 ];
+
+const SUBJECT_LABEL_MAP: Record<string, string> = {
+  math: '수학', highmath: '고등수학', english: '영어', science: '과학', korean: '국어',
+};
+const SUBJECT_BADGE_MAP: Record<string, string> = {
+  math: 'bg-blue-100 text-blue-700',
+  highmath: 'bg-purple-100 text-purple-700',
+  english: 'bg-pink-100 text-pink-700',
+  science: 'bg-emerald-100 text-emerald-700',
+  korean: 'bg-red-100 text-red-700',
+};
 
 const StaffList: React.FC<StaffListProps> = ({
   staff,
@@ -189,12 +202,9 @@ const StaffList: React.FC<StaffListProps> = ({
                       {member.subjects?.map((subject) => (
                         <span
                           key={subject}
-                          className={`text-xxs px-1.5 py-0.5 rounded ${subject === 'math'
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-pink-100 text-pink-700'
-                            }`}
+                          className={`text-xxs px-1.5 py-0.5 rounded ${SUBJECT_BADGE_MAP[subject] || 'bg-gray-100 text-gray-700'}`}
                         >
-                          {subject === 'math' ? '수학' : subject === 'highmath' ? '고등수학' : '영어'}
+                          {SUBJECT_LABEL_MAP[subject] || subject}
                         </span>
                       ))}
                       {(!member.subjects || member.subjects.length === 0) && (
@@ -205,7 +215,7 @@ const StaffList: React.FC<StaffListProps> = ({
                   <td className="px-2 py-1.5 whitespace-nowrap text-xs">
                     <div className="flex gap-1">
                       {DEPARTMENT_OPTIONS.map(dept => {
-                        const depts = member.departments || ['math', 'highmath', 'english'];
+                        const depts = member.departments || ['math', 'highmath', 'english', 'science', 'korean'];
                         const isActive = depts.includes(dept.key);
                         return (
                           <span

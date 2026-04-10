@@ -28,7 +28,7 @@ export const TimetableNavBar: React.FC<TimetableNavBarProps> = ({
   setMathViewMode,
   hasPermission,
   setIsTimetableSettingsOpen,
-  userDepartments = ['math', 'highmath', 'english'],
+  userDepartments = ['math', 'highmath', 'english', 'science', 'korean'],
 }) => {
   return (
     <div className="bg-primary h-10 flex items-center px-3 md:px-6 border-b border-gray-700 relative z-30 text-xs overflow-x-auto no-scrollbar">

@@ -8,6 +8,7 @@ interface StaffClassHistoryProps {
 
 const SUBJECT_LABELS: Record<string, string> = {
   math: '수학',
+  highmath: '고등수학',
   english: '영어',
   science: '과학',
   korean: '국어',

@@ -66,7 +66,7 @@ export const useTeachers = (enabled: boolean = true) => {
                         textColor: staff.textColor,
                         order: staff.timetableOrder,
                         defaultRoom: staff.defaultRoom,
-                        departments: staff.departments || ['math', 'highmath', 'english'],
+                        departments: staff.departments || ['math', 'highmath', 'english', 'science', 'korean'],
                     } as Teacher;
                 })
                 .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));

@@ -27,7 +27,7 @@ export default function SubjectControls({
     setMathViewMode,
     hasPermission,
     setIsTimetableSettingsOpen,
-    userDepartments = ['math', 'highmath', 'english'],
+    userDepartments = ['math', 'highmath', 'english', 'science', 'korean'],
     isMaster,
 }: SubjectControlsProps) {
     return (

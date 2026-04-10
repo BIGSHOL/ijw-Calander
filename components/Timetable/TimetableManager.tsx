@@ -1191,11 +1191,11 @@ const TimetableManager = ({
 }: TimetableManagerProps) => {
     const queryClient = useQueryClient();
     // master는 항상 전체 보기 (자동전체보기), 그 외는 소속 기반 필터링
-    const userDepartments: ('math' | 'highmath' | 'english')[] = currentUser?.role === 'master'
-        ? ['math', 'highmath', 'english']
+    const userDepartments: ('math' | 'highmath' | 'english' | 'science' | 'korean')[] = currentUser?.role === 'master'
+        ? ['math', 'highmath', 'english', 'science', 'korean']
         : (currentUser?.departments && currentUser.departments.length > 0
             ? currentUser.departments
-            : ['math', 'highmath', 'english']);
+            : ['math', 'highmath', 'english', 'science', 'korean']);
     const { hasPermission } = usePermissions(currentUser);
     const canEditMath = hasPermission('timetable.math.edit');
     const canEditEnglish = hasPermission('timetable.english.edit');
