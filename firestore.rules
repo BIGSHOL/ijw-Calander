@@ -605,6 +605,14 @@ service cloud.firestore {
       allow delete: if hasRole(['master', 'admin']);
     }
 
+    // === Session Periods (세션/차수 기간 - 외부 앱 공개 읽기) ===
+    // 비인증 외부 앱에서도 세션 기간 조회 가능하도록 공개 읽기 허용
+    match /session_periods/{sessionId} {
+      allow read: if true;
+      allow create, update, delete: if hasRole(['master', 'admin']) ||
+                                        hasPermission('attendance.edit_all');
+    }
+
     // === Attendance Collection (출석 관리) ===
     match /attendance/{attendanceId} {
       allow read: if hasRole(['master', 'admin']) ||
