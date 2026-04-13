@@ -220,18 +220,14 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
             return cls;
         }));
 
-        setPendingMoves(prev => {
-            const next = [...prev, {
-                studentId,
-                fromClassId,
-                toClassId,
-                fromZone,
-                toZone,
-                student: { id: studentId } as TimetableStudent
-            }];
-            console.log('[DragDrop] pendingMoves:', next.length, 'from:', fromClassId, 'to:', toClassId, 'student:', studentId);
-            return next;
-        });
+        setPendingMoves(prev => [...prev, {
+            studentId,
+            fromClassId,
+            toClassId,
+            fromZone,
+            toZone,
+            student: { id: studentId } as TimetableStudent
+        }]);
         draggingStudentRef.current = null;
         setDraggingStudent(null);
     }, []);
@@ -518,12 +514,11 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
             .filter(Boolean) as any[];
         if (movingStudents.length === 0) return;
 
-        // Optimistic UI 업데이트
+        // Optimistic UI 업데이트 (출발지 학생 유지 — 취소선으로 표시)
         setLocalClasses(prev => prev.map(cls => {
             if (cls.id === fromClassId) {
-                const newIds = (cls.studentIds || []).filter(id => !studentIds.includes(id));
-                const newStudentList = (cls.studentList || []).filter(s => !studentIds.includes(s.id));
-                return { ...cls, studentIds: newIds, studentList: newStudentList };
+                // 출발지: 학생 유지 (취소선 표시용)
+                return cls;
             }
             if (cls.id === toClassId) {
                 const newIds = [...(cls.studentIds || [])];

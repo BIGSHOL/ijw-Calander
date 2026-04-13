@@ -364,22 +364,24 @@ export async function fetchWeeklyAbsentStudents(weekStart: string, weekEnd: stri
     const absent = new Set<string>();
     if (!supabase) return { late, absent };
 
-    // reports + hs_reports 모두 조회
-    for (const table of ['reports', 'hs_reports'] as const) {
-        const { data } = await supabase
-            .from(table)
-            .select('lateness, students(name)')
-            .gte('date', weekStart)
-            .lte('date', weekEnd)
-            .not('lateness', 'is', null);
+    // reports 테이블 조회 (hs_reports가 없을 수 있으므로 에러 무시)
+    for (const table of ['reports'] as const) {
+        try {
+            const { data } = await supabase
+                .from(table)
+                .select('lateness, students(name)')
+                .gte('date', weekStart)
+                .lte('date', weekEnd)
+                .not('lateness', 'is', null);
 
-        (data || []).forEach((row: any) => {
-            const name = row.students?.name;
-            if (!name) return;
-            const val = mapReportToAttendanceValue(row.lateness);
-            if (val === 0) absent.add(name);
-            else if (val === 2) late.add(name);
-        });
+            (data || []).forEach((row: any) => {
+                const name = row.students?.name;
+                if (!name) return;
+                const val = mapReportToAttendanceValue(row.lateness);
+                if (val === 0) absent.add(name);
+                else if (val === 2) late.add(name);
+            });
+        } catch { /* table may not exist */ }
     }
     return { late, absent };
 }
