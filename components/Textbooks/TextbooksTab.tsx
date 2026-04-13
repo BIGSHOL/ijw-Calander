@@ -81,9 +81,18 @@ export default function TextbooksTab({ currentUser }: TextbooksTabProps) {
 
   const handleSaveEdit = useCallback(async () => {
     if (editingIdx === null) return;
-    const updated = catalog.map((item, i) =>
-      i === editingIdx ? { ...item, name: editForm.name, price: editForm.price, subject: editForm.subject } : item
-    );
+    const today = new Date().toISOString().split('T')[0];
+    const updated = catalog.map((item, i) => {
+      if (i !== editingIdx) return item;
+      const priceChanged = item.price !== editForm.price;
+      return {
+        ...item,
+        name: editForm.name,
+        price: editForm.price,
+        subject: editForm.subject,
+        ...(priceChanged ? { lastPriceUpdatedAt: today, previousPrice: item.price } : {}),
+      };
+    });
     try {
       await saveCatalog.mutateAsync(updated);
     } catch (err) {
@@ -353,7 +362,18 @@ export default function TextbooksTab({ currentUser }: TextbooksTabProps) {
                               onChange={e => setEditForm(f => ({ ...f, price: Number(e.target.value) }))}
                               className="w-24 px-1.5 py-0.5 text-xs border rounded text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
-                          ) : `${item.price.toLocaleString()}원`}
+                          ) : (
+                            <div className="flex flex-col items-end">
+                              <span>{item.price.toLocaleString()}원</span>
+                              {item.previousPrice != null && item.lastPriceUpdatedAt && (
+                                <span className={`text-[10px] ${item.price > item.previousPrice ? 'text-red-500' : 'text-blue-500'}`}>
+                                  {item.price > item.previousPrice ? '▲' : '▼'}
+                                  {Math.abs(item.price - item.previousPrice).toLocaleString()}원
+                                  <span className="text-gray-400 ml-1">{item.lastPriceUpdatedAt.substring(5)}</span>
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </td>
                         {isAdmin && (
                           <td className="px-3 py-2 text-center">

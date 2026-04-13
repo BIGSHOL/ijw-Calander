@@ -5,6 +5,8 @@ export interface TextbookCatalogItem {
   price: number;
   category: 'elementary' | 'middle' | 'high';
   subject?: string; // 기본값: '수학'
+  lastPriceUpdatedAt?: string; // 마지막 가격 수정일 (YYYY-MM-DD)
+  previousPrice?: number; // 변경 전 가격
 }
 
 export const DEFAULT_SUBJECT = '수학';
