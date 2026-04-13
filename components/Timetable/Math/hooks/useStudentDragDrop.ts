@@ -220,14 +220,18 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
             return cls;
         }));
 
-        setPendingMoves(prev => [...prev, {
-            studentId,
-            fromClassId,
-            toClassId,
-            fromZone,
-            toZone,
-            student: { id: studentId } as TimetableStudent
-        }]);
+        setPendingMoves(prev => {
+            const next = [...prev, {
+                studentId,
+                fromClassId,
+                toClassId,
+                fromZone,
+                toZone,
+                student: { id: studentId } as TimetableStudent
+            }];
+            console.log('[DragDrop] pendingMoves:', next.length, 'from:', fromClassId, 'to:', toClassId, 'student:', studentId);
+            return next;
+        });
         draggingStudentRef.current = null;
         setDraggingStudent(null);
     }, []);
