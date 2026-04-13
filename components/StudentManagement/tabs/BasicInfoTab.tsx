@@ -17,6 +17,7 @@ import {
   CheckSquare,
   ChevronDown,
   Copy,
+  Bus,
 } from 'lucide-react';
 import { useStudents } from '../../../hooks/useStudents';
 
@@ -711,12 +712,102 @@ const BasicInfoTab: React.FC<BasicInfoTabProps> = ({ student, readOnly = false }
         )}
       </div>
 
-      {/* 메모 섹션 */}
-      <div className="bg-white border border-gray-200 overflow-hidden">
+      {/* 등하원 정보 */}
+      <div className="border border-gray-200 overflow-hidden">
         <div
           className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-pointer"
-          onClick={() => setShowMemo(!showMemo)}
+          onClick={() => {}}
         >
+          <div className="flex items-center gap-1">
+            <Bus className="w-3 h-3 text-primary" />
+            <h3 className="text-primary font-bold text-xs">등하원 정보</h3>
+          </div>
+        </div>
+        <div className="p-2 space-y-2">
+          {/* 등원 시간 */}
+          <div>
+            <label className="text-xxs font-medium text-gray-600 mb-1 block">등원 시간</label>
+            {isEditing ? (
+              <select
+                value={formData.arrivalTime ?? ''}
+                onChange={(e) => handleChange('arrivalTime', e.target.value || undefined)}
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-accent"
+              >
+                <option value="">선택 안 함</option>
+                {Array.from({ length: 29 }, (_, i) => {
+                  const h = Math.floor(i / 2) + 9;
+                  const m = i % 2 === 0 ? '00' : '30';
+                  const t = `${h.toString().padStart(2, '0')}:${m}`;
+                  return <option key={t} value={t}>{t}</option>;
+                })}
+              </select>
+            ) : (
+              <span className="text-xs text-primary">{formData.arrivalTime || '-'}</span>
+            )}
+          </div>
+
+          {/* 하원 시간 */}
+          <div>
+            <label className="text-xxs font-medium text-gray-600 mb-1 block">하원 시간</label>
+            {isEditing ? (
+              <select
+                value={formData.departureTime ?? ''}
+                onChange={(e) => handleChange('departureTime', e.target.value || undefined)}
+                className="w-full px-2 py-1 text-xs border border-gray-300 rounded-sm focus:outline-none focus:ring-1 focus:ring-accent"
+              >
+                <option value="">선택 안 함</option>
+                {Array.from({ length: 27 }, (_, i) => {
+                  const h = Math.floor(i / 2) + 10;
+                  const m = i % 2 === 0 ? '00' : '30';
+                  const t = `${h.toString().padStart(2, '0')}:${m}`;
+                  return <option key={t} value={t}>{t}</option>;
+                })}
+              </select>
+            ) : (
+              <span className="text-xs text-primary">{formData.departureTime || '-'}</span>
+            )}
+          </div>
+
+          {/* 특이사항 태그 */}
+          <div>
+            <label className="text-xxs font-medium text-gray-600 mb-1 block">특이사항</label>
+            {isEditing ? (
+              <div className="flex flex-wrap gap-1">
+                {['셔틀탑승', '자가등원', '부모픽업', '도보', '지각잦음', '일찍하원', '늦은하원', '차량이동'].map(tag => {
+                  const tags = formData.transportTags || [];
+                  const isSelected = tags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => {
+                        const newTags = isSelected ? tags.filter((t: string) => t !== tag) : [...tags, tag];
+                        handleChange('transportTags', newTags);
+                      }}
+                      className={`px-1.5 py-0.5 text-xxs rounded border ${isSelected ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'}`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-1">
+                {(formData.transportTags || []).length > 0
+                  ? (formData.transportTags || []).map((tag: string) => (
+                      <span key={tag} className="px-1.5 py-0.5 text-xxs rounded bg-blue-100 text-blue-700">{tag}</span>
+                    ))
+                  : <span className="text-xs text-gray-400">-</span>
+                }
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* 메모 (기존) */}
+      <div className="border border-gray-200 overflow-hidden">
+        <div className="flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-pointer" onClick={() => setShowMemo(!showMemo)}>
           <div className="flex items-center gap-1">
             <FileText className="w-3 h-3 text-primary" />
             <h3 className="text-primary font-bold text-xs">메모</h3>

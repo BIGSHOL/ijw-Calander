@@ -58,6 +58,10 @@ export interface TimetableStudent {
   attendanceDays?: string[]; // 등원 요일 (비어있으면 모든 수업 요일에 등원)
   enrollmentDocId?: string; // Firestore enrollment 문서 ID (실제 문서 참조용)
   isSlotTeacher?: boolean; // 부담임 여부 (수학용)
+  // 등하원 정보
+  arrivalTime?: string; // 등원 시간 (HH:MM)
+  departureTime?: string; // 하원 시간 (HH:MM)
+  transportTags?: string[]; // 등하원 특이사항 태그
 }
 
 export interface TimetableClass {

@@ -176,6 +176,12 @@ const StudentItem: React.FC<StudentItemProps> = ({
                         : '';
                     if (statusInfo) lines += `\n────────\n${statusInfo}`;
                     if (textbookInfo) lines += `\n────────\n${textbookInfo.month} ${textbookInfo.textbookName}`;
+                    // 등하원 정보
+                    const transportParts: string[] = [];
+                    if (student.arrivalTime) transportParts.push(`등원: ${student.arrivalTime}`);
+                    if (student.departureTime) transportParts.push(`하원: ${student.departureTime}`);
+                    if (student.transportTags?.length) transportParts.push(student.transportTags.join(', '));
+                    if (transportParts.length > 0) lines += `\n────────\n🚌 ${transportParts.join(' | ')}`;
                     // 최근 진도 정보
                     if (latestReport && latestReport.progress) {
                         const d = new Date(latestReport.date);

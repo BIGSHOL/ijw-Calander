@@ -255,6 +255,10 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                         transferTo: enrollmentData.transferTo,
                         enrollmentDocId: enrollmentData.enrollmentDocId,
                         isSlotTeacher: enrollmentData.isSlotTeacher || false,
+                        // 등하원 정보 (학생 프로필에서 복사)
+                        arrivalTime: baseStudent.arrivalTime,
+                        departureTime: baseStudent.departureTime,
+                        transportTags: baseStudent.transportTags,
                     } as TimetableStudent;
                 })
                 .filter(Boolean) as TimetableStudent[];
