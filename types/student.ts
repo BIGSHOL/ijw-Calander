@@ -117,6 +117,11 @@ export interface UnifiedStudent {
   overdueSmsPrimary?: boolean;          // 미납문자발송 - 보호자
   overdueSmsOther?: boolean;            // 미납문자발송 - 기타보호자
 
+  // 등하원 정보
+  arrivalTime?: string;                 // 등원 시간 (HH:MM)
+  departureTime?: string;               // 하원 시간 (HH:MM)
+  transportTags?: string[];             // 등하원 특이사항 태그
+
   // 기타 정보
   graduationYear?: string;              // 졸업연도
   customField1?: string;                // 기타항목1
