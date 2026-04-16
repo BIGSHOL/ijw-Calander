@@ -1315,14 +1315,14 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap bg-green-100 text-green-700 border border-dashed border-green-400 flex items-center justify-between group/pending`}
                                         title="저장 대기 중 (X 또는 Del로 취소)"
                                     >
-                                        <span className="truncate">+ {s.name}{showSchool || showGrade ? `/${formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null)}` : ''}</span>
                                         {onCancelPendingEnroll && (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); onCancelPendingEnroll(s.id, cls.className); }}
-                                                className="ml-0.5 text-green-500 hover:text-red-500 opacity-0 group-hover/pending:opacity-100 transition-opacity shrink-0"
+                                                className="mr-0.5 text-green-500 hover:text-red-500 shrink-0 text-[11px] leading-none"
                                                 title="등록 취소"
                                             >×</button>
                                         )}
+                                        <span className="truncate">+ {s.name}{showSchool || showGrade ? `/${formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null)}` : ''}</span>
                                     </li>
                                 ))}
                             </ul>
@@ -1617,14 +1617,14 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap bg-green-100 text-green-700 border border-dashed border-green-400 flex items-center justify-between group/pending`}
                                         title="저장 대기 중 (X 또는 Del로 취소)"
                                     >
-                                        <span className="truncate">+ {s.name}{showSchool || showGrade ? `/${formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null)}` : ''}</span>
                                         {onCancelPendingEnroll && (
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); onCancelPendingEnroll(s.id, cls.className); }}
-                                                className="ml-0.5 text-green-500 hover:text-red-500 opacity-0 group-hover/pending:opacity-100 transition-opacity shrink-0"
+                                                className="mr-0.5 text-green-500 hover:text-red-500 shrink-0 text-[11px] leading-none"
                                                 title="등록 취소"
                                             >×</button>
                                         )}
+                                        <span className="truncate">+ {s.name}{showSchool || showGrade ? `/${formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null)}` : ''}</span>
                                     </li>
                                 ))}
                             </ul>
@@ -1659,7 +1659,6 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                             }
                                                         }}
                                                     >
-                                                        <span className="flex-1 truncate">{text}</span>
                                                         {isScheduledStudent && canEdit && onCancelScheduledEnrollment && (
                                                             <button
                                                                 onClick={(e) => {
@@ -1668,12 +1667,13 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                         onCancelScheduledEnrollment(s.id, cls.className);
                                                                     }
                                                                 }}
-                                                                className="ml-0.5 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                                                                className="mr-0.5 text-red-400 hover:text-red-600 shrink-0 text-[11px] leading-none"
                                                                 title="배정 예정 취소"
                                                             >
                                                                 &times;
                                                             </button>
                                                         )}
+                                                        <span className="flex-1 truncate">{text}</span>
                                                     </li>
                                                 );
                                             })}
