@@ -1103,6 +1103,15 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     {isAssistantTeacher && (
                         <span className="absolute top-0 left-0 z-10 text-[10px] leading-none bg-gray-800 text-white px-0.5 py-0.5 font-bold whitespace-nowrap animate-pulse">부담임</span>
                     )}
+                    {/* 강사 인수인계 예정 배지 (pendingTeacher + pendingTeacherDate 있을 때) */}
+                    {cls.pendingTeacher && cls.pendingTeacherDate && (
+                        <span
+                            className="absolute top-0 right-0 z-10 text-[9px] leading-none bg-emerald-600 text-white px-1 py-0.5 font-bold whitespace-nowrap"
+                            title={`${cls.pendingTeacherDate}부터 ${cls.pendingTeacher} 담임으로 인수인계 예정${cls.pendingTeacherReason ? `\n사유: ${cls.pendingTeacherReason}` : ''}`}
+                        >
+                            🔄 {cls.pendingTeacherDate.slice(5)}
+                        </span>
+                    )}
                     {isMergedClass && uniqueMergedNames.length > 1 ? (
                         /* 합반: 수업명 가로 2등분 */
                         <div className="flex w-full h-full">

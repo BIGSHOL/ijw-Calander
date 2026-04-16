@@ -53,10 +53,17 @@ const TeacherHandoverModal: React.FC<TeacherHandoverModalProps> = ({
   const [reason, setReason] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
-  // 표시용 강사 목록: isHidden 제외, 현재 담임 제외
+  // 표시용 강사 목록: isHidden 제외, 현재 담임 제외, 수업 과목 담당 강사만
+  // — t.subjects가 비어있거나 없으면 과목 제한 없음으로 간주 (레거시 데이터 호환)
   const selectableTeachers = useMemo(() => {
-    return teachers.filter(t => !t.isHidden && t.name !== currentTeacher);
-  }, [teachers, currentTeacher]);
+    return teachers.filter(t => {
+      if (t.isHidden) return false;
+      if (t.name === currentTeacher) return false;
+      const hasSubjectList = Array.isArray(t.subjects) && t.subjects.length > 0;
+      if (hasSubjectList && !t.subjects!.includes(subject)) return false;
+      return true;
+    });
+  }, [teachers, currentTeacher, subject]);
 
   const isImmediate = effectiveDate <= todayStr;
 

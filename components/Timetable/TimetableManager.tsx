@@ -1004,10 +1004,13 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                 )}
 
                 {/* Class Detail Modal - 수업 관리와 동일한 상세 모달 사용 */}
+                {/* canEdit/canDelete는 수업 수정 권한(canEditMath = classes.edit)에 연결 */}
                 {selectedClassInfo && (
                     <ClassDetailModal
                         classInfo={selectedClassInfo}
                         onClose={() => setSelectedClassInfo(null)}
+                        canEdit={canEditMath}
+                        canDelete={canEditMath}
                     />
                 )}
 
