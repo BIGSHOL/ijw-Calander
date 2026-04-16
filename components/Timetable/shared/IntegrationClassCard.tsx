@@ -1452,9 +1452,6 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                     title={student.withdrawalDate ? `퇴원일: ${student.withdrawalDate}` : undefined}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        if (isTestView && mode === 'edit' && (onRestoreEnrollment || onDeleteEnrollment || onMoveStudent)) {
-                                                            setWithdrawnActionModal({ studentId: student.id, studentName: student.name });
-                                                        }
                                                     }}
                                                     onDoubleClick={() => onStudentClick?.(student.id)}
                                                 >
