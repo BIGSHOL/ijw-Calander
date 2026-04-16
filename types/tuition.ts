@@ -23,6 +23,9 @@ export interface TuitionSelectedCourse extends TuitionCourse {
   note: string;
   excludeHolidays?: boolean;
   useSessionPeriod?: boolean;
+  // 월 N회 고정 모드: true이면 요일/공휴일/세션 자동 재계산을 건너뛰고 fixedSessionsCount(기본 12)로 강제
+  fixedMonthly?: boolean;
+  fixedSessionsCount?: number;
 }
 
 export interface TuitionExtraItem {

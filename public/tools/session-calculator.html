@@ -9,12 +9,44 @@
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif; }
   .day-chip { user-select: none; }
 </style>
+
+<!-- Firebase (학원 정의 세션 데이터 비인증 공개 읽기) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+  import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCDDAnbtu7HDM3JUbFf4jKSH4mS6GYYPkI",
+    authDomain: "ijw-calander.firebaseapp.com",
+    projectId: "ijw-calander",
+    storageBucket: "ijw-calander.firebasestorage.app",
+    messagingSenderId: "231563652148",
+    appId: "1:231563652148:web:4a217812ef96fa3aae2e61",
+  };
+  const DATABASE_ID = "restore20260319";
+
+  try {
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app, DATABASE_ID);
+    const snap = await getDocs(collection(db, "session_periods"));
+    const sessions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    window.__SESSIONS__ = sessions;
+    window.dispatchEvent(new CustomEvent("sessions-loaded", { detail: sessions }));
+    console.log(`[세션 로드] ${sessions.length}건`);
+  } catch (e) {
+    console.error("[세션 로드 실패]", e);
+    window.__SESSIONS__ = [];
+    window.__SESSIONS_ERROR__ = String(e.message || e);
+    window.dispatchEvent(new CustomEvent("sessions-loaded", { detail: [] }));
+  }
+</script>
 </head>
 <body class="bg-slate-50 min-h-screen">
 <div class="max-w-6xl mx-auto p-4 md:p-8">
   <header class="mb-6">
     <h1 class="text-2xl md:text-3xl font-bold text-slate-800">세션 / 월 수강료 계산기</h1>
-    <p class="text-slate-500 mt-1 text-sm">월 12회 고정 vs 요일별 실제 횟수 비교</p>
+    <p class="text-slate-500 mt-1 text-sm">월 12회 고정 · 요일별 실제 · 학원 정의 세션 3-way 비교</p>
+    <div id="sessionStatus" class="mt-2 text-xs text-slate-400">📚 학원 세션 데이터 불러오는 중...</div>
   </header>
 
   <!-- 입력 카드 -->
@@ -61,6 +93,17 @@
         </select>
       </div>
 
+      <!-- 카테고리 (세션 매칭용) -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">과목 카테고리 <span class="text-xs font-normal text-slate-400">(세션 데이터 매칭)</span></label>
+        <select id="category" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none">
+          <option value="수학">수학</option>
+          <option value="영어">영어</option>
+          <option value="EiE">EiE</option>
+        </select>
+        <p id="categoryHint" class="text-xs text-slate-400 mt-1">선택한 과목의 학원 정의 세션 회차를 자동 매칭합니다.</p>
+      </div>
+
       <!-- 기간 -->
       <div>
         <label class="block text-sm font-semibold text-slate-700 mb-2">비교 기간 (시작 월 ~ 종료 월)</label>
@@ -100,7 +143,7 @@
   <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 md:p-6 mb-6">
     <h2 class="text-lg font-bold text-slate-800 mb-4">📅 선택 기간 합계 <span id="rangeLabel" class="text-blue-600"></span></h2>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <!-- 12회 고정 -->
       <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
         <p class="text-xs font-semibold text-slate-500 mb-1">방식 1 · 월 12회 × 개월 수</p>
@@ -113,7 +156,13 @@
         <p class="text-2xl font-bold text-blue-700"><span id="actualCount">0</span>회</p>
         <p class="text-xl text-blue-600 mt-1"><span id="actualAmount">0</span> <span class="text-sm text-blue-400">원</span></p>
       </div>
-      <!-- 차이 -->
+      <!-- 학원 정의 세션 -->
+      <div class="border border-amber-200 rounded-lg p-4 bg-amber-50">
+        <p class="text-xs font-semibold text-amber-700 mb-1">방식 3 · 학원 정의 세션 <span id="sessionMatchCount" class="text-amber-500"></span></p>
+        <p class="text-2xl font-bold text-amber-800"><span id="sessionCount">-</span>회</p>
+        <p class="text-xl text-amber-700 mt-1"><span id="sessionAmount">-</span> <span class="text-sm text-amber-400">원</span></p>
+      </div>
+      <!-- 차이 (요일실제 − 12회고정) -->
       <div class="border border-slate-200 rounded-lg p-4" id="diffBox">
         <p class="text-xs font-semibold text-slate-500 mb-1">차이 (방식2 − 방식1)</p>
         <p class="text-2xl font-bold"><span id="diffCount">0</span>회</p>
@@ -132,10 +181,11 @@
           <tr class="bg-slate-100 text-slate-700">
             <th class="px-3 py-2 text-left border border-slate-200">연/월</th>
             <th class="px-3 py-2 text-right border border-slate-200">요일 실제 횟수</th>
+            <th class="px-3 py-2 text-right border border-slate-200 bg-amber-50">정의 세션 회차</th>
             <th class="px-3 py-2 text-right border border-slate-200">요일 실제 금액</th>
+            <th class="px-3 py-2 text-right border border-slate-200 bg-amber-50">정의 세션 금액</th>
             <th class="px-3 py-2 text-right border border-slate-200">12회 고정 금액</th>
-            <th class="px-3 py-2 text-right border border-slate-200">차이 (회)</th>
-            <th class="px-3 py-2 text-right border border-slate-200">차이 (원)</th>
+            <th class="px-3 py-2 text-right border border-slate-200">차이 (회·원)</th>
           </tr>
         </thead>
         <tbody id="rangeTableBody"></tbody>
@@ -143,10 +193,11 @@
           <tr class="bg-slate-800 text-white font-bold">
             <td class="px-3 py-2 border border-slate-200">합계</td>
             <td class="px-3 py-2 text-right border border-slate-200"><span id="sumActualCount">0</span>회</td>
+            <td class="px-3 py-2 text-right border border-slate-200 bg-amber-100 text-amber-900"><span id="sumSessionCount">-</span>회</td>
             <td class="px-3 py-2 text-right border border-slate-200"><span id="sumActualAmount">0</span>원</td>
+            <td class="px-3 py-2 text-right border border-slate-200 bg-amber-100 text-amber-900"><span id="sumSessionAmount">-</span>원</td>
             <td class="px-3 py-2 text-right border border-slate-200"><span id="sumFixedAmount">0</span>원</td>
-            <td class="px-3 py-2 text-right border border-slate-200"><span id="sumDiffCount">0</span>회</td>
-            <td class="px-3 py-2 text-right border border-slate-200"><span id="sumDiffAmount">0</span>원</td>
+            <td class="px-3 py-2 text-right border border-slate-200"><span id="sumDiffCount">0</span>회 / <span id="sumDiffAmount">0</span>원</td>
           </tr>
         </tfoot>
       </table>
@@ -243,7 +294,31 @@ const state = {
   year: 2026,
   monthFrom: 4,
   monthTo: 4,
+  category: '수학',
+  sessions: window.__SESSIONS__ || null, // [{year, month, category, ranges, sessions}]
 };
+
+// 세션 데이터 로딩 처리
+function getCatCount(uiCategory) {
+  if (!state.sessions) return 0;
+  const dbCat = (typeof CATEGORY_UI_TO_DB !== 'undefined' && CATEGORY_UI_TO_DB[uiCategory]) || uiCategory;
+  return state.sessions.filter(s => s.category === dbCat || s.category === uiCategory).length;
+}
+
+window.addEventListener('sessions-loaded', (e) => {
+  state.sessions = e.detail || [];
+  const status = document.getElementById('sessionStatus');
+  if (window.__SESSIONS_ERROR__) {
+    status.textContent = `⚠️ 세션 데이터 로드 실패: ${window.__SESSIONS_ERROR__}`;
+    status.className = 'mt-2 text-xs text-rose-500';
+  } else {
+    const total = state.sessions.length;
+    const myCat = getCatCount(state.category);
+    status.textContent = `📚 학원 세션 ${total}건 로드됨 (현재 카테고리: ${state.category} ${myCat}건)`;
+    status.className = 'mt-2 text-xs text-emerald-600';
+  }
+  recalc();
+});
 
 // ----- 렌더링: 요일 칩 -----
 const daysWrap = document.getElementById('daysWrap');
@@ -319,6 +394,20 @@ yearSel.addEventListener('change', e => { state.year = +e.target.value; recalc()
 monthFromSel.addEventListener('change', e => { state.monthFrom = +e.target.value; recalc(); });
 monthToSel.addEventListener('change', e => { state.monthTo = +e.target.value; recalc(); });
 
+// 카테고리 변경
+const categorySel = document.getElementById('category');
+categorySel.value = state.category;
+categorySel.addEventListener('change', e => {
+  state.category = e.target.value;
+  // 상태 라벨 업데이트
+  if (state.sessions) {
+    const myCat = getCatCount(state.category);
+    const status = document.getElementById('sessionStatus');
+    status.textContent = `📚 학원 세션 ${state.sessions.length}건 로드됨 (현재 카테고리: ${state.category} ${myCat}건)`;
+  }
+  recalc();
+});
+
 // 기간 프리셋
 document.querySelectorAll('.range-preset').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -391,6 +480,20 @@ function getRangeMonths(year, from, to) {
   return result;
 }
 
+// UI 한글 카테고리 ↔ DB 영문 카테고리 매핑 (TuitionSessionManager와 동일)
+const CATEGORY_UI_TO_DB = { '수학': 'math', '영어': 'english', 'EiE': 'eie' };
+
+// 학원 정의 세션 매칭: (year, month, UI 카테고리) → session 또는 null
+function findSession(year, month, uiCategory) {
+  if (!state.sessions) return null;
+  const dbCat = CATEGORY_UI_TO_DB[uiCategory] || uiCategory;
+  return state.sessions.find(s =>
+    Number(s.year) === Number(year) &&
+    Number(s.month) === Number(month) &&
+    (s.category === dbCat || s.category === uiCategory)
+  ) || null;
+}
+
 // ----- 재계산 -----
 function recalc() {
   const price = Number(priceInput.value) || 0;
@@ -417,13 +520,25 @@ function recalc() {
 
   // ---- 기간 합계 ----
   let sumActualCount = 0, sumActualAmount = 0;
+  let sumSessionCount = 0, sumSessionAmount = 0;
+  let sessionMatchedMonths = 0;
   const monthlyData = rangeMonths.map(({ year, month }) => {
     const dates = countSessionsInMonth(year, month, selectedIdx, holidays);
     const c = dates.length;
     const a = c * price;
     sumActualCount += c;
     sumActualAmount += a;
-    return { year, month, dates, count: c, amount: a };
+    // 학원 정의 세션 매칭
+    const matched = findSession(year, month, state.category);
+    let sessionCount = null, sessionAmount = null;
+    if (matched) {
+      sessionCount = Number(matched.sessions) || 0;
+      sessionAmount = sessionCount * price;
+      sumSessionCount += sessionCount;
+      sumSessionAmount += sessionAmount;
+      sessionMatchedMonths++;
+    }
+    return { year, month, dates, count: c, amount: a, sessionCount, sessionAmount, session: matched };
   });
   const sumFixedCount = 12 * monthCount;
   const sumFixedAmount = sumFixedCount * price;
@@ -437,6 +552,20 @@ function recalc() {
   document.getElementById('diffCount').textContent = (diffCount > 0 ? '+' : '') + diffCount;
   document.getElementById('diffAmount').textContent = (diffAmount > 0 ? '+' : '') + formatNumber(diffAmount);
 
+  // 학원 정의 세션 카드
+  const sessionCountEl = document.getElementById('sessionCount');
+  const sessionAmountEl = document.getElementById('sessionAmount');
+  const sessionMatchEl = document.getElementById('sessionMatchCount');
+  if (sessionMatchedMonths > 0) {
+    sessionCountEl.textContent = sumSessionCount;
+    sessionAmountEl.textContent = formatNumber(sumSessionAmount);
+    sessionMatchEl.textContent = `(${sessionMatchedMonths}/${monthCount}개월 매칭)`;
+  } else {
+    sessionCountEl.textContent = '-';
+    sessionAmountEl.textContent = '-';
+    sessionMatchEl.textContent = state.sessions === null ? '(로드 중)' : `(${state.category} 매칭 데이터 없음)`;
+  }
+
   const diffBox = document.getElementById('diffBox');
   diffBox.className = 'border rounded-lg p-4 ' +
     (diffAmount > 0 ? 'border-emerald-300 bg-emerald-50'
@@ -446,19 +575,29 @@ function recalc() {
   // ---- 기간 내 월별 표 ----
   const rangeTableBody = document.getElementById('rangeTableBody');
   rangeTableBody.innerHTML = '';
-  monthlyData.forEach(({ year, month, count, amount }) => {
+  monthlyData.forEach(({ year, month, count, amount, sessionCount, sessionAmount }) => {
     const f = 12 * price;
     const dc = count - 12;
     const da = amount - f;
+    const sessionCountCell = sessionCount === null
+      ? `<span class="text-slate-300">-</span>`
+      : `${sessionCount}회`;
+    const sessionAmountCell = sessionAmount === null
+      ? `<span class="text-slate-300">-</span>`
+      : formatNumber(sessionAmount);
     const tr = document.createElement('tr');
     tr.className = 'hover:bg-slate-50';
     tr.innerHTML = `
       <td class="px-3 py-2 border border-slate-200 font-medium">${year}년 ${month}월</td>
       <td class="px-3 py-2 text-right border border-slate-200">${count}회</td>
+      <td class="px-3 py-2 text-right border border-slate-200 bg-amber-50/50 text-amber-800 font-medium">${sessionCountCell}</td>
       <td class="px-3 py-2 text-right border border-slate-200">${formatNumber(amount)}</td>
+      <td class="px-3 py-2 text-right border border-slate-200 bg-amber-50/50 text-amber-800 font-medium">${sessionAmountCell}</td>
       <td class="px-3 py-2 text-right border border-slate-200">${formatNumber(f)}</td>
-      <td class="px-3 py-2 text-right border border-slate-200 ${dc>0?'text-emerald-600':dc<0?'text-rose-600':''}">${dc>0?'+':''}${dc}</td>
-      <td class="px-3 py-2 text-right border border-slate-200 ${da>0?'text-emerald-600':da<0?'text-rose-600':''}">${da>0?'+':''}${formatNumber(da)}</td>
+      <td class="px-3 py-2 text-right border border-slate-200 text-xs">
+        <span class="${dc>0?'text-emerald-600':dc<0?'text-rose-600':''}">${dc>0?'+':''}${dc}회</span> /
+        <span class="${da>0?'text-emerald-600':da<0?'text-rose-600':''}">${da>0?'+':''}${formatNumber(da)}원</span>
+      </td>
     `;
     rangeTableBody.appendChild(tr);
   });
@@ -468,6 +607,8 @@ function recalc() {
   document.getElementById('sumFixedAmount').textContent = formatNumber(sumFixedAmount);
   document.getElementById('sumDiffCount').textContent = (diffCount > 0 ? '+' : '') + diffCount;
   document.getElementById('sumDiffAmount').textContent = (diffAmount > 0 ? '+' : '') + formatNumber(diffAmount);
+  document.getElementById('sumSessionCount').textContent = sessionMatchedMonths > 0 ? sumSessionCount : '-';
+  document.getElementById('sumSessionAmount').textContent = sessionMatchedMonths > 0 ? formatNumber(sumSessionAmount) : '-';
 
   // ---- 요약 박스 ----
   const selectedLabels = DAYS.filter(d => state.selectedDays.has(d.key)).map(d => d.label).join('·');
@@ -495,13 +636,24 @@ function recalc() {
   // ---- 월별 수업일 리스트 ----
   const monthlyDateList = document.getElementById('monthlyDateList');
   monthlyDateList.innerHTML = '';
-  monthlyData.forEach(({ year, month, dates }) => {
+  monthlyData.forEach(({ year, month, dates, session, sessionCount }) => {
     const block = document.createElement('div');
     block.className = 'border border-slate-200 rounded-lg p-3';
     const header = document.createElement('p');
-    header.className = 'text-sm font-semibold text-slate-700 mb-2';
-    header.textContent = `${year}년 ${month}월 — ${dates.length}회`;
+    header.className = 'text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2 flex-wrap';
+    header.innerHTML = `
+      <span>${year}년 ${month}월 — 요일 실제 ${dates.length}회</span>
+      ${session ? `<span class="text-xs px-2 py-0.5 bg-amber-100 text-amber-800 rounded">📚 정의 세션 ${sessionCount}회</span>` : ''}
+    `;
     block.appendChild(header);
+    if (session && Array.isArray(session.ranges) && session.ranges.length > 0) {
+      const ranges = document.createElement('div');
+      ranges.className = 'text-xs text-amber-700 mb-2';
+      ranges.innerHTML = '<b>세션 기간:</b> ' + session.ranges
+        .map(r => `${r.startDate} ~ ${r.endDate}`)
+        .join(', ');
+      block.appendChild(ranges);
+    }
     if (dates.length === 0) {
       const empty = document.createElement('p');
       empty.className = 'text-xs text-slate-400';
