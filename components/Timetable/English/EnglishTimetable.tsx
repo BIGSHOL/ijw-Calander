@@ -53,6 +53,7 @@ interface EnglishTimetableProps {
     setIsTimetableSettingsOpen?: (value: boolean) => void;
     userDepartments?: ('math' | 'highmath' | 'english')[];
     shuttleStudentNames?: Set<string>;
+    onMakeEduSyncOpen?: () => void;
 }
 
 interface ScheduleCell {
@@ -69,7 +70,7 @@ interface ScheduleCell {
 type ScheduleData = Record<string, ScheduleCell>;
 
 // Inner component that uses SimulationContext
-const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [], classKeywords = [], currentUser, studentMap, currentWeekStart, weekLabel, goToPrevWeek, goToNextWeek, goToThisWeek, timetableSubject, setTimetableSubject, setTimetableViewType, mathViewMode, setMathViewMode, hasPermissionFn, setIsTimetableSettingsOpen, userDepartments, shuttleStudentNames }) => {
+const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [], classKeywords = [], currentUser, studentMap, currentWeekStart, weekLabel, goToPrevWeek, goToNextWeek, goToThisWeek, timetableSubject, setTimetableSubject, setTimetableViewType, mathViewMode, setMathViewMode, hasPermissionFn, setIsTimetableSettingsOpen, userDepartments, shuttleStudentNames, onMakeEduSyncOpen }) => {
     // Removed local activeTab state, using viewType prop
     const [shuttleOnly, setShuttleOnly] = useState(false);
     const [schoolFilter, setSchoolFilter] = useState<string[]>([]);
@@ -96,10 +97,6 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     // Header controls (mode, search) - managed at parent level for class view
     const [mode, setMode] = useState<'view' | 'edit'>('view');
     const [searchQuery, setSearchQuery] = useState('');
-
-    // 메이크에듀 원생 동기화 모달
-    const [isMakeEduSyncOpen, setIsMakeEduSyncOpen] = useState(false);
-    const { students: allStudents } = useStudents(true);
 
     // 공통 뷰 설정 타입
     type ViewSize = 'small' | 'medium' | 'large';
@@ -852,6 +849,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 hasPermission={hasPermissionFn}
                                 setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
                                 userDepartments={userDepartments}
+                                onMakeEduSyncOpen={onMakeEduSyncOpen}
                             />
                         )}
                         {weekLabel && goToPrevWeek && goToNextWeek && goToThisWeek && (
@@ -1017,18 +1015,6 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
 
                         <div className="w-px h-4 bg-white/20 mx-1"></div>
 
-                        {/* 메이크에듀 원생 동기화 */}
-                        <button
-                            onClick={() => setIsMakeEduSyncOpen(true)}
-                            className="flex items-center gap-1 px-2 py-1 bg-green-600/80 border border-green-500 text-white rounded-sm hover:bg-green-500 text-xs font-bold transition-colors"
-                            title="메이크에듀 원생 동기화"
-                        >
-                            <Users size={12} />
-                            동기화
-                        </button>
-
-                        <div className="w-px h-4 bg-white/20 mx-1"></div>
-
                         {/* 이미지 저장 (수학 통합뷰와 동일 위치) */}
                         <button
                             onClick={() => setIsClassExportModalOpen(true)}
@@ -1172,6 +1158,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 hasPermission={hasPermissionFn}
                                 setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
                                 userDepartments={userDepartments}
+                                onMakeEduSyncOpen={onMakeEduSyncOpen}
                             />
                         )}
                         {weekLabel && goToPrevWeek && goToNextWeek && goToThisWeek && (
@@ -1397,6 +1384,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 hasPermission={hasPermissionFn}
                                 setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
                                 userDepartments={userDepartments}
+                                onMakeEduSyncOpen={onMakeEduSyncOpen}
                             />
                         )}
                         {weekLabel && goToPrevWeek && goToNextWeek && goToThisWeek && (
@@ -2117,15 +2105,6 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                 />
             )}
 
-            {/* 메이크에듀 원생 동기화 모달 */}
-            {isMakeEduSyncOpen && (
-                <React.Suspense fallback={null}>
-                    <MakeEduSyncModal
-                        onClose={() => setIsMakeEduSyncOpen(false)}
-                        existingStudents={allStudents}
-                    />
-                </React.Suspense>
-            )}
         </div>
     );
 };

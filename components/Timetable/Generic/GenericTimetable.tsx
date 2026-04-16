@@ -38,6 +38,7 @@ interface GenericTimetableProps {
   hasPermissionFn?: (perm: string) => boolean;
   setIsTimetableSettingsOpen?: (value: boolean) => void;
   userDepartments?: ('math' | 'highmath' | 'english')[];
+  onMakeEduSyncOpen?: () => void;
 }
 
 /**
@@ -66,6 +67,7 @@ function GenericTimetable({
   hasPermissionFn,
   setIsTimetableSettingsOpen,
   userDepartments,
+  onMakeEduSyncOpen,
 }: GenericTimetableProps) {
   // Performance Note (rerender-lazy-state-init):
   // Memoize config to avoid re-computation
@@ -147,6 +149,7 @@ function GenericTimetable({
             hasPermission={hasPermissionFn}
             setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
             userDepartments={userDepartments}
+            onMakeEduSyncOpen={onMakeEduSyncOpen}
           />
         </div>
       )}

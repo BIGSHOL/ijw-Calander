@@ -165,6 +165,7 @@ interface TimetableHeaderProps {
     hasPermission?: (perm: string) => boolean;
     setIsTimetableSettingsOpen?: (value: boolean) => void;
     userDepartments?: ('math' | 'highmath' | 'english')[];
+    onMakeEduSyncOpen?: () => void;
     // 강의실 필터
     roomFilter?: { main: boolean; barun: boolean; godeung: boolean };
     onRoomFilterChange?: (type: 'main' | 'barun' | 'godeung', value: boolean) => void;
@@ -242,6 +243,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     hasPermission,
     setIsTimetableSettingsOpen,
     userDepartments,
+    onMakeEduSyncOpen,
     roomFilter,
     onRoomFilterChange,
     studentFilter,
@@ -561,6 +563,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                         setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
                         userDepartments={userDepartments}
                         isMaster={isMaster}
+                        onMakeEduSyncOpen={onMakeEduSyncOpen}
                     />
                 )}
 

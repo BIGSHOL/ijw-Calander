@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
     ClipboardList, User as UserIcon, Building,
-    Calendar as CalendarIcon, Table2, Settings, ChevronDown
+    Calendar as CalendarIcon, Table2, Settings, ChevronDown, Users
 } from 'lucide-react';
 import { TimetableSubjectType } from '../../../types';
 
@@ -72,6 +72,7 @@ interface SubjectControlsProps {
     setIsTimetableSettingsOpen?: (value: boolean) => void;
     userDepartments?: ('math' | 'highmath' | 'english')[];
     isMaster?: boolean;
+    onMakeEduSyncOpen?: () => void;
 }
 
 export default function SubjectControls({
@@ -85,6 +86,7 @@ export default function SubjectControls({
     setIsTimetableSettingsOpen,
     userDepartments = ['math', 'highmath', 'english', 'science', 'korean'],
     isMaster,
+    onMakeEduSyncOpen,
 }: SubjectControlsProps) {
     const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
     const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
@@ -222,6 +224,18 @@ export default function SubjectControls({
                     title="수업 설정"
                 >
                     <Settings size={14} />
+                </button>
+            )}
+
+            {/* 메이크 에듀 연결하기 */}
+            {onMakeEduSyncOpen && (
+                <button
+                    onClick={onMakeEduSyncOpen}
+                    className="flex items-center gap-1 px-2 py-0.5 bg-green-600/80 border border-green-500 text-white rounded-sm hover:bg-green-500 text-xs font-bold transition-colors"
+                    title="메이크 에듀 원생 동기화"
+                >
+                    <Users size={12} />
+                    메이크 에듀 연결하기
                 </button>
             )}
 

@@ -60,6 +60,7 @@ interface ShuttleTimetableProps {
     hasPermissionFn: (perm: string) => boolean;
     setIsTimetableSettingsOpen?: (value: boolean) => void;
     userDepartments?: ('math' | 'highmath' | 'english')[];
+    onMakeEduSyncOpen?: () => void;
 }
 
 function ShuttleTimetable({
@@ -69,6 +70,7 @@ function ShuttleTimetable({
     hasPermissionFn,
     setIsTimetableSettingsOpen,
     userDepartments,
+    onMakeEduSyncOpen,
 }: ShuttleTimetableProps) {
     const [isSyncing, setIsSyncing] = useState(false);
     const [activeFilters, setActiveFilters] = useState<Set<ShuttleFilter>>(new Set());
@@ -118,6 +120,7 @@ function ShuttleTimetable({
                         hasPermission={hasPermissionFn}
                         setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
                         userDepartments={userDepartments}
+                        onMakeEduSyncOpen={onMakeEduSyncOpen}
                     />
                 </div>
                 <div className="flex items-center justify-center flex-1">

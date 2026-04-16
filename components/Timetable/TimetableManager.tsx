@@ -47,6 +47,7 @@ import { useQueryClient } from '@tanstack/react-query';
 const GenericTimetable = lazy(() => import('./Generic/GenericTimetable'));
 const ShuttleTimetable = lazy(() => import('./Shuttle/ShuttleTimetable'));
 const AllSubjectsTimetable = lazy(() => import('./AllSubjectsTimetable'));
+const MakeEduSyncModal = lazy(() => import('../StudentManagement/MakeEduSyncModal'));
 
 // MathTimetableContent를 외부로 분리하여 Hook 순서 에러 방지
 interface MathTimetableContentProps {
@@ -787,6 +788,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     hasPermission={hasPermissionFn}
                     setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
                     userDepartments={userDepartments}
+                    onMakeEduSyncOpen={() => setIsMakeEduSyncOpen(true)}
                     roomFilter={roomFilter}
                     onRoomFilterChange={onRoomFilterChange}
                     studentFilter={studentFilter}
@@ -1226,6 +1228,9 @@ const TimetableManager = ({
 
     // Hook Integration: Unified Students
     const { students: globalStudents } = useStudents(true);  // 퇴원생 포함 (시간표에서 필요)
+
+    // 메이크 에듀 동기화 모달
+    const [isMakeEduSyncOpen, setIsMakeEduSyncOpen] = useState(false);
 
     // Create Student Lookup Map
     const studentMap = useMemo(() => {
@@ -1941,6 +1946,16 @@ const TimetableManager = ({
         );
     }
 
+    // 메이크 에듀 동기화 모달 (모든 탭에서 공통)
+    const makeEduSyncModalElement = isMakeEduSyncOpen ? (
+        <Suspense fallback={null}>
+            <MakeEduSyncModal
+                onClose={() => setIsMakeEduSyncOpen(false)}
+                existingStudents={globalStudents}
+            />
+        </Suspense>
+    ) : null;
+
     // Guard: Check permissions
     if (!currentUser) {
         return (
@@ -1992,121 +2007,142 @@ const TimetableManager = ({
 
     if (subjectTab === 'english') {
         return (
-            <Suspense fallback={<VideoLoading className="flex-1 h-full" />}>
-                <EnglishTimetable
-                    onSwitchToMath={() => setSubjectTab('math')}
-                    viewType={viewType}
-                    teachers={propsTeachers}
-                    classKeywords={classKeywords}
-                    currentUser={currentUser}
-                    studentMap={studentMap} // Pass global student map
-                    currentWeekStart={currentMonday}
-                    weekLabel={weekLabel}
-                    goToPrevWeek={goToPrevWeek}
-                    goToNextWeek={goToNextWeek}
-                    goToThisWeek={goToThisWeek}
-                    // 과목/뷰 전환 (TimetableNavBar 통합)
-                    timetableSubject={subjectTab}
-                    setTimetableSubject={setSubjectTab}
-                    setTimetableViewType={setViewType as React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>}
-                    mathViewMode={timetableViewMode}
-                    setMathViewMode={setTimetableViewMode as (value: string) => void}
-                    hasPermissionFn={externalHasPermission || hasPermission}
-                    setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
-                    userDepartments={userDepartments}
-                    shuttleStudentNames={shuttleStudentNames}
-                />
-            </Suspense>
+            <>
+                <Suspense fallback={<VideoLoading className="flex-1 h-full" />}>
+                    <EnglishTimetable
+                        onSwitchToMath={() => setSubjectTab('math')}
+                        viewType={viewType}
+                        teachers={propsTeachers}
+                        classKeywords={classKeywords}
+                        currentUser={currentUser}
+                        studentMap={studentMap} // Pass global student map
+                        currentWeekStart={currentMonday}
+                        weekLabel={weekLabel}
+                        goToPrevWeek={goToPrevWeek}
+                        goToNextWeek={goToNextWeek}
+                        goToThisWeek={goToThisWeek}
+                        // 과목/뷰 전환 (TimetableNavBar 통합)
+                        timetableSubject={subjectTab}
+                        setTimetableSubject={setSubjectTab}
+                        setTimetableViewType={setViewType as React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>}
+                        mathViewMode={timetableViewMode}
+                        setMathViewMode={setTimetableViewMode as (value: string) => void}
+                        hasPermissionFn={externalHasPermission || hasPermission}
+                        setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
+                        userDepartments={userDepartments}
+                        shuttleStudentNames={shuttleStudentNames}
+                        onMakeEduSyncOpen={() => setIsMakeEduSyncOpen(true)}
+                    />
+                </Suspense>
+                {makeEduSyncModalElement}
+            </>
         );
     }
 
     // Performance Note (async-suspense-boundaries): Generic Timetable with Suspense
     if (subjectTab === 'science') {
         return (
-            <Suspense fallback={<VideoLoading className="flex-1 h-full" />}>
-                <GenericTimetable
-                    subject="science"
-                    currentUser={currentUser}
-                    viewType={viewType === 'excel' ? 'class' : viewType}
-                    onStudentsUpdated={() => {
-                        // Refresh logic if needed
-                    }}
-                    studentMap={studentMap}
-                    referenceDate={genericReferenceDate}
-                    // 과목/뷰 전환 (TimetableNavBar 통합)
-                    timetableSubject={subjectTab}
-                    setTimetableSubject={setSubjectTab}
-                    setTimetableViewType={setViewType as React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>}
-                    mathViewMode={timetableViewMode}
-                    setMathViewMode={setTimetableViewMode as (value: string) => void}
-                    hasPermissionFn={externalHasPermission || hasPermission}
-                    setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
-                    userDepartments={userDepartments}
-                />
-            </Suspense>
+            <>
+                <Suspense fallback={<VideoLoading className="flex-1 h-full" />}>
+                    <GenericTimetable
+                        subject="science"
+                        currentUser={currentUser}
+                        viewType={viewType === 'excel' ? 'class' : viewType}
+                        onStudentsUpdated={() => {
+                            // Refresh logic if needed
+                        }}
+                        studentMap={studentMap}
+                        referenceDate={genericReferenceDate}
+                        // 과목/뷰 전환 (TimetableNavBar 통합)
+                        timetableSubject={subjectTab}
+                        setTimetableSubject={setSubjectTab}
+                        setTimetableViewType={setViewType as React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>}
+                        mathViewMode={timetableViewMode}
+                        setMathViewMode={setTimetableViewMode as (value: string) => void}
+                        hasPermissionFn={externalHasPermission || hasPermission}
+                        setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
+                        userDepartments={userDepartments}
+                        onMakeEduSyncOpen={() => setIsMakeEduSyncOpen(true)}
+                    />
+                </Suspense>
+                {makeEduSyncModalElement}
+            </>
         );
     }
 
     if (subjectTab === 'korean') {
         return (
-            <Suspense fallback={<VideoLoading className="flex-1 h-full" />}>
-                <GenericTimetable
-                    subject="korean"
-                    currentUser={currentUser}
-                    viewType={viewType === 'excel' ? 'class' : viewType}
-                    onStudentsUpdated={() => {
-                        // Refresh logic if needed
-                    }}
-                    studentMap={studentMap}
-                    referenceDate={genericReferenceDate}
-                    // 과목/뷰 전환 (TimetableNavBar 통합)
-                    timetableSubject={subjectTab}
-                    setTimetableSubject={setSubjectTab}
-                    setTimetableViewType={setViewType as React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>}
-                    mathViewMode={timetableViewMode}
-                    setMathViewMode={setTimetableViewMode as (value: string) => void}
-                    hasPermissionFn={externalHasPermission || hasPermission}
-                    setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
-                    userDepartments={userDepartments}
-                />
-            </Suspense>
+            <>
+                <Suspense fallback={<VideoLoading className="flex-1 h-full" />}>
+                    <GenericTimetable
+                        subject="korean"
+                        currentUser={currentUser}
+                        viewType={viewType === 'excel' ? 'class' : viewType}
+                        onStudentsUpdated={() => {
+                            // Refresh logic if needed
+                        }}
+                        studentMap={studentMap}
+                        referenceDate={genericReferenceDate}
+                        // 과목/뷰 전환 (TimetableNavBar 통합)
+                        timetableSubject={subjectTab}
+                        setTimetableSubject={setSubjectTab}
+                        setTimetableViewType={setViewType as React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>}
+                        mathViewMode={timetableViewMode}
+                        setMathViewMode={setTimetableViewMode as (value: string) => void}
+                        hasPermissionFn={externalHasPermission || hasPermission}
+                        setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
+                        userDepartments={userDepartments}
+                        onMakeEduSyncOpen={() => setIsMakeEduSyncOpen(true)}
+                    />
+                </Suspense>
+                {makeEduSyncModalElement}
+            </>
         );
     }
 
     if (subjectTab === 'all') {
         return (
-            <Suspense fallback={<VideoLoading className="flex-1 h-full" />}>
-                <AllSubjectsTimetable
-                    timetableSubject={subjectTab}
-                    setTimetableSubject={setSubjectTab}
-                    setTimetableViewType={setViewType as React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>}
-                    mathViewMode={timetableViewMode}
-                    setMathViewMode={setTimetableViewMode as (value: string) => void}
-                    hasPermissionFn={externalHasPermission || hasPermission}
-                    setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
-                    userDepartments={userDepartments}
-                />
-            </Suspense>
+            <>
+                <Suspense fallback={<VideoLoading className="flex-1 h-full" />}>
+                    <AllSubjectsTimetable
+                        timetableSubject={subjectTab}
+                        setTimetableSubject={setSubjectTab}
+                        setTimetableViewType={setViewType as React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>}
+                        mathViewMode={timetableViewMode}
+                        setMathViewMode={setTimetableViewMode as (value: string) => void}
+                        hasPermissionFn={externalHasPermission || hasPermission}
+                        setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
+                        userDepartments={userDepartments}
+                        onMakeEduSyncOpen={() => setIsMakeEduSyncOpen(true)}
+                    />
+                </Suspense>
+                {makeEduSyncModalElement}
+            </>
         );
     }
 
     if (subjectTab === 'shuttle') {
         return (
-            <Suspense fallback={<VideoLoading className="flex-1 h-full" />}>
-                <ShuttleTimetable
-                    currentUser={currentUser}
-                    timetableSubject={subjectTab}
-                    setTimetableSubject={setSubjectTab}
-                    setTimetableViewType={setViewType as React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>}
-                    hasPermissionFn={externalHasPermission || hasPermission}
-                    setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
-                    userDepartments={userDepartments}
-                />
-            </Suspense>
+            <>
+                <Suspense fallback={<VideoLoading className="flex-1 h-full" />}>
+                    <ShuttleTimetable
+                        currentUser={currentUser}
+                        timetableSubject={subjectTab}
+                        setTimetableSubject={setSubjectTab}
+                        setTimetableViewType={setViewType as React.Dispatch<React.SetStateAction<'teacher' | 'room' | 'class' | 'excel'>>}
+                        hasPermissionFn={externalHasPermission || hasPermission}
+                        setIsTimetableSettingsOpen={externalSetIsTimetableSettingsOpen}
+                        userDepartments={userDepartments}
+                        onMakeEduSyncOpen={() => setIsMakeEduSyncOpen(true)}
+                    />
+                </Suspense>
+                {makeEduSyncModalElement}
+            </>
         );
     }
 
     return (
+    <>
         <MathSimulationProvider>
             <MathTimetableContent
                 weekLabel={weekLabel}
@@ -2245,6 +2281,8 @@ const TimetableManager = ({
                 />
             )}
         </MathSimulationProvider>
+        {makeEduSyncModalElement}
+    </>
     );
 };
 
