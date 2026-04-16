@@ -14,6 +14,7 @@ import LevelSettingsModal from './LevelSettingsModal';
 import LevelUpConfirmModal from './LevelUpConfirmModal';
 import StudentModal from './StudentModal';
 import EditClassModal from '../../ClassManagement/EditClassModal';
+import ScheduledDateModal from '../Math/components/ScheduledDateModal';
 
 import { doc, onSnapshot, setDoc, collection, query, where, writeBatch, getDocs, updateDoc, deleteField, deleteDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
@@ -264,6 +265,24 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
 
     // 6. Move Changes
     const { moveChanges, isSaving, handleMoveStudent, handleCancelChanges, handleSaveChanges } = useEnglishChanges(isSimulationMode);
+
+    // 6-1. 반 이동 날짜 설정 모달 (수학과 동일)
+    const [moveModalInfo, setMoveModalInfo] = useState<{
+        student: TimetableStudent;
+        fromClass: string;
+        toClass: string;
+    } | null>(null);
+
+    const handleMoveStudentWithModal = useCallback((student: TimetableStudent, fromClass: string, toClass: string) => {
+        setMoveModalInfo({ student, fromClass, toClass });
+    }, []);
+
+    const handleMoveModalConfirm = useCallback((scheduledDate?: string) => {
+        if (!moveModalInfo) return;
+        // scheduledDate가 있으면 예정일 이동, 없으면 즉시 이동
+        handleMoveStudent(moveModalInfo.student, moveModalInfo.fromClass, moveModalInfo.toClass);
+        setMoveModalInfo(null);
+    }, [moveModalInfo, handleMoveStudent]);
 
     // 7. Classes Data Transformation (classesData 또는 scenarioClasses로부터 담임 정보 전달)
     const rawClasses = useEnglishClasses(scheduleData, settings, teachersData, classesData, isSimulationMode, scenarioClasses);
@@ -683,7 +702,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 isSimulationMode={isSimulationMode}
                                                 onSimulationLevelUp={onSimulationLevelUp}
                                                 moveChanges={isExcelMode ? undefined : moveChanges}
-                                                onMoveStudent={isExcelMode && excelOnExcelMoveStudent ? excelOnExcelMoveStudent : handleMoveStudent}
+                                                onMoveStudent={isExcelMode && excelOnExcelMoveStudent ? excelOnExcelMoveStudent : handleMoveStudentWithModal}
                                                 classStudentData={classDataMap[cls.name]}
                                                 hideTime={true}
                                                 useInjaePeriod={group.useInjaePeriod}
@@ -826,6 +845,18 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                 groups={exportGroups}
                 onGroupsChanged={handleExportGroupsChanged}
             />
+            {/* 반 이동 날짜 설정 모달 (수학과 동일) */}
+            {moveModalInfo && (
+                <ScheduledDateModal
+                    studentName={moveModalInfo.student.name}
+                    fromClassName={moveModalInfo.fromClass}
+                    toClassName={moveModalInfo.toClass}
+                    title="반 이동 날짜 설정"
+                    actionVerb="이동"
+                    onConfirm={handleMoveModalConfirm}
+                    onClose={() => setMoveModalInfo(null)}
+                />
+            )}
         </div>
     );
 };
