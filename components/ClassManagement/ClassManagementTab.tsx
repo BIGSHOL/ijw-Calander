@@ -242,12 +242,8 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
     { value: 'korean', label: SUBJECT_LABELS.korean, icon: <Book className="w-4 h-4" /> },
   ];
 
-  // 상단 영역 높이 (앱 헤더 ~64px + 브레드크럼 ~48px + 필터바 40px = ~152px)
-  // 여유분 포함해서 165px로 설정
-  const SCROLL_OFFSET = 165;
-
   return (
-    <div className="flex flex-col h-full min-h-0 bg-gray-50">
+    <div className="flex flex-col h-full min-h-0 bg-gray-50 overflow-hidden">
       {/* 상단 고정 영역 - flex-shrink-0으로 절대 줄어들지 않음 */}
       <div className="flex-shrink-0">
         {/* 상단 네비게이션 바 */}
@@ -318,7 +314,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
                   </button>
 
                   {showTeacherDropdown && (
-                    <div className="absolute top-full left-0 mt-1 bg-[#1e293b] border border-gray-700 rounded-sm shadow-xl z-50 min-w-[320px] max-h-[500px] overflow-y-auto">
+                    <div className="absolute top-full left-0 mt-1 bg-[#1e293b] border border-gray-700 rounded-sm shadow-xl z-50 min-w-[280px] max-w-[95vw] max-h-[70vh] overflow-y-auto">
                       {/* 전체 선택 */}
                       <div className="p-2 border-b border-white/10">
                         <button
@@ -579,11 +575,8 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
 
       </div>
 
-      {/* 스크롤 가능한 콘텐츠 영역 - 명시적 maxHeight로 스크롤 영역 제한 */}
-      <div
-        className="flex-1 min-h-0 overflow-auto px-6 pb-6"
-        style={{ maxHeight: `calc(100vh - ${SCROLL_OFFSET}px)` }}
-      >
+      {/* 스크롤 가능한 콘텐츠 영역 - flex-1 + min-h-0으로 자연스럽게 남은 공간 채움 */}
+      <div className="flex-1 min-h-0 overflow-auto px-3 md:px-6 pb-6">
         {/* 에러 상태 */}
         {error && (
           <div className="bg-red-50 border border-red-300 rounded-sm p-4 mb-6">

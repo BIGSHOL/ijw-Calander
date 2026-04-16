@@ -40,18 +40,20 @@ body {
   }
 }
 
-/* 반응형 비활성화 - 고정 레이아웃 테스트 */
+/* 레이아웃 기본 설정 */
 html, body {
-  min-width: 1280px;
-  overflow: hidden !important;
+  min-width: 0;
+  overflow: hidden;
   height: 100vh;
+  height: 100dvh;
   margin: 0;
   padding: 0;
 }
 
 #root {
   height: 100vh;
-  overflow: hidden !important;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 /* Global Focus Indicators - Addresses Issue #6 */
