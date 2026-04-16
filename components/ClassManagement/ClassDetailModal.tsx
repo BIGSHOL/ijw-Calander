@@ -3,7 +3,7 @@ import { X, Edit, Trash2, Users, Clock, User, BookOpen, Calendar, MapPin, FileTe
 import TeacherHandoverModal from './TeacherHandoverModal';
 import { ClassInfo, useClasses } from '../../hooks/useClasses';
 import { useClassDetail, ClassStudent } from '../../hooks/useClassDetail';
-import { useDeleteClass, useUpdateClass, UpdateClassData, useManageClassStudents } from '../../hooks/useClassMutations';
+import { useDeleteClass, useUpdateClass, UpdateClassData, useManageClassStudents, useCancelTeacherHandover } from '../../hooks/useClassMutations';
 import { useStudents } from '../../hooks/useStudents';
 import ClassStudentList from './ClassStudentList';
 import SubjectBadges from '../Common/SubjectBadges';
@@ -58,7 +58,51 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
   // ==================== 보기 모드 훅 ====================
   const { data: classDetail, isLoading: detailLoading } = useClassDetail(initialClassName, subject);
   const deleteClassMutation = useDeleteClass();
+  const cancelHandoverMutation = useCancelTeacherHandover();
   const { data: teachersData } = useTeachers();
+
+  // 강사 인수인계 예약 정보 (classes/{id}.pendingTeacher*)
+  const hasPendingHandover = !!(classInfo.pendingTeacher && classInfo.pendingTeacherDate);
+
+  const handleCancelHandover = async () => {
+    if (!classInfo.id || !classInfo.pendingTeacher) return;
+    const confirmMsg = `"${initialClassName}" 수업의 강사 인수인계 예약을 취소하시겠습니까?\n\n` +
+      `- 예정일: ${classInfo.pendingTeacherDate}\n` +
+      `- ${classInfo.teacher} → ${classInfo.pendingTeacher}\n\n` +
+      `사전 생성된 새 enrollment가 삭제되고, 기존 enrollment의 endDate가 복구됩니다.`;
+    if (!window.confirm(confirmMsg)) return;
+    try {
+      await cancelHandoverMutation.mutateAsync({
+        classId: classInfo.id,
+        className: initialClassName,
+        subject: subject as SubjectType,
+        currentTeacher: classInfo.teacher,
+        pendingTeacher: classInfo.pendingTeacher,
+      });
+    } catch (err: any) {
+      alert('취소 실패: ' + (err?.message || '알 수 없는 오류'));
+    }
+  };
+
+  const handleModifyHandover = async () => {
+    // 기존 예약 취소 후 TeacherHandoverModal 재오픈
+    if (!classInfo.id || !classInfo.pendingTeacher) return;
+    const confirmMsg = `기존 예약을 취소하고 다시 설정하시겠습니까?\n\n` +
+      `(사전 찢어진 enrollment가 롤백된 후 새 예약 모달이 열립니다)`;
+    if (!window.confirm(confirmMsg)) return;
+    try {
+      await cancelHandoverMutation.mutateAsync({
+        classId: classInfo.id,
+        className: initialClassName,
+        subject: subject as SubjectType,
+        currentTeacher: classInfo.teacher,
+        pendingTeacher: classInfo.pendingTeacher,
+      });
+      setShowHandoverModal(true);
+    } catch (err: any) {
+      alert('수정 실패: ' + (err?.message || '알 수 없는 오류'));
+    }
+  };
 
   const studentIds = useMemo(() => {
     return classDetail?.students.map(s => s.id) || [];
@@ -510,7 +554,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
               </>
             ) : (
               <>
-                {canEdit && !isSimulationMode && classInfo.id && (
+                {canEdit && !isSimulationMode && classInfo.id && !hasPendingHandover && (
                   <button
                     onClick={() => setShowHandoverModal(true)}
                     disabled={isPending}
@@ -535,6 +579,46 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
             </button>
           </div>
         </div>
+
+        {/* 강사 인수인계 예약 배너 (pending 상태일 때만 표시) */}
+        {hasPendingHandover && !isEditMode && !isSimulationMode && (
+          <div className="bg-emerald-50 border-b border-emerald-200 px-2 py-1.5 flex items-center gap-2">
+            <UserCheck className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0" />
+            <div className="text-xxs text-emerald-900 flex-1 min-w-0">
+              <span className="font-bold">강사 인수인계 예약됨</span>
+              <span className="mx-1.5 text-emerald-600">·</span>
+              <span>
+                <span className="font-medium">{classInfo.pendingTeacherDate}</span>부터
+                <span className="mx-1 text-emerald-700">{classInfo.teacher}</span>
+                →
+                <span className="ml-1 font-bold text-emerald-800">{classInfo.pendingTeacher}</span>
+              </span>
+              {classInfo.pendingTeacherReason && (
+                <span className="ml-2 text-emerald-700 italic">({classInfo.pendingTeacherReason})</span>
+              )}
+            </div>
+            {canEdit && classInfo.id && (
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button
+                  onClick={handleModifyHandover}
+                  disabled={cancelHandoverMutation.isPending || isPending}
+                  className="px-1.5 py-0.5 text-xxs font-semibold bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-100 disabled:opacity-50 transition-colors"
+                  title="기존 예약을 취소하고 다시 설정"
+                >
+                  수정
+                </button>
+                <button
+                  onClick={handleCancelHandover}
+                  disabled={cancelHandoverMutation.isPending || isPending}
+                  className="px-1.5 py-0.5 text-xxs font-semibold bg-white border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                  title="예약 취소 — 찢어진 enrollment 롤백"
+                >
+                  {cancelHandoverMutation.isPending ? '...' : '취소'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 탭 네비게이션 */}
         <div className="flex items-center gap-4 px-2 py-1 border-b border-gray-200 bg-white">

@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   addDoc,
   updateDoc,
@@ -12,6 +13,7 @@ import {
   setDoc,
   deleteField,
 } from 'firebase/firestore';
+import { subDays, parseISO, format } from 'date-fns';
 import { db } from '../firebaseConfig';
 import { SubjectType } from '../types';
 import { getTodayKST, formatDateKST } from '../utils/dateUtils';
@@ -356,15 +358,24 @@ export interface HandoverTeacherData {
  * 핵심 migrate 로직 — 지정된 class의 모든 활성 enrollment를 찢어서 새 담임으로 넘김
  * - 기존 enrollment: endDate = effectiveDate - 1일
  * - 새 enrollment: addDoc 으로 신규 생성, 동일 classId/className/schedule, staffId=newTeacher, startDate=effectiveDate
- * - classes/{classId}: staffId/teacher 필드 업데이트 + pendingTeacher* 필드 삭제
+ *                   + handoverBatchId 필드 저장 — 취소/롤백 시 이 단일 값으로 정확히 범위를 좁힘
+ * - classes/{classId}: options.skipClassDocUpdate=false(기본) 시 staffId/teacher 필드 즉시 교체 + pending 필드 삭제
+ *                       options.skipClassDocUpdate=true(미래 예약 시) 시 classes 본체는 건드리지 않음 (auto-apply가 효력일에 처리)
+ *
+ * @param options.batchId 호출자가 부여한 인수인계 batch 식별자 (예약 시 생성). 없으면 내부 생성.
+ * @param options.previousStaffId 롤백용으로 저장할 이전 담임 (cancel 시 classes.staffId 복구에 사용)
  */
-export async function executeTeacherHandover(data: HandoverTeacherData): Promise<{ enrollmentsSplit: number }> {
+export async function executeTeacherHandover(
+  data: HandoverTeacherData,
+  options: { skipClassDocUpdate?: boolean; batchId?: string; previousStaffId?: string } = {}
+): Promise<{ enrollmentsSplit: number; batchId: string }> {
   const { classId, subject, className, newTeacher, effectiveDate, reason } = data;
 
-  // D-1 계산 (effectiveDate의 전날)
-  const prevDate = new Date(effectiveDate);
-  prevDate.setDate(prevDate.getDate() - 1);
-  const prevDateStr = formatDateKST(prevDate);
+  // D-1 계산 (effectiveDate의 전날) — date-fns로 DST-safe 캘린더 연산
+  const prevDateStr = format(subDays(parseISO(effectiveDate), 1), 'yyyy-MM-dd');
+
+  // batchId 보장 — 예약 시 생성되어 전달되는 게 원칙, 없으면 여기서 생성 (즉시 실행 경로)
+  const batchId = options.batchId || `${classId}_${effectiveDate}_${Date.now()}`;
 
   // 1. 대상 class의 활성 enrollment들 수집 (classId 또는 className 기반)
   const enrollmentDocs: Array<{ ref: any; data: any; studentId: string }> = [];
@@ -388,7 +399,8 @@ export async function executeTeacherHandover(data: HandoverTeacherData): Promise
     });
   } catch { /* ignore */ }
 
-  // className + subject 기반 보완 조회 (classId 필드 누락된 레거시 데이터)
+  // className + subject 기반 보완 조회 (classId 필드 누락된 레거시 데이터만)
+  // — 다른 classId가 명시된 문서는 엉뚱한 반 데이터이므로 제외
   try {
     const classNameQuery = query(
       collectionGroup(db, 'enrollments'),
@@ -400,6 +412,8 @@ export async function executeTeacherHandover(data: HandoverTeacherData): Promise
       const raw = d.data();
       if (raw.endDate || raw.withdrawalDate) return;
       if (seenPaths.has(d.ref.path)) return;
+      // classId가 명시되어 있고 대상 classId와 다르면 제외 (다른 반 데이터)
+      if (raw.classId && raw.classId !== classId) return;
       seenPaths.add(d.ref.path);
       const pathParts = d.ref.path.split('/');
       const studentId = pathParts[1];
@@ -410,9 +424,10 @@ export async function executeTeacherHandover(data: HandoverTeacherData): Promise
   // 2. 각 enrollment 찢기: 기존 endDate=D-1, 새 enrollment addDoc 으로 생성
   const now = new Date().toISOString();
   const splitPromises = enrollmentDocs.map(async ({ ref, data, studentId }) => {
-    // 기존 enrollment 종료
+    // 기존 enrollment 종료 — handoverBatchId 를 원본에도 박아 나중에 cancel 시 pair 식별
     await updateDoc(ref, {
       endDate: prevDateStr,
+      handoverEndedByBatchId: batchId,
       updatedAt: now,
     });
     // 새 enrollment 생성 (addDoc으로 자동 ID — 같은 classId로 여러 enrollment 허용)
@@ -424,9 +439,11 @@ export async function executeTeacherHandover(data: HandoverTeacherData): Promise
       staffId: newTeacher,
       teacher: newTeacher,
       schedule: data.schedule || [],
-      attendanceDays: data.attendanceDays || [],
+      // 원본에 attendanceDays 필드가 없으면 신규에도 넣지 않기 — "모든 요일 등원" 의미 보존
+      ...(data.attendanceDays ? { attendanceDays: data.attendanceDays } : {}),
       startDate: effectiveDate,
       enrollmentDate: effectiveDate,
+      handoverBatchId: batchId,
       handoverFromEnrollmentId: ref.id,
       handoverFromStaffId: data.staffId || data.teacher || '',
       createdAt: now,
@@ -437,22 +454,166 @@ export async function executeTeacherHandover(data: HandoverTeacherData): Promise
   });
   await Promise.all(splitPromises);
 
-  // 3. classes/{classId} 본체 업데이트 + pending 필드 삭제
+  // slotTeachers에서 이전 담임 이름과 일치하는 엔트리를 새 담임으로 교체 (slot별 담임 오버라이드 반영)
+  // — 즉시 적용 경로에서만 실행 (미래 예약은 auto-apply 시점에 처리)
+  const slotTeachersUpdate: Record<string, string> = {};
+  if (!options.skipClassDocUpdate && options.previousStaffId) {
+    try {
+      const classSnap = await getDoc(doc(db, COL_CLASSES, classId));
+      const classData = classSnap.data();
+      const slotTeachers: Record<string, string> | undefined = classData?.slotTeachers;
+      if (slotTeachers && typeof slotTeachers === 'object') {
+        Object.entries(slotTeachers).forEach(([k, v]) => {
+          slotTeachersUpdate[k] = (v === options.previousStaffId) ? newTeacher : (v as string);
+        });
+      }
+    } catch { /* ignore */ }
+  }
+
+  // 3. classes/{classId} 본체 업데이트 (효력일이 이미 도래한 경우에만)
+  // 미래 예약 시(skipClassDocUpdate=true)는 건드리지 않고, pendingTeacher* 필드만 별도로 저장
+  // 반 카드는 referenceDate 기반으로 pending 필드를 참조해 주차별 프리뷰를 제공함
+  if (!options.skipClassDocUpdate) {
+    try {
+      const classRef = doc(db, COL_CLASSES, classId);
+      const payload: Record<string, any> = {
+        staffId: newTeacher,
+        teacher: newTeacher,
+        pendingTeacher: deleteField(),
+        pendingTeacherDate: deleteField(),
+        pendingTeacherReason: deleteField(),
+        pendingHandoverBatchId: deleteField(),
+        pendingHandoverPreviousTeacher: deleteField(),
+        updatedAt: now,
+      };
+      if (Object.keys(slotTeachersUpdate).length > 0) {
+        payload.slotTeachers = slotTeachersUpdate;
+      }
+      // 영어 반의 mainTeacher 필드도 동기화
+      if (subject === 'english') {
+        payload.mainTeacher = newTeacher;
+      }
+      await updateDoc(classRef, payload);
+    } catch (err) {
+      console.warn('[handover] classes doc 업데이트 실패:', err);
+    }
+  }
+
+  return { enrollmentsSplit: enrollmentDocs.length, batchId };
+}
+
+/**
+ * 예약/적용된 강사 인수인계 취소 / 롤백
+ *
+ * 개선된 설계:
+ * - batchId로만 롤백 범위를 좁혀, 같은 반의 다른(과거·다른 회차) 인수인계를 건드리지 않음
+ * - previousStaffId가 classes 문서에 저장되어 있으면 classes.staffId 도 원상 복구 (auto-apply 이후 취소 시나리오)
+ * - 원본 enrollment의 endDate는 "batchId 매칭 시에만" deleteField — 과거 인수인계로 이미 설정된 endDate는 보존
+ */
+export async function cancelTeacherHandover(classId: string): Promise<{ restored: number; removed: number; batchId?: string }> {
+  let restored = 0;
+  let removed = 0;
+  const now = new Date().toISOString();
+
+  // 1. classes/{id}에서 현재 예약 batchId와 이전 담임 읽기
+  let batchId: string | undefined;
+  let previousStaffId: string | undefined;
+  let classData: any = null;
+  try {
+    const classSnap = await getDoc(doc(db, COL_CLASSES, classId));
+    classData = classSnap.data();
+    batchId = classData?.pendingHandoverBatchId;
+    previousStaffId = classData?.pendingHandoverPreviousTeacher;
+  } catch (err) {
+    console.warn('[cancel handover] classes doc 조회 실패:', err);
+  }
+
+  // batchId가 없으면 (이미 auto-apply 됐거나 예약이 없는 경우) — 안전하게 가장 최근 적용된 인수인계를 역추적
+  // 이번 스코프에서는 "예약 상태"만 취소 대상으로 한정 (auto-apply 완료 후 복구는 별도 운영 API)
+  if (!batchId) {
+    console.warn('[cancel handover] pendingHandoverBatchId 없음 — 예약 상태가 아니므로 취소 불가');
+    return { restored: 0, removed: 0 };
+  }
+
+  // 2. batchId 기준으로 새 enrollment 식별 & 삭제 + 원본 endDate 복구
+  try {
+    const batchEnrollQuery = query(
+      collectionGroup(db, 'enrollments'),
+      where('handoverBatchId', '==', batchId)
+    );
+    const snap = await getDocs(batchEnrollQuery);
+
+    const restorePromises: Promise<any>[] = [];
+    const deletePromises: Promise<any>[] = [];
+
+    snap.docs.forEach(d => {
+      const raw = d.data();
+      // 같은 batch에 속하는 새 enrollment 삭제
+      deletePromises.push(
+        deleteDoc(d.ref).catch(err => {
+          console.warn('[cancel handover] 새 enrollment 삭제 실패:', d.ref.path, err);
+        })
+      );
+      // 대응하는 원본 enrollment 찾아서 endDate 복구
+      if (raw.handoverFromEnrollmentId) {
+        const studentId = d.ref.path.split('/')[1];
+        const originalRef = doc(db, 'students', studentId, 'enrollments', raw.handoverFromEnrollmentId);
+        restorePromises.push(
+          getDoc(originalRef).then(origSnap => {
+            if (!origSnap.exists()) return;
+            const origData = origSnap.data();
+            // sanity check: 이 enrollment가 정말 이 batch로 마감된 것인지 확인
+            if (origData.handoverEndedByBatchId !== batchId) {
+              console.warn('[cancel handover] batch 불일치로 endDate 복구 스킵:', originalRef.path);
+              return;
+            }
+            return updateDoc(originalRef, {
+              endDate: deleteField(),
+              handoverEndedByBatchId: deleteField(),
+              updatedAt: now,
+            });
+          }).catch(err => {
+            console.warn('[cancel handover] endDate 복구 실패:', studentId, raw.handoverFromEnrollmentId, err);
+          })
+        );
+      }
+    });
+
+    await Promise.all([...deletePromises, ...restorePromises]);
+    removed = snap.docs.length;
+    restored = restorePromises.length;
+  } catch (err) {
+    console.warn('[cancel handover] enrollment 롤백 중 오류:', err);
+  }
+
+  // 3. classes/{id}의 pending 필드 삭제 + auto-apply 이후면 staffId/teacher 도 원복
   try {
     const classRef = doc(db, COL_CLASSES, classId);
-    await updateDoc(classRef, {
-      staffId: newTeacher,
-      teacher: newTeacher,
+    const payload: Record<string, any> = {
       pendingTeacher: deleteField(),
       pendingTeacherDate: deleteField(),
       pendingTeacherReason: deleteField(),
+      pendingHandoverBatchId: deleteField(),
+      pendingHandoverPreviousTeacher: deleteField(),
       updatedAt: now,
-    });
+    };
+    // auto-apply 완료 후 취소 시나리오: classes.staffId가 pending 대상과 동일하면 previousStaffId로 롤백
+    if (previousStaffId && classData) {
+      const appliedTeacher = classData.pendingTeacher;
+      if (appliedTeacher && classData.staffId === appliedTeacher) {
+        payload.staffId = previousStaffId;
+        payload.teacher = previousStaffId;
+        if (classData.subject === 'english') {
+          payload.mainTeacher = previousStaffId;
+        }
+      }
+    }
+    await updateDoc(classRef, payload);
   } catch (err) {
-    console.warn('[handover] classes doc 업데이트 실패:', err);
+    console.warn('[cancel handover] classes doc 필드 삭제 실패:', err);
   }
 
-  return { enrollmentsSplit: enrollmentDocs.length };
+  return { restored, removed, batchId };
 }
 
 export const useHandoverTeacher = () => {
@@ -468,13 +629,46 @@ export const useHandoverTeacher = () => {
         throw new Error('현재 담임과 동일한 강사로는 인수인계할 수 없습니다.');
       }
 
-      // 미래 날짜면 예약 저장 / 오늘 또는 과거면 즉시 실행
+      // 과거 날짜 방지 (모달에서도 막지만 API 직접 호출 방어)
+      if (effectiveDate < todayStr) {
+        throw new Error('과거 날짜로는 인수인계할 수 없습니다. 인수일은 오늘 또는 미래로 지정해 주세요.');
+      }
+
+      // 중복 예약 방지 — classes/{id}에 이미 pendingTeacher가 있으면 거절
+      try {
+        const existingSnap = await getDoc(doc(db, COL_CLASSES, classId));
+        const existingData = existingSnap.data();
+        if (existingData?.pendingTeacher && existingData?.pendingTeacherDate) {
+          throw new Error(
+            `이미 예약된 인수인계가 있습니다 (${existingData.pendingTeacherDate} 부터 ${existingData.pendingTeacher}). ` +
+            `수정하려면 기존 예약을 먼저 취소한 후 다시 예약해 주세요.`
+          );
+        }
+      } catch (err: any) {
+        if (err?.message?.startsWith('이미 예약된')) throw err;
+        // 그 외 조회 실패는 무시하고 진행
+      }
+
+      // 예약 시점 batchId 생성 (cancel/rollback 시 이 값으로 정확히 좁힘)
+      const batchId = `${classId}_${effectiveDate}_${Date.now()}`;
+
+      // 미래 날짜면 예약(eager split), 오늘이면 즉시 실행 (classes.staffId까지 교체)
       if (effectiveDate > todayStr) {
-        // 예약: classes 문서에 pending 필드 저장 (자동 migrate 훅이 날짜 도달 시 실행)
+        // 1. enrollment를 "즉시" 찢어서 미래 주차로 이동 시 학생 enrollment가 이미 새 담임으로 보이도록
+        //    단 classes/{id}.staffId 는 교체하지 않음 (auto-apply가 효력일에 처리)
+        const result = await executeTeacherHandover(data, {
+          skipClassDocUpdate: true,
+          batchId,
+          previousStaffId: currentTeacher,
+        });
+
+        // 2. classes 문서에 pendingTeacher* 필드 저장 (반 카드 referenceDate 기반 프리뷰 + auto-apply 트리거)
         const classRef = doc(db, COL_CLASSES, classId);
         const payload: Record<string, any> = {
           pendingTeacher: newTeacher,
           pendingTeacherDate: effectiveDate,
+          pendingHandoverBatchId: batchId,
+          pendingHandoverPreviousTeacher: currentTeacher,
           updatedAt: new Date().toISOString(),
         };
         if (reason) payload.pendingTeacherReason = reason;
@@ -484,27 +678,56 @@ export const useHandoverTeacher = () => {
           action: 'class_update',
           subject,
           className,
-          details: `강사 인수인계 예약: ${currentTeacher} → ${newTeacher} (${effectiveDate}부터)`,
+          details: `강사 인수인계 예약: ${currentTeacher} → ${newTeacher} (${effectiveDate}부터, enrollment ${result.enrollmentsSplit}건 사전 분리, batchId=${batchId})`,
           before: { teacher: currentTeacher },
-          after: { teacher: newTeacher, effectiveDate, reason },
+          after: { teacher: newTeacher, effectiveDate, reason, batchId },
         });
 
-        return { scheduled: true, enrollmentsSplit: 0 };
+        return { scheduled: true, enrollmentsSplit: result.enrollmentsSplit, batchId };
       }
 
-      // 즉시 실행
-      const result = await executeTeacherHandover(data);
+      // 즉시 실행 (enrollment 찢기 + classes/{id}.staffId 교체)
+      const result = await executeTeacherHandover(data, { batchId, previousStaffId: currentTeacher });
 
       logTimetableChange({
         action: 'class_update',
         subject,
         className,
-        details: `강사 인수인계 적용: ${currentTeacher} → ${newTeacher} (${effectiveDate}부터, enrollment ${result.enrollmentsSplit}건 분리)`,
+        details: `강사 인수인계 적용: ${currentTeacher} → ${newTeacher} (${effectiveDate}부터, enrollment ${result.enrollmentsSplit}건 분리, batchId=${batchId})`,
         before: { teacher: currentTeacher },
-        after: { teacher: newTeacher, effectiveDate, reason },
+        after: { teacher: newTeacher, effectiveDate, reason, batchId },
       });
 
       return { scheduled: false, ...result };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['classes'] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['students', true] });
+      queryClient.invalidateQueries({ queryKey: ['classDetail'] });
+      queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
+      queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
+      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
+      queryClient.invalidateQueries({ queryKey: ['classStudents'] });
+    },
+  });
+};
+
+export const useCancelTeacherHandover = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: { classId: string; className: string; subject: SubjectType; currentTeacher: string; pendingTeacher?: string }) => {
+      const result = await cancelTeacherHandover(payload.classId);
+      logTimetableChange({
+        action: 'class_update',
+        subject: payload.subject,
+        className: payload.className,
+        details: `강사 인수인계 예약 취소 (새 enrollment ${result.removed}건 삭제 / 기존 ${result.restored}건 endDate 복구)`,
+        before: { teacher: payload.currentTeacher, pendingTeacher: payload.pendingTeacher },
+        after: { teacher: payload.currentTeacher },
+      });
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['classes'] });

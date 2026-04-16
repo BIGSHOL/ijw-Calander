@@ -28,7 +28,6 @@ const StudentDetailModal = lazy(() => import('../StudentManagement/StudentDetail
 const SimpleViewSettingsModal = lazy(() => import('./Math/components/Modals/SimpleViewSettingsModal'));
 const ScenarioManagementModal = lazy(() => import('./Math/ScenarioManagementModal'));
 import { ClassInfo, useClasses } from '../../hooks/useClasses';
-import { executeTeacherHandover } from '../../hooks/useClassMutations';
 import { ALL_WEEKDAYS, MATH_PERIODS, ENGLISH_PERIODS } from './constants';
 import { MathSimulationProvider, useMathSimulation } from './Math/context/SimulationContext';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
@@ -39,7 +38,7 @@ import type { ExportGroupInfo } from './Math/MathClassTab';
 import WithdrawalStudentDetail from '../WithdrawalManagement/WithdrawalStudentDetail';
 import { WithdrawalEntry } from '../../hooks/useWithdrawalFilters';
 import ScheduledDateModal from './Math/components/ScheduledDateModal';
-import { doc, collection, collectionGroup, query, where, getDocs, deleteDoc, updateDoc, deleteField } from 'firebase/firestore';
+import { doc, collection, collectionGroup, query, where, getDoc, getDocs, deleteDoc, updateDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -1698,8 +1697,44 @@ const TimetableManager = ({
                 }
             }
         });
-        return [...base, ...ghosts];
-    }, [localClasses, currentSubjectFilter, roomFilter, subjectTab]);
+
+        // 강사 인수인계 프리뷰: 해당 주의 월요일(시작일) >= pendingTeacherDate 이면 주 전체를 새 담임으로 표시
+        // — 주 중간에 효력일이 걸친 경우(예: 주 화요일에 인수인계)는 override하지 않음 (해당 주 전체가 효력일 이후인 주만)
+        // — 이유: 주 중간에 override하면 월~월-1 수업이 잘못된 담임 컬럼에 표시되는 UX 혼란 발생
+        // 학생 enrollment는 eager-split 되어 있으므로 학생 배치는 날짜 기반으로 정확히 처리됨
+        const weekStartStr = currentMonday
+            ? (() => {
+                const y = currentMonday.getFullYear();
+                const m = String(currentMonday.getMonth() + 1).padStart(2, '0');
+                const d = String(currentMonday.getDate()).padStart(2, '0');
+                return `${y}-${m}-${d}`;
+            })()
+            : undefined;
+
+        const applyTeacherOverride = (c: TimetableClass): TimetableClass => {
+            if (
+                c.pendingTeacher
+                && c.pendingTeacherDate
+                && weekStartStr
+                && weekStartStr >= c.pendingTeacherDate
+            ) {
+                // teacher + staffId(있다면) 함께 교체하여 강사별 뷰 필터링 일관성 유지
+                const next: any = { ...c, teacher: c.pendingTeacher };
+                // slotTeachers 내 이전 담임 이름을 새 담임으로 교체한 사본도 제공
+                if (c.slotTeachers && typeof c.slotTeachers === 'object') {
+                    const updated: Record<string, string> = {};
+                    Object.entries(c.slotTeachers).forEach(([k, v]) => {
+                        updated[k] = (v === c.teacher) ? c.pendingTeacher! : (v as string);
+                    });
+                    next.slotTeachers = updated;
+                }
+                return next;
+            }
+            return c;
+        };
+
+        return [...base, ...ghosts].map(applyTeacherOverride);
+    }, [localClasses, currentSubjectFilter, roomFilter, subjectTab, currentMonday]);
 
     // 스케줄 변경 예정 자동 적용 (마운트 시 1회)
     useEffect(() => {
@@ -1769,7 +1804,9 @@ const TimetableManager = ({
 
     // 강사 인수인계 예정 자동 적용 (마운트 시 1회)
     // - pendingTeacher + pendingTeacherDate 가 있고 날짜가 오늘 이전/당일이면 실행
-    // - executeTeacherHandover로 enrollment 찢기 + class staffId 교체 일괄 처리
+    // - 예약 시점(useHandoverTeacher)에 이미 찢어진 enrollment 외에,
+    //   예약 후 효력일 사이에 새로 추가된 enrollment(staffId=이전 담임)는 여기서 새 담임으로 migrate
+    // - classes/{id}.staffId/teacher 를 새 담임으로 교체 + pending/previous 필드 삭제
     useEffect(() => {
         const todayStr = getTodayKST();
         const pendingHandovers = classesWithEnrollments.filter(
@@ -1780,19 +1817,63 @@ const TimetableManager = ({
         const applyPendingHandovers = async () => {
             for (const cls of pendingHandovers) {
                 try {
-                    const subjectNormalized: any = cls.subject === '수학' ? 'math'
-                        : cls.subject === '고등수학' ? 'highmath'
-                        : cls.subject === '영어' ? 'english'
-                        : cls.subject;
-                    await executeTeacherHandover({
-                        classId: cls.id,
-                        subject: subjectNormalized,
-                        className: cls.className,
-                        currentTeacher: cls.teacher,
-                        newTeacher: cls.pendingTeacher!,
-                        effectiveDate: cls.pendingTeacherDate!,
-                        reason: cls.pendingTeacherReason,
-                    });
+                    // 1. 효력일 사이에 새로 생긴 활성 enrollment (staffId=이전 담임 그대로)를 새 담임으로 migrate
+                    try {
+                        const classIdQuery = query(
+                            collectionGroup(db, 'enrollments'),
+                            where('classId', '==', cls.id)
+                        );
+                        const enrollSnap = await getDocs(classIdQuery);
+                        const migratePromises: Promise<any>[] = [];
+                        enrollSnap.docs.forEach(d => {
+                            const raw = d.data();
+                            // 종료됐거나 이미 새 담임인 enrollment는 건너뛰기
+                            if (raw.endDate || raw.withdrawalDate) return;
+                            if (raw.staffId === cls.pendingTeacher) return;
+                            // 이 batch로 이미 사전 분리된 enrollment(startDate=pendingTeacherDate, handoverBatchId 있음)는 건너뛰기
+                            if (raw.handoverBatchId) return;
+                            // 남은 건 = 예약 후 생긴 신규 enrollment → 새 담임으로 migrate
+                            migratePromises.push(
+                                updateDoc(d.ref, {
+                                    staffId: cls.pendingTeacher!,
+                                    teacher: cls.pendingTeacher!,
+                                    updatedAt: new Date().toISOString(),
+                                }).catch(err => console.warn('[자동적용] enrollment migrate 실패:', d.ref.path, err))
+                            );
+                        });
+                        await Promise.all(migratePromises);
+                    } catch (err) {
+                        console.warn('[자동적용] 신규 enrollment 스캔 실패:', cls.className, err);
+                    }
+
+                    // 2. classes 본체 + slotTeachers 교체 + pending 필드 삭제
+                    const classRef = doc(db, 'classes', cls.id);
+                    const classSnap = await getDoc(classRef);
+                    const classData = classSnap.data();
+                    const payload: Record<string, any> = {
+                        staffId: cls.pendingTeacher!,
+                        teacher: cls.pendingTeacher!,
+                        pendingTeacher: deleteField(),
+                        pendingTeacherDate: deleteField(),
+                        pendingTeacherReason: deleteField(),
+                        pendingHandoverBatchId: deleteField(),
+                        pendingHandoverPreviousTeacher: deleteField(),
+                        updatedAt: new Date().toISOString(),
+                    };
+                    // slotTeachers에서 이전 담임 이름과 같은 값을 새 담임으로 교체
+                    const slotTeachers = classData?.slotTeachers;
+                    if (slotTeachers && typeof slotTeachers === 'object') {
+                        const updated: Record<string, string> = {};
+                        Object.entries(slotTeachers).forEach(([k, v]) => {
+                            updated[k] = (v === cls.teacher) ? cls.pendingTeacher! : (v as string);
+                        });
+                        payload.slotTeachers = updated;
+                    }
+                    // 영어 반 mainTeacher 동기화
+                    if (cls.subject === '영어' || classData?.subject === 'english') {
+                        payload.mainTeacher = cls.pendingTeacher!;
+                    }
+                    await updateDoc(classRef, payload);
                     console.log(`[자동적용] ${cls.className} 강사 인수인계 적용 완료: ${cls.teacher} → ${cls.pendingTeacher}`);
                 } catch (error) {
                     console.error(`[자동적용] ${cls.className} 강사 인수인계 실패:`, error);
@@ -1804,7 +1885,6 @@ const TimetableManager = ({
             queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
             queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
             queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
-            queryClient.invalidateQueries({ queryKey: ['classStudents'] });
         };
 
         applyPendingHandovers();

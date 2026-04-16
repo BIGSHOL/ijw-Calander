@@ -21,6 +21,10 @@ export interface ClassInfo {
     slotTeachers?: Record<string, string>;
     slotRooms?: Record<string, string>;
     memo?: string;
+    // 강사 인수인계 예약 (effectiveDate부터 새 담임으로 교체 예정)
+    pendingTeacher?: string;
+    pendingTeacherDate?: string;
+    pendingTeacherReason?: string;
 }
 
 /**
@@ -116,6 +120,10 @@ export const useClasses = (subjectOrEnabled?: SubjectType | boolean, enabled = t
                     slotTeachers: data.slotTeachers,
                     slotRooms: data.slotRooms,
                     memo: data.memo,
+                    // 강사 인수인계 예약
+                    pendingTeacher: data.pendingTeacher,
+                    pendingTeacherDate: data.pendingTeacherDate,
+                    pendingTeacherReason: data.pendingTeacherReason,
                 };
             });
 
