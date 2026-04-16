@@ -1553,6 +1553,8 @@ const TimetableManager = ({
 
     const handleWithdrawalDrop = useCallback((studentId: string, classId: string, className: string) => {
         const student = studentMap[studentId];
+        // 이미 퇴원 처리된 학생은 퇴원 드롭 무시
+        if (student?.status === 'withdrawn') return;
         setWithdrawalModalInfo({
             studentId,
             studentName: student?.name || studentId,
