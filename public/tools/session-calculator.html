@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>세션/월 수강료 계산기</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif; }
+  .day-chip { user-select: none; }
+</style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+<div class="max-w-6xl mx-auto p-4 md:p-8">
+  <header class="mb-6">
+    <h1 class="text-2xl md:text-3xl font-bold text-slate-800">세션 / 월 수강료 계산기</h1>
+    <p class="text-slate-500 mt-1 text-sm">월 12회 고정 vs 요일별 실제 횟수 비교</p>
+  </header>
+
+  <!-- 입력 카드 -->
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 md:p-6 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <!-- 회당 단가 -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">회당 단가 (원)</label>
+        <input id="price" type="number" min="0" step="1000" value="50000"
+               class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none" />
+        <p class="text-xs text-slate-400 mt-1">예: 월 12회 기준 수강료 ÷ 12 = 회당 단가</p>
+      </div>
+
+      <!-- 월 12회 기준 금액 표시용 -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">월 12회 기준 수강료</label>
+        <div id="baseMonthly" class="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-700 font-medium">
+          600,000 원
+        </div>
+        <p class="text-xs text-slate-400 mt-1">= 단가 × 12</p>
+      </div>
+
+      <!-- 요일 선택 -->
+      <div class="md:col-span-2">
+        <label class="block text-sm font-semibold text-slate-700 mb-2">요일 선택 (복수 선택)</label>
+        <div id="daysWrap" class="flex flex-wrap gap-2">
+          <!-- day chips injected by JS -->
+        </div>
+        <div class="flex flex-wrap gap-2 mt-3 text-xs">
+          <button data-preset="mon,wed,fri" class="preset px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded">월수금</button>
+          <button data-preset="tue,thu" class="preset px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded">화목</button>
+          <button data-preset="mon,wed,thu" class="preset px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded">월수목</button>
+          <button data-preset="tue,wed,fri" class="preset px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded">화수금</button>
+          <button data-preset="mon,tue,wed" class="preset px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded">월화수</button>
+          <button data-preset="mon,tue,wed,thu,fri" class="preset px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded">월~금</button>
+        </div>
+      </div>
+
+      <!-- 연도 -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">기준 연도</label>
+        <select id="year" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none">
+          <!-- injected -->
+        </select>
+      </div>
+
+      <!-- 기간 -->
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">비교 기간 (시작 월 ~ 종료 월)</label>
+        <div class="flex items-center gap-2">
+          <select id="monthFrom" class="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none"></select>
+          <span class="text-slate-400">~</span>
+          <select id="monthTo" class="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:outline-none"></select>
+        </div>
+        <div class="flex flex-wrap gap-2 mt-2 text-xs">
+          <button data-range="1,3" class="range-preset px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded">1Q (1~3월)</button>
+          <button data-range="4,6" class="range-preset px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded">2Q (4~6월)</button>
+          <button data-range="7,9" class="range-preset px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded">3Q (7~9월)</button>
+          <button data-range="10,12" class="range-preset px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded">4Q (10~12월)</button>
+          <button data-range="3,8" class="range-preset px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded">상반기 학기 (3~8월)</button>
+          <button data-range="9,2" class="range-preset px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded">하반기 학기 (9~익년2월)</button>
+          <button data-range="1,12" class="range-preset px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded">연간 전체</button>
+        </div>
+      </div>
+
+      <!-- 공휴일 제외 옵션 -->
+      <div class="md:col-span-2">
+        <label class="inline-flex items-center gap-2 cursor-pointer">
+          <input id="excludeHolidays" type="checkbox" checked class="w-4 h-4 rounded border-slate-300 text-blue-500 focus:ring-blue-400" />
+          <span class="text-sm font-semibold text-slate-700">공휴일 제외 (한국 공휴일 기준)</span>
+        </label>
+        <details class="mt-2 text-xs text-slate-500">
+          <summary class="cursor-pointer hover:text-slate-700">공휴일 편집</summary>
+          <textarea id="holidayList" rows="4" class="mt-2 w-full px-2 py-1 border border-slate-200 rounded font-mono text-xs"
+            placeholder="한 줄에 하나씩: YYYY-MM-DD"></textarea>
+          <p class="mt-1">쉼표/줄바꿈으로 구분. 기본값은 2026~2027년 한국 법정 공휴일.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- 기간 합계 비교 결과 -->
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 md:p-6 mb-6">
+    <h2 class="text-lg font-bold text-slate-800 mb-4">📅 선택 기간 합계 <span id="rangeLabel" class="text-blue-600"></span></h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <!-- 12회 고정 -->
+      <div class="border border-slate-200 rounded-lg p-4 bg-slate-50">
+        <p class="text-xs font-semibold text-slate-500 mb-1">방식 1 · 월 12회 × 개월 수</p>
+        <p class="text-2xl font-bold text-slate-800"><span id="fixedCount">12</span>회</p>
+        <p class="text-xl text-slate-700 mt-1"><span id="fixedAmount">600,000</span> <span class="text-sm text-slate-400">원</span></p>
+      </div>
+      <!-- 요일 실제 -->
+      <div class="border border-slate-200 rounded-lg p-4 bg-blue-50">
+        <p class="text-xs font-semibold text-blue-600 mb-1">방식 2 · 요일별 실제 횟수</p>
+        <p class="text-2xl font-bold text-blue-700"><span id="actualCount">0</span>회</p>
+        <p class="text-xl text-blue-600 mt-1"><span id="actualAmount">0</span> <span class="text-sm text-blue-400">원</span></p>
+      </div>
+      <!-- 차이 -->
+      <div class="border border-slate-200 rounded-lg p-4" id="diffBox">
+        <p class="text-xs font-semibold text-slate-500 mb-1">차이 (방식2 − 방식1)</p>
+        <p class="text-2xl font-bold"><span id="diffCount">0</span>회</p>
+        <p class="text-xl mt-1"><span id="diffAmount">0</span> <span class="text-sm text-slate-400">원</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 월별 상세 (기간 내) -->
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 md:p-6 mb-6">
+    <h2 class="text-lg font-bold text-slate-800 mb-4">📊 기간 내 월별 상세 <span id="rangeLabel2" class="text-blue-600"></span></h2>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm border-collapse">
+        <thead>
+          <tr class="bg-slate-100 text-slate-700">
+            <th class="px-3 py-2 text-left border border-slate-200">연/월</th>
+            <th class="px-3 py-2 text-right border border-slate-200">요일 실제 횟수</th>
+            <th class="px-3 py-2 text-right border border-slate-200">요일 실제 금액</th>
+            <th class="px-3 py-2 text-right border border-slate-200">12회 고정 금액</th>
+            <th class="px-3 py-2 text-right border border-slate-200">차이 (회)</th>
+            <th class="px-3 py-2 text-right border border-slate-200">차이 (원)</th>
+          </tr>
+        </thead>
+        <tbody id="rangeTableBody"></tbody>
+        <tfoot>
+          <tr class="bg-slate-800 text-white font-bold">
+            <td class="px-3 py-2 border border-slate-200">합계</td>
+            <td class="px-3 py-2 text-right border border-slate-200"><span id="sumActualCount">0</span>회</td>
+            <td class="px-3 py-2 text-right border border-slate-200"><span id="sumActualAmount">0</span>원</td>
+            <td class="px-3 py-2 text-right border border-slate-200"><span id="sumFixedAmount">0</span>원</td>
+            <td class="px-3 py-2 text-right border border-slate-200"><span id="sumDiffCount">0</span>회</td>
+            <td class="px-3 py-2 text-right border border-slate-200"><span id="sumDiffAmount">0</span>원</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <div id="summaryBox" class="mt-5 p-4 rounded-lg text-sm"></div>
+
+    <!-- 월별 수업일 리스트 -->
+    <details class="mt-5">
+      <summary class="cursor-pointer text-sm font-semibold text-slate-700 hover:text-slate-900">📌 월별 실제 수업일 보기</summary>
+      <div id="monthlyDateList" class="mt-3 space-y-3"></div>
+    </details>
+  </section>
+
+  <!-- 연간 비교 결과 -->
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 md:p-6 mb-6">
+    <h2 class="text-lg font-bold text-slate-800 mb-4">🗓️ 연간 비교 <span id="yearLabel" class="text-blue-600"></span></h2>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm border-collapse">
+        <thead>
+          <tr class="bg-slate-100 text-slate-700">
+            <th class="px-3 py-2 text-left border border-slate-200">월</th>
+            <th class="px-3 py-2 text-right border border-slate-200">요일 실제 횟수</th>
+            <th class="px-3 py-2 text-right border border-slate-200">요일 실제 금액</th>
+            <th class="px-3 py-2 text-right border border-slate-200">12회 고정 금액</th>
+            <th class="px-3 py-2 text-right border border-slate-200">차이 (회)</th>
+            <th class="px-3 py-2 text-right border border-slate-200">차이 (원)</th>
+          </tr>
+        </thead>
+        <tbody id="yearTableBody"></tbody>
+        <tfoot>
+          <tr class="bg-slate-800 text-white font-bold">
+            <td class="px-3 py-2 border border-slate-200">연간 합계</td>
+            <td class="px-3 py-2 text-right border border-slate-200"><span id="yearSumActualCount">0</span>회</td>
+            <td class="px-3 py-2 text-right border border-slate-200"><span id="yearSumActualAmount">0</span>원</td>
+            <td class="px-3 py-2 text-right border border-slate-200"><span id="yearSumFixedAmount">0</span>원</td>
+            <td class="px-3 py-2 text-right border border-slate-200"><span id="yearSumDiffCount">0</span>회</td>
+            <td class="px-3 py-2 text-right border border-slate-200"><span id="yearSumDiffAmount">0</span>원</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </section>
+
+  <footer class="text-center text-xs text-slate-400 py-4">
+    인재원 세션 계산기 · 브라우저에서 바로 실행
+  </footer>
+</div>
+
+<script>
+// ----- 기본 데이터 -----
+const DAYS = [
+  { key: 'mon', label: '월', idx: 1 },
+  { key: 'tue', label: '화', idx: 2 },
+  { key: 'wed', label: '수', idx: 3 },
+  { key: 'thu', label: '목', idx: 4 },
+  { key: 'fri', label: '금', idx: 5 },
+  { key: 'sat', label: '토', idx: 6 },
+  { key: 'sun', label: '일', idx: 0 },
+];
+
+// 한국 법정 공휴일 (2026-2027) - 기본값
+const DEFAULT_HOLIDAYS = [
+  // 2026
+  '2026-01-01', // 신정
+  '2026-02-16', '2026-02-17', '2026-02-18', // 설날 연휴
+  '2026-03-01', '2026-03-02', // 삼일절 + 대체
+  '2026-05-05', // 어린이날
+  '2026-05-24', '2026-05-25', // 부처님오신날 + 대체
+  '2026-06-06', // 현충일
+  '2026-08-15', '2026-08-17', // 광복절 + 대체
+  '2026-09-24', '2026-09-25', '2026-09-26', // 추석 연휴
+  '2026-10-03', '2026-10-05', // 개천절 + 대체
+  '2026-10-09', // 한글날
+  '2026-12-25', // 성탄절
+  // 2027
+  '2027-01-01',
+  '2027-02-06', '2027-02-07', '2027-02-08', '2027-02-09',
+  '2027-03-01',
+  '2027-05-05',
+  '2027-05-13',
+  '2027-06-06', '2027-06-07',
+  '2027-08-15', '2027-08-16',
+  '2027-09-14', '2027-09-15', '2027-09-16',
+  '2027-10-03', '2027-10-04',
+  '2027-10-09', '2027-10-11',
+  '2027-12-25',
+];
+
+// ----- 상태 -----
+const state = {
+  selectedDays: new Set(['mon', 'wed', 'fri']),
+  year: 2026,
+  monthFrom: 4,
+  monthTo: 4,
+};
+
+// ----- 렌더링: 요일 칩 -----
+const daysWrap = document.getElementById('daysWrap');
+DAYS.forEach(d => {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.dataset.day = d.key;
+  b.textContent = d.label;
+  b.className = 'day-chip w-10 h-10 rounded-full border-2 text-sm font-bold transition';
+  daysWrap.appendChild(b);
+});
+
+function refreshDayChips() {
+  daysWrap.querySelectorAll('button[data-day]').forEach(el => {
+    const on = state.selectedDays.has(el.dataset.day);
+    const day = el.dataset.day;
+    const isSun = day === 'sun';
+    const isSat = day === 'sat';
+    el.className = 'day-chip w-10 h-10 rounded-full border-2 text-sm font-bold transition ' +
+      (on
+        ? (isSun ? 'bg-red-500 text-white border-red-500'
+          : isSat ? 'bg-blue-500 text-white border-blue-500'
+          : 'bg-slate-800 text-white border-slate-800')
+        : (isSun ? 'text-red-500 border-red-200 hover:border-red-400'
+          : isSat ? 'text-blue-500 border-blue-200 hover:border-blue-400'
+          : 'text-slate-600 border-slate-200 hover:border-slate-400'));
+  });
+}
+
+daysWrap.addEventListener('click', e => {
+  const btn = e.target.closest('button[data-day]');
+  if (!btn) return;
+  const key = btn.dataset.day;
+  if (state.selectedDays.has(key)) state.selectedDays.delete(key);
+  else state.selectedDays.add(key);
+  refreshDayChips();
+  recalc();
+});
+
+// 요일 프리셋
+document.querySelectorAll('.preset').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.selectedDays = new Set(btn.dataset.preset.split(','));
+    refreshDayChips();
+    recalc();
+  });
+});
+
+// ----- 연/월 드롭다운 -----
+const yearSel = document.getElementById('year');
+const monthFromSel = document.getElementById('monthFrom');
+const monthToSel = document.getElementById('monthTo');
+const thisYear = new Date().getFullYear();
+for (let y = thisYear - 1; y <= thisYear + 3; y++) {
+  const opt = document.createElement('option');
+  opt.value = y;
+  opt.textContent = y + '년';
+  if (y === state.year) opt.selected = true;
+  yearSel.appendChild(opt);
+}
+for (let m = 1; m <= 12; m++) {
+  [monthFromSel, monthToSel].forEach(sel => {
+    const opt = document.createElement('option');
+    opt.value = m;
+    opt.textContent = m + '월';
+    sel.appendChild(opt);
+  });
+}
+monthFromSel.value = state.monthFrom;
+monthToSel.value = state.monthTo;
+
+yearSel.addEventListener('change', e => { state.year = +e.target.value; recalc(); });
+monthFromSel.addEventListener('change', e => { state.monthFrom = +e.target.value; recalc(); });
+monthToSel.addEventListener('change', e => { state.monthTo = +e.target.value; recalc(); });
+
+// 기간 프리셋
+document.querySelectorAll('.range-preset').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const [from, to] = btn.dataset.range.split(',').map(Number);
+    state.monthFrom = from;
+    state.monthTo = to;
+    monthFromSel.value = from;
+    monthToSel.value = to;
+    recalc();
+  });
+});
+
+// ----- 기타 입력 -----
+const priceInput = document.getElementById('price');
+const excludeHolidaysInput = document.getElementById('excludeHolidays');
+const holidayListTextarea = document.getElementById('holidayList');
+
+holidayListTextarea.value = DEFAULT_HOLIDAYS.join('\n');
+
+[priceInput, excludeHolidaysInput, holidayListTextarea].forEach(el => {
+  el.addEventListener('input', recalc);
+  el.addEventListener('change', recalc);
+});
+
+// ----- 계산 로직 -----
+function getHolidaySet() {
+  if (!excludeHolidaysInput.checked) return new Set();
+  const raw = holidayListTextarea.value || '';
+  const set = new Set();
+  raw.split(/[\s,]+/).forEach(s => {
+    const t = s.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(t)) set.add(t);
+  });
+  return set;
+}
+
+function dateKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
+function countSessionsInMonth(year, month /* 1~12 */, selectedIdxSet, holidaySet) {
+  const dates = [];
+  const last = new Date(year, month, 0).getDate();
+  for (let d = 1; d <= last; d++) {
+    const dt = new Date(year, month - 1, d);
+    if (!selectedIdxSet.has(dt.getDay())) continue;
+    if (holidaySet.has(dateKey(dt))) continue;
+    dates.push(dt);
+  }
+  return dates;
+}
+
+function formatNumber(n) {
+  return n.toLocaleString('ko-KR');
+}
+
+// 기간 내 (year, month) 페어 리스트 생성
+// from > to 인 경우 다음 해까지 넘어감 (예: 9~2 → 9,10,11,12,익년1,2)
+function getRangeMonths(year, from, to) {
+  const result = [];
+  if (from <= to) {
+    for (let m = from; m <= to; m++) result.push({ year, month: m });
+  } else {
+    for (let m = from; m <= 12; m++) result.push({ year, month: m });
+    for (let m = 1; m <= to; m++) result.push({ year: year + 1, month: m });
+  }
+  return result;
+}
+
+// ----- 재계산 -----
+function recalc() {
+  const price = Number(priceInput.value) || 0;
+  document.getElementById('baseMonthly').textContent = formatNumber(price * 12) + ' 원';
+
+  const selectedIdx = new Set();
+  state.selectedDays.forEach(k => {
+    const d = DAYS.find(x => x.key === k);
+    if (d) selectedIdx.add(d.idx);
+  });
+  const holidays = getHolidaySet();
+
+  // ---- 기간 라벨 ----
+  const rangeMonths = getRangeMonths(state.year, state.monthFrom, state.monthTo);
+  const monthCount = rangeMonths.length;
+  const isCrossYear = state.monthFrom > state.monthTo;
+  const labelText = isCrossYear
+    ? `· ${state.year}년 ${state.monthFrom}월 ~ ${state.year + 1}년 ${state.monthTo}월 (${monthCount}개월)`
+    : (state.monthFrom === state.monthTo
+        ? `· ${state.year}년 ${state.monthFrom}월`
+        : `· ${state.year}년 ${state.monthFrom}월 ~ ${state.monthTo}월 (${monthCount}개월)`);
+  document.getElementById('rangeLabel').textContent = labelText;
+  document.getElementById('rangeLabel2').textContent = labelText;
+
+  // ---- 기간 합계 ----
+  let sumActualCount = 0, sumActualAmount = 0;
+  const monthlyData = rangeMonths.map(({ year, month }) => {
+    const dates = countSessionsInMonth(year, month, selectedIdx, holidays);
+    const c = dates.length;
+    const a = c * price;
+    sumActualCount += c;
+    sumActualAmount += a;
+    return { year, month, dates, count: c, amount: a };
+  });
+  const sumFixedCount = 12 * monthCount;
+  const sumFixedAmount = sumFixedCount * price;
+  const diffCount = sumActualCount - sumFixedCount;
+  const diffAmount = sumActualAmount - sumFixedAmount;
+
+  document.getElementById('fixedCount').textContent = sumFixedCount;
+  document.getElementById('fixedAmount').textContent = formatNumber(sumFixedAmount);
+  document.getElementById('actualCount').textContent = sumActualCount;
+  document.getElementById('actualAmount').textContent = formatNumber(sumActualAmount);
+  document.getElementById('diffCount').textContent = (diffCount > 0 ? '+' : '') + diffCount;
+  document.getElementById('diffAmount').textContent = (diffAmount > 0 ? '+' : '') + formatNumber(diffAmount);
+
+  const diffBox = document.getElementById('diffBox');
+  diffBox.className = 'border rounded-lg p-4 ' +
+    (diffAmount > 0 ? 'border-emerald-300 bg-emerald-50'
+      : diffAmount < 0 ? 'border-rose-300 bg-rose-50'
+      : 'border-slate-200 bg-slate-50');
+
+  // ---- 기간 내 월별 표 ----
+  const rangeTableBody = document.getElementById('rangeTableBody');
+  rangeTableBody.innerHTML = '';
+  monthlyData.forEach(({ year, month, count, amount }) => {
+    const f = 12 * price;
+    const dc = count - 12;
+    const da = amount - f;
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-slate-50';
+    tr.innerHTML = `
+      <td class="px-3 py-2 border border-slate-200 font-medium">${year}년 ${month}월</td>
+      <td class="px-3 py-2 text-right border border-slate-200">${count}회</td>
+      <td class="px-3 py-2 text-right border border-slate-200">${formatNumber(amount)}</td>
+      <td class="px-3 py-2 text-right border border-slate-200">${formatNumber(f)}</td>
+      <td class="px-3 py-2 text-right border border-slate-200 ${dc>0?'text-emerald-600':dc<0?'text-rose-600':''}">${dc>0?'+':''}${dc}</td>
+      <td class="px-3 py-2 text-right border border-slate-200 ${da>0?'text-emerald-600':da<0?'text-rose-600':''}">${da>0?'+':''}${formatNumber(da)}</td>
+    `;
+    rangeTableBody.appendChild(tr);
+  });
+
+  document.getElementById('sumActualCount').textContent = sumActualCount;
+  document.getElementById('sumActualAmount').textContent = formatNumber(sumActualAmount);
+  document.getElementById('sumFixedAmount').textContent = formatNumber(sumFixedAmount);
+  document.getElementById('sumDiffCount').textContent = (diffCount > 0 ? '+' : '') + diffCount;
+  document.getElementById('sumDiffAmount').textContent = (diffAmount > 0 ? '+' : '') + formatNumber(diffAmount);
+
+  // ---- 요약 박스 ----
+  const selectedLabels = DAYS.filter(d => state.selectedDays.has(d.key)).map(d => d.label).join('·');
+  const dayCount = state.selectedDays.size;
+  const summaryBox = document.getElementById('summaryBox');
+  if (dayCount === 0) {
+    summaryBox.className = 'mt-5 p-4 rounded-lg text-sm bg-slate-100 text-slate-600';
+    summaryBox.innerHTML = '⚠️ 요일을 하나 이상 선택하세요.';
+  } else {
+    const avgPerMonth = (sumActualCount / monthCount).toFixed(1);
+    const sign = diffAmount > 0 ? '더 받음' : diffAmount < 0 ? '덜 받음' : '동일';
+    const color = diffAmount > 0 ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                : diffAmount < 0 ? 'bg-rose-50 text-rose-800 border-rose-200'
+                : 'bg-slate-50 text-slate-700 border-slate-200';
+    summaryBox.className = `mt-5 p-4 rounded-lg text-sm border ${color}`;
+    summaryBox.innerHTML = `
+      <p class="font-bold text-base mb-1">💡 기간 요약 · ${selectedLabels} (주 ${dayCount}회) · ${monthCount}개월</p>
+      <p>· 실제 수업 횟수: <b>${sumActualCount}회</b> (월 평균 ${avgPerMonth}회)</p>
+      <p>· 12회 고정 총합: <b>${formatNumber(sumFixedAmount)}원</b> (12 × ${monthCount} × ${formatNumber(price)})</p>
+      <p>· 요일별 실제 총합: <b>${formatNumber(sumActualAmount)}원</b></p>
+      <p class="mt-2 text-base">➡️ 요일별 정산이 <b>${diffCount>0?'+':''}${diffCount}회 / ${diffAmount>0?'+':''}${formatNumber(diffAmount)}원</b> ${sign}</p>
+    `;
+  }
+
+  // ---- 월별 수업일 리스트 ----
+  const monthlyDateList = document.getElementById('monthlyDateList');
+  monthlyDateList.innerHTML = '';
+  monthlyData.forEach(({ year, month, dates }) => {
+    const block = document.createElement('div');
+    block.className = 'border border-slate-200 rounded-lg p-3';
+    const header = document.createElement('p');
+    header.className = 'text-sm font-semibold text-slate-700 mb-2';
+    header.textContent = `${year}년 ${month}월 — ${dates.length}회`;
+    block.appendChild(header);
+    if (dates.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'text-xs text-slate-400';
+      empty.textContent = '선택된 요일 기준 수업일이 없습니다.';
+      block.appendChild(empty);
+    } else {
+      const wrap = document.createElement('div');
+      wrap.className = 'flex flex-wrap gap-1.5 text-xs';
+      dates.forEach(dt => {
+        const dayLabel = ['일','월','화','수','목','금','토'][dt.getDay()];
+        const chip = document.createElement('span');
+        const isSun = dt.getDay() === 0, isSat = dt.getDay() === 6;
+        chip.className = 'px-2 py-0.5 rounded ' +
+          (isSun ? 'bg-red-50 text-red-600'
+            : isSat ? 'bg-blue-50 text-blue-600'
+            : 'bg-slate-100 text-slate-700');
+        chip.textContent = `${dt.getMonth()+1}/${dt.getDate()}(${dayLabel})`;
+        wrap.appendChild(chip);
+      });
+      block.appendChild(wrap);
+    }
+    monthlyDateList.appendChild(block);
+  });
+
+  // ---- 연간 비교 표 (참고용, 기준 연도 1~12월) ----
+  document.getElementById('yearLabel').textContent = `· ${state.year}년`;
+  const yearBody = document.getElementById('yearTableBody');
+  yearBody.innerHTML = '';
+  let yearSumActualCount = 0, yearSumActualAmount = 0;
+  for (let m = 1; m <= 12; m++) {
+    const dates = countSessionsInMonth(state.year, m, selectedIdx, holidays);
+    const c = dates.length;
+    const a = c * price;
+    const f = 12 * price;
+    yearSumActualCount += c;
+    yearSumActualAmount += a;
+    const dc = c - 12;
+    const da = a - f;
+
+    // 기간 내에 포함된 월 하이라이트
+    const inRange = !isCrossYear
+      ? (m >= state.monthFrom && m <= state.monthTo)
+      : (m >= state.monthFrom);
+    const tr = document.createElement('tr');
+    tr.className = inRange ? 'bg-blue-50 font-semibold' : 'hover:bg-slate-50';
+    tr.innerHTML = `
+      <td class="px-3 py-2 border border-slate-200">${m}월</td>
+      <td class="px-3 py-2 text-right border border-slate-200">${c}회</td>
+      <td class="px-3 py-2 text-right border border-slate-200">${formatNumber(a)}</td>
+      <td class="px-3 py-2 text-right border border-slate-200">${formatNumber(f)}</td>
+      <td class="px-3 py-2 text-right border border-slate-200 ${dc>0?'text-emerald-600':dc<0?'text-rose-600':''}">${dc>0?'+':''}${dc}</td>
+      <td class="px-3 py-2 text-right border border-slate-200 ${da>0?'text-emerald-600':da<0?'text-rose-600':''}">${da>0?'+':''}${formatNumber(da)}</td>
+    `;
+    yearBody.appendChild(tr);
+  }
+  const yearSumFixedCount = 144;
+  const yearSumFixedAmount = yearSumFixedCount * price;
+  const yearDiffCount = yearSumActualCount - yearSumFixedCount;
+  const yearDiffAmount = yearSumActualAmount - yearSumFixedAmount;
+  document.getElementById('yearSumActualCount').textContent = yearSumActualCount;
+  document.getElementById('yearSumActualAmount').textContent = formatNumber(yearSumActualAmount);
+  document.getElementById('yearSumFixedAmount').textContent = formatNumber(yearSumFixedAmount);
+  document.getElementById('yearSumDiffCount').textContent = (yearDiffCount > 0 ? '+' : '') + yearDiffCount;
+  document.getElementById('yearSumDiffAmount').textContent = (yearDiffAmount > 0 ? '+' : '') + formatNumber(yearDiffAmount);
+}
+
+// 초기 렌더
+refreshDayChips();
+recalc();
+</script>
+</body>
+</html>

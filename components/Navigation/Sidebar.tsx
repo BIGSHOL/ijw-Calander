@@ -201,6 +201,31 @@ const Sidebar: React.FC<SidebarProps> = ({
                     )}
                   </a>
                 )}
+
+                {/* 관리 그룹 하단에 세션 계산기 새 창 바로가기 추가 */}
+                {group.id === 'admin' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.open(
+                        '/tools/session-calculator.html',
+                        'sessionCalculator',
+                        'width=1100,height=900,scrollbars=yes,resizable=yes,noopener,noreferrer'
+                      );
+                    }}
+                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs font-medium transition-all text-gray-700 hover:bg-gray-100 hover:text-gray-900 ${isCollapsed ? 'justify-center' : ''}`}
+                    title={isCollapsed ? '세션 계산기 (새 창)' : undefined}
+                    aria-label="세션 계산기 새 창에서 열기"
+                  >
+                    <span className="text-sm flex-shrink-0" aria-hidden="true">🧮</span>
+                    {!isCollapsed && (
+                      <span className="flex items-center gap-1 flex-1">
+                        세션 계산기
+                        <ExternalLink size={10} className="text-gray-400 ml-auto" />
+                      </span>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
           );
