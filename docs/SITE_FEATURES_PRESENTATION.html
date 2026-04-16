@@ -1,0 +1,1692 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>에이와 인재원 - 시스템 기능 소개</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Pretendard', 'Noto Sans KR', -apple-system, sans-serif; }
+body {
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  color: #e2e8f0;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+.slide-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+.slide {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 80px;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+.slide.active { opacity: 1; pointer-events: auto; }
+
+/* 슬라이드 번호 */
+.slide-number {
+  position: absolute;
+  top: 20px; right: 30px;
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+.slide-title {
+  position: absolute;
+  top: 20px; left: 30px;
+  font-size: 13px;
+  color: #38bdf8;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* 네비게이션 */
+.nav-btn {
+  position: fixed;
+  bottom: 25px;
+  background: #1e40af;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 4px 14px rgba(30, 64, 175, 0.4);
+  transition: all 0.2s;
+  z-index: 100;
+}
+.nav-btn:hover { background: #1e3a8a; transform: translateY(-2px); }
+.nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+#prev-btn { left: 30px; }
+#next-btn { right: 30px; }
+#menu-btn { right: 140px; background: #475569; }
+
+.progress-bar {
+  position: fixed;
+  bottom: 0; left: 0;
+  width: 100%;
+  height: 3px;
+  background: #1e293b;
+  z-index: 99;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #06b6d4);
+  width: 0%;
+  transition: width 0.3s;
+}
+
+/* 타이틀 슬라이드 */
+.title-slide { text-align: center; }
+.title-slide h1 {
+  font-size: 72px;
+  font-weight: 900;
+  background: linear-gradient(135deg, #38bdf8, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 20px;
+  letter-spacing: -2px;
+}
+.title-slide .subtitle {
+  font-size: 24px;
+  color: #94a3b8;
+  margin-bottom: 40px;
+}
+.title-slide .meta {
+  font-size: 14px;
+  color: #64748b;
+  margin-top: 60px;
+}
+.title-slide .badges {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 30px;
+  flex-wrap: wrap;
+}
+.title-slide .badge {
+  padding: 8px 18px;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 100px;
+  font-size: 13px;
+  color: #93c5fd;
+  font-weight: 500;
+}
+
+/* 일반 슬라이드 */
+.content-slide { justify-content: flex-start; padding-top: 80px; }
+.content-slide h2 {
+  font-size: 42px;
+  font-weight: 800;
+  color: #f1f5f9;
+  margin-bottom: 10px;
+  letter-spacing: -0.5px;
+}
+.content-slide .lead {
+  font-size: 18px;
+  color: #94a3b8;
+  margin-bottom: 40px;
+  max-width: 1000px;
+}
+
+/* 그리드 레이아웃 */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; width: 100%; max-width: 1400px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; width: 100%; max-width: 1400px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; width: 100%; max-width: 1400px; }
+
+/* 카드 */
+.card {
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  border-radius: 12px;
+  padding: 24px;
+  transition: all 0.2s;
+}
+.card:hover { border-color: #3b82f6; transform: translateY(-3px); }
+.card .icon { font-size: 36px; margin-bottom: 10px; }
+.card h3 { font-size: 18px; color: #f1f5f9; margin-bottom: 8px; font-weight: 700; }
+.card p { font-size: 13px; color: #94a3b8; line-height: 1.6; }
+.card ul { font-size: 13px; color: #cbd5e1; line-height: 1.8; margin-top: 8px; padding-left: 16px; }
+.card.highlight { background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.1)); border-color: #3b82f6; }
+.card.dev { background: rgba(100, 100, 100, 0.2); border-color: #64748b; }
+.card.dev::before { content: "개발중"; position: absolute; top: 10px; right: 10px; background: #ea580c; color: white; padding: 2px 8px; border-radius: 100px; font-size: 10px; font-weight: 700; }
+.card { position: relative; }
+
+/* 테이블 */
+.table-wrapper { width: 100%; max-width: 1400px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; background: rgba(30, 41, 59, 0.6); border-radius: 8px; overflow: hidden; }
+th { background: #1e293b; color: #38bdf8; text-align: left; padding: 12px 16px; font-size: 13px; font-weight: 700; }
+td { padding: 12px 16px; border-top: 1px solid rgba(100, 116, 139, 0.2); font-size: 13px; color: #cbd5e1; }
+tr:hover td { background: rgba(59, 130, 246, 0.05); }
+.status-ok { color: #4ade80; font-weight: 600; }
+.status-dev { color: #fb923c; font-weight: 600; }
+.status-no { color: #f87171; font-weight: 600; }
+
+/* 리스트 */
+.feature-list { list-style: none; max-width: 1200px; }
+.feature-list li {
+  padding: 14px 18px;
+  background: rgba(30, 41, 59, 0.6);
+  border-left: 4px solid #3b82f6;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  font-size: 15px;
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.feature-list li strong { color: #f1f5f9; min-width: 150px; display: inline-block; }
+.feature-list li.dev { border-left-color: #ea580c; }
+.feature-list li.new { border-left-color: #4ade80; }
+
+/* 다이어그램 */
+.flow-diagram {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 30px;
+  width: 100%;
+  max-width: 1200px;
+  font-family: 'Consolas', monospace;
+  font-size: 14px;
+  color: #94a3b8;
+  line-height: 1.8;
+  white-space: pre;
+  overflow-x: auto;
+}
+.flow-diagram .arrow { color: #38bdf8; }
+.flow-diagram .highlight { color: #f472b6; font-weight: bold; }
+
+/* 메뉴 */
+.menu-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.9);
+  z-index: 200;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+}
+.menu-overlay.active { display: flex; }
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  max-width: 1200px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 20px;
+}
+.menu-item {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 12px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  border: 1px solid #334155;
+  transition: all 0.2s;
+}
+.menu-item:hover { background: #3b82f6; border-color: #3b82f6; color: white; }
+.menu-item .num { color: #64748b; margin-right: 10px; font-weight: 600; }
+.menu-item:hover .num { color: #fef3c7; }
+
+.close-menu { position: absolute; top: 20px; right: 30px; background: #dc2626; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; }
+
+/* 색상 태그 */
+.tag { display: inline-block; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; margin-right: 6px; }
+.tag-blue { background: #1e40af; color: #bfdbfe; }
+.tag-green { background: #14532d; color: #86efac; }
+.tag-orange { background: #7c2d12; color: #fed7aa; }
+.tag-purple { background: #581c87; color: #d8b4fe; }
+.tag-pink { background: #831843; color: #fbcfe8; }
+.tag-gray { background: #334155; color: #cbd5e1; }
+
+/* 스크롤 허용 (긴 슬라이드) */
+.slide.scrollable {
+  overflow-y: auto;
+  padding-bottom: 80px;
+  align-items: flex-start;
+}
+
+/* 키 힌트 */
+.key-hint { position: fixed; top: 60px; right: 30px; background: rgba(30, 41, 59, 0.8); padding: 6px 12px; border-radius: 6px; font-size: 11px; color: #94a3b8; z-index: 50; }
+
+@media print {
+  .slide { opacity: 1 !important; pointer-events: auto !important; position: relative; page-break-after: always; height: auto; min-height: 100vh; }
+  .nav-btn, .progress-bar, .menu-overlay, .key-hint { display: none !important; }
+}
+</style>
+</head>
+<body>
+<div class="slide-container">
+
+<!-- 슬라이드 1: 타이틀 -->
+<div class="slide active title-slide" data-title="COVER">
+  <div class="slide-number">1 / 30</div>
+  <h1>에이와 인재원</h1>
+  <div class="subtitle">학원 통합 관리 시스템 · 기능 소개</div>
+  <div class="badges">
+    <span class="badge">React + TypeScript</span>
+    <span class="badge">Firebase</span>
+    <span class="badge">AI 통합</span>
+    <span class="badge">33개 메뉴</span>
+    <span class="badge">100+ 권한</span>
+  </div>
+  <div class="meta">v2026.04.14 · 에이와 인재원</div>
+</div>
+
+<!-- 슬라이드 2: 목차 -->
+<div class="slide content-slide" data-title="목차">
+  <div class="slide-title">INDEX</div>
+  <div class="slide-number">2 / 30</div>
+  <h2>📑 목차</h2>
+  <div class="grid-3" style="margin-top: 20px;">
+    <div class="card">
+      <div class="icon">🏗️</div>
+      <h3>1부. 시스템 개요</h3>
+      <ul>
+        <li>기술 스택 & 아키텍처</li>
+        <li>권한 및 역할 체계</li>
+        <li>전체 메뉴 맵</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="icon">📋</div>
+      <h3>2부. 핵심 기능</h3>
+      <ul>
+        <li>시간표 (수학/영어/셔틀)</li>
+        <li>학생 관리</li>
+        <li>출결 & 성적</li>
+        <li>교재 & 수납</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="icon">🔗</div>
+      <h3>3부. 고급 기능</h3>
+      <ul>
+        <li>시뮬레이션 모드</li>
+        <li>AI 연동 (상담/회의)</li>
+        <li>외부 시스템 연동</li>
+        <li>개발중 기능</li>
+      </ul>
+    </div>
+  </div>
+  <p style="margin-top: 30px; color: #64748b; font-size: 14px;">➡️ 화살표 키 또는 하단 버튼으로 이동, <strong>M</strong> 키로 목차 보기</p>
+</div>
+
+<!-- 슬라이드 3: 시스템 개요 -->
+<div class="slide content-slide" data-title="시스템 개요">
+  <div class="slide-title">PART 1 · OVERVIEW</div>
+  <div class="slide-number">3 / 30</div>
+  <h2>🏗️ 시스템 개요</h2>
+  <p class="lead">학원 운영의 모든 영역을 아우르는 통합 관리 플랫폼</p>
+
+  <div class="grid-4">
+    <div class="card highlight">
+      <div class="icon">📋</div>
+      <h3>시간표</h3>
+      <p>수학/영어/과학/국어/셔틀 통합 관리. 드래그 이동, 시뮬레이션, 시나리오 저장.</p>
+    </div>
+    <div class="card highlight">
+      <div class="icon">👥</div>
+      <h3>학생 관리</h3>
+      <p>7개 탭 통합 조회. 등록·수납·상담·성적·교재 이력 한눈에.</p>
+    </div>
+    <div class="card highlight">
+      <div class="icon">✅</div>
+      <h3>출결 & 성적</h3>
+      <p>세션 기반 출석부, 일일 지각/결석, 시험 성적 관리.</p>
+    </div>
+    <div class="card highlight">
+      <div class="icon">💰</div>
+      <h3>수납 & 급여</h3>
+      <p>수강료 계산, 엑셀 일괄 수납, 직원 급여 자동 산정.</p>
+    </div>
+    <div class="card highlight">
+      <div class="icon">🤖</div>
+      <h3>AI 상담/회의</h3>
+      <p>녹음 → 음성인식 → Claude AI 보고서 자동 생성.</p>
+    </div>
+    <div class="card highlight">
+      <div class="icon">🔄</div>
+      <h3>외부 연동</h3>
+      <p>메이크에듀 크롤링, Google Calendar, Edutrix 보고서.</p>
+    </div>
+    <div class="card highlight">
+      <div class="icon">🔐</div>
+      <h3>권한 체계</h3>
+      <p>8단계 역할 × 100+ 권한. 역할 시뮬레이션 지원.</p>
+    </div>
+    <div class="card highlight">
+      <div class="icon">📊</div>
+      <h3>대시보드</h3>
+      <p>KPI/매출/출석/상담 실시간 현황. 역할별 맞춤 뷰.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 슬라이드 4: 기술 스택 -->
+<div class="slide content-slide scrollable" data-title="기술 스택">
+  <div class="slide-title">PART 1 · TECH</div>
+  <div class="slide-number">4 / 30</div>
+  <h2>⚙️ 기술 스택</h2>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>🎨 프론트엔드</h3>
+      <ul>
+        <li><strong>React 18</strong> + TypeScript</li>
+        <li><strong>Vite</strong> 빌드 (번들 분할, 동적 import)</li>
+        <li><strong>Tailwind CSS</strong> + 커스텀 디자인</li>
+        <li><strong>React Query (TanStack)</strong> — 30분 캐싱</li>
+        <li><strong>Context API</strong> — 시뮬레이션/권한 상태</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>☁️ 백엔드 (Firebase)</h3>
+      <ul>
+        <li><strong>Firestore</strong> — 40+ 컬렉션</li>
+        <li><strong>Auth</strong> — Google / 이메일 로그인</li>
+        <li><strong>Cloud Functions</strong> — Gen1, asia-northeast3</li>
+        <li><strong>Secret Manager</strong> — API 키 보관</li>
+        <li><strong>Hosting</strong> — prod/dev 분리</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🤖 AI & 자동화</h3>
+      <ul>
+        <li><strong>Claude API</strong> — 상담/회의 보고서</li>
+        <li><strong>AssemblyAI</strong> — 음성인식 (화자 구분)</li>
+        <li><strong>Google GenAI</strong> — 부가 AI</li>
+        <li><strong>Puppeteer + Chromium</strong> — 크롤링</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>📊 데이터 처리</h3>
+      <ul>
+        <li><strong>jsPDF + html2canvas</strong> — PDF 생성</li>
+        <li><strong>xlsx</strong> — 엑셀 import/export</li>
+        <li><strong>date-fns</strong> — 날짜 처리 (KST)</li>
+        <li><strong>Recharts</strong> — 차트 시각화</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 슬라이드 5: 권한 체계 -->
+<div class="slide content-slide" data-title="권한 체계">
+  <div class="slide-title">PART 1 · PERMISSIONS</div>
+  <div class="slide-number">5 / 30</div>
+  <h2>🔐 권한 및 역할</h2>
+  <p class="lead">8단계 역할 × 100+ 권한 · Master는 다른 역할로 시뮬레이션 가능</p>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr><th>역할</th><th>설명</th><th>주요 권한</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>master</strong></td><td>최고 관리자</td><td>모든 권한 + 역할 시뮬레이션</td></tr>
+        <tr><td><strong>admin</strong></td><td>관리자</td><td>권한 변경/역할 관리 제외 모든 권한</td></tr>
+        <tr><td><strong>manager</strong></td><td>매니저</td><td>직원/급여/역할 제외 대부분</td></tr>
+        <tr><td><strong>math_lead</strong></td><td>수학팀장</td><td>수학 전체 + 일부 관리</td></tr>
+        <tr><td><strong>english_lead</strong></td><td>영어팀장</td><td>영어 전체 + 일부 관리</td></tr>
+        <tr><td><strong>math_teacher</strong></td><td>수학선생님</td><td>수학 수업/출석/학생 조회</td></tr>
+        <tr><td><strong>english_teacher</strong></td><td>영어선생님</td><td>영어 수업/출석/학생 조회</td></tr>
+        <tr><td><strong>user</strong></td><td>기본 사용자</td><td>로그인 승인 대기 + 기본 조회</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="margin-top: 30px; display: flex; gap: 12px; flex-wrap: wrap; max-width: 1200px;">
+    <span class="tag tag-blue">timetable.*</span>
+    <span class="tag tag-green">students.*</span>
+    <span class="tag tag-orange">attendance.*</span>
+    <span class="tag tag-purple">classes.*</span>
+    <span class="tag tag-pink">grades.*</span>
+    <span class="tag tag-blue">consultation.*</span>
+    <span class="tag tag-green">billing.*</span>
+    <span class="tag tag-orange">textbooks.*</span>
+    <span class="tag tag-purple">payroll.*</span>
+    <span class="tag tag-pink">staff.*</span>
+    <span class="tag tag-gray">+100여개 권한</span>
+  </div>
+</div>
+
+<!-- 슬라이드 6: 전체 메뉴 맵 -->
+<div class="slide content-slide scrollable" data-title="전체 메뉴 맵">
+  <div class="slide-title">PART 1 · MENU MAP</div>
+  <div class="slide-number">6 / 30</div>
+  <h2>🗂️ 전체 메뉴 — 8개 그룹 × 33개 탭</h2>
+
+  <div class="grid-4">
+    <div class="card">
+      <h3>🏠 홈 (2)</h3>
+      <ul><li>대시보드</li><li>공지사항</li></ul>
+    </div>
+    <div class="card">
+      <h3>📅 일정 (2)</h3>
+      <ul><li>연간 일정</li><li>간트 차트</li></ul>
+    </div>
+    <div class="card">
+      <h3>📚 수업 (9)</h3>
+      <ul><li>시간표 ⭐</li><li>출석부</li><li>출결 관리</li><li>수업 관리</li><li>강의실</li><li>강의실 배정</li><li>숙제 관리</li><li>시험 관리</li><li>교재 관리</li></ul>
+    </div>
+    <div class="card">
+      <h3>👥 학생 (7)</h3>
+      <ul><li>학생 관리 ⭐</li><li>등록 상담</li><li>학생 상담</li><li>성적 관리</li><li>퇴원 관리</li><li>계약 관리</li><li>학습 리포트</li></ul>
+    </div>
+    <div class="card">
+      <h3>💼 관리 (10)</h3>
+      <ul><li>수강료 현황</li><li>직원 관리</li><li>수납 관리</li><li>자료실</li><li>역할 관리</li><li>급여 관리</li><li>매출 분석</li><li>수강료 계산</li><li>회의록</li><li>지출 관리</li></ul>
+    </div>
+    <div class="card">
+      <h3>💬 소통 (2)</h3>
+      <ul><li>학부모 소통</li><li>알림 발송</li></ul>
+    </div>
+    <div class="card">
+      <h3>📣 마케팅 (3)</h3>
+      <ul><li>마케팅</li><li>셔틀 관리</li><li>시간표 배포</li></ul>
+    </div>
+    <div class="card">
+      <h3>❓ 지원 (2)</h3>
+      <ul><li>도움말</li><li>로그보기</li></ul>
+    </div>
+  </div>
+</div>
+
+<!-- 슬라이드 7: 시간표 개요 -->
+<div class="slide content-slide" data-title="시간표 - 개요">
+  <div class="slide-title">PART 2 · TIMETABLE</div>
+  <div class="slide-number">7 / 30</div>
+  <h2>📋 시간표 — 가장 복잡한 핵심 기능</h2>
+  <p class="lead">수학 · 고등수학 · 영어 · 셔틀 · 전체 통합 뷰 지원</p>
+
+  <div class="grid-3">
+    <div class="card highlight">
+      <div class="icon">🧮</div>
+      <h3>수학</h3>
+      <p><strong>기본뷰: 엑셀(강사)</strong></p>
+      <ul>
+        <li>엑셀(요일) · 개발중</li>
+        <li>강의실뷰 · 개발중</li>
+        <li>통합뷰 · 개발중</li>
+      </ul>
+    </div>
+    <div class="card highlight">
+      <div class="icon">📐</div>
+      <h3>고등수학</h3>
+      <p><strong>기본뷰: 엑셀(요일)</strong></p>
+      <ul>
+        <li>엑셀(강사) · 개발중</li>
+        <li>강의실뷰 · 개발중</li>
+        <li>통합뷰 · 개발중</li>
+      </ul>
+    </div>
+    <div class="card highlight">
+      <div class="icon">🔤</div>
+      <h3>영어</h3>
+      <p><strong>기본뷰: 엑셀</strong></p>
+      <ul>
+        <li>통합뷰 · 개발중</li>
+        <li>강사뷰 · 개발중</li>
+        <li>강의실뷰 · 개발중</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top: 24px; max-width: 1200px; padding: 20px; background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; border-radius: 6px;">
+    <p style="font-size: 14px; color: #bfdbfe;">💡 과목 전환 시 자동으로 해당 과목의 <strong>기본뷰</strong>로 진입됩니다. 뷰 드롭다운에서 "개발중" 카테고리의 다른 뷰로도 이동 가능합니다.</p>
+  </div>
+</div>
+
+<!-- 슬라이드 8: 시간표 - 주요 기능 -->
+<div class="slide content-slide scrollable" data-title="시간표 - 기능">
+  <div class="slide-title">PART 2 · TIMETABLE</div>
+  <div class="slide-number">8 / 30</div>
+  <h2>📋 시간표 — 주요 기능</h2>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>🎯 학생 통계 배지 (상단 헤더)</h3>
+      <ul>
+        <li><strong>재원</strong>: 현재 등록 학생 (녹색)</li>
+        <li><strong>신입</strong>: 30일 이내 등록 (핑크)</li>
+        <li><strong>예정</strong>: 대기 + 퇴원예정 (앰버)</li>
+        <li><strong>퇴원</strong>: 30일 이내 퇴원 (회색)</li>
+        <li>배지 클릭 시 드롭다운으로 상세 목록</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🖱️ 드래그 & 드롭</h3>
+      <ul>
+        <li>학생 드래그로 반 이동</li>
+        <li>이전 위치: <span style="text-decoration:line-through">취소선</span> + 회색</li>
+        <li>이동 위치: <span style="background:#a78bfa;padding:2px 6px;border-radius:3px;color:white">보라색 배경</span></li>
+        <li>저장 시 Firestore enrollment 분리 처리</li>
+        <li>Ctrl+Z로 이동 취소 가능</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>⌨️ 엑셀 모드 단축키</h3>
+      <ul>
+        <li><strong>클릭/Shift+클릭</strong>: 학생 다중 선택</li>
+        <li><strong>Ctrl+C/X/V</strong>: 복사/잘라내기/붙여넣기</li>
+        <li><strong>Del</strong>: 선택 학생 보류 삭제</li>
+        <li><strong>Ctrl+Z</strong>: 마지막 작업 취소</li>
+        <li><strong>Tab/Enter</strong>: 셀 이동</li>
+        <li>자동완성 하이라이트 (다른 반 학생 빨간색)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🔍 필터 시스템</h3>
+      <ul>
+        <li><strong>강의실</strong>: 본원/바른/고등</li>
+        <li><strong>학교별</strong>: 초/중/고 (학교명)</li>
+        <li><strong>학년별</strong>: 초1~고3</li>
+        <li><strong>셔틀탑승</strong>: 메이크에듀 연동</li>
+        <li><strong>지각/결석</strong>: 주간 리포트 기반</li>
+        <li>병합 셀 (합반) 지원</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 슬라이드 9: 시뮬레이션 모드 -->
+<div class="slide content-slide scrollable" data-title="시뮬레이션 모드">
+  <div class="slide-title">PART 2 · SIMULATION</div>
+  <div class="slide-number">9 / 30</div>
+  <h2>🎭 시뮬레이션 모드</h2>
+  <p class="lead">실시간 데이터와 분리된 메모리 기반 편집 환경 · 학기 전환 시나리오 테스트</p>
+
+  <div class="grid-3">
+    <div class="card">
+      <h3>▶️ 진입</h3>
+      <ul>
+        <li>실시간 데이터 메모리 복사</li>
+        <li>주황색 헤더 + "SIMULATION" 배지</li>
+        <li>자동 "edit" 모드 전환</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>✏️ 편집 기능</h3>
+      <ul>
+        <li>학생 이동 (드래그/메뉴)</li>
+        <li>수업 추가/삭제</li>
+        <li>반 이름 변경 (레벨업)</li>
+        <li>학생 추가/제거</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>↩️ Undo/Redo</h3>
+      <ul>
+        <li><strong>Ctrl+Z</strong>: 실행 취소</li>
+        <li><strong>Ctrl+Y</strong>: 다시 실행</li>
+        <li>최대 20단계 히스토리</li>
+        <li>각 액션 설명 + 시각 기록</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>💾 시나리오 관리</h3>
+      <ul>
+        <li>여러 시나리오 저장</li>
+        <li>불러오기/덮어쓰기/삭제</li>
+        <li>시나리오 비교 (영어만)</li>
+        <li>자동 백업 생성</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>⚠️ 충돌 감지</h3>
+      <ul>
+        <li>편집 중 실시간 변경 추적</li>
+        <li>새/삭제된 수업 자동 감지</li>
+        <li>발행 시 충돌 알림</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🚀 실제 반영 모드</h3>
+      <ul>
+        <li><strong>덮어쓰기</strong>: 시뮬 데이터로 전체 교체</li>
+        <li><strong>병합</strong>: 새 수업 유지</li>
+        <li><strong>취소</strong>: 반영 취소</li>
+        <li>반이동 이력 자동 기록</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top: 20px; max-width: 1200px; padding: 16px; background: rgba(34, 197, 94, 0.1); border-left: 4px solid #22c55e; border-radius: 6px;">
+    <p style="font-size: 13px; color: #bbf7d0;">✅ <strong>수학 시뮬레이션 최근 업그레이드</strong>: Undo/Redo, 수업 CRUD, 충돌감지, 발행모드 구현 완료 (영어와 동일 수준)</p>
+  </div>
+</div>
+
+<!-- 슬라이드 10: 학생 관리 -->
+<div class="slide content-slide scrollable" data-title="학생 관리">
+  <div class="slide-title">PART 2 · STUDENTS</div>
+  <div class="slide-number">10 / 30</div>
+  <h2>👥 학생 관리 — 7개 탭 통합</h2>
+  <p class="lead">한 학생의 모든 정보를 하나의 화면에서 관리</p>
+
+  <div class="grid-4">
+    <div class="card">
+      <h3>📝 1. 기본정보</h3>
+      <ul>
+        <li>이름/성별/생년월일</li>
+        <li>학교/학년/졸업연도</li>
+        <li>연락처 (원생/보호자)</li>
+        <li>주소/이메일</li>
+        <li>알림 설정 (SMS/푸시/알림톡)</li>
+        <li><strong style="color:#4ade80">등하원 정보</strong> (NEW)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>📅 2. 수강 기록</h3>
+      <ul>
+        <li>반별 수강 이력</li>
+        <li>입학일/종료일</li>
+        <li>월별 출석/결석/지각</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>💰 3. 수납 내역</h3>
+      <ul>
+        <li>월별 수납 기록</li>
+        <li>미납 현황</li>
+        <li>할인 적용 내역</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>💬 4. 상담 내역</h3>
+      <ul>
+        <li>등록 상담 + 학생 상담</li>
+        <li>녹음 파일 링크</li>
+        <li>AI 생성 보고서</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>📚 5. 수강 과목</h3>
+      <ul>
+        <li>현재 등록된 모든 수업</li>
+        <li>과목별 소속 뱃지</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>📊 6. 성적</h3>
+      <ul>
+        <li>시험별 성적</li>
+        <li>평균/등수 시각화</li>
+        <li>학년별 추이</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>📖 7. 교재</h3>
+      <ul>
+        <li>월별 받은 교재</li>
+        <li>미청구 교재 표시</li>
+      </ul>
+    </div>
+    <div class="card highlight">
+      <h3>🔧 관리 도구</h3>
+      <ul>
+        <li>학년 일괄 진급</li>
+        <li>중복 학생 병합</li>
+        <li>메이크에듀 연동</li>
+        <li>고아 데이터 정리</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 슬라이드 11: 등록 상담 (AI) -->
+<div class="slide content-slide" data-title="상담 관리">
+  <div class="slide-title">PART 2 · CONSULTATION</div>
+  <div class="slide-number">11 / 30</div>
+  <h2>🎤 상담 관리 — AI 자동화</h2>
+  <p class="lead">신규 문의부터 녹음, AI 보고서까지 원스톱 처리</p>
+
+  <div class="grid-2">
+    <div class="card highlight">
+      <h3>📞 등록 상담</h3>
+      <ul>
+        <li>신규 문의/학부모 상담 기록</li>
+        <li><strong>음성 녹음</strong> → Firebase Storage 저장</li>
+        <li><strong>AssemblyAI</strong>로 음성인식 (화자 구분)</li>
+        <li><strong>Claude AI</strong>로 자동 보고서 생성</li>
+        <li>상담 → 정식 학생 등록 전환</li>
+        <li>임시저장 (Draft) 지원</li>
+      </ul>
+    </div>
+    <div class="card highlight">
+      <h3>💬 학생 상담</h3>
+      <ul>
+        <li>재원생 상담 기록</li>
+        <li>학부모 상담 이력</li>
+        <li>학생 상세 페이지와 연동</li>
+        <li>상담 유형별 통계</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top: 30px; max-width: 1100px;">
+    <div class="flow-diagram">
+[학부모 전화] → [상담 녹음 시작] → [<span class="highlight">Firebase Storage</span> 저장]
+                                         ↓
+                            [<span class="highlight">AssemblyAI</span> 음성인식]
+                                         ↓
+                          [화자 구분 + 한국어 Transcript]
+                                         ↓
+                              [<span class="highlight">Claude API</span> 보고서]
+                                         ↓
+                     [Firestore consultation_reports 저장]
+                                         ↓
+                          [학생 등록 전환 or 보관]</div>
+  </div>
+</div>
+
+<!-- 슬라이드 12: 출결 -->
+<div class="slide content-slide" data-title="출결 관리">
+  <div class="slide-title">PART 2 · ATTENDANCE</div>
+  <div class="slide-number">12 / 30</div>
+  <h2>✅ 출결 관리</h2>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>📝 출석부 (월간)</h3>
+      <ul>
+        <li>과목별 분리 (수학/영어)</li>
+        <li>월별 × 학생별 그리드</li>
+        <li>세션 기반 (격주/매주 등)</li>
+        <li>정산 자동 계산</li>
+        <li>엑셀 내보내기</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🕐 일일 출결 관리</h3>
+      <ul>
+        <li>오늘 날짜 기준 지각/조퇴/결석</li>
+        <li>수업 리포트 연동 (Edutrix)</li>
+        <li>SMS 자동 발송 연동</li>
+        <li>주간 결석 학생 자동 필터</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top: 20px; max-width: 1200px;" class="grid-3">
+    <div class="card">
+      <h3>🔄 출석부 이관</h3>
+      <p>학년 진급 시 기존 출석 기록 자동 이전 (AttendanceMigrationModal)</p>
+    </div>
+    <div class="card">
+      <h3>⚙️ 세션 설정</h3>
+      <p>수업 빈도/기간/정산 주기 설정 (SessionSettingsModal)</p>
+    </div>
+    <div class="card">
+      <h3>💵 정산 계산</h3>
+      <p>출석 기반 수강료 자동 산정 + 할인 적용 (SettlementModal)</p>
+    </div>
+  </div>
+</div>
+
+<!-- 슬라이드 13: 교재 -->
+<div class="slide content-slide" data-title="교재 관리">
+  <div class="slide-title">PART 2 · TEXTBOOKS</div>
+  <div class="slide-number">13 / 30</div>
+  <h2>📖 교재 관리</h2>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>📚 교재 카탈로그</h3>
+      <ul>
+        <li>과목 × 학년 × 난이도별 분류</li>
+        <li>가격 수정 CRUD</li>
+        <li>학년별/과목별 필터</li>
+      </ul>
+    </div>
+    <div class="card highlight">
+      <h3>💰 가격 변동 이력 <span class="tag tag-green" style="margin-left:8px">NEW</span></h3>
+      <ul>
+        <li>테이블 "수정일" 컬럼</li>
+        <li>클릭 → 변동 이력 팝업</li>
+        <li>최근 2건 + "N건 더보기"</li>
+        <li>누적 저장 (priceHistory 배열)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>📋 교재 요청</h3>
+      <ul>
+        <li>학생별 교재 요청 생성</li>
+        <li>승인/주문/완료 워크플로우</li>
+        <li>미완료 수 배지 표시</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>💳 수납 내역</h3>
+      <ul>
+        <li>월별 교재비 정산 현황</li>
+        <li>학생 매칭 자동 (UserCheck 아이콘)</li>
+        <li>페이지네이션 (30건/페이지)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 슬라이드 14: 메이크에듀 연동 -->
+<div class="slide content-slide scrollable" data-title="메이크에듀 연동">
+  <div class="slide-title">PART 3 · INTEGRATION</div>
+  <div class="slide-number">14 / 30</div>
+  <h2>🔗 메이크에듀(MakeEdu) 연동</h2>
+  <p class="lead">학원 관리 SaaS 메이크에듀로부터 학생/수납 데이터 자동 동기화</p>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>👥 학생 목록 크롤링</h3>
+      <ul>
+        <li>URL: /student/studentList.do</li>
+        <li>Puppeteer 헤드리스 브라우저 로그인</li>
+        <li>페이지당 500건 × 최대 20페이지</li>
+        <li>학생 이름/학교/학년 자동 업데이트</li>
+      </ul>
+    </div>
+    <div class="card highlight">
+      <h3>🚌 셔틀 학생 동기화 <span class="tag tag-green">NEW</span></h3>
+      <ul>
+        <li>URL: /pay/payUnionDeList.do (상세수납)</li>
+        <li>수업명 "셔틀/스쿨버스/통학버스" 필터</li>
+        <li><strong>월별 로직</strong>:
+          <ul>
+            <li>1~10일: 전월 + 당월 (중복 제거)</li>
+            <li>11일~: 당월만</li>
+          </ul>
+        </li>
+        <li>fromYm 입력값 자동 변경</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top: 20px; max-width: 1200px;">
+    <div class="flow-diagram">
+[동기화 버튼 클릭] → [Cloud Function: scrapeMakeEduShuttleStudents]
+                            ↓
+                 [<span class="highlight">Puppeteer</span> 로그인 (membId/password)]
+                            ↓
+                    [상세수납 페이지 이동]
+                            ↓
+             [listSize=500, fromYm=전월|당월 설정]
+                            ↓
+                  [모든 페이지 크롤링 (1~50)]
+                            ↓
+            [수업명 "셔틀" 포함 행의 학생명 추출]
+                            ↓
+              [<span class="highlight">shuttle_students</span> 컬렉션 전체 재작성]</div>
+  </div>
+
+  <p style="margin-top: 12px; color: #64748b; font-size: 13px;">💡 실행 시간: ~85초 · 클라이언트 타임아웃: 300초 · 메모리: 2GB</p>
+</div>
+
+<!-- 슬라이드 15: 외부 연동 -->
+<div class="slide content-slide" data-title="외부 연동">
+  <div class="slide-title">PART 3 · INTEGRATION</div>
+  <div class="slide-number">15 / 30</div>
+  <h2>🌐 외부 시스템 연동</h2>
+
+  <div class="grid-3">
+    <div class="card">
+      <div class="icon">📅</div>
+      <h3>Google Calendar</h3>
+      <ul>
+        <li>연간 일정 ↔ GCal 양방향 동기화</li>
+        <li>이벤트 생성/수정/삭제 반영</li>
+        <li>GCalSyncSettings 설정</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="icon">🎓</div>
+      <h3>Edutrix (수업보고서)</h3>
+      <ul>
+        <li>외부 리포트 시스템 (edutrix.vercel.app)</li>
+        <li>Supabase reports/en_reports/hs_reports</li>
+        <li>시간표 툴팁에 최근 진도 표시</li>
+        <li>주간 지각/결석 학생 필터</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="icon">🏫</div>
+      <h3>MakeEdu</h3>
+      <ul>
+        <li>학생 DB 동기화</li>
+        <li>셔틀 학생 추출</li>
+        <li>고등부 전용 동기화</li>
+        <li>수납 데이터 크롤링</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="icon">🔔</div>
+      <h3>FCM 푸시 알림</h3>
+      <ul>
+        <li>학부모 푸시 알림</li>
+        <li>출결 실시간 알림</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="icon">📱</div>
+      <h3>SMS / 알림톡</h3>
+      <ul>
+        <li>템플릿 기반 발송</li>
+        <li>수납/출결/공지 자동 발송</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="icon">🔗</div>
+      <h3>공유 링크 (Embed)</h3>
+      <ul>
+        <li>로그인 없이 공개 공유</li>
+        <li>토큰 기반 인증</li>
+        <li>시간표/출석부 임베드</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 슬라이드 16: 수강료 & 급여 -->
+<div class="slide content-slide" data-title="수강료 & 급여">
+  <div class="slide-title">PART 2 · FINANCE</div>
+  <div class="slide-number">16 / 30</div>
+  <h2>💰 수강료 · 급여 · 지출</h2>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>🧮 수강료 계산</h3>
+      <ul>
+        <li><strong>세션 관리</strong>: 수업 빈도/기간 설정</li>
+        <li><strong>휴일 관리</strong>: 결석일 자동 제외</li>
+        <li><strong>할인 정책</strong>: 형제/장학/프로모션</li>
+        <li><strong>추가 요금</strong>: 교재/특별반</li>
+        <li><strong>청구서 자동 생성</strong></li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>💳 수납 관리</h3>
+      <ul>
+        <li>수납 내역 입력/수정</li>
+        <li>엑셀 일괄 import</li>
+        <li>학생별 미납 조회</li>
+        <li>월별 매출 리포트</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>💵 급여 관리</h3>
+      <ul>
+        <li>월별 직원 급여 자동 계산</li>
+        <li>출석 기반 시급 산정</li>
+        <li>수당/공제 관리</li>
+        <li>급여명세서 PDF 출력</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>📉 지출 관리</h3>
+      <ul>
+        <li>지출 내역 기록</li>
+        <li>카테고리별 분류</li>
+        <li>월별 리포트</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 슬라이드 17: 대시보드 & 분석 -->
+<div class="slide content-slide" data-title="대시보드 & 분석">
+  <div class="slide-title">PART 2 · DASHBOARD</div>
+  <div class="slide-number">17 / 30</div>
+  <h2>📊 대시보드 & 분석</h2>
+
+  <div class="grid-2">
+    <div class="card highlight">
+      <h3>🏠 대시보드 (역할별)</h3>
+      <ul>
+        <li><strong>Master/Admin</strong>: 전체 KPI + 학원 현황</li>
+        <li><strong>Manager</strong>: 부서 관리 현황</li>
+        <li><strong>Teacher</strong>: 본인 담당 수업/학생</li>
+        <li>KPI 카드 (재원/신입/퇴원/매출)</li>
+        <li>최근 활동 로그</li>
+        <li>오늘 일정/시간표</li>
+      </ul>
+    </div>
+    <div class="card highlight">
+      <h3>📈 매출 분석</h3>
+      <ul>
+        <li>월별 매출 트렌드</li>
+        <li>학생 유입/이탈 분석</li>
+        <li>과목별 매출 비중</li>
+        <li>반별 수익성 분석</li>
+        <li>차트 시각화 (Recharts)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 슬라이드 18: 캘린더 & 간트 -->
+<div class="slide content-slide" data-title="캘린더 & 간트">
+  <div class="slide-title">PART 2 · SCHEDULE</div>
+  <div class="slide-number">18 / 30</div>
+  <h2>📅 연간 일정 & 간트 차트</h2>
+
+  <div class="grid-2">
+    <div class="card highlight">
+      <h3>📅 연간 일정</h3>
+      <ul>
+        <li><strong>3단 달력</strong>: 현재 · 1년전 · 2년전 비교</li>
+        <li>4가지 뷰: 월간/주간/일일/리스트</li>
+        <li>이벤트 드래그&드롭</li>
+        <li>버킷 시스템 (보관함)</li>
+        <li>필터: 부서/카테고리/즐겨찾기</li>
+        <li>Google Calendar 동기화</li>
+      </ul>
+    </div>
+    <div class="card highlight">
+      <h3>📊 간트 차트</h3>
+      <ul>
+        <li>프로젝트 단위 작업 관리</li>
+        <li>템플릿 시스템 (반복 작업)</li>
+        <li>카테고리/부서별 필터</li>
+        <li>진행률 시각화</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top: 20px; max-width: 1200px; padding: 16px; background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; border-radius: 6px;">
+    <p style="font-size: 13px; color: #bfdbfe;">🎯 <strong>활용 사례</strong>: 신학기 오픈 준비, 학부모 상담 기간, 시험 일정, 직원 휴가 등 모든 학원 이벤트를 한 곳에서 관리</p>
+  </div>
+</div>
+
+<!-- 슬라이드 19: 데이터 흐름 - 시간표 -->
+<div class="slide content-slide" data-title="데이터 흐름">
+  <div class="slide-title">PART 3 · DATA FLOW</div>
+  <div class="slide-number">19 / 30</div>
+  <h2>🔄 데이터 흐름 — 학생 이동</h2>
+  <p class="lead">드래그로 학생을 반 이동시킬 때 일어나는 모든 일</p>
+
+  <div class="flow-diagram">
+[ClassCard: 학생 드래그 시작]
+  <span class="arrow">↓</span> onDragStart(studentId, fromClassId)
+[useStudentDragDrop]: draggingStudentRef 설정
+  <span class="arrow">↓</span> onDrop(toClassId)
+[handleDrop]: <span class="highlight">Optimistic UI 업데이트</span>
+  ├─ setLocalClasses(prev → 소스반 유지 + 대상반 학생 추가)
+  └─ setPendingMoves([...prev, { studentId, from, to }])
+  <span class="arrow">↓</span>
+[화면 즉시 반영]
+  ├─ 소스반 학생: 취소선 + 회색 배경
+  └─ 대상반 학생: 보라색 배경
+  <span class="arrow">↓</span>
+[사용자 "저장" 클릭]
+  <span class="arrow">↓</span>
+[handleSavePendingMoves]: <span class="highlight">Firestore 반영</span>
+  ├─ 기존 enrollment: endDate = 어제
+  ├─ 새 enrollment 생성 (새 classId)
+  └─ writeBatch commit (최대 500건씩)
+  <span class="arrow">↓</span>
+[React Query invalidate]: 캐시 갱신 + 리페치</div>
+</div>
+
+<!-- 슬라이드 20: 데이터 흐름 - 시뮬레이션 -->
+<div class="slide content-slide" data-title="시뮬레이션 흐름">
+  <div class="slide-title">PART 3 · DATA FLOW</div>
+  <div class="slide-number">20 / 30</div>
+  <h2>🎭 데이터 흐름 — 시뮬레이션 반영</h2>
+
+  <div class="flow-diagram">
+[시뮬레이션 모드 진입]
+  <span class="arrow">↓</span> enterScenarioMode()
+[loadFromLiveInternal]: 실시간 데이터 → <span class="highlight">메모리</span>
+  <span class="arrow">↓</span>
+[편집 작업]
+  ├─ 학생 이동/추가/삭제
+  ├─ 수업 추가/삭제/레벨업
+  └─ 각 작업마다 History 기록 (최대 20)
+  <span class="arrow">↓</span>
+[사용자 "실제 반영" 클릭]
+  <span class="arrow">↓</span> detectConflicts()
+[실시간 변경 감지]
+  ├─ 새로 추가된 수업 발견
+  └─ 삭제된 수업 발견
+  <span class="arrow">↓</span>
+[사용자 선택: <span class="highlight">덮어쓰기 / 병합 / 취소</span>]
+  <span class="arrow">↓</span>
+[자동 백업 생성] (math_scenarios/backup_*)
+  <span class="arrow">↓</span>
+[classes 업데이트] + [enrollments 이동 이력 추적]
+  ├─ 반 이름 변경: doc 삭제 + 새 doc (startDate 유지)
+  ├─ 반 이동: endDate 설정 + 새 doc (startDate=오늘)
+  └─ 삭제된 학생: endDate 설정
+  <span class="arrow">↓</span>
+[성공 알림 + 백업 ID 안내]</div>
+</div>
+
+<!-- 슬라이드 21: 상담 녹음 AI 흐름 -->
+<div class="slide content-slide" data-title="AI 자동화">
+  <div class="slide-title">PART 3 · AI</div>
+  <div class="slide-number">21 / 30</div>
+  <h2>🤖 AI 자동화 흐름</h2>
+  <p class="lead">상담/회의 녹음 → AI 보고서 자동 생성</p>
+
+  <div class="flow-diagram">
+[상담/회의 시작] → [웹 MediaRecorder 녹음]
+  <span class="arrow">↓</span>
+[Firebase Storage 업로드]
+  <span class="arrow">↓</span>
+[Cloud Function: analyzeConsultation / analyzeMeeting]
+  <span class="arrow">↓</span>
+[Signed URL 생성]
+  <span class="arrow">↓</span>
+[<span class="highlight">AssemblyAI</span> 음성인식 + 화자 구분]
+  ├─ 한국어 Transcript 생성
+  ├─ Speaker A/B/C 자동 식별
+  └─ 타임스탬프 표시
+  <span class="arrow">↓</span>
+[<span class="highlight">Claude API (Sonnet)</span> 보고서 생성]
+  ├─ 상담: 학생/학부모 요구사항 추출
+  │       상담 포인트 / 액션 아이템
+  └─ 회의: 주요 논의/결정사항/담당자
+  <span class="arrow">↓</span>
+[Firestore 저장]
+  ├─ consultation_reports
+  └─ meeting_reports
+  <span class="arrow">↓</span>
+[UI 표시: 보고서 조회 + 수정 가능]</div>
+</div>
+
+<!-- 슬라이드 22: 개발중 / 미완성 -->
+<div class="slide content-slide scrollable" data-title="개발중 기능">
+  <div class="slide-title">PART 3 · IN DEVELOPMENT</div>
+  <div class="slide-number">22 / 30</div>
+  <h2>🚧 개발중 / 미완성 기능</h2>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr><th>영역</th><th>기능</th><th>상태</th><th>비고</th></tr>
+      </thead>
+      <tbody>
+        <tr><td rowspan="3">시간표 - 수학</td><td>엑셀(강사) 기본뷰</td><td class="status-ok">✅ 정상</td><td>주력 뷰</td></tr>
+        <tr><td>엑셀(요일) / 강의실뷰 / 통합뷰</td><td class="status-dev">🚧 개발중</td><td>드롭다운 "개발중" 카테고리</td></tr>
+        <tr><td>시뮬레이션 (Undo/Redo/수업CRUD)</td><td class="status-ok">✅ 신규</td><td>dev 배포 완료, prod 대기</td></tr>
+        <tr><td rowspan="2">시간표 - 고등수학</td><td>엑셀(요일) 기본뷰</td><td class="status-ok">✅ 정상</td><td>주력 뷰</td></tr>
+        <tr><td>엑셀(강사) / 강의실뷰 / 통합뷰</td><td class="status-dev">🚧 개발중</td><td>드롭다운 "개발중"</td></tr>
+        <tr><td rowspan="2">시간표 - 영어</td><td>엑셀 기본뷰</td><td class="status-ok">✅ 정상</td><td>주력 뷰</td></tr>
+        <tr><td>통합뷰 / 강사 / 강의실</td><td class="status-dev">🚧 개발중</td><td>드롭다운 "개발중"</td></tr>
+        <tr><td>시뮬레이션 - 수학</td><td>시나리오 비교 / 예약 적용 / 커스텀뷰</td><td class="status-no">❌ 미구현</td><td>영어만 지원</td></tr>
+        <tr><td>학부모 포털</td><td>메시지 송수신</td><td class="status-dev">🚧 초기 단계</td><td>링크 발급만 동작</td></tr>
+        <tr><td>매출 분석</td><td>고급 차트/예측</td><td class="status-dev">🚧 일부</td><td>기본 차트만</td></tr>
+        <tr><td>마케팅</td><td>캠페인 관리</td><td class="status-dev">🚧 미검증</td><td>구조만 존재</td></tr>
+        <tr><td>시간표 배포</td><td>자동 배포</td><td class="status-dev">🚧 미검증</td><td>수동 생성만</td></tr>
+        <tr><td>계약 관리</td><td>정식 계약서</td><td class="status-dev">🚧 미검증</td><td>구조만 존재</td></tr>
+        <tr><td>Firebase Functions</td><td>ClassNote 날짜 버그 수정</td><td class="status-dev">⏳ 배포 대기</td><td>코드는 수정 완료</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 슬라이드 23: 최근 개선 사항 -->
+<div class="slide content-slide scrollable" data-title="최근 개선">
+  <div class="slide-title">PART 3 · CHANGELOG</div>
+  <div class="slide-number">23 / 30</div>
+  <h2>✨ 최근 주요 개선 (2026-04)</h2>
+
+  <ul class="feature-list">
+    <li class="new"><strong>04-15</strong>사이트명 "에이와 인재원"으로 변경 (index.html + manifest)</li>
+    <li class="new"><strong>04-14</strong>수학 시뮬레이션 대폭 확장 (Undo/Redo + 수업CRUD + 충돌감지 + 발행모드)</li>
+    <li class="new"><strong>04-14</strong>시뮬레이션 엑셀뷰 데이터 연동 (시나리오 데이터로 그리드 렌더링)</li>
+    <li class="new"><strong>04-14</strong>셔틀버스 크롤링을 상세수납 페이지로 변경 + 월별 로직</li>
+    <li class="new"><strong>04-14</strong>시간표 뷰 드롭다운 + "개발중" 카테고리 분리 + "기본뷰" 라벨</li>
+    <li class="new"><strong>04-14</strong>교재 가격 변동 이력 (수정일 컬럼 + 팝업 + 2건+더보기)</li>
+    <li class="new"><strong>04-14</strong>과목 전환 시 기본뷰 자동 설정 (수학→엑셀강사 등)</li>
+    <li><strong>04-13</strong>학생 등하원 정보 (BasicInfoTab + 시간표 툴팁)</li>
+    <li><strong>04-13</strong>드래그 이동 취소선 표시 (React.memo 수정 + 인라인 스타일)</li>
+    <li><strong>04-13</strong>병합 셀 hold/withdrawn 30일 필터 (누적 버그 수정)</li>
+    <li><strong>04-13</strong>재원생 통계 dedup 로직 (활성 우선) + 기준일 수정</li>
+    <li><strong>04-13</strong>영어 시간표 셔틀/학교/학년 필터</li>
+    <li><strong>04-13</strong>MakeEdu Puppeteer 로그인 전환 (bot detection 회피)</li>
+  </ul>
+</div>
+
+<!-- 슬라이드 24: 성능 최적화 -->
+<div class="slide content-slide" data-title="성능 최적화">
+  <div class="slide-title">PART 3 · PERFORMANCE</div>
+  <div class="slide-number">24 / 30</div>
+  <h2>⚡ 성능 최적화</h2>
+
+  <div class="grid-3">
+    <div class="card">
+      <div class="icon">📦</div>
+      <h3>번들 최적화</h3>
+      <ul>
+        <li>Lazy Loading (React.lazy)</li>
+        <li>Manual Chunks 분리</li>
+        <li>초기 번들 150KB 절감</li>
+        <li>EnglishTimetable lazy</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="icon">💾</div>
+      <h3>데이터 캐싱</h3>
+      <ul>
+        <li>React Query 30분 staleTime</li>
+        <li>useMemo 필터 캐싱</li>
+        <li>ref 동기화 (stale closure 방지)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="icon">🎨</div>
+      <h3>렌더 최적화</h3>
+      <ul>
+        <li>React.memo (ClassCard)</li>
+        <li>커스텀 비교 함수</li>
+        <li>createPortal (overflow 회피)</li>
+        <li>Optimistic UI</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="icon">🔄</div>
+      <h3>버전 관리</h3>
+      <ul>
+        <li>version.json 폴링 (5분)</li>
+        <li>자동 캐시 갱신</li>
+        <li>VersionUpdateToast 알림</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="icon">♿</div>
+      <h3>접근성</h3>
+      <ul>
+        <li>SkipLink</li>
+        <li>ErrorBoundary</li>
+        <li>FocusTrap (모달)</li>
+        <li>키보드 네비게이션</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="icon">📊</div>
+      <h3>배치 처리</h3>
+      <ul>
+        <li>Firestore batch (500건/트랜잭션)</li>
+        <li>Pending Event Move 배치</li>
+        <li>동시 변경 충돌 방지</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 슬라이드 25: 배포 & 운영 -->
+<div class="slide content-slide" data-title="배포 & 운영">
+  <div class="slide-title">PART 3 · DEPLOYMENT</div>
+  <div class="slide-number">25 / 30</div>
+  <h2>🚀 배포 & 운영</h2>
+
+  <div class="grid-2">
+    <div class="card highlight">
+      <h3>🌐 Hosting (두 사이트)</h3>
+      <ul>
+        <li><strong>prod</strong>: https://ijw-calander.web.app</li>
+        <li><strong>dev</strong>: https://ijw-calander-dev.web.app</li>
+        <li>동일 Firestore DB 공유</li>
+        <li>테스트 후 프로덕션 배포 전략</li>
+      </ul>
+    </div>
+    <div class="card highlight">
+      <h3>☁️ Cloud Functions (asia-northeast3)</h3>
+      <ul>
+        <li>메이크에듀 크롤링 (2GB/540초)</li>
+        <li>AI 상담/회의 분석</li>
+        <li>학년 일괄 진급</li>
+        <li>Secret Manager API 키</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="margin-top: 24px; max-width: 1200px;">
+    <div class="flow-diagram">
+[코드 변경] → [npm run build] → [dist/ 생성]
+                                    <span class="arrow">↓</span>
+                      [firebase deploy --only hosting:dev]
+                                    <span class="arrow">↓</span>
+                         [dev 사이트에서 <span class="highlight">테스트</span>]
+                                    <span class="arrow">↓</span>
+                         [사용자 승인 후 prod 배포]
+                                    <span class="arrow">↓</span>
+                      [firebase deploy --only hosting:prod]
+                                    <span class="arrow">↓</span>
+                    [version.json 업데이트 → 자동 캐시 갱신]</div>
+  </div>
+</div>
+
+<!-- 슬라이드 26: Firestore 구조 -->
+<div class="slide content-slide scrollable" data-title="Firestore 구조">
+  <div class="slide-title">PART 3 · DATA MODEL</div>
+  <div class="slide-number">26 / 30</div>
+  <h2>🗄️ Firestore 데이터 구조 (40+ 컬렉션)</h2>
+
+  <div class="grid-4">
+    <div class="card">
+      <h3>📚 수업 관련</h3>
+      <ul>
+        <li>classes</li>
+        <li>students/{id}/enrollments</li>
+        <li>classroom</li>
+        <li>attendance</li>
+        <li>timetable_sessions</li>
+        <li>math_scenarios</li>
+        <li>english_simulation_scenarios</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>👥 학생 관련</h3>
+      <ul>
+        <li>students</li>
+        <li>shuttle_students</li>
+        <li>consultations</li>
+        <li>student_consultations</li>
+        <li>consultation_reports</li>
+        <li>grades</li>
+        <li>contracts</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>📖 교재/시험</h3>
+      <ul>
+        <li>textbook_catalog</li>
+        <li>textbook_billings</li>
+        <li>textbook_requests</li>
+        <li>exams</li>
+        <li>exam_series</li>
+        <li>homework</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>💰 재무/직원</h3>
+      <ul>
+        <li>billing</li>
+        <li>payroll</li>
+        <li>expenses</li>
+        <li>staff</li>
+        <li>staff_leaves</li>
+        <li>staffIndex</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>📅 일정/이벤트</h3>
+      <ul>
+        <li>events</li>
+        <li>archived_events</li>
+        <li>bucket_items</li>
+        <li>holidays</li>
+        <li>gantt_projects</li>
+        <li>gantt_templates</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>🎙️ AI/미디어</h3>
+      <ul>
+        <li>consultation_reports</li>
+        <li>meeting_reports</li>
+        <li>Storage (녹음파일)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>📢 커뮤니케이션</h3>
+      <ul>
+        <li>notices</li>
+        <li>parent_links</li>
+        <li>parent_messages</li>
+        <li>notifications</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>⚙️ 설정/시스템</h3>
+      <ul>
+        <li>settings/permissions_config</li>
+        <li>settings/math_config</li>
+        <li>settings/english_config</li>
+        <li>resources</li>
+        <li>departments</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 슬라이드 27: 다이어그램 - 전체 흐름 -->
+<div class="slide content-slide" data-title="전체 아키텍처">
+  <div class="slide-title">PART 3 · ARCHITECTURE</div>
+  <div class="slide-number">27 / 30</div>
+  <h2>🏛️ 전체 아키텍처</h2>
+
+  <div class="flow-diagram" style="font-size: 13px;">
+┌──────────────────────────────────────────────────────────────┐
+│                    <span class="highlight">Firebase Hosting</span>                         │
+│     prod: ijw-calander.web.app   dev: ijw-calander-dev        │
+└────────────────────────┬─────────────────────────────────────┘
+                         <span class="arrow">↓</span>
+┌──────────────────────────────────────────────────────────────┐
+│                   <span class="highlight">React SPA (Vite)</span>                         │
+│  App.tsx → Sidebar → TabContent → [33개 탭 컴포넌트]          │
+│          → AppHeader → ModalManager → Chatbot                │
+└─────┬────────────────────┬──────────────────────┬───────────┘
+      <span class="arrow">↓</span>                    <span class="arrow">↓</span>                       <span class="arrow">↓</span>
+┌──────────┐    ┌──────────────────┐    ┌──────────────────────┐
+│<span class="highlight">Firebase Auth</span>│    │<span class="highlight">Firestore (40+)</span> │    │<span class="highlight">Cloud Functions</span>     │
+│  Google/ │    │  classes         │    │ • MakeEdu 크롤링     │
+│  이메일  │    │  students        │    │ • AI 상담/회의 분석  │
+│          │    │  enrollments     │    │ • 학년 진급          │
+│          │    │  attendance      │    │ • 데이터 무결성      │
+└──────────┘    │  scenarios       │    └─────────┬────────────┘
+                │  consultations   │              <span class="arrow">↓</span>
+                │  billing, staff  │    ┌─────────────────────┐
+                │  ...             │    │ External APIs       │
+                └──────────────────┘    │ • Claude            │
+                                        │ • AssemblyAI        │
+                                        │ • Google Calendar   │
+                                        │ • MakeEdu (Puppet)  │
+                                        └─────────────────────┘</div>
+</div>
+
+<!-- 슬라이드 28: 파일 구조 -->
+<div class="slide content-slide scrollable" data-title="파일 구조">
+  <div class="slide-title">PART 3 · CODE STRUCTURE</div>
+  <div class="slide-number">28 / 30</div>
+  <h2>📁 코드베이스 구조</h2>
+
+  <div class="flow-diagram" style="font-size: 12px;">
+ijw-Calander-main/
+├── <span class="highlight">App.tsx</span>                     (메인 앱 · 라우팅 · 인증)
+├── index.html                   (캐시방지 스크립트)
+├── vite.config.ts               (번들 최적화)
+├── firebase.json                (hosting targets)
+├── firebaseConfig.ts
+│
+├── components/                  <span class="highlight">44개 폴더</span>
+│   ├── Timetable/               ⭐ Math/English/Shuttle/Generic
+│   ├── StudentManagement/       ⭐ 7개 탭 · 10+ 모달
+│   ├── Attendance/              월간 출석부
+│   ├── Calendar/                3단 연간 일정
+│   ├── ClassManagement/         수업 CRUD
+│   ├── Dashboard/               역할별 대시보드
+│   ├── Textbooks/               교재 · 가격이력
+│   ├── Staff/                   직원 · 권한
+│   ├── Billing/                 수납 · 엑셀 import
+│   ├── Grades/                  성적 · 시험
+│   ├── RegistrationConsultation/ 등록상담 · AI녹음
+│   ├── StudentConsultation/     재원생 상담
+│   ├── Gantt/                   프로젝트 관리
+│   ├── Navigation/              사이드바
+│   ├── Layout/                  AppHeader · TabContent · Modal
+│   ├── Embed/                   공유 링크
+│   ├── Chatbot/                 AI 챗봇
+│   ├── TuitionCalculator/       수강료 계산
+│   └── [29개 폴더 더]
+│
+├── hooks/                       <span class="highlight">100+ 커스텀 훅</span>
+│   ├── useAppState.ts           중앙 상태
+│   ├── usePermissions.ts        권한 체크
+│   ├── useFirebaseQueries.ts    공통 쿼리
+│   ├── useSubjectClassStudents.ts 과목별 학생
+│   ├── useStudentDragDrop.ts    드래그&드롭
+│   └── [95+ 훅]
+│
+├── types/                       타입 정의
+│   ├── system.ts                AppTab · TAB_META
+│   ├── auth.ts                  UserRole · PermissionId
+│   └── [도메인별 타입]
+│
+├── utils/                       유틸리티
+├── data/                        정적 데이터
+│   └── textbookCatalog.ts
+├── <span class="highlight">functions/</span>                   Cloud Functions
+│   └── index.js                 ⭐ 크롤링 · AI · 배치작업
+└── public/                      정적 파일
+    ├── manifest.json
+    └── version.json             캐시 체크</div>
+</div>
+
+<!-- 슬라이드 29: Q&A / 추가 정보 -->
+<div class="slide content-slide" data-title="자주 묻는 질문">
+  <div class="slide-title">PART 3 · FAQ</div>
+  <div class="slide-number">29 / 30</div>
+  <h2>❓ 자주 묻는 질문</h2>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>Q. dev 사이트와 prod 사이트의 차이?</h3>
+      <p>📌 <strong>같은 Firestore DB</strong>를 공유합니다. 프론트엔드 코드만 분리된 테스트/운영 버전입니다. dev에서 테스트한 내용이 DB에 반영됩니다.</p>
+    </div>
+    <div class="card">
+      <h3>Q. 시뮬레이션 데이터가 실제에 영향?</h3>
+      <p>📌 <strong>실제 반영 버튼을 누르지 않는 한 안전</strong>합니다. 메모리 내 편집이며, 시나리오 저장 시에만 <code>math_scenarios</code> 컬렉션에 기록됩니다.</p>
+    </div>
+    <div class="card">
+      <h3>Q. Master 권한 계정은?</h3>
+      <p>📌 <code>settings/system_config</code>의 <code>masterEmails</code>에 등록된 계정이 Master입니다. 다른 역할로 시뮬레이션 테스트 가능.</p>
+    </div>
+    <div class="card">
+      <h3>Q. 메이크에듀 크롤링이 실패하면?</h3>
+      <p>📌 로그인 차단(NO_REJECT) 또는 페이지 구조 변경이 원인일 수 있습니다. Cloud Function 로그를 확인하고 Secret Manager의 인증 정보를 점검하세요.</p>
+    </div>
+    <div class="card">
+      <h3>Q. 새 탭/기능 추가 방법?</h3>
+      <p>📌 <code>types/system.ts</code>의 <code>AppTab</code>에 추가 → <code>TAB_META</code>/<code>TAB_GROUPS</code> 등록 → <code>Layout/TabContent.tsx</code>에 라우팅 → 권한 설정.</p>
+    </div>
+    <div class="card">
+      <h3>Q. 데이터 백업/복구?</h3>
+      <p>📌 시뮬레이션 "실제 반영" 시 자동 백업이 <code>math_scenarios/backup_*</code>에 저장됩니다. 필요 시 로드하여 복구 가능합니다.</p>
+    </div>
+  </div>
+</div>
+
+<!-- 슬라이드 30: 마무리 -->
+<div class="slide title-slide" data-title="마무리">
+  <div class="slide-number">30 / 30</div>
+  <h1 style="font-size:60px;">감사합니다</h1>
+  <div class="subtitle">에이와 인재원 학원 관리 시스템</div>
+
+  <div style="margin-top: 40px; padding: 24px 36px; background: rgba(30, 41, 59, 0.8); border-radius: 12px; border: 1px solid #334155; max-width: 800px;">
+    <p style="font-size: 15px; color: #cbd5e1; line-height: 2;">
+      <strong style="color:#38bdf8;">본 문서 정보</strong><br>
+      📅 문서 작성일: 2026-04-14<br>
+      🔖 시스템 버전: v2026.04.14<br>
+      🌐 운영: <a href="https://ijw-calander.web.app" style="color:#60a5fa;">ijw-calander.web.app</a><br>
+      🧪 테스트: <a href="https://ijw-calander-dev.web.app" style="color:#60a5fa;">ijw-calander-dev.web.app</a>
+    </p>
+  </div>
+
+  <div class="badges" style="margin-top:40px;">
+    <span class="badge">33 메뉴</span>
+    <span class="badge">100+ 권한</span>
+    <span class="badge">40+ 컬렉션</span>
+    <span class="badge">100+ 훅</span>
+    <span class="badge">AI 통합</span>
+  </div>
+
+  <div class="meta" style="margin-top:60px;">⌨️ <strong>← →</strong> 이동 · <strong>M</strong> 목차 · <strong>F11</strong> 전체화면 · 인쇄 시 PDF로 저장 가능</div>
+</div>
+
+</div>
+
+<!-- 네비게이션 -->
+<button id="prev-btn" class="nav-btn">← 이전</button>
+<button id="menu-btn" class="nav-btn">📋 목차</button>
+<button id="next-btn" class="nav-btn">다음 →</button>
+
+<div class="progress-bar"><div class="progress-fill"></div></div>
+
+<div class="key-hint">← → 키로 이동 · M 목차 · F 전체화면</div>
+
+<!-- 메뉴 오버레이 -->
+<div class="menu-overlay" id="menu-overlay">
+  <button class="close-menu" onclick="closeMenu()">✕ 닫기</button>
+  <div class="menu-grid" id="menu-grid"></div>
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const total = slides.length;
+let current = 0;
+
+function show(idx) {
+  if (idx < 0 || idx >= total) return;
+  slides[current].classList.remove('active');
+  current = idx;
+  slides[current].classList.add('active');
+  document.getElementById('prev-btn').disabled = current === 0;
+  document.getElementById('next-btn').disabled = current === total - 1;
+  document.querySelector('.progress-fill').style.width = ((current + 1) / total * 100) + '%';
+  window.scrollTo(0, 0);
+}
+
+document.getElementById('prev-btn').onclick = () => show(current - 1);
+document.getElementById('next-btn').onclick = () => show(current + 1);
+document.getElementById('menu-btn').onclick = openMenu;
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); show(current + 1); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); show(current - 1); }
+  else if (e.key === 'Home') show(0);
+  else if (e.key === 'End') show(total - 1);
+  else if (e.key === 'm' || e.key === 'M') openMenu();
+  else if (e.key === 'Escape') closeMenu();
+});
+
+function openMenu() {
+  const grid = document.getElementById('menu-grid');
+  grid.innerHTML = '';
+  slides.forEach((slide, idx) => {
+    const title = slide.dataset.title || `슬라이드 ${idx + 1}`;
+    const item = document.createElement('div');
+    item.className = 'menu-item';
+    item.innerHTML = `<span class="num">${String(idx + 1).padStart(2, '0')}</span>${title}`;
+    item.onclick = () => { show(idx); closeMenu(); };
+    grid.appendChild(item);
+  });
+  document.getElementById('menu-overlay').classList.add('active');
+}
+
+function closeMenu() {
+  document.getElementById('menu-overlay').classList.remove('active');
+}
+
+show(0);
+</script>
+</body>
+</html>
