@@ -1,9 +1,60 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
     ClipboardList, User as UserIcon, Building,
-    Calendar as CalendarIcon, Table2, Settings
+    Calendar as CalendarIcon, Table2, Settings, ChevronDown
 } from 'lucide-react';
 import { TimetableSubjectType } from '../../../types';
+
+interface ViewOption {
+    key: string;          // viewType + optional mathViewMode
+    label: string;
+    icon: React.ReactNode;
+    category: 'default' | 'dev';
+}
+
+// 과목별 뷰 옵션 정의
+function getViewOptions(subject: TimetableSubjectType, hasIntegratedPermission: boolean): ViewOption[] {
+    if (subject === 'math') {
+        return [
+            { key: 'excel|excel-teacher', label: '기본뷰', icon: <Table2 size={12} />, category: 'default' },
+            { key: 'excel|excel-day', label: '엑셀(요일)', icon: <Table2 size={12} />, category: 'dev' },
+            { key: 'room', label: '강의실', icon: <Building size={12} />, category: 'dev' },
+            { key: 'class', label: '통합뷰', icon: <ClipboardList size={12} />, category: 'dev' },
+        ];
+    }
+    if (subject === 'highmath') {
+        return [
+            { key: 'excel|excel-day', label: '기본뷰', icon: <Table2 size={12} />, category: 'default' },
+            { key: 'excel|excel-teacher', label: '엑셀(강사)', icon: <Table2 size={12} />, category: 'dev' },
+            { key: 'room', label: '강의실', icon: <Building size={12} />, category: 'dev' },
+            { key: 'class', label: '통합뷰', icon: <ClipboardList size={12} />, category: 'dev' },
+        ];
+    }
+    if (subject === 'english') {
+        return [
+            { key: 'excel', label: '기본뷰', icon: <Table2 size={12} />, category: 'default' },
+            { key: 'class', label: '통합뷰', icon: <ClipboardList size={12} />, category: 'dev' },
+            { key: 'teacher', label: '강사', icon: <UserIcon size={12} />, category: 'dev' },
+            { key: 'room', label: '강의실', icon: <Building size={12} />, category: 'dev' },
+        ];
+    }
+    return [];
+}
+
+function getCurrentKey(viewType: string, mathViewMode?: string, subject?: TimetableSubjectType): string {
+    // 수학/고등수학만 excel 서브모드 사용
+    if (viewType === 'excel' && mathViewMode && (subject === 'math' || subject === 'highmath')) {
+        return `excel|${mathViewMode}`;
+    }
+    return viewType;
+}
+
+function getCurrentLabel(options: ViewOption[], currentKey: string): { label: string; icon: React.ReactNode } {
+    const found = options.find(o => o.key === currentKey);
+    if (found) return { label: found.label, icon: found.icon };
+    return { label: currentKey, icon: <Table2 size={12} /> };
+}
 
 interface SubjectControlsProps {
     timetableSubject: TimetableSubjectType;
@@ -30,6 +81,54 @@ export default function SubjectControls({
     userDepartments = ['math', 'highmath', 'english', 'science', 'korean'],
     isMaster,
 }: SubjectControlsProps) {
+    const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
+    const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // 외부 클릭 닫기
+    useEffect(() => {
+        if (!isViewDropdownOpen) return;
+        const handler = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node) &&
+                buttonRef.current && !buttonRef.current.contains(e.target as Node)) {
+                setIsViewDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [isViewDropdownOpen]);
+
+    const handleToggleDropdown = () => {
+        if (!isViewDropdownOpen && buttonRef.current) {
+            const rect = buttonRef.current.getBoundingClientRect();
+            setDropdownPos({ top: rect.bottom + 4, left: rect.left });
+        }
+        setIsViewDropdownOpen(!isViewDropdownOpen);
+    };
+
+    const hasMathOrEnglish = timetableSubject === 'math' || timetableSubject === 'highmath' || timetableSubject === 'english';
+    const canViewIntegrated = hasPermission('timetable.integrated.view') || hasPermission('timetable.english.view');
+    const viewOptions = getViewOptions(timetableSubject, canViewIntegrated);
+    const currentKey = getCurrentKey(viewType, mathViewMode, timetableSubject);
+    const current = getCurrentLabel(viewOptions, currentKey);
+
+    const handleSelectView = (option: ViewOption) => {
+        if (!setTimetableViewType) return;
+        const parts = option.key.split('|');
+        const newViewType = parts[0] as 'teacher' | 'room' | 'class' | 'excel';
+        const newMathViewMode = parts[1];
+
+        setTimetableViewType(newViewType);
+        if (newMathViewMode && setMathViewMode) {
+            setMathViewMode(newMathViewMode);
+        }
+        setIsViewDropdownOpen(false);
+    };
+
+    const defaultOptions = viewOptions.filter(o => o.category === 'default');
+    const devOptions = viewOptions.filter(o => o.category === 'dev');
+
     return (
         <div className="flex items-center gap-1.5">
             <select
@@ -47,58 +146,67 @@ export default function SubjectControls({
                 <option value="all">전체</option>
             </select>
 
-            {/* 영어 뷰 전환 */}
-            {timetableSubject === 'english' && setTimetableViewType && (
-                <button
-                    onClick={() => {
-                        const canViewIntegrated = hasPermission('timetable.integrated.view') || hasPermission('timetable.english.view');
-                        setTimetableViewType(prev => {
-                            if (prev === 'class') return 'teacher';
-                            if (prev === 'teacher') return 'room';
-                            if (prev === 'room') return canViewIntegrated ? 'excel' : 'teacher';
-                            return canViewIntegrated ? 'class' : 'teacher';
-                        });
-                    }}
-                    className="px-2 py-0.5 rounded-sm bg-white/10 border border-white/10 text-gray-300 font-bold text-xs hover:text-white hover:bg-white/15 active:scale-95 transition-all cursor-pointer"
-                    title="보기방식 전환"
-                >
-                    {viewType === 'class' ? <><ClipboardList size={12} className="inline" /> 통합뷰</>
-                        : viewType === 'excel' ? <><Table2 size={12} className="inline" /> 엑셀</>
-                        : viewType === 'teacher' ? <><UserIcon size={12} className="inline" /> 강사</>
-                        : <><Building size={12} className="inline" /> 강의실</>}
-                </button>
-            )}
+            {/* 뷰 선택 드롭다운 */}
+            {hasMathOrEnglish && setTimetableViewType && viewOptions.length > 0 && (
+                <>
+                    <button
+                        ref={buttonRef}
+                        onClick={handleToggleDropdown}
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-sm bg-white/10 border border-white/10 text-gray-300 font-bold text-xs hover:text-white hover:bg-white/15 active:scale-95 transition-all cursor-pointer"
+                        title="보기방식 선택"
+                    >
+                        {current.icon}
+                        <span>{current.label}</span>
+                        <ChevronDown size={10} className={`transition-transform ${isViewDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
 
-            {/* 수학/고등수학 뷰 전환 - 강사별뷰 숨김, 엑셀뷰 2종 */}
-            {(timetableSubject === 'math' || timetableSubject === 'highmath') && setTimetableViewType && setMathViewMode && (
-                <button
-                    onClick={() => {
-                        setTimetableViewType(prev => {
-                            // 강의실 → 통합뷰 → 엑셀(강사) → 엑셀(요일) → 강의실
-                            if (prev === 'teacher') return 'room';
-                            if (prev === 'room') return 'class';
-                            if (prev === 'class') {
-                                setMathViewMode('excel-teacher');
-                                return 'excel';
-                            }
-                            if (prev === 'excel' && mathViewMode === 'excel-teacher') {
-                                setMathViewMode('excel-day');
-                                return 'excel';
-                            }
-                            // excel-day → 강의실 (다음 진입 시 초기화)
-                            setMathViewMode('excel-teacher');
-                            return 'room';
-                        });
-                    }}
-                    className="px-2 py-0.5 rounded-sm bg-white/10 border border-white/10 text-gray-300 font-bold text-xs hover:text-white hover:bg-white/15 active:scale-95 transition-all cursor-pointer"
-                    title="보기방식 전환"
-                >
-                    {viewType === 'room' ? <><Building size={12} className="inline" /> 강의실</>
-                        : viewType === 'class' ? <><ClipboardList size={12} className="inline" /> 통합뷰</>
-                        : viewType === 'excel' && mathViewMode === 'excel-day' ? <><Table2 size={12} className="inline" /> 엑셀(요일)</>
-                        : viewType === 'excel' ? <><Table2 size={12} className="inline" /> 엑셀(강사)</>
-                        : <><Building size={12} className="inline" /> 강의실</>}
-                </button>
+                    {isViewDropdownOpen && createPortal(
+                        <div
+                            ref={dropdownRef}
+                            className="fixed bg-gray-800 border border-gray-600 rounded-lg shadow-xl min-w-[140px] py-1"
+                            style={{ top: dropdownPos.top, left: dropdownPos.left, zIndex: 99999 }}
+                        >
+                            {/* 기본 뷰 */}
+                            {defaultOptions.map(option => (
+                                <button
+                                    key={option.key}
+                                    onClick={() => handleSelectView(option)}
+                                    className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors ${
+                                        currentKey === option.key
+                                            ? 'bg-blue-600 text-white font-bold'
+                                            : 'text-gray-200 hover:bg-gray-700'
+                                    }`}
+                                >
+                                    {option.icon}
+                                    {option.label}
+                                </button>
+                            ))}
+
+                            {/* 구분선 + 개발중 카테고리 */}
+                            {devOptions.length > 0 && (
+                                <>
+                                    <div className="my-1 border-t border-gray-600" />
+                                    <div className="px-3 py-0.5 text-[11px] text-orange-400 font-semibold">개발중</div>
+                                    {devOptions.map(option => (
+                                        <button
+                                            key={option.key}
+                                            onClick={() => handleSelectView(option)}
+                                            className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs text-left transition-colors ${
+                                                currentKey === option.key
+                                                    ? 'bg-blue-600 text-white font-bold'
+                                                    : 'text-gray-400 hover:bg-gray-700 hover:text-gray-200'
+                                            }`}
+                                        >
+                                            {option.icon}
+                                            {option.label}
+                                        </button>
+                                    ))}
+                                </>
+                            )}
+                        </div>,
+                        document.body
+                    )}
+                </>
             )}
 
             {/* 수업 설정 버튼 */}
