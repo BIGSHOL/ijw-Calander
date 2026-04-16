@@ -94,6 +94,7 @@ interface EnglishClassTabProps {
     shuttleOnly?: boolean;
     schoolFilter?: string[];
     gradeFilter?: string[];
+    isTestView?: boolean;  // 테스트 뷰 여부 (true면 신규 기능 활성화)
 }
 
 // ClassInfo removed (imported from hooks)
@@ -151,6 +152,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     shuttleOnly,
     schoolFilter,
     gradeFilter,
+    isTestView = false,
 }) => {
     const { hasPermission } = usePermissions(currentUser);
     const canEditEnglish = hasPermission('timetable.english.edit');
@@ -702,8 +704,9 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 isSimulationMode={isSimulationMode}
                                                 onSimulationLevelUp={onSimulationLevelUp}
                                                 moveChanges={isExcelMode ? undefined : moveChanges}
-                                                onMoveStudent={isExcelMode && excelOnExcelMoveStudent ? excelOnExcelMoveStudent : handleMoveStudentWithModal}
-                                                allClassNames={classNames}
+                                                onMoveStudent={isExcelMode && excelOnExcelMoveStudent ? excelOnExcelMoveStudent : (isTestView ? handleMoveStudentWithModal : handleMoveStudent)}
+                                                allClassNames={isTestView ? classNames : undefined}
+                                                isTestView={isTestView}
                                                 classStudentData={classDataMap[cls.name]}
                                                 hideTime={true}
                                                 useInjaePeriod={group.useInjaePeriod}

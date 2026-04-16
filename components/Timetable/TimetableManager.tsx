@@ -942,6 +942,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap}
                         pendingMoveSchedules={pendingMoveSchedules}
                         isExcelMode={true}
+                        isTestView={timetableViewMode === 'excel-teacher-test'}
                         selectedClassId={selectedClassId}
                         onCellSelect={setSelectedClassId}
                         onEnrollStudent={handleEnrollStudentPending}

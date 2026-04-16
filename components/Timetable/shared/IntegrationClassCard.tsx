@@ -303,6 +303,7 @@ interface IntegrationClassCardProps {
     onRestoreEnrollment?: (studentId: string, className: string) => void;  // 수업 종료 취소
     onDeleteEnrollment?: (studentId: string, className: string) => void;  // 수강 기록 삭제
     allClassNames?: string[];  // 퇴원생 반이동용 전체 수업 목록
+    isTestView?: boolean;  // 테스트 뷰 여부 (true면 신규 기능 활성화)
     onCancelScheduledEnrollment?: (studentId: string, className: string) => void;  // 배정 예정 취소
     onEditClass?: (classId: string) => void;  // 시뮬레이션 모드 수업 편집
     // 주차 이동 시 배정 예정/퇴원 예정 미리보기용
@@ -375,6 +376,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     onRestoreEnrollment,
     onDeleteEnrollment,
     allClassNames = [],
+    isTestView = false,
     onCancelScheduledEnrollment,
     onEditClass,
     currentWeekStart,
@@ -851,8 +853,8 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
             const data = JSON.parse(e.dataTransfer.getData('text/plain'));
             if (data && data.student) {
                 if (data.fromClass === classInfo.name) return;
-                // 퇴원 학생 → 재원생 이동 (날짜 모달로 처리)
-                if (data.isWithdrawn) {
+                // 퇴원 학생 → 재원생 이동 (테스트 뷰에서만)
+                if (data.isWithdrawn && isTestView) {
                     const restoredStudent = { ...data.student, withdrawalDate: undefined, isMoved: false, onHold: false };
                     onMoveStudent(restoredStudent, data.fromClass, classInfo.name);
                     return;
@@ -1434,8 +1436,8 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                             {(isEnglish ? filteredWithdrawnStudents : filteredWithdrawnStudents.slice(0, 3)).map((student) => (
                                                 <div
                                                     key={student.id}
-                                                    draggable={mode === 'edit'}
-                                                    onDragStart={(e) => {
+                                                    draggable={isTestView && mode === 'edit'}
+                                                    onDragStart={isTestView ? (e) => {
                                                         if (mode === 'edit') {
                                                             e.dataTransfer.setData('text/plain', JSON.stringify({
                                                                 student,
@@ -1446,25 +1448,23 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                             e.dataTransfer.setData('fromClassId', classInfo.classId);
                                                             e.dataTransfer.setData('fromClassName', classInfo.name);
                                                         }
-                                                    }}
-                                                    className={`flex items-center text-[12px] py-0.5 px-1 bg-black text-white mb-0.5 ${mode === 'edit' ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-800 group relative select-none`}
+                                                    } : undefined}
+                                                    className={`flex items-center text-[12px] py-0.5 px-1 bg-black text-white mb-0.5 ${isTestView && mode === 'edit' ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-800 group relative ${isTestView ? 'select-none' : ''}`}
                                                     title={student.withdrawalDate ? `퇴원일: ${student.withdrawalDate}` : undefined}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        if (mode === 'edit' && (onRestoreEnrollment || onDeleteEnrollment || onMoveStudent)) {
+                                                        if (isTestView && mode === 'edit' && (onRestoreEnrollment || onDeleteEnrollment || onMoveStudent)) {
                                                             setWithdrawnActionModal({ studentId: student.id, studentName: student.name });
-                                                        } else if (onStudentClick) {
-                                                            onStudentClick(student.id);
                                                         }
                                                     }}
                                                     onDoubleClick={() => onStudentClick?.(student.id)}
                                                 >
-                                                    <div className="flex items-center flex-1 min-w-0 pointer-events-none">
+                                                    <div className={`flex items-center flex-1 min-w-0 ${isTestView ? 'pointer-events-none' : ''}`}>
                                                         <span className="font-normal shrink-0">{student.name}</span>
                                                         {isEnglish && student.englishName && <span className="ml-1 text-gray-400 truncate max-w-[60px]" title={student.englishName}>({student.englishName})</span>}
                                                     </div>
                                                     {(displayOptions?.showSchool !== false || displayOptions?.showGrade !== false) && (
-                                                        <span className="text-xxs shrink-0 text-gray-300 text-right leading-none ml-1 pointer-events-none">
+                                                        <span className={`text-xxs shrink-0 text-gray-300 text-right leading-none ml-1 ${isTestView ? 'pointer-events-none' : ''}`}>
                                                             {formatSchoolGrade(displayOptions?.showSchool !== false ? student.school : undefined, displayOptions?.showGrade !== false ? student.grade : undefined)}
                                                         </span>
                                                     )}
@@ -1474,7 +1474,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                                 e.stopPropagation();
                                                                 setWithdrawnActionModal({ studentId: student.id, studentName: student.name });
                                                             }}
-                                                            className="absolute right-0.5 text-[11px] text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all bg-black w-[18px] h-[18px] flex items-center justify-center rounded-sm pointer-events-none group-hover:pointer-events-auto"
+                                                            className={`absolute right-0.5 text-[11px] text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all bg-black w-[18px] h-[18px] flex items-center justify-center rounded-sm ${isTestView ? 'pointer-events-none group-hover:pointer-events-auto' : ''}`}
                                                             title="복구 또는 삭제"
                                                         >
                                                             &times;
@@ -1544,8 +1544,8 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                         </div>
                                     </button>
                                 )}
-                                {/* 반이동 — 다른 반으로 재원생 등록 */}
-                                {onMoveStudent && allClassNames.length > 0 && (
+                                {/* 반이동 — 다른 반으로 재원생 등록 (테스트 뷰 전용) */}
+                                {isTestView && onMoveStudent && allClassNames.length > 0 && (
                                     <div className="w-full p-3 rounded-sm border border-green-300 bg-white hover:bg-green-50 transition-all text-left">
                                         <div className="flex items-center gap-3 mb-2">
                                             <span className="text-xl">&#x27A1;</span>

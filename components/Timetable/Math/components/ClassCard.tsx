@@ -247,6 +247,7 @@ interface ClassCardProps {
     latestReports?: Map<string, any>;  // 학생별 최근 보고서 (학생이름 → EdutrixReport)
     // 엑셀 모드 (강사뷰 변형)
     isExcelMode?: boolean;
+    isTestView?: boolean;  // 테스트 뷰 여부
     isSelected?: boolean;
     onCellSelect?: (classId: string) => void;
     onEnrollStudent?: (studentId: string, className: string) => void;
@@ -311,6 +312,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
     referenceDate,
     latestReports,
     isExcelMode,
+    isTestView = false,
     isSelected,
     onCellSelect,
     onEnrollStudent,
@@ -1512,17 +1514,16 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                 return (
                                                     <li
                                                         key={s.id}
-                                                        draggable={canEdit}
-                                                        onDragStart={(e) => { if (canEdit) onDragStart(e, s.id, cls.id, 'common'); }}
-                                                        className={`${fontSizeClass} leading-[1.3] bg-black text-white px-0.5 py-0 overflow-hidden whitespace-nowrap ${canEdit ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-700 transition-colors`}
+                                                        draggable={isTestView && canEdit}
+                                                        onDragStart={isTestView ? (e) => { if (canEdit) onDragStart(e, s.id, cls.id, 'common'); } : undefined}
+                                                        className={`${fontSizeClass} leading-[1.3] bg-black text-white px-0.5 py-0 overflow-hidden whitespace-nowrap ${isTestView && canEdit ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-700 transition-colors`}
                                                         title={tooltipText}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        onDoubleClick={(e) => {
-                                                            if (onStudentClick) {
-                                                                e.stopPropagation();
-                                                                onStudentClick(s.id);
-                                                            }
+                                                        onClick={isTestView ? (e) => e.stopPropagation() : (e) => {
+                                                            if (onStudentClick) { e.stopPropagation(); onStudentClick(s.id); }
                                                         }}
+                                                        onDoubleClick={isTestView ? (e) => {
+                                                            if (onStudentClick) { e.stopPropagation(); onStudentClick(s.id); }
+                                                        } : undefined}
                                                     >
                                                         {text}
                                                     </li>
@@ -1729,17 +1730,16 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                 return (
                                                     <li
                                                         key={s.id}
-                                                        draggable={canEdit}
-                                                        onDragStart={(e) => { if (canEdit) onDragStart(e, s.id, cls.id, 'common'); }}
-                                                        className={`${fontSizeClass} leading-[1.3] bg-black text-white px-0.5 py-0 overflow-hidden whitespace-nowrap ${canEdit ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-700 transition-colors`}
+                                                        draggable={isTestView && canEdit}
+                                                        onDragStart={isTestView ? (e) => { if (canEdit) onDragStart(e, s.id, cls.id, 'common'); } : undefined}
+                                                        className={`${fontSizeClass} leading-[1.3] bg-black text-white px-0.5 py-0 overflow-hidden whitespace-nowrap ${isTestView && canEdit ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-700 transition-colors`}
                                                         title={s.withdrawalDate ? `${text} (퇴원: ${s.withdrawalDate})` : text}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                        onDoubleClick={(e) => {
-                                                            if (onStudentClick) {
-                                                                e.stopPropagation();
-                                                                onStudentClick(s.id);
-                                                            }
+                                                        onClick={isTestView ? (e) => e.stopPropagation() : (e) => {
+                                                            if (onStudentClick) { e.stopPropagation(); onStudentClick(s.id); }
                                                         }}
+                                                        onDoubleClick={isTestView ? (e) => {
+                                                            if (onStudentClick) { e.stopPropagation(); onStudentClick(s.id); }
+                                                        } : undefined}
                                                     >
                                                         {text}
                                                     </li>
