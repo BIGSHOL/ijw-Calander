@@ -1447,7 +1447,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
                         {/* 대기 + 퇴원 (스크롤 영역 바깥, 셀 하단 고정) */}
                         {(showHoldStudents || showWithdrawnStudents) && (
-                            <div className="flex-shrink-0 max-h-[100px] overflow-y-auto no-scrollbar">
+                            <div className="flex-shrink-0 overflow-visible">
                                 {showHoldStudents && allMergedHoldStudents.length > 0 && (
                                     <div className="px-0.5 py-0 bg-pink-50 border-b border-pink-200">
                                         <div className={`${fontSizeClass} font-bold text-pink-600 overflow-hidden whitespace-nowrap`}>{allMergedHoldStudents.length}명 - 대기</div>
@@ -1646,7 +1646,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
                         {/* 대기 + 퇴원 (스크롤 영역 바깥, 셀 하단 고정) */}
                         {(showHoldStudents || showWithdrawnStudents) && (
-                            <div className="flex-shrink-0 max-h-[100px] overflow-y-auto no-scrollbar">
+                            <div className="flex-shrink-0 overflow-visible">
                                 {/* 대기생 Section */}
                                 {showHoldStudents && holdStudents.length > 0 && (
                                     <div className="px-0.5 py-0 bg-pink-50 border-b border-pink-200">
