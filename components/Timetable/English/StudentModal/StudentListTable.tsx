@@ -297,6 +297,39 @@ const StudentListTable: React.FC<StudentListTableProps> = ({
                                 <div className="flex items-center gap-1 shrink-0">
                                     {canEdit && (
                                         <>
+                                            {/* 재원생 등록 버튼 */}
+                                            <button
+                                                onClick={() => {
+                                                    if (window.confirm('재원생으로 등록하시겠습니까?')) {
+                                                        const today = new Date().toISOString().split('T')[0];
+                                                        onUpdate(student.id, {
+                                                            withdrawalDate: undefined,
+                                                            enrollmentDate: today,
+                                                            onHold: false,
+                                                            isMoved: false
+                                                        });
+                                                    }
+                                                }}
+                                                className="px-2 py-0.5 text-xxs rounded-sm border transition-colors bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+                                            >
+                                                재원생
+                                            </button>
+                                            {/* 반이동 버튼 */}
+                                            <button
+                                                onClick={() => {
+                                                    if (window.confirm('반이동 처리하시겠습니까?\n(퇴원이 취소되고 반이동 상태로 변경됩니다)')) {
+                                                        onUpdate(student.id, {
+                                                            withdrawalDate: undefined,
+                                                            isMoved: true,
+                                                            enrollmentDate: undefined,
+                                                            onHold: false
+                                                        });
+                                                    }
+                                                }}
+                                                className="px-2 py-0.5 text-xxs rounded-sm border transition-colors bg-green-100 text-green-700 border-green-200 hover:bg-green-200"
+                                            >
+                                                반이동
+                                            </button>
                                             <button
                                                 onClick={() => onUpdate(student.id, { withdrawalDate: undefined })}
                                                 className="px-2 py-0.5 text-xxs rounded-sm border transition-colors bg-black text-white border-black hover:bg-gray-800"
