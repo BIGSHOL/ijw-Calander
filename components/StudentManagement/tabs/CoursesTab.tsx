@@ -276,7 +276,9 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         return !hasEnded && hasStarted;
       })
       .forEach(enrollment => {
-        const key = `${enrollment.subject}_${enrollment.className}`;
+        // 그룹핑 키에 staffId 포함 — 같은 className이어도 담임이 다르면 별도 카드로 분리
+        // (강사 인수인계 시나리오: 권나현 endDate=D-1 / 김선생 startDate=D 가 별도로 표시되어야 함)
+        const key = `${enrollment.subject}_${enrollment.className}_${enrollment.staffId || ''}`;
 
         if (groups.has(key)) {
           const existing = groups.get(key)!;
@@ -347,7 +349,9 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         return !hasEnded && isFuture;
       })
       .forEach(enrollment => {
-        const key = `${enrollment.subject}_${enrollment.className}`;
+        // 그룹핑 키에 staffId 포함 — 같은 className이어도 담임이 다르면 별도 카드로 분리
+        // (강사 인수인계 시나리오: 권나현 endDate=D-1 / 김선생 startDate=D 가 별도로 표시되어야 함)
+        const key = `${enrollment.subject}_${enrollment.className}_${enrollment.staffId || ''}`;
 
         if (groups.has(key)) {
           const existing = groups.get(key)!;
@@ -456,7 +460,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
       // 없으면 enrollment 기반으로 기본 정보 생성
       const mainTeacher = getMainTeacher(group);
       const classInfo: ClassInfo = {
-        id: `${group.subject}_${group.className}`,
+        id: `${group.subject}_${group.className}_${group.teachers[0] || ''}`,
         className: group.className,
         subject: group.subject,
         teacher: mainTeacher || group.teachers[0] || '',
@@ -479,7 +483,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
       return;
     }
 
-    const key = `${group.subject}_${group.className}`;
+    const key = `${group.subject}_${group.className}_${group.teachers[0] || ''}`;
     setDeletingClass(key); // 로딩 상태 재활용
 
     try {
@@ -546,7 +550,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
     if (!window.confirm(confirmMsg)) return;
 
-    const key = `${group.subject}_${group.className}`;
+    const key = `${group.subject}_${group.className}_${group.teachers[0] || ''}`;
     setDeletingClass(key);
 
     try {
@@ -617,7 +621,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
     if (!window.confirm(confirmMsg)) return;
 
-    const key = `${group.subject}_${group.className}`;
+    const key = `${group.subject}_${group.className}_${group.teachers[0] || ''}`;
     setDeletingClass(key);
 
     try {
@@ -685,7 +689,9 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         return !!endDate && endDate < today;
       })
       .forEach(enrollment => {
-        const key = `${enrollment.subject}_${enrollment.className}`;
+        // 그룹핑 키에 staffId 포함 — 같은 className이어도 담임이 다르면 별도 카드로 분리
+        // (강사 인수인계 시나리오: 권나현 endDate=D-1 / 김선생 startDate=D 가 별도로 표시되어야 함)
+        const key = `${enrollment.subject}_${enrollment.className}_${enrollment.staffId || ''}`;
 
         if (groups.has(key)) {
           const existing = groups.get(key)!;
@@ -755,7 +761,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
       return !teacher?.isHidden;
     }).map(staffId => getTeacherByIdOrName(staffId)?.name).filter(Boolean);
     const subjectColor = SUBJECT_COLORS[group.subject] || SUBJECT_COLORS.other;
-    const key = `${group.subject}_${group.className}`;
+    const key = `${group.subject}_${group.className}_${group.teachers[0] || ''}`;
     const isDeleting = deletingClass === key;
 
     // 실제 수업 정보 가져오기
@@ -820,7 +826,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
         {/* 시작일/종료일 */}
         <>
-          {canEditEnrollmentDates && !readOnly && editingDate?.key === `${group.subject}_${group.className}` && editingDate?.field === 'startDate' ? (
+          {canEditEnrollmentDates && !readOnly && editingDate?.key === `${group.subject}_${group.className}_${group.teachers[0] || ''}` && editingDate?.field === 'startDate' ? (
             <input
               type="date"
               className="w-24 shrink-0 text-xxs text-primary-700 text-center border border-blue-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
@@ -845,7 +851,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
               onClick={(e) => {
                 if (canEditEnrollmentDates && !readOnly) {
                   e.stopPropagation();
-                  setEditingDate({ key: `${group.subject}_${group.className}`, field: 'startDate' });
+                  setEditingDate({ key: `${group.subject}_${group.className}_${group.teachers[0] || ''}`, field: 'startDate' });
                 }
               }}
               title={canEditEnrollmentDates && !readOnly ? '클릭하여 시작일 수정' : undefined}
@@ -853,7 +859,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
               {formatDate(group.startDate)}
             </span>
           )}
-          {canEditEnrollmentDates && !readOnly && editingDate?.key === `${group.subject}_${group.className}` && editingDate?.field === 'endDate' ? (
+          {canEditEnrollmentDates && !readOnly && editingDate?.key === `${group.subject}_${group.className}_${group.teachers[0] || ''}` && editingDate?.field === 'endDate' ? (
             <input
               type="date"
               className="w-24 shrink-0 text-xxs text-primary-700 text-center border border-blue-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
@@ -883,7 +889,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
               onClick={(e) => {
                 if (canEditEnrollmentDates && !readOnly) {
                   e.stopPropagation();
-                  setEditingDate({ key: `${group.subject}_${group.className}`, field: 'endDate' });
+                  setEditingDate({ key: `${group.subject}_${group.className}_${group.teachers[0] || ''}`, field: 'endDate' });
                 }
               }}
               title={canEditEnrollmentDates && !readOnly ? '클릭하여 종료일 수정' : undefined}
@@ -896,7 +902,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
               onClick={(e) => {
                 if (canEditEnrollmentDates && !readOnly) {
                   e.stopPropagation();
-                  setEditingDate({ key: `${group.subject}_${group.className}`, field: 'endDate' });
+                  setEditingDate({ key: `${group.subject}_${group.className}_${group.teachers[0] || ''}`, field: 'endDate' });
                 }
               }}
               title={canEditEnrollmentDates && !readOnly ? '클릭하여 종료일 설정' : undefined}
@@ -974,7 +980,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         </div>
 
         {/* 시작일 */}
-        {canEditEnrollmentDates && !readOnly && editingDate?.key === `completed_${group.subject}_${group.className}` && editingDate?.field === 'startDate' ? (
+        {canEditEnrollmentDates && !readOnly && editingDate?.key === `completed_${group.subject}_${group.className}_${group.teachers[0] || ''}` && editingDate?.field === 'startDate' ? (
           <input
             type="date"
             className="w-24 shrink-0 text-xxs text-primary-700 text-center border border-blue-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
@@ -999,7 +1005,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             onClick={(e) => {
               if (canEditEnrollmentDates && !readOnly) {
                 e.stopPropagation();
-                setEditingDate({ key: `completed_${group.subject}_${group.className}`, field: 'startDate' });
+                setEditingDate({ key: `completed_${group.subject}_${group.className}_${group.teachers[0] || ''}`, field: 'startDate' });
               }
             }}
             title={canEditEnrollmentDates && !readOnly ? '클릭하여 시작일 수정' : undefined}
@@ -1009,7 +1015,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         )}
 
         {/* 종료일 */}
-        {canEditEnrollmentDates && !readOnly && editingDate?.key === `completed_${group.subject}_${group.className}` && editingDate?.field === 'endDate' ? (
+        {canEditEnrollmentDates && !readOnly && editingDate?.key === `completed_${group.subject}_${group.className}_${group.teachers[0] || ''}` && editingDate?.field === 'endDate' ? (
           <input
             type="date"
             className="w-24 shrink-0 text-xxs text-primary-700 text-center border border-blue-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
@@ -1034,7 +1040,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             onClick={(e) => {
               if (canEditEnrollmentDates && !readOnly) {
                 e.stopPropagation();
-                setEditingDate({ key: `completed_${group.subject}_${group.className}`, field: 'endDate' });
+                setEditingDate({ key: `completed_${group.subject}_${group.className}_${group.teachers[0] || ''}`, field: 'endDate' });
               }
             }}
             title={canEditEnrollmentDates && !readOnly ? '클릭하여 종료일 수정' : undefined}
@@ -1047,11 +1053,11 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         {canManageClassHistory && !readOnly && (
           <button
             onClick={(e) => handleDeleteCompletedEnrollment(group, e)}
-            disabled={deletingClass === `${group.subject}_${group.className}`}
+            disabled={deletingClass === `${group.subject}_${group.className}_${group.teachers[0] || ''}`}
             className="w-5 h-5 shrink-0 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-sm transition-colors disabled:opacity-50"
             title="수업 이력 삭제"
           >
-            {deletingClass === `${group.subject}_${group.className}` ? (
+            {deletingClass === `${group.subject}_${group.className}_${group.teachers[0] || ''}` ? (
               <Loader2 className="w-3 h-3 animate-spin" />
             ) : (
               <Trash2 className="w-3 h-3" />
@@ -1177,7 +1183,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
                 const actualClass = allClasses.find(
                   c => c.className === group.className && c.subject === group.subject
                 );
-                const key = `${group.subject}_${group.className}`;
+                const key = `${group.subject}_${group.className}_${group.teachers[0] || ''}`;
                 const isDeleting = deletingClass === key;
 
                 return (
@@ -1222,7 +1228,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
                     <span className="w-10 shrink-0"></span>
 
                     {/* 시작일 */}
-                    {canEditEnrollmentDates && !readOnly && editingDate?.key === `scheduled_${group.subject}_${group.className}` && editingDate?.field === 'startDate' ? (
+                    {canEditEnrollmentDates && !readOnly && editingDate?.key === `scheduled_${group.subject}_${group.className}_${group.teachers[0] || ''}` && editingDate?.field === 'startDate' ? (
                       <input
                         type="date"
                         className="w-24 shrink-0 text-xxs text-blue-600 text-center border border-blue-300 rounded px-0.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400"
@@ -1247,7 +1253,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
                         onClick={(e) => {
                           if (canEditEnrollmentDates && !readOnly) {
                             e.stopPropagation();
-                            setEditingDate({ key: `scheduled_${group.subject}_${group.className}`, field: 'startDate' });
+                            setEditingDate({ key: `scheduled_${group.subject}_${group.className}_${group.teachers[0] || ''}`, field: 'startDate' });
                           }
                         }}
                       >
