@@ -1426,9 +1426,18 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                             {(isEnglish ? filteredWithdrawnStudents : filteredWithdrawnStudents.slice(0, 3)).map((student) => (
                                                 <div
                                                     key={student.id}
-                                                    className="flex items-center text-[12px] py-0.5 px-1 bg-black text-white mb-0.5 cursor-pointer hover:bg-gray-800 group relative"
+                                                    draggable={mode === 'edit'}
+                                                    onDragStart={(e) => {
+                                                        if (mode === 'edit') {
+                                                            e.dataTransfer.setData('studentId', student.id);
+                                                            e.dataTransfer.setData('fromClassId', classInfo.id);
+                                                            e.dataTransfer.setData('fromClassName', classInfo.name);
+                                                        }
+                                                    }}
+                                                    className={`flex items-center text-[12px] py-0.5 px-1 bg-black text-white mb-0.5 ${mode === 'edit' ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-800 group relative`}
                                                     title={student.withdrawalDate ? `퇴원일: ${student.withdrawalDate}` : undefined}
-                                                    onClick={() => onStudentClick?.(student.id)}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    onDoubleClick={() => onStudentClick?.(student.id)}
                                                 >
                                                     <div className="flex items-center flex-1 min-w-0">
                                                         <span className="font-normal shrink-0">{student.name}</span>
