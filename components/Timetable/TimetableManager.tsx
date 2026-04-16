@@ -1355,6 +1355,7 @@ const TimetableManager = ({
         toClassName: string;
         targetClassSchedule?: string[];
         isZoneChange?: boolean; // 같은 반 내 zone 이동 여부
+        isWithdrawn?: boolean; // 퇴원생 이동 여부
         multiStudentIds?: string[]; // 멀티 이동 시 전체 학생 ID 목록
     } | null>(null);
     const prevPendingMovesLengthRef = React.useRef(0);
@@ -1855,6 +1856,7 @@ const TimetableManager = ({
                         fromClassName: fromClass?.className || '',
                         toClassName: toClass?.className || '',
                         targetClassSchedule: toClass?.schedule,
+                        isWithdrawn: student?.status === 'withdrawn' || !!student?.withdrawalDate,
                     });
                 }
             }
@@ -2168,7 +2170,7 @@ const TimetableManager = ({
                     title={dateModalInfo.isZoneChange ? '등원일 변경 날짜 설정' : '반 이동 날짜 설정'}
                     customImmediateLabel={dateModalInfo.isZoneChange ? undefined : '즉시 이동 (오늘)'}
                     actionVerb={dateModalInfo.isZoneChange ? '변경' : undefined}
-                    scheduledLabel={dateModalInfo.isZoneChange ? undefined : '예정 수업일 지정'}
+                    scheduledLabel={dateModalInfo.isZoneChange ? undefined : (dateModalInfo.isWithdrawn ? '마지막 수업일 지정' : '예정 수업일 지정')}
                     allowPastDate={!dateModalInfo.isZoneChange}
                     onConfirm={handleDateModalConfirm}
                     onClose={handleDateModalClose}

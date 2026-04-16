@@ -158,6 +158,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
         studentName: string;
         fromClassName: string;
         toClassName: string;
+        isWithdrawn?: boolean;
     } | null>(null);
 
     // 통합 undo 히스토리 (Ctrl+Z 순서 추적)
@@ -228,6 +229,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
             studentName: student.name,
             fromClassName: fromClass,
             toClassName: toClass,
+            isWithdrawn: !!student.withdrawalDate,
         });
     }, []);
 
@@ -2108,7 +2110,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                     toClassName={dragMoveModalInfo.toClassName}
                     title="반 이동 날짜 설정"
                     customImmediateLabel="즉시 이동 (오늘)"
-                    scheduledLabel="예정 수업일 지정"
+                    scheduledLabel={dragMoveModalInfo.isWithdrawn ? '마지막 수업일 지정' : '예정 수업일 지정'}
                     allowPastDate
                     onConfirm={handleDragMoveConfirm}
                     onClose={() => setDragMoveModalInfo(null)}
