@@ -159,6 +159,7 @@ interface MathTimetableContentProps {
     mathIntegrationSettings: MathIntegrationSettings;
     updateMathIntegrationSettings: (settings: MathIntegrationSettings) => void;
     userDepartments?: ('math' | 'highmath' | 'english')[];
+    onMakeEduSyncOpen?: () => void;
 }
 
 const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
@@ -261,6 +262,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     mathIntegrationSettings,
     updateMathIntegrationSettings,
     userDepartments,
+    onMakeEduSyncOpen,
 }) => {
     const simulation = useMathSimulation();
     const { isScenarioMode, currentScenarioName, enterScenarioMode, exitScenarioMode, loadFromLive, publishToLive } = simulation;
@@ -788,7 +790,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     hasPermission={hasPermissionFn}
                     setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
                     userDepartments={userDepartments}
-                    onMakeEduSyncOpen={() => setIsMakeEduSyncOpen(true)}
+                    onMakeEduSyncOpen={onMakeEduSyncOpen}
                     roomFilter={roomFilter}
                     onRoomFilterChange={onRoomFilterChange}
                     studentFilter={studentFilter}
@@ -2243,6 +2245,7 @@ const TimetableManager = ({
                 mathIntegrationSettings={outerMathSettings}
                 updateMathIntegrationSettings={updateOuterMathSettings}
                 userDepartments={userDepartments}
+                onMakeEduSyncOpen={() => setIsMakeEduSyncOpen(true)}
             />
             {/* 드래그 반이동 날짜 선택 모달 */}
             {dateModalInfo && (
