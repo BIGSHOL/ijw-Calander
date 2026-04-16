@@ -81,6 +81,10 @@ export interface TimetableClass {
   pendingSchedule?: string[];      // 변경 예정 스케줄 (레거시 형식)
   pendingScheduleDate?: string;    // 적용 예정일 (YYYY-MM-DD)
   isPendingSchedule?: boolean;     // 고스트 블록 여부 (런타임 전용)
+  // 강사 인수인계 예정 (D-1까지 기존 담임 / D부터 새 담임)
+  pendingTeacher?: string;          // 변경 예정 담임 (staffId 또는 이름)
+  pendingTeacherDate?: string;      // 적용 예정일 (YYYY-MM-DD)
+  pendingTeacherReason?: string;    // 사유 메모 (옵션)
 }
 
 export interface Teacher {

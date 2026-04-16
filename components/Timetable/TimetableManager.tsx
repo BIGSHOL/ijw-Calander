@@ -28,6 +28,7 @@ const StudentDetailModal = lazy(() => import('../StudentManagement/StudentDetail
 const SimpleViewSettingsModal = lazy(() => import('./Math/components/Modals/SimpleViewSettingsModal'));
 const ScenarioManagementModal = lazy(() => import('./Math/ScenarioManagementModal'));
 import { ClassInfo, useClasses } from '../../hooks/useClasses';
+import { executeTeacherHandover } from '../../hooks/useClassMutations';
 import { ALL_WEEKDAYS, MATH_PERIODS, ENGLISH_PERIODS } from './constants';
 import { MathSimulationProvider, useMathSimulation } from './Math/context/SimulationContext';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
@@ -1756,6 +1757,50 @@ const TimetableManager = ({
         };
 
         applyPendingSchedules();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // 마운트 시 1회만 실행
+
+    // 강사 인수인계 예정 자동 적용 (마운트 시 1회)
+    // - pendingTeacher + pendingTeacherDate 가 있고 날짜가 오늘 이전/당일이면 실행
+    // - executeTeacherHandover로 enrollment 찢기 + class staffId 교체 일괄 처리
+    useEffect(() => {
+        const todayStr = getTodayKST();
+        const pendingHandovers = classesWithEnrollments.filter(
+            cls => cls.pendingTeacher && cls.pendingTeacherDate && cls.pendingTeacherDate <= todayStr
+        );
+        if (pendingHandovers.length === 0) return;
+
+        const applyPendingHandovers = async () => {
+            for (const cls of pendingHandovers) {
+                try {
+                    const subjectNormalized: any = cls.subject === '수학' ? 'math'
+                        : cls.subject === '고등수학' ? 'highmath'
+                        : cls.subject === '영어' ? 'english'
+                        : cls.subject;
+                    await executeTeacherHandover({
+                        classId: cls.id,
+                        subject: subjectNormalized,
+                        className: cls.className,
+                        currentTeacher: cls.teacher,
+                        newTeacher: cls.pendingTeacher!,
+                        effectiveDate: cls.pendingTeacherDate!,
+                        reason: cls.pendingTeacherReason,
+                    });
+                    console.log(`[자동적용] ${cls.className} 강사 인수인계 적용 완료: ${cls.teacher} → ${cls.pendingTeacher}`);
+                } catch (error) {
+                    console.error(`[자동적용] ${cls.className} 강사 인수인계 실패:`, error);
+                }
+            }
+
+            queryClient.invalidateQueries({ queryKey: ['classes'] });
+            queryClient.invalidateQueries({ queryKey: ['students'] });
+            queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
+            queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
+            queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
+            queryClient.invalidateQueries({ queryKey: ['classStudents'] });
+        };
+
+        applyPendingHandovers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // 마운트 시 1회만 실행
 

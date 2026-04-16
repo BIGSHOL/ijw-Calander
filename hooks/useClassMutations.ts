@@ -326,6 +326,200 @@ export const useUpdateClass = () => {
 };
 
 /**
+ * 강사 인수인계 (Teacher Handover)
+ *
+ * 인수일 D 기준 enrollment를 찢어서 이력 보존:
+ * - 기존 enrollment: endDate = D-1 (D-1까지 이전 담임)
+ * - 새 enrollment: startDate = D, staffId = 새 강사 (D부터 새 담임)
+ * - classes/{classId}: staffId/teacher 새 강사로 즉시 교체 (적용 날짜가 오늘 또는 과거인 경우)
+ *                     또는 pendingTeacher* 필드로 저장 (미래 날짜)
+ *
+ * @param handoverData.classId 대상 수업 문서 ID
+ * @param handoverData.subject 과목
+ * @param handoverData.className 수업명
+ * @param handoverData.currentTeacher 현재 담임 (검증/로그용)
+ * @param handoverData.newTeacher 새 담임
+ * @param handoverData.effectiveDate 적용일 (YYYY-MM-DD) — 오늘 이전/오늘이면 즉시 실행, 미래면 예약
+ * @param handoverData.reason 사유 메모 (옵션)
+ */
+export interface HandoverTeacherData {
+  classId: string;
+  subject: SubjectType;
+  className: string;
+  currentTeacher: string;
+  newTeacher: string;
+  effectiveDate: string;
+  reason?: string;
+}
+
+/**
+ * 핵심 migrate 로직 — 지정된 class의 모든 활성 enrollment를 찢어서 새 담임으로 넘김
+ * - 기존 enrollment: endDate = effectiveDate - 1일
+ * - 새 enrollment: addDoc 으로 신규 생성, 동일 classId/className/schedule, staffId=newTeacher, startDate=effectiveDate
+ * - classes/{classId}: staffId/teacher 필드 업데이트 + pendingTeacher* 필드 삭제
+ */
+export async function executeTeacherHandover(data: HandoverTeacherData): Promise<{ enrollmentsSplit: number }> {
+  const { classId, subject, className, newTeacher, effectiveDate, reason } = data;
+
+  // D-1 계산 (effectiveDate의 전날)
+  const prevDate = new Date(effectiveDate);
+  prevDate.setDate(prevDate.getDate() - 1);
+  const prevDateStr = formatDateKST(prevDate);
+
+  // 1. 대상 class의 활성 enrollment들 수집 (classId 또는 className 기반)
+  const enrollmentDocs: Array<{ ref: any; data: any; studentId: string }> = [];
+  const seenPaths = new Set<string>();
+
+  try {
+    const classIdQuery = query(
+      collectionGroup(db, 'enrollments'),
+      where('classId', '==', classId)
+    );
+    const snap1 = await getDocs(classIdQuery);
+    snap1.docs.forEach(d => {
+      const raw = d.data();
+      // 활성 enrollment만 (종료된 것은 제외)
+      if (raw.endDate || raw.withdrawalDate) return;
+      if (seenPaths.has(d.ref.path)) return;
+      seenPaths.add(d.ref.path);
+      const pathParts = d.ref.path.split('/');
+      const studentId = pathParts[1];
+      enrollmentDocs.push({ ref: d.ref, data: raw, studentId });
+    });
+  } catch { /* ignore */ }
+
+  // className + subject 기반 보완 조회 (classId 필드 누락된 레거시 데이터)
+  try {
+    const classNameQuery = query(
+      collectionGroup(db, 'enrollments'),
+      where('subject', '==', subject),
+      where('className', '==', className)
+    );
+    const snap2 = await getDocs(classNameQuery);
+    snap2.docs.forEach(d => {
+      const raw = d.data();
+      if (raw.endDate || raw.withdrawalDate) return;
+      if (seenPaths.has(d.ref.path)) return;
+      seenPaths.add(d.ref.path);
+      const pathParts = d.ref.path.split('/');
+      const studentId = pathParts[1];
+      enrollmentDocs.push({ ref: d.ref, data: raw, studentId });
+    });
+  } catch { /* ignore */ }
+
+  // 2. 각 enrollment 찢기: 기존 endDate=D-1, 새 enrollment addDoc 으로 생성
+  const now = new Date().toISOString();
+  const splitPromises = enrollmentDocs.map(async ({ ref, data, studentId }) => {
+    // 기존 enrollment 종료
+    await updateDoc(ref, {
+      endDate: prevDateStr,
+      updatedAt: now,
+    });
+    // 새 enrollment 생성 (addDoc으로 자동 ID — 같은 classId로 여러 enrollment 허용)
+    const enrollmentsCol = collection(db, COL_STUDENTS, studentId, 'enrollments');
+    const newDoc: Record<string, any> = {
+      classId,
+      className,
+      subject,
+      staffId: newTeacher,
+      teacher: newTeacher,
+      schedule: data.schedule || [],
+      attendanceDays: data.attendanceDays || [],
+      startDate: effectiveDate,
+      enrollmentDate: effectiveDate,
+      handoverFromEnrollmentId: ref.id,
+      handoverFromStaffId: data.staffId || data.teacher || '',
+      createdAt: now,
+      updatedAt: now,
+    };
+    if (reason) newDoc.handoverReason = reason;
+    await addDoc(enrollmentsCol, newDoc);
+  });
+  await Promise.all(splitPromises);
+
+  // 3. classes/{classId} 본체 업데이트 + pending 필드 삭제
+  try {
+    const classRef = doc(db, COL_CLASSES, classId);
+    await updateDoc(classRef, {
+      staffId: newTeacher,
+      teacher: newTeacher,
+      pendingTeacher: deleteField(),
+      pendingTeacherDate: deleteField(),
+      pendingTeacherReason: deleteField(),
+      updatedAt: now,
+    });
+  } catch (err) {
+    console.warn('[handover] classes doc 업데이트 실패:', err);
+  }
+
+  return { enrollmentsSplit: enrollmentDocs.length };
+}
+
+export const useHandoverTeacher = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: HandoverTeacherData) => {
+      const { classId, subject, className, currentTeacher, newTeacher, effectiveDate, reason } = data;
+      const todayStr = getTodayKST();
+
+      // 동일인 인수인계 방지
+      if (currentTeacher === newTeacher) {
+        throw new Error('현재 담임과 동일한 강사로는 인수인계할 수 없습니다.');
+      }
+
+      // 미래 날짜면 예약 저장 / 오늘 또는 과거면 즉시 실행
+      if (effectiveDate > todayStr) {
+        // 예약: classes 문서에 pending 필드 저장 (자동 migrate 훅이 날짜 도달 시 실행)
+        const classRef = doc(db, COL_CLASSES, classId);
+        const payload: Record<string, any> = {
+          pendingTeacher: newTeacher,
+          pendingTeacherDate: effectiveDate,
+          updatedAt: new Date().toISOString(),
+        };
+        if (reason) payload.pendingTeacherReason = reason;
+        await updateDoc(classRef, payload);
+
+        logTimetableChange({
+          action: 'class_update',
+          subject,
+          className,
+          details: `강사 인수인계 예약: ${currentTeacher} → ${newTeacher} (${effectiveDate}부터)`,
+          before: { teacher: currentTeacher },
+          after: { teacher: newTeacher, effectiveDate, reason },
+        });
+
+        return { scheduled: true, enrollmentsSplit: 0 };
+      }
+
+      // 즉시 실행
+      const result = await executeTeacherHandover(data);
+
+      logTimetableChange({
+        action: 'class_update',
+        subject,
+        className,
+        details: `강사 인수인계 적용: ${currentTeacher} → ${newTeacher} (${effectiveDate}부터, enrollment ${result.enrollmentsSplit}건 분리)`,
+        before: { teacher: currentTeacher },
+        after: { teacher: newTeacher, effectiveDate, reason },
+      });
+
+      return { scheduled: false, ...result };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['classes'] });
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['students', true] });
+      queryClient.invalidateQueries({ queryKey: ['classDetail'] });
+      queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
+      queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
+      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
+      queryClient.invalidateQueries({ queryKey: ['classStudents'] });
+    },
+  });
+};
+
+/**
  * 수업 삭제 (모든 학생의 해당 enrollment 삭제)
  *
  * @param deleteData.className 수업명

@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Edit, Trash2, Users, Clock, User, BookOpen, Calendar, MapPin, FileText, BarChart3, ChevronDown, ChevronUp, UserMinus } from 'lucide-react';
+import { X, Edit, Trash2, Users, Clock, User, BookOpen, Calendar, MapPin, FileText, BarChart3, ChevronDown, ChevronUp, UserMinus, UserCheck } from 'lucide-react';
+import TeacherHandoverModal from './TeacherHandoverModal';
 import { ClassInfo, useClasses } from '../../hooks/useClasses';
 import { useClassDetail, ClassStudent } from '../../hooks/useClassDetail';
 import { useDeleteClass, useUpdateClass, UpdateClassData, useManageClassStudents } from '../../hooks/useClassMutations';
@@ -52,6 +53,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
   const [isEditMode, setIsEditMode] = useState(false);
   const [activeViewTab, setActiveViewTab] = useState<ViewTabType>('schedule');
   const [activeEditTab, setActiveEditTab] = useState<EditTabType>('info');
+  const [showHandoverModal, setShowHandoverModal] = useState(false);
 
   // ==================== 보기 모드 훅 ====================
   const { data: classDetail, isLoading: detailLoading } = useClassDetail(initialClassName, subject);
@@ -508,6 +510,16 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
               </>
             ) : (
               <>
+                {canEdit && !isSimulationMode && classInfo.id && (
+                  <button
+                    onClick={() => setShowHandoverModal(true)}
+                    disabled={isPending}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-1.5 py-0.5 text-xs font-semibold disabled:opacity-50 transition-colors flex items-center gap-1"
+                    title="지정한 날짜부터 담임을 새 강사로 교체 (기존 담임의 수강 이력은 보존)"
+                  >
+                    <UserCheck className="w-3 h-3" />인수인계
+                  </button>
+                )}
                 {canEdit && (
                   <button onClick={() => { setActiveEditTab('schedule'); setIsEditMode(true); }} disabled={isPending} className="bg-accent hover:bg-[#e5a60f] text-primary px-1.5 py-0.5 text-xs font-semibold disabled:opacity-50 transition-colors flex items-center gap-1">
                     <Edit className="w-3 h-3" />수정
@@ -1188,6 +1200,20 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* 강사 인수인계 모달 */}
+      {showHandoverModal && classInfo.id && (
+        <TeacherHandoverModal
+          classId={classInfo.id}
+          className={initialClassName}
+          subject={subject as SubjectType}
+          currentTeacher={classInfo.teacher}
+          onClose={() => setShowHandoverModal(false)}
+          onSuccess={() => {
+            // 모달 자체가 부모를 닫지는 않고, 캐시 무효화는 mutation의 onSuccess에서 처리됨
+          }}
+        />
+      )}
     </div>
   );
 };
