@@ -2175,7 +2175,7 @@ const TimetableManager = ({
             {/* 퇴원 날짜 선택 모달 */}
             {withdrawalModalInfo && (
                 <ScheduledDateModal
-                    title="퇴원 날짜 설정"
+                    title="퇴원 마지막 날짜 설정"
                     description={
                         <p className="text-xs text-gray-600 text-center">
                             <span className="font-bold text-gray-800">{withdrawalModalInfo.studentName}</span>
@@ -2183,12 +2183,14 @@ const TimetableManager = ({
                             <span className="text-gray-400">{withdrawalModalInfo.className}</span>
                         </p>
                     }
-                    customImmediateLabel="즉시 퇴원 (오늘)"
+                    customImmediateLabel="오늘 퇴원"
+                    scheduledLabel="마지막 수업일 지정"
                     studentName={withdrawalModalInfo.studentName}
                     fromClassName={withdrawalModalInfo.className}
                     toClassName=""
                     onConfirm={handleWithdrawalConfirm}
                     onClose={() => setWithdrawalModalInfo(null)}
+                    allowPastDate
                 />
             )}
         </MathSimulationProvider>
