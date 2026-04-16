@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
-  Trash2, Calculator, ChevronDown, Check, Search, CalendarOff, Calendar,
+  Trash2, Calculator, ChevronDown, Check, Search, CalendarOff, Calendar, Hash,
 } from 'lucide-react';
 import { isHolidayDate } from '../../utils/tuitionHolidays';
 import { formatSchoolGrade } from '../../utils/studentUtils';
@@ -274,6 +274,7 @@ export const TuitionInputSection: React.FC<TuitionInputSectionProps> = ({
   useEffect(() => {
     selectedCourses.forEach(course => {
       if (course.useSessionPeriod) return;
+      if (course.fixedMonthly) return; // 월 N회 고정 모드는 자동 재계산 건너뜀
       if (course.days && studentInfo.startDate && studentInfo.endDate) {
         const newSessions = calculateSessions(
           studentInfo.startDate, studentInfo.endDate,
@@ -391,6 +392,7 @@ export const TuitionInputSection: React.FC<TuitionInputSectionProps> = ({
                   value={course.days}
                   onChange={(val) => {
                     updateCourse(course.uid, 'days', val);
+                    if (course.fixedMonthly) return; // 월 N회 고정 모드는 요일 변경에도 sessions 유지
                     if (studentInfo.startDate && studentInfo.endDate) {
                       const sessions = calculateSessions(
                         studentInfo.startDate, studentInfo.endDate,
@@ -428,7 +430,10 @@ export const TuitionInputSection: React.FC<TuitionInputSectionProps> = ({
                   onClick={() => {
                     const newExcludeHolidays = !course.excludeHolidays;
                     updateCourse(course.uid, 'excludeHolidays', newExcludeHolidays);
-                    if (studentInfo.startDate && studentInfo.endDate && course.days && !course.useSessionPeriod) {
+                    if (
+                      studentInfo.startDate && studentInfo.endDate && course.days &&
+                      !course.useSessionPeriod && !course.fixedMonthly
+                    ) {
                       const sessions = calculateSessions(
                         studentInfo.startDate, studentInfo.endDate,
                         course.days, newExcludeHolidays, holidayDateSet,
@@ -452,7 +457,11 @@ export const TuitionInputSection: React.FC<TuitionInputSectionProps> = ({
                     onClick={() => {
                       const newUseSession = !course.useSessionPeriod;
                       updateCourse(course.uid, 'useSessionPeriod', newUseSession);
-                      if (!newUseSession && studentInfo.startDate && studentInfo.endDate && course.days) {
+                      // 세션 적용 ON 시 12회 고정과 배타
+                      if (newUseSession && course.fixedMonthly) {
+                        updateCourse(course.uid, 'fixedMonthly', false);
+                      }
+                      if (!newUseSession && studentInfo.startDate && studentInfo.endDate && course.days && !course.fixedMonthly) {
                         const sessions = calculateSessions(
                           studentInfo.startDate, studentInfo.endDate,
                           course.days, course.excludeHolidays, holidayDateSet,
@@ -470,6 +479,58 @@ export const TuitionInputSection: React.FC<TuitionInputSectionProps> = ({
                     세션 적용
                     {course.useSessionPeriod && <Check size={10} />}
                   </button>
+                )}
+
+                {/* 월 N회 고정 토글 (요일/공휴일/세션 자동 재계산을 건너뛰고 N회로 강제) */}
+                <button
+                  onClick={() => {
+                    const newFixedMonthly = !course.fixedMonthly;
+                    const N = course.fixedSessionsCount ?? 12;
+                    updateCourse(course.uid, 'fixedMonthly', newFixedMonthly);
+                    if (newFixedMonthly) {
+                      // 12회 고정 ON: 세션 적용과 배타, sessions = N
+                      if (course.useSessionPeriod) {
+                        updateCourse(course.uid, 'useSessionPeriod', false);
+                      }
+                      if (!course.fixedSessionsCount) {
+                        updateCourse(course.uid, 'fixedSessionsCount', N);
+                      }
+                      updateCourse(course.uid, 'sessions', N);
+                    } else if (studentInfo.startDate && studentInfo.endDate && course.days) {
+                      // OFF: 요일/공휴일 기반 재계산
+                      const sessions = calculateSessions(
+                        studentInfo.startDate, studentInfo.endDate,
+                        course.days, course.excludeHolidays, holidayDateSet,
+                      );
+                      updateCourse(course.uid, 'sessions', sessions);
+                    }
+                  }}
+                  className={`flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors ${
+                    course.fixedMonthly
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-600'
+                      : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                  }`}
+                  title="월 N회로 회수를 강제 (요일/공휴일/세션 자동 재계산 무시)"
+                >
+                  <Hash size={12} />
+                  월 {course.fixedMonthly ? (course.fixedSessionsCount ?? 12) : 'N'}회 고정
+                  {course.fixedMonthly && <Check size={10} />}
+                </button>
+
+                {course.fixedMonthly && (
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={course.fixedSessionsCount ?? 12}
+                    onChange={(e) => {
+                      const n = Math.max(1, Math.min(50, Number(e.target.value) || 12));
+                      updateCourse(course.uid, 'fixedSessionsCount', n);
+                      updateCourse(course.uid, 'sessions', n);
+                    }}
+                    className="w-14 px-1.5 py-0.5 text-xs border border-emerald-300 rounded text-right focus:ring-1 focus:ring-emerald-400 outline-none"
+                    title="월 고정 회수"
+                  />
                 )}
               </div>
             </div>
