@@ -1850,13 +1850,15 @@ const TimetableManager = ({
                     const fromClass = classesWithEnrollments.find(c => c.id === lastMove.fromClassId);
                     const toClass = classesWithEnrollments.find(c => c.id === lastMove.toClassId);
                     const student = studentMap[lastMove.studentId];
+                    // enrollment 레벨 퇴원 여부도 확인 (과목별 퇴원 학생 감지)
+                    const enrollmentInFromClass = fromClass?.studentList?.find((s: any) => s.id === lastMove.studentId);
                     setDateModalInfo({
                         studentId: lastMove.studentId,
                         studentName: student?.name || lastMove.studentId,
                         fromClassName: fromClass?.className || '',
                         toClassName: toClass?.className || '',
                         targetClassSchedule: toClass?.schedule,
-                        isWithdrawn: student?.status === 'withdrawn' || !!student?.withdrawalDate,
+                        isWithdrawn: student?.status === 'withdrawn' || !!student?.withdrawalDate || !!enrollmentInFromClass?.withdrawalDate,
                     });
                 }
             }
