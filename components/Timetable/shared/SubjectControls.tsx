@@ -21,6 +21,7 @@ function getViewOptions(subject: TimetableSubjectType, hasIntegratedPermission: 
             { key: 'excel|excel-day', label: '엑셀(요일)', icon: <Table2 size={12} />, category: 'dev' },
             { key: 'room', label: '강의실', icon: <Building size={12} />, category: 'dev' },
             { key: 'class', label: '통합뷰', icon: <ClipboardList size={12} />, category: 'dev' },
+            { key: 'excel|excel-teacher-test', label: '테스트 뷰', icon: <Table2 size={12} />, category: 'dev' },
         ];
     }
     if (subject === 'highmath') {
@@ -53,7 +54,10 @@ function getCurrentKey(viewType: string, mathViewMode?: string, subject?: Timeta
 function getCurrentLabel(options: ViewOption[], currentKey: string): { label: string; icon: React.ReactNode } {
     const found = options.find(o => o.key === currentKey);
     if (found) return { label: found.label, icon: found.icon };
-    return { label: currentKey, icon: <Table2 size={12} /> };
+    // 매칭 안 되면 default 카테고리의 첫 옵션(기본뷰) 표시
+    const defaultOption = options.find(o => o.category === 'default');
+    if (defaultOption) return { label: defaultOption.label, icon: defaultOption.icon };
+    return { label: '기본뷰', icon: <Table2 size={12} /> };
 }
 
 interface SubjectControlsProps {
