@@ -849,6 +849,16 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
             const data = JSON.parse(e.dataTransfer.getData('text/plain'));
             if (data && data.student) {
                 if (data.fromClass === classInfo.name) return;
+                // 퇴원 학생 → 재원생 이동
+                if (data.isWithdrawn) {
+                    if (!confirm(`${data.student.name}은(는) 퇴원 학생입니다.\n${classInfo.name} 반으로 이동하여 재원생으로 등록하시겠습니까?`)) {
+                        return;
+                    }
+                    // withdrawalDate 제거하여 재원생으로 전환
+                    const restoredStudent = { ...data.student, withdrawalDate: undefined, isMoved: false, onHold: false };
+                    onMoveStudent(restoredStudent, data.fromClass, classInfo.name);
+                    return;
+                }
                 if (data.isNewStudent && !confirm(`${data.student.name}은(는) 신입생입니다.\n반 이동하시겠습니까?`)) {
                     return;
                 }
@@ -1429,6 +1439,11 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                     draggable={mode === 'edit'}
                                                     onDragStart={(e) => {
                                                         if (mode === 'edit') {
+                                                            e.dataTransfer.setData('text/plain', JSON.stringify({
+                                                                student,
+                                                                fromClass: classInfo.name,
+                                                                isWithdrawn: true
+                                                            }));
                                                             e.dataTransfer.setData('studentId', student.id);
                                                             e.dataTransfer.setData('fromClassId', classInfo.id);
                                                             e.dataTransfer.setData('fromClassName', classInfo.name);
