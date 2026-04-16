@@ -846,14 +846,16 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                 groups={exportGroups}
                 onGroupsChanged={handleExportGroupsChanged}
             />
-            {/* 반 이동 날짜 설정 모달 (수학과 동일) */}
+            {/* 반 이동 날짜 설정 모달 */}
             {moveModalInfo && (
                 <ScheduledDateModal
                     studentName={moveModalInfo.student.name}
                     fromClassName={moveModalInfo.fromClass}
                     toClassName={moveModalInfo.toClass}
                     title="반 이동 날짜 설정"
-                    actionVerb="이동"
+                    customImmediateLabel="즉시 이동 (오늘)"
+                    scheduledLabel="마지막 수업일 지정"
+                    allowPastDate
                     onConfirm={handleMoveModalConfirm}
                     onClose={() => setMoveModalInfo(null)}
                 />

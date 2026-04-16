@@ -18,6 +18,8 @@ interface ScheduledDateModalProps {
     description?: React.ReactNode;
     customImmediateLabel?: string;
     actionVerb?: string; // 기본 '이동', '삽입' 등으로 변경 가능
+    scheduledLabel?: string; // '예정일 지정' 대신 사용할 라벨
+    allowPastDate?: boolean; // true면 과거 날짜도 선택 가능
 }
 
 const ScheduledDateModal: React.FC<ScheduledDateModalProps> = ({
@@ -32,6 +34,8 @@ const ScheduledDateModal: React.FC<ScheduledDateModalProps> = ({
     description,
     customImmediateLabel,
     actionVerb,
+    scheduledLabel,
+    allowPastDate,
 }) => {
     const [mode, setMode] = useState<'immediate' | 'scheduled'>('immediate');
     const [selectedDate, setSelectedDate] = useState('');
@@ -176,12 +180,12 @@ const ScheduledDateModal: React.FC<ScheduledDateModalProps> = ({
                                     onChange={() => setMode('scheduled')}
                                     className="accent-blue-500"
                                 />
-                                <span className="text-sm font-bold text-gray-700">예정일 지정</span>
+                                <span className="text-sm font-bold text-gray-700">{scheduledLabel || '예정일 지정'}</span>
                             </div>
                             {mode === 'scheduled' && (
                                 <input
                                     type="date"
-                                    min={tomorrow}
+                                    min={allowPastDate ? undefined : tomorrow}
                                     value={selectedDate}
                                     onChange={(e) => setSelectedDate(e.target.value)}
                                     className="ml-5 px-2 py-1 border border-gray-300 rounded-sm text-sm focus:border-blue-400 focus:outline-none"
