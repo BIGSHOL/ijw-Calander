@@ -2080,14 +2080,16 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                 />
             )}
 
-            {/* 드래그 이동 예정일 선택 모달 */}
+            {/* 드래그 이동 날짜 선택 모달 */}
             {dragMoveModalInfo && (
                 <ScheduledDateModal
                     studentName={dragMoveModalInfo.studentName}
                     fromClassName={dragMoveModalInfo.fromClassName}
                     toClassName={dragMoveModalInfo.toClassName}
-                    title="이동일 설정"
-                    actionVerb="이동"
+                    title="반 이동 날짜 설정"
+                    customImmediateLabel="즉시 이동 (오늘)"
+                    scheduledLabel="마지막 수업일 지정"
+                    allowPastDate
                     onConfirm={handleDragMoveConfirm}
                     onClose={() => setDragMoveModalInfo(null)}
                 />
