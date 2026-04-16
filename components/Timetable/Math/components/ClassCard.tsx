@@ -1512,8 +1512,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                 return (
                                                     <li
                                                         key={s.id}
-                                                        draggable={false}
-                                                        className={`${fontSizeClass} leading-[1.3] bg-black text-white px-0.5 py-0 overflow-hidden whitespace-nowrap cursor-default hover:bg-gray-700 transition-colors`}
+                                                        draggable={canEdit}
+                                                        onDragStart={(e) => { if (canEdit) onDragStart(e, s.id, cls.id, 'common'); }}
+                                                        className={`${fontSizeClass} leading-[1.3] bg-black text-white px-0.5 py-0 overflow-hidden whitespace-nowrap ${canEdit ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-700 transition-colors`}
                                                         title={tooltipText}
                                                         onClick={(e) => e.stopPropagation()}
                                                         onDoubleClick={(e) => {
@@ -1728,8 +1729,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                 return (
                                                     <li
                                                         key={s.id}
-                                                        draggable={false}
-                                                        className={`${fontSizeClass} leading-[1.3] bg-black text-white px-0.5 py-0 overflow-hidden whitespace-nowrap cursor-default hover:bg-gray-700 transition-colors`}
+                                                        draggable={canEdit}
+                                                        onDragStart={(e) => { if (canEdit) onDragStart(e, s.id, cls.id, 'common'); }}
+                                                        className={`${fontSizeClass} leading-[1.3] bg-black text-white px-0.5 py-0 overflow-hidden whitespace-nowrap ${canEdit ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-700 transition-colors`}
                                                         title={s.withdrawalDate ? `${text} (퇴원: ${s.withdrawalDate})` : text}
                                                         onClick={(e) => e.stopPropagation()}
                                                         onDoubleClick={(e) => {
