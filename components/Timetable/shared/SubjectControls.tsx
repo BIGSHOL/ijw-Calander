@@ -35,6 +35,7 @@ function getViewOptions(subject: TimetableSubjectType, hasIntegratedPermission: 
     if (subject === 'english') {
         return [
             { key: 'excel', label: '기본뷰', icon: <Table2 size={12} />, category: 'default' },
+            { key: 'excel|excel-test', label: '테스트 뷰', icon: <Table2 size={12} />, category: 'dev' },
             { key: 'class', label: '통합뷰', icon: <ClipboardList size={12} />, category: 'dev' },
             { key: 'teacher', label: '강사', icon: <UserIcon size={12} />, category: 'dev' },
             { key: 'room', label: '강의실', icon: <Building size={12} />, category: 'dev' },
@@ -43,9 +44,9 @@ function getViewOptions(subject: TimetableSubjectType, hasIntegratedPermission: 
     return [];
 }
 
-function getCurrentKey(viewType: string, mathViewMode?: string, subject?: TimetableSubjectType): string {
-    // 수학/고등수학만 excel 서브모드 사용
-    if (viewType === 'excel' && mathViewMode && (subject === 'math' || subject === 'highmath')) {
+function getCurrentKey(viewType: string, mathViewMode?: string, _subject?: TimetableSubjectType): string {
+    // excel 서브모드가 있으면 pipe key 반환
+    if (viewType === 'excel' && mathViewMode) {
         return `excel|${mathViewMode}`;
     }
     return viewType;
@@ -124,8 +125,8 @@ export default function SubjectControls({
         const newMathViewMode = parts[1];
 
         setTimetableViewType(newViewType);
-        if (newMathViewMode && setMathViewMode) {
-            setMathViewMode(newMathViewMode);
+        if (setMathViewMode) {
+            setMathViewMode(newMathViewMode || '');
         }
         setIsViewDropdownOpen(false);
     };
