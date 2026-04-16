@@ -2158,14 +2158,17 @@ const TimetableManager = ({
                 updateMathIntegrationSettings={updateOuterMathSettings}
                 userDepartments={userDepartments}
             />
-            {/* 드래그 예정일 선택 모달 (반이동 + 같은반 zone이동) */}
+            {/* 드래그 반이동 날짜 선택 모달 */}
             {dateModalInfo && (
                 <ScheduledDateModal
                     studentName={dateModalInfo.studentName}
                     fromClassName={dateModalInfo.fromClassName}
                     toClassName={dateModalInfo.toClassName}
-                    title={dateModalInfo.isZoneChange ? '등원일 변경 날짜 설정' : undefined}
+                    title={dateModalInfo.isZoneChange ? '등원일 변경 날짜 설정' : '반 이동 날짜 설정'}
+                    customImmediateLabel={dateModalInfo.isZoneChange ? undefined : '즉시 이동 (오늘)'}
                     actionVerb={dateModalInfo.isZoneChange ? '변경' : undefined}
+                    scheduledLabel={dateModalInfo.isZoneChange ? undefined : '마지막 수업일 지정'}
+                    allowPastDate={!dateModalInfo.isZoneChange}
                     onConfirm={handleDateModalConfirm}
                     onClose={handleDateModalClose}
                     weekStart={currentMonday}
