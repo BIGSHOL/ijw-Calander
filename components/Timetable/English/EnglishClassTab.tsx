@@ -703,6 +703,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 onSimulationLevelUp={onSimulationLevelUp}
                                                 moveChanges={isExcelMode ? undefined : moveChanges}
                                                 onMoveStudent={isExcelMode && excelOnExcelMoveStudent ? excelOnExcelMoveStudent : handleMoveStudentWithModal}
+                                                allClassNames={classNames}
                                                 classStudentData={classDataMap[cls.name]}
                                                 hideTime={true}
                                                 useInjaePeriod={group.useInjaePeriod}

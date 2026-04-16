@@ -302,6 +302,7 @@ interface IntegrationClassCardProps {
     useInjaePeriod?: boolean;
     onRestoreEnrollment?: (studentId: string, className: string) => void;  // 수업 종료 취소
     onDeleteEnrollment?: (studentId: string, className: string) => void;  // 수강 기록 삭제
+    allClassNames?: string[];  // 퇴원생 반이동용 전체 수업 목록
     onCancelScheduledEnrollment?: (studentId: string, className: string) => void;  // 배정 예정 취소
     onEditClass?: (classId: string) => void;  // 시뮬레이션 모드 수업 편집
     // 주차 이동 시 배정 예정/퇴원 예정 미리보기용
@@ -373,6 +374,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     useInjaePeriod = false,
     onRestoreEnrollment,
     onDeleteEnrollment,
+    allClassNames = [],
     onCancelScheduledEnrollment,
     onEditClass,
     currentWeekStart,
@@ -1441,21 +1443,28 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                                 isWithdrawn: true
                                                             }));
                                                             e.dataTransfer.setData('studentId', student.id);
-                                                            e.dataTransfer.setData('fromClassId', classInfo.id);
+                                                            e.dataTransfer.setData('fromClassId', classInfo.classId);
                                                             e.dataTransfer.setData('fromClassName', classInfo.name);
                                                         }
                                                     }}
-                                                    className={`flex items-center text-[12px] py-0.5 px-1 bg-black text-white mb-0.5 ${mode === 'edit' ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-800 group relative`}
+                                                    className={`flex items-center text-[12px] py-0.5 px-1 bg-black text-white mb-0.5 ${mode === 'edit' ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-800 group relative select-none`}
                                                     title={student.withdrawalDate ? `퇴원일: ${student.withdrawalDate}` : undefined}
-                                                    onClick={(e) => e.stopPropagation()}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (mode === 'edit' && (onRestoreEnrollment || onDeleteEnrollment || onMoveStudent)) {
+                                                            setWithdrawnActionModal({ studentId: student.id, studentName: student.name });
+                                                        } else if (onStudentClick) {
+                                                            onStudentClick(student.id);
+                                                        }
+                                                    }}
                                                     onDoubleClick={() => onStudentClick?.(student.id)}
                                                 >
-                                                    <div className="flex items-center flex-1 min-w-0">
+                                                    <div className="flex items-center flex-1 min-w-0 pointer-events-none">
                                                         <span className="font-normal shrink-0">{student.name}</span>
                                                         {isEnglish && student.englishName && <span className="ml-1 text-gray-400 truncate max-w-[60px]" title={student.englishName}>({student.englishName})</span>}
                                                     </div>
                                                     {(displayOptions?.showSchool !== false || displayOptions?.showGrade !== false) && (
-                                                        <span className="text-xxs shrink-0 text-gray-300 text-right leading-none ml-1">
+                                                        <span className="text-xxs shrink-0 text-gray-300 text-right leading-none ml-1 pointer-events-none">
                                                             {formatSchoolGrade(displayOptions?.showSchool !== false ? student.school : undefined, displayOptions?.showGrade !== false ? student.grade : undefined)}
                                                         </span>
                                                     )}
@@ -1465,7 +1474,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                                 e.stopPropagation();
                                                                 setWithdrawnActionModal({ studentId: student.id, studentName: student.name });
                                                             }}
-                                                            className="absolute right-0.5 text-[11px] text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all bg-black w-[18px] h-[18px] flex items-center justify-center rounded-sm"
+                                                            className="absolute right-0.5 text-[11px] text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all bg-black w-[18px] h-[18px] flex items-center justify-center rounded-sm pointer-events-none group-hover:pointer-events-auto"
                                                             title="복구 또는 삭제"
                                                         >
                                                             &times;
@@ -1501,10 +1510,10 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                 />
             )}
 
-            {/* 퇴원생 복구/삭제 선택 다이얼로그 */}
+            {/* 퇴원생 복구/삭제/반이동 선택 다이얼로그 */}
             {withdrawnActionModal && createPortal(
-                <div className="fixed inset-0 bg-black/50 z-[110] flex items-start justify-center pt-[12vh] p-4">
-                    <div className="bg-white rounded-sm shadow-2xl w-[280px] flex flex-col overflow-hidden">
+                <div className="fixed inset-0 bg-black/50 z-[110] flex items-start justify-center pt-[12vh] p-4" onClick={() => setWithdrawnActionModal(null)}>
+                    <div className="bg-white rounded-sm shadow-2xl w-[280px] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
                         {/* Header */}
                         <div className="bg-gray-800 text-white p-3 font-bold text-sm flex justify-between items-center">
                             <span>퇴원생 처리</span>
@@ -1534,6 +1543,37 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                             <div className="text-[11px] text-gray-500">수업 종료를 취소하고 재원생으로 복구</div>
                                         </div>
                                     </button>
+                                )}
+                                {/* 반이동 — 다른 반으로 재원생 등록 */}
+                                {onMoveStudent && allClassNames.length > 0 && (
+                                    <div className="w-full p-3 rounded-sm border border-green-300 bg-white hover:bg-green-50 transition-all text-left">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <span className="text-xl">&#x27A1;</span>
+                                            <div>
+                                                <div className="text-sm font-bold text-green-700">반이동</div>
+                                                <div className="text-[11px] text-gray-500">다른 반으로 이동하여 재원생 등록</div>
+                                            </div>
+                                        </div>
+                                        <select
+                                            className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-sm bg-white focus:outline-none focus:ring-1 focus:ring-green-500"
+                                            defaultValue=""
+                                            onChange={(e) => {
+                                                const targetClass = e.target.value;
+                                                if (!targetClass) return;
+                                                const student = filteredWithdrawnStudents.find(s => s.id === withdrawnActionModal.studentId);
+                                                if (student) {
+                                                    const restoredStudent = { ...student, withdrawalDate: undefined, isMoved: false, onHold: false };
+                                                    onMoveStudent(restoredStudent, classInfo.name, targetClass);
+                                                }
+                                                setWithdrawnActionModal(null);
+                                            }}
+                                        >
+                                            <option value="" disabled>이동할 반 선택...</option>
+                                            {allClassNames.filter(n => n !== classInfo.name).map(name => (
+                                                <option key={name} value={name}>{name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                 )}
                                 {onDeleteEnrollment && (
                                     <button
