@@ -857,7 +857,7 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                     toClassName={moveModalInfo.toClass}
                     title="반 이동 날짜 설정"
                     customImmediateLabel="즉시 이동 (오늘)"
-                    scheduledLabel="마지막 수업일 지정"
+                    scheduledLabel="예정 수업일 지정"
                     allowPastDate
                     onConfirm={handleMoveModalConfirm}
                     onClose={() => setMoveModalInfo(null)}

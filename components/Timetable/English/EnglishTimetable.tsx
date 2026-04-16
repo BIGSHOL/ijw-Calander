@@ -2108,7 +2108,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                     toClassName={dragMoveModalInfo.toClassName}
                     title="반 이동 날짜 설정"
                     customImmediateLabel="즉시 이동 (오늘)"
-                    scheduledLabel="마지막 수업일 지정"
+                    scheduledLabel="예정 수업일 지정"
                     allowPastDate
                     onConfirm={handleDragMoveConfirm}
                     onClose={() => setDragMoveModalInfo(null)}
