@@ -677,7 +677,13 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
     const groups = new Map<string, GroupedEnrollment>();
 
     (student.enrollments || [])
-      .filter(enrollment => !!getEndDate(enrollment)) // endDate/withdrawalDate가 있는 것만 = 종료됨
+      .filter(enrollment => {
+        // 종료일이 "오늘 이전"인 것만 지난 수업으로 분류.
+        // endDate === today는 "오늘까지 등원"을 의미하므로 오늘은 여전히 수강 중.
+        // (수강 중 필터와 상호배타적으로 맞추기 위함 — 중복 노출 버그 방지)
+        const endDate = getEndDate(enrollment);
+        return !!endDate && endDate < today;
+      })
       .forEach(enrollment => {
         const key = `${enrollment.subject}_${enrollment.className}`;
 
@@ -723,7 +729,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
       });
 
     return Array.from(groups.values());
-  }, [student.enrollments]);
+  }, [student.enrollments, today]);
 
   // 로딩 중 early return (모든 훅 호출 이후)
   if (loadingTeachers) {
