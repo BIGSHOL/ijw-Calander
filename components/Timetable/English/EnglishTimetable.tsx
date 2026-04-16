@@ -24,6 +24,9 @@ import PortalTooltip from '../../Common/PortalTooltip';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
 import { TimetableSubjectType } from '../../../types';
 import SubjectControls from '../shared/SubjectControls';
+import { useStudents } from '../../../hooks/useStudents';
+
+const MakeEduSyncModal = React.lazy(() => import('../../StudentManagement/MakeEduSyncModal'));
 
 interface EnglishTimetableProps {
     onClose?: () => void;
@@ -93,6 +96,10 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
     // Header controls (mode, search) - managed at parent level for class view
     const [mode, setMode] = useState<'view' | 'edit'>('view');
     const [searchQuery, setSearchQuery] = useState('');
+
+    // 메이크에듀 원생 동기화 모달
+    const [isMakeEduSyncOpen, setIsMakeEduSyncOpen] = useState(false);
+    const { students: allStudents } = useStudents(true);
 
     // 공통 뷰 설정 타입
     type ViewSize = 'small' | 'medium' | 'large';
@@ -1008,6 +1015,18 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
 
                         <div className="w-px h-4 bg-white/20 mx-1"></div>
 
+                        {/* 메이크에듀 원생 동기화 */}
+                        <button
+                            onClick={() => setIsMakeEduSyncOpen(true)}
+                            className="flex items-center gap-1 px-2 py-1 bg-green-600/80 border border-green-500 text-white rounded-sm hover:bg-green-500 text-xs font-bold transition-colors"
+                            title="메이크에듀 원생 동기화"
+                        >
+                            <Users size={12} />
+                            동기화
+                        </button>
+
+                        <div className="w-px h-4 bg-white/20 mx-1"></div>
+
                         {/* 이미지 저장 (수학 통합뷰와 동일 위치) */}
                         <button
                             onClick={() => setIsClassExportModalOpen(true)}
@@ -1729,6 +1748,7 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                     isExportModalOpen={isClassExportModalOpen}
                                     setIsExportModalOpen={setIsClassExportModalOpen}
                                     isExcelMode={true}
+                                    isTestView={mathViewMode === 'excel-test'}
                                     selectedClassId={selectedClassId}
                                     onCellSelect={setSelectedClassId}
                                     selectedStudentIds={selectedStudentIds}
@@ -2093,6 +2113,16 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                     onConfirm={handleDragMoveConfirm}
                     onClose={() => setDragMoveModalInfo(null)}
                 />
+            )}
+
+            {/* 메이크에듀 원생 동기화 모달 */}
+            {isMakeEduSyncOpen && (
+                <React.Suspense fallback={null}>
+                    <MakeEduSyncModal
+                        onClose={() => setIsMakeEduSyncOpen(false)}
+                        existingStudents={allStudents}
+                    />
+                </React.Suspense>
             )}
         </div>
     );
