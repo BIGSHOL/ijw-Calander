@@ -586,6 +586,10 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
             schedule: cls.schedule,
             studentCount: cls.studentIds?.length || cls.studentList?.length || 0,
             id: cls.id,
+            // 강사 인수인계 예약 필드 — 모달에서 배너/상세 섹션 렌더하려면 반드시 전달해야 함
+            pendingTeacher: cls.pendingTeacher,
+            pendingTeacherDate: cls.pendingTeacherDate,
+            pendingTeacherReason: cls.pendingTeacherReason,
         };
         setSelectedClassInfo(classInfo);
     }, [canEditMath, setSelectedClassInfo]);

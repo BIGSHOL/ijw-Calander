@@ -8,14 +8,16 @@
  * - 적용일이 오늘 또는 과거면 즉시 실행, 미래면 예약 (classes/{id}.pendingTeacher*)
  * - 예약된 인수인계는 TimetableManager의 auto-apply useEffect에서 매 마운트 시 체크
  *
- * 학생 입장 UX: 같은 className이지만 "지난 수업 (권나현)" + "수강 중 (김선생)"으로 자연스럽게 분리 표시
- *              ← CoursesTab 그룹핑 키에 staffId 포함되어 있어야 올바르게 분리됨 (선행 작업 완료)
+ * 수정 모드(isModifying=true):
+ * - 기존 예약 정보를 initialValues로 받아 폼을 미리 채움
+ * - 사용자가 "저장" 버튼 눌러 확정하는 시점에만 기존 예약을 취소하고 새 예약 생성
+ * - 사용자가 모달을 닫으면 기존 예약은 그대로 유지됨 (UX 보호)
  */
 
 import React, { useMemo, useState } from 'react';
 import { X, UserCheck, AlertCircle, Calendar } from 'lucide-react';
 import { useTeachers } from '../../hooks/useFirebaseQueries';
-import { useHandoverTeacher } from '../../hooks/useClassMutations';
+import { useHandoverTeacher, useCancelTeacherHandover } from '../../hooks/useClassMutations';
 import { getTodayKST } from '../../utils/dateUtils';
 import { SubjectType } from '../../utils/styleUtils';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
@@ -27,6 +29,11 @@ interface TeacherHandoverModalProps {
   currentTeacher: string;
   onClose: () => void;
   onSuccess?: () => void;
+  // 수정 모드: 기존 예약의 값을 미리 채움 + 저장 시 기존 예약 취소 후 새 예약
+  isModifying?: boolean;
+  initialNewTeacher?: string;
+  initialEffectiveDate?: string;
+  initialReason?: string;
 }
 
 const TeacherHandoverModal: React.FC<TeacherHandoverModalProps> = ({
@@ -36,6 +43,10 @@ const TeacherHandoverModal: React.FC<TeacherHandoverModalProps> = ({
   currentTeacher,
   onClose,
   onSuccess,
+  isModifying = false,
+  initialNewTeacher,
+  initialEffectiveDate,
+  initialReason,
 }) => {
   useEscapeClose(onClose);
   const todayStr = getTodayKST();
@@ -47,10 +58,11 @@ const TeacherHandoverModal: React.FC<TeacherHandoverModalProps> = ({
 
   const { data: teachers = [] } = useTeachers();
   const handoverMutation = useHandoverTeacher();
+  const cancelMutation = useCancelTeacherHandover();
 
-  const [newTeacher, setNewTeacher] = useState<string>('');
-  const [effectiveDate, setEffectiveDate] = useState<string>(tomorrowStr);
-  const [reason, setReason] = useState<string>('');
+  const [newTeacher, setNewTeacher] = useState<string>(initialNewTeacher || '');
+  const [effectiveDate, setEffectiveDate] = useState<string>(initialEffectiveDate || tomorrowStr);
+  const [reason, setReason] = useState<string>(initialReason || '');
   const [error, setError] = useState<string | null>(null);
 
   // 표시용 강사 목록: isHidden 제외, 현재 담임 제외, 수업 과목 담당 강사만
@@ -66,6 +78,7 @@ const TeacherHandoverModal: React.FC<TeacherHandoverModalProps> = ({
   }, [teachers, currentTeacher, subject]);
 
   const isImmediate = effectiveDate <= todayStr;
+  const isProcessing = handoverMutation.isPending || cancelMutation.isPending;
 
   const handleSubmit = async () => {
     setError(null);
@@ -81,11 +94,23 @@ const TeacherHandoverModal: React.FC<TeacherHandoverModalProps> = ({
     // 즉시 실행 시 확인 문구
     if (isImmediate) {
       const confirmMsg = `"${className}" 수업의 담임을 지금 바로 ${currentTeacher} → ${newTeacher}로 교체합니다.\n` +
-        `${effectiveDate} 이전 수강 이력(권나현 시절)은 "지난 수업"에 남고, ${effectiveDate}부터 새 담임으로 수강 중이 됩니다.\n\n진행할까요?`;
+        `${effectiveDate} 이전 수강 이력은 "지난 수업"에 남고, ${effectiveDate}부터 새 담임으로 수강 중이 됩니다.\n\n진행할까요?`;
       if (!window.confirm(confirmMsg)) return;
     }
 
     try {
+      // 수정 모드: 기존 예약 먼저 취소 (사용자 확정 시에만 rollback 실행 — UX 보호)
+      if (isModifying) {
+        await cancelMutation.mutateAsync({
+          classId,
+          className,
+          subject,
+          currentTeacher,
+          pendingTeacher: initialNewTeacher,
+        });
+      }
+
+      // 새 예약 생성
       await handoverMutation.mutateAsync({
         classId,
         subject,
@@ -102,6 +127,11 @@ const TeacherHandoverModal: React.FC<TeacherHandoverModalProps> = ({
     }
   };
 
+  const modalTitle = isModifying ? '강사 인수인계 수정' : '강사 인수인계';
+  const submitLabel = isImmediate
+    ? (isModifying ? '수정 후 즉시 적용' : '즉시 적용')
+    : (isModifying ? '수정 저장' : '예약');
+
   return (
     <div
       className="fixed inset-0 bg-black/50 flex items-center justify-center z-[110]"
@@ -115,11 +145,11 @@ const TeacherHandoverModal: React.FC<TeacherHandoverModalProps> = ({
         <div className="bg-primary text-white px-3 py-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <UserCheck className="w-4 h-4" />
-            <h2 className="text-sm font-bold">강사 인수인계</h2>
+            <h2 className="text-sm font-bold">{modalTitle}</h2>
           </div>
           <button
             onClick={onClose}
-            disabled={handoverMutation.isPending}
+            disabled={isProcessing}
             className="text-white hover:text-gray-200 disabled:opacity-50"
           >
             <X size={18} />
@@ -135,6 +165,12 @@ const TeacherHandoverModal: React.FC<TeacherHandoverModalProps> = ({
             <div className="text-xs text-gray-600 mt-1">
               현재 담임: <span className="font-semibold text-gray-800">{currentTeacher}</span>
             </div>
+            {isModifying && initialNewTeacher && initialEffectiveDate && (
+              <div className="text-xxs text-emerald-700 mt-1.5 pt-1.5 border-t border-gray-100">
+                기존 예약: <span className="font-medium">{initialEffectiveDate}부터 {initialNewTeacher}</span>
+                <span className="text-gray-400 ml-1">— "저장" 클릭 시 이 예약을 대체합니다</span>
+              </div>
+            )}
           </div>
 
           {/* 새 담임 선택 */}
@@ -145,7 +181,7 @@ const TeacherHandoverModal: React.FC<TeacherHandoverModalProps> = ({
             <select
               value={newTeacher}
               onChange={(e) => setNewTeacher(e.target.value)}
-              disabled={handoverMutation.isPending}
+              disabled={isProcessing}
               className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:outline-none focus:border-primary"
             >
               <option value="">— 강사 선택 —</option>
@@ -168,7 +204,7 @@ const TeacherHandoverModal: React.FC<TeacherHandoverModalProps> = ({
               value={effectiveDate}
               min={todayStr}
               onChange={(e) => setEffectiveDate(e.target.value)}
-              disabled={handoverMutation.isPending}
+              disabled={isProcessing}
               className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:outline-none focus:border-primary"
             />
             <div className="text-xxs text-gray-500 mt-1">
@@ -186,8 +222,8 @@ const TeacherHandoverModal: React.FC<TeacherHandoverModalProps> = ({
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              disabled={handoverMutation.isPending}
-              placeholder="예: 권나현 선생님 퇴사"
+              disabled={isProcessing}
+              placeholder="예: 담임 선생님 퇴사"
               rows={2}
               className="w-full px-2 py-1.5 text-xs border border-gray-300 rounded-sm focus:outline-none focus:border-primary resize-none"
             />
@@ -206,25 +242,23 @@ const TeacherHandoverModal: React.FC<TeacherHandoverModalProps> = ({
         <div className="px-3 py-2 bg-white border-t border-gray-200 flex items-center justify-end gap-2">
           <button
             onClick={onClose}
-            disabled={handoverMutation.isPending}
+            disabled={isProcessing}
             className="px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-100 disabled:opacity-50 transition-colors"
           >
             취소
           </button>
           <button
             onClick={handleSubmit}
-            disabled={handoverMutation.isPending || !newTeacher}
+            disabled={isProcessing || !newTeacher}
             className="px-3 py-1 text-xs font-semibold bg-accent hover:bg-[#e5a60f] text-primary disabled:opacity-50 transition-colors flex items-center gap-1"
           >
-            {handoverMutation.isPending ? (
+            {isProcessing ? (
               <>
                 <div className="animate-spin w-3 h-3 border-2 border-primary border-t-transparent rounded-full" />
-                처리 중...
+                {isModifying ? '수정 중...' : '처리 중...'}
               </>
-            ) : isImmediate ? (
-              '즉시 적용'
             ) : (
-              '예약'
+              submitLabel
             )}
           </button>
         </div>

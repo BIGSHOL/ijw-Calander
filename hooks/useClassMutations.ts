@@ -528,10 +528,22 @@ export async function cancelTeacherHandover(classId: string): Promise<{ restored
     console.warn('[cancel handover] classes doc 조회 실패:', err);
   }
 
-  // batchId가 없으면 (이미 auto-apply 됐거나 예약이 없는 경우) — 안전하게 가장 최근 적용된 인수인계를 역추적
-  // 이번 스코프에서는 "예약 상태"만 취소 대상으로 한정 (auto-apply 완료 후 복구는 별도 운영 API)
+  // batchId가 없는 경우 — 구버전 예약이거나 데이터 이상 상태
+  // enrollment 찢기가 없었으므로 롤백할 건 없고, classes 문서의 pending 필드만 정리 (폴백)
   if (!batchId) {
-    console.warn('[cancel handover] pendingHandoverBatchId 없음 — 예약 상태가 아니므로 취소 불가');
+    console.warn('[cancel handover] pendingHandoverBatchId 없음 — 구버전 예약으로 간주하고 pending 필드만 정리');
+    try {
+      await updateDoc(doc(db, COL_CLASSES, classId), {
+        pendingTeacher: deleteField(),
+        pendingTeacherDate: deleteField(),
+        pendingTeacherReason: deleteField(),
+        pendingHandoverBatchId: deleteField(),
+        pendingHandoverPreviousTeacher: deleteField(),
+        updatedAt: now,
+      });
+    } catch (err) {
+      console.warn('[cancel handover] 구버전 pending 필드 정리 실패:', err);
+    }
     return { restored: 0, removed: 0 };
   }
 

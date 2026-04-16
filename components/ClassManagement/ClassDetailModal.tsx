@@ -84,24 +84,14 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
     }
   };
 
-  const handleModifyHandover = async () => {
-    // 기존 예약 취소 후 TeacherHandoverModal 재오픈
+  const [showModifyHandoverModal, setShowModifyHandoverModal] = useState(false);
+
+  const handleModifyHandover = () => {
+    // 수정 모달 오픈 — 기존 예약은 건드리지 않음
+    // 사용자가 모달에서 "수정 저장" 클릭 시에만 기존 예약 취소 + 새 예약 생성 순서로 실행
+    // (사용자가 모달을 닫으면 기존 예약은 그대로 유지되어 UX 보호)
     if (!classInfo.id || !classInfo.pendingTeacher) return;
-    const confirmMsg = `기존 예약을 취소하고 다시 설정하시겠습니까?\n\n` +
-      `(사전 찢어진 enrollment가 롤백된 후 새 예약 모달이 열립니다)`;
-    if (!window.confirm(confirmMsg)) return;
-    try {
-      await cancelHandoverMutation.mutateAsync({
-        classId: classInfo.id,
-        className: initialClassName,
-        subject: subject as SubjectType,
-        currentTeacher: classInfo.teacher,
-        pendingTeacher: classInfo.pendingTeacher,
-      });
-      setShowHandoverModal(true);
-    } catch (err: any) {
-      alert('수정 실패: ' + (err?.message || '알 수 없는 오류'));
-    }
+    setShowModifyHandoverModal(true);
   };
 
   const studentIds = useMemo(() => {
@@ -1343,7 +1333,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
         </div>
       </div>
 
-      {/* 강사 인수인계 모달 */}
+      {/* 강사 인수인계 모달 (신규 예약) */}
       {showHandoverModal && classInfo.id && (
         <TeacherHandoverModal
           classId={classInfo.id}
@@ -1352,8 +1342,23 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
           currentTeacher={classInfo.teacher}
           onClose={() => setShowHandoverModal(false)}
           onSuccess={() => {
-            // 모달 자체가 부모를 닫지는 않고, 캐시 무효화는 mutation의 onSuccess에서 처리됨
+            // 캐시 무효화는 mutation의 onSuccess에서 처리됨
           }}
+        />
+      )}
+
+      {/* 강사 인수인계 수정 모달 (기존 예약 대체) */}
+      {showModifyHandoverModal && classInfo.id && classInfo.pendingTeacher && classInfo.pendingTeacherDate && (
+        <TeacherHandoverModal
+          classId={classInfo.id}
+          className={initialClassName}
+          subject={subject as SubjectType}
+          currentTeacher={classInfo.teacher}
+          isModifying
+          initialNewTeacher={classInfo.pendingTeacher}
+          initialEffectiveDate={classInfo.pendingTeacherDate}
+          initialReason={classInfo.pendingTeacherReason}
+          onClose={() => setShowModifyHandoverModal(false)}
         />
       )}
     </div>

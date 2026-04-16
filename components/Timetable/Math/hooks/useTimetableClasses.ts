@@ -110,6 +110,13 @@ export const useTimetableClasses = () => {
                     color: data.color,
                     slotTeachers: data.slotTeachers || {},
                     slotRooms: data.slotRooms || {},
+                    // 스케줄 변경 예정 (기존 기능)
+                    pendingSchedule: data.pendingLegacySchedule || data.pendingSchedule,
+                    pendingScheduleDate: data.pendingScheduleDate,
+                    // 강사 인수인계 예정 (신규) — 반 카드 🔄 배지 + 수업 상세 모달 배너/상세 섹션 렌더에 필수
+                    pendingTeacher: data.pendingTeacher,
+                    pendingTeacherDate: data.pendingTeacherDate,
+                    pendingTeacherReason: data.pendingTeacherReason,
                 };
             });
 

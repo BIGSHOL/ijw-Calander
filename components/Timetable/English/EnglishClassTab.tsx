@@ -726,6 +726,10 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                         schedule: fullClassData?.schedule,
                                                         slotTeachers: fullClassData?.slotTeachers,
                                                         slotRooms: fullClassData?.slotRooms,
+                                                        // 강사 인수인계 예약 필드 — 모달에서 배너/상세 섹션 렌더에 필수
+                                                        pendingTeacher: fullClassData?.pendingTeacher,
+                                                        pendingTeacherDate: fullClassData?.pendingTeacherDate,
+                                                        pendingTeacherReason: fullClassData?.pendingTeacherReason,
                                                     };
                                                     setSelectedClassDetail(classDetail);
                                                 } : undefined}
