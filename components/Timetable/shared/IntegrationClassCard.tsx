@@ -855,8 +855,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                 if (data.fromClass === classInfo.name) return;
                 // 퇴원 학생 → 재원생 이동 (테스트 뷰에서만)
                 if (data.isWithdrawn && isTestView) {
-                    const restoredStudent = { ...data.student, withdrawalDate: undefined, isMoved: false, onHold: false };
-                    onMoveStudent(restoredStudent, data.fromClass, classInfo.name);
+                    onMoveStudent(data.student, data.fromClass, classInfo.name);
                     return;
                 }
                 if (data.isNewStudent && !confirm(`${data.student.name}은(는) 신입생입니다.\n반 이동하시겠습니까?`)) {
@@ -1562,8 +1561,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
                                                 if (!targetClass) return;
                                                 const student = filteredWithdrawnStudents.find(s => s.id === withdrawnActionModal.studentId);
                                                 if (student) {
-                                                    const restoredStudent = { ...student, withdrawalDate: undefined, isMoved: false, onHold: false };
-                                                    onMoveStudent(restoredStudent, classInfo.name, targetClass);
+                                                    onMoveStudent(student, classInfo.name, targetClass);
                                                 }
                                                 setWithdrawnActionModal(null);
                                             }}
