@@ -1110,6 +1110,64 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                       </div>
                     );
                   })()}
+
+                  {/* 강사 인수인계 예정 상세 섹션 */}
+                  {hasPendingHandover && !isSimulationMode && (
+                    <div className="bg-white border border-emerald-300 overflow-hidden">
+                      <div className="flex items-center gap-1 px-2 py-1 bg-emerald-50 border-b border-emerald-200">
+                        <UserCheck className="w-3 h-3 text-emerald-700" />
+                        <h3 className="text-emerald-800 font-bold text-xs">강사 인수인계 예정</h3>
+                      </div>
+                      <div className="px-2 py-2 space-y-1.5">
+                        {/* 날짜 + 담임 변경 정보 */}
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="shrink-0 w-16 text-gray-500">적용일</span>
+                          <span className="font-bold text-emerald-800">{classInfo.pendingTeacherDate}</span>
+                          <span className="text-xxs text-gray-400">(이 날부터 새 담임 수업 시작 — 전날까지는 현재 담임)</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="shrink-0 w-16 text-gray-500">담임 교체</span>
+                          <span className="font-medium text-gray-700">{getTeacherDisplayName(classInfo.teacher)}</span>
+                          <span className="text-emerald-600 font-bold">→</span>
+                          <span className="font-bold text-emerald-800">{getTeacherDisplayName(classInfo.pendingTeacher || '')}</span>
+                        </div>
+                        {classInfo.pendingTeacherReason && (
+                          <div className="flex items-start gap-2 text-xs">
+                            <span className="shrink-0 w-16 text-gray-500">사유</span>
+                            <span className="flex-1 text-gray-700 italic whitespace-pre-wrap">{classInfo.pendingTeacherReason}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 text-xs pt-0.5">
+                          <span className="shrink-0 w-16 text-gray-500">상태</span>
+                          <span className="text-gray-700">
+                            학생 수강 이력 <span className="font-medium text-emerald-700">사전 분리 완료</span>
+                            <span className="mx-1 text-gray-300">·</span>
+                            효력일 도달 시 <span className="font-medium">자동 적용</span>
+                          </span>
+                        </div>
+
+                        {/* 수정/취소 버튼 */}
+                        {canEdit && classInfo.id && (
+                          <div className="flex items-center justify-end gap-1.5 pt-1.5 mt-1 border-t border-emerald-100">
+                            <button
+                              onClick={handleModifyHandover}
+                              disabled={cancelHandoverMutation.isPending || isPending}
+                              className="px-2 py-0.5 text-xxs font-semibold bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-50 disabled:opacity-50 transition-colors"
+                            >
+                              예약 수정
+                            </button>
+                            <button
+                              onClick={handleCancelHandover}
+                              disabled={cancelHandoverMutation.isPending || isPending}
+                              className="px-2 py-0.5 text-xxs font-semibold bg-white border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                            >
+                              {cancelHandoverMutation.isPending ? '취소 중...' : '예약 취소'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
