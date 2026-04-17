@@ -40,10 +40,13 @@ body {
   }
 }
 
-/* 레이아웃 기본 설정 */
+/* 레이아웃 기본 설정
+ * PC 기본 너비(1280px)보다 좁아지면 body에 가로 스크롤바가 나타남.
+ * 세로 스크롤은 내부 콘텐츠에서 관리하므로 body는 hidden 유지.
+ */
 html, body {
-  min-width: 0;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   height: 100vh;
   height: 100dvh;
   margin: 0;
@@ -51,6 +54,7 @@ html, body {
 }
 
 #root {
+  min-width: 1280px;
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
