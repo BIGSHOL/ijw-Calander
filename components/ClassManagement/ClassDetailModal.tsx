@@ -589,7 +589,8 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
         </div>
 
         {/* 강사 인수인계 예약 배너 (pending 상태일 때만 표시) */}
-        {hasPendingHandover && !isEditMode && !isSimulationMode && (
+        {/* 상단 배너: 스케줄 탭 외 탭에서만 노출 (스케줄 탭엔 본문에 상세 카드가 있어 중복 방지) */}
+        {hasPendingHandover && !isEditMode && !isSimulationMode && activeViewTab !== 'schedule' && (
           <div className="bg-emerald-50 border-b border-emerald-200 px-2 py-1.5 flex items-center gap-2">
             <UserCheck className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0" />
             <div className="text-xxs text-emerald-900 flex-1 min-w-0">
