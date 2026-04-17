@@ -754,9 +754,12 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     const filteredScheduledStudents = hasFilter ? scheduledStudents.filter(studentPassesFilter) : scheduledStudents;
     const filteredWithdrawnStudents = hasFilter ? withdrawnStudents.filter(studentPassesFilter) : withdrawnStudents;
 
-    // 신입생 판별 (영어용)
+    // 신입생 판별 (영어용) - 현재 주차 기준일로 계산 (prev/next 주차 이동 시 재계산)
+    const refDateMs = useMemo(() => {
+        return currentWeekStart ? new Date(currentWeekStart).getTime() : Date.now();
+    }, [currentWeekStart]);
     const isNewStudent = (enrollmentDate: string): number => {
-        const days = Math.ceil((Date.now() - new Date(enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
+        const days = Math.ceil((refDateMs - new Date(enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
         if (days <= 30) return 1;
         if (days <= 60) return 2;
         return 0;
@@ -802,7 +805,7 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
             const wA = getAttendanceWeight(a), wB = getAttendanceWeight(b);
             return wA !== wB ? wA - wB : (a.name || '').localeCompare(b.name || '', 'ko');
         });
-    }, [activeStudents, isEnglish, classInfo.finalDays]);
+    }, [activeStudents, isEnglish, classInfo.finalDays, refDateMs]);
 
     const getRowStyle = (student: TimetableStudent & { isTempMoved?: boolean; isMoved?: boolean; isWithdrawalScheduled?: boolean }) => {
         if (student.isTempMoved) return { className: 'bg-purple-400 ring-1 ring-purple-500', textClass: 'text-white font-bold', subTextClass: 'text-white/80', englishTextClass: 'text-white/80' };
