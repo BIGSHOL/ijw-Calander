@@ -54,7 +54,7 @@ html, body {
 }
 
 #root {
-  min-width: 1600px;
+  min-width: 1280px;
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
