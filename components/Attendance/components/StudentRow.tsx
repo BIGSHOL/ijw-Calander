@@ -504,7 +504,7 @@ const StudentRow = React.memo(({
           <td
             key={dateKey}
             onContextMenu={(e) => onContextMenu(e, student, dateKey, isValid)}
-            className={`p-0 border-r border-b border-gray-200 text-center text-xxs font-medium relative ${cellBaseClass} align-middle ${
+            className={`p-0 border-r border-b border-gray-200 text-center text-xxs font-medium relative overflow-hidden ${cellBaseClass} align-middle ${
               highlightWeekends && isWeekend && isValid ? 'bg-gray-300' : ''
             }`}
             title={holidayName ? `🎉 ${holidayName}${memo ? ` | 메모: ${memo}` : ''}` : (memo ? `메모: ${memo}` : undefined)}
