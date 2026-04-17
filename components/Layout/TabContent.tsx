@@ -173,14 +173,14 @@ export const TabContent: React.FC<TabContentProps> = ({
         </Suspense>
       ) : appMode === 'calendar' && calendarProps ? (
         <div className={`w-full flex-1 max-w-full mx-auto h-full print:p-0 flex print:flex-row print:gap-2 ${
-          calendarProps.listDirection === 'vertical' ? 'flex-col overflow-y-auto' : 'flex-col xl:flex-row overflow-x-auto'
+          calendarProps.listDirection === 'vertical' ? 'flex-col overflow-y-auto' : 'flex-row overflow-x-auto'
         }`}>
           <Suspense fallback={<TabLoadingFallback />}>
             {/* 1단: 현재 년도 */}
             <div className={`flex-1 flex flex-col overflow-y-auto ${calendarProps.viewColumns >= 2
               ? calendarProps.listDirection === 'vertical'
                 ? 'min-h-[300px] border-b-4 border-gray-400'
-                : 'min-w-[320px] border-r-4 border-gray-400'
+                : 'min-w-[640px] border-r-4 border-gray-400'
               : 'min-w-0'
             }`}>
               <CalendarBoard
@@ -220,7 +220,7 @@ export const TabContent: React.FC<TabContentProps> = ({
 
             {/* 2단: 1년 전 */}
             <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${calendarProps.viewColumns >= 2
-              ? `${calendarProps.listDirection === 'vertical' ? 'min-h-[300px]' : 'min-w-[320px]'} ${calendarProps.viewColumns >= 3 ? (calendarProps.listDirection === 'vertical' ? 'border-b-4 border-gray-400' : 'border-r-4 border-gray-400') : ''}`
+              ? `${calendarProps.listDirection === 'vertical' ? 'min-h-[300px]' : 'min-w-[640px]'} ${calendarProps.viewColumns >= 3 ? (calendarProps.listDirection === 'vertical' ? 'border-b-4 border-gray-400' : 'border-r-4 border-gray-400') : ''}`
               : 'hidden'
             }`}>
               <CalendarBoard
@@ -247,7 +247,7 @@ export const TabContent: React.FC<TabContentProps> = ({
 
             {/* 3단: 2년 전 */}
             <div className={`flex-1 flex flex-col overflow-hidden transition-all duration-300 ${calendarProps.viewColumns >= 3
-              ? (calendarProps.listDirection === 'vertical' ? 'min-h-[300px]' : 'min-w-[320px]')
+              ? (calendarProps.listDirection === 'vertical' ? 'min-h-[300px]' : 'min-w-[640px]')
               : 'hidden'
             }`}>
               <CalendarBoard
