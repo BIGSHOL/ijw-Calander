@@ -1,21 +1,18 @@
 /**
  * useEnglishStats - Student statistics for English timetable
  *
- * PURPOSE: Derive student statistics from studentMap (which already contains enrollments)
- * instead of making a separate Firestore collectionGroup query.
+ * PURPOSE: 수학 탭과 동일한 데이터 소스(useSubjectClassStudents의 studentList)를
+ * 이터레이트하여 통계 계산. 아래 테이블에 표시되는 학생과 헤더 카운트가
+ * 정확히 일치하도록 보장.
  *
- * DATA FLOW:
- * 1. studentMap already contains student.enrollments[] from useStudents(true)
- * 2. Filter enrollments by subject='english' and calculate stats
- *
- * OPTIMIZATION (2026-02-04):
- * - useQuery + collectionGroup → useMemo 파생으로 변경
- * - 중복 Firestore 쿼리 완전 제거 (useStudents가 이미 모든 enrollment 포함)
+ * 기존에는 studentMap.enrollments를 직접 필터링하는 방식이었으나,
+ * 이는 아래 테이블 렌더링에 쓰이는 studentList 데이터와 불일치할 수 있어
+ * 재원/신입/예정/퇴원 카운트가 어긋나는 버그가 있었음.
  */
 
 import { useMemo } from 'react';
-import { convertTimestampToDate } from '../../../../utils/firestoreConverters';
 import { formatDateKey } from '../../../../utils/dateUtils';
+import { useSubjectClassStudents } from '../../../../hooks/useSubjectClassStudents';
 
 interface ScheduleCell {
     className?: string;
@@ -56,142 +53,125 @@ export const useEnglishStats = (
     studentMap: Record<string, any> = {},
     referenceDate?: string  // 주차 기준일 (YYYY-MM-DD), 없으면 오늘
 ) => {
-    const studentStats = useMemo<StudentStats>(() => {
-        // Get unique class names from scheduleData
-        const classNames = new Set<string>();
+    // scheduleData에서 수업명 목록 추출
+    const classNames = useMemo(() => {
+        const names = new Set<string>();
         Object.values(scheduleData).forEach(cell => {
-            if (cell.className) classNames.add(cell.className);
+            if (cell.className) names.add(cell.className);
             if (cell.merged) {
-                cell.merged.forEach(m => {
-                    if (m.className) classNames.add(m.className);
-                });
+                cell.merged.forEach(m => { if (m.className) names.add(m.className); });
             }
         });
+        return Array.from(names);
+    }, [scheduleData]);
 
-        if (classNames.size === 0 || Object.keys(studentMap).length === 0) {
-            return { active: 0, new1: 0, new2: 0, withdrawn: 0, withdrawnFuture: 0, waiting: 0, waitingStudents: [], withdrawnStudents: [], withdrawnFutureStudents: [] };
-        }
+    // 아래 테이블과 동일한 데이터 소스 사용 (React Query 캐시 공유)
+    const { classDataMap } = useSubjectClassStudents({
+        subject: 'english',
+        classNames: isSimulationMode ? [] : classNames,
+        studentMap,
+        referenceDate,
+    });
 
-        const refDate = referenceDate || formatDateKey(new Date());
-        const now = new Date(refDate);
-        const today = refDate;
-        let active = 0, new1 = 0, new2 = 0, withdrawn = 0, withdrawnFuture = 0, waiting = 0;
-        const waitingStudents: StudentInfo[] = [];
+    const studentStats = useMemo<StudentStats>(() => {
+        const today = referenceDate || formatDateKey(new Date());
+        const refDate = new Date(today);
+
+        const activeStudentIds = new Set<string>();
+        const new1StudentIds = new Set<string>();
+        const new2StudentIds = new Set<string>();
+        const waitingStudentIds = new Set<string>();
+        const processedStudents = new Map<string, any>();
+
+        // studentList 데이터 기반 — 수학 탭과 동일 로직
+        Object.values(classDataMap || {}).forEach((classData: any) => {
+            classData.studentList?.forEach((student: any) => {
+                if (processedStudents.has(student.id)) return;
+                processedStudents.set(student.id, student);
+
+                // 실제 퇴원 (반이동 제외)
+                if (student.withdrawalDate && !student.isTransferred) return;
+                // 반이동 학생 - 퇴원이 아님, 스킵 (다른 반에서 재원생으로 카운트)
+                if (student.withdrawalDate && student.isTransferred) return;
+
+                // 대기/예정 (onHold)
+                if (student.onHold) {
+                    const enrollDate = student.enrollmentDate || student.startDate;
+                    if (enrollDate) {
+                        const daysUntil = Math.floor((new Date(enrollDate).getTime() - refDate.getTime()) / (1000 * 60 * 60 * 24));
+                        if (daysUntil <= 30) waitingStudentIds.add(student.id);
+                    } else {
+                        waitingStudentIds.add(student.id);
+                    }
+                    return;
+                }
+
+                // 재원생
+                activeStudentIds.add(student.id);
+
+                // 신입 (반이동 제외)
+                if (!student.isTransferredIn) {
+                    const enrollDate = student.enrollmentDate || student.startDate;
+                    if (enrollDate) {
+                        const daysSince = Math.floor((refDate.getTime() - new Date(enrollDate).getTime()) / (1000 * 60 * 60 * 24));
+                        if (daysSince >= 0 && daysSince <= 30) new1StudentIds.add(student.id);
+                        else if (daysSince > 30 && daysSince <= 60) new2StudentIds.add(student.id);
+                    }
+                }
+            });
+        });
+
+        // 퇴원 / 퇴원예정 목록
         const withdrawnStudents: StudentInfo[] = [];
         const withdrawnFutureStudents: StudentInfo[] = [];
 
-        // Track unique students to avoid double-counting (a student can have multiple enrollments)
-        const countedStudents = new Set<string>();
+        processedStudents.forEach((student, studentId) => {
+            if (!student.withdrawalDate || student.isTransferred) return;
+            const base = studentMap[studentId] || student;
+            const info: StudentInfo = {
+                id: studentId,
+                name: base.name || student.name,
+                school: base.school || '',
+                grade: base.grade || '',
+                withdrawalDate: student.withdrawalDate,
+            };
 
-        // 학생별로 영어 enrollment 중 가장 우선되는 상태를 결정
-        Object.entries(studentMap).forEach(([studentId, student]) => {
-            if (!student.enrollments) return;
-            const baseStudent = studentMap[studentId];
-            if (!baseStudent) return;
-
-            // 이 학생의 영어 enrollment 중 활성인 것이 있는지 먼저 확인
-            const englishEnrollments = (student.enrollments as any[]).filter((e: any) =>
-                e.subject === 'english' && e.className && classNames.has(e.className)
-            );
-            if (englishEnrollments.length === 0) return;
-            if (countedStudents.has(studentId)) return;
-            countedStudents.add(studentId);
-
-            // 활성 enrollment 찾기 (endDate/withdrawalDate 없고, 미래 시작이 아닌 것)
-            const activeEnrollment = englishEnrollments.find((e: any) => {
-                const wd = convertTimestampToDate(e.withdrawalDate);
-                const ed = convertTimestampToDate(e.endDate);
-                if (wd || ed) return false;
-                const start = convertTimestampToDate(e.enrollmentDate) || convertTimestampToDate(e.startDate);
-                if (start && start > today) return false;
-                if (e.onHold) return false;
-                return true;
-            });
-
-            if (activeEnrollment) {
-                if (baseStudent.status !== 'active') return;
-                active++;
-                const enrollStartDate = convertTimestampToDate(activeEnrollment.enrollmentDate) ||
-                    convertTimestampToDate(activeEnrollment.startDate);
-                if (enrollStartDate) {
-                    const daysSinceEnroll = Math.floor((now.getTime() - new Date(enrollStartDate).getTime()) / (1000 * 60 * 60 * 24));
-                    if (daysSinceEnroll >= 0 && daysSinceEnroll <= 30) new1++;
-                    else if (daysSinceEnroll > 30 && daysSinceEnroll <= 60) new2++;
-                }
-                return;
+            if (student.withdrawalDate > today) {
+                withdrawnFutureStudents.push(info);
+            } else {
+                const daysSince = Math.floor((refDate.getTime() - new Date(student.withdrawalDate).getTime()) / (1000 * 60 * 60 * 24));
+                if (daysSince <= 30) withdrawnStudents.push(info);
             }
+        });
 
-            // 대기(onHold) enrollment
-            const holdEnrollment = englishEnrollments.find((e: any) => {
-                const wd = convertTimestampToDate(e.withdrawalDate);
-                const ed = convertTimestampToDate(e.endDate);
-                return !wd && !ed && e.onHold;
-            });
-            if (holdEnrollment) {
-                waiting++;
+        // 대기 학생 목록
+        const waitingStudents: StudentInfo[] = [];
+        waitingStudentIds.forEach(studentId => {
+            const base = studentMap[studentId];
+            const student = processedStudents.get(studentId);
+            if (base || student) {
                 waitingStudents.push({
-                    id: studentId, name: baseStudent.name, school: baseStudent.school, grade: baseStudent.grade,
-                    enrollmentDate: convertTimestampToDate(holdEnrollment.enrollmentDate) || baseStudent.startDate
+                    id: studentId,
+                    name: base?.name || student?.name || '',
+                    school: base?.school || '',
+                    grade: base?.grade || '',
+                    enrollmentDate: student?.enrollmentDate,
                 });
-                return;
-            }
-
-            // 배정 예정 (미래 시작일, 30일 이내)
-            const scheduledEnrollment = englishEnrollments.find((e: any) => {
-                const wd = convertTimestampToDate(e.withdrawalDate);
-                const ed = convertTimestampToDate(e.endDate);
-                if (wd || ed) return false;
-                const start = convertTimestampToDate(e.enrollmentDate) || convertTimestampToDate(e.startDate);
-                return start && start > today;
-            });
-            if (scheduledEnrollment) {
-                const start = convertTimestampToDate(scheduledEnrollment.enrollmentDate) || convertTimestampToDate(scheduledEnrollment.startDate);
-                const daysUntil = Math.floor((new Date(start!).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                if (daysUntil <= 30) {
-                    waiting++;
-                    waitingStudents.push({
-                        id: studentId, name: baseStudent.name, school: baseStudent.school, grade: baseStudent.grade,
-                        enrollmentDate: start
-                    });
-                }
-                return;
-            }
-
-            // 퇴원 — 가장 최근 종료된 enrollment 기준
-            const endedEnrollments = englishEnrollments
-                .map((e: any) => convertTimestampToDate(e.withdrawalDate) || convertTimestampToDate(e.endDate))
-                .filter(Boolean) as string[];
-            if (endedEnrollments.length > 0) {
-                const latestEnd = endedEnrollments.sort().reverse()[0];
-                const studentInfo: StudentInfo = {
-                    id: studentId, name: baseStudent.name, school: baseStudent.school, grade: baseStudent.grade,
-                    withdrawalDate: latestEnd
-                };
-                if (latestEnd > today) {
-                    withdrawnFuture++;
-                    withdrawnFutureStudents.push(studentInfo);
-                } else {
-                    const daysSince = Math.floor((now.getTime() - new Date(latestEnd).getTime()) / (1000 * 60 * 60 * 24));
-                    if (daysSince <= 30) {
-                        withdrawn++;
-                        withdrawnStudents.push(studentInfo);
-                    }
-                }
             }
         });
 
         return {
-            active,
-            new1,
-            new2,
-            withdrawn,
-            withdrawnFuture,
-            waiting,
+            active: activeStudentIds.size,
+            new1: new1StudentIds.size,
+            new2: new2StudentIds.size,
+            withdrawn: withdrawnStudents.length,
+            withdrawnFuture: withdrawnFutureStudents.length,
+            waiting: waitingStudentIds.size,
             waitingStudents,
             withdrawnStudents,
-            withdrawnFutureStudents
+            withdrawnFutureStudents,
         };
-    }, [scheduleData, studentMap, referenceDate]);
+    }, [classDataMap, studentMap, referenceDate]);
 
     return studentStats;
 };
