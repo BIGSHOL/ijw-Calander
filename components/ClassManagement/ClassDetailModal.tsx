@@ -60,24 +60,42 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
   const deleteClassMutation = useDeleteClass();
   const cancelHandoverMutation = useCancelTeacherHandover();
   const { data: teachersData } = useTeachers();
+  // useClasses로 해당 과목의 최신 class 목록 조회 (pending 필드 fallback 용)
+  // — prop으로 들어온 classInfo.pendingTeacher가 undefined여도 Firestore 최신값을 신뢰
+  // — 예약 취소 직후 stale prop을 무시하고 즉시 UI 반영
+  const { data: subjectClassesList } = useClasses(subject);
+
+  // 최신 Firestore pending 정보를 prop에 오버레이한 effective classInfo
+  const effectiveClassInfo = useMemo(() => {
+    if (!classInfo.id) return classInfo;
+    const latest = subjectClassesList?.find(c => c.id === classInfo.id);
+    if (!latest) return classInfo;
+    return {
+      ...classInfo,
+      // pending 필드는 Firestore를 단일 소스로 신뢰 (undefined면 undefined 그대로 반영)
+      pendingTeacher: latest.pendingTeacher,
+      pendingTeacherDate: latest.pendingTeacherDate,
+      pendingTeacherReason: latest.pendingTeacherReason,
+    } as typeof classInfo;
+  }, [classInfo, subjectClassesList]);
 
   // 강사 인수인계 예약 정보 (classes/{id}.pendingTeacher*)
-  const hasPendingHandover = !!(classInfo.pendingTeacher && classInfo.pendingTeacherDate);
+  const hasPendingHandover = !!(effectiveClassInfo.pendingTeacher && effectiveClassInfo.pendingTeacherDate);
 
   const handleCancelHandover = async () => {
-    if (!classInfo.id || !classInfo.pendingTeacher) return;
+    if (!effectiveClassInfo.id || !effectiveClassInfo.pendingTeacher) return;
     const confirmMsg = `"${initialClassName}" 수업의 강사 인수인계 예약을 취소하시겠습니까?\n\n` +
-      `- 예정일: ${classInfo.pendingTeacherDate}\n` +
-      `- ${classInfo.teacher} → ${classInfo.pendingTeacher}\n\n` +
+      `- 예정일: ${effectiveClassInfo.pendingTeacherDate}\n` +
+      `- ${effectiveClassInfo.teacher} → ${effectiveClassInfo.pendingTeacher}\n\n` +
       `사전 생성된 새 enrollment가 삭제되고, 기존 enrollment의 endDate가 복구됩니다.`;
     if (!window.confirm(confirmMsg)) return;
     try {
       await cancelHandoverMutation.mutateAsync({
-        classId: classInfo.id,
+        classId: effectiveClassInfo.id,
         className: initialClassName,
         subject: subject as SubjectType,
-        currentTeacher: classInfo.teacher,
-        pendingTeacher: classInfo.pendingTeacher,
+        currentTeacher: effectiveClassInfo.teacher,
+        pendingTeacher: effectiveClassInfo.pendingTeacher,
       });
     } catch (err: any) {
       alert('취소 실패: ' + (err?.message || '알 수 없는 오류'));
@@ -90,7 +108,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
     // 수정 모달 오픈 — 기존 예약은 건드리지 않음
     // 사용자가 모달에서 "수정 저장" 클릭 시에만 기존 예약 취소 + 새 예약 생성 순서로 실행
     // (사용자가 모달을 닫으면 기존 예약은 그대로 유지되어 UX 보호)
-    if (!classInfo.id || !classInfo.pendingTeacher) return;
+    if (!effectiveClassInfo.id || !effectiveClassInfo.pendingTeacher) return;
     setShowModifyHandoverModal(true);
   };
 
@@ -578,13 +596,13 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
               <span className="font-bold">강사 인수인계 예약됨</span>
               <span className="mx-1.5 text-emerald-600">·</span>
               <span>
-                <span className="font-medium">{classInfo.pendingTeacherDate}</span>부터
-                <span className="mx-1 text-emerald-700">{classInfo.teacher}</span>
+                <span className="font-medium">{effectiveClassInfo.pendingTeacherDate}</span>부터
+                <span className="mx-1 text-emerald-700">{effectiveClassInfo.teacher}</span>
                 →
-                <span className="ml-1 font-bold text-emerald-800">{classInfo.pendingTeacher}</span>
+                <span className="ml-1 font-bold text-emerald-800">{effectiveClassInfo.pendingTeacher}</span>
               </span>
-              {classInfo.pendingTeacherReason && (
-                <span className="ml-2 text-emerald-700 italic">({classInfo.pendingTeacherReason})</span>
+              {effectiveClassInfo.pendingTeacherReason && (
+                <span className="ml-2 text-emerald-700 italic">({effectiveClassInfo.pendingTeacherReason})</span>
               )}
             </div>
             {canEdit && classInfo.id && (
@@ -1112,19 +1130,19 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                         {/* 날짜 + 담임 변경 정보 */}
                         <div className="flex items-center gap-2 text-xs">
                           <span className="shrink-0 w-16 text-gray-500">적용일</span>
-                          <span className="font-bold text-emerald-800">{classInfo.pendingTeacherDate}</span>
+                          <span className="font-bold text-emerald-800">{effectiveClassInfo.pendingTeacherDate}</span>
                           <span className="text-xxs text-gray-400">(이 날부터 새 담임 수업 시작 — 전날까지는 현재 담임)</span>
                         </div>
                         <div className="flex items-center gap-2 text-xs">
                           <span className="shrink-0 w-16 text-gray-500">담임 교체</span>
-                          <span className="font-medium text-gray-700">{getTeacherDisplayName(classInfo.teacher)}</span>
+                          <span className="font-medium text-gray-700">{getTeacherDisplayName(effectiveClassInfo.teacher)}</span>
                           <span className="text-emerald-600 font-bold">→</span>
-                          <span className="font-bold text-emerald-800">{getTeacherDisplayName(classInfo.pendingTeacher || '')}</span>
+                          <span className="font-bold text-emerald-800">{getTeacherDisplayName(effectiveClassInfo.pendingTeacher || '')}</span>
                         </div>
-                        {classInfo.pendingTeacherReason && (
+                        {effectiveClassInfo.pendingTeacherReason && (
                           <div className="flex items-start gap-2 text-xs">
                             <span className="shrink-0 w-16 text-gray-500">사유</span>
-                            <span className="flex-1 text-gray-700 italic whitespace-pre-wrap">{classInfo.pendingTeacherReason}</span>
+                            <span className="flex-1 text-gray-700 italic whitespace-pre-wrap">{effectiveClassInfo.pendingTeacherReason}</span>
                           </div>
                         )}
                         <div className="flex items-center gap-2 text-xs pt-0.5">
@@ -1348,16 +1366,16 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
       )}
 
       {/* 강사 인수인계 수정 모달 (기존 예약 대체) */}
-      {showModifyHandoverModal && classInfo.id && classInfo.pendingTeacher && classInfo.pendingTeacherDate && (
+      {showModifyHandoverModal && effectiveClassInfo.id && effectiveClassInfo.pendingTeacher && effectiveClassInfo.pendingTeacherDate && (
         <TeacherHandoverModal
-          classId={classInfo.id}
+          classId={effectiveClassInfo.id}
           className={initialClassName}
           subject={subject as SubjectType}
-          currentTeacher={classInfo.teacher}
+          currentTeacher={effectiveClassInfo.teacher}
           isModifying
-          initialNewTeacher={classInfo.pendingTeacher}
-          initialEffectiveDate={classInfo.pendingTeacherDate}
-          initialReason={classInfo.pendingTeacherReason}
+          initialNewTeacher={effectiveClassInfo.pendingTeacher}
+          initialEffectiveDate={effectiveClassInfo.pendingTeacherDate}
+          initialReason={effectiveClassInfo.pendingTeacherReason}
           onClose={() => setShowModifyHandoverModal(false)}
         />
       )}
