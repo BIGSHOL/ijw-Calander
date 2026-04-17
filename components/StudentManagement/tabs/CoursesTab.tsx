@@ -1226,11 +1226,22 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
                       {group.className}
                     </span>
 
-                    {/* 강사 */}
+                    {/* 강사
+                        - classes.pendingTeacher + pendingTeacherDate 가 있고
+                          enrollment 시작일이 인수인계 효력일 이상이면 새 담임으로 표시
+                        - 이로써 인수인계 이전에 만들어진 "미래 시작 + 이전 담임 staffId" 레거시 enrollment 도
+                          UI 상 올바르게 새 담임으로 보임 */}
                     <div className="w-14 shrink-0 flex items-center gap-0.5">
                       <User className="w-3 h-3 text-gray-400" />
                       <span className="text-xxs text-primary-700 truncate">
-                        {getTeacherByIdOrName(getMainTeacher(group))?.name || actualClass?.teacher || '-'}
+                        {(() => {
+                          const pendingT = (actualClass as any)?.pendingTeacher;
+                          const pendingD = (actualClass as any)?.pendingTeacherDate;
+                          if (pendingT && pendingD && group.startDate && group.startDate >= pendingD) {
+                            return getTeacherByIdOrName(pendingT)?.name || pendingT;
+                          }
+                          return getTeacherByIdOrName(getMainTeacher(group))?.name || actualClass?.teacher || '-';
+                        })()}
                       </span>
                     </div>
 
