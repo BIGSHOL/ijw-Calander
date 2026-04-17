@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { TAB_GROUPS, TAB_META, AppTab } from '../../types';
-import { ChevronLeft, ChevronRight, Menu, X, ExternalLink, MessageCircle, Mic, Calculator } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, MessageCircle, Mic, Calculator } from 'lucide-react';
 
 interface SidebarProps {
   currentTab: AppTab | null;
@@ -22,26 +22,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   hasChatbotAccess,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Detect mobile screen size
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Close mobile sidebar when route changes
-  useEffect(() => {
-    if (isMobile) {
-      setIsMobileOpen(false);
-    }
-  }, [currentTab, isMobile]);
 
   // Sort groups by order
   const sortedGroups = [...TAB_GROUPS].sort((a, b) => a.order - b.order);
@@ -55,27 +35,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   });
 
   const toggleCollapse = () => {
-    if (!isMobile) {
-      setIsCollapsed(!isCollapsed);
-    }
+    setIsCollapsed(!isCollapsed);
   };
-
-  const toggleMobileMenu = () => {
-    if (isMobile) {
-      setIsMobileOpen(!isMobileOpen);
-    }
-  };
-
-  // Mobile hamburger button
-  const MobileMenuButton = () => (
-    <button
-      onClick={toggleMobileMenu}
-      className="md:hidden fixed top-4 left-4 z-50 p-2 bg-primary text-white rounded-sm shadow-lg border border-white/10 hover:bg-[#0a1633] transition-colors"
-      aria-label={isMobileOpen ? '메뉴 닫기' : '메뉴 열기'}
-    >
-      {isMobileOpen ? <X size={20} /> : <Menu size={20} />}
-    </button>
-  );
 
   const sidebarContent = (
     <>
@@ -107,15 +68,13 @@ const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
         )}
-        {!isMobile && (
-          <button
-            onClick={toggleCollapse}
-            className="p-1 hover:bg-white/10 rounded transition-colors"
-            aria-label={isCollapsed ? '사이드바 펼치기' : '사이드바 접기'}
-          >
-            {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-          </button>
-        )}
+        <button
+          onClick={toggleCollapse}
+          className="p-1 hover:bg-white/10 rounded transition-colors"
+          aria-label={isCollapsed ? '사이드바 펼치기' : '사이드바 접기'}
+        >
+          {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        </button>
       </div>
 
       {/* Navigation Groups - 컴팩트 */}
@@ -262,36 +221,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   );
 
   return (
-    <>
-      <MobileMenuButton />
-
-      {/* Desktop Sidebar - 컴팩트 너비 */}
-      <aside
-        className={`hidden md:flex flex-col bg-white border-r border-gray-200 transition-all duration-300 sticky top-0 h-screen ${isCollapsed ? 'w-[56px]' : 'w-[160px]'
-          }`}
-        aria-label="사이드바 메뉴"
-      >
-        {sidebarContent}
-      </aside>
-
-      {/* Mobile Sidebar Overlay */}
-      {isMobile && isMobileOpen && (
-        <div
-          className="md:hidden fixed inset-0 bg-black/50 z-40 animate-in fade-in duration-200"
-          onClick={() => setIsMobileOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
-      {/* Mobile Sidebar */}
-      <aside
-        className={`md:hidden fixed left-0 top-0 bottom-0 w-[200px] bg-white z-40 flex flex-col transform transition-transform duration-300 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
-        aria-label="모바일 사이드바 메뉴"
-      >
-        {sidebarContent}
-      </aside>
-    </>
+    <aside
+      className={`flex flex-col bg-white border-r border-gray-200 transition-all duration-300 sticky top-0 h-screen flex-shrink-0 ${isCollapsed ? 'w-[56px]' : 'w-[160px]'
+        }`}
+      aria-label="사이드바 메뉴"
+    >
+      {sidebarContent}
+    </aside>
   );
 };
 

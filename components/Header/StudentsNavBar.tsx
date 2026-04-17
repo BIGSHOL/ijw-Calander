@@ -60,7 +60,7 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
         {/* Primary Filters - 항상 보이는 주요 필터 */}
         <TabFilterGroup.Primary>
           {/* Subject Filter - Grid View */}
-          <div className="grid grid-cols-6 gap-1 bg-white/10 rounded-sm p-1 border border-white/10 shadow-sm">
+          <div className="flex flex-nowrap gap-1 bg-white/10 rounded-sm p-1 border border-white/10 shadow-sm [&>button]:whitespace-nowrap">
             <TabButton
               active={studentFilters.subjects.length === 0}
               onClick={() => setStudentFilters(prev => ({ ...prev, subjects: [] }))}
@@ -160,7 +160,7 @@ export const StudentsNavBar: React.FC<StudentsNavBarProps> = ({
           )}
 
           {/* Status Toggle */}
-          <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm">
+          <div className="flex flex-nowrap bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm [&>button]:whitespace-nowrap">
             <TabButton
               active={studentFilters.status === 'all'}
               onClick={() => setStudentFilters(prev => ({ ...prev, status: 'all' }))}

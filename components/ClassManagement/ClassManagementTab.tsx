@@ -250,7 +250,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
         <TabSubNavigation variant="compact" className="px-3 md:px-6 py-2 border-b border-white/10" allowOverflow>
           <div className="flex items-center gap-2 shrink-0">
               {/* 과목 토글 */}
-              <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm flex-shrink-0">
+              <div className="flex flex-nowrap bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm flex-shrink-0 [&>button]:whitespace-nowrap">
                 {subjectFilters.map(({ value, label, icon }) => (
                   <TabButton
                     key={value}
@@ -265,7 +265,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
               </div>
 
               {/* 담임/부담임 필터 */}
-              <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm flex-shrink-0">
+              <div className="flex flex-nowrap bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm flex-shrink-0 [&>button]:whitespace-nowrap">
                 <button
                   onClick={() => setFilters({ ...filters, teacherRole: 'all' })}
                   className={`px-3 py-1 rounded text-xs font-bold transition-all ${
@@ -481,7 +481,7 @@ const ClassManagementTab: React.FC<ClassManagementTabProps> = ({ currentUser }) 
               )}
 
               {/* 요일 필터 */}
-              <div className="flex bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm flex-shrink-0">
+              <div className="flex flex-nowrap bg-white/10 rounded-sm p-0.5 border border-white/10 shadow-sm flex-shrink-0 [&>button]:whitespace-nowrap">
                 {ALL_DAYS.map(day => {
                   const isSelected = filters.selectedDays.includes(day);
                   const toggleDay = () => {

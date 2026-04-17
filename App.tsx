@@ -787,7 +787,7 @@ const App: React.FC = () => {
             } : undefined}
           />
 
-          <main id="main-content" className="flex-1 flex flex-col md:flex-row overflow-hidden" role="main">
+          <main id="main-content" className="flex-1 flex flex-row overflow-hidden min-w-0" role="main">
             <HeaderCollapseProvider isHeaderCollapsed={isHeaderCollapsed}>
               <TabContent
                 appMode={appMode}
