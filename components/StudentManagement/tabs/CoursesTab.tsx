@@ -415,18 +415,36 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
   };
 
   // 수업의 대표 강사 결정
+  // — group 단위로 좁혀 집계해야 "같은 className이지만 다른 담임" 그룹(인수인계 후 eager split 된 새 enrollment)에서
+  //   엉뚱하게 과거 담임이 대표 강사로 뽑히는 버그 방지
   const getMainTeacher = (group: GroupedEnrollment): string | null => {
     const teacherCounts: Record<string, number> = {};
+    const groupEnrollmentIds = new Set(group.enrollmentIds);
+    const groupStaffSet = new Set(group.teachers);
 
     student.enrollments
-      .filter(e => e.subject === group.subject && e.className === group.className)
+      .filter(e => {
+        // 과목/수업명 1차 필터 (필수)
+        if (e.subject !== group.subject || e.className !== group.className) return false;
+        // 그룹에 포함된 enrollmentId만 인정 (정확)
+        const eid = (e as any).id;
+        if (groupEnrollmentIds.size > 0 && eid) {
+          return groupEnrollmentIds.has(eid);
+        }
+        // fallback: 그룹의 staffId 집합 안에 속한 enrollment만
+        if (groupStaffSet.size > 0 && e.staffId) {
+          return groupStaffSet.has(e.staffId);
+        }
+        return true;
+      })
       .forEach(enrollment => {
         const staffId = enrollment.staffId;
         if (!staffId) return;
         const teacherData = getTeacherByIdOrName(staffId);
         if (teacherData?.isHidden) return;
 
-        const dayCount = enrollment.days?.length || 0;
+        // days 필드가 없는 enrollment(인수인계 eager split 등)는 최소 1로 간주하여 카운트 누락 방지
+        const dayCount = (enrollment.days?.length || 0) || 1;
         teacherCounts[staffId] = (teacherCounts[staffId] || 0) + dayCount;
       });
 
