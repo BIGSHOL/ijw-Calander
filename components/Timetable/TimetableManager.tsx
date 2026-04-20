@@ -1379,6 +1379,7 @@ const TimetableManager = ({
         fromClassName: string;
         toClassName: string;
         targetClassSchedule?: string[];
+        fromClassSchedule?: string[]; // 출발 반 스케줄 (요일 비교용)
         isZoneChange?: boolean; // 같은 반 내 zone 이동 여부
         isWithdrawn?: boolean; // 퇴원생 이동 여부
         multiStudentIds?: string[]; // 멀티 이동 시 전체 학생 ID 목록
@@ -2026,6 +2027,7 @@ const TimetableManager = ({
                         fromClassName: fromClass?.className || '',
                         toClassName: toClass?.className || '',
                         targetClassSchedule: toClass?.schedule,
+                        fromClassSchedule: fromClass?.schedule,
                         isWithdrawn: student?.status === 'withdrawn' || !!student?.withdrawalDate || !!enrollmentInFromClass?.withdrawalDate,
                     });
                 }
@@ -2378,6 +2380,7 @@ const TimetableManager = ({
                     onClose={handleDateModalClose}
                     weekStart={currentMonday}
                     targetClassSchedule={dateModalInfo.targetClassSchedule}
+                    fromClassSchedule={dateModalInfo.fromClassSchedule}
                 />
             )}
             {/* 퇴원 날짜 선택 모달 */}
