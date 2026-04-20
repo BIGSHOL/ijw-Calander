@@ -16,7 +16,6 @@ import {
 import { db } from '../firebaseConfig';
 import { UnifiedStudent } from '../types';
 import { CampusType, getCampus } from '../utils/campusUtils';
-import { withdrawStudent } from '../utils/withdrawal';
 
 export const COL_STUDENTS = 'students';
 
@@ -196,19 +195,19 @@ export function useStudents(includeWithdrawn = false, enabled = true, campusFilt
     });
 
     // Delete student mutation
-    // hardDelete=true: 완전 삭제
-    // hardDelete=false: soft delete = 퇴원 처리와 동일. writeBatch로 학생 + 모든 enrollment 원자화
-    //                   (기존에는 "어제" 날짜를 학생 문서에만 기록해 enrollment가 어긋나는 버그가 있었음)
     const deleteStudentMutation = useMutation({
         mutationFn: async ({ id, hardDelete = false }: { id: string; hardDelete?: boolean }) => {
+            const docRef = doc(db, COL_STUDENTS, id);
             if (hardDelete) {
-                const docRef = doc(db, COL_STUDENTS, id);
                 await deleteDoc(docRef);
             } else {
+                const now = new Date().toISOString();
                 const _yd = new Date(); _yd.setDate(_yd.getDate() - 1);
                 const yesterday = _yd.toISOString().split('T')[0];
-                await withdrawStudent({
-                    studentId: id,
+                await updateDoc(docRef, {
+                    status: 'withdrawn',
+                    updatedAt: now,
+                    endDate: yesterday,
                     withdrawalDate: yesterday,
                     withdrawalReason: '삭제 처리',
                 });
