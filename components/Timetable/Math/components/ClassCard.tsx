@@ -1074,8 +1074,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     >
                         {/* 위 핸들 */}
                         <div className="absolute top-0 left-0 right-0 h-[20px] pointer-events-auto cursor-move" draggable onDragStart={(e) => { handleBorderDrag(e); hideOverlay(); }} onDragEnd={showOverlay} />
-                        {/* 아래 핸들 */}
-                        <div className="absolute bottom-0 left-0 right-0 h-[20px] pointer-events-auto cursor-move" draggable onDragStart={(e) => { handleBorderDrag(e); hideOverlay(); }} onDragEnd={showOverlay} />
+                        {/* 아래 핸들 — 엑셀 편집 모드에서 카드가 선택되면 하단에 학생 검색 입력창이 뜨는데,
+                            이 핸들이 그 위를 덮어서 입력 클릭·타이핑을 방해함. 검색 입력창이 있을 땐 숨김. */}
+                        {!(isExcelMode && isSelected && canEdit && mode === 'edit') && (
+                            <div className="absolute bottom-0 left-0 right-0 h-[20px] pointer-events-auto cursor-move" draggable onDragStart={(e) => { handleBorderDrag(e); hideOverlay(); }} onDragEnd={showOverlay} />
+                        )}
                         {/* 왼쪽 핸들 */}
                         <div className="absolute top-0 left-0 bottom-0 w-[20px] pointer-events-auto cursor-move" draggable onDragStart={(e) => { handleBorderDrag(e); hideOverlay(); }} onDragEnd={showOverlay} />
                         {/* 오른쪽 핸들 */}
