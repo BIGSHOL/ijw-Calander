@@ -65,6 +65,11 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
         // 활성 수업의 스케줄/강사 정보 (반이동예정 툴팁용)
         const studentActiveClassSchedule: Record<string, Record<string, string[]>> = {};
         const studentActiveClassTeacher: Record<string, Record<string, string>> = {};
+        // 같은 과목 안에서 "가장 마지막에 종료된 반" 추적.
+        // 모든 반이 종료된 경우(= 퇴원) 여러 반 카드에 퇴원 배지가 중복 표시되는 버그를 막기 위해,
+        // 여기서 뽑힌 latestEndedClassName만 퇴원 섹션에 노출하고 나머지는 isTransferred 처리한다.
+        // tie-breaker: 종료일(withdrawalDate || endDate) 최신 → 동일하면 enrollment.updatedAt 최신.
+        const studentLatestEnded: Record<string, { className: string; endDate: string; updatedAtMs: number }> = {};
 
         Object.entries(studentMap).forEach(([studentId, student]) => {
             if (!student.enrollments) return;
@@ -100,6 +105,20 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                         studentEndedClasses[studentId] = new Set();
                     }
                     studentEndedClasses[studentId].add(className);
+
+                    // "마지막 종료된 반" 갱신 (과목 내 비교)
+                    const endDateStr = effectiveEndDate as string;
+                    const rawUpdatedAt = (enrollment as any).updatedAt;
+                    const updatedAtMs = rawUpdatedAt?.toMillis?.()
+                        ?? (typeof rawUpdatedAt === 'string' ? new Date(rawUpdatedAt).getTime() : 0)
+                        ?? 0;
+                    const current = studentLatestEnded[studentId];
+                    if (!current
+                        || endDateStr > current.endDate
+                        || (endDateStr === current.endDate && updatedAtMs > current.updatedAtMs)
+                    ) {
+                        studentLatestEnded[studentId] = { className, endDate: endDateStr, updatedAtMs };
+                    }
                 }
             });
         });
@@ -151,6 +170,13 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                 // isTransferred: 이 수업에서 종료됐지만 다른 수업에 활성 등록이 있음
                 const hasActiveInOtherClass = hasEndDate &&
                     Array.from(activeClasses).some(c => c !== className);
+                // 모든 반이 종료된 경우: 같은 과목 안에서 "가장 마지막에 종료된 반"이 아니면
+                // 여기선 퇴원 표시하지 않고 이동 처리로 숨긴다 (한 곳에만 퇴원 배지 보이도록).
+                const latestEnded = studentLatestEnded[studentId];
+                const isNotLatestEndedClass = hasEndDate
+                    && !hasActiveInOtherClass
+                    && !!latestEnded
+                    && latestEnded.className !== className;
                 // transferTo: 반이동 대상 반 정보 (담당/반이름/스케줄)
                 let transferToClass: string | undefined;
                 if (hasActiveInOtherClass) {
@@ -164,6 +190,9 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                         parts.push(scheduleStr ? `${targetClass} (${scheduleStr})` : targetClass);
                         transferToClass = parts.join('\n');
                     }
+                } else if (isNotLatestEndedClass) {
+                    // 이 반은 더 이른 시점에 종료됐으니, 최종적으로 종료된 반을 대상으로 안내
+                    transferToClass = latestEnded!.className;
                 }
 
                 // isTransferredIn: 이 수업에 활성 등록이 있고, 다른 수업에서 종료된 기록이 있음
@@ -211,7 +240,7 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                     onHold: isScheduled || enrollment.onHold,
                     attendanceDays: enrollment.attendanceDays || [],
                     isScheduled,
-                    isTransferred: hasActiveInOtherClass,
+                    isTransferred: hasActiveInOtherClass || isNotLatestEndedClass,
                     isTransferredIn: hasEndedInOtherClass,
                     isSlotTeacher: enrollment.isSlotTeacher || false,
                     transferTo: transferToClass,
