@@ -7,13 +7,14 @@ import ConsultationsTab from './tabs/ConsultationsTab';
 import AttendanceTab from './tabs/AttendanceTab';
 import BillingTab from './tabs/BillingTab';
 import StudentTextbookTab from './tabs/StudentTextbookTab';
+import MemosTab from './tabs/MemosTab';
 import WithdrawalModal from './WithdrawalModal';
 import { useStudents } from '../../hooks/useStudents';
 import { usePermissions } from '../../hooks/usePermissions';
 import { collection, getDocs, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
-import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2, Calendar, CreditCard, AlertTriangle, BookCopy, TrendingUp, Loader2 } from 'lucide-react';
+import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2, Calendar, CreditCard, AlertTriangle, BookCopy, TrendingUp, Loader2, StickyNote } from 'lucide-react';
 import { useStudentEnrollmentValidation } from './hooks/useStudentEnrollmentValidation';
 import { useStudentReports } from '../../hooks/useStudentReports';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
@@ -26,7 +27,7 @@ interface StudentDetailProps {
   // compact 모드(모달)에서는 퇴원처리 버튼이 항상 숨겨짐 - 학생관리에서만 처리
 }
 
-type TabType = 'basic' | 'courses' | 'grades' | 'attendance' | 'consultations' | 'billing' | 'textbooks' | 'progress';
+type TabType = 'basic' | 'courses' | 'grades' | 'attendance' | 'consultations' | 'memos' | 'billing' | 'textbooks' | 'progress';
 
 const StudentDetail: React.FC<StudentDetailProps> = ({ student: studentProp, compact = false, readOnly = false, currentUser }) => {
   const [activeTab, setActiveTab] = useState<TabType>('basic');
@@ -53,6 +54,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student: studentProp, com
     { id: 'grades', label: '성적', icon: <GraduationCap className="w-3 h-3" /> },
     { id: 'attendance', label: '출결', icon: <Calendar className="w-3 h-3" /> },
     { id: 'consultations', label: '상담', icon: <MessageSquare className="w-3 h-3" /> },
+    { id: 'memos', label: '메모', icon: <StickyNote className="w-3 h-3" /> },
     { id: 'billing', label: '수납', icon: <CreditCard className="w-3 h-3" /> },
     { id: 'textbooks', label: '교재', icon: <BookCopy className="w-3 h-3" /> },
     { id: 'progress', label: '진도', icon: <TrendingUp className="w-3 h-3" /> },
@@ -241,6 +243,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student: studentProp, com
         {activeTab === 'grades' && <GradesTab student={student} readOnly={readOnly || !canEditStudent} currentUser={currentUser} />}
         {activeTab === 'attendance' && <AttendanceTab student={student} readOnly={readOnly || !canEditStudent} />}
         {activeTab === 'consultations' && <ConsultationsTab student={student} readOnly={readOnly || !canEditStudent} currentUser={currentUser} />}
+        {activeTab === 'memos' && <MemosTab student={student} currentUser={currentUser} />}
         {activeTab === 'billing' && <BillingTab student={student} />}
         {activeTab === 'textbooks' && <StudentTextbookTab student={student} />}
         {activeTab === 'progress' && <ProgressTab student={student} />}
