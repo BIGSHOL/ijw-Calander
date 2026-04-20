@@ -64,6 +64,7 @@ interface MathTimetableContentProps {
     scheduledStudentDates?: Map<string, string>;  // studentId → scheduledDate (시뮬레이션 드래그 차단용)
     pendingMovedStudentIds?: Set<string>;
     pendingMoveFromMap?: Map<string, Set<string>>;  // classId → 출발지 학생 IDs
+    pendingMoveToMap?: Map<string, Set<string>>;  // classId → 도착지 학생 IDs (보라 하이라이트 클래스 스코핑용)
     pendingMoveSchedules?: Map<string, string | undefined>;  // studentId → scheduledDate (툴팁용)
     handleSavePendingMoves: () => void;
     handleCancelPendingMoves: () => void;
@@ -176,6 +177,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     scheduledStudentDates,
     pendingMovedStudentIds,
     pendingMoveFromMap,
+    pendingMoveToMap,
     pendingMoveSchedules,
     handleSavePendingMoves,
     handleCancelPendingMoves,
@@ -855,7 +857,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         weekdayGroupOrder={mathConfig.weekdayGroupOrder}
                         classKeywords={classKeywords}
                         onStudentClick={handleStudentClick}
-                        pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap}
+                        pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap} pendingMoveToMap={pendingMoveToMap}
                         pendingMoveSchedules={pendingMoveSchedules}
                         onCancelScheduledEnrollment={!isScenarioMode ? onCancelScheduledEnrollment : undefined}
                         onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
@@ -902,7 +904,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         weekdayGroupOrder={mathConfig.weekdayGroupOrder}
                         classKeywords={classKeywords}
                         onStudentClick={handleStudentClick}
-                        pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap}
+                        pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap} pendingMoveToMap={pendingMoveToMap}
                         pendingMoveSchedules={pendingMoveSchedules}
                         onCancelScheduledEnrollment={!isScenarioMode ? onCancelScheduledEnrollment : undefined}
                         onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
@@ -956,7 +958,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         isUnifiedTable={true}
                         classKeywords={classKeywords}
                         onStudentClick={handleStudentClick}
-                        pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap}
+                        pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap} pendingMoveToMap={pendingMoveToMap}
                         pendingMoveSchedules={pendingMoveSchedules}
                         isExcelMode={true}
                         isTestView={timetableViewMode === 'excel-teacher-test'}
@@ -1943,6 +1945,19 @@ const TimetableManager = ({
         return map;
     }, [pendingMoves]);
 
+    // 이동 도착지 classId → studentId Set (보라색 하이라이트 표시용).
+    // 기존 pendingMovedStudentIds(flat Set)만으로 하이라이트하면 같은 학생이 등록된 다른 반들에도
+    // 보라색 표시가 섞여 나와 버그였음 → 도착지 반에서만 하이라이트되도록 classId로 스코핑.
+    const pendingMoveToMap = useMemo(() => {
+        if (pendingMoves.length === 0) return undefined;
+        const map = new Map<string, Set<string>>();
+        pendingMoves.forEach(m => {
+            if (!map.has(m.toClassId)) map.set(m.toClassId, new Set());
+            map.get(m.toClassId)!.add(m.studentId);
+        });
+        return map;
+    }, [pendingMoves]);
+
     // 예정일 스케줄 Map (studentId → scheduledDate, 툴팁 표시용)
     const pendingMoveSchedules = useMemo(() => {
         if (pendingMoves.length === 0) return undefined;
@@ -2260,7 +2275,7 @@ const TimetableManager = ({
                 pendingMovesCount={pendingMoves.length}
                 scheduledMovesCount={scheduledMovesCount}
                 scheduledStudentDates={scheduledStudentDates}
-                pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap}
+                pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap} pendingMoveToMap={pendingMoveToMap}
                 pendingMoveSchedules={pendingMoveSchedules}
                 handleSavePendingMoves={handleSavePendingMoves}
                 handleCancelPendingMoves={handleCancelPendingMoves}

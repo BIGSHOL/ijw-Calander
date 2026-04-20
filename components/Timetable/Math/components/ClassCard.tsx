@@ -235,8 +235,9 @@ interface ClassCardProps {
     cellSizePx?: number;  // 셀 사이즈 (수업명 정사각형 크기)
     showHoldStudents?: boolean;  // 대기 학생 표시 여부
     showWithdrawnStudents?: boolean;  // 퇴원 학생 표시 여부
-    pendingMovedStudentIds?: Set<string>;  // 드래그 이동 대기 중인 학생 ID
+    pendingMovedStudentIds?: Set<string>;  // 드래그 이동 대기 중인 학생 ID (flat, 다른 용도 유지)
     pendingMoveFromMap?: Map<string, Set<string>>;  // classId → 출발지 학생 IDs
+    pendingMoveToMap?: Map<string, Set<string>>;  // classId → 도착지 학생 IDs (보라색 하이라이트 클래스 스코핑용)
     pendingMoveSchedules?: Map<string, string | undefined>;  // studentId → scheduledDate
     mergedClasses?: TimetableClass[];  // 합반수업: 같은 슬롯의 모든 수업 목록
     showMergedLabel?: boolean;  // 반반 레이아웃용 합반 라벨 표시
@@ -302,6 +303,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
     showWithdrawnStudents = true,
     pendingMovedStudentIds,
     pendingMoveFromMap,
+    pendingMoveToMap,
     pendingMoveSchedules,
     mergedClasses,
     showMergedLabel = false,
@@ -1309,7 +1311,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             isHighlighted={isHighlighted}
                                             enrollmentStyle={enrollmentStyle}
                                             themeText={theme.studentText || 'text-gray-800'}
-                                            isPendingMoved={pendingMovedStudentIds?.has(s.id)}
+                                            isPendingMoved={!!pendingMoveToMap?.get(cls.id)?.has(s.id)}
                                             isPendingMovedFrom={!!pendingMoveFromMap?.get(cls.id)?.has(s.id)}
                                             pendingScheduledDate={pendingMoveSchedules?.get(s.id) || undefined}
                                             isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
@@ -1398,7 +1400,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                 isHighlighted={isHighlighted}
                                                                 enrollmentStyle={enrollmentStyle}
                                                                 themeText={theme.studentText || 'text-gray-800'}
-                                                                isPendingMoved={pendingMovedStudentIds?.has(s.id)}
+                                                                isPendingMoved={!!pendingMoveToMap?.get(cls.id)?.has(s.id)}
                                             isPendingMovedFrom={!!pendingMoveFromMap?.get(cls.id)?.has(s.id)}
                                                                 pendingScheduledDate={pendingMoveSchedules?.get(s.id) || undefined}
                                                                 isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
@@ -1612,7 +1614,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             isHighlighted={isHighlighted}
                                             enrollmentStyle={enrollmentStyle}
                                             themeText={theme.studentText || 'text-gray-800'}
-                                            isPendingMoved={pendingMovedStudentIds?.has(s.id)}
+                                            isPendingMoved={!!pendingMoveToMap?.get(cls.id)?.has(s.id)}
                                             isPendingMovedFrom={!!pendingMoveFromMap?.get(cls.id)?.has(s.id)}
                                             pendingScheduledDate={pendingMoveSchedules?.get(s.id) || undefined}
                                             isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
