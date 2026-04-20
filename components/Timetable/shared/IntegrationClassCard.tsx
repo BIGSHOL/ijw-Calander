@@ -733,11 +733,11 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
         }
         return true;
     });
-    // 퇴원 학생 (기준일 기준 30일 이내, 이 반에서 종료된 enrollment는 모두 표시)
-    // isWithdrawalScheduled(미래 퇴원예정)는 재원 섹션 가로줄로 표시되므로 여기서 제외.
-    // isTransferred(다른 반에 활성 등록)는 이 반 기준에선 여전히 "이 반에서 퇴원"으로 보여야 하므로 제외하지 않음.
+    // 퇴원 학생 (반이동 제외, 기준일 기준 30일 이내만)
+    // useSubjectClassStudents에서 "마지막 종료된 반만 isTransferred=false"로 마킹하므로
+    // 이 필터가 자동으로 중복 노출을 막는다.
     const withdrawnStudents = displayStudents.filter(s => {
-        if (!s.withdrawalDate || (s as any).isWithdrawalScheduled) return false;
+        if (!s.withdrawalDate || (s as any).isWithdrawalScheduled || s.isTransferred) return false;
         const daysSince = Math.floor((refMs - new Date(s.withdrawalDate).getTime()) / (1000 * 60 * 60 * 24));
         return daysSince <= 30;
     });
