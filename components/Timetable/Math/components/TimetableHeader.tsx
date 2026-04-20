@@ -463,44 +463,53 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
         const today = currentWeekStart ? formatDateKey(currentWeekStart) : formatDateKey(new Date());
         const refDate = new Date(today);
 
-        // studentList 데이터 신뢰: withdrawalDate 있으면 퇴원, onHold면 대기
-        const processedStudents = new Map<string, any>();
+        // 같은 학생이 여러 반에 나타날 수 있음 (한 반은 퇴원, 다른 반은 재원 등).
+        // 우선순위 = 재원(3) > 대기(2) > 퇴원(1). 가장 높은 상태를 그 학생의 대표 상태로 채택.
+        // 이렇게 해야 "A반에서 이동 후 B반에서 재원중"인 학생이 퇴원으로 잘못 집계되지 않음.
+        const getStatusRank = (s: any): number => {
+            if (!s.withdrawalDate && !s.onHold) return 3; // 재원
+            if (s.onHold && !s.withdrawalDate) return 2;  // 대기
+            // 퇴원 내에선 "대표 반(isTransferred=false)"이 숨김 처리(isTransferred=true)보다 우선
+            return s.isTransferred ? 0 : 1;
+        };
 
+        const processedStudents = new Map<string, any>();
         filteredClasses.forEach(cls => {
             cls.studentList?.forEach((student: any) => {
-                if (processedStudents.has(student.id)) return;
-                processedStudents.set(student.id, student);
-
-                if (student.withdrawalDate && !student.isTransferred) {
-                    // 실제 퇴원 (반이동은 제외)
-                    return;
-                }
-                if (student.withdrawalDate && student.isTransferred) {
-                    // 반이동 학생 — 퇴원이 아님, 스킵 (다른 반에서 재원생으로 카운트)
-                    return;
-                }
-                if (student.onHold) {
-                    // 대기/예정 — 수업시작일 기준 30일 전까지만
-                    const enrollDate = student.enrollmentDate || student.startDate;
-                    if (enrollDate) {
-                        const daysUntil = Math.floor((new Date(enrollDate).getTime() - refDate.getTime()) / (1000 * 60 * 60 * 24));
-                        if (daysUntil <= 30) onHoldStudentIds.add(student.id);
-                    } else {
-                        onHoldStudentIds.add(student.id);
-                    }
-                    return;
-                }
-                // 재원생
-                activeStudentIds.add(student.id);
-                // 신입 (등록 30일 이내, 반이동 제외)
-                if (!student.isTransferredIn) {
-                    const enrollDate = student.enrollmentDate || student.startDate;
-                    if (enrollDate) {
-                        const daysSince = Math.floor((refDate.getTime() - new Date(enrollDate).getTime()) / (1000 * 60 * 60 * 24));
-                        if (daysSince >= 0 && daysSince <= 30) newStudentIds.add(student.id);
-                    }
+                const existing = processedStudents.get(student.id);
+                if (!existing || getStatusRank(student) > getStatusRank(existing)) {
+                    processedStudents.set(student.id, student);
                 }
             });
+        });
+
+        processedStudents.forEach(student => {
+            if (student.withdrawalDate) {
+                // 재원/대기가 있었다면 이미 그걸로 덮어써졌을 것. 여기 들어오면 모든 반이 종료된 상태.
+                // isTransferred는 "마지막 종료된 반이 아님"(f7f247d) 마킹에도 쓰이므로
+                // 퇴원 카운트는 한 번만 잡히도록 아래 별도 처리 루프에서 집계.
+                return;
+            }
+            if (student.onHold) {
+                const enrollDate = student.enrollmentDate || student.startDate;
+                if (enrollDate) {
+                    const daysUntil = Math.floor((new Date(enrollDate).getTime() - refDate.getTime()) / (1000 * 60 * 60 * 24));
+                    if (daysUntil <= 30) onHoldStudentIds.add(student.id);
+                } else {
+                    onHoldStudentIds.add(student.id);
+                }
+                return;
+            }
+            // 재원생
+            activeStudentIds.add(student.id);
+            // 신입 (등록 30일 이내, 반이동 제외)
+            if (!student.isTransferredIn) {
+                const enrollDate = student.enrollmentDate || student.startDate;
+                if (enrollDate) {
+                    const daysSince = Math.floor((refDate.getTime() - new Date(enrollDate).getTime()) / (1000 * 60 * 60 * 24));
+                    if (daysSince >= 0 && daysSince <= 30) newStudentIds.add(student.id);
+                }
+            }
         });
 
         // 퇴원 학생: 30일 이내만
