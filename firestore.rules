@@ -225,6 +225,20 @@ service cloud.firestore {
         hasPermission('students.enrollment.manage');
     }
 
+    // 학생별 공유 메모 (담임·부담임 소통용)
+    // - Read: 인증된 사용자 (students.view 권한 보유자 대상)
+    // - Create: 인증된 사용자가 본인 authorId 로 작성 (담임·부담임 여부는 클라이언트 측 체크)
+    //           ※ 클라이언트 UI 에서 담임·부담임 필터를 강제하지만, 룰에서는 authorId 일치만 검증
+    // - Update/Delete: 본인 작성 메모 또는 master/admin
+    match /students/{studentId}/memos/{memoId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated()
+                     && request.resource.data.authorId == request.auth.uid;
+      allow update, delete: if isAuthenticated()
+                     && (resource.data.authorId == request.auth.uid
+                         || hasRole(['master', 'admin']));
+    }
+
     // === Gantt Chart Collections (Phase 10: Access Control) ===
 
     // Phase 10 Helper Functions for Gantt Access Control
