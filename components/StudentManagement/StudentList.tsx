@@ -3,6 +3,7 @@ import { UnifiedStudent } from '../../types';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { formatDateKey } from '../../utils/dateUtils';
 import { getCampus } from '../../utils/campusUtils';
+import { getDisplayStudentStatus } from '../../utils/studentStatus';
 import SubjectBadges from '../Common/SubjectBadges';
 
 interface StudentListProps {
@@ -45,45 +46,22 @@ const StudentList: React.FC<StudentListProps> = ({
     const withdrawn: UnifiedStudent[] = [];
 
     students.forEach(student => {
-      // 퇴원생: withdrawalDate가 있는 경우
-      if (student.withdrawalDate) {
-        if (student.status === 'withdrawn') {
-          // 이미 퇴원 완료된 학생 → 퇴원 섹션
+      const display = getDisplayStudentStatus(student, { today, weekEnd });
+      switch (display) {
+        case 'withdrawn':
           withdrawn.push(student);
-        } else if (student.withdrawalDate >= today && student.withdrawalDate <= weekEnd) {
-          // 이번 주 퇴원 예정
+          break;
+        case 'withdrawing':
           withdrawing.push(student);
-        }
-        return;
-      }
-
-      // 대기생 체크 (withdrawalDate 없음)
-      let isOnHold = false;
-
-      // 1. status가 on_hold인 경우
-      if (student.status === 'on_hold') {
-        isOnHold = true;
-      }
-
-      // 2. enrollments에서 체크 (현재 수강 중인 수업이 모두 대기 상태)
-      const activeEnrollments = (student.enrollments || []).filter(e => {
-        const hasEnded = !!e.endDate;
-        const startDate = e.startDate;
-        const isFuture = startDate && startDate > today;
-        return !hasEnded && !isFuture;
-      });
-
-      if (activeEnrollments.length > 0) {
-        const allOnHold = activeEnrollments.every(e => e.onHold === true);
-        if (allOnHold) {
-          isOnHold = true;
-        }
-      }
-
-      if (isOnHold) {
-        onHold.push(student);
-      } else {
-        active.push(student);
+          break;
+        case 'on_hold':
+          onHold.push(student);
+          break;
+        case 'prospect':
+        case 'active':
+        default:
+          active.push(student);
+          break;
       }
     });
 

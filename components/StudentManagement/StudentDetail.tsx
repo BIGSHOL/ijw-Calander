@@ -10,13 +10,13 @@ import StudentTextbookTab from './tabs/StudentTextbookTab';
 import WithdrawalModal from './WithdrawalModal';
 import { useStudents } from '../../hooks/useStudents';
 import { usePermissions } from '../../hooks/usePermissions';
-import { collection, getDocs, updateDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
 import { User, BookOpen, MessageSquare, GraduationCap, UserMinus, UserCheck, Trash2, Calendar, CreditCard, AlertTriangle, BookCopy, TrendingUp, Loader2 } from 'lucide-react';
 import { useStudentEnrollmentValidation } from './hooks/useStudentEnrollmentValidation';
 import { useStudentReports } from '../../hooks/useStudentReports';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
+import { isStudentWithdrawn } from '../../utils/studentStatus';
+import { withdrawStudent, reactivateStudent } from '../../utils/withdrawal';
 
 interface StudentDetailProps {
   student: UnifiedStudent;
@@ -32,7 +32,7 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student: studentProp, com
   const [activeTab, setActiveTab] = useState<TabType>('basic');
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
   const [showEnrollmentWarning, setShowEnrollmentWarning] = useState(true);
-  const { students, updateStudent, deleteStudent } = useStudents();
+  const { students, deleteStudent } = useStudents();
   const queryClient = useQueryClient();
 
   // React Query 캐시에서 최신 학생 데이터 사용 (실시간 반영)
@@ -58,64 +58,48 @@ const StudentDetail: React.FC<StudentDetailProps> = ({ student: studentProp, com
     { id: 'progress', label: '진도', icon: <TrendingUp className="w-3 h-3" /> },
   ];
 
-  const isWithdrawn = student.status === 'withdrawn';
+  const isWithdrawn = isStudentWithdrawn(student);
 
-  // 퇴원 처리
+  // 퇴원 처리 — 학생 문서 + 전체 enrollment를 writeBatch로 원자화
   const handleWithdrawal = async (data: {
     withdrawalDate: string;
     withdrawalReason?: string;
     withdrawalMemo?: string;
   }) => {
-    // 1. 학생 문서 상태 변경
-    await updateStudent(student.id, {
-      status: 'withdrawn',
-      endDate: data.withdrawalDate,
-      withdrawalDate: data.withdrawalDate,
-      withdrawalReason: data.withdrawalReason,
-      withdrawalMemo: data.withdrawalMemo,
-    });
-
-    // 2. 모든 활성 enrollment에도 withdrawalDate 설정 (시간표 퇴원 섹션 실시간 반영)
     try {
-      const enrollmentsRef = collection(db, 'students', student.id, 'enrollments');
-      const snapshot = await getDocs(enrollmentsRef);
+      await withdrawStudent({
+        studentId: student.id,
+        withdrawalDate: data.withdrawalDate,
+        withdrawalReason: data.withdrawalReason,
+        withdrawalMemo: data.withdrawalMemo,
+      });
 
-      const updatePromises = snapshot.docs
-        .filter(doc => {
-          const d = doc.data();
-          return !d.withdrawalDate && !d.endDate; // 아직 퇴원 처리 안 된 enrollment만
-        })
-        .map(doc =>
-          updateDoc(doc.ref, {
-            withdrawalDate: data.withdrawalDate,
-            endDate: data.withdrawalDate,
-          })
-        );
-
-      await Promise.all(updatePromises);
-
-      // 모든 시간표 캐시 무효화
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
       queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
       queryClient.invalidateQueries({ queryKey: ['classStudents'] });
     } catch (error) {
-      console.error('enrollment 퇴원 동기화 오류:', error);
+      console.error('퇴원 처리 오류:', error);
+      alert('퇴원 처리에 실패했습니다. 다시 시도해주세요.');
+      throw error;
     }
   };
 
-  // 재원 복구
+  // 재원 복구 — 학생 문서 + 퇴원 당시 설정된 enrollment 복원
   const handleReactivate = async () => {
     if (!window.confirm(`${student.name} 학생을 재원 상태로 복구하시겠습니까?`)) return;
 
-    await updateStudent(student.id, {
-      status: 'active',
-      endDate: undefined,
-      withdrawalDate: undefined,
-      withdrawalReason: undefined,
-      withdrawalMemo: undefined,
-      withdrawalConsultation: undefined,
-    });
+    try {
+      await reactivateStudent({ studentId: student.id });
+
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
+      queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
+      queryClient.invalidateQueries({ queryKey: ['classStudents'] });
+    } catch (error) {
+      console.error('재원 복구 오류:', error);
+      alert('재원 복구에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
   // 학생 삭제 (완전 삭제)
