@@ -155,9 +155,9 @@ const StudentItem: React.FC<StudentItemProps> = ({
             className={`py-0 px-0.5 list-none ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap min-w-0 font-normal transition-all duration-150
             ${isPendingExcelDelete ? '!bg-red-200 !text-red-500 line-through opacity-50' : ''}
             ${isExcelMode && !isPendingExcelDelete ? 'cursor-pointer select-none' : isDraggable ? 'cursor-grab' : isClickable ? 'cursor-pointer' : ''}
-            ${!isPendingExcelDelete && isStudentSelected ? '!bg-blue-200 !text-blue-900 font-bold ring-1 ring-blue-400' : !isPendingExcelDelete && isCutStudent ? '!bg-amber-100 !text-amber-800 ring-1 ring-dashed ring-amber-400 opacity-70' : !isPendingExcelDelete && isCopiedStudent ? '!bg-green-100 !text-green-800 ring-1 ring-green-400' : ''}
-            ${!isPendingExcelDelete && !isStudentSelected && !isCutStudent && !isCopiedStudent ? (isPendingMovedFrom ? 'bg-gray-200 text-gray-400 line-through opacity-60' : isPendingMoved ? 'bg-purple-400 text-white font-bold' : isTransferScheduled ? 'bg-purple-200 text-purple-800 font-bold' : isWithdrawalScheduled ? 'bg-orange-100 text-orange-800 line-through' : isAcHighlighted ? '!bg-red-200 !text-red-700 font-bold ring-2 ring-red-400 animate-pulse' : isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText) : ''}
-            ${!isPendingExcelDelete && !isStudentSelected && !isCutStudent && !isCopiedStudent && !isPendingMoved && !isTransferScheduled && !isWithdrawalScheduled && !isHighlighted && !enrollmentStyle ? 'opacity-80' : ''}`}
+            ${!isPendingExcelDelete && isPendingMovedFrom ? '!bg-gray-200 !text-gray-400 line-through opacity-60' : !isPendingExcelDelete && isPendingMoved ? '!bg-purple-400 !text-white font-bold' : !isPendingExcelDelete && isCutStudent ? '!bg-amber-100 !text-amber-800 ring-1 ring-dashed ring-amber-400 opacity-70' : !isPendingExcelDelete && isStudentSelected ? '!bg-blue-200 !text-blue-900 font-bold ring-1 ring-blue-400' : !isPendingExcelDelete && isCopiedStudent ? '!bg-green-100 !text-green-800 ring-1 ring-green-400' : ''}
+            ${!isPendingExcelDelete && !isStudentSelected && !isCutStudent && !isCopiedStudent && !isPendingMovedFrom && !isPendingMoved ? (isTransferScheduled ? 'bg-purple-200 text-purple-800 font-bold' : isWithdrawalScheduled ? 'bg-orange-100 text-orange-800 line-through' : isAcHighlighted ? '!bg-red-200 !text-red-700 font-bold ring-2 ring-red-400 animate-pulse' : isHighlighted ? 'bg-yellow-300 font-bold text-black' : enrollmentStyle ? `${enrollmentStyle.bg} ${enrollmentStyle.text}` : themeText) : ''}
+            ${!isPendingExcelDelete && !isStudentSelected && !isCutStudent && !isCopiedStudent && !isPendingMoved && !isPendingMovedFrom && !isTransferScheduled && !isWithdrawalScheduled && !isHighlighted && !enrollmentStyle ? 'opacity-80' : ''}`}
             style={hoverStyle}
             title={
                 (() => {
@@ -1536,19 +1536,18 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     if (sg && sg !== '-') text += `/${sg}`;
                                                 }
                                                 const tooltipText = s.withdrawalDate ? `퇴원일: ${s.withdrawalDate}` : undefined;
+                                                // 기본뷰·테스트뷰 동일 동작: 드래그 가능 + 더블클릭 모달 (영어탭과 일관)
                                                 return (
                                                     <li
                                                         key={s.id}
-                                                        draggable={isTestView && canEdit}
-                                                        onDragStart={isTestView ? (e) => { if (canEdit) onDragStart(e, s.id, cls.id, 'common'); } : undefined}
-                                                        className={`${fontSizeClass} leading-[1.3] bg-black text-white px-0.5 py-0 overflow-hidden whitespace-nowrap ${isTestView && canEdit ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-700 transition-colors`}
+                                                        draggable={canEdit}
+                                                        onDragStart={(e) => { if (canEdit) onDragStart(e, s.id, cls.id, 'common'); }}
+                                                        className={`${fontSizeClass} leading-[1.3] bg-black text-white px-0.5 py-0 overflow-hidden whitespace-nowrap ${canEdit ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-700 transition-colors`}
                                                         title={tooltipText}
-                                                        onClick={isTestView ? (e) => e.stopPropagation() : (e) => {
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        onDoubleClick={(e) => {
                                                             if (onStudentClick) { e.stopPropagation(); onStudentClick(s.id); }
                                                         }}
-                                                        onDoubleClick={isTestView ? (e) => {
-                                                            if (onStudentClick) { e.stopPropagation(); onStudentClick(s.id); }
-                                                        } : undefined}
                                                     >
                                                         {text}
                                                     </li>
@@ -1752,19 +1751,18 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     const sg = formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null);
                                                     if (sg && sg !== '-') text += `/${sg}`;
                                                 }
+                                                // 기본뷰·테스트뷰 동일 동작: 드래그 가능 + 더블클릭 모달 (영어탭과 일관)
                                                 return (
                                                     <li
                                                         key={s.id}
-                                                        draggable={isTestView && canEdit}
-                                                        onDragStart={isTestView ? (e) => { if (canEdit) onDragStart(e, s.id, cls.id, 'common'); } : undefined}
-                                                        className={`${fontSizeClass} leading-[1.3] bg-black text-white px-0.5 py-0 overflow-hidden whitespace-nowrap ${isTestView && canEdit ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-700 transition-colors`}
+                                                        draggable={canEdit}
+                                                        onDragStart={(e) => { if (canEdit) onDragStart(e, s.id, cls.id, 'common'); }}
+                                                        className={`${fontSizeClass} leading-[1.3] bg-black text-white px-0.5 py-0 overflow-hidden whitespace-nowrap ${canEdit ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-700 transition-colors`}
                                                         title={s.withdrawalDate ? `${text} (퇴원: ${s.withdrawalDate})` : text}
-                                                        onClick={isTestView ? (e) => e.stopPropagation() : (e) => {
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        onDoubleClick={(e) => {
                                                             if (onStudentClick) { e.stopPropagation(); onStudentClick(s.id); }
                                                         }}
-                                                        onDoubleClick={isTestView ? (e) => {
-                                                            if (onStudentClick) { e.stopPropagation(); onStudentClick(s.id); }
-                                                        } : undefined}
                                                     >
                                                         {text}
                                                     </li>
