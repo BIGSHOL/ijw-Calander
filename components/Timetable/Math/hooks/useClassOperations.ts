@@ -484,8 +484,10 @@ export const useClassOperations = () => {
             return data.className !== className && !data.withdrawalDate && !data.endDate;
         }).length;
 
-        const _ydS = new Date(); _ydS.setDate(_ydS.getDate() - 1);
-        const today = _ydS.toISOString().split('T')[0]; // 전날로 설정
+        // 시간표 "수정 모드" Delete 저장 흐름은 handleWithdrawalDrop(드롭존)과 동일하게
+        // 오늘 날짜로 endDate/withdrawalDate를 찍어야 퇴원 섹션으로 즉시 이동함
+        // (기존엔 전날로 찍어 의미는 같지만, 날짜 한 칸이 어긋나 재원/퇴원 분류가 흔들리는 케이스가 있었음)
+        const today = new Date().toISOString().split('T')[0];
 
         // 쿼리 결과에서 해당 className enrollment 찾기 (doc ID 형식 무관)
         const targetDoc = allDocs.find(d => d.data().className === className && !d.data().endDate && !d.data().withdrawalDate)

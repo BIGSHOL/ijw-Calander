@@ -721,14 +721,23 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                             }
 
                             // 4. 캐시 무효화 및 화면 새로고침 (강제 refetch)
+                            // 수업 섹션 재원/퇴원 분류가 studentMap 파생이므로 students / classStudents 계열 전부 무효화해야 함
                             console.log('[Excel Save] 캐시 무효화 및 강제 새로고침...');
-                            await queryClient.invalidateQueries({ queryKey: ['students'] });
-                            await queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
-                            await queryClient.invalidateQueries({ queryKey: ['mathClasses'] });
+                            await Promise.all([
+                                queryClient.invalidateQueries({ queryKey: ['students'] }),
+                                queryClient.invalidateQueries({ queryKey: ['timetableClasses'] }),
+                                queryClient.invalidateQueries({ queryKey: ['mathClasses'] }),
+                                queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] }),
+                                queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] }),
+                                queryClient.invalidateQueries({ queryKey: ['classStudents'] }),
+                            ]);
 
                             // 강제로 다시 fetch
-                            await queryClient.refetchQueries({ queryKey: ['timetableClasses'] });
-                            await queryClient.refetchQueries({ queryKey: ['mathClasses'] });
+                            await Promise.all([
+                                queryClient.refetchQueries({ queryKey: ['timetableClasses'] }),
+                                queryClient.refetchQueries({ queryKey: ['mathClasses'] }),
+                                queryClient.refetchQueries({ queryKey: ['students'] }),
+                            ]);
                             console.log('[Excel Save] 저장 완료!');
                         } catch (error) {
                             console.error('엑셀 보류 작업 저장 오류:', error);
@@ -1602,9 +1611,14 @@ const TimetableManager = ({
                     throw new Error('enrollment 문서를 찾을 수 없습니다.');
                 }
             }
-            queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] });
-            queryClient.invalidateQueries({ queryKey: ['students'] });
-            queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] }),
+                queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] }),
+                queryClient.invalidateQueries({ queryKey: ['classStudents'] }),
+                queryClient.invalidateQueries({ queryKey: ['students'] }),
+                queryClient.invalidateQueries({ queryKey: ['timetableClasses'] }),
+                queryClient.invalidateQueries({ queryKey: ['mathClasses'] }),
+            ]);
         } catch (error) {
             console.error('퇴원 처리 오류:', error);
             alert('퇴원 처리에 실패했습니다.');
