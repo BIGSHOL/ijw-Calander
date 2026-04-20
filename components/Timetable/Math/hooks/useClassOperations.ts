@@ -489,11 +489,15 @@ export const useClassOperations = () => {
         // (기존엔 전날로 찍어 의미는 같지만, 날짜 한 칸이 어긋나 재원/퇴원 분류가 흔들리는 케이스가 있었음)
         const today = new Date().toISOString().split('T')[0];
 
-        // 쿼리 결과에서 해당 className enrollment 찾기 (doc ID 형식 무관)
-        const targetDoc = allDocs.find(d => d.data().className === className && !d.data().endDate && !d.data().withdrawalDate)
-            || allDocs.find(d => d.data().className === className);
+        // 쿼리 결과에서 해당 className의 모든 활성 enrollment 찾기
+        // (같은 반에 attendanceDays만 다른 월만/목만 분리 enrollment가 공존할 수 있음 —
+        //  find로 하나만 종료하면 남은 건 여전히 활성이라 재원 섹션에 남음)
+        const activeTargets = allDocs.filter(d => d.data().className === className && !d.data().endDate && !d.data().withdrawalDate);
+        const targetDocs = activeTargets.length > 0
+            ? activeTargets
+            : allDocs.filter(d => d.data().className === className).slice(0, 1); // 활성 없으면 fallback
 
-        if (!targetDoc) {
+        if (targetDocs.length === 0) {
             console.log(`[smartRemoveStudent] ⚠️ enrollment 문서 없음: ${studentId} - ${className}`);
             invalidateMathCaches();
             queryClient.invalidateQueries({ queryKey: ['timetableClasses'] });
@@ -509,31 +513,26 @@ export const useClassOperations = () => {
                 classSnapshot = await getDocs(query(classesRef, where('className', '==', className), where('subject', '==', 'highmath')));
             }
 
+            const updateBase: Record<string, any> = {
+                endDate: today,
+                withdrawalDate: today,
+                updatedAt: new Date().toISOString(),
+            };
             if (!classSnapshot.empty) {
                 const classData = classSnapshot.docs[0].data();
-                const schedule = classData.legacySchedule || classData.schedule?.map((s: any) =>
+                updateBase.schedule = classData.legacySchedule || classData.schedule?.map((s: any) =>
                     typeof s === 'string' ? s : `${s.day} ${s.periodId}`
                 ) || [];
-
-                await updateDoc(targetDoc.ref, {
-                    endDate: today,
-                    withdrawalDate: today,
-                    schedule,
-                    updatedAt: new Date().toISOString(),
-                });
-            } else {
-                await updateDoc(targetDoc.ref, {
-                    endDate: today,
-                    withdrawalDate: today,
-                    updatedAt: new Date().toISOString(),
-                });
             }
+
+            // 모든 활성 enrollment를 한꺼번에 종료 (월만/목만 분리되어도 반 전체에서 퇴원)
+            await Promise.all(targetDocs.map(d => updateDoc(d.ref, updateBase)));
         } catch (error) {
             console.error('enrollment 업데이트 오류:', error);
             throw error;
         }
 
-        const targetSubject = targetDoc?.data()?.subject || 'math';
+        const targetSubject = targetDocs[0]?.data()?.subject || 'math';
         if (otherActiveMath >= 1) {
             logTimetableChange({
                 action: 'student_unenroll', subject: targetSubject, className, studentId, studentName: studentId,
