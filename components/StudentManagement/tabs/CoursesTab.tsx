@@ -806,7 +806,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         </span>
 
         {/* 수업명 */}
-        <span className={`${compact ? 'flex-1 min-w-0' : 'w-52 shrink-0'} text-xs text-primary truncate font-medium`}>
+        <span className="flex-1 min-w-0 text-xs text-primary truncate font-medium">
           {group.className}
         </span>
 
@@ -818,8 +818,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           </span>
         </div>
 
-        {/* 스케줄 (요일+교시 배지) - 학생의 등원 요일만 표시 - compact에서는 숨김 */}
-        {!compact && (
+        {/* 스케줄 (요일+교시 배지) - 학생의 등원 요일만 표시 */}
         <div className="w-40 min-w-0 overflow-hidden">
           <ScheduleBadge
             schedule={actualClass?.schedule?.filter(s => {
@@ -832,7 +831,6 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             subject={subjectForSchedule}
           />
         </div>
-        )}
 
         {/* 학생수 */}
         <div className="w-10 shrink-0 flex items-center justify-center gap-0.5">
@@ -903,7 +901,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             />
           ) : group.endDate ? (
             <span
-              className={`w-14 shrink-0 text-xxs font-bold text-orange-500 text-center ${canEditEnrollmentDates && !readOnly ? 'cursor-pointer hover:text-orange-700 hover:underline' : ''}`}
+              className={`w-16 shrink-0 text-xxs font-bold text-orange-500 text-center ${canEditEnrollmentDates && !readOnly ? 'cursor-pointer hover:text-orange-700 hover:underline' : ''}`}
               onClick={(e) => {
                 if (canEditEnrollmentDates && !readOnly) {
                   e.stopPropagation();
@@ -916,7 +914,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             </span>
           ) : (
             <span
-              className={`w-14 shrink-0 text-xxs font-bold text-emerald-600 text-center ${canEditEnrollmentDates && !readOnly ? 'cursor-pointer hover:text-blue-600 hover:underline' : ''}`}
+              className={`w-16 shrink-0 text-xxs font-bold text-emerald-600 text-center ${canEditEnrollmentDates && !readOnly ? 'cursor-pointer hover:text-blue-600 hover:underline' : ''}`}
               onClick={(e) => {
                 if (canEditEnrollmentDates && !readOnly) {
                   e.stopPropagation();
@@ -995,6 +993,14 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             schedule={group.schedule || actualClass?.schedule}
             subject={subjectForSchedule}
           />
+        </div>
+
+        {/* 인원 자리 (수강중/배정예정과 정렬) */}
+        <div className="w-10 shrink-0 flex items-center justify-center gap-0.5">
+          <Users className="w-3 h-3 text-gray-300" />
+          <span className="text-xxs font-medium text-primary-700">
+            {actualClass?.studentCount || 0}
+          </span>
         </div>
 
         {/* 시작일 */}
@@ -1129,12 +1135,12 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         {/* 테이블 헤더 */}
         <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-primary-700">
           <span className="w-8 shrink-0">과목</span>
-          <span className={`${compact ? 'flex-1 min-w-0' : 'w-52'} shrink-0`}>수업명</span>
+          <span className="flex-1 min-w-0">수업명</span>
           <span className="w-14 shrink-0">강사</span>
-          {!compact && <span className="w-40">스케줄</span>}
+          <span className="w-40">스케줄</span>
           <span className="w-10 shrink-0 text-center">인원</span>
           <span className="w-16 shrink-0 text-center">시작</span>
-          <span className="w-14 shrink-0 text-center">종료</span>
+          <span className="w-16 shrink-0 text-center">종료</span>
           <span className="w-5 shrink-0"></span>
         </div>
 
@@ -1181,11 +1187,12 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           {/* 테이블 헤더 */}
           <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-primary-700">
             <span className="w-8 shrink-0">과목</span>
-            <span className="w-52 shrink-0">수업명</span>
+            <span className="flex-1 min-w-0">수업명</span>
             <span className="w-14 shrink-0">강사</span>
             <span className="w-40">스케줄</span>
-            <span className="w-10 shrink-0"></span>{/* 인원 자리 (수강중과 정렬) */}
+            <span className="w-10 shrink-0 text-center">인원</span>
             <span className="w-16 shrink-0 text-center">시작</span>
+            <span className="w-16 shrink-0 text-center">종료</span>
             <span className="w-5 shrink-0"></span>
           </div>
 
@@ -1222,7 +1229,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
                     </span>
 
                     {/* 수업명 */}
-                    <span className="w-52 shrink-0 text-xs text-primary-700 font-medium truncate">
+                    <span className="flex-1 min-w-0 text-xs text-primary-700 font-medium truncate">
                       {group.className}
                     </span>
 
@@ -1254,7 +1261,12 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
                     </div>
 
                     {/* 인원 자리 (수강중과 정렬) */}
-                    <span className="w-10 shrink-0"></span>
+                    <div className="w-10 shrink-0 flex items-center justify-center gap-0.5">
+                      <Users className="w-3 h-3 text-gray-400" />
+                      <span className="text-xxs font-medium text-primary">
+                        {actualClass?.studentCount || 0}
+                      </span>
+                    </div>
 
                     {/* 시작일 */}
                     {canEditEnrollmentDates && !readOnly && editingDate?.key === `scheduled_${group.subject}_${group.className}_${group.teachers[0] || ''}` && editingDate?.field === 'startDate' ? (
@@ -1289,6 +1301,9 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
                         {group.startDate ? formatDate(group.startDate) : '-'}
                       </span>
                     )}
+
+                    {/* 종료 자리 (수강중/지난과 정렬) */}
+                    <span className="w-16 shrink-0 text-xxs text-gray-300 text-center">-</span>
 
                     {/* 삭제 버튼 - readOnly 모드에서는 숨김 */}
                     {!readOnly && (
@@ -1334,6 +1349,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             <span className="flex-1 min-w-0">수업명</span>
             <span className="w-14 shrink-0">강사</span>
             <span className="w-40">스케줄</span>
+            <span className="w-10 shrink-0 text-center">인원</span>
             <span className="w-16 shrink-0 text-center">시작</span>
             <span className="w-16 shrink-0 text-center">종료</span>
             <span className="w-5 shrink-0"></span>
