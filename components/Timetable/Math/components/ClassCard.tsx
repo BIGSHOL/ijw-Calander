@@ -1411,9 +1411,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             </div>
                                         );
                                     })}
-                                    {/* 엑셀 모드에서는 학생 드래그가 비활성이라 이 드롭존이 기능상 쓸모 없고,
-                                        아래 학생 검색 입력을 가려서 방해됨 → 엑셀 모드일 때 숨김 */}
-                                    {canEdit && !isExcelMode && (
+                                    {canEdit && (
                                         <div className="flex min-w-0 border-t border-gray-300">
                                             {mergedDays.map((d, dIdx) => (
                                                 <div
@@ -1762,8 +1760,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
                             </div>
                         )}
 
-                        {/* 퇴원 드롭존 (단일 셀) — 엑셀 모드에서는 드래그 비활성 + 검색 입력 방해 때문에 숨김 */}
-                        {canEdit && !isExcelMode && onWithdrawalDrop && (
+                        {/* 퇴원 드롭존 (단일 셀) */}
+                        {canEdit && onWithdrawalDrop && (
                             <div
                                 className={`flex-shrink-0 border-t border-red-300 flex items-center justify-center transition-all cursor-default ${
                                     dragOverZone === 'withdrawal'
