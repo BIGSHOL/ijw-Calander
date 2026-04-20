@@ -1072,17 +1072,27 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         className="absolute inset-0 pointer-events-none z-20"
                         style={{ outline: '3px solid #3b82f6', outlineOffset: '-1px', borderRadius: '2px' }}
                     >
-                        {/* 위 핸들 */}
-                        <div className="absolute top-0 left-0 right-0 h-[20px] pointer-events-auto cursor-move" draggable onDragStart={(e) => { handleBorderDrag(e); hideOverlay(); }} onDragEnd={showOverlay} />
-                        {/* 아래 핸들 — 엑셀 편집 모드에서 카드가 선택되면 하단에 학생 검색 입력창이 뜨는데,
-                            이 핸들이 그 위를 덮어서 입력 클릭·타이핑을 방해함. 검색 입력창이 있을 땐 숨김. */}
-                        {!(isExcelMode && isSelected && canEdit && mode === 'edit') && (
-                            <div className="absolute bottom-0 left-0 right-0 h-[20px] pointer-events-auto cursor-move" draggable onDragStart={(e) => { handleBorderDrag(e); hideOverlay(); }} onDragEnd={showOverlay} />
-                        )}
-                        {/* 왼쪽 핸들 */}
-                        <div className="absolute top-0 left-0 bottom-0 w-[20px] pointer-events-auto cursor-move" draggable onDragStart={(e) => { handleBorderDrag(e); hideOverlay(); }} onDragEnd={showOverlay} />
-                        {/* 오른쪽 핸들 */}
-                        <div className="absolute top-0 right-0 bottom-0 w-[28px] pointer-events-auto cursor-move" draggable onDragStart={(e) => { handleBorderDrag(e); hideOverlay(); }} onDragEnd={showOverlay} />
+                        {/* 검색 입력창이 뜨는 상태면 하단 핸들들이 입력창을 덮어 클릭을 방해함.
+                            하단 핸들은 아예 숨기고, 좌·우 핸들은 하단 검색창 영역만큼 높이를 줄인다. */}
+                        {(() => {
+                            const searchVisible = isExcelMode && isSelected && canEdit && mode === 'edit';
+                            // 검색창 높이(border-t + p-1 + input) ≈ 32px
+                            const sideBottomClass = searchVisible ? 'bottom-[32px]' : 'bottom-0';
+                            return (
+                                <>
+                                    {/* 위 핸들 */}
+                                    <div className="absolute top-0 left-0 right-0 h-[20px] pointer-events-auto cursor-move" draggable onDragStart={(e) => { handleBorderDrag(e); hideOverlay(); }} onDragEnd={showOverlay} />
+                                    {/* 아래 핸들 — 검색창 있을 땐 숨김 */}
+                                    {!searchVisible && (
+                                        <div className="absolute bottom-0 left-0 right-0 h-[20px] pointer-events-auto cursor-move" draggable onDragStart={(e) => { handleBorderDrag(e); hideOverlay(); }} onDragEnd={showOverlay} />
+                                    )}
+                                    {/* 왼쪽 핸들 */}
+                                    <div className={`absolute top-0 left-0 ${sideBottomClass} w-[20px] pointer-events-auto cursor-move`} draggable onDragStart={(e) => { handleBorderDrag(e); hideOverlay(); }} onDragEnd={showOverlay} />
+                                    {/* 오른쪽 핸들 */}
+                                    <div className={`absolute top-0 right-0 ${sideBottomClass} w-[28px] pointer-events-auto cursor-move`} draggable onDragStart={(e) => { handleBorderDrag(e); hideOverlay(); }} onDragEnd={showOverlay} />
+                                </>
+                            );
+                        })()}
                     </div>
                 );
             })()}
