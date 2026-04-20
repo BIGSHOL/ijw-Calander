@@ -276,9 +276,13 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         return !hasEnded && hasStarted;
       })
       .forEach(enrollment => {
-        // 그룹핑 키에 staffId 포함 — 같은 className이어도 담임이 다르면 별도 카드로 분리
-        // (강사 인수인계 시나리오: 권나현 endDate=D-1 / 김선생 startDate=D 가 별도로 표시되어야 함)
-        const key = `${enrollment.subject}_${enrollment.className}_${enrollment.staffId || ''}`;
+        // 그룹핑 키에 staffId + attendanceDays 시그니처 포함
+        // — 같은 className이어도 담임/등원요일이 다르면 별도 카드로 분리
+        // (강사 인수인계: 권나현 endDate=D-1 / 김선생 startDate=D 는 별도 행)
+        // (요일 변경: 월목 엔롤먼트와 신규 월만 엔롤먼트가 섞이지 않고 별도 행 → X 시 해당 행만 종료)
+        const ad = (enrollment as any).attendanceDays;
+        const attendanceSig = (ad && ad.length > 0) ? [...ad].sort().join(',') : '*';
+        const key = `${enrollment.subject}_${enrollment.className}_${enrollment.staffId || ''}_${attendanceSig}`;
 
         if (groups.has(key)) {
           const existing = groups.get(key)!;
@@ -291,7 +295,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
               existing.days.push(day);
             }
           });
-          // 학생 등원 요일 수집
+          // 학생 등원 요일 수집 (같은 시그니처 그룹 내에선 동일 값이지만 방어적으로 유지)
           (enrollment as any).attendanceDays?.forEach((day: string) => {
             if (!existing.attendanceDays.includes(day)) {
               existing.attendanceDays.push(day);
@@ -349,9 +353,10 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         return !hasEnded && isFuture;
       })
       .forEach(enrollment => {
-        // 그룹핑 키에 staffId 포함 — 같은 className이어도 담임이 다르면 별도 카드로 분리
-        // (강사 인수인계 시나리오: 권나현 endDate=D-1 / 김선생 startDate=D 가 별도로 표시되어야 함)
-        const key = `${enrollment.subject}_${enrollment.className}_${enrollment.staffId || ''}`;
+        // 그룹핑 키에 staffId + attendanceDays 시그니처 포함 (groupedEnrollments와 동일 원칙)
+        const ad = (enrollment as any).attendanceDays;
+        const attendanceSig = (ad && ad.length > 0) ? [...ad].sort().join(',') : '*';
+        const key = `${enrollment.subject}_${enrollment.className}_${enrollment.staffId || ''}_${attendanceSig}`;
 
         if (groups.has(key)) {
           const existing = groups.get(key)!;
@@ -575,13 +580,19 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
       const now = new Date();
       const endDate = now.toISOString().split('T')[0]; // YYYY-MM-DD 형식
 
+      // 이미 종료된 enrollment(endDate 이전 날짜)는 건드리지 않음 — 과거 퇴원 기록 보호
+      const shouldSkipAlreadyEnded = (data: Record<string, any>) => {
+        const existingEnd = data.endDate || data.withdrawalDate;
+        return typeof existingEnd === 'string' && existingEnd < endDate;
+      };
+
       // 1. 저장된 enrollmentIds가 있으면 사용
       if (group.enrollmentIds.length > 0) {
         for (const enrollmentId of group.enrollmentIds) {
           const docRef = doc(db, `students/${student.id}/enrollments`, enrollmentId);
           const docSnap = await getDoc(docRef);
           // 문서가 존재하는 경우에만 업데이트 (수동 삭제된 경우 스킵)
-          if (docSnap.exists()) {
+          if (docSnap.exists() && !shouldSkipAlreadyEnded(docSnap.data())) {
             await updateDoc(docRef, {
               endDate: endDate,
               updatedAt: new Date().toISOString(),
@@ -590,6 +601,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         }
       } else {
         // 2. enrollmentIds가 없으면 쿼리로 찾아서 업데이트
+        // attendanceDays 시그니처까지 일치하는 것만 종료 (월목 전체 → 월만 이동 시 신규 enrollment만 골라 종료)
         const enrollmentsRef = collection(db, `students/${student.id}/enrollments`);
         const q = query(
           enrollmentsRef,
@@ -598,7 +610,17 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         );
         const snapshot = await getDocs(q);
 
+        const groupSig = group.attendanceDays.length > 0
+          ? [...group.attendanceDays].sort().join(',')
+          : '*';
+
         for (const docSnap of snapshot.docs) {
+          const data = docSnap.data();
+          const ad = data.attendanceDays || [];
+          const docSig = ad.length > 0 ? [...ad].sort().join(',') : '*';
+          if (docSig !== groupSig) continue; // 다른 요일 그룹은 건너뜀
+          if (shouldSkipAlreadyEnded(data)) continue; // 이미 과거에 종료된 건 보호
+
           await updateDoc(docSnap.ref, {
             endDate: endDate,
             updatedAt: new Date().toISOString(),
@@ -707,9 +729,10 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         return !!endDate && endDate < today;
       })
       .forEach(enrollment => {
-        // 그룹핑 키에 staffId 포함 — 같은 className이어도 담임이 다르면 별도 카드로 분리
-        // (강사 인수인계 시나리오: 권나현 endDate=D-1 / 김선생 startDate=D 가 별도로 표시되어야 함)
-        const key = `${enrollment.subject}_${enrollment.className}_${enrollment.staffId || ''}`;
+        // 그룹핑 키에 staffId + attendanceDays 시그니처 포함 (groupedEnrollments와 동일 원칙)
+        const ad = (enrollment as any).attendanceDays;
+        const attendanceSig = (ad && ad.length > 0) ? [...ad].sort().join(',') : '*';
+        const key = `${enrollment.subject}_${enrollment.className}_${enrollment.staffId || ''}_${attendanceSig}`;
 
         if (groups.has(key)) {
           const existing = groups.get(key)!;
