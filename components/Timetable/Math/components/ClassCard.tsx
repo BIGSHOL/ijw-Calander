@@ -756,9 +756,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
             .filter(s => s.onHold && !s.withdrawalDate && isStudentAttendingAllMergedDays(s))
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
             .filter(filterStudent);
-        // 퇴원 학생: 과거/오늘 날짜 + 반이동이 아닌 실제 퇴원만
+        // 퇴원 학생: 과거/오늘 날짜인 이 반의 종료된 enrollment.
+        // isEarlierEndedClass(같은 과목에서 이 반보다 나중에 종료된 반이 있음)만 제외 —
+        // 반이동(다른 반 활성) 상태인 학생도 이 반에선 "이 반에서 퇴원"으로 표시됨.
         const commonWithdrawn = allStudents
-            .filter(s => s.withdrawalDate && s.withdrawalDate <= today && !s.isTransferred)
+            .filter(s => s.withdrawalDate && s.withdrawalDate <= today && !s.isEarlierEndedClass)
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
             .filter(filterStudent);
         // 퇴원예정: 재원생 섹션에서 가로줄로 표시하므로 별도 섹션은 빈 배열
@@ -846,10 +848,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
             .filter(filterStudent);
 
-        // 퇴원 학생: 과거/오늘 날짜 + 반이동이 아닌 실제 퇴원만 (기준일 기준 30일 이내)
+        // 퇴원 학생: 과거/오늘 날짜인 이 반의 종료된 enrollment (기준일 기준 30일 이내).
+        // isEarlierEndedClass만 제외 — 반이동 상태라도 이 반에선 퇴원으로 표시.
         const withdrawn = allStudents
             .filter(s => {
-                if (!s.withdrawalDate || s.withdrawalDate > today || s.isTransferred) return false;
+                if (!s.withdrawalDate || s.withdrawalDate > today || s.isEarlierEndedClass) return false;
                 const daysSince = Math.floor((refDateMs - new Date(s.withdrawalDate).getTime()) / (1000 * 60 * 60 * 24));
                 return daysSince <= 30;
             })
