@@ -1106,7 +1106,9 @@ const SyncLogModal: React.FC<{ result: SyncResult; onClose: () => void }> = ({ r
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+    // z-[120]: 출석부 테이블 sticky 헤더(z-[100]~z-[110])보다 위에 올려야 가려지지 않음.
+    // (다른 출석부 모달들은 z-[100] 사용 — 이 모달도 헤더를 덮어야 하므로 그보다 높게)
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40" onClick={onClose}>
       <div
         className="bg-white rounded-lg shadow-xl w-[700px] max-h-[80vh] flex flex-col"
         onClick={e => e.stopPropagation()}
