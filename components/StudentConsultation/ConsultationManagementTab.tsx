@@ -291,10 +291,12 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
     return (
         <div className="h-full flex flex-col overflow-hidden">
             {/* 상단 네비게이션 바 - Light Theme (수학 시간표 스타일) */}
+            {/* allowOverflow: 필터 드롭다운이 nav 아래로 렌더되는데 기본 overflow-x-auto 때문에 잘리던 문제 해소 */}
             <TabSubNavigation
                 variant="compact"
                 theme="light"
                 showBorder={true}
+                allowOverflow={true}
                 className="justify-between px-3 md:px-4 relative z-30"
             >
                 {/* Left: View Toggle + Date Presets + Filter Dropdown */}
