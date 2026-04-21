@@ -1333,6 +1333,18 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                             </button>
                         </div>
                     )}
+
+                    {/* 신입 연결 (구 "메이크 에듀 연결하기") — 헤더 우측 끝 */}
+                    {onMakeEduSyncOpen && (
+                        <button
+                            onClick={onMakeEduSyncOpen}
+                            className="flex items-center gap-1 px-2 py-1 bg-green-600/80 border border-green-500 text-white rounded-sm hover:bg-green-500 text-xs font-bold transition-colors"
+                            title="메이크 에듀 원생 동기화"
+                        >
+                            <Users size={12} />
+                            신입 연결
+                        </button>
+                    )}
                 </div>
                 <div className="w-4 flex-shrink-0"></div>
             </div>
