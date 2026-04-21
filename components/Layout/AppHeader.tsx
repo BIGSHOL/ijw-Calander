@@ -281,9 +281,25 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       )}
 
       {/* Row 3: Attendance Navigation Bar */}
-      {/* 출석부 탭은 외부 앱(https://attendance-project-snowy.vercel.app/)을 iframe으로 임베드하므로
-          상단 AttendanceNavBar(과목/강사/날짜/세션 필터)는 중복이라 숨김. 향후 내부 출석부 복구 시 git revert.
-          참고: AttendanceNavBar import 는 props 타입 호환성 위해 유지. */}
+      {appMode === 'attendance' && !isHeaderCollapsed && attendanceProps && (
+        <AttendanceNavBar
+          effectiveProfile={attendanceProps.effectiveProfile}
+          hasPermission={attendanceProps.hasPermission}
+          teachers={attendanceProps.teachers}
+          attendanceSubject={attendanceProps.attendanceSubject}
+          setAttendanceSubject={attendanceProps.setAttendanceSubject}
+          attendanceStaffId={attendanceProps.attendanceStaffId}
+          setAttendanceStaffId={attendanceProps.setAttendanceStaffId}
+          attendanceDate={attendanceProps.attendanceDate}
+          setAttendanceDate={attendanceProps.setAttendanceDate}
+          attendanceViewMode={attendanceProps.attendanceViewMode}
+          setAttendanceViewMode={attendanceProps.setAttendanceViewMode}
+          selectedSession={attendanceProps.selectedSession}
+          setSelectedSession={attendanceProps.setSelectedSession}
+          sessions={attendanceProps.sessions}
+          setIsAttendanceAddStudentModalOpen={attendanceProps.setIsAttendanceAddStudentModalOpen}
+        />
+      )}
 
       {/* Row 4: Students Navigation Bar */}
       {appMode === 'students' && !isHeaderCollapsed && studentsProps && (
