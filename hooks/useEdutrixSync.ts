@@ -13,17 +13,29 @@ function getKoreanDayName(dateStr: string): string {
     return DAY_NAMES[new Date(year, month - 1, day).getDay()];
 }
 
-/** enrollment에서 수업 요일 추출 */
-function getScheduledDays(enrollment: { days?: string[]; schedule?: string[] }): Set<string> {
+/** enrollment에서 수업 요일 추출.
+ *  schedule 배열 요소는 레거시 string("월 1교시"), 언더스코어 변형("월_1교시"),
+ *  또는 object({day: "월", periodId: "1-1"}) 형태가 공존함. 세 형태 모두 안전하게 처리.
+ */
+function getScheduledDays(enrollment: { days?: string[]; schedule?: unknown[] }): Set<string> {
     const days = new Set<string>();
     if (enrollment.schedule && Array.isArray(enrollment.schedule)) {
         for (const slot of enrollment.schedule) {
-            const day = slot.split(' ')[0];
-            if (day) days.add(day);
+            if (typeof slot === 'string') {
+                // 공백 또는 언더스코어 분리 — "월 1교시" / "월_1교시" 모두 대응
+                const day = slot.split(/[\s_]+/)[0];
+                if (day) days.add(day);
+            } else if (slot && typeof slot === 'object') {
+                // ScheduleSlot 객체 형식 { day, periodId, ... }
+                const day = (slot as { day?: unknown }).day;
+                if (typeof day === 'string' && day) days.add(day);
+            }
         }
     }
     if (enrollment.days && Array.isArray(enrollment.days)) {
-        for (const d of enrollment.days) days.add(d);
+        for (const d of enrollment.days) {
+            if (typeof d === 'string' && d) days.add(d);
+        }
     }
     return days;
 }
@@ -133,7 +145,9 @@ export function useEdutrixSync() {
                 teacher: (data.teacher || '') as string,
                 subject: (data.subject || '') as string,
                 days: (data.days || []) as string[],
-                schedule: (data.schedule || []) as string[],
+                // schedule은 레거시 string / 현행 ScheduleSlot object 혼재 가능 → unknown[]으로 받고
+                // getScheduledDays에서 타입별로 안전 파싱
+                schedule: (data.schedule || []) as unknown[],
             };
         });
     }, []);
@@ -199,7 +213,7 @@ export function useEdutrixSync() {
 
             const holidaySet = await fetchHolidays();
 
-            const enrollmentCache = new Map<string, { className: string; classId: string; staffId: string; teacher: string; subject: string; days: string[]; schedule: string[] }[]>();
+            const enrollmentCache = new Map<string, { className: string; classId: string; staffId: string; teacher: string; subject: string; days: string[]; schedule: unknown[] }[]>();
 
             const attendanceBatch = new Map<string, {
                 studentId: string;
