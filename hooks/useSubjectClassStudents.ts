@@ -241,9 +241,6 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                     attendanceDays: enrollment.attendanceDays || [],
                     isScheduled,
                     isTransferred: hasActiveInOtherClass || isNotLatestEndedClass,
-                    // 퇴원 섹션 중복 방지 전용: 이 반이 "가장 마지막 종료된 반"이 아닐 때만 true.
-                    // 반이동(다른 반 활성) 상태는 제외 — 반이동 상태라도 이 반에선 퇴원으로 보여야 하므로.
-                    isEarlierEndedClass: isNotLatestEndedClass,
                     isTransferredIn: hasEndedInOtherClass,
                     isSlotTeacher: enrollment.isSlotTeacher || false,
                     transferTo: transferToClass,
@@ -283,7 +280,6 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                         attendanceDays: enrollmentData.attendanceDays || [],
                         isScheduled: enrollmentData.isScheduled || false,
                         isTransferred: enrollmentData.isTransferred || false,
-                        isEarlierEndedClass: enrollmentData.isEarlierEndedClass || false,
                         isTransferredIn: enrollmentData.isTransferredIn || false,
                         transferTo: enrollmentData.transferTo,
                         enrollmentDocId: enrollmentData.enrollmentDocId,
