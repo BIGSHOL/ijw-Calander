@@ -280,8 +280,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
         />
       )}
 
-      {/* Row 3: Attendance Navigation Bar */}
-      {appMode === 'attendance' && !isHeaderCollapsed && attendanceProps && (
+      {/* Row 3: Attendance Navigation Bar (attendance-test 포함 — 내부 AttendanceManager 헤더 툴바) */}
+      {(appMode === 'attendance' || appMode === 'attendance-test') && !isHeaderCollapsed && attendanceProps && (
         <AttendanceNavBar
           effectiveProfile={attendanceProps.effectiveProfile}
           hasPermission={attendanceProps.hasPermission}
