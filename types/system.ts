@@ -21,7 +21,7 @@ export interface ReportSummary {
 export type AppTab =
   // 기존 탭 (20개)
   | 'dashboard' | 'calendar' | 'timetable' | 'payment' | 'gantt'
-  | 'consultation' | 'attendance' | 'students' | 'grades' | 'classes'
+  | 'consultation' | 'attendance' | 'attendance-test' | 'students' | 'grades' | 'classes'
   | 'classroom' | 'classroom-assignment' | 'student-consultations'
   | 'staff' | 'daily-attendance' | 'billing' | 'role-management'
   | 'resources' | 'withdrawal' | 'help'
@@ -59,6 +59,7 @@ export const TAB_META: Record<AppTab, Omit<TabMetadata, 'id'>> = {
   // 수업
   timetable: { label: '시간표', icon: '📋' },
   attendance: { label: '출석부', icon: '📝' },
+  'attendance-test': { label: '출석부 테스트', icon: '🧪' },
   'daily-attendance': { label: '출결 관리', icon: '✅' },
   classes: { label: '수업 관리', icon: '📚' },
   classroom: { label: '강의실', icon: '🏫' },
@@ -128,7 +129,7 @@ export const TAB_GROUPS: TabGroup[] = [
     id: 'class',
     label: '수업',
     icon: '📚',
-    tabs: ['timetable', 'attendance', 'daily-attendance', 'classes', 'classroom', 'classroom-assignment', 'homework', 'exams', 'textbooks'],
+    tabs: ['timetable', 'attendance', 'attendance-test', 'daily-attendance', 'classes', 'classroom', 'classroom-assignment', 'homework', 'exams', 'textbooks'],
     order: 2,
   },
   {
@@ -184,7 +185,7 @@ export type TabPermissionConfig = {
 // Note: master always has access to all tabs (handled in code)
 export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
   master: [
-    'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt',
+    'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'attendance-test', 'daily-attendance', 'payment', 'gantt',
     'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment',
     'student-consultations', 'staff', 'billing', 'role-management', 'resources', 'withdrawal',
     'homework', 'exams', 'textbooks', 'contracts', 'reports', 'payroll', 'analytics',
@@ -192,7 +193,7 @@ export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
     'tuition-calculator', 'meeting-minutes', 'expenses',
   ],
   admin: [
-    'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'daily-attendance', 'payment', 'gantt',
+    'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'attendance-test', 'daily-attendance', 'payment', 'gantt',
     'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment',
     'student-consultations', 'staff', 'billing', 'role-management', 'resources', 'withdrawal',
     'homework', 'exams', 'textbooks', 'contracts', 'reports', 'payroll', 'analytics',

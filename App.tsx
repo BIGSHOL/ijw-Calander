@@ -140,7 +140,7 @@ const App: React.FC = () => {
   const { data: systemConfig } = useSystemConfig(!!currentUser);
   const { data: staffWithAccounts = [] } = useStaffWithAccounts(!!currentUser);
   const { data: departments = [] } = useDepartments(!!currentUser && appMode === 'calendar');
-  const { data: teachers = [] } = useTeachers(!!currentUser && (appMode === 'attendance' || appMode === 'timetable'));
+  const { data: teachers = [] } = useTeachers(!!currentUser && (appMode === 'attendance' || appMode === 'attendance-test' || appMode === 'timetable'));
   const { data: holidays = [] } = useHolidays(!!currentUser && appMode === 'calendar');
   const { data: classKeywords = [] } = useClassKeywords(!!currentUser && appMode === 'timetable');
 
@@ -747,7 +747,7 @@ const App: React.FC = () => {
               setAllVisibility,
               toggleFavorite,
             } : undefined}
-            attendanceProps={appMode === 'attendance' ? {
+            attendanceProps={(appMode === 'attendance' || appMode === 'attendance-test') ? {
               effectiveProfile,
               hasPermission,
               teachers,
@@ -844,7 +844,7 @@ const App: React.FC = () => {
                     setAppMode('students');
                   },
                 } : undefined}
-                attendanceProps={appMode === 'attendance' ? {
+                attendanceProps={(appMode === 'attendance' || appMode === 'attendance-test') ? {
                   teachers,
                   attendanceSubject,
                   attendanceStaffId,

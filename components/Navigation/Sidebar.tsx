@@ -113,21 +113,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                   return (
                     <React.Fragment key={tab}>
                     <button
-                      onClick={(e) => {
-                        // 출석부 탭: 기본은 외부 출석부 앱 팝업(window.open)으로 열기 (협업자 정책 d960330).
-                        // 단, 내부 AttendanceManager 컴포넌트 개발/수정을 위해 두 가지 예외 경로를 둔다:
-                        //   1) Shift+click  → 내부 탭 진입 (프로덕션에서도 개발자만 알 수 있는 접근)
-                        //   2) localhost    → 개발 서버에서는 기본 클릭도 내부 탭 진입
-                        // 두 경로 모두 대표님/일반 사용자 기본 동작은 영향 없음.
+                      onClick={() => {
+                        // 출석부 탭(정식): 협업자 정책(d960330) — 외부 출석부 앱을 새 창 팝업으로 열기.
+                        // 출석부 테스트 탭: 내부 AttendanceManager로 진입하는 작업용 탭(관리자 전용).
                         if (tab === 'attendance') {
-                          const isLocalhost =
-                            typeof window !== 'undefined' &&
-                            (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-                          const forceInternal = e.shiftKey || isLocalhost;
-                          if (forceInternal) {
-                            onTabSelect(tab);
-                            return;
-                          }
                           window.open(
                             'https://attendance-project-snowy.vercel.app/',
                             'attendancePopup',

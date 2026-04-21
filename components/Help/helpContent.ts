@@ -219,6 +219,20 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
       },
     ],
   },
+  'attendance-test': {
+    title: '출석부 테스트',
+    overview: '내부 출석부(AttendanceManager) 작업·검증용 임시 탭. 정식 출석부(외부 앱) 정책과 별개로 운영자 작업 화면입니다.',
+    sections: [
+      {
+        title: '용도',
+        items: [
+          '내부 AttendanceManager 컴포넌트 수정·테스트',
+          '정식 출석부(외부 앱) 동작에 영향 없이 별도 화면에서 작업',
+          '관리자(master/admin) 전용',
+        ],
+      },
+    ],
+  },
   'daily-attendance': {
     title: '출결 관리',
     overview: '일별 전체 출결 현황을 한눈에 확인하는 관리 뷰입니다.',

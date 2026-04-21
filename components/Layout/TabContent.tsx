@@ -312,7 +312,9 @@ export const TabContent: React.FC<TabContentProps> = ({
             />
           </div>
         </Suspense>
-      ) : appMode === 'attendance' && attendanceProps ? (
+      ) : (appMode === 'attendance' || appMode === 'attendance-test') && attendanceProps ? (
+        // attendance-test 는 사이드바 외부 팝업 정책(d960330)을 우회해 내부 AttendanceManager를
+        // 직접 띄우는 작업용 탭. 동일 컴포넌트·동일 props로 렌더.
         <Suspense fallback={<TabLoadingFallback />}>
           <div className="w-full flex-1 flex flex-col overflow-hidden">
             <AttendanceManager
