@@ -28,7 +28,8 @@ const StudentDetailModal = lazy(() => import('../StudentManagement/StudentDetail
 const SimpleViewSettingsModal = lazy(() => import('./Math/components/Modals/SimpleViewSettingsModal'));
 const ScenarioManagementModal = lazy(() => import('./Math/ScenarioManagementModal'));
 import { ClassInfo, useClasses } from '../../hooks/useClasses';
-import { ALL_WEEKDAYS, MATH_PERIODS, ENGLISH_PERIODS } from './constants';
+import { ALL_WEEKDAYS, MATH_PERIODS, ENGLISH_PERIODS, LEGACY_TO_UNIFIED_PERIOD_MAP, getPeriodInfo, WEEKEND_PERIOD_INFO } from './constants';
+import type { ScheduleConflict } from './Math/components/ScheduledDateModal';
 import { MathSimulationProvider, useMathSimulation } from './Math/context/SimulationContext';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import EmbedTokenManager from '../Embed/EmbedTokenManager';
@@ -47,6 +48,75 @@ const GenericTimetable = lazy(() => import('./Generic/GenericTimetable'));
 const ShuttleTimetable = lazy(() => import('./Shuttle/ShuttleTimetable'));
 const AllSubjectsTimetable = lazy(() => import('./AllSubjectsTimetable'));
 const MakeEduSyncModal = lazy(() => import('../StudentManagement/MakeEduSyncModal'));
+
+// 과목 한글/영문 → PERIOD_INFO 키 매핑
+const SUBJECT_TO_PERIOD_KEY: Record<string, 'math' | 'english' | 'science' | 'korean' | 'highmath'> = {
+    '수학': 'math', '고등수학': 'highmath', '영어': 'english', '과학': 'science', '국어': 'korean',
+    'math': 'math', 'highmath': 'highmath', 'english': 'english', 'science': 'science', 'korean': 'korean',
+};
+
+// 스케줄 문자열 배열("월 1교시", "수 3" 등)을 {요일, 시작, 끝} 슬롯으로 변환
+function parseScheduleSlots(schedule: string[] | undefined, subject: string): Array<{ day: string; start: string; end: string }> {
+    if (!schedule || schedule.length === 0) return [];
+    const periodKey = SUBJECT_TO_PERIOD_KEY[subject] || 'math';
+    const slots: Array<{ day: string; start: string; end: string }> = [];
+    for (const s of schedule) {
+        const parts = s.split(' ');
+        if (parts.length < 2) continue;
+        const day = parts[0];
+        const periodRaw = parts[1];
+        const unifiedPeriod = LEGACY_TO_UNIFIED_PERIOD_MAP[periodRaw] || periodRaw;
+        // 주말은 WEEKEND_PERIOD_INFO의 레거시/통일 키 모두 지원
+        const info = (day === '토' || day === '일')
+            ? (WEEKEND_PERIOD_INFO[unifiedPeriod] || WEEKEND_PERIOD_INFO[periodRaw])
+            : getPeriodInfo(unifiedPeriod, periodKey);
+        if (!info) continue;
+        slots.push({ day, start: info.startTime, end: info.endTime });
+    }
+    return slots;
+}
+
+// 두 시간 범위가 겹치는지 ('HH:MM' 형식 문자열 비교)
+function timeRangesOverlap(a: { start: string; end: string }, b: { start: string; end: string }): boolean {
+    return a.start < b.end && b.start < a.end;
+}
+
+// 학생이 이동 대상 반에 들어가면, 이 학생의 다른 수업과 시간이 겹치는지 감지
+function detectScheduleConflicts(
+    studentId: string,
+    fromClassId: string,
+    toClass: { id: string; schedule?: string[]; subject: string } | undefined,
+    allClasses: Array<{ id: string; className: string; subject: string; schedule?: string[]; studentList?: Array<{ id: string; withdrawalDate?: string }> }>
+): ScheduleConflict[] {
+    if (!toClass) return [];
+    const toSlots = parseScheduleSlots(toClass.schedule, toClass.subject);
+    if (toSlots.length === 0) return [];
+
+    const seen = new Set<string>();
+    const conflicts: ScheduleConflict[] = [];
+    for (const other of allClasses) {
+        if (other.id === fromClassId || other.id === toClass.id) continue;
+        const hasActive = other.studentList?.some(s => s.id === studentId && !s.withdrawalDate);
+        if (!hasActive) continue;
+        const otherSlots = parseScheduleSlots(other.schedule, other.subject);
+        if (otherSlots.length === 0) continue;
+        for (const toSlot of toSlots) {
+            for (const otherSlot of otherSlots) {
+                if (toSlot.day !== otherSlot.day) continue;
+                if (!timeRangesOverlap(toSlot, otherSlot)) continue;
+                const key = `${other.id}|${otherSlot.day}|${otherSlot.start}~${otherSlot.end}`;
+                if (seen.has(key)) continue;
+                seen.add(key);
+                conflicts.push({
+                    className: other.className,
+                    day: otherSlot.day,
+                    time: `${otherSlot.start}~${otherSlot.end}`,
+                });
+            }
+        }
+    }
+    return conflicts;
+}
 
 // MathTimetableContent를 외부로 분리하여 Hook 순서 에러 방지
 interface MathTimetableContentProps {
@@ -1383,7 +1453,7 @@ const TimetableManager = ({
         fromClassName: string;
         toClassName: string;
         targetClassSchedule?: string[];
-        fromClassSchedule?: string[]; // 출발 반 스케줄 (요일 비교용)
+        conflicts?: ScheduleConflict[]; // 학생의 다른 수업과 시간 충돌 목록
         isZoneChange?: boolean; // 같은 반 내 zone 이동 여부
         isWithdrawn?: boolean; // 퇴원생 이동 여부
         multiStudentIds?: string[]; // 멀티 이동 시 전체 학생 ID 목록
@@ -2025,13 +2095,20 @@ const TimetableManager = ({
                     const student = studentMap[lastMove.studentId];
                     // enrollment 레벨 퇴원 여부도 확인 (과목별 퇴원 학생 감지)
                     const enrollmentInFromClass = fromClass?.studentList?.find((s: any) => s.id === lastMove.studentId);
+                    // 학생의 다른 수업과 도착 반의 시간 충돌 감지
+                    const conflicts = detectScheduleConflicts(
+                        lastMove.studentId,
+                        lastMove.fromClassId,
+                        toClass,
+                        classesWithEnrollments as any
+                    );
                     setDateModalInfo({
                         studentId: lastMove.studentId,
                         studentName: student?.name || lastMove.studentId,
                         fromClassName: fromClass?.className || '',
                         toClassName: toClass?.className || '',
                         targetClassSchedule: toClass?.schedule,
-                        fromClassSchedule: fromClass?.schedule,
+                        conflicts,
                         isWithdrawn: student?.status === 'withdrawn' || !!student?.withdrawalDate || !!enrollmentInFromClass?.withdrawalDate,
                     });
                 }
@@ -2384,7 +2461,7 @@ const TimetableManager = ({
                     onClose={handleDateModalClose}
                     weekStart={currentMonday}
                     targetClassSchedule={dateModalInfo.targetClassSchedule}
-                    fromClassSchedule={dateModalInfo.fromClassSchedule}
+                    conflicts={dateModalInfo.conflicts}
                 />
             )}
             {/* 퇴원 날짜 선택 모달 */}
