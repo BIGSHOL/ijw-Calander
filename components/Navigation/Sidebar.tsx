@@ -113,12 +113,24 @@ const Sidebar: React.FC<SidebarProps> = ({
                   return (
                     <React.Fragment key={tab}>
                     <button
-                      onClick={() => onTabSelect(tab)}
+                      onClick={() => {
+                        // 출석부 탭: 내부 페이지로 전환하지 않고 외부 출석부 앱을 새 창(팝업)으로 열기
+                        // (수업보고서 외부 링크와 동일 UX — 현재 탭 유지, 별도 창 노출)
+                        if (tab === 'attendance') {
+                          window.open(
+                            'https://attendance-project-snowy.vercel.app/',
+                            'attendancePopup',
+                            'width=1400,height=900,scrollbars=yes,resizable=yes'
+                          );
+                          return;
+                        }
+                        onTabSelect(tab);
+                      }}
                       className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs font-medium transition-all ${isActive
                         ? 'bg-accent text-primary shadow-sm'
                         : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                         } ${isCollapsed ? 'justify-center' : ''} ${isTuitionCalc ? 'border border-gray-300 border-dashed' : ''}`}
-                      aria-label={`${meta.label} 탭으로 이동`}
+                      aria-label={tab === 'attendance' ? '출석부 외부 앱을 새 창에서 열기' : `${meta.label} 탭으로 이동`}
                       aria-current={isActive ? 'page' : undefined}
                       title={isCollapsed ? meta.label : undefined}
                     >
@@ -128,6 +140,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                       {!isCollapsed && (
                         <span className="flex items-center gap-1 flex-1">
                           {meta.label}
+                          {tab === 'attendance' && (
+                            <ExternalLink size={10} className="text-gray-400 flex-shrink-0 ml-auto" />
+                          )}
                           {(tab === 'consultation' || tab === 'student-consultations' || tab === 'meeting-minutes') && (
                             <Mic size={11} className="text-red-400 flex-shrink-0 ml-auto" />
                           )}
