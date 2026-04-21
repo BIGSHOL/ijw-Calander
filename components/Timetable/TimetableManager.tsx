@@ -1351,9 +1351,13 @@ const TimetableManager = ({
     });
 
     // View State (use external if provided)
-    const [internalSelectedDays, setInternalSelectedDays] = useState<string[]>(
-        viewSettings.selectedDays || ['월', '화', '수', '목', '금', '토', '일']
-    );
+    // 주말(토/일)은 항상 기본 활성화 — 저장된 설정에 빠져 있어도 강제 포함
+    const [internalSelectedDays, setInternalSelectedDays] = useState<string[]>(() => {
+        const saved = viewSettings.selectedDays || ['월', '화', '수', '목', '금', '토', '일'];
+        const merged = [...new Set([...saved, '토', '일'])];
+        const dayOrder = ['월', '화', '수', '목', '금', '토', '일'];
+        return dayOrder.filter(d => merged.includes(d));
+    });
     const selectedDays = externalSelectedDays ?? internalSelectedDays;
     const setSelectedDays = onSelectedDaysChange ?? setInternalSelectedDays;
 
