@@ -56,7 +56,7 @@ const SUBJECT_TO_PERIOD_KEY: Record<string, 'math' | 'english' | 'science' | 'ko
 };
 
 // 스케줄 문자열 배열("월 1교시", "수 3" 등)을 {요일, 시작, 끝} 슬롯으로 변환
-function parseScheduleSlots(schedule: string[] | undefined, subject: string): Array<{ day: string; start: string; end: string }> {
+export function parseScheduleSlots(schedule: string[] | undefined, subject: string): Array<{ day: string; start: string; end: string }> {
     if (!schedule || schedule.length === 0) return [];
     const periodKey = SUBJECT_TO_PERIOD_KEY[subject] || 'math';
     const slots: Array<{ day: string; start: string; end: string }> = [];
@@ -77,12 +77,12 @@ function parseScheduleSlots(schedule: string[] | undefined, subject: string): Ar
 }
 
 // 두 시간 범위가 겹치는지 ('HH:MM' 형식 문자열 비교)
-function timeRangesOverlap(a: { start: string; end: string }, b: { start: string; end: string }): boolean {
+export function timeRangesOverlap(a: { start: string; end: string }, b: { start: string; end: string }): boolean {
     return a.start < b.end && b.start < a.end;
 }
 
 // 학생이 이동 대상 반에 들어가면, 이 학생의 다른 수업과 시간이 겹치는지 감지
-function detectScheduleConflicts(
+export function detectScheduleConflicts(
     studentId: string,
     fromClassId: string,
     toClass: { id: string; schedule?: string[]; subject: string } | undefined,
