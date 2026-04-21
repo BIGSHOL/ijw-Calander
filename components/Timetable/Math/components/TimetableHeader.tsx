@@ -512,31 +512,22 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
             }
         });
 
-        // 퇴원 학생: 카드 퇴원 섹션과 동일한 조건으로 집계 (isEarlierEndedClass만 제외).
-        // processedStudents(재원 우선 dedup)는 반이동 학생이 재원으로 덮여서 퇴원 집계에 잡히지 않기 때문에
-        // 여기선 filteredClasses를 직접 순회하며 학생 ID 기준 dedup.
-        // — 반이동 상태 학생은 "재원(B반)"과 "퇴원(A반)" 둘 다로 카드에 보이므로,
-        //   집계도 양쪽에 포함되어 카드와 일치하는 숫자가 나옴.
-        const withdrawnStudentsMap = new Map<string, any>();
-        const withdrawnFutureStudentsMap = new Map<string, any>();
-        filteredClasses.forEach(cls => {
-            cls.studentList?.forEach((s: any) => {
-                if (!s.withdrawalDate || s.isEarlierEndedClass) return;
-                if (s.withdrawalDate > today) {
-                    if (!withdrawnFutureStudentsMap.has(s.id)) withdrawnFutureStudentsMap.set(s.id, s);
-                } else {
-                    const daysSince = Math.floor((refDate.getTime() - new Date(s.withdrawalDate).getTime()) / (1000 * 60 * 60 * 24));
-                    if (daysSince <= 30 && !withdrawnStudentsMap.has(s.id)) withdrawnStudentsMap.set(s.id, s);
-                }
-            });
-        });
+        // 퇴원 학생: 30일 이내만
+        const withdrawnStudents: Array<{ id: string; name: string; school: string; grade: string; withdrawalDate?: string }> = [];
+        const withdrawnFutureStudents: Array<{ id: string; name: string; school: string; grade: string; withdrawalDate?: string }> = [];
 
-        const toInfo = (studentId: string, s: any) => {
-            const base = studentMap[studentId] || s;
-            return { id: studentId, name: base.name || s.name, school: base.school || '', grade: base.grade || '', withdrawalDate: s.withdrawalDate };
-        };
-        const withdrawnStudents = Array.from(withdrawnStudentsMap, ([id, s]) => toInfo(id, s));
-        const withdrawnFutureStudents = Array.from(withdrawnFutureStudentsMap, ([id, s]) => toInfo(id, s));
+        processedStudents.forEach((student, studentId) => {
+            if (!student.withdrawalDate || student.isTransferred) return; // 반이동 제외
+            const base = studentMap[studentId] || student;
+            const info = { id: studentId, name: base.name || student.name, school: base.school || '', grade: base.grade || '', withdrawalDate: student.withdrawalDate };
+
+            if (student.withdrawalDate > today) {
+                withdrawnFutureStudents.push(info);
+            } else {
+                const daysSince = Math.floor((refDate.getTime() - new Date(student.withdrawalDate).getTime()) / (1000 * 60 * 60 * 24));
+                if (daysSince <= 30) withdrawnStudents.push(info);
+            }
+        });
 
         // 대기 학생 목록
         const onHoldStudents: Array<{ id: string; name: string; school: string; grade: string; enrollmentDate?: string }> = [];
