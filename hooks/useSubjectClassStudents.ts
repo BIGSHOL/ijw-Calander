@@ -170,11 +170,11 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                 // isTransferred: 이 수업에서 종료됐지만 다른 수업에 활성 등록이 있음
                 const hasActiveInOtherClass = hasEndDate &&
                     Array.from(activeClasses).some(c => c !== className);
-                // 같은 과목 안에 이 반보다 나중에 종료된 다른 반이 있으면 "가장 마지막 종료된 반"이 아니다.
-                // 활성 반이 남아 있든 아니든 항상 적용 — 이전엔 !hasActiveInOtherClass 가드를 둬서
-                // 학생이 다른 반에 활성 수업이 있을 때 이전 종료된 반들의 숨김이 풀려 퇴원 섹션 중복이 발생했음.
+                // 모든 반이 종료된 경우: 같은 과목 안에서 "가장 마지막에 종료된 반"이 아니면
+                // 여기선 퇴원 표시하지 않고 이동 처리로 숨긴다 (한 곳에만 퇴원 배지 보이도록).
                 const latestEnded = studentLatestEnded[studentId];
                 const isNotLatestEndedClass = hasEndDate
+                    && !hasActiveInOtherClass
                     && !!latestEnded
                     && latestEnded.className !== className;
                 // transferTo: 반이동 대상 반 정보 (담당/반이름/스케줄)
