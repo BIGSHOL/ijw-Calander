@@ -109,6 +109,10 @@ export const useTabPermissions = (userProfile: UserProfile | null) => {
             // 도움말은 모든 사용자에게 항상 접근 가능
             if (tab === 'help') return true;
 
+            // '출석부 테스트'는 내부 AttendanceManager 작업용 탭 — master/admin에게 항상 허용.
+            // Firestore tabPermissions에 명시적으로 추가돼 있지 않아도 코드 레벨에서 강제 허용.
+            if (tab === 'attendance-test' && (userRole === 'master' || userRole === 'admin')) return true;
+
             return effectiveTabs.includes(tab);
         };
 
