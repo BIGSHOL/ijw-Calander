@@ -309,15 +309,53 @@ export function useEdutrixSync() {
                     className = teacherMathEnrollments[0].className;
                 }
 
-                // 선생님 매칭 실패 → 스킵
+                // 선생님 매칭 실패 → 스킵 (진단 정보 포함)
                 if (!className) {
+                    // 매칭된 enrollment들의 반/요일 요약 (선생님 매칭됨)
+                    const teacherEnrollSummary = teacherMathEnrollments
+                        .map(e => {
+                            const d = [...getScheduledDays(e)].join('') || '요일미지정';
+                            return `${e.className}[${d}]`;
+                        })
+                        .join(', ');
+                    // 같은 수학 과목이지만 선생님 다른 enrollments (진단용)
+                    const otherMathSummary = mathEnrollments
+                        .filter(e => !teacherMathEnrollments.includes(e))
+                        .map(e => {
+                            const d = [...getScheduledDays(e)].join('') || '요일미지정';
+                            const t = e.teacher || e.staffId || '담당미상';
+                            return `${e.className}[${d}/${t}]`;
+                        })
+                        .join(', ');
+                    // math enrollment 0개 케이스: 실제 학생의 subject 분포를 보여줌.
+                    // highmath로만 등록된 경우 / subject 필드가 비어 있는 경우 등을 즉시 식별 가능.
+                    let allSubjectsSummary = '';
+                    if (mathEnrollments.length === 0 && enrollments.length > 0) {
+                        const counts: Record<string, number> = {};
+                        for (const e of enrollments) {
+                            const key = e.subject || '(subject 없음)';
+                            counts[key] = (counts[key] || 0) + 1;
+                        }
+                        allSubjectsSummary = Object.entries(counts)
+                            .map(([k, v]) => `${k}:${v}`)
+                            .join(',');
+                    }
+                    const parts: string[] = [
+                        `edutrix: ${edutrixTeacherName || '없음'}`,
+                        `요일: ${reportDayName}`,
+                        `math enrollment ${mathEnrollments.length}개`,
+                        `teacher매칭 ${teacherMathEnrollments.length}개`,
+                    ];
+                    if (teacherEnrollSummary) parts.push(`매칭: ${teacherEnrollSummary}`);
+                    if (otherMathSummary) parts.push(`다른 수학: ${otherMathSummary}`);
+                    if (allSubjectsSummary) parts.push(`전체 enrollment subject: ${allSubjectsSummary}`);
                     result.skipped++;
                     result.details.push({
                         studentName: report.student_name || '',
                         className: report.class_name || '',
                         date: dateKey,
                         status: 'skipped_no_match',
-                        message: `선생님 매칭 실패 (edutrix: ${edutrixTeacherName || '없음'}, math enrollment ${mathEnrollments.length}개, teacher매칭 ${teacherMathEnrollments.length}개)`,
+                        message: `선생님 매칭 실패 (${parts.join(' | ')})`,
                     });
                     continue;
                 }
