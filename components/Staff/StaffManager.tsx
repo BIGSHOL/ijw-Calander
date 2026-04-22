@@ -361,9 +361,12 @@ const StaffManager: React.FC<StaffManagerProps> = ({
                 className="px-2 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-accent"
               >
                 <option value="all">전체 직책</option>
-                {Object.entries(STAFF_ROLE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
+                {/* 레거시 한글 key('강사')는 DB 호환용 매핑만 유지하고 드롭다운에서 제외 */}
+                {Object.entries(STAFF_ROLE_LABELS)
+                  .filter(([value]) => !/[\uAC00-\uD7A3]/.test(value))
+                  .map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
               </select>
             </div>
 

@@ -405,9 +405,12 @@ const StaffForm: React.FC<StaffFormProps> = ({ staff, onClose, onSubmit, showSys
                 onChange={handleChange}
                 className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
               >
-                {Object.entries(STAFF_ROLE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
+                {/* 레거시 한글 key('강사')는 DB 호환용으로만 매핑에 남겨두고 드롭다운에는 노출 금지 */}
+                {Object.entries(STAFF_ROLE_LABELS)
+                  .filter(([value]) => !/[\uAC00-\uD7A3]/.test(value))
+                  .map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
               </select>
             </div>
 

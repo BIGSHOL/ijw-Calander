@@ -181,6 +181,72 @@ export type TabPermissionConfig = {
   [key in UserRole]?: AppTab[];
 };
 
+/**
+ * 탭 접근 권한 = "대표 view permission" 기반
+ *
+ * 역할 관리 UI 에서 체크하는 세부 permission 을 탭 접근 가드로 직접 사용.
+ * - 매핑이 있는 탭: OR 조건. 매핑된 permission 중 하나라도 true 면 접근 허용.
+ *                   전부 false 면 접근 차단 (DEFAULT_TAB_PERMISSIONS 폴백 사용 X)
+ * - 매핑이 없는 탭: 기존 DEFAULT_TAB_PERMISSIONS / Firestore tabPermissions 로 폴백
+ *
+ * 별도 처리되는 특수 탭:
+ * - help: 모든 사용자 항상 허용
+ * - attendance-test: master/admin 만 허용 (코드 레벨 강제)
+ * - logs: master 전용 (DEFAULT_TAB_PERMISSIONS 로 처리)
+ * - dashboard, calendar: 별도 permission 없이 DEFAULT 로 처리
+ */
+export const TAB_PRIMARY_PERMISSIONS: Partial<Record<AppTab, string[]>> = {
+  // 일정 그룹
+  'gantt': ['gantt.view'],
+  // 수업 그룹
+  'timetable': [
+    'timetable.math.view',
+    'timetable.english.view',
+    'timetable.science.view',
+    'timetable.korean.view',
+    'timetable.integrated.view',
+  ],
+  'attendance': ['attendance.manage_own', 'attendance.edit_all'],
+  'daily-attendance': ['daily_attendance.view', 'daily_attendance.edit'],
+  'classes': ['classes.view'],
+  'classroom': ['classroom.view'],
+  'classroom-assignment': ['classroom.edit', 'classes.edit'],
+  'homework': ['homework.view'],
+  'exams': ['exams.view'],
+  'textbooks': ['textbooks.view'],
+  // 학생 그룹
+  'students': ['students.view'],
+  'consultation': ['consultation.view'],
+  'student-consultations': [
+    'student_consultations.view',
+    'student_consultations.create',
+    'student_consultations.edit',
+  ],
+  'grades': ['grades.view'],
+  'withdrawal': ['withdrawal.view'],
+  'contracts': ['contracts.view'],
+  'reports': ['reports.view'],
+  // 관리 그룹
+  'payment': ['payment.view'],
+  'tuition-calculator': ['tuition.view'],
+  'staff': ['staff.view'],
+  'billing': ['billing.view'],
+  'resources': ['resources.view'],
+  'role-management': ['roles.view'],
+  'analytics': ['analytics.view'],
+  'payroll': ['payroll.view'],
+  'expenses': ['expenses.view'],
+  'meeting-minutes': ['meeting.view', 'meeting.edit'],
+  // 소통 그룹
+  'notices': ['notices.view'],
+  'parent-portal': ['parent_portal.view'],
+  'sms-notifications': ['notifications.view'],
+  // 마케팅 그룹
+  'marketing': ['marketing.view'],
+  'shuttle': ['shuttle.view'],
+  'timetable-distribution': ['timetable_distribution.view'],
+};
+
 // Default Tab Permissions (Fallback)
 // Note: master always has access to all tabs (handled in code)
 export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {

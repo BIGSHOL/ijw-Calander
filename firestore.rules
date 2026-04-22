@@ -220,9 +220,10 @@ service cloud.firestore {
       // Read: 공개 (임베드 시간표에서 수강 정보 필요 - collectionGroup 쿼리)
       allow read: if true;
 
-      // Write: master/admin 또는 students.enrollment.manage 권한
+      // Write: master/admin 또는 students.edit 권한
+      // (이전 규칙은 DEFAULT_ROLE_PERMISSIONS 에 없는 dead key 'students.enrollment.manage' 참조 → 항상 false)
       allow create, update, delete: if hasRole(['master', 'admin']) ||
-        hasPermission('students.enrollment.manage');
+        hasPermission('students.edit');
     }
 
     // 학생별 공유 메모 (담임·부담임 소통용)
@@ -337,17 +338,14 @@ service cloud.firestore {
     }
 
     // === Consultation Records (Phase 13: EduCRM Integration) ===
+    // 역할 관리 UI 의 "등록 상담" 카테고리와 키 일치시킴 (단수형 consultation.*)
     match /consultations/{consultationId} {
-      // Read: All authenticated users can view
       allow read: if isAuthenticated();
-
-      // Create/Update: Master or users with consultation permission
-      allow create, update: if hasRole(['master']) ||
-                              hasPermission('consultations.edit') ||
-                              hasPermission('consultations.create');
-
-      // Delete: Only master
-      allow delete: if hasRole(['master']);
+      allow create, update: if hasRole(['master', 'admin']) ||
+                              hasPermission('consultation.edit') ||
+                              hasPermission('consultation.create');
+      allow delete: if hasRole(['master', 'admin']) ||
+                       hasPermission('consultation.manage');
     }
 
     // === Student Consultation Records (학생 상담 기록) ===
@@ -610,6 +608,41 @@ service cloud.firestore {
       allow delete: if hasRole(['master', 'admin']) || hasPermission('recording.delete');
     }
 
+    // === Meeting Reports (회의록 녹음/분석) ===
+    // 역할 관리 UI의 "회의록" 카테고리: meeting.view / meeting.edit / meeting.delete
+    // 이전에는 명시 규칙 없어 catch-all(master/admin only)에 걸려 manager 작성/수정 거부되던 이슈 해결
+    match /meeting_reports/{docId} {
+      allow read: if isAuthenticated() &&
+                     (hasRole(['master', 'admin']) ||
+                      hasPermission('meeting.view') ||
+                      hasPermission('meeting.edit'));
+      allow create: if hasRole(['master', 'admin']) ||
+                       hasPermission('meeting.edit');
+      allow update: if hasRole(['master', 'admin']) ||
+                       hasPermission('meeting.edit');
+      allow delete: if hasRole(['master', 'admin']) ||
+                       hasPermission('meeting.delete');
+    }
+
+    // === Consultation Reports (학생 상담 녹음/분석) ===
+    // 역할 관리 UI의 "학생 상담" 카테고리: student_consultations.view/create/edit
+    // 및 "상담녹음분석" 카테고리: recording.edit/delete (레거시 호환)
+    match /consultation_reports/{docId} {
+      allow read: if isAuthenticated() &&
+                     (hasRole(['master', 'admin']) ||
+                      hasPermission('student_consultations.view') ||
+                      hasPermission('recording.edit'));
+      allow create: if hasRole(['master', 'admin']) ||
+                       hasPermission('student_consultations.create') ||
+                       hasPermission('student_consultations.edit') ||
+                       hasPermission('recording.edit');
+      allow update: if hasRole(['master', 'admin']) ||
+                       hasPermission('student_consultations.edit') ||
+                       hasPermission('recording.edit');
+      allow delete: if hasRole(['master', 'admin']) ||
+                       hasPermission('recording.delete');
+    }
+
     // === Enrollment Terms (등록차수 관리) ===
     match /enrollment_terms/{termId} {
       allow read: if isAuthenticated();
@@ -727,6 +760,43 @@ service cloud.firestore {
       allow delete: if isAuthenticated() &&
                        (hasRole(['master', 'admin']) ||
                         hasPermission('expenses.edit'));
+    }
+
+    // === Tuition Calculator (수강료 계산기) ===
+    // 역할 관리 UI "수강료 계산" 카테고리: tuition.view/edit/manage
+    // tuition_courses, tuition_invoices, tuition_discounts, tuition_extras, tuition_holidays, tuition_sessions
+    match /tuition_courses/{id} {
+      allow read: if isAuthenticated() && (hasRole(['master', 'admin']) || hasPermission('tuition.view'));
+      allow create, update: if hasRole(['master', 'admin']) || hasPermission('tuition.edit') || hasPermission('tuition.manage');
+      allow delete: if hasRole(['master', 'admin']) || hasPermission('tuition.manage');
+    }
+    match /tuition_invoices/{id} {
+      allow read: if isAuthenticated() && (hasRole(['master', 'admin']) || hasPermission('tuition.view'));
+      allow create, update: if hasRole(['master', 'admin']) || hasPermission('tuition.edit') || hasPermission('tuition.manage');
+      allow delete: if hasRole(['master', 'admin']) || hasPermission('tuition.manage');
+    }
+    match /tuition_discounts/{id} {
+      allow read: if isAuthenticated() && (hasRole(['master', 'admin']) || hasPermission('tuition.view'));
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('tuition.edit') || hasPermission('tuition.manage');
+    }
+    match /tuition_extras/{id} {
+      allow read: if isAuthenticated() && (hasRole(['master', 'admin']) || hasPermission('tuition.view'));
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('tuition.edit') || hasPermission('tuition.manage');
+    }
+    match /tuition_holidays/{id} {
+      allow read: if isAuthenticated() && (hasRole(['master', 'admin']) || hasPermission('tuition.view'));
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('tuition.manage');
+    }
+    match /tuition_sessions/{id} {
+      allow read: if isAuthenticated() && (hasRole(['master', 'admin']) || hasPermission('tuition.view'));
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('tuition.manage');
+    }
+
+    // === Resources (자료실) ===
+    // 역할 관리 UI "자료실" 카테고리: resources.view/edit
+    match /resources/{id} {
+      allow read: if isAuthenticated() && (hasRole(['master', 'admin']) || hasPermission('resources.view'));
+      allow create, update, delete: if hasRole(['master', 'admin']) || hasPermission('resources.edit');
     }
 
     // === Default: Role-Based Access for All Collections ===

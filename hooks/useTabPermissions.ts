@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
-import { UserProfile, AppTab, DEFAULT_TAB_PERMISSIONS, TabPermissionConfig, TAB_META } from '../types';
+import { UserProfile, AppTab, DEFAULT_TAB_PERMISSIONS, TabPermissionConfig, TAB_META, TAB_PRIMARY_PERMISSIONS } from '../types';
 import { useSystemConfig } from './useFirebaseQueries';
 import { useRoleSimulation, getEffectiveRole, getEffectiveUserProfile } from './useRoleSimulation';
+import { usePermissions } from './usePermissions';
 
 // Extract to module level to avoid recreating on every render (rendering-hoist-jsx)
 const ALL_TABS = Object.keys(TAB_META) as AppTab[];
@@ -14,6 +15,8 @@ const ALL_TABS = Object.keys(TAB_META) as AppTab[];
 export const useTabPermissions = (userProfile: UserProfile | null) => {
     const { data: systemConfig, isLoading } = useSystemConfig();
     const { simulatedRole, simulatedUserProfile, simulationType } = useRoleSimulation();
+    // 역할 관리 UI 에서 체크한 세부 permission 을 탭 접근 가드로 직접 사용하기 위해 usePermissions 연동
+    const { hasPermission } = usePermissions(userProfile);
 
     return useMemo(() => {
         const canAccessTab = (tab: AppTab): boolean => {
@@ -113,6 +116,17 @@ export const useTabPermissions = (userProfile: UserProfile | null) => {
             // Firestore tabPermissions에 명시적으로 추가돼 있지 않아도 코드 레벨에서 강제 허용.
             if (tab === 'attendance-test' && (userRole === 'master' || userRole === 'admin')) return true;
 
+            // ⭐ permission 기반 탭 접근 권한 (역할 관리 UI 와 동기화)
+            // TAB_PRIMARY_PERMISSIONS 에 매핑된 탭은 "해당 permission 중 하나라도 true 면 접근" 으로 판단
+            // 매핑 있는데 전부 false 면 접근 차단 (DEFAULT 폴백 사용 X)
+            // 이로써 역할 관리 UI 에서 체크한 권한 = 탭 접근 권한 이 일치하게 됨
+            const primaryPerms = TAB_PRIMARY_PERMISSIONS[tab];
+            if (primaryPerms && primaryPerms.length > 0) {
+                const hasAny = primaryPerms.some(p => hasPermission(p as any));
+                return hasAny;
+            }
+
+            // 매핑 없는 탭(dashboard, calendar, logs, timetable-distribution 일부 등)은 기존 DEFAULT/Firestore 사용
             return effectiveTabs.includes(tab);
         };
 
@@ -128,5 +142,5 @@ export const useTabPermissions = (userProfile: UserProfile | null) => {
             accessibleTabs,
             isLoading,
         };
-    }, [userProfile, systemConfig, simulatedRole, simulatedUserProfile, simulationType]);
+    }, [userProfile, systemConfig, simulatedRole, simulatedUserProfile, simulationType, hasPermission]);
 };

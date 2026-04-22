@@ -15,6 +15,34 @@ admin.initializeApp();
 const db = getFirestore("restore20260319");
 
 /**
+ * Server-side 권한 헬퍼 — Firestore rules 의 hasPermission() 과 동일 동작
+ * staffIndex/{uid}.systemRole → settings/rolePermissions.{role}[permissionId]
+ *
+ * @param {string} uid Firebase Auth UID
+ * @param {string[]} anyOf 권한 키 배열. 하나라도 true 면 pass. 비어있으면 role 만 확인.
+ * @param {{ allowRoles?: string[] }} options 명시적으로 허용하는 role (기본: ['master', 'admin'])
+ * @returns {Promise<{ ok: boolean, role: string | null }>}
+ */
+async function checkServerPermission(uid, anyOf = [], options = {}) {
+    const allowRoles = options.allowRoles || ['master', 'admin'];
+    try {
+        const indexDoc = await db.collection("staffIndex").doc(uid).get();
+        const role = indexDoc.exists ? (indexDoc.data()?.systemRole || null) : null;
+        if (!role) return { ok: false, role: null };
+        if (allowRoles.includes(role)) return { ok: true, role };
+        if (anyOf.length === 0) return { ok: false, role };
+
+        const permsDoc = await db.collection("settings").doc("rolePermissions").get();
+        const rolePerms = permsDoc.exists ? (permsDoc.data()?.[role] || {}) : {};
+        const ok = anyOf.some(p => rolePerms[p] === true);
+        return { ok, role };
+    } catch (e) {
+        logger.warn("[checkServerPermission] error:", e?.message || e);
+        return { ok: false, role: null };
+    }
+}
+
+/**
  * Puppeteer로 MakeEdu 로그인 후 쿠키 문자열 반환
  * fetch 기반 로그인이 NO_REJECT로 차단되어 헤드리스 브라우저 사용
  */
@@ -6570,6 +6598,13 @@ exports.processMeetingRecording = functions
     .https.onCall(async (data, context) => {
         if (!context.auth) {
             throw new functions.https.HttpsError("unauthenticated", "로그인이 필요합니다.");
+        }
+
+        // 역할 관리 UI 의 meeting.edit 또는 레거시 recording.edit 권한 보유자만 실행 허용
+        // master/admin 은 allowRoles 기본값으로 자동 통과
+        const perm = await checkServerPermission(context.auth.uid, ['meeting.edit', 'recording.edit']);
+        if (!perm.ok) {
+            throw new functions.https.HttpsError("permission-denied", "회의록 작성 권한이 없습니다.");
         }
 
         const { reportId: existingReportId, storagePath, title, attendees, meetingDate, recorder, fileName } = data;
