@@ -171,8 +171,9 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
     const activeDays = new Set<string>();
 
     const activeEnrollments = (student.enrollments || []).filter(e => {
-      const hasEnded = !!(e as any).endDate;
-      const startDate = (e as any).startDate;
+      const endDate = (e as any).endDate || (e as any).withdrawalDate;
+      const startDate = (e as any).enrollmentDate || (e as any).startDate;
+      const hasEnded = endDate ? endDate < today : false;
       const hasStarted = !startDate || startDate <= today;
       return !hasEnded && hasStarted;
     });
@@ -583,7 +584,11 @@ const StudentTimetableModal: React.FC<StudentTimetableModalProps> = ({ student, 
               (student.enrollments || [])
                 .filter(e => {
                   const today = new Date().toISOString().split('T')[0];
-                  return !(e as any).endDate && (!(e as any).startDate || (e as any).startDate <= today);
+                  const endDate = (e as any).endDate || (e as any).withdrawalDate;
+                  const startDate = (e as any).enrollmentDate || (e as any).startDate;
+                  const hasEnded = endDate ? endDate < today : false;
+                  const hasStarted = !startDate || startDate <= today;
+                  return !hasEnded && hasStarted;
                 })
                 .reduce((acc, e) => {
                   const key = `${e.subject}_${e.className}`;
