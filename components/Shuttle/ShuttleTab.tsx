@@ -40,8 +40,10 @@ export default function ShuttleTab() {
       if (!isOnShuttle) return;
 
       const active = (student.enrollments || []).filter(e => {
-        const hasEnded = !!e.endDate;
-        const hasStarted = !e.startDate || e.startDate <= today;
+        const endDate = (e as any).endDate || (e as any).withdrawalDate;
+        const startDate = (e as any).enrollmentDate || e.startDate;
+        const hasEnded = endDate ? endDate < today : false;
+        const hasStarted = !startDate || startDate <= today;
         return !hasEnded && hasStarted && !e.onHold;
       });
 

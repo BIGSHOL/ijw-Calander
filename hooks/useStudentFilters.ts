@@ -266,9 +266,10 @@ const filterBySubjects = (students: UnifiedStudent[], subjects: string[], mode: 
 
         const studentSubjects = (s.enrollments || [])
             .filter(e => {
-                // CoursesTab과 동일한 로직: endDate가 없고 startDate가 오늘 이전인 것만
-                const hasEnded = !!e.endDate;
-                const startDate = e.startDate;
+                // CoursesTab과 동일한 로직: endDate가 오늘 이전이면 종료, startDate가 오늘 이전인 것만
+                const endDate = (e as any).endDate || (e as any).withdrawalDate;
+                const startDate = (e as any).enrollmentDate || e.startDate;
+                const hasEnded = endDate ? endDate < today : false;
                 const isFuture = startDate && startDate > today;
                 // 종료되지 않았고, 미래가 아닌 수업만 (현재 수강 중)
                 return !hasEnded && !isFuture;
@@ -300,9 +301,10 @@ const filterByTeacher = (students: UnifiedStudent[], staffId: string): UnifiedSt
 
         return (s.enrollments || [])
             .filter(e => {
-                // CoursesTab과 동일한 로직: endDate가 없고 startDate가 오늘 이전인 것만
-                const hasEnded = !!e.endDate;
-                const startDate = e.startDate;
+                // CoursesTab과 동일한 로직: endDate가 오늘 이전이면 종료, startDate가 오늘 이전인 것만
+                const endDate = (e as any).endDate || (e as any).withdrawalDate;
+                const startDate = (e as any).enrollmentDate || e.startDate;
+                const hasEnded = endDate ? endDate < today : false;
                 const isFuture = startDate && startDate > today;
                 // 종료되지 않았고, 미래가 아닌 수업만 (현재 수강 중)
                 return !hasEnded && !isFuture;
