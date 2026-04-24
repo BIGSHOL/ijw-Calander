@@ -22,7 +22,7 @@ export type AppTab =
   // 기존 탭 (20개)
   | 'dashboard' | 'calendar' | 'timetable' | 'payment' | 'gantt'
   | 'consultation' | 'attendance' | 'attendance-test' | 'students' | 'grades' | 'classes'
-  | 'classroom' | 'classroom-assignment' | 'student-consultations'
+  | 'classroom' | 'classroom-assignment' | 'student-consultations' | 'consultation-list-test'
   | 'staff' | 'daily-attendance' | 'billing' | 'role-management'
   | 'resources' | 'withdrawal' | 'help'
   // Phase 1: 소통 강화
@@ -71,6 +71,7 @@ export const TAB_META: Record<AppTab, Omit<TabMetadata, 'id'>> = {
   students: { label: '학생 관리', icon: '👥' },
   consultation: { label: '등록 상담', icon: '📞' },
   'student-consultations': { label: '학생 상담', icon: '💬' },
+  'consultation-list-test': { label: '상담목록 테스트', icon: '🧪' },
   grades: { label: '성적 관리', icon: '📊' },
   withdrawal: { label: '퇴원 관리', icon: '🚪' },
   contracts: { label: '계약 관리', icon: '📄' },
@@ -136,7 +137,7 @@ export const TAB_GROUPS: TabGroup[] = [
     id: 'student',
     label: '학생',
     icon: '👥',
-    tabs: ['students', 'consultation', 'student-consultations', 'grades', 'withdrawal', 'contracts', 'reports'],
+    tabs: ['students', 'consultation', 'student-consultations', 'consultation-list-test', 'grades', 'withdrawal', 'contracts', 'reports'],
     order: 3,
   },
   {

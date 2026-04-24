@@ -5454,6 +5454,175 @@ exports.scrapeMakeEduShuttleStudents = functions
     });
 
 // ========================================================================
+// MakeEdu 상담내역 테스트 조회 (관리자용 - DB 저장 없이 파싱 결과만 반환)
+// ========================================================================
+
+/**
+ * MakeEdu HTML content → plain text 파서
+ * (참고: backups/makeedu-consultation-sync-plan.md)
+ */
+function parseConsultationContent(html) {
+    if (!html) return "";
+    let text = String(html);
+    // 1. 태그 → 줄바꿈
+    text = text.replace(/<br\s*\/?\s*>/gi, "\n");
+    text = text.replace(/<\/(p|div|li|h[1-6]|tr|ul|ol)>/gi, "\n");
+    // 2. 나머지 태그 제거
+    text = text.replace(/<[^>]+>/g, "");
+    // 3. HTML 엔티티 디코드
+    text = text
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, "\"")
+        .replace(/&#39;/g, "'");
+    // 4. 공백 정규화
+    text = text.replace(/[ \t]+/g, " ");
+    text = text.replace(/\n{3,}/g, "\n\n");
+    text = text.replace(/[ \t]+\n/g, "\n");
+    text = text.replace(/\n[ \t]+/g, "\n");
+    // 5. footer 제거
+    text = text.replace(/\[등록자:[^\]]*\]/g, "");
+    // 6. "상담 내용:" 이후 본문만 추출
+    const idx = text.indexOf("상담 내용:");
+    if (idx !== -1) {
+        text = text.substring(idx + "상담 내용:".length);
+    }
+    // 7. 빈 섹션 마커 제거
+    text = text.replace(/(조치사항|건의사항|비고)\s*:\s*(?=\n|$)/g, "");
+    return text.trim();
+}
+
+/**
+ * MakeEdu 상담내역 HTML 테이블 파싱
+ */
+function parseConsultationTableHtml(html) {
+    const $ = cheerio.load(html);
+    const rows = [];
+    // table_list 우선, 없으면 첫 번째 tbody table
+    const $table = $("#table_list").length ? $("#table_list") : $("table").first();
+    $table.find("tbody tr").each((_, tr) => {
+        const $tds = $(tr).find("td");
+        if ($tds.length < 16) return;
+        const studentName = $($tds[2]).text().trim();
+        const school = $($tds[3]).text().trim();
+        const grade = $($tds[4]).text().trim();
+        const guardianPhone = $($tds[5]).text().trim();
+        const studentPhone = $($tds[6]).text().trim();
+        const consultantName = $($tds[10]).text().trim();
+        const date = $($tds[11]).text().trim();
+        const title = $($tds[14]).text().trim();
+        const contentHtml = $($tds[15]).html() || "";
+        const content = parseConsultationContent(contentHtml);
+
+        // BOT 필터
+        if (/봇|BOT_/i.test(consultantName)) return;
+        if (!studentName || !date || !consultantName) return;
+
+        rows.push({
+            studentName, school, grade,
+            guardianPhone, studentPhone,
+            consultantName, date, title,
+            content,
+            contentLength: content.length,
+            contentRawLength: contentHtml.length,
+        });
+    });
+    return rows;
+}
+
+/**
+ * MakeEdu 상담내역 1개월 조회 (테스트 전용 - DB 저장 없음)
+ *
+ * @param {object} data - { yearMonth: "YYYYMM" }
+ */
+exports.scrapeMakeEduConsultationsTest = functions
+    .region("asia-northeast3")
+    .runWith({ timeoutSeconds: 300, memory: "2GB", secrets: ["MAKEEDU_USERNAME", "MAKEEDU_PASSWORD"] })
+    .https.onCall(async (data, context) => {
+        logger.info("[scrapeMakeEduConsultationsTest] Start (onCall)", data);
+        try {
+            const userId = process.env.MAKEEDU_USERNAME;
+            const userPwd = process.env.MAKEEDU_PASSWORD;
+            if (!userId || !userPwd) {
+                throw new functions.https.HttpsError("failed-precondition",
+                    "MakeEdu 로그인 정보가 설정되지 않았습니다.");
+            }
+
+            // yearMonth 검증 (YYYYMM)
+            const yearMonth = (data && data.yearMonth) || "";
+            if (!/^\d{6}$/.test(yearMonth)) {
+                throw new functions.https.HttpsError("invalid-argument",
+                    "yearMonth는 YYYYMM 형식이어야 합니다. 예: 202604");
+            }
+            const year = parseInt(yearMonth.substring(0, 4));
+            const month = parseInt(yearMonth.substring(4, 6));
+            const lastDay = new Date(year, month, 0).getDate();
+            const fromYmd = `${yearMonth}01`;
+            const toYmd = `${yearMonth}${String(lastDay).padStart(2, "0")}`;
+
+            // 1. 로그인
+            logger.info("[scrapeMakeEduConsultationsTest] Logging in...");
+            const cookieStr = await makeEduLoginWithPuppeteer(userId, userPwd);
+            if (!cookieStr) {
+                throw new functions.https.HttpsError("unauthenticated",
+                    "MakeEdu 로그인 실패");
+            }
+
+            // 2. 상담내역 엑셀(HTML) 다운로드
+            const baseUrl = "https://school.makeedu.co.kr";
+            const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+
+            const formBody = new URLSearchParams({
+                fromYmd, toYmd,
+                listSize: "99999",
+                currentPage: "1",
+            }).toString();
+
+            logger.info(`[scrapeMakeEduConsultationsTest] Fetching ${fromYmd}~${toYmd}`);
+            const res = await fetch(`${baseUrl}/counsel/counselList_excel2.do`, {
+                method: "POST",
+                headers: {
+                    "Cookie": cookieStr,
+                    "User-Agent": UA,
+                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                    "Referer": `${baseUrl}/counsel/counselList.do`,
+                },
+                body: formBody,
+            });
+
+            if (!res.ok) {
+                throw new functions.https.HttpsError("internal",
+                    `MakeEdu 응답 실패: ${res.status}`);
+            }
+
+            const html = await res.text();
+            logger.info(`[scrapeMakeEduConsultationsTest] HTML length: ${html.length}`);
+
+            // 3. HTML 파싱
+            const rows = parseConsultationTableHtml(html);
+            logger.info(`[scrapeMakeEduConsultationsTest] Parsed ${rows.length} rows`);
+
+            return {
+                success: true,
+                yearMonth,
+                fromYmd,
+                toYmd,
+                htmlLength: html.length,
+                count: rows.length,
+                rows: rows.slice(0, 500),  // 최대 500개만 반환 (UI 부하 방지)
+                truncated: rows.length > 500,
+            };
+        } catch (error) {
+            logger.error("[scrapeMakeEduConsultationsTest] Error:", error);
+            if (error.code) throw error;
+            throw new functions.https.HttpsError("internal",
+                error.message || "상담내역 크롤링 실패");
+        }
+    });
+
+// ========================================================================
 // 상담 녹음 분석 (AssemblyAI 음성인식 + Claude AI 보고서)
 // ========================================================================
 
