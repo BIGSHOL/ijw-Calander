@@ -4,7 +4,7 @@ import { X, Upload, Check, Loader2, Database, Plus, FileText, Users, UserPlus, C
 import { useStudents } from '../../hooks/useStudents';
 import { useStaff } from '../../hooks/useStaff';
 import { StaffMember, UnifiedStudent } from '../../types';
-import { collection, writeBatch, doc, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+import { collection, writeBatch, doc, query, where, getDocs, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
@@ -144,9 +144,32 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                 status: '완료',
             }));
             setRawData(parsed);
+
+            // 동기화 내역 로그 (수동 자동 가져오기)
+            try {
+                await addDoc(collection(db, 'makeEduConsultationSyncLogs'), {
+                    type: 'manual_auto_fetch',
+                    yearMonth: autoYearMonth,
+                    fetched: parsed.length,
+                    success: true,
+                    executedAt: serverTimestamp(),
+                });
+            } catch (logErr) {
+                console.warn('[AutoFetch] Log save failed:', logErr);
+            }
         } catch (err: any) {
             console.error('[AutoFetch] Error:', err);
             setError(err?.message || '자동 가져오기 실패');
+            // 실패 로그
+            try {
+                await addDoc(collection(db, 'makeEduConsultationSyncLogs'), {
+                    type: 'manual_auto_fetch',
+                    yearMonth: autoYearMonth,
+                    success: false,
+                    error: err?.message || String(err),
+                    executedAt: serverTimestamp(),
+                });
+            } catch { /* ignore */ }
         } finally {
             setAutoLoading(false);
         }

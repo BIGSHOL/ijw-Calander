@@ -18,7 +18,6 @@ const ClassManagementTab = React.lazy(() => import('../ClassManagement').then(m 
 const ClassroomTab = React.lazy(() => import('../Classroom').then(m => ({ default: m.ClassroomTab })));
 const ClassroomAssignmentTab = React.lazy(() => import('../ClassroomAssignment').then(m => ({ default: m.ClassroomAssignmentTab })));
 const StudentConsultationTab = React.lazy(() => import('../StudentConsultation').then(m => ({ default: m.ConsultationManagementTab })));
-const ConsultationListTestTab = React.lazy(() => import('../StudentConsultation/ConsultationListTestTab'));
 const BillingManager = React.lazy(() => import('../Billing').then(m => ({ default: m.BillingManager })));
 const DailyAttendanceManager = React.lazy(() => import('../DailyAttendance').then(m => ({ default: m.DailyAttendanceManager })));
 const StaffManager = React.lazy(() => import('../Staff').then(m => ({ default: m.StaffManager })));
@@ -377,12 +376,6 @@ export const TabContent: React.FC<TabContentProps> = ({
         <Suspense fallback={<TabLoadingFallback />}>
           <div className="w-full flex-1 overflow-hidden">
             <StudentConsultationTab currentUser={effectiveProfile} />
-          </div>
-        </Suspense>
-      ) : appMode === 'consultation-list-test' ? (
-        <Suspense fallback={<TabLoadingFallback />}>
-          <div className="w-full flex-1 overflow-hidden">
-            <ConsultationListTestTab currentUser={effectiveProfile} />
           </div>
         </Suspense>
       ) : appMode === 'billing' ? (

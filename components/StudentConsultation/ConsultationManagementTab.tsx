@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect, useRef, Suspense } from 'react';
-import { Plus, Search, GraduationCap, Upload, LayoutDashboard, List, ChevronDown, X, Loader2, Filter, SlidersHorizontal, Mic, History } from 'lucide-react';
+import { Plus, Search, GraduationCap, Upload, LayoutDashboard, List, ChevronDown, X, Loader2, Filter, SlidersHorizontal, Mic, History, RefreshCw } from 'lucide-react';
 import { usePaginatedConsultations, StudentConsultationFilters } from '../../hooks/useStudentConsultations';
 import { ConsultationCategory, CATEGORY_CONFIG } from '../../types';
 import ConsultationList from './ConsultationList';
 // Lazy load modals for better code splitting
 const AddConsultationModal = React.lazy(() => import('./AddConsultationModal'));
 const ConsultationMigrationModal = React.lazy(() => import('./ConsultationMigrationModal'));
+const SyncLogsModal = React.lazy(() => import('./SyncLogsModal'));
 import { useStudents } from '../../hooks/useStudents';
 import { useStaff } from '../../hooks/useStaff';
 import { ConsultationDashboard } from '../Dashboard';
@@ -59,6 +60,7 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
     const [filters, setFilters] = useState<StudentConsultationFilters>({});
     const [showAddModal, setShowAddModal] = useState(false);
     const [showMigrationModal, setShowMigrationModal] = useState(false);
+    const [showSyncLogsModal, setShowSyncLogsModal] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
     // 권한 체크
@@ -577,14 +579,24 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
 
                     {/* DB이전 버튼 - 목록 모드만 */}
                     {viewMode === 'list' && (
-                        <button
-                            onClick={() => setShowMigrationModal(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-success hover:bg-[#059669] text-white text-xs font-bold transition-colors"
-                            title="MakeEdu 데이터 가져오기"
-                        >
-                            <Upload size={14} />
-                            <span>DB 이전</span>
-                        </button>
+                        <>
+                            <button
+                                onClick={() => setShowSyncLogsModal(true)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold transition-colors"
+                                title="메이크에듀 동기화 내역 (자동/수동)"
+                            >
+                                <RefreshCw size={14} />
+                                <span>동기화 내역</span>
+                            </button>
+                            <button
+                                onClick={() => setShowMigrationModal(true)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm bg-success hover:bg-[#059669] text-white text-xs font-bold transition-colors"
+                                title="MakeEdu 데이터 가져오기"
+                            >
+                                <Upload size={14} />
+                                <span>DB 이전</span>
+                            </button>
+                        </>
                     )}
 
                     {/* 상담 등록 버튼 */}
@@ -744,6 +756,13 @@ const ConsultationManagementTab: React.FC<ConsultationManagementTabProps> = ({ c
                     </Suspense>
                 )
             }
+
+            {/* 동기화 내역 모달 */}
+            {showSyncLogsModal && (
+                <Suspense fallback={<div className="fixed inset-0 bg-black/40 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-white" /></div>}>
+                    <SyncLogsModal onClose={() => setShowSyncLogsModal(false)} />
+                </Suspense>
+            )}
         </div >
     );
 };

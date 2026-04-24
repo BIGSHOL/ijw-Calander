@@ -116,9 +116,6 @@ export const useTabPermissions = (userProfile: UserProfile | null) => {
             // Firestore tabPermissions에 명시적으로 추가돼 있지 않아도 코드 레벨에서 강제 허용.
             if (tab === 'attendance-test' && (userRole === 'master' || userRole === 'admin')) return true;
 
-            // '상담목록 테스트'도 동일하게 master/admin 전용 (메이크에듀 검증용)
-            if (tab === 'consultation-list-test' && (userRole === 'master' || userRole === 'admin')) return true;
-
             // ⭐ permission 기반 탭 접근 권한 (역할 관리 UI 와 동기화)
             // TAB_PRIMARY_PERMISSIONS 에 매핑된 탭은 "해당 permission 중 하나라도 true 면 접근" 으로 판단
             // 매핑 있는데 전부 false 면 접근 차단 (DEFAULT 폴백 사용 X)
