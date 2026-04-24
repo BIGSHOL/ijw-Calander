@@ -108,70 +108,133 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
     const [progress, setProgress] = useState(0);
     const [skippedCount, setSkippedCount] = useState(0); // 중복 스킵 카운트
 
-    // 메이크에듀 자동 가져오기 (월 선택)
+    // 메이크에듀 자동 가져오기 (기간 선택)
     const today = new Date();
     const defaultYM = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}`;
-    const [autoYearMonth, setAutoYearMonth] = useState(defaultYM);
+    const [fromYearMonth, setFromYearMonth] = useState(defaultYM);
+    const [toYearMonth, setToYearMonth] = useState(defaultYM);
     const [autoLoading, setAutoLoading] = useState(false);
+    const [autoProgress, setAutoProgress] = useState<{ current: string; done: number; total: number } | null>(null);
+
+    // YYYYMM 범위 → 월 배열
+    const buildMonthList = (from: string, to: string): string[] => {
+        const months: string[] = [];
+        const fy = parseInt(from.substring(0, 4));
+        const fm = parseInt(from.substring(4, 6));
+        const ty = parseInt(to.substring(0, 4));
+        const tm = parseInt(to.substring(4, 6));
+        let y = fy, m = fm;
+        while (y < ty || (y === ty && m <= tm)) {
+            months.push(`${y}${String(m).padStart(2, '0')}`);
+            m++;
+            if (m > 12) { y++; m = 1; }
+            if (months.length > 60) break; // 안전장치 (5년)
+        }
+        return months;
+    };
 
     const handleAutoFetch = async () => {
-        if (!/^\d{6}$/.test(autoYearMonth)) {
+        if (!/^\d{6}$/.test(fromYearMonth) || !/^\d{6}$/.test(toYearMonth)) {
             setError('YYYYMM 형식 (예: 202604)');
             return;
         }
+        if (fromYearMonth > toYearMonth) {
+            setError('시작월이 종료월보다 늦을 수 없습니다');
+            return;
+        }
+        const months = buildMonthList(fromYearMonth, toYearMonth);
+        if (months.length === 0) {
+            setError('조회할 월이 없습니다');
+            return;
+        }
+
         setAutoLoading(true);
         setError(null);
-        try {
-            const fns = getFunctions(undefined, 'asia-northeast3');
-            const callable = httpsCallable<{ yearMonth: string }, any>(
-                fns, 'scrapeMakeEduConsultationsTest', { timeout: 300000 }
-            );
-            const res = await callable({ yearMonth: autoYearMonth });
-            const data: any = res.data;
-            // 메이크에듀 결과 → ParsedConsultation 형식 변환
-            const parsed: ParsedConsultation[] = (data.rows || []).map((r: any, idx: number) => ({
-                no: idx + 1,
-                studentName: r.studentName,
-                parentPhone: r.guardianPhone || '',
-                studentPhone: r.studentPhone || '',
-                schoolName: r.school || '',
-                grade: mapGrade(r.grade),
-                counselor: r.consultantName,
-                registrar: r.consultantName,
-                consultationDate: r.date,
-                notes: (r.title ? `[${r.title}]\n` : '') + (r.content || ''),
-                subject: '기타',
-                status: '완료',
-            }));
-            setRawData(parsed);
+        setAutoProgress({ current: months[0], done: 0, total: months.length });
 
-            // 동기화 내역 로그 (수동 자동 가져오기)
-            try {
-                await addDoc(collection(db, 'makeEduConsultationSyncLogs'), {
-                    type: 'manual_auto_fetch',
-                    yearMonth: autoYearMonth,
-                    fetched: parsed.length,
-                    success: true,
-                    executedAt: serverTimestamp(),
-                });
-            } catch (logErr) {
-                console.warn('[AutoFetch] Log save failed:', logErr);
+        const allParsed: ParsedConsultation[] = [];
+        const fns = getFunctions(undefined, 'asia-northeast3');
+        const callable = httpsCallable<{ yearMonth: string }, any>(
+            fns, 'scrapeMakeEduConsultationsTest', { timeout: 300000 }
+        );
+
+        try {
+            for (let i = 0; i < months.length; i++) {
+                const ym = months[i];
+                setAutoProgress({ current: ym, done: i, total: months.length });
+                try {
+                    const res = await callable({ yearMonth: ym });
+                    const data: any = res.data;
+                    const monthParsed: ParsedConsultation[] = (data.rows || []).map((r: any, idx: number) => ({
+                        no: allParsed.length + idx + 1,
+                        studentName: r.studentName,
+                        parentPhone: r.guardianPhone || '',
+                        studentPhone: r.studentPhone || '',
+                        schoolName: r.school || '',
+                        grade: mapGrade(r.grade),
+                        counselor: r.consultantName,
+                        registrar: r.consultantName,
+                        consultationDate: r.date,
+                        notes: (r.title ? `[${r.title}]\n` : '') + (r.content || ''),
+                        subject: '기타',
+                        status: '완료',
+                    }));
+                    allParsed.push(...monthParsed);
+
+                    await addDoc(collection(db, 'makeEduConsultationSyncLogs'), {
+                        type: 'manual_auto_fetch',
+                        yearMonth: ym,
+                        fetched: monthParsed.length,
+                        success: true,
+                        executedAt: serverTimestamp(),
+                    });
+                } catch (monthErr: any) {
+                    console.error(`[AutoFetch] ${ym} error:`, monthErr);
+                    await addDoc(collection(db, 'makeEduConsultationSyncLogs'), {
+                        type: 'manual_auto_fetch',
+                        yearMonth: ym,
+                        success: false,
+                        error: monthErr?.message || String(monthErr),
+                        executedAt: serverTimestamp(),
+                    }).catch(() => { /* ignore */ });
+                    // 한 달 실패해도 다음 달 계속
+                }
             }
+            setAutoProgress({ current: '완료', done: months.length, total: months.length });
+            setRawData(allParsed);
         } catch (err: any) {
             console.error('[AutoFetch] Error:', err);
             setError(err?.message || '자동 가져오기 실패');
-            // 실패 로그
-            try {
-                await addDoc(collection(db, 'makeEduConsultationSyncLogs'), {
-                    type: 'manual_auto_fetch',
-                    yearMonth: autoYearMonth,
-                    success: false,
-                    error: err?.message || String(err),
-                    executedAt: serverTimestamp(),
-                });
-            } catch { /* ignore */ }
         } finally {
             setAutoLoading(false);
+        }
+    };
+
+    // 메이크에듀 데이터 일괄 삭제 (중복 정리용)
+    const handleDeleteAllMakeEdu = async () => {
+        const confirmText = window.prompt(
+            '⚠️ 위험: 메이크에듀 출처 상담 데이터(MakeEdu_Excel + MakeEdu_HtmlXls)를 모두 삭제합니다.\n' +
+            '되돌릴 수 없습니다.\n\n' +
+            '계속하려면 정확히 `DELETE-MAKEEDU` 를 입력하세요:'
+        );
+        if (confirmText !== 'DELETE-MAKEEDU') return;
+
+        setLoading(true);
+        try {
+            const fns = getFunctions(undefined, 'asia-northeast3');
+            const callable = httpsCallable<{ confirmText: string }, any>(
+                fns, 'deleteMakeEduConsultations', { timeout: 540000 }
+            );
+            const res = await callable({ confirmText: 'DELETE-MAKEEDU' });
+            const data: any = res.data;
+            alert(`✅ ${data.totalDeleted}건 삭제 완료\n\n` +
+                `MakeEdu_Excel: ${data.breakdown.MakeEdu_Excel}건\n` +
+                `MakeEdu_HtmlXls: ${data.breakdown.MakeEdu_HtmlXls}건`);
+        } catch (err: any) {
+            console.error('[DeleteMakeEdu] Error:', err);
+            alert(`삭제 실패: ${err?.message || err}`);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -466,17 +529,8 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
         setError(null);
 
         try {
-            // === 중복 체크: 기존 상담 기록 조회 ===
-            const existingConsultationsSnap = await getDocs(collection(db, 'student_consultations'));
+            // === 중복 체크: 같은 배치 내 중복 방지용 (deterministic doc ID 사용으로 DB 중복은 자동 방지) ===
             const existingKeys = new Set<string>();
-
-            existingConsultationsSnap.docs.forEach(doc => {
-                const data = doc.data();
-                // 중복 판별 키: studentId + date + content 앞 100자 (하루에 여러 상담 가능)
-                const contentKey = (data.content || '').replace(/\s+/g, '').substring(0, 100);
-                const key = `${data.studentId}_${data.date}_${contentKey}`;
-                existingKeys.add(key);
-            });
 
             // Process ALL items, creating students if needed
             // Filter out Error if any (though currently logic doesn't set ERROR)
@@ -524,24 +578,36 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
 
                     if (!studentId) continue;
 
-                    // === 중복 체크 (내용 기반) ===
-                    const contentKey = (item.notes || '').replace(/\s+/g, '').substring(0, 100);
-                    const duplicateKey = `${studentId}_${item.consultationDate}_${contentKey}`;
-                    if (existingKeys.has(duplicateKey)) {
-                        skippedDuplicates++;
-                        continue; // 중복이면 스킵
-                    }
-
-                    // 새 키를 추가 (같은 배치 내 중복 방지)
-                    existingKeys.add(duplicateKey);
-
-                    const docRef = doc(collection(db, 'student_consultations'));
-
                     // Append Registrar to content since schema doesn't have it
                     let finalContent = item.notes || '';
                     if (item.registrar) {
                         finalContent += `\n\n[등록자: ${item.registrar}]`;
                     }
+
+                    // === Deterministic doc ID (중복 자동 방지) ===
+                    // makeedu_{studentId}_{date}_{consultant}_{contentHash}
+                    const safeKey = (s: string) => (s || '').replace(/[^\w가-힣]/g, '_').slice(0, 50) || 'unknown';
+                    const simpleHash = (s: string) => {
+                        let h = 0;
+                        const str = String(s || '');
+                        for (let i = 0; i < str.length; i++) {
+                            h = ((h << 5) - h) + str.charCodeAt(i);
+                            h |= 0;
+                        }
+                        return Math.abs(h).toString(36).padStart(8, '0').slice(0, 8);
+                    };
+                    const consultantName = item.matchedConsultant?.name || item.counselor || '미지정';
+                    const contentHash = simpleHash(finalContent + '|' + (item.generatedTitle || ''));
+                    const docId = `makeedu_${safeKey(studentId)}_${item.consultationDate}_${safeKey(consultantName)}_${contentHash}`;
+
+                    // 같은 배치 내 중복 방지
+                    if (existingKeys.has(docId)) {
+                        skippedDuplicates++;
+                        continue;
+                    }
+                    existingKeys.add(docId);
+
+                    const docRef = doc(db, 'student_consultations', docId);
 
                     const consultationData = {
                         id: docRef.id,
@@ -549,7 +615,7 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                         studentName: studentName,
                         type: 'parent',
                         consultantId: item.matchedConsultant?.id || 'unknown',
-                        consultantName: item.matchedConsultant?.name || item.counselor || '미지정',
+                        consultantName,
                         date: item.consultationDate,
                         title: item.generatedTitle || '상담 기록',
                         content: finalContent,
@@ -561,10 +627,10 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                         followUpNeeded: false,
                         followUpDone: false,
                         isMigrated: true,
-                        migrationSource: 'MakeEdu_Excel'
+                        migrationSource: 'MakeEdu_HtmlXls'
                     };
 
-                    batch.set(docRef, consultationData);
+                    batch.set(docRef, consultationData, { merge: true });
                     batchHasItems = true;
                 }
 
@@ -643,30 +709,56 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                                     <Cloud className="text-green-600" size={20} />
                                     <h3 className="text-base font-bold text-gray-900">메이크에듀 자동 가져오기 (추천)</h3>
                                 </div>
-                                <p className="text-xs text-gray-600 mb-3">월을 선택하면 자동으로 크롤링하여 가져옵니다 (엑셀 다운로드 불필요)</p>
-                                <div className="flex items-end gap-2">
+                                <p className="text-xs text-gray-600 mb-3">기간을 선택하면 그 사이 모든 월을 순회해서 가져옵니다</p>
+                                <div className="flex items-end gap-2 mb-2">
                                     <div className="flex-1">
-                                        <label className="block text-xs text-gray-700 mb-1">조회 월 (YYYYMM)</label>
+                                        <label className="block text-xs text-gray-700 mb-1">시작월 (YYYYMM)</label>
                                         <input
                                             type="text"
-                                            value={autoYearMonth}
-                                            onChange={e => setAutoYearMonth(e.target.value.replace(/[^\d]/g, '').slice(0, 6))}
+                                            value={fromYearMonth}
+                                            onChange={e => setFromYearMonth(e.target.value.replace(/[^\d]/g, '').slice(0, 6))}
+                                            placeholder="예: 202401"
+                                            className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-green-500"
+                                            disabled={autoLoading}
+                                        />
+                                    </div>
+                                    <span className="text-gray-400 mb-2">~</span>
+                                    <div className="flex-1">
+                                        <label className="block text-xs text-gray-700 mb-1">종료월 (YYYYMM)</label>
+                                        <input
+                                            type="text"
+                                            value={toYearMonth}
+                                            onChange={e => setToYearMonth(e.target.value.replace(/[^\d]/g, '').slice(0, 6))}
                                             placeholder="예: 202604"
                                             className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-green-500"
                                             disabled={autoLoading}
                                         />
                                     </div>
-                                    <button
-                                        onClick={handleAutoFetch}
-                                        disabled={autoLoading}
-                                        className="flex items-center gap-1.5 px-4 py-1.5 bg-green-600 text-white rounded text-sm font-bold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                    >
-                                        {autoLoading ? <Loader2 className="animate-spin" size={14} /> : <Cloud size={14} />}
-                                        {autoLoading ? '가져오는 중...' : '자동 가져오기'}
-                                    </button>
                                 </div>
-                                <p className="text-[10px] text-gray-500 mt-2">⚠️ 5분까지 걸릴 수 있습니다</p>
+                                <button
+                                    onClick={handleAutoFetch}
+                                    disabled={autoLoading}
+                                    className="w-full flex items-center justify-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded text-sm font-bold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                >
+                                    {autoLoading ? <Loader2 className="animate-spin" size={14} /> : <Cloud size={14} />}
+                                    {autoLoading ? `가져오는 중...` : '기간 자동 가져오기'}
+                                </button>
+                                {autoProgress && (
+                                    <div className="mt-2 px-2 py-1 bg-white/70 rounded text-xs text-gray-700">
+                                        진행: <strong>{autoProgress.done}/{autoProgress.total}</strong> · 현재 {autoProgress.current}
+                                    </div>
+                                )}
+                                <p className="text-[10px] text-gray-500 mt-2">⚠️ 월당 1~5분 · doc ID는 content hash 기반으로 중복 자동 방지</p>
                             </div>
+
+                            {/* 메이크에듀 데이터 일괄 삭제 (중복 정리) */}
+                            <button
+                                onClick={handleDeleteAllMakeEdu}
+                                disabled={loading || autoLoading}
+                                className="text-xs text-red-600 underline hover:text-red-800"
+                            >
+                                ⚠️ 기존 메이크에듀 데이터 전체 삭제 (중복 정리용)
+                            </button>
 
                             <div className="text-xs text-gray-400">또는</div>
 

@@ -5717,16 +5717,25 @@ async function syncMakeEduConsultationsForMonth(yearMonth) {
         groups.set(key, arr);
     }
 
-    // 5. seq 안정화 + 저장
+    // 5. content hash 기반 deterministic doc ID + 저장
     const safeKey = (s) => (s || "").replace(/[^\w가-힣]/g, "_").slice(0, 50) || "unknown";
+    const simpleHash = (s) => {
+        let h = 0;
+        const str = String(s || "");
+        for (let i = 0; i < str.length; i++) {
+            h = ((h << 5) - h) + str.charCodeAt(i);
+            h |= 0;
+        }
+        return Math.abs(h).toString(36).padStart(8, "0").slice(0, 8);
+    };
     const now = Date.now();
     const colRef = admin.firestore().collection("student_consultations");
     const writes = [];
 
     for (const [, arr] of groups) {
-        arr.sort((a, b) => (a.row.content || "").localeCompare(b.row.content || ""));
-        arr.forEach(({ row, student }, seq) => {
-            const docId = `makeedu_${safeKey(student.id)}_${row.date}_${safeKey(row.consultantName)}_${seq}`;
+        arr.forEach(({ row, student }) => {
+            const contentHash = simpleHash((row.content || "") + "|" + (row.title || ""));
+            const docId = `makeedu_${safeKey(student.id)}_${row.date}_${safeKey(row.consultantName)}_${contentHash}`;
             writes.push({
                 docId,
                 data: {
@@ -5808,6 +5817,56 @@ exports.scheduledMakeEduConsultationSync = functions
             });
             throw err;
         }
+    });
+
+/**
+ * 기존 메이크에듀 출처 상담 데이터 전체 삭제 (중복 정리용)
+ * - migrationSource가 'MakeEdu_Excel' 또는 'MakeEdu_HtmlXls'인 모든 doc 삭제
+ * - 안전장치: 클라이언트에서 confirmText: 'DELETE-MAKEEDU' 보내야 실행
+ */
+exports.deleteMakeEduConsultations = functions
+    .region("asia-northeast3")
+    .runWith({ timeoutSeconds: 540, memory: "1GB" })
+    .https.onCall(async (data, context) => {
+        if (!context.auth) {
+            throw new functions.https.HttpsError("unauthenticated", "로그인 필요");
+        }
+        if (data?.confirmText !== "DELETE-MAKEEDU") {
+            throw new functions.https.HttpsError("invalid-argument",
+                "안전장치: confirmText='DELETE-MAKEEDU' 필요");
+        }
+
+        const colRef = admin.firestore().collection("student_consultations");
+        let totalDeleted = 0;
+        const sources = ["MakeEdu_Excel", "MakeEdu_HtmlXls"];
+        const breakdown = {};
+
+        for (const src of sources) {
+            const snap = await colRef.where("migrationSource", "==", src).get();
+            breakdown[src] = snap.size;
+            // 500건 단위 batch delete
+            const docs = snap.docs;
+            for (let i = 0; i < docs.length; i += 500) {
+                const chunk = docs.slice(i, i + 500);
+                const batch = admin.firestore().batch();
+                chunk.forEach(d => batch.delete(d.ref));
+                await batch.commit();
+                totalDeleted += chunk.length;
+            }
+        }
+
+        logger.info("[deleteMakeEduConsultations] Deleted:", totalDeleted, breakdown);
+
+        // 로그 저장
+        await admin.firestore().collection("makeEduConsultationSyncLogs").add({
+            type: "manual_cleanup",
+            success: true,
+            written: -totalDeleted,
+            note: `삭제: ${totalDeleted}건 (${JSON.stringify(breakdown)})`,
+            executedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        return { success: true, totalDeleted, breakdown };
     });
 
 // ========================================================================
