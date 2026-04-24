@@ -5690,7 +5690,7 @@ async function syncMakeEduConsultationsForMonth(yearMonth) {
     logger.info(`[syncConsultations] ${yearMonth}: ${rows.length} rows fetched`);
 
     // 3. students 캐싱 (이름별 인덱스)
-    const studentsSnap = await admin.firestore().collection("students").get();
+    const studentsSnap = await db.collection("students").get();
     const byName = new Map();
     studentsSnap.forEach(docSnap => {
         const s = { id: docSnap.id, ...docSnap.data() };
@@ -5729,7 +5729,7 @@ async function syncMakeEduConsultationsForMonth(yearMonth) {
         return Math.abs(h).toString(36).padStart(8, "0").slice(0, 8);
     };
     const now = Date.now();
-    const colRef = admin.firestore().collection("student_consultations");
+    const colRef = db.collection("student_consultations");
     const writes = [];
 
     for (const [, arr] of groups) {
@@ -5765,7 +5765,7 @@ async function syncMakeEduConsultationsForMonth(yearMonth) {
     let written = 0;
     for (let i = 0; i < writes.length; i += 500) {
         const chunk = writes.slice(i, i + 500);
-        const batch = admin.firestore().batch();
+        const batch = db.batch();
         chunk.forEach(w => batch.set(colRef.doc(w.docId), w.data, { merge: true }));
         await batch.commit();
         written += chunk.length;
@@ -5800,7 +5800,7 @@ exports.scheduledMakeEduConsultationSync = functions
             logger.info("[scheduledMakeEduConsultationSync] Result:", result);
 
             // 로그 저장
-            await admin.firestore().collection("makeEduConsultationSyncLogs").add({
+            await db.collection("makeEduConsultationSyncLogs").add({
                 ...result,
                 type: "scheduled",
                 success: true,
@@ -5809,7 +5809,7 @@ exports.scheduledMakeEduConsultationSync = functions
             return result;
         } catch (err) {
             logger.error("[scheduledMakeEduConsultationSync] Error:", err);
-            await admin.firestore().collection("makeEduConsultationSyncLogs").add({
+            await db.collection("makeEduConsultationSyncLogs").add({
                 type: "scheduled",
                 success: false,
                 error: err.message,
@@ -5836,7 +5836,7 @@ exports.deleteMakeEduConsultations = functions
                 "안전장치: confirmText='DELETE-MAKEEDU' 필요");
         }
 
-        const colRef = admin.firestore().collection("student_consultations");
+        const colRef = db.collection("student_consultations");
         let totalDeleted = 0;
         const sources = ["MakeEdu_Excel", "MakeEdu_HtmlXls"];
         const breakdown = {};
@@ -5848,7 +5848,7 @@ exports.deleteMakeEduConsultations = functions
             const docs = snap.docs;
             for (let i = 0; i < docs.length; i += 500) {
                 const chunk = docs.slice(i, i + 500);
-                const batch = admin.firestore().batch();
+                const batch = db.batch();
                 chunk.forEach(d => batch.delete(d.ref));
                 await batch.commit();
                 totalDeleted += chunk.length;
@@ -5858,7 +5858,7 @@ exports.deleteMakeEduConsultations = functions
         logger.info("[deleteMakeEduConsultations] Deleted:", totalDeleted, breakdown);
 
         // 로그 저장
-        await admin.firestore().collection("makeEduConsultationSyncLogs").add({
+        await db.collection("makeEduConsultationSyncLogs").add({
             type: "manual_cleanup",
             success: true,
             written: -totalDeleted,
