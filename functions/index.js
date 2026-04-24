@@ -5622,6 +5622,194 @@ exports.scrapeMakeEduConsultationsTest = functions
         }
     });
 
+/**
+ * [내부] 이름 + 연락처(보호자/원생)로 학생 매칭
+ */
+async function matchStudentByNameAndPhone(row, studentsCache) {
+    const normalizePhone = (s) => (s || "").replace(/[^\d]/g, "");
+    const rowGuardian = normalizePhone(row.guardianPhone);
+    const rowStudent = normalizePhone(row.studentPhone);
+
+    const candidates = studentsCache.byName.get(row.studentName) || [];
+    for (const s of candidates) {
+        const sParent = normalizePhone(s.parentPhone);
+        const sParent2 = normalizePhone(s.parentPhone2);
+        const sStudent = normalizePhone(s.studentPhone);
+        const sOther = normalizePhone(s.otherPhone);
+        if (rowGuardian && (sParent === rowGuardian || sParent2 === rowGuardian || sOther === rowGuardian || sStudent === rowGuardian)) {
+            return { student: s, reason: "parent_phone" };
+        }
+        if (rowStudent && (sStudent === rowStudent || sParent === rowStudent || sParent2 === rowStudent)) {
+            return { student: s, reason: "student_phone" };
+        }
+    }
+    return null;
+}
+
+/**
+ * [내부] 특정 yearMonth의 메이크에듀 상담내역을 크롤링 → 매칭 → student_consultations에 upsert
+ * @returns {object} { fetched, matched, skipped, written, errors }
+ */
+async function syncMakeEduConsultationsForMonth(yearMonth) {
+    const userId = process.env.MAKEEDU_USERNAME;
+    const userPwd = process.env.MAKEEDU_PASSWORD;
+    if (!userId || !userPwd) throw new Error("MakeEdu 로그인 정보 없음");
+
+    // 1. 로그인
+    const cookieStr = await makeEduLoginWithPuppeteer(userId, userPwd);
+    if (!cookieStr) throw new Error("MakeEdu 로그인 실패");
+
+    // 2. 크롤링
+    const year = parseInt(yearMonth.substring(0, 4));
+    const month = parseInt(yearMonth.substring(4, 6));
+    const lastDay = new Date(year, month, 0).getDate();
+    const fromYmd = `${yearMonth}01`;
+    const toYmd = `${yearMonth}${String(lastDay).padStart(2, "0")}`;
+
+    const baseUrl = "https://school.makeedu.co.kr";
+    const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+    const formBody = new URLSearchParams({
+        fromYmd, toYmd,
+        listSize: "99999",
+        currentPage: "1",
+    }).toString();
+
+    const res = await fetch(`${baseUrl}/counsel/counselList_excel2.do`, {
+        method: "POST",
+        headers: {
+            "Cookie": cookieStr,
+            "User-Agent": UA,
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "Referer": `${baseUrl}/counsel/counselList.do`,
+        },
+        body: formBody,
+    });
+    if (!res.ok) throw new Error(`MakeEdu 응답 실패: ${res.status}`);
+    const html = await res.text();
+    const rows = parseConsultationTableHtml(html);
+    logger.info(`[syncConsultations] ${yearMonth}: ${rows.length} rows fetched`);
+
+    // 3. students 캐싱 (이름별 인덱스)
+    const studentsSnap = await admin.firestore().collection("students").get();
+    const byName = new Map();
+    studentsSnap.forEach(docSnap => {
+        const s = { id: docSnap.id, ...docSnap.data() };
+        const arr = byName.get(s.name) || [];
+        arr.push(s);
+        byName.set(s.name, arr);
+    });
+    const studentsCache = { byName };
+
+    // 4. 매칭 + 그룹핑 (stable seq)
+    const groups = new Map(); // key: studentId|date|consultant -> MatchedRow[]
+    let matched = 0;
+    let unmatched = 0;
+    for (const row of rows) {
+        const match = await matchStudentByNameAndPhone(row, studentsCache);
+        if (!match) {
+            unmatched++;
+            continue;
+        }
+        matched++;
+        const key = `${match.student.id}|${row.date}|${row.consultantName}`;
+        const arr = groups.get(key) || [];
+        arr.push({ row, student: match.student });
+        groups.set(key, arr);
+    }
+
+    // 5. seq 안정화 + 저장
+    const safeKey = (s) => (s || "").replace(/[^\w가-힣]/g, "_").slice(0, 50) || "unknown";
+    const now = Date.now();
+    const colRef = admin.firestore().collection("student_consultations");
+    const writes = [];
+
+    for (const [, arr] of groups) {
+        arr.sort((a, b) => (a.row.content || "").localeCompare(b.row.content || ""));
+        arr.forEach(({ row, student }, seq) => {
+            const docId = `makeedu_${safeKey(student.id)}_${row.date}_${safeKey(row.consultantName)}_${seq}`;
+            writes.push({
+                docId,
+                data: {
+                    studentId: student.id,
+                    studentName: row.studentName,
+                    school: student.school || row.school || "",
+                    grade: student.grade || row.grade || "",
+                    type: "parent",
+                    consultantId: row.consultantName,
+                    consultantName: row.consultantName,
+                    date: row.date,
+                    category: "general",
+                    title: row.title || "",
+                    content: row.content || "",
+                    followUpNeeded: false,
+                    followUpDone: false,
+                    createdBy: "makeedu_cron_sync",
+                    migrationSource: "MakeEdu_HtmlXls",
+                    createdAt: now,
+                    updatedAt: now,
+                },
+            });
+        });
+    }
+
+    // 500건 단위 batch
+    let written = 0;
+    for (let i = 0; i < writes.length; i += 500) {
+        const chunk = writes.slice(i, i + 500);
+        const batch = admin.firestore().batch();
+        chunk.forEach(w => batch.set(colRef.doc(w.docId), w.data, { merge: true }));
+        await batch.commit();
+        written += chunk.length;
+    }
+
+    return {
+        yearMonth,
+        fetched: rows.length,
+        matched,
+        unmatched,
+        written,
+    };
+}
+
+/**
+ * MakeEdu 상담내역 당월 자동 동기화 (매일 03:00 KST)
+ * - 이번달 전체 상담내역 조회 → 매칭된 것만 upsert
+ * - 기존 doc과 같은 ID면 merge되어 내용만 갱신
+ * - 매칭 실패는 skip (알림 없음, 로그만 기록)
+ */
+exports.scheduledMakeEduConsultationSync = functions
+    .region("asia-northeast3")
+    .runWith({ timeoutSeconds: 540, memory: "2GB", secrets: ["MAKEEDU_USERNAME", "MAKEEDU_PASSWORD"] })
+    .pubsub.schedule("0 3 * * *")
+    .timeZone("Asia/Seoul")
+    .onRun(async (context) => {
+        logger.info("[scheduledMakeEduConsultationSync] Start");
+        try {
+            const today = new Date();
+            const yearMonth = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}`;
+            const result = await syncMakeEduConsultationsForMonth(yearMonth);
+            logger.info("[scheduledMakeEduConsultationSync] Result:", result);
+
+            // 로그 저장
+            await admin.firestore().collection("makeEduConsultationSyncLogs").add({
+                ...result,
+                type: "scheduled",
+                success: true,
+                executedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            return result;
+        } catch (err) {
+            logger.error("[scheduledMakeEduConsultationSync] Error:", err);
+            await admin.firestore().collection("makeEduConsultationSyncLogs").add({
+                type: "scheduled",
+                success: false,
+                error: err.message,
+                executedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            throw err;
+        }
+    });
+
 // ========================================================================
 // 상담 녹음 분석 (AssemblyAI 음성인식 + Claude AI 보고서)
 // ========================================================================

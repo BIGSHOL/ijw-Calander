@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { read, utils } from 'xlsx';
-import { X, Upload, Check, Loader2, Database, Plus, FileText, Users, UserPlus } from 'lucide-react';
+import { X, Upload, Check, Loader2, Database, Plus, FileText, Users, UserPlus, Cloud } from 'lucide-react';
 import { useStudents } from '../../hooks/useStudents';
 import { useStaff } from '../../hooks/useStaff';
 import { StaffMember, UnifiedStudent } from '../../types';
 import { collection, writeBatch, doc, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { formatDateKey } from '../../utils/dateUtils';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
@@ -106,6 +107,50 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
     const [step, setStep] = useState<'load' | 'preview' | 'migrating' | 'done'>('load');
     const [progress, setProgress] = useState(0);
     const [skippedCount, setSkippedCount] = useState(0); // 중복 스킵 카운트
+
+    // 메이크에듀 자동 가져오기 (월 선택)
+    const today = new Date();
+    const defaultYM = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}`;
+    const [autoYearMonth, setAutoYearMonth] = useState(defaultYM);
+    const [autoLoading, setAutoLoading] = useState(false);
+
+    const handleAutoFetch = async () => {
+        if (!/^\d{6}$/.test(autoYearMonth)) {
+            setError('YYYYMM 형식 (예: 202604)');
+            return;
+        }
+        setAutoLoading(true);
+        setError(null);
+        try {
+            const fns = getFunctions(undefined, 'asia-northeast3');
+            const callable = httpsCallable<{ yearMonth: string }, any>(
+                fns, 'scrapeMakeEduConsultationsTest', { timeout: 300000 }
+            );
+            const res = await callable({ yearMonth: autoYearMonth });
+            const data: any = res.data;
+            // 메이크에듀 결과 → ParsedConsultation 형식 변환
+            const parsed: ParsedConsultation[] = (data.rows || []).map((r: any, idx: number) => ({
+                no: idx + 1,
+                studentName: r.studentName,
+                parentPhone: r.guardianPhone || '',
+                studentPhone: r.studentPhone || '',
+                schoolName: r.school || '',
+                grade: mapGrade(r.grade),
+                counselor: r.consultantName,
+                registrar: r.consultantName,
+                consultationDate: r.date,
+                notes: (r.title ? `[${r.title}]\n` : '') + (r.content || ''),
+                subject: '기타',
+                status: '완료',
+            }));
+            setRawData(parsed);
+        } catch (err: any) {
+            console.error('[AutoFetch] Error:', err);
+            setError(err?.message || '자동 가져오기 실패');
+        } finally {
+            setAutoLoading(false);
+        }
+    };
 
     // 1. File Upload Handler (Excel & JSON Support)
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -569,6 +614,39 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                 <div className="flex-1 overflow-hidden flex flex-col p-6 bg-gray-50">
                     {step === 'load' && (
                         <div className="flex flex-col items-center justify-center h-full gap-6">
+                            {/* 자동 가져오기 (메이크에듀 크롤링) */}
+                            <div className="w-full max-w-md p-6 bg-gradient-to-br from-green-50 to-blue-50 rounded-sm border-2 border-green-300">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Cloud className="text-green-600" size={20} />
+                                    <h3 className="text-base font-bold text-gray-900">메이크에듀 자동 가져오기 (추천)</h3>
+                                </div>
+                                <p className="text-xs text-gray-600 mb-3">월을 선택하면 자동으로 크롤링하여 가져옵니다 (엑셀 다운로드 불필요)</p>
+                                <div className="flex items-end gap-2">
+                                    <div className="flex-1">
+                                        <label className="block text-xs text-gray-700 mb-1">조회 월 (YYYYMM)</label>
+                                        <input
+                                            type="text"
+                                            value={autoYearMonth}
+                                            onChange={e => setAutoYearMonth(e.target.value.replace(/[^\d]/g, '').slice(0, 6))}
+                                            placeholder="예: 202604"
+                                            className="w-full px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-green-500"
+                                            disabled={autoLoading}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleAutoFetch}
+                                        disabled={autoLoading}
+                                        className="flex items-center gap-1.5 px-4 py-1.5 bg-green-600 text-white rounded text-sm font-bold hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                                    >
+                                        {autoLoading ? <Loader2 className="animate-spin" size={14} /> : <Cloud size={14} />}
+                                        {autoLoading ? '가져오는 중...' : '자동 가져오기'}
+                                    </button>
+                                </div>
+                                <p className="text-[10px] text-gray-500 mt-2">⚠️ 5분까지 걸릴 수 있습니다</p>
+                            </div>
+
+                            <div className="text-xs text-gray-400">또는</div>
+
                             <div className="w-full max-w-md p-8 bg-white rounded-sm border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-center hover:border-blue-500 hover:bg-blue-50 transition-colors cursor-pointer relative">
                                 <input
                                     type="file"
@@ -577,8 +655,8 @@ const ConsultationMigrationModal: React.FC<ConsultationMigrationModalProps> = ({
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 />
                                 <Upload className="text-gray-400 mb-4" size={48} />
-                                <h3 className="text-lg font-bold text-gray-900 mb-1">상담 내역 엑셀 업로드</h3>
-                                <p className="text-sm text-gray-500 mb-4">MakeEdu에서 내려받은 엑셀 파일(.xls, .xlsx)을 업로드하세요.</p>
+                                <h3 className="text-lg font-bold text-gray-900 mb-1">엑셀 파일 직접 업로드</h3>
+                                <p className="text-sm text-gray-500 mb-4">기존 방식: 메이크에듀에서 내려받은 엑셀 파일(.xls, .xlsx)을 업로드</p>
                                 <button className="px-4 py-2 bg-primary text-white rounded-sm text-sm font-medium">
                                     파일 선택하기
                                 </button>

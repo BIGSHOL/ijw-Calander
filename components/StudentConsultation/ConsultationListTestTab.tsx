@@ -1,7 +1,7 @@
 // 메이크에듀 상담내역 테스트 조회 + 매칭 + DB 저장 (관리자용)
 import React, { useState, useMemo } from 'react';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { collection, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, writeBatch } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { Loader2, Download, AlertCircle, CheckCircle2, Save, AlertTriangle } from 'lucide-react';
 import { UserProfile, UnifiedStudent } from '../../types';
@@ -195,6 +195,7 @@ const ConsultationListTestTab: React.FC<Props> = ({ currentUser }) => {
 
             const colRef = collection(db, 'student_consultations');
             const writes: { docId: string; data: any }[] = [];
+            const now = Date.now();
 
             for (const [groupKey, rows] of groupSeq) {
                 rows.forEach((row, seq) => {
@@ -216,8 +217,8 @@ const ConsultationListTestTab: React.FC<Props> = ({ currentUser }) => {
                         followUpDone: false,
                         createdBy: 'makeedu_test_sync',
                         migrationSource: 'MakeEdu_HtmlXls',
-                        createdAt: serverTimestamp(),
-                        updatedAt: serverTimestamp(),
+                        createdAt: now,
+                        updatedAt: now,
                     };
                     writes.push({ docId, data });
                 });
