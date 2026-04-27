@@ -217,44 +217,56 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
         }
 
         // ===== 다른 반으로 이동 (기존 로직 + attendanceDays 반영) =====
-        // ref에서 최신 localClasses 읽기 (stale closure 방지)
-        const currentLocalClasses = localClassesRef.current;
-        const fromClass = currentLocalClasses.find(c => c.id === fromClassId);
-        const toClass = currentLocalClasses.find(c => c.id === toClassId);
-        if (!fromClass || !toClass) return;
-
-        const movingStudent = fromClass.studentList?.find(s => s.id === studentId);
-        if (!fromClass.studentIds?.includes(studentId) && !movingStudent) return;
-
         const newAttendanceDays = toZone === 'common' ? [] : [toZone];
 
-        setLocalClasses(prev => prev.map(cls => {
-            if (cls.id === fromClassId) {
-                // 이전 위치: 학생 제거하지 않고 유지 (취소선으로 표시됨)
-                return cls;
-            }
-            if (cls.id === toClassId) {
-                const newIds = [...(cls.studentIds || [])];
-                if (!newIds.includes(studentId)) {
-                    newIds.push(studentId);
-                }
-                const newStudentList = [...(cls.studentList || [])];
-                if (movingStudent && !newStudentList.some(s => s.id === studentId)) {
-                    newStudentList.push({ ...movingStudent, attendanceDays: newAttendanceDays });
-                }
-                return { ...cls, studentIds: newIds, studentList: newStudentList };
-            }
-            return cls;
-        }));
+        // 검증과 업데이트를 prev 기반으로 수행 (ref stale 방지).
+        // 연속 이동(A→B→C)에서 첫 setLocalClasses 커밋 전에 두 번째 드롭이 들어오면
+        // localClassesRef가 stale → moving=undefined → studentList 누락되는 버그 방지.
+        let dropApplied = false;
+        setLocalClasses(prev => {
+            const fromCls = prev.find(c => c.id === fromClassId);
+            const toCls = prev.find(c => c.id === toClassId);
+            if (!fromCls || !toCls) return prev;
 
-        setPendingMoves(prev => [...prev, {
-            studentId,
-            fromClassId,
-            toClassId,
-            fromZone,
-            toZone,
-            student: { id: studentId } as TimetableStudent
-        }]);
+            const moving = fromCls.studentList?.find(s => s.id === studentId);
+            if (!fromCls.studentIds?.includes(studentId) && !moving) return prev;
+
+            dropApplied = true;
+            return prev.map(cls => {
+                if (cls.id === fromClassId) {
+                    // 이전 위치: 학생 제거하지 않고 유지 (취소선으로 표시됨)
+                    return cls;
+                }
+                if (cls.id === toClassId) {
+                    const newIds = [...(cls.studentIds || [])];
+                    if (!newIds.includes(studentId)) {
+                        newIds.push(studentId);
+                    }
+                    const newStudentList = [...(cls.studentList || [])];
+                    if (!newStudentList.some(s => s.id === studentId)) {
+                        // moving 없을 때도 최소 객체로 push — 도착지 학생명/하이라이트 보장
+                        newStudentList.push(
+                            moving
+                                ? { ...moving, attendanceDays: newAttendanceDays }
+                                : { id: studentId, attendanceDays: newAttendanceDays } as TimetableStudent
+                        );
+                    }
+                    return { ...cls, studentIds: newIds, studentList: newStudentList };
+                }
+                return cls;
+            });
+        });
+
+        if (dropApplied) {
+            setPendingMoves(prev => [...prev, {
+                studentId,
+                fromClassId,
+                toClassId,
+                fromZone,
+                toZone,
+                student: { id: studentId } as TimetableStudent
+            }]);
+        }
         draggingStudentRef.current = null;
         setDraggingStudent(null);
     }, []);
@@ -528,51 +540,62 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
     const handleMultiDrop = useCallback((studentIds: string[], fromClassId: string, toClassId: string, toZone: DragZone = 'common') => {
         if (fromClassId === toClassId) return;
 
-        const currentLocalClasses = localClassesRef.current;
-        const fromClass = currentLocalClasses.find(c => c.id === fromClassId);
-        const toClass = currentLocalClasses.find(c => c.id === toClassId);
-        if (!fromClass || !toClass) return;
-
         const newAttendanceDays = toZone === 'common' ? [] : [toZone];
 
-        // 이동할 학생들 필터링
-        const movingStudents = studentIds
-            .map(sid => fromClass.studentList?.find(s => s.id === sid))
-            .filter(Boolean) as any[];
-        if (movingStudents.length === 0) return;
+        // 검증/업데이트를 prev 기반으로 (ref stale 방지). 연속 이동 시 누락되던 버그 대응.
+        let appliedIds: string[] = [];
+        setLocalClasses(prev => {
+            const fromCls = prev.find(c => c.id === fromClassId);
+            const toCls = prev.find(c => c.id === toClassId);
+            if (!fromCls || !toCls) return prev;
 
-        // Optimistic UI 업데이트 (출발지 학생 유지 — 취소선으로 표시)
-        setLocalClasses(prev => prev.map(cls => {
-            if (cls.id === fromClassId) {
-                // 출발지: 학생 유지 (취소선 표시용)
+            // 출발지에 존재하는 학생만 이동 (studentList 또는 studentIds 기준)
+            const validIds = studentIds.filter(sid =>
+                fromCls.studentList?.some(s => s.id === sid) ||
+                fromCls.studentIds?.includes(sid)
+            );
+            if (validIds.length === 0) return prev;
+
+            appliedIds = validIds;
+
+            return prev.map(cls => {
+                if (cls.id === fromClassId) {
+                    // 출발지: 학생 유지 (취소선 표시용)
+                    return cls;
+                }
+                if (cls.id === toClassId) {
+                    const newIds = [...(cls.studentIds || [])];
+                    const newStudentList = [...(cls.studentList || [])];
+                    validIds.forEach(sid => {
+                        if (!newIds.includes(sid)) newIds.push(sid);
+                        if (!newStudentList.some((s: any) => s.id === sid)) {
+                            const moving = fromCls.studentList?.find(s => s.id === sid);
+                            newStudentList.push(
+                                moving
+                                    ? { ...moving, attendanceDays: newAttendanceDays }
+                                    : { id: sid, attendanceDays: newAttendanceDays } as TimetableStudent
+                            );
+                        }
+                    });
+                    return { ...cls, studentIds: newIds, studentList: newStudentList };
+                }
                 return cls;
-            }
-            if (cls.id === toClassId) {
-                const newIds = [...(cls.studentIds || [])];
-                const newStudentList = [...(cls.studentList || [])];
-                movingStudents.forEach(ms => {
-                    if (!newIds.includes(ms.id)) newIds.push(ms.id);
-                    if (!newStudentList.some((s: any) => s.id === ms.id)) {
-                        newStudentList.push({ ...ms, attendanceDays: newAttendanceDays });
-                    }
-                });
-                return { ...cls, studentIds: newIds, studentList: newStudentList };
-            }
-            return cls;
-        }));
+            });
+        });
 
-        // 각 학생에 대해 pendingMove 추가
-        setPendingMoves(prev => [
-            ...prev,
-            ...movingStudents.map(ms => ({
-                studentId: ms.id,
-                fromClassId,
-                toClassId,
-                fromZone: 'common' as DragZone,
-                toZone,
-                student: { id: ms.id } as TimetableStudent
-            }))
-        ]);
+        if (appliedIds.length > 0) {
+            setPendingMoves(prev => [
+                ...prev,
+                ...appliedIds.map(sid => ({
+                    studentId: sid,
+                    fromClassId,
+                    toClassId,
+                    fromZone: 'common' as DragZone,
+                    toZone,
+                    student: { id: sid } as TimetableStudent
+                }))
+            ]);
+        }
 
         setDragOverClassId(null);
     }, []);
