@@ -218,6 +218,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
 
         // ===== 다른 반으로 이동 (기존 로직 + attendanceDays 반영) =====
         const newAttendanceDays = toZone === 'common' ? [] : [toZone];
+        const todayKey = formatDateKey(new Date());
 
         // 검증과 업데이트를 prev 기반으로 수행 (ref stale 방지).
         // 연속 이동(A→B→C)에서 첫 setLocalClasses 커밋 전에 두 번째 드롭이 들어오면
@@ -244,12 +245,13 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                     }
                     const newStudentList = [...(cls.studentList || [])];
                     if (!newStudentList.some(s => s.id === studentId)) {
-                        // 반이동 시 대기/배정예정 상태는 해제 — 도착지에서 재원생으로 표시되어야 함.
+                        // 반이동 시 대기/배정예정 상태는 해제 + enrollmentDate를 오늘로 갱신 →
+                        // 도착지의 미래 입학일 필터를 통과하여 재원생 섹션에 표시(보라 하이라이트).
                         // moving 없을 때도 최소 객체로 push (도착지 학생명/하이라이트 보장).
                         newStudentList.push(
                             moving
-                                ? { ...moving, attendanceDays: newAttendanceDays, onHold: false, isScheduled: false }
-                                : { id: studentId, attendanceDays: newAttendanceDays } as TimetableStudent
+                                ? { ...moving, attendanceDays: newAttendanceDays, onHold: false, isScheduled: false, enrollmentDate: todayKey }
+                                : { id: studentId, attendanceDays: newAttendanceDays, enrollmentDate: todayKey } as TimetableStudent
                         );
                     }
                     return { ...cls, studentIds: newIds, studentList: newStudentList };
@@ -543,6 +545,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
         if (fromClassId === toClassId) return;
 
         const newAttendanceDays = toZone === 'common' ? [] : [toZone];
+        const todayKey = formatDateKey(new Date());
 
         // 검증/업데이트를 prev 기반으로 (ref stale 방지). 연속 이동 시 누락되던 버그 대응.
         let appliedIds: string[] = [];
@@ -572,11 +575,11 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                         if (!newIds.includes(sid)) newIds.push(sid);
                         if (!newStudentList.some((s: any) => s.id === sid)) {
                             const moving = fromCls.studentList?.find(s => s.id === sid);
-                            // 반이동 시 대기/배정예정 상태는 해제 — 도착지에서 재원생으로 표시
+                            // 반이동 시 대기/배정예정 해제 + enrollmentDate를 오늘로 → 도착지 재원생 섹션 표시
                             newStudentList.push(
                                 moving
-                                    ? { ...moving, attendanceDays: newAttendanceDays, onHold: false, isScheduled: false }
-                                    : { id: sid, attendanceDays: newAttendanceDays } as TimetableStudent
+                                    ? { ...moving, attendanceDays: newAttendanceDays, onHold: false, isScheduled: false, enrollmentDate: todayKey }
+                                    : { id: sid, attendanceDays: newAttendanceDays, enrollmentDate: todayKey } as TimetableStudent
                             );
                         }
                     });
