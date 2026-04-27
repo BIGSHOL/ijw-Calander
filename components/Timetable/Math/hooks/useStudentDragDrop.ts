@@ -379,7 +379,11 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                     const isChanged = sortedExisting.length !== sortedNew.length ||
                         sortedExisting.some((d: string, i: number) => d !== sortedNew[i]);
 
-                    if (!isChanged) continue;
+                    // 퇴원생 복원은 attendanceDays 동일해도 진행해야 함
+                    //  - 퇴원: endDate/withdrawalDate 존재 → 같은 반 common 으로 드래그 시 newDays=[]==existingDays=[] → 'unchanged' 로 잘못 스킵됨
+                    //  - 이 경우엔 enrollment 분리(아래 split)로 진행해야 새 enrollment 가 active 로 생성됨
+                    const isWithdrawnEnrollment = !!(existingData?.endDate || existingData?.withdrawalDate);
+                    if (!isChanged && !isWithdrawnEnrollment) continue;
 
                     // 예정일이 있으면 해당 날짜 사용, 없으면 오늘
                     const effectiveDate = move.scheduledDate || defaultToday;
