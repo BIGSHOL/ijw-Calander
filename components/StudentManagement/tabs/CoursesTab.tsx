@@ -273,6 +273,10 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
       .filter(enrollment => {
         // 취소된 예약 제외 (cancel ≠ delete; 데이터 보존 + restore 가능)
         if ((enrollment as any).cancelledAt) return false;
+        // 모순 record 가드 — startDate > endDate 인 깨진 record 는 어디에도 표시 안 함
+        const _sd = getStartDate(enrollment);
+        const _ed = getEndDate(enrollment);
+        if (_sd && _ed && _sd > _ed) return false;
         // endDate가 없거나 오늘 이후이면 아직 수강중, startDate가 오늘 이전이거나 없는 것
         const endDate = getEndDate(enrollment);
         const hasEnded = endDate ? endDate < today : false; // 종료일이 오늘 이전이면 종료
@@ -352,6 +356,10 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
       .filter(enrollment => {
         // 취소된 예약 제외 (cancel ≠ delete; 데이터 보존 + restore 가능)
         if ((enrollment as any).cancelledAt) return false;
+        // 모순 record 가드 — startDate > endDate 인 깨진 record 는 어디에도 표시 안 함
+        const _sd = getStartDate(enrollment);
+        const _ed = getEndDate(enrollment);
+        if (_sd && _ed && _sd > _ed) return false;
         // endDate가 없거나 오늘 이후이고, startDate가 미래인 것만
         const endDate = getEndDate(enrollment);
         const hasEnded = endDate ? endDate < today : false;
@@ -792,6 +800,10 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
       .filter(enrollment => {
         // 취소된 예약 제외 — 지난 수업은 "실제 시작했다 끝난 것" 만
         if ((enrollment as any).cancelledAt) return false;
+        // 모순 record 가드 — 미래 시작 + 과거 종료 같은 깨진 record 는 지난 수업에 들어오면 안 됨
+        const _sd = getStartDate(enrollment);
+        const _ed = getEndDate(enrollment);
+        if (_sd && _ed && _sd > _ed) return false;
         // 종료일이 "오늘 이전"인 것만 지난 수업으로 분류.
         // endDate === today는 "오늘까지 등원"을 의미하므로 오늘은 여전히 수강 중.
         // (수강 중 필터와 상호배타적으로 맞추기 위함 — 중복 노출 버그 방지)

@@ -73,6 +73,12 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                 if (!subjects.includes(enrollment.subject)) return;
                 // 취소된 예약은 활성/종료 어디에도 카운트 안 함 (반이동 감지 정확성을 위해)
                 if (enrollment.cancelledAt) return;
+                // 모순 record 가드 — startDate > endDate 인 깨진 record 는 무시
+                {
+                    const _s = convertTimestampToDate(enrollment.enrollmentDate || enrollment.startDate);
+                    const _e = convertTimestampToDate(enrollment.withdrawalDate || enrollment.endDate);
+                    if (_s && _e && _s > _e) return;
+                }
 
                 const className = enrollment.className as string;
                 if (!className) return;
@@ -125,6 +131,12 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                 if (!subjects.includes(enrollment.subject)) return;
                 // 취소된 예약은 시간표에 표시하지 않음 (학생 카드/대기 모두)
                 if (enrollment.cancelledAt) return;
+                // 모순 record 가드 — startDate > endDate 인 깨진 record 는 시간표에 표시 안 함
+                {
+                    const _s = convertTimestampToDate(enrollment.enrollmentDate || enrollment.startDate);
+                    const _e = convertTimestampToDate(enrollment.withdrawalDate || enrollment.endDate);
+                    if (_s && _e && _s > _e) return;
+                }
 
                 const rawClassName = enrollment.className as string;
                 if (!rawClassName) return;
