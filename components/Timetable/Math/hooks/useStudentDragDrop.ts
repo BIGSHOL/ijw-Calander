@@ -30,6 +30,12 @@ export interface PendingMove {
     toZone: DragZone;
     student: TimetableStudent;
     scheduledDate?: string;  // 'YYYY-MM-DD' 예정일 (undefined = 오늘 즉시 이동)
+    /**
+     * 출발지가 퇴원 섹션이었음을 명시.
+     * 같은 반 + 같은 zone(common→common) 으로 되돌아온 것처럼 보이는 dedup 가드를 우회하기 위함.
+     * (퇴원생 복원은 zone 동일해도 enrollment split 으로 active 새로 만들어야 함)
+     */
+    isWithdrawn?: boolean;
 }
 
 export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
@@ -211,7 +217,8 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                 toClassId,
                 fromZone,
                 toZone,
-                student: { id: studentId } as TimetableStudent
+                student: { id: studentId } as TimetableStudent,
+                isWithdrawn,
             }]);
             draggingStudentRef.current = null;
             setDraggingStudent(null);
@@ -283,7 +290,7 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
         try {
             // 같은 학생의 여러 이동을 최종 결과로 압축
             // A→B, B→C 이동이 있으면 최종적으로 A→C만 처리
-            const finalMoves = new Map<string, { fromClassId: string; toClassId: string; fromZone: DragZone; toZone: DragZone; scheduledDate?: string }>();
+            const finalMoves = new Map<string, { fromClassId: string; toClassId: string; fromZone: DragZone; toZone: DragZone; scheduledDate?: string; isWithdrawn?: boolean }>();
             pendingMoves.forEach(move => {
                 const existing = finalMoves.get(move.studentId);
                 if (existing) {
@@ -291,20 +298,24 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                     existing.toClassId = move.toClassId;
                     existing.toZone = move.toZone;
                     existing.scheduledDate = move.scheduledDate;
+                    // 출발이 한 번이라도 퇴원이면 복원 처리 보존
+                    if (move.isWithdrawn) existing.isWithdrawn = true;
                 } else {
                     finalMoves.set(move.studentId, {
                         fromClassId: move.fromClassId,
                         toClassId: move.toClassId,
                         fromZone: move.fromZone,
                         toZone: move.toZone,
-                        scheduledDate: move.scheduledDate
+                        scheduledDate: move.scheduledDate,
+                        isWithdrawn: move.isWithdrawn,
                     });
                 }
             });
 
             // 같은 반 + 같은 zone으로 되돌아온 경우 제거 (A→B→A, 월만→목만→월만)
+            // 단, 퇴원생 복원(common→common 등) 은 zone 동일해도 처리 필요 → 예외
             for (const [studentId, move] of finalMoves) {
-                if (move.fromClassId === move.toClassId && move.fromZone === move.toZone) {
+                if (move.fromClassId === move.toClassId && move.fromZone === move.toZone && !move.isWithdrawn) {
                     finalMoves.delete(studentId);
                 }
             }
