@@ -689,7 +689,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     // 배정 예정 취소 - onCancelScheduledEnrollment prop을 사용
     // (handleCancelScheduledEnrollment는 TimetableManager에서 정의하여 prop으로 전달)
 
-    const handleGridDragStart = useCallback((e: React.DragEvent, sId: string, cId: string, zone?: string) => {
+    const handleGridDragStart = useCallback((e: React.DragEvent, sId: string, cId: string, zone?: string, isWithdrawn?: boolean) => {
         if (isScenarioMode) {
             // 예정일 이동이 걸린 학생은 시뮬레이션에서 드래그 차단
             const scheduledDate = scheduledStudentDates?.get(sId);
@@ -698,12 +698,16 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                 alert(`이 학생은 반이동 예정(${scheduledDate})이 있습니다.\n실시간 모드에서 예정을 취소한 후 시뮬레이션에서 이동해주세요.`);
                 return;
             }
+            // 시뮬레이션 모드에서도 퇴원생은 cross-class 이동 차단을 위해 dataTransfer 에 표시
+            if (isWithdrawn) e.dataTransfer.setData('isWithdrawn', '1');
             e.dataTransfer.setData('studentId', sId);
             e.dataTransfer.setData('fromClassId', cId);
             if (zone) e.dataTransfer.setData('fromZone', zone);
             e.dataTransfer.effectAllowed = 'move';
         } else if (canEditMath) {
-            handleDragStart(e, sId, cId, zone);
+            // 5번째 인자(isWithdrawn) 를 useStudentDragDrop.handleDragStart 까지 그대로 전파
+            // — 누락 시 dragInfo 에 isWithdrawn 안 들어가서 cross-class 차단 로직 동작 안 함
+            handleDragStart(e, sId, cId, zone, isWithdrawn);
         }
     }, [isScenarioMode, canEditMath, handleDragStart, scheduledStudentDates]);
 
