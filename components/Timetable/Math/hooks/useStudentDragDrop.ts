@@ -5,6 +5,7 @@ import { db } from '../../../../firebaseConfig';
 import { TimetableClass, TimetableStudent } from '../../../../types';
 import { formatDateKey } from '../../../../utils/dateUtils';
 import { logTimetableChange } from '../../../../hooks/useTimetableLog';
+import { syncStudentStatus } from '../../../../utils/studentStatusSync';
 
 // 'common' = 모든 요일 등원, 특정 요일 문자열(예: '월', '목') = 해당 요일만 등원
 export type DragZone = 'common' | string;
@@ -495,6 +496,16 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
             }
 
             await batch.commit();
+
+            // 학생 status 동기화 — enrollment 만 바꾸고 student.status 가 그대로면
+            // 퇴원생을 재학생으로 복원해도 student 본인은 여전히 'withdrawn' 으로 남아
+            // 퇴원 드롭존/학생 리스트 등에서 비활성으로 취급됨.
+            // syncStudentStatus 가 활성 enrollment 존재 시 'active' 로 자동 복구함.
+            await Promise.all(
+                Array.from(finalMoves.keys()).map(sid =>
+                    syncStudentStatus(sid).catch(err => console.error('[syncStudentStatus]', sid, err))
+                )
+            );
 
             // 로그 기록: 각 학생 이동 기록
             for (const [studentId, move] of finalMoves) {
