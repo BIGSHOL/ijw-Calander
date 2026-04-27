@@ -179,8 +179,9 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
             return;
         }
 
-        // 같은 반 + 같은 zone → 무시
-        if (fromClassId === toClassId && fromZone === toZone) {
+        // 같은 반 + 같은 zone → 무시 (활성 학생 한정)
+        // 퇴원생은 zone 동일해도 복원 필요 → isWithdrawn 면 통과
+        if (fromClassId === toClassId && fromZone === toZone && !isWithdrawn) {
             draggingStudentRef.current = null;
             setDraggingStudent(null);
             return;
