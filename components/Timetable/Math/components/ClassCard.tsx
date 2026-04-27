@@ -391,6 +391,16 @@ const ClassCard: React.FC<ClassCardProps> = ({
         return [name.slice(0, idx), name.slice(idx + 1)];
     }, [cls.className]);
 
+    // pendingMoveFromMap을 flatten한 set — 학생이 어느 반에서든 이동 대기 중인지 체크용.
+    // 같은 학생이 여러 반에 등록되어 있을 때(active 한 반 + 다른 반 대기 섹션 노출) 대기 섹션
+    // 위치에서도 미리보기(취소선)를 보여주기 위함.
+    const allPendingFromIds = useMemo(() => {
+        if (!pendingMoveFromMap || pendingMoveFromMap.size === 0) return null;
+        const s = new Set<string>();
+        pendingMoveFromMap.forEach(ids => ids.forEach(id => s.add(id)));
+        return s;
+    }, [pendingMoveFromMap]);
+
     const [showScheduleTooltip, setShowScheduleTooltip] = useState(false);
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
     const headerRef = useRef<HTMLDivElement>(null);
@@ -1474,10 +1484,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     if (sg && sg !== '-') text += `/${sg}`;
                                                 }
                                                 const tooltipText = s.enrollmentDate ? `예정일: ${s.enrollmentDate}` : undefined;
+                                                const isMovingFromAny = !!allPendingFromIds?.has(s.id);
                                                 return (
                                                     <li
                                                         key={s.id}
-                                                        className={`${fontSizeClass} leading-[1.3] bg-amber-50 text-amber-800 px-0.5 py-0 overflow-hidden whitespace-nowrap cursor-pointer hover:bg-amber-100 transition-colors`}
+                                                        className={`${fontSizeClass} leading-[1.3] px-0.5 py-0 overflow-hidden whitespace-nowrap cursor-pointer transition-colors ${isMovingFromAny ? '!bg-gray-200 !text-gray-400 line-through opacity-60' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'}`}
                                                         title={tooltipText}
                                                         onClick={(e) => {
                                                             if (onStudentClick) {
@@ -1674,10 +1685,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                 }
                                                 const tooltipText = s.enrollmentDate ? `예정일: ${s.enrollmentDate}` : undefined;
                                                 const isScheduledStudent = !!(s as any).isScheduled;
+                                                const isMovingFromAny = !!allPendingFromIds?.has(s.id);
                                                 return (
                                                     <li
                                                         key={s.id}
-                                                        className={`${fontSizeClass} leading-[1.3] bg-amber-50 text-amber-800 px-0.5 py-0 overflow-hidden whitespace-nowrap cursor-pointer hover:bg-amber-100 transition-colors flex items-center group`}
+                                                        className={`${fontSizeClass} leading-[1.3] px-0.5 py-0 overflow-hidden whitespace-nowrap cursor-pointer transition-colors flex items-center group ${isMovingFromAny ? '!bg-gray-200 !text-gray-400 line-through opacity-60' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'}`}
                                                         title={tooltipText}
                                                         onClick={(e) => {
                                                             if (onStudentClick) {
