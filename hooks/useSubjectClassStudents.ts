@@ -71,6 +71,8 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
 
             student.enrollments.forEach((enrollment: any) => {
                 if (!subjects.includes(enrollment.subject)) return;
+                // 취소된 예약은 활성/종료 어디에도 카운트 안 함 (반이동 감지 정확성을 위해)
+                if (enrollment.cancelledAt) return;
 
                 const className = enrollment.className as string;
                 if (!className) return;
@@ -121,6 +123,8 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
 
             student.enrollments.forEach((enrollment: any) => {
                 if (!subjects.includes(enrollment.subject)) return;
+                // 취소된 예약은 시간표에 표시하지 않음 (학생 카드/대기 모두)
+                if (enrollment.cancelledAt) return;
 
                 const rawClassName = enrollment.className as string;
                 if (!rawClassName) return;
@@ -208,10 +212,11 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                     enrollmentDate: startDate,
                     // 기준일 기준으로 종료된 경우만 withdrawalDate 표시
                     withdrawalDate: hasEndDate ? (withdrawalDate || endDate) : undefined,
-                    // 이동일 취소(soft-delete) 후에도 startDate 가 미래로 남아있는 모순 enrollment 는 대기에서 제외.
-                    //  - CoursesTab.handleRemoveEnrollment 가 endDate=today 만 set 하고 startDate 는 미래 그대로 둠
-                    //  - 시간표 측은 startDate 만 보고 대기 분류했었음 → endDate 도 같이 보도록 보강
-                    onHold: (isScheduled && !hasEndDate) || enrollment.onHold,
+                    // 대기 분류는 다음 모두 만족할 때만:
+                    //  - isScheduled (startDate 미래)
+                    //  - !hasEndDate (종료 안 됨)
+                    //  - !cancelledAt (예약 취소 안 됨; cancel ≠ delete 정책으로 데이터는 보존되지만 시간표/배정예정에서는 빠짐)
+                    onHold: (isScheduled && !hasEndDate && !enrollment.cancelledAt) || enrollment.onHold,
                     attendanceDays: enrollment.attendanceDays || [],
                     isScheduled,
                     isTransferred: hasActiveInOtherClass,

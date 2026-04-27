@@ -24,6 +24,14 @@ export interface Enrollment {
   onHold?: boolean;  // 일시정지 여부
   isScheduled?: boolean; // 배정 예정 (미래 시작일)
 
+  // 예약 취소 (Cancel ≠ Delete)
+  // - 미래 startDate 인 enrollment 의 X 클릭 시 endDate 대신 set
+  // - 모든 read-side 필터(scheduledEnrollments, onHold, 시간표 대기 등)는 cancelledAt 있는 record 제외
+  // - 복원(restore)은 단순히 cancelledAt 필드 제거
+  cancelledAt?: string;     // YYYY-MM-DD — 예약 취소된 날짜
+  cancelledBy?: string;     // 취소한 사용자 (audit)
+  cancelReason?: string;    // 취소 사유 메모 (옵션)
+
   // Migration metadata
   migrated?: boolean;
   migratedAt?: string;

@@ -1,6 +1,7 @@
 ﻿import React, { useState, useMemo, lazy, Suspense } from 'react';
 import { UnifiedStudent, UserProfile } from '../../../types';
-import { BookOpen, Plus, User, X, Loader2, Users, Trash2, ChevronDown, Calendar } from 'lucide-react';
+import { BookOpen, Plus, User, X, Loader2, Users, Trash2, ChevronDown, Calendar, RotateCcw } from 'lucide-react';
+import { restoreCancelledEnrollment } from '../../../utils/classMove';
 
 const StudentTimetableModal = lazy(() => import('../StudentTimetableModal'));
 import AssignClassModal from '../AssignClassModal';
@@ -229,6 +230,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
   const [showCurrentClasses, setShowCurrentClasses] = useState(true);
   const [showScheduledClasses, setShowScheduledClasses] = useState(true);
   const [showCompletedClasses, setShowCompletedClasses] = useState(true);
+  const [showCancelledClasses, setShowCancelledClasses] = useState(false);
+  const [restoringEnrollmentId, setRestoringEnrollmentId] = useState<string | null>(null);
   const { refreshStudents } = useStudents();
   const { data: teachers = [], isLoading: loadingTeachers } = useTeachers();
   const { data: allClasses = [] } = useClasses();
@@ -268,6 +271,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
     (student.enrollments || [])
       .filter(enrollment => {
+        // 취소된 예약 제외 (cancel ≠ delete; 데이터 보존 + restore 가능)
+        if ((enrollment as any).cancelledAt) return false;
         // endDate가 없거나 오늘 이후이면 아직 수강중, startDate가 오늘 이전이거나 없는 것
         const endDate = getEndDate(enrollment);
         const hasEnded = endDate ? endDate < today : false; // 종료일이 오늘 이전이면 종료
@@ -345,6 +350,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
     (student.enrollments || [])
       .filter(enrollment => {
+        // 취소된 예약 제외 (cancel ≠ delete; 데이터 보존 + restore 가능)
+        if ((enrollment as any).cancelledAt) return false;
         // endDate가 없거나 오늘 이후이고, startDate가 미래인 것만
         const endDate = getEndDate(enrollment);
         const hasEnded = endDate ? endDate < today : false;
@@ -566,6 +573,14 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
   };
 
   // 수업 배정 취소 (해당 학생의 enrollment만 삭제)
+  //
+  // 분기 정책 (Cancel ≠ Delete):
+  //  - 미래 startDate (배정 예정) → cancelledAt 플래그 set. endDate 손대지 않음.
+  //    "예약 무르기" 의미. 학생 데이터/이력 보존. 복원 가능.
+  //  - 과거/오늘 startDate (시작된 수업) → endDate=today (기존 soft-delete).
+  //    "여기까지 다녔음" 의미. 출결/수강료 등 이력 보존.
+  //
+  // 이로써 startDate(미래) > endDate(오늘) 모순 record 가 구조적으로 발생 불가.
   const handleRemoveEnrollment = async (group: GroupedEnrollment, e: React.MouseEvent) => {
     e.stopPropagation(); // 행 클릭 이벤트 전파 방지
 
@@ -578,12 +593,43 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
     try {
       const now = new Date();
-      const endDate = now.toISOString().split('T')[0]; // YYYY-MM-DD 형식
+      const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
 
       // 이미 종료된 enrollment(endDate 이전 날짜)는 건드리지 않음 — 과거 퇴원 기록 보호
       const shouldSkipAlreadyEnded = (data: Record<string, any>) => {
         const existingEnd = data.endDate || data.withdrawalDate;
-        return typeof existingEnd === 'string' && existingEnd < endDate;
+        return typeof existingEnd === 'string' && existingEnd < todayStr;
+      };
+
+      // 이미 취소된 예약은 재취소 안 함
+      const shouldSkipAlreadyCancelled = (data: Record<string, any>) => {
+        return typeof data.cancelledAt === 'string';
+      };
+
+      // enrollment 가 미래 시작 예약인지 판정
+      const isFutureReservation = (data: Record<string, any>) => {
+        const sd = data.startDate || data.enrollmentDate;
+        return typeof sd === 'string' && sd > todayStr;
+      };
+
+      // 단일 enrollment 처리 — 미래/시작됨에 따라 다른 update 적용
+      const processOne = async (docRef: ReturnType<typeof doc>, data: Record<string, any>) => {
+        if (shouldSkipAlreadyEnded(data) || shouldSkipAlreadyCancelled(data)) return;
+
+        if (isFutureReservation(data)) {
+          // 배정 예정 취소 = 예약 무르기. endDate 손대지 않음. startDate 도 그대로 (원래 의도 보존).
+          await updateDoc(docRef, {
+            cancelledAt: todayStr,
+            cancelledBy: currentUser?.uid || currentUser?.email || null,
+            updatedAt: new Date().toISOString(),
+          });
+        } else {
+          // 시작된 수업 종료 (기존 동작)
+          await updateDoc(docRef, {
+            endDate: todayStr,
+            updatedAt: new Date().toISOString(),
+          });
+        }
       };
 
       // 1. 저장된 enrollmentIds가 있으면 사용
@@ -591,12 +637,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         for (const enrollmentId of group.enrollmentIds) {
           const docRef = doc(db, `students/${student.id}/enrollments`, enrollmentId);
           const docSnap = await getDoc(docRef);
-          // 문서가 존재하는 경우에만 업데이트 (수동 삭제된 경우 스킵)
-          if (docSnap.exists() && !shouldSkipAlreadyEnded(docSnap.data())) {
-            await updateDoc(docRef, {
-              endDate: endDate,
-              updatedAt: new Date().toISOString(),
-            });
+          if (docSnap.exists()) {
+            await processOne(docRef, docSnap.data());
           }
         }
       } else {
@@ -619,12 +661,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           const ad = data.attendanceDays || [];
           const docSig = ad.length > 0 ? [...ad].sort().join(',') : '*';
           if (docSig !== groupSig) continue; // 다른 요일 그룹은 건너뜀
-          if (shouldSkipAlreadyEnded(data)) continue; // 이미 과거에 종료된 건 보호
-
-          await updateDoc(docSnap.ref, {
-            endDate: endDate,
-            updatedAt: new Date().toISOString(),
-          });
+          await processOne(docSnap.ref, data);
         }
       }
 
@@ -715,6 +752,37 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
     refreshStudents();
   };
 
+  // 취소된 예약 복원 — admin 전용 (선생님 실수 대비 안전망)
+  // classMove pair 가 있는 경우 restoreMove() 가 더 정확하지만,
+  // 단일 enrollment 복원도 cancelledAt 만 제거하면 즉시 활성으로 돌아옴.
+  const handleRestoreCancelled = async (enrollmentId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!canManageClassHistory) {
+      alert('취소된 예약을 복원할 권한이 없습니다.');
+      return;
+    }
+    if (!window.confirm('이 취소된 예약을 복원하시겠습니까? 학생이 다시 해당 반의 대기 상태로 돌아갑니다.')) return;
+
+    setRestoringEnrollmentId(enrollmentId);
+    try {
+      await restoreCancelledEnrollment(student.id, enrollmentId, currentUser?.uid || currentUser?.email || undefined);
+      // 캐시 갱신
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['students'], refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: ['classes'], refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: ['classStudents'], refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: ['englishClassStudents'], refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: ['mathClassStudents'], refetchType: 'all' }),
+      ]);
+      refreshStudents();
+    } catch (err) {
+      console.error('예약 복원 오류:', err);
+      alert('예약 복원에 실패했습니다.');
+    } finally {
+      setRestoringEnrollmentId(null);
+    }
+  };
+
   // 종료된 수업 목록 (enrollments에서 endDate가 있는 항목)
   // NOTE: 모든 useMemo/useEffect 훅은 early return 전에 호출되어야 함 (React 훅 규칙)
   const completedClasses = useMemo(() => {
@@ -722,6 +790,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
     (student.enrollments || [])
       .filter(enrollment => {
+        // 취소된 예약 제외 — 지난 수업은 "실제 시작했다 끝난 것" 만
+        if ((enrollment as any).cancelledAt) return false;
         // 종료일이 "오늘 이전"인 것만 지난 수업으로 분류.
         // endDate === today는 "오늘까지 등원"을 의미하므로 오늘은 여전히 수강 중.
         // (수강 중 필터와 상호배타적으로 맞추기 위함 — 중복 노출 버그 방지)
@@ -777,6 +847,41 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
     return Array.from(groups.values());
   }, [student.enrollments, today]);
+
+  // 취소된 예약 (cancelledAt 있는 enrollment) — admin 전용 섹션
+  // 그룹화 안 함: 각 enrollment 가 개별 record (취소 사유/시점이 다를 수 있음)
+  // 복원 시 정확히 그 record 를 되살려야 하므로 enrollment id 단위 표시
+  interface CancelledEntry {
+    id: string;
+    className: string;
+    subject: string;
+    staffId?: string;
+    startDate?: string;
+    cancelledAt: string;
+    cancelledBy?: string;
+    attendanceDays?: string[];
+    schedule?: string[];
+  }
+  const cancelledEnrollments = useMemo<CancelledEntry[]>(() => {
+    const list: CancelledEntry[] = [];
+    (student.enrollments || []).forEach((e: any) => {
+      if (!e.cancelledAt) return;
+      list.push({
+        id: e.id,
+        className: e.className,
+        subject: e.subject,
+        staffId: e.staffId,
+        startDate: getStartDate(e),
+        cancelledAt: e.cancelledAt,
+        cancelledBy: e.cancelledBy,
+        attendanceDays: e.attendanceDays,
+        schedule: e.schedule,
+      });
+    });
+    // 최근 취소순 정렬
+    list.sort((a, b) => (b.cancelledAt || '').localeCompare(a.cancelledAt || ''));
+    return list;
+  }, [student.enrollments]);
 
   // 로딩 중 early return (모든 훅 호출 이후)
   if (loadingTeachers) {
@@ -1391,6 +1496,82 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         </div>
         )}
       </div>
+
+      {/* 취소된 예약 섹션 — admin/master 전용. 선생님 실수 대비 안전망 */}
+      {canManageClassHistory && cancelledEnrollments.length > 0 && (
+        <div className="mt-4">
+          <div
+            className="flex items-center gap-2 mb-2 cursor-pointer"
+            onClick={() => setShowCancelledClasses(!showCancelledClasses)}
+          >
+            <h3 className="text-xs font-bold text-orange-700">취소된 예약</h3>
+            <span className="text-xs text-orange-700">
+              ({cancelledEnrollments.length}개)
+            </span>
+            <span className="text-xxs text-gray-500 bg-orange-50 px-1.5 py-0.5 rounded-sm border border-orange-100">
+              관리자 전용 · 복원 가능
+            </span>
+            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showCancelledClasses ? '' : 'rotate-180'}`} />
+          </div>
+          {showCancelledClasses && (
+            <div className="bg-white border border-orange-100 overflow-hidden">
+              <div className="flex items-center gap-2 px-2 py-1 bg-orange-50/60 border-b border-orange-100 text-xxs font-medium text-orange-800">
+                <span className="w-8 shrink-0">과목</span>
+                <span className="flex-1 min-w-0">수업명</span>
+                <span className="w-14 shrink-0">강사</span>
+                <span className="w-24 shrink-0 text-center">예정 시작일</span>
+                <span className="w-20 shrink-0 text-center">취소일</span>
+                <span className="w-5 shrink-0"></span>
+              </div>
+              {cancelledEnrollments.map((c) => {
+                const subjectColor = SUBJECT_COLORS[c.subject as keyof typeof SUBJECT_COLORS] || SUBJECT_COLORS.other;
+                const teacherName = getTeacherByIdOrName(c.staffId)?.name || c.staffId || '-';
+                const isRestoring = restoringEnrollmentId === c.id;
+                return (
+                  <div
+                    key={`cancelled-${c.id}`}
+                    className="flex items-center gap-2 px-2 py-1.5 border-b border-orange-50 opacity-80"
+                  >
+                    <span
+                      className="w-8 shrink-0 text-micro px-1 py-0.5 rounded-sm font-semibold text-center"
+                      style={{ backgroundColor: subjectColor.bg, color: subjectColor.text }}
+                    >
+                      {SUBJECT_LABELS[c.subject as keyof typeof SUBJECT_LABELS]}
+                    </span>
+                    <span className="flex-1 min-w-0 text-xs text-primary-700 truncate">
+                      {c.className}
+                    </span>
+                    <div className="w-14 shrink-0 flex items-center gap-0.5">
+                      <User className="w-3 h-3 text-gray-400" />
+                      <span className="text-xxs text-primary-700 truncate">{teacherName}</span>
+                    </div>
+                    <span className="w-24 shrink-0 text-xxs text-blue-600 text-center font-medium">
+                      {c.startDate ? formatDate(c.startDate) : '-'}
+                    </span>
+                    <span className="w-20 shrink-0 text-xxs text-orange-600 text-center font-bold">
+                      {formatDate(c.cancelledAt)}
+                    </span>
+                    {!readOnly && (
+                      <button
+                        onClick={(e) => handleRestoreCancelled(c.id, e)}
+                        disabled={isRestoring}
+                        className="w-5 h-5 shrink-0 flex items-center justify-center text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-sm transition-colors disabled:opacity-50"
+                        title="이 취소된 예약을 복원 (학생 다시 대기로 돌아감)"
+                      >
+                        {isRestoring ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <RotateCcw className="w-3 h-3" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 수업 배정 모달 */}
       {isAssignModalOpen && (
