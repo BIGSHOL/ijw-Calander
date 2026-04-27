@@ -405,3 +405,116 @@ if (typeof window !== 'undefined' && import.meta.env.DEV) {
     (window as any).db = dbInstance;
 }
 
+// ======== 모순 enrollment record cleanup (admin/master 전용) ========
+// 사용자가 master/admin 으로 로그인된 브라우저 세션에서 호출.
+// Firestore rules 가 권한 체크 — 일반 사용자는 PERMISSION_DENIED 받음.
+// 사용 예: window.cleanupBrokenEnrollments() — dry-run, 결과만 표시
+//        window.cleanupBrokenEnrollments({ apply: true }) — 실제 적용
+import { writeBatch as _writeBatch, deleteField as _deleteField, doc as _doc } from "firebase/firestore";
+
+interface BrokenRecord {
+    studentId: string;
+    studentName: string;
+    enrollmentId: string;
+    className: string;
+    subject: string;
+    staffId: string | null;
+    start: string;
+    end: string;
+}
+
+async function cleanupBrokenEnrollments(opts: { apply?: boolean } = {}): Promise<{
+    found: number;
+    applied: number;
+    records: BrokenRecord[];
+}> {
+    const apply = !!opts.apply;
+    const today = new Date().toISOString().split('T')[0];
+    const fmtDate = (v: any): string => {
+        if (!v) return '-';
+        if (typeof v === 'string') return v;
+        if (v?.toDate) return v.toDate().toISOString().split('T')[0];
+        return String(v);
+    };
+
+    console.log(`🔍 모순 enrollment cleanup ${apply ? '(APPLY MODE)' : '(DRY-RUN)'} — 오늘=${today}`);
+    const studentsSnap = await getDocs(collection(dbInstance, 'students'));
+    console.log(`전체 학생: ${studentsSnap.size}명 스캔 중...`);
+
+    const broken: BrokenRecord[] = [];
+    for (const studentDoc of studentsSnap.docs) {
+        const studentId = studentDoc.id;
+        const studentName = studentDoc.data().name || '(이름없음)';
+        const enrollSnap = await getDocs(collection(dbInstance, 'students', studentId, 'enrollments'));
+        for (const e of enrollSnap.docs) {
+            const data: any = e.data();
+            const start = fmtDate(data.startDate || data.enrollmentDate);
+            const end = fmtDate(data.endDate || data.withdrawalDate);
+            if (start === '-' || end === '-') continue;
+            if (start <= end) continue;
+            if (data.cancelledAt) continue; // 이미 변환됨
+            broken.push({
+                studentId,
+                studentName,
+                enrollmentId: e.id,
+                className: data.className,
+                subject: data.subject,
+                staffId: data.staffId || null,
+                start,
+                end,
+            });
+        }
+    }
+
+    console.log(`📊 모순 record 발견: ${broken.length}개`);
+    if (broken.length === 0) {
+        console.log('✅ 청소할 record 없음');
+        return { found: 0, applied: 0, records: [] };
+    }
+
+    // 학생별 그룹 출력
+    const byStudent = new Map<string, { name: string; items: BrokenRecord[] }>();
+    for (const b of broken) {
+        if (!byStudent.has(b.studentId)) byStudent.set(b.studentId, { name: b.studentName, items: [] });
+        byStudent.get(b.studentId)!.items.push(b);
+    }
+    console.table(broken.map(b => ({
+        student: b.studentName,
+        subject: b.subject,
+        className: b.className,
+        start: b.start,
+        end: b.end,
+        teacher: b.staffId,
+    })));
+
+    if (!apply) {
+        console.log('💡 적용하려면: window.cleanupBrokenEnrollments({ apply: true })');
+        return { found: broken.length, applied: 0, records: broken };
+    }
+
+    let applied = 0;
+    for (const [sid, info] of byStudent) {
+        const batch = _writeBatch(dbInstance);
+        for (const b of info.items) {
+            const ref = _doc(dbInstance, 'students', sid, 'enrollments', b.enrollmentId);
+            batch.update(ref, {
+                cancelledAt: b.end,
+                cancelledBy: 'system-cleanup',
+                cancelReason: `일회성 cleanup: 모순 record (startDate ${b.start} > endDate ${b.end})`,
+                endDate: _deleteField(),
+                withdrawalDate: _deleteField(),
+                updatedAt: new Date().toISOString(),
+            });
+            applied += 1;
+        }
+        await batch.commit();
+        console.log(`  ✓ ${info.name} ${info.items.length}건`);
+    }
+    console.log(`✅ 총 ${applied}개 record 정리 완료`);
+    return { found: broken.length, applied, records: broken };
+}
+
+if (typeof window !== 'undefined') {
+    (window as any).cleanupBrokenEnrollments = cleanupBrokenEnrollments;
+}
+
