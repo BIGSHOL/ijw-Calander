@@ -208,7 +208,10 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                     enrollmentDate: startDate,
                     // 기준일 기준으로 종료된 경우만 withdrawalDate 표시
                     withdrawalDate: hasEndDate ? (withdrawalDate || endDate) : undefined,
-                    onHold: isScheduled || enrollment.onHold,
+                    // 이동일 취소(soft-delete) 후에도 startDate 가 미래로 남아있는 모순 enrollment 는 대기에서 제외.
+                    //  - CoursesTab.handleRemoveEnrollment 가 endDate=today 만 set 하고 startDate 는 미래 그대로 둠
+                    //  - 시간표 측은 startDate 만 보고 대기 분류했었음 → endDate 도 같이 보도록 보강
+                    onHold: (isScheduled && !hasEndDate) || enrollment.onHold,
                     attendanceDays: enrollment.attendanceDays || [],
                     isScheduled,
                     isTransferred: hasActiveInOtherClass,
