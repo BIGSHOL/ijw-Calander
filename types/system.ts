@@ -191,7 +191,7 @@ export type TabPermissionConfig = {
  *
  * 별도 처리되는 특수 탭:
  * - help: 모든 사용자 항상 허용
- * - attendance-test: master/admin 만 허용 (코드 레벨 강제)
+ * - attendance-test: admin 전용 (코드 레벨 강제. master 는 line 30 에서 통과)
  * - logs: master 전용 (DEFAULT_TAB_PERMISSIONS 로 처리)
  * - dashboard, calendar: 별도 permission 없이 DEFAULT 로 처리
  */
