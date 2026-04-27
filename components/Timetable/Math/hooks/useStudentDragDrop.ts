@@ -171,8 +171,9 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
         const { studentId, fromClassId, fromZone, isWithdrawn } = currentDragging;
 
         // 퇴원생은 다른 반으로 이동 불가 — 같은 반 내에서만 재원 섹션으로 복원 가능
-        // (handleDragOver 에서 cursor: not-allowed 로 1차 차단. 우회 드롭 시 silent reject)
+        // (handleDragOver 에서 1차 차단되지만 안전망)
         if (isWithdrawn && fromClassId !== toClassId) {
+            alert('퇴원 학생은 같은 반 내에서만 이동 가능합니다.\n다른 반으로 보내려면 먼저 해당 반에서 재원으로 복원한 뒤 이동하세요.');
             draggingStudentRef.current = null;
             setDraggingStudent(null);
             return;
