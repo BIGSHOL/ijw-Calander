@@ -1488,7 +1488,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                 return (
                                                     <li
                                                         key={s.id}
-                                                        className={`${fontSizeClass} leading-[1.3] px-0.5 py-0 overflow-hidden whitespace-nowrap cursor-pointer transition-colors ${isMovingFromAny ? '!bg-gray-200 !text-gray-400 line-through opacity-60' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'}`}
+                                                        draggable={canEdit}
+                                                        onDragStart={(e) => { if (canEdit) onDragStart(e, s.id, cls.id, 'common'); }}
+                                                        className={`${fontSizeClass} leading-[1.3] px-0.5 py-0 overflow-hidden whitespace-nowrap ${canEdit ? 'cursor-grab' : 'cursor-pointer'} transition-colors ${isMovingFromAny ? '!bg-gray-200 !text-gray-400 line-through opacity-60' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'}`}
                                                         title={tooltipText}
                                                         onClick={(e) => {
                                                             if (onStudentClick) {
@@ -1689,7 +1691,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                 return (
                                                     <li
                                                         key={s.id}
-                                                        className={`${fontSizeClass} leading-[1.3] px-0.5 py-0 overflow-hidden whitespace-nowrap cursor-pointer transition-colors flex items-center group ${isMovingFromAny ? '!bg-gray-200 !text-gray-400 line-through opacity-60' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'}`}
+                                                        draggable={canEdit}
+                                                        onDragStart={(e) => { if (canEdit) onDragStart(e, s.id, cls.id, 'common'); }}
+                                                        className={`${fontSizeClass} leading-[1.3] px-0.5 py-0 overflow-hidden whitespace-nowrap ${canEdit ? 'cursor-grab' : 'cursor-pointer'} transition-colors flex items-center group ${isMovingFromAny ? '!bg-gray-200 !text-gray-400 line-through opacity-60' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'}`}
                                                         title={tooltipText}
                                                         onClick={(e) => {
                                                             if (onStudentClick) {
