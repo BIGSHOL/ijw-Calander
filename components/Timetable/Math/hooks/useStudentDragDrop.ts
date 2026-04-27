@@ -13,6 +13,12 @@ export interface DraggingStudent {
     studentId: string;
     fromClassId: string;
     fromZone: DragZone;
+    /**
+     * 퇴원생 여부.
+     * - true 면 다른 반으로의 드래그앤드롭 차단 (cross-class restriction).
+     * - 같은 반 안에서 재원 섹션으로 이동만 허용 — 복원 의미.
+     */
+    isWithdrawn?: boolean;
 }
 
 export interface PendingMove {
@@ -63,8 +69,14 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
     // 동기적으로 올바른 데이터를 선택
     const effectiveClasses = pendingMoves.length === 0 ? initialClasses : localClasses;
 
-    const handleDragStart = useCallback((e: React.DragEvent, studentId: string, fromClassId: string, fromZone: DragZone = 'common') => {
-        const dragInfo = { studentId, fromClassId, fromZone };
+    const handleDragStart = useCallback((
+        e: React.DragEvent,
+        studentId: string,
+        fromClassId: string,
+        fromZone: DragZone = 'common',
+        isWithdrawn: boolean = false,
+    ) => {
+        const dragInfo = { studentId, fromClassId, fromZone, isWithdrawn };
         draggingStudentRef.current = dragInfo;  // 동기적 ref 업데이트 (stale closure 방지)
         setDraggingStudent(dragInfo);
         e.dataTransfer.effectAllowed = 'move';
@@ -84,6 +96,12 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
     }, []);
 
     const handleDragOver = useCallback((e: React.DragEvent, classId: string) => {
+        // 퇴원생을 다른 반으로 드롭 시도 → preventDefault 호출 안 함 → 브라우저가 not-allowed 커서 표시 + 드롭 자체 차단
+        const dragging = draggingStudentRef.current;
+        if (dragging?.isWithdrawn && dragging.fromClassId !== classId) {
+            e.dataTransfer.dropEffect = 'none';
+            return;
+        }
         e.preventDefault();
         setDragOverClassId(classId);
     }, []);
@@ -150,7 +168,16 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
         const currentDragging = draggingStudentRef.current;
         if (!currentDragging) return;
 
-        const { studentId, fromClassId, fromZone } = currentDragging;
+        const { studentId, fromClassId, fromZone, isWithdrawn } = currentDragging;
+
+        // 퇴원생은 다른 반으로 이동 불가 — 같은 반 내에서만 재원 섹션으로 복원 가능
+        // (handleDragOver 에서 1차 차단되지만 안전망)
+        if (isWithdrawn && fromClassId !== toClassId) {
+            alert('퇴원 학생은 같은 반 내에서만 이동 가능합니다.\n다른 반으로 보내려면 먼저 해당 반에서 재원으로 복원한 뒤 이동하세요.');
+            draggingStudentRef.current = null;
+            setDraggingStudent(null);
+            return;
+        }
 
         // 같은 반 + 같은 zone → 무시
         if (fromClassId === toClassId && fromZone === toZone) {

@@ -17,7 +17,7 @@ interface StudentItemProps {
     displayText: string;
     canEdit: boolean;
     onStudentClick?: (studentId: string) => void;
-    onDragStart: (e: React.DragEvent, studentId: string, classId: string, zone?: string) => void;
+    onDragStart: (e: React.DragEvent, studentId: string, classId: string, zone?: string, isWithdrawn?: boolean) => void;
     classId: string;
     zone?: string;  // 'common' | 특정 요일 (예: '월', '목')
     fontSizeClass: string;
@@ -220,7 +220,7 @@ interface ClassCardProps {
     canEdit: boolean;  // 수정 모드 여부 (true일 때 수업명 클릭하면 수업 상세 모달)
     isDragOver: boolean;
     onClick: (cls: TimetableClass) => void;  // 수업 상세 모달 열기 (수정 모드에서만)
-    onDragStart: (e: React.DragEvent, studentId: string, fromClassId: string, fromZone?: string) => void;
+    onDragStart: (e: React.DragEvent, studentId: string, fromClassId: string, fromZone?: string, isWithdrawn?: boolean) => void;
     onDragOver: (e: React.DragEvent, classId: string) => void;
     onDragLeave: (e: React.DragEvent) => void;
     onDrop: (e: React.DragEvent, toClassId: string, toZone?: string) => void;
@@ -1540,7 +1540,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     <li
                                                         key={s.id}
                                                         draggable={canEdit}
-                                                        onDragStart={(e) => { if (canEdit) onDragStart(e, s.id, cls.id, 'common'); }}
+                                                        onDragStart={(e) => { if (canEdit) onDragStart(e, s.id, cls.id, 'common', true); }}
                                                         className={`${fontSizeClass} leading-[1.3] bg-black text-white px-0.5 py-0 overflow-hidden whitespace-nowrap ${canEdit ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-700 transition-colors`}
                                                         title={tooltipText}
                                                         onClick={(e) => e.stopPropagation()}
@@ -1755,7 +1755,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     <li
                                                         key={s.id}
                                                         draggable={canEdit}
-                                                        onDragStart={(e) => { if (canEdit) onDragStart(e, s.id, cls.id, 'common'); }}
+                                                        onDragStart={(e) => { if (canEdit) onDragStart(e, s.id, cls.id, 'common', true); }}
                                                         className={`${fontSizeClass} leading-[1.3] bg-black text-white px-0.5 py-0 overflow-hidden whitespace-nowrap ${canEdit ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-700 transition-colors`}
                                                         title={s.withdrawalDate ? `${text} (퇴원: ${s.withdrawalDate})` : text}
                                                         onClick={(e) => e.stopPropagation()}

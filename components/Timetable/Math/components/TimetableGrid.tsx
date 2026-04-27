@@ -49,7 +49,7 @@ interface TimetableGridProps {
     // DnD
     dragOverClassId: string | null;
     onClassClick: (cls: TimetableClass) => void;
-    onDragStart: (e: React.DragEvent, studentId: string, fromClassId: string, fromZone?: string) => void;
+    onDragStart: (e: React.DragEvent, studentId: string, fromClassId: string, fromZone?: string, isWithdrawn?: boolean) => void;
     onDragOver: (e: React.DragEvent, classId: string) => void;
     onDragLeave: (e: React.DragEvent) => void;
     onDrop: (e: React.DragEvent, toClassId: string, toZone?: string) => void;
