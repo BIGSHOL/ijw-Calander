@@ -244,10 +244,11 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                     }
                     const newStudentList = [...(cls.studentList || [])];
                     if (!newStudentList.some(s => s.id === studentId)) {
-                        // moving 없을 때도 최소 객체로 push — 도착지 학생명/하이라이트 보장
+                        // 반이동 시 대기/배정예정 상태는 해제 — 도착지에서 재원생으로 표시되어야 함.
+                        // moving 없을 때도 최소 객체로 push (도착지 학생명/하이라이트 보장).
                         newStudentList.push(
                             moving
-                                ? { ...moving, attendanceDays: newAttendanceDays }
+                                ? { ...moving, attendanceDays: newAttendanceDays, onHold: false, isScheduled: false }
                                 : { id: studentId, attendanceDays: newAttendanceDays } as TimetableStudent
                         );
                     }
@@ -451,8 +452,9 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                         }
 
                         // 새 enrollment 생성 (attendanceDays 포함, isTransferred는 제거 - 실시간 계산으로 판단)
+                        // 반이동 시 onHold/isScheduled도 제거 — 도착지는 재원생으로 시작 (대기 → 재원 승격 등)
                         if (existingData) {
-                            const { endDate, withdrawalDate, isTransferred, ...preservedData } = existingData;
+                            const { endDate, withdrawalDate, isTransferred, onHold, isScheduled, ...preservedData } = existingData;
                             batch.set(newEnrollmentRef, {
                                 ...preservedData,
                                 classId: move.toClassId,
@@ -570,9 +572,10 @@ export const useStudentDragDrop = (initialClasses: TimetableClass[]) => {
                         if (!newIds.includes(sid)) newIds.push(sid);
                         if (!newStudentList.some((s: any) => s.id === sid)) {
                             const moving = fromCls.studentList?.find(s => s.id === sid);
+                            // 반이동 시 대기/배정예정 상태는 해제 — 도착지에서 재원생으로 표시
                             newStudentList.push(
                                 moving
-                                    ? { ...moving, attendanceDays: newAttendanceDays }
+                                    ? { ...moving, attendanceDays: newAttendanceDays, onHold: false, isScheduled: false }
                                     : { id: sid, attendanceDays: newAttendanceDays } as TimetableStudent
                             );
                         }
