@@ -283,6 +283,8 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                         grade: baseStudent.grade || '',
                         underline: enrollmentData.underline ?? baseStudent.underline ?? false,
                         enrollmentDate: classEnrollmentDate,
+                        // 학생의 같은 과목 전체 첫 입학일 — 신입 판정 기준 (ClassCard / TimetableHeader / IntegrationCard 가 사용)
+                        firstSubjectEnrollmentDate: enrollmentData.firstSubjectEnrollmentDate,
                         withdrawalDate: enrollmentData.withdrawalDate,
                         onHold: enrollmentData.onHold,
                         isMoved: false,
