@@ -5205,22 +5205,60 @@ async function scrapeMakeEduShuttleStudentsInternal() {
             logger.warn("[scrapeMakeEduShuttle] Could not set listSize, proceeding with default");
         }
 
-        // fromYm 강제 설정: 메이크에듀 기본값이 다음달일 수 있으므로 항상 명시적으로 변경
+        // fromYm/toYm 강제 설정: 메이크에듀 기본값이 다음달일 수 있으므로 항상 명시적으로 변경
         // - 11일 이후: 당월 (예: 202604)
-        // - 10일 이전: 전월 (예: 202603) → 전월 + 당월 동시 조회
-        const targetYMValue = needPrevMonth
+        // - 10일 이전: fromYm=전월, toYm=당월 → 전월+당월 동시 조회
+        const currentYMValue = `${kstYear}${String(kstMonth).padStart(2, '0')}`;       // 202604
+        const fromYMValue = needPrevMonth
             ? `${prevYear}${String(prevMonth).padStart(2, '0')}`     // 202603
-            : `${kstYear}${String(kstMonth).padStart(2, '0')}`;       // 202604
-        await page.evaluate((val) => {
-            const fromYm = document.querySelector('#fromYm');
-            if (fromYm) {
-                fromYm.value = val;
-                // 메이크에듀 폼이 onChange/onInput을 듣고 있을 수 있으므로 이벤트 발생
-                fromYm.dispatchEvent(new Event('change', { bubbles: true }));
-                fromYm.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-        }, targetYMValue);
-        logger.info(`[scrapeMakeEduShuttle] Set fromYm to ${targetYMValue} (${needPrevMonth ? '전월부터' : '당월'} 조회)`);
+            : currentYMValue;
+        const toYMValue = currentYMValue; // 종료월은 항상 당월
+
+        // 디버그: 폼의 모든 ym 관련 input 확인
+        const formInputs = await page.evaluate(() => {
+            const inputs = document.querySelectorAll('input, select');
+            const result = [];
+            inputs.forEach(inp => {
+                const name = inp.name || inp.id || '';
+                if (name.toLowerCase().includes('ym') || name.toLowerCase().includes('month') ||
+                    name.toLowerCase().includes('date') || name.toLowerCase().includes('dd')) {
+                    result.push({ tag: inp.tagName, name, id: inp.id, value: inp.value });
+                }
+            });
+            return result;
+        });
+        logger.info("[scrapeMakeEduShuttle] Date-related form inputs:", JSON.stringify(formInputs));
+
+        // fromYm/toYm/endYm 등 모든 청구월 관련 input 강제 설정
+        await page.evaluate((fromVal, toVal) => {
+            const setVal = (selector, val) => {
+                const el = document.querySelector(selector);
+                if (el) {
+                    el.value = val;
+                    el.dispatchEvent(new Event('change', { bubbles: true }));
+                    el.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            };
+            setVal('#fromYm', fromVal);
+            setVal('input[name="fromYm"]', fromVal);
+            setVal('#toYm', toVal);
+            setVal('input[name="toYm"]', toVal);
+            setVal('#endYm', toVal);
+            setVal('input[name="endYm"]', toVal);
+            // ymCls 클래스를 가진 모든 month input도 동일하게 설정 (fromYm은 fromVal, 나머지는 toVal)
+            const allYmInputs = document.querySelectorAll('input.ymCls, input.month-year-input');
+            allYmInputs.forEach((inp, idx) => {
+                const name = (inp.name || inp.id || '').toLowerCase();
+                if (name.includes('from') || name.includes('start')) {
+                    inp.value = fromVal;
+                } else {
+                    inp.value = toVal;
+                }
+                inp.dispatchEvent(new Event('change', { bubbles: true }));
+                inp.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+        }, fromYMValue, toYMValue);
+        logger.info(`[scrapeMakeEduShuttle] Set fromYm=${fromYMValue}, toYm=${toYMValue} (${needPrevMonth ? '전월부터' : '당월'} 조회)`);
 
         // 검색 버튼 클릭 (listSize + fromYm 반영)
         try {
