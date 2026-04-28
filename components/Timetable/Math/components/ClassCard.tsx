@@ -266,6 +266,10 @@ interface ClassCardProps {
     mode?: 'view' | 'edit';
     onCancelScheduledEnrollment?: (studentId: string, className: string) => void;  // 배정 예정 취소
     onWithdrawalDrop?: (studentId: string, classId: string, className: string) => void;  // 퇴원 드롭존
+    /** 퇴원 학생 단일 클릭 시 select (Delete 키로 삭제용). 더블 클릭은 기존대로 모달. */
+    onWithdrawnSelect?: (key: string, studentId: string, enrollmentDocId: string | undefined, classId: string) => void;
+    /** 현재 선택된 퇴원 학생 키 (`${studentId}_${enrollmentDocId}_${classId}`). 시각적 ring 표시용 */
+    selectedWithdrawnKey?: string | null;
     // 엑셀 보류 삭제/등록 (시각적 표시) - pendingExcelDeleteIds: composite key "studentId_className"
     pendingExcelDeleteIds?: Set<string>;
     pendingExcelEnrollments?: Array<{ studentId: string; className: string; enrollmentDate?: string }>;
@@ -332,6 +336,8 @@ const ClassCard: React.FC<ClassCardProps> = ({
     mode,
     onCancelScheduledEnrollment,
     onWithdrawalDrop,
+    onWithdrawnSelect,
+    selectedWithdrawnKey,
     pendingExcelDeleteIds,
     pendingExcelEnrollments,
     fillCell,
@@ -1557,9 +1563,21 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                         key={s.id}
                                                         draggable={canEdit}
                                                         onDragStart={(e) => { if (canEdit) onDragStart(e, s.id, cls.id, 'common', true); }}
-                                                        className={`${fontSizeClass} leading-[1.3] bg-black text-white px-0.5 py-0 overflow-hidden whitespace-nowrap ${canEdit ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-700 transition-colors`}
+                                                        className={`${fontSizeClass} leading-[1.3] bg-black text-white px-0.5 py-0 overflow-hidden whitespace-nowrap ${canEdit ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-700 transition-colors ${
+                                                            canEdit && selectedWithdrawnKey === `${s.id}_${(s as any).enrollmentDocId || ''}_${cls.id}`
+                                                                ? 'ring-2 ring-yellow-400 ring-inset'
+                                                                : ''
+                                                        }`}
                                                         title={tooltipText}
-                                                        onClick={(e) => e.stopPropagation()}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            // 단일 클릭 = select (수정 모드 + onWithdrawnSelect 핸들러 있을 때만)
+                                                            if (canEdit && onWithdrawnSelect) {
+                                                                const enrollmentDocId = (s as any).enrollmentDocId || '';
+                                                                const key = `${s.id}_${enrollmentDocId}_${cls.id}`;
+                                                                onWithdrawnSelect(key, s.id, enrollmentDocId, cls.id);
+                                                            }
+                                                        }}
                                                         onDoubleClick={(e) => {
                                                             if (onStudentClick) { e.stopPropagation(); onStudentClick(s.id); }
                                                         }}
@@ -1773,9 +1791,20 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                         key={s.id}
                                                         draggable={canEdit}
                                                         onDragStart={(e) => { if (canEdit) onDragStart(e, s.id, cls.id, 'common', true); }}
-                                                        className={`${fontSizeClass} leading-[1.3] bg-black text-white px-0.5 py-0 overflow-hidden whitespace-nowrap ${canEdit ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-700 transition-colors`}
+                                                        className={`${fontSizeClass} leading-[1.3] bg-black text-white px-0.5 py-0 overflow-hidden whitespace-nowrap ${canEdit ? 'cursor-grab' : 'cursor-default'} hover:bg-gray-700 transition-colors ${
+                                                            canEdit && selectedWithdrawnKey === `${s.id}_${(s as any).enrollmentDocId || ''}_${cls.id}`
+                                                                ? 'ring-2 ring-yellow-400 ring-inset'
+                                                                : ''
+                                                        }`}
                                                         title={s.withdrawalDate ? `${text} (퇴원: ${s.withdrawalDate})` : text}
-                                                        onClick={(e) => e.stopPropagation()}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (canEdit && onWithdrawnSelect) {
+                                                                const enrollmentDocId = (s as any).enrollmentDocId || '';
+                                                                const key = `${s.id}_${enrollmentDocId}_${cls.id}`;
+                                                                onWithdrawnSelect(key, s.id, enrollmentDocId, cls.id);
+                                                            }
+                                                        }}
                                                         onDoubleClick={(e) => {
                                                             if (onStudentClick) { e.stopPropagation(); onStudentClick(s.id); }
                                                         }}

@@ -168,7 +168,7 @@ interface MathTimetableContentProps {
     showWithdrawnStudents: boolean;
     setShowWithdrawnStudents: (show: boolean) => void;
     dragOverClassId: string | null;
-    handleDragStart: (e: React.DragEvent, studentId: string, classId: string, zone?: string) => void;
+    handleDragStart: (e: React.DragEvent, studentId: string, classId: string, zone?: string, isWithdrawn?: boolean) => void;
     handleDragOver: (e: React.DragEvent, classId: string) => void;
     handleDragLeave: () => void;
     handleDrop: (e: React.DragEvent, classId: string, zone?: string) => void;
@@ -934,7 +934,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap} pendingMoveToMap={pendingMoveToMap}
                         pendingMoveSchedules={pendingMoveSchedules}
                         onCancelScheduledEnrollment={!isScenarioMode ? onCancelScheduledEnrollment : undefined}
-                        onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
+                        onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined} onWithdrawnSelect={!isScenarioMode ? handleWithdrawnSelect : undefined} selectedWithdrawnKey={!isScenarioMode ? (selectedWithdrawn?.key || null) : null}
                         studentFilter={studentFilter}
                         shuttleStudentNames={shuttleStudentNames}
                         weeklyAbsent={weeklyAbsent}
@@ -981,7 +981,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap} pendingMoveToMap={pendingMoveToMap}
                         pendingMoveSchedules={pendingMoveSchedules}
                         onCancelScheduledEnrollment={!isScenarioMode ? onCancelScheduledEnrollment : undefined}
-                        onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
+                        onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined} onWithdrawnSelect={!isScenarioMode ? handleWithdrawnSelect : undefined} selectedWithdrawnKey={!isScenarioMode ? (selectedWithdrawn?.key || null) : null}
                         studentFilter={studentFilter}
                         shuttleStudentNames={shuttleStudentNames}
                         weeklyAbsent={weeklyAbsent}
@@ -1050,7 +1050,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         onAcHighlightChange={setAcHighlightStudentId}
                         onStudentSelect={handleExcelStudentSelect}
                         onStudentMultiSelect={handleExcelStudentMultiSelect}
-                        onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
+                        onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined} onWithdrawnSelect={!isScenarioMode ? handleWithdrawnSelect : undefined} selectedWithdrawnKey={!isScenarioMode ? (selectedWithdrawn?.key || null) : null}
                         pendingExcelDeleteIds={pendingExcelDeleteIds}
                         pendingExcelEnrollments={pendingExcelEnrollments.length > 0 ? pendingExcelEnrollments : undefined}
                         studentFilter={studentFilter}
@@ -1656,6 +1656,77 @@ const TimetableManager = ({
     const [withdrawalModalInfo, setWithdrawalModalInfo] = useState<{
         studentId: string; studentName: string; classId: string; className: string;
     } | null>(null);
+
+    // ===== 퇴원 학생 선택 + Delete 키로 시간표 숨김 =====
+    // - 단일 클릭으로 퇴원 학생 select (ring 표시)
+    // - Delete 키 누르면 enrollment 의 hiddenAt 필드 set → 시간표 필터에서 제외
+    // - 데이터는 보존 (Cancel ≠ Delete 패턴) → 학생 모달의 '삭제된 퇴원 기록' 섹션에서 복원 가능
+    const [selectedWithdrawn, setSelectedWithdrawn] = useState<{
+        key: string; studentId: string; enrollmentDocId: string | undefined; classId: string;
+    } | null>(null);
+
+    const handleWithdrawnSelect = useCallback((key: string, studentId: string, enrollmentDocId: string | undefined, classId: string) => {
+        setSelectedWithdrawn(prev => {
+            // 이미 선택된 학생을 다시 클릭 → 선택 해제
+            if (prev?.key === key) return null;
+            return { key, studentId, enrollmentDocId, classId };
+        });
+    }, []);
+
+    const handleDeleteSelectedWithdrawn = useCallback(async () => {
+        if (!selectedWithdrawn) return;
+        const { studentId, enrollmentDocId, classId } = selectedWithdrawn;
+        const today = getTodayKST();
+        try {
+            // enrollmentDocId 가 있으면 직접, 없으면 className 으로 쿼리해서 활성 퇴원 찾기
+            const enrollmentsRef = collection(db, 'students', studentId, 'enrollments');
+            let targetRef: any = null;
+            if (enrollmentDocId) {
+                const directRef = doc(enrollmentsRef, enrollmentDocId);
+                const snap = await getDoc(directRef);
+                if (snap.exists()) targetRef = directRef;
+            }
+            if (!targetRef) {
+                // fallback: classId 가 docId 인 경우
+                const fallback = doc(enrollmentsRef, classId);
+                const snap = await getDoc(fallback);
+                if (snap.exists()) targetRef = fallback;
+            }
+            if (!targetRef) {
+                alert('퇴원 enrollment 를 찾을 수 없습니다.');
+                return;
+            }
+            await updateDoc(targetRef, {
+                hiddenAt: today,
+                hiddenBy: currentUser?.uid || currentUser?.email || null,
+                updatedAt: new Date().toISOString(),
+            });
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['students'] }),
+                queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] }),
+                queryClient.invalidateQueries({ queryKey: ['timetableClasses'] }),
+            ]);
+            setSelectedWithdrawn(null);
+        } catch (err) {
+            console.error('퇴원 record 숨김 처리 오류:', err);
+            alert('숨김 처리에 실패했습니다.');
+        }
+    }, [selectedWithdrawn, queryClient, currentUser]);
+
+    // Delete 키 → selected 퇴원 record 숨김 (수정 모드 한정)
+    useEffect(() => {
+        if (!canEditMath || !selectedWithdrawn) return;
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.key !== 'Delete') return;
+            // 입력 폼 안에서 Delete 누른 경우 무시 (텍스트 편집 우선)
+            const t = e.target as HTMLElement | null;
+            if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+            e.preventDefault();
+            handleDeleteSelectedWithdrawn();
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [canEditMath, selectedWithdrawn, handleDeleteSelectedWithdrawn]);
 
     const handleWithdrawalDrop = useCallback((studentId: string, classId: string, className: string) => {
         const student = studentMap[studentId];
@@ -2430,6 +2501,8 @@ const TimetableManager = ({
                 setSelectedWithdrawalEntry={setSelectedWithdrawalEntry}
                 onCancelScheduledEnrollment={handleCancelScheduledEnrollment}
                 onWithdrawalDrop={handleWithdrawalDrop}
+                onWithdrawnSelect={handleWithdrawnSelect}
+                selectedWithdrawnKey={selectedWithdrawn?.key || null}
                 // 과목/뷰 전환 (TimetableNavBar 통합)
                 timetableSubject={subjectTab}
                 setTimetableSubject={setSubjectTab}

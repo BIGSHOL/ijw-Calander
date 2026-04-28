@@ -32,6 +32,15 @@ export interface Enrollment {
   cancelledBy?: string;     // 취소한 사용자 (audit)
   cancelReason?: string;    // 취소 사유 메모 (옵션)
 
+  // 퇴원 record 시간표 숨김 (Hide ≠ Delete)
+  // - 시간표 수정 모드에서 퇴원 학생 선택 + Delete 키로 set
+  // - cancelledAt 과 의미 다름: cancelledAt 은 시작 안 한 미래 예약 취소, hiddenAt 은 이미 끝난 퇴원 기록 숨김
+  // - 시간표 read-side 필터에서 hiddenAt 있는 record 제외 (퇴원 섹션에 안 보임)
+  // - 복원: 학생 모달의 "삭제된 퇴원 기록" 섹션에서 ⤴︎ 클릭 시 hiddenAt 필드 제거
+  hiddenAt?: string;        // YYYY-MM-DD — 시간표에서 숨긴 날짜
+  hiddenBy?: string;        // 숨긴 사용자 (audit)
+  hideReason?: string;      // 숨김 사유 (옵션)
+
   // Migration metadata
   migrated?: boolean;
   migratedAt?: string;

@@ -80,6 +80,8 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                 if (!subjects.includes(enrollment.subject)) return;
                 // 취소된 예약은 활성/종료 어디에도 카운트 안 함 (반이동 감지 정확성을 위해)
                 if (enrollment.cancelledAt) return;
+                // 시간표에서 숨김 처리된 퇴원 record 도 제외
+                if (enrollment.hiddenAt) return;
                 // 모순 record 가드 — startDate > endDate 인 깨진 record 는 무시
                 {
                     const _s = convertTimestampToDate(enrollment.enrollmentDate || enrollment.startDate);
@@ -146,6 +148,8 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                 if (!subjects.includes(enrollment.subject)) return;
                 // 취소된 예약은 시간표에 표시하지 않음 (학생 카드/대기 모두)
                 if (enrollment.cancelledAt) return;
+                // 시간표에서 숨김 처리된 퇴원 record (Delete 키로 숨김 처리됨) 도 제외
+                if (enrollment.hiddenAt) return;
                 // 모순 record 가드 — startDate > endDate 인 깨진 record 는 시간표에 표시 안 함
                 {
                     const _s = convertTimestampToDate(enrollment.enrollmentDate || enrollment.startDate);

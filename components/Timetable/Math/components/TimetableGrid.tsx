@@ -86,6 +86,9 @@ interface TimetableGridProps {
     onCancelScheduledEnrollment?: (studentId: string, className: string) => void;
     // 퇴원 드롭존
     onWithdrawalDrop?: (studentId: string, classId: string, className: string) => void;
+    // 퇴원 학생 select (Delete 키로 hidden 처리)
+    onWithdrawnSelect?: (key: string, studentId: string, enrollmentDocId: string | undefined, classId: string) => void;
+    selectedWithdrawnKey?: string | null;
     // 엑셀 보류 삭제/등록 (시각적 표시)
     pendingExcelDeleteIds?: Set<string>;
     pendingExcelEnrollments?: Array<{ studentId: string; className: string; enrollmentDate?: string }>;
@@ -154,6 +157,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     onStudentMultiSelect,
     onCancelScheduledEnrollment,
     onWithdrawalDrop,
+    onWithdrawnSelect,
+    selectedWithdrawnKey,
     pendingExcelDeleteIds,
     pendingExcelEnrollments,
     weekdayGroupOrder,
@@ -487,7 +492,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     onStudentMultiSelect={onStudentMultiSelect}
                     mode={mode}
                     onCancelScheduledEnrollment={onCancelScheduledEnrollment}
-                    onWithdrawalDrop={onWithdrawalDrop}
+                    onWithdrawalDrop={onWithdrawalDrop} onWithdrawnSelect={onWithdrawnSelect} selectedWithdrawnKey={selectedWithdrawnKey}
                     pendingExcelDeleteIds={pendingExcelDeleteIds}
                     pendingExcelEnrollments={pendingExcelEnrollments}
                     studentFilter={studentFilter}
@@ -1300,7 +1305,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                     onStudentMultiSelect={onStudentMultiSelect}
                                                                     mode={mode}
                                                                     onCancelScheduledEnrollment={onCancelScheduledEnrollment}
-                                                                    onWithdrawalDrop={onWithdrawalDrop}
+                                                                    onWithdrawalDrop={onWithdrawalDrop} onWithdrawnSelect={onWithdrawnSelect} selectedWithdrawnKey={selectedWithdrawnKey}
                                                                     pendingExcelDeleteIds={pendingExcelDeleteIds}
                                                                     pendingExcelEnrollments={pendingExcelEnrollments}
                                                                     studentFilter={studentFilter}
@@ -1476,7 +1481,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 onStudentMultiSelect={onStudentMultiSelect}
                                                                                 mode={mode}
                                                                             onCancelScheduledEnrollment={onCancelScheduledEnrollment}
-                    onWithdrawalDrop={onWithdrawalDrop}
+                    onWithdrawalDrop={onWithdrawalDrop} onWithdrawnSelect={onWithdrawnSelect} selectedWithdrawnKey={selectedWithdrawnKey}
                     pendingExcelDeleteIds={pendingExcelDeleteIds}
                     pendingExcelEnrollments={pendingExcelEnrollments}
                     studentFilter={studentFilter}
@@ -1614,7 +1619,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         onStudentMultiSelect={onStudentMultiSelect}
                                                                         mode={mode}
                                                                     onCancelScheduledEnrollment={onCancelScheduledEnrollment}
-                    onWithdrawalDrop={onWithdrawalDrop}
+                    onWithdrawalDrop={onWithdrawalDrop} onWithdrawnSelect={onWithdrawnSelect} selectedWithdrawnKey={selectedWithdrawnKey}
                     pendingExcelDeleteIds={pendingExcelDeleteIds}
                     pendingExcelEnrollments={pendingExcelEnrollments}
                     studentFilter={studentFilter}
@@ -1706,7 +1711,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                 acHighlightStudentId={acHighlightStudentId} onAcHighlightChange={onAcHighlightChange}
                 onStudentSelect={onStudentSelect} onStudentMultiSelect={onStudentMultiSelect}
                 mode={mode} onCancelScheduledEnrollment={onCancelScheduledEnrollment}
-                onWithdrawalDrop={onWithdrawalDrop}
+                onWithdrawalDrop={onWithdrawalDrop} onWithdrawnSelect={onWithdrawnSelect} selectedWithdrawnKey={selectedWithdrawnKey}
                 pendingExcelDeleteIds={pendingExcelDeleteIds} pendingExcelEnrollments={pendingExcelEnrollments}
                 studentFilter={studentFilter} shuttleStudentNames={shuttleStudentNames} weeklyAbsent={weeklyAbsent}
             />
@@ -2038,7 +2043,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     acHighlightStudentId={acHighlightStudentId} onAcHighlightChange={onAcHighlightChange}
                     onStudentSelect={onStudentSelect} onStudentMultiSelect={onStudentMultiSelect}
                     mode={mode} onCancelScheduledEnrollment={onCancelScheduledEnrollment}
-                    onWithdrawalDrop={onWithdrawalDrop}
+                    onWithdrawalDrop={onWithdrawalDrop} onWithdrawnSelect={onWithdrawnSelect} selectedWithdrawnKey={selectedWithdrawnKey}
                     pendingExcelDeleteIds={pendingExcelDeleteIds}
                     pendingExcelEnrollments={pendingExcelEnrollments}
                     studentFilter={studentFilter}
