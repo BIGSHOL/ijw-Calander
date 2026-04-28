@@ -94,7 +94,8 @@ function ShuttleTimetable({
         setIsSyncing(true);
         try {
             const functions = getFunctions(undefined, 'asia-northeast3');
-            const scrapeFn = httpsCallable(functions, 'scrapeMakeEduShuttleStudents');
+            // 셔틀 크롤링은 80초 가까이 걸려서 기본 70초 타임아웃을 5분으로 연장
+            const scrapeFn = httpsCallable(functions, 'scrapeMakeEduShuttleStudents', { timeout: 300000 });
             const result = await scrapeFn();
             const data = result.data as any;
             alert(`동기화 완료!\n전체 학생: ${data.totalStudents}명\n셔틀 학생: ${data.shuttleStudents}명`);
