@@ -29,12 +29,20 @@ const SCENARIO_COLLECTION = 'math_scenarios';
 /**
  * Firebase에 저장 전 undefined 값을 제거합니다.
  * Firebase Firestore는 undefined 값을 허용하지 않습니다.
+ * Timestamp/Date 등 특수 객체는 평탄화하지 않고 그대로 보존합니다.
  */
 const sanitizeForFirestore = <T extends Record<string, any>>(obj: T): T => {
   const result: Record<string, any> = {};
   for (const [key, value] of Object.entries(obj)) {
     if (value === undefined) continue;
-    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+    if (
+      value !== null &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      // Timestamp(toDate), Date(getTime) 등 특수 객체는 그대로 보존
+      typeof (value as any).toDate !== 'function' &&
+      !(value instanceof Date)
+    ) {
       result[key] = sanitizeForFirestore(value);
     } else {
       result[key] = value;
@@ -56,7 +64,8 @@ export interface ScenarioClass {
   slotRooms?: Record<string, string>;     // "월-5" -> "Room"
   underline?: boolean;
   mainTeacher?: string;
-  // ... 기타 필드
+  // 라이브 원본 doc data 전체 보관 (publish 시 머지하여 미관리 필드 손실 방지)
+  _raw?: Record<string, any>;
 }
 
 export interface ScenarioEnrollment {
@@ -69,6 +78,8 @@ export interface ScenarioEnrollment {
   withdrawalDate?: string;
   onHold?: boolean;
   attendanceDays?: string[];
+  // 라이브 원본 enrollment doc data 전체 보관
+  _raw?: Record<string, any>;
 }
 
 export interface ScenarioStudent extends TimetableStudent {
@@ -175,6 +186,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
         slotRooms: data.slotRooms || {},
         underline: data.underline,
         mainTeacher: data.mainTeacher,
+        _raw: data,
       };
     });
 
@@ -204,6 +216,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
         withdrawalDate: convertTimestampToDate(data.withdrawalDate),
         onHold: data.onHold || false,  // onHold 상태 유지
         attendanceDays: data.attendanceDays || [],
+        _raw: data,
       };
     });
 
@@ -550,10 +563,12 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
         version: 2,
       });
 
-      // 2. classes 업데이트
+      // 2. classes 업데이트 — _raw(라이브 원본)와 편집 필드 머지하여 미관리 필드 보존
       const classBatch = writeBatch(db);
       Object.entries(scenarioClasses).forEach(([classId, classData]) => {
-        classBatch.set(doc(db, 'classes', classId), sanitizeForFirestore(classData));
+        const { _raw, ...editable } = classData;
+        const merged = { ...(_raw || {}), ...editable };
+        classBatch.set(doc(db, 'classes', classId), sanitizeForFirestore(merged));
       });
       await classBatch.commit();
 
@@ -581,21 +596,39 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
       });
 
       // 생성 배치 - doc ID = classId, subject = 실제 과목
+      // _raw(라이브 원본)와 편집 필드 머지: 시뮬에서 변경한 className/classId/subject는 새 값이 우선
+      // 학생 이동 시 enrollment의 teacher/schedule은 새 반 정보로 동기화
       const enrollmentsToCreate: { ref: any; data: any }[] = [];
       Object.entries(scenarioEnrollments).forEach(([className, students]) => {
         const classId = classNameToIdMap[className];
-        const classSubject = classId && scenarioClasses[classId]?.subject || 'math';
+        const targetClass = classId ? scenarioClasses[classId] : undefined;
+        const classSubject = (targetClass?.subject) || 'math';
+        // 새 반의 schedule을 enrollment 형식("월 1-1")으로 변환
+        const targetSchedule = targetClass?.schedule?.map((s: any) =>
+          typeof s === 'string' ? s : `${s.day} ${s.periodId}`
+        );
+        const targetTeacher = targetClass?.teacher;
         Object.entries(students).forEach(([studentId, enrollment]) => {
           const enrollDocId = classId || enrollment.classId || className;
           const enrollmentRef = doc(db, 'students', studentId, 'enrollments', enrollDocId);
+          const { _raw, ...editable } = enrollment;
+          const merged: Record<string, any> = {
+            ...(_raw || {}),
+            ...editable,
+            classId: enrollDocId,
+            subject: classSubject,
+            className,
+          };
+          if (targetSchedule && targetSchedule.length > 0) {
+            merged.schedule = targetSchedule;
+          }
+          if (targetTeacher) {
+            merged.teacher = targetTeacher;
+            merged.staffId = targetTeacher;
+          }
           enrollmentsToCreate.push({
             ref: enrollmentRef,
-            data: sanitizeForFirestore({
-              ...enrollment,
-              classId: enrollDocId,
-              subject: classSubject,
-              className,
-            }),
+            data: sanitizeForFirestore(merged),
           });
         });
       });

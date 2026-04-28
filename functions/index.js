@@ -5205,21 +5205,46 @@ async function scrapeMakeEduShuttleStudentsInternal() {
             logger.warn("[scrapeMakeEduShuttle] Could not set listSize, proceeding with default");
         }
 
-        // fromYm 강제 설정: 메이크에듀 기본값이 다음달일 수 있으므로 항상 명시적으로 변경
-        // - 11일 이후: 당월 (예: 202604)
-        // - 10일 이전: 전월 (예: 202603) → 전월 + 당월 동시 조회
+        // fromYm 강제 설정
         const targetYMValue = needPrevMonth
             ? `${prevYear}${String(prevMonth).padStart(2, '0')}`     // 202603
             : `${kstYear}${String(kstMonth).padStart(2, '0')}`;       // 202604
+
+        // fromYm value 설정 + native setter 사용 (React/Vue 등이 value descriptor를 override한 경우 대응)
         await page.evaluate((val) => {
             const fromYm = document.querySelector('#fromYm');
             if (fromYm) {
-                fromYm.value = val;
+                const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                nativeSetter.call(fromYm, val);
                 fromYm.dispatchEvent(new Event('change', { bubbles: true }));
                 fromYm.dispatchEvent(new Event('input', { bubbles: true }));
+                fromYm.dispatchEvent(new Event('blur', { bubbles: true }));
             }
         }, targetYMValue);
-        logger.info(`[scrapeMakeEduShuttle] Set fromYm to ${targetYMValue} (${needPrevMonth ? '전월부터' : '당월'} 조회)`);
+
+        // 검증: fromYm 값이 실제로 변경됐는지 + btnSrch onclick 핸들러 확인
+        const debugInfo = await page.evaluate(() => {
+            const fromYm = document.querySelector('#fromYm');
+            const btn = document.querySelector('#btnSrch');
+            // 모든 hidden ym 관련 필드도 같이 확인
+            const hiddenYms = [];
+            document.querySelectorAll('input[type="hidden"]').forEach(h => {
+                if ((h.name || '').toLowerCase().includes('ym')) {
+                    hiddenYms.push({ name: h.name, value: h.value });
+                }
+            });
+            return {
+                fromYmValue: fromYm ? fromYm.value : null,
+                btnOnclick: btn ? btn.getAttribute('onclick') : null,
+                btnHasParentForm: btn ? !!btn.closest('form') : null,
+                hiddenYms,
+                // window 전역 검색 함수가 있는지
+                hasGlobalSearchFn: typeof window.fnSearch === 'function' ||
+                                   typeof window.fn_search === 'function' ||
+                                   typeof window.search === 'function',
+            };
+        });
+        logger.info(`[scrapeMakeEduShuttle] After set fromYm=${targetYMValue}, debug:`, JSON.stringify(debugInfo));
 
         // 검색 버튼 클릭 (listSize + fromYm 반영)
         try {
