@@ -718,6 +718,14 @@ const TimetableDistributionTab: React.FC = () => {
     const selected = activeStudents.filter(s => selectedIds.has(s.id));
     if (selected.length === 0) return;
 
+    // 최근 등록 학생부터 처리 (startDate / enrollmentDate desc)
+    // → ClassNote에서 최근 보고서를 빨리 조회 가능하도록 최근 학생을 먼저 제출
+    selected.sort((a: any, b: any) => {
+      const aDate = a.startDate || a.enrollmentDate || a.createdAt || '0';
+      const bDate = b.startDate || b.enrollmentDate || b.createdAt || '0';
+      return String(bDate).localeCompare(String(aDate));
+    });
+
     setIsDistributing(true);
     setResults({});
     setProgress({ current: 0, total: selected.length, phase: '시간표 이미지 생성 중...' });
