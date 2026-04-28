@@ -5135,7 +5135,7 @@ async function scrapeMakeEduShuttleStudentsInternal() {
     const kstYear = kstNow.getUTCFullYear();
     const kstMonth = kstNow.getUTCMonth() + 1; // 1-based
     const currentYM = `${kstYear}-${String(kstMonth).padStart(2, '0')}`;
-    // 10일까지는 전월도 확인
+    // 10일까지는 전월도 확인 (전월 결제가 늦게 들어오는 케이스 대비)
     const needPrevMonth = kstDay <= 10;
     const prevMonth = kstMonth === 1 ? 12 : kstMonth - 1;
     const prevYear = kstMonth === 1 ? kstYear - 1 : kstYear;
@@ -5205,15 +5205,17 @@ async function scrapeMakeEduShuttleStudentsInternal() {
             logger.warn("[scrapeMakeEduShuttle] Could not set listSize, proceeding with default");
         }
 
-        // 10일까지: fromYm을 전월로 변경하여 전월+당월 동시 조회
-        if (needPrevMonth) {
-            const prevYMValue = `${prevYear}${String(prevMonth).padStart(2, '0')}`; // 202603
-            await page.evaluate((val) => {
-                const fromYm = document.querySelector('#fromYm');
-                if (fromYm) fromYm.value = val;
-            }, prevYMValue);
-            logger.info(`[scrapeMakeEduShuttle] Set fromYm to ${prevYMValue} (전월 포함 조회)`);
-        }
+        // fromYm 강제 설정: 메이크에듀 기본값이 다음달일 수 있으므로 항상 명시적으로 변경
+        // - 11일 이후: 당월 (예: 202604)
+        // - 10일 이전: 전월 (예: 202603) → 전월 + 당월 동시 조회
+        const targetYMValue = needPrevMonth
+            ? `${prevYear}${String(prevMonth).padStart(2, '0')}`     // 202603
+            : `${kstYear}${String(kstMonth).padStart(2, '0')}`;       // 202604
+        await page.evaluate((val) => {
+            const fromYm = document.querySelector('#fromYm');
+            if (fromYm) fromYm.value = val;
+        }, targetYMValue);
+        logger.info(`[scrapeMakeEduShuttle] Set fromYm to ${targetYMValue} (${needPrevMonth ? '전월부터' : '당월'} 조회)`);
 
         // 검색 버튼 클릭 (listSize + fromYm 반영)
         try {
