@@ -1,0 +1,8 @@
+--- index.js.orig
++++ index.js
+@@ -2651,6 +651,7 @@
+             const colSiblings = findCol(["형제", "자매"]);
+             const colMemo = findCol(["메모", "비고"]);
+             const colStatus = findCol(["상태", "재원", "등록상태"]);
++            const colNo = findCol(["원생고유번호"]);
+             const colAddressDetail = findCol(["상세주소"]);
