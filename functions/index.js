@@ -5205,6 +5205,17 @@ async function scrapeMakeEduShuttleStudentsInternal() {
             logger.warn("[scrapeMakeEduShuttle] Could not set listSize, proceeding with default");
         }
 
+        // listSize 변경이 페이지 reload를 트리거할 수 있으므로 안정화 대기
+        // (onChange로 자동 검색되는 경우 navigation 발생)
+        await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 15000 }).catch(() => {});
+        await new Promise(r => setTimeout(r, 3000));
+        // fromYm input이 다시 그려질 때까지 대기
+        try {
+            await page.waitForSelector('#fromYm', { timeout: 10000 });
+        } catch (e) {
+            logger.warn("[scrapeMakeEduShuttle] #fromYm not found after listSize change");
+        }
+
         // fromYm 강제 설정
         const targetYMValue = needPrevMonth
             ? `${prevYear}${String(prevMonth).padStart(2, '0')}`     // 202603
