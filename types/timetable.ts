@@ -45,7 +45,13 @@ export interface TimetableStudent {
   school?: string;      // 학교
   underline?: boolean;  // 밑줄 표시 여부
   startDate?: string; // 시작일 (YYYY-MM-DD)
-  enrollmentDate?: string; // 신입생 등록일 (YYYY-MM-DD)
+  enrollmentDate?: string; // 이 cell 의 enrollment 시작일 (YYYY-MM-DD) — 셀별 표시/필터용
+  /**
+   * 학생의 같은 과목 전체 enrollment 중 가장 이른 startDate (YYYY-MM-DD).
+   * 신입 빨간/핑크 판정 및 "입학일" 툴팁의 기준 — 재등록/반이동 후에도 진짜 첫 입학일을 유지.
+   * 예: 2020-11-09 부터 수학을 한 학생이 오늘 새 반 등록 → 신입 표시 안 됨.
+   */
+  firstSubjectEnrollmentDate?: string;
   withdrawalDate?: string; // 퇴원일 (YYYY-MM-DD)
   endDate?: string; // 종료일 (YYYY-MM-DD)
   onHold?: boolean; // 대기생 여부

@@ -171,8 +171,8 @@ const StudentItem: React.FC<StudentItemProps> = ({
                             ? `반이동예정: ${transferScheduledDate || '미정'}${transferTo ? `\n${transferTo}` : ''}`
                         : isWithdrawalScheduled && withdrawalScheduledDate
                             ? `퇴원예정: ${withdrawalScheduledDate}`
-                        : enrollmentStyle && student.enrollmentDate
-                            ? `${student.isTransferredIn ? '반이동' : '입학일'}: ${student.enrollmentDate}`
+                        : enrollmentStyle && (student.firstSubjectEnrollmentDate || student.enrollmentDate)
+                            ? `${student.isTransferredIn ? '반이동' : '입학일'}: ${student.firstSubjectEnrollmentDate || student.enrollmentDate}`
                         : '';
                     if (statusInfo) lines += `\n────────\n${statusInfo}`;
                     if (textbookInfo) lines += `\n────────\n${textbookInfo.month} ${textbookInfo.textbookName}`;
@@ -600,13 +600,18 @@ const ClassCard: React.FC<ClassCardProps> = ({
     };
 
     // === 입학일 기반 스타일 (영어 시간표와 동일) ===
+    // 신입 판정 기준 = "이 과목에서의 첫 입학일" (학생의 같은 과목 전체 enrollment 중 가장 이른 startDate).
+    //  - 셀별 enrollmentDate 가 아니라 firstSubjectEnrollmentDate 를 우선 사용
+    //  - 재등록/반이동 후에도 첫 입학일을 보존해서 "기존 학생인데 신입처럼 빨갛게" 표시되는 버그 방지
+    //  - firstSubjectEnrollmentDate 누락된 경우(레거시) 만 enrollmentDate 로 폴백
     const getEnrollmentStyle = (student: any) => {
         // 반이동 학생 (다른 반에서 이동해 온 학생) - 초록 배경에 검은 글씨
         if (student.isTransferredIn) {
             return { bg: 'bg-green-200', text: 'text-gray-900 font-bold' };
         }
-        if (student.enrollmentDate) {
-            const days = Math.ceil((refDateMs - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
+        const baseDate = student.firstSubjectEnrollmentDate || student.enrollmentDate;
+        if (baseDate) {
+            const days = Math.ceil((refDateMs - new Date(baseDate).getTime()) / (1000 * 60 * 60 * 24));
             if (days <= 30) return { bg: 'bg-red-500', text: 'text-white font-bold' };
             if (days <= 60) return { bg: 'bg-pink-100', text: 'text-black font-bold' };
         }

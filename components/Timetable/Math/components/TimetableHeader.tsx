@@ -503,8 +503,10 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
             // 재원생
             activeStudentIds.add(student.id);
             // 신입 (등록 30일 이내, 반이동 제외)
+            // 기준 = 같은 과목 전체 첫 입학일 (firstSubjectEnrollmentDate). 셀별 enrollmentDate 사용 시
+            // 같은 과목에서 새 반에 다시 등록한 기존 학생도 신입으로 잘못 집계되던 버그 수정.
             if (!student.isTransferredIn) {
-                const enrollDate = student.enrollmentDate || student.startDate;
+                const enrollDate = student.firstSubjectEnrollmentDate || student.enrollmentDate || student.startDate;
                 if (enrollDate) {
                     const daysSince = Math.floor((refDate.getTime() - new Date(enrollDate).getTime()) / (1000 * 60 * 60 * 24));
                     if (daysSince >= 0 && daysSince <= 30) newStudentIds.add(student.id);

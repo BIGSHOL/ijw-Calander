@@ -119,15 +119,20 @@ const StudentItem: React.FC<StudentItemProps> = ({
         return studentDays;
     }, [classDays, student.attendanceDays]);
 
-    // 신입생 판별 (60일 이내)
+    // 신입생 판별 (30일 이내) — 빨강 스타일링(line ~825) 컷오프와 일치.
+    // 자정 앵커(formatDateKey)로 시간대 경계에서 ±1일 어긋나는 것 방지 (수학 ClassCard와 동일 정책).
+    // 기준 = 같은 과목 전체 첫 입학일 (firstSubjectEnrollmentDate). 셀별 enrollmentDate 폴백.
+    //  - 같은 과목에서 새 반에 재등록한 기존 학생이 신입으로 잘못 표시되던 버그 방지
     const isNewStudent = useMemo(() => {
         if (student.isTransferredIn) return false; // 반이동은 별도 처리
-        if (student.enrollmentDate) {
-            const days = Math.ceil((Date.now() - new Date(student.enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));
-            return days <= 60;
+        const baseDate = student.firstSubjectEnrollmentDate || student.enrollmentDate;
+        if (baseDate) {
+            const todayMs = new Date(formatDateKey(new Date())).getTime();
+            const days = Math.ceil((todayMs - new Date(baseDate).getTime()) / (1000 * 60 * 60 * 24));
+            return days <= 30;
         }
         return false;
-    }, [student.enrollmentDate, student.isTransferredIn]);
+    }, [student.firstSubjectEnrollmentDate, student.enrollmentDate, student.isTransferredIn]);
 
     // 반이동예정 여부 (isTransferred + isWithdrawalScheduled)
     const isTransferScheduled = !!(student.isTransferred && (student as any).isWithdrawalScheduled);
@@ -152,8 +157,9 @@ const StudentItem: React.FC<StudentItemProps> = ({
             sections.push(statusInfo);
         } else if (student.isTransferredIn) {
             sections.push(student.enrollmentDate ? `반이동: ${student.enrollmentDate}` : '반이동 학생');
-        } else if (isNewStudent && student.enrollmentDate) {
-            sections.push(`입학일: ${student.enrollmentDate}`);
+        } else if (isNewStudent) {
+            const inDate = student.firstSubjectEnrollmentDate || student.enrollmentDate;
+            if (inDate) sections.push(`입학일: ${inDate}`);
         }
 
         // 3섹션: 최근 진도 정보 (Edutrix 보고서)
@@ -756,9 +762,11 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     const filteredScheduledStudents = hasFilter ? scheduledStudents.filter(studentPassesFilter) : scheduledStudents;
     const filteredWithdrawnStudents = hasFilter ? withdrawnStudents.filter(studentPassesFilter) : withdrawnStudents;
 
-    // 신입생 판별 (영어용) - 현재 주차 기준일로 계산 (prev/next 주차 이동 시 재계산)
+    // 신입생 판별 (영어용) - 현재 주차 기준일로 계산 (prev/next 주차 이동 시 재계산).
+    // 폴백도 자정 앵커(formatDateKey)로 통일해 시간대 경계 오차 제거 (수학 ClassCard와 동일).
     const refDateMs = useMemo(() => {
-        return currentWeekStart ? new Date(currentWeekStart).getTime() : Date.now();
+        if (currentWeekStart) return new Date(currentWeekStart).getTime();
+        return new Date(formatDateKey(new Date())).getTime();
     }, [currentWeekStart]);
     const isNewStudent = (enrollmentDate: string): number => {
         const days = Math.ceil((refDateMs - new Date(enrollmentDate).getTime()) / (1000 * 60 * 60 * 24));

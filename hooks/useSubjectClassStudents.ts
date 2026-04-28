@@ -65,6 +65,13 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
         // 활성 수업의 스케줄/강사 정보 (반이동예정 툴팁용)
         const studentActiveClassSchedule: Record<string, Record<string, string[]>> = {};
         const studentActiveClassTeacher: Record<string, Record<string, string>> = {};
+        /**
+         * 학생별 "이 과목 전체 enrollment 중 가장 이른 시작일" 캐시.
+         * 신입 빨간/핑크 판정 기준 — 같은 과목에서 과거 수강 이력이 있으면 새 반에서 다시 시작해도 신입 아님.
+         * 예: 김지호 = 2020-11-09 (수학 김민주반 첫 시작) — 오늘 김은정반 새 등록 시 enrollmentDate=오늘 이지만
+         *      firstSubjectEnrollmentDate=2020-11-09 → 신입 표시 안 됨.
+         */
+        const studentFirstSubjectStartDate: Record<string, string> = {};
 
         Object.entries(studentMap).forEach(([studentId, student]) => {
             if (!student.enrollments) return;
@@ -82,6 +89,14 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
 
                 const className = enrollment.className as string;
                 if (!className) return;
+
+                const startDateForFirst = convertTimestampToDate(enrollment.enrollmentDate || enrollment.startDate);
+                if (startDateForFirst) {
+                    const cur = studentFirstSubjectStartDate[studentId];
+                    if (!cur || startDateForFirst < cur) {
+                        studentFirstSubjectStartDate[studentId] = startDateForFirst;
+                    }
+                }
 
                 const withdrawalDate = convertTimestampToDate(enrollment.withdrawalDate);
                 const endDate = convertTimestampToDate(enrollment.endDate);
@@ -222,6 +237,9 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                     enrollmentDocId: enrollment.id,
                     underline: enrollment.underline,
                     enrollmentDate: startDate,
+                    // 학생의 같은 과목 전체 중 가장 이른 startDate — 신입 판정/입학일 툴팁 기준
+                    // (재등록/반이동 후에도 진짜 첫 수학 입학일을 유지)
+                    firstSubjectEnrollmentDate: studentFirstSubjectStartDate[studentId],
                     // 기준일 기준으로 종료된 경우만 withdrawalDate 표시
                     withdrawalDate: hasEndDate ? (withdrawalDate || endDate) : undefined,
                     // 대기 분류는 다음 모두 만족할 때만:
