@@ -266,6 +266,11 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     // 예정 드롭다운 상태 (클릭 기반)
     const [isPendingDropdownOpen, setIsPendingDropdownOpen] = useState(false);
     const pendingDropdownRef = useRef<HTMLDivElement>(null);
+    // 재원 / 신입 드롭다운 상태 (퇴원과 동일 패턴 — 클릭 기반)
+    const [isActiveDropdownOpen, setIsActiveDropdownOpen] = useState(false);
+    const activeDropdownRef = useRef<HTMLDivElement>(null);
+    const [isNewDropdownOpen, setIsNewDropdownOpen] = useState(false);
+    const newDropdownRef = useRef<HTMLDivElement>(null);
 
     // 퇴원생 상세 모달 상태
     const [selectedWithdrawalEntry, setSelectedWithdrawalEntry] = useState<WithdrawalEntry | null>(null);
@@ -434,7 +439,8 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
 
     // 드롭다운 외부 클릭 시 닫기
     useEffect(() => {
-        if (!isViewDropdownOpen && !isMoreDropdownOpen && !isWithdrawnDropdownOpen && !isPendingDropdownOpen) return;
+        if (!isViewDropdownOpen && !isMoreDropdownOpen && !isWithdrawnDropdownOpen && !isPendingDropdownOpen
+            && !isActiveDropdownOpen && !isNewDropdownOpen) return;
         const handleClickOutside = (event: MouseEvent) => {
             if (viewDropdownRef.current && !viewDropdownRef.current.contains(event.target as Node)) {
                 setIsViewDropdownOpen(false);
@@ -448,10 +454,16 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
             if (pendingDropdownRef.current && !pendingDropdownRef.current.contains(event.target as Node)) {
                 setIsPendingDropdownOpen(false);
             }
+            if (activeDropdownRef.current && !activeDropdownRef.current.contains(event.target as Node)) {
+                setIsActiveDropdownOpen(false);
+            }
+            if (newDropdownRef.current && !newDropdownRef.current.contains(event.target as Node)) {
+                setIsNewDropdownOpen(false);
+            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isViewDropdownOpen, isMoreDropdownOpen, isWithdrawnDropdownOpen, isPendingDropdownOpen]);
+    }, [isViewDropdownOpen, isMoreDropdownOpen, isWithdrawnDropdownOpen, isPendingDropdownOpen, isActiveDropdownOpen, isNewDropdownOpen]);
 
     // 학생 수 카운트 계산 (현재 시간표에 등록된 학생만, 중복 제거)
     // useSubjectClassStudents가 이미 기준일 기반으로 withdrawalDate/onHold를 설정
@@ -545,12 +557,45 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
             }
         });
 
+        // 재원 / 신입 학생 상세 목록 (드롭다운용)
+        // — id Set 을 그대로 순회. 신입 기준 입학일 = firstSubjectEnrollmentDate (과목 전체 첫 입학일).
+        const buildStudentInfo = (studentId: string, useFirstSubjectDate: boolean) => {
+            const base = studentMap[studentId];
+            const student = processedStudents.get(studentId);
+            if (!base && !student) return null;
+            const dateForDisplay = useFirstSubjectDate
+                ? (student?.firstSubjectEnrollmentDate || student?.enrollmentDate)
+                : student?.enrollmentDate;
+            return {
+                id: studentId,
+                name: base?.name || student?.name || '',
+                school: base?.school || '',
+                grade: base?.grade || '',
+                enrollmentDate: dateForDisplay,
+            };
+        };
+        const activeStudents: Array<{ id: string; name: string; school: string; grade: string; enrollmentDate?: string }> = [];
+        activeStudentIds.forEach(id => {
+            const info = buildStudentInfo(id, true);
+            if (info) activeStudents.push(info);
+        });
+        activeStudents.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+
+        const newStudents: Array<{ id: string; name: string; school: string; grade: string; enrollmentDate?: string }> = [];
+        newStudentIds.forEach(id => {
+            const info = buildStudentInfo(id, true);
+            if (info) newStudents.push(info);
+        });
+        newStudents.sort((a, b) => (b.enrollmentDate || '').localeCompare(a.enrollmentDate || ''));
+
         return {
             activeCount: activeStudentIds.size,          // 재원생 (중복 제거됨)
             newCount: newStudentIds.size,                // 신입 (30일 이내)
             onHoldCount: onHoldStudentIds.size,          // 대기 (중복 제거됨)
             withdrawnCount: withdrawnStudents.length,    // 퇴원 (과거/오늘)
             withdrawnFutureCount: withdrawnFutureStudents.length,  // 퇴원 예정 (미래)
+            activeStudents,                              // 재원 학생 상세 목록 (드롭다운)
+            newStudents,                                 // 신입 학생 상세 목록 (드롭다운)
             onHoldStudents,                              // 대기 학생 상세 목록
             withdrawnStudents,                           // 퇴원 학생 상세 목록
             withdrawnFutureStudents                      // 퇴원 예정 학생 상세 목록
@@ -602,18 +647,56 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                         </button>
                     </div>
 
-                    {/* 학생 통계 배지 (통일: 재원/신입/예정/퇴원) */}
+                    {/* 학생 통계 배지 (통일: 재원/신입/예정/퇴원) — 모두 클릭 시 학생 목록 드롭다운 */}
                     <div className="flex items-center gap-2 ml-2 pl-2 border-l border-white/20">
-                        {/* 재원 */}
-                        <div className="flex items-center gap-1 px-2 py-0.5 bg-green-900/50 border border-green-700/50 rounded-sm">
-                            <span className="text-xxs text-green-400 font-medium">재원</span>
-                            <span className="text-xs font-bold text-green-300">{studentCounts.activeCount}</span>
+                        {/* 재원 — 클릭 기반 드롭다운 (퇴원과 동일 패턴) */}
+                        <div className="relative" ref={activeDropdownRef}>
+                            <div
+                                className="flex items-center gap-1 px-2 py-0.5 bg-green-900/50 border border-green-700/50 rounded-sm cursor-pointer hover:bg-green-800/50 transition-colors"
+                                onClick={() => setIsActiveDropdownOpen(!isActiveDropdownOpen)}
+                            >
+                                <span className="text-xxs text-green-400 font-medium">재원</span>
+                                <span className="text-xs font-bold text-green-300">{studentCounts.activeCount}</span>
+                            </div>
+                            {isActiveDropdownOpen && studentCounts.activeStudents.length > 0 && (
+                                <div className="absolute top-full left-0 mt-1 bg-gray-800 text-white text-xs px-3 py-2 rounded shadow-lg z-50 min-w-max max-h-96 overflow-y-auto">
+                                    <div className="font-bold text-green-300 mb-1">재원 ({studentCounts.activeCount}명)</div>
+                                    {studentCounts.activeStudents.map(s => {
+                                        const schoolGrade = formatSchoolGrade(s.school, s.grade);
+                                        return (
+                                            <div key={s.id} className="whitespace-nowrap py-0.5">
+                                                {s.name}/{schoolGrade !== '-' ? schoolGrade : '미입력'}
+                                                {s.enrollmentDate && ` (입학: ${s.enrollmentDate})`}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
-                        {/* 신입 (30일 이내) */}
+                        {/* 신입 (30일 이내) — 클릭 기반 드롭다운 */}
                         {studentCounts.newCount > 0 && (
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-pink-900/50 border border-pink-700/50 rounded-sm">
-                                <span className="text-xxs text-pink-400 font-medium">신입</span>
-                                <span className="text-xs font-bold text-pink-300">{studentCounts.newCount}</span>
+                            <div className="relative" ref={newDropdownRef}>
+                                <div
+                                    className="flex items-center gap-1 px-2 py-0.5 bg-pink-900/50 border border-pink-700/50 rounded-sm cursor-pointer hover:bg-pink-800/50 transition-colors"
+                                    onClick={() => setIsNewDropdownOpen(!isNewDropdownOpen)}
+                                >
+                                    <span className="text-xxs text-pink-400 font-medium">신입</span>
+                                    <span className="text-xs font-bold text-pink-300">{studentCounts.newCount}</span>
+                                </div>
+                                {isNewDropdownOpen && studentCounts.newStudents.length > 0 && (
+                                    <div className="absolute top-full left-0 mt-1 bg-gray-800 text-white text-xs px-3 py-2 rounded shadow-lg z-50 min-w-max max-h-96 overflow-y-auto">
+                                        <div className="font-bold text-pink-300 mb-1">신입 ({studentCounts.newCount}명)</div>
+                                        {studentCounts.newStudents.map(s => {
+                                            const schoolGrade = formatSchoolGrade(s.school, s.grade);
+                                            return (
+                                                <div key={s.id} className="whitespace-nowrap py-0.5">
+                                                    {s.name}/{schoolGrade !== '-' ? schoolGrade : '미입력'}
+                                                    {s.enrollmentDate && ` (입학: ${s.enrollmentDate})`}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
                         )}
                         {/* 예정 (대기 + 퇴원예정) - 클릭 기반 드롭다운 */}

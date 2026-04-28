@@ -42,6 +42,8 @@ interface StudentStats {
     withdrawnFuture: number;  // 퇴원 예정
     waiting: number;  // 대기생 (onHold)
     // 툴팁용 상세 정보
+    activeStudents: StudentInfo[];
+    newStudents: StudentInfo[];
     waitingStudents: StudentInfo[];
     withdrawnStudents: StudentInfo[];
     withdrawnFutureStudents: StudentInfo[];
@@ -181,6 +183,33 @@ export const useEnglishStats = (
             }
         });
 
+        // 재원 / 신입 학생 상세 목록 (툴팁용) — 같은 과목 첫 입학일 기준
+        const buildInfo = (studentId: string): StudentInfo | null => {
+            const base = studentMap[studentId];
+            const student = processedStudents.get(studentId);
+            if (!base && !student) return null;
+            return {
+                id: studentId,
+                name: base?.name || student?.name || '',
+                school: base?.school || '',
+                grade: base?.grade || '',
+                enrollmentDate: student?.firstSubjectEnrollmentDate || student?.enrollmentDate,
+            };
+        };
+        const activeStudents: StudentInfo[] = [];
+        activeStudentIds.forEach(id => {
+            const info = buildInfo(id);
+            if (info) activeStudents.push(info);
+        });
+        activeStudents.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+
+        const newStudents: StudentInfo[] = [];
+        new1StudentIds.forEach(id => {
+            const info = buildInfo(id);
+            if (info) newStudents.push(info);
+        });
+        newStudents.sort((a, b) => (b.enrollmentDate || '').localeCompare(a.enrollmentDate || ''));
+
         return {
             active: activeStudentIds.size,
             new1: new1StudentIds.size,
@@ -188,6 +217,8 @@ export const useEnglishStats = (
             withdrawn: withdrawnStudents.length,
             withdrawnFuture: withdrawnFutureStudents.length,
             waiting: waitingStudentIds.size,
+            activeStudents,
+            newStudents,
             waitingStudents,
             withdrawnStudents,
             withdrawnFutureStudents,

@@ -879,17 +879,45 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         )}
                         {/* 학생 통계 배지 (통일: 재원/신입/예정/퇴원) */}
                         <div className="flex items-center gap-2 ml-2 pl-2 border-l border-white/20">
-                            {/* 재원 */}
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-green-900/50 border border-green-700/50 rounded-sm">
-                                <span className="text-xxs text-green-400 font-medium">재원</span>
-                                <span className="text-xs font-bold text-green-300">{studentStats.active}</span>
-                            </div>
-                            {/* 신입 (30일 이내) */}
-                            {studentStats.new1 > 0 && (
-                                <div className="flex items-center gap-1 px-2 py-0.5 bg-pink-900/50 border border-pink-700/50 rounded-sm">
-                                    <span className="text-xxs text-pink-400 font-medium">신입</span>
-                                    <span className="text-xs font-bold text-pink-300">{studentStats.new1}</span>
+                            {/* 재원 — 호버 툴팁 학생 목록 (퇴원과 동일 PortalTooltip 패턴) */}
+                            <PortalTooltip
+                                content={
+                                    <div className="bg-gray-800 text-white text-xs px-3 py-2 rounded shadow-lg max-h-96 overflow-y-auto">
+                                        <div className="font-bold text-green-300 mb-1">재원 ({studentStats.active}명)</div>
+                                        {studentStats.activeStudents.map(s => (
+                                            <div key={s.id} className="whitespace-nowrap">
+                                                {s.name}/{formatSchoolGrade(s.school, s.grade) || '미입력'}
+                                                {s.enrollmentDate && ` (입학: ${s.enrollmentDate})`}
+                                            </div>
+                                        ))}
+                                    </div>
+                                }
+                            >
+                                <div className="flex items-center gap-1 px-2 py-0.5 bg-green-900/50 border border-green-700/50 rounded-sm cursor-pointer">
+                                    <span className="text-xxs text-green-400 font-medium">재원</span>
+                                    <span className="text-xs font-bold text-green-300">{studentStats.active}</span>
                                 </div>
+                            </PortalTooltip>
+                            {/* 신입 (30일 이내) — 호버 툴팁 학생 목록 */}
+                            {studentStats.new1 > 0 && (
+                                <PortalTooltip
+                                    content={
+                                        <div className="bg-gray-800 text-white text-xs px-3 py-2 rounded shadow-lg max-h-96 overflow-y-auto">
+                                            <div className="font-bold text-pink-300 mb-1">신입 ({studentStats.new1}명)</div>
+                                            {studentStats.newStudents.map(s => (
+                                                <div key={s.id} className="whitespace-nowrap">
+                                                    {s.name}/{formatSchoolGrade(s.school, s.grade) || '미입력'}
+                                                    {s.enrollmentDate && ` (입학: ${s.enrollmentDate})`}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    }
+                                >
+                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-pink-900/50 border border-pink-700/50 rounded-sm cursor-pointer">
+                                        <span className="text-xxs text-pink-400 font-medium">신입</span>
+                                        <span className="text-xs font-bold text-pink-300">{studentStats.new1}</span>
+                                    </div>
+                                </PortalTooltip>
                             )}
                             {/* 예정 (대기 + 퇴원예정) */}
                             {(studentStats.waiting > 0 || studentStats.withdrawnFuture > 0) && (
@@ -1188,17 +1216,45 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         )}
                         {/* 학생 통계 배지 (통일: 재원/신입/예정/퇴원) */}
                         <div className="flex items-center gap-2 ml-2 pl-2 border-l border-white/20">
-                            {/* 재원 */}
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-green-900/50 border border-green-700/50 rounded-sm">
-                                <span className="text-xxs text-green-400 font-medium">재원</span>
-                                <span className="text-xs font-bold text-green-300">{studentStats.active}</span>
-                            </div>
-                            {/* 신입 (30일 이내) */}
-                            {studentStats.new1 > 0 && (
-                                <div className="flex items-center gap-1 px-2 py-0.5 bg-pink-900/50 border border-pink-700/50 rounded-sm">
-                                    <span className="text-xxs text-pink-400 font-medium">신입</span>
-                                    <span className="text-xs font-bold text-pink-300">{studentStats.new1}</span>
+                            {/* 재원 — 호버 툴팁 학생 목록 (퇴원과 동일 PortalTooltip 패턴) */}
+                            <PortalTooltip
+                                content={
+                                    <div className="bg-gray-800 text-white text-xs px-3 py-2 rounded shadow-lg max-h-96 overflow-y-auto">
+                                        <div className="font-bold text-green-300 mb-1">재원 ({studentStats.active}명)</div>
+                                        {studentStats.activeStudents.map(s => (
+                                            <div key={s.id} className="whitespace-nowrap">
+                                                {s.name}/{formatSchoolGrade(s.school, s.grade) || '미입력'}
+                                                {s.enrollmentDate && ` (입학: ${s.enrollmentDate})`}
+                                            </div>
+                                        ))}
+                                    </div>
+                                }
+                            >
+                                <div className="flex items-center gap-1 px-2 py-0.5 bg-green-900/50 border border-green-700/50 rounded-sm cursor-pointer">
+                                    <span className="text-xxs text-green-400 font-medium">재원</span>
+                                    <span className="text-xs font-bold text-green-300">{studentStats.active}</span>
                                 </div>
+                            </PortalTooltip>
+                            {/* 신입 (30일 이내) — 호버 툴팁 학생 목록 */}
+                            {studentStats.new1 > 0 && (
+                                <PortalTooltip
+                                    content={
+                                        <div className="bg-gray-800 text-white text-xs px-3 py-2 rounded shadow-lg max-h-96 overflow-y-auto">
+                                            <div className="font-bold text-pink-300 mb-1">신입 ({studentStats.new1}명)</div>
+                                            {studentStats.newStudents.map(s => (
+                                                <div key={s.id} className="whitespace-nowrap">
+                                                    {s.name}/{formatSchoolGrade(s.school, s.grade) || '미입력'}
+                                                    {s.enrollmentDate && ` (입학: ${s.enrollmentDate})`}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    }
+                                >
+                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-pink-900/50 border border-pink-700/50 rounded-sm cursor-pointer">
+                                        <span className="text-xxs text-pink-400 font-medium">신입</span>
+                                        <span className="text-xs font-bold text-pink-300">{studentStats.new1}</span>
+                                    </div>
+                                </PortalTooltip>
                             )}
                             {/* 예정 (대기 + 퇴원예정) */}
                             {(studentStats.waiting > 0 || studentStats.withdrawnFuture > 0) && (
@@ -1414,17 +1470,45 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                         )}
                         {/* 학생 통계 배지 (통일: 재원/신입/예정/퇴원) */}
                         <div className="flex items-center gap-2 ml-2 pl-2 border-l border-white/20">
-                            {/* 재원 */}
-                            <div className="flex items-center gap-1 px-2 py-0.5 bg-green-900/50 border border-green-700/50 rounded-sm">
-                                <span className="text-xxs text-green-400 font-medium">재원</span>
-                                <span className="text-xs font-bold text-green-300">{studentStats.active}</span>
-                            </div>
-                            {/* 신입 (30일 이내) */}
-                            {studentStats.new1 > 0 && (
-                                <div className="flex items-center gap-1 px-2 py-0.5 bg-pink-900/50 border border-pink-700/50 rounded-sm">
-                                    <span className="text-xxs text-pink-400 font-medium">신입</span>
-                                    <span className="text-xs font-bold text-pink-300">{studentStats.new1}</span>
+                            {/* 재원 — 호버 툴팁 학생 목록 (퇴원과 동일 PortalTooltip 패턴) */}
+                            <PortalTooltip
+                                content={
+                                    <div className="bg-gray-800 text-white text-xs px-3 py-2 rounded shadow-lg max-h-96 overflow-y-auto">
+                                        <div className="font-bold text-green-300 mb-1">재원 ({studentStats.active}명)</div>
+                                        {studentStats.activeStudents.map(s => (
+                                            <div key={s.id} className="whitespace-nowrap">
+                                                {s.name}/{formatSchoolGrade(s.school, s.grade) || '미입력'}
+                                                {s.enrollmentDate && ` (입학: ${s.enrollmentDate})`}
+                                            </div>
+                                        ))}
+                                    </div>
+                                }
+                            >
+                                <div className="flex items-center gap-1 px-2 py-0.5 bg-green-900/50 border border-green-700/50 rounded-sm cursor-pointer">
+                                    <span className="text-xxs text-green-400 font-medium">재원</span>
+                                    <span className="text-xs font-bold text-green-300">{studentStats.active}</span>
                                 </div>
+                            </PortalTooltip>
+                            {/* 신입 (30일 이내) — 호버 툴팁 학생 목록 */}
+                            {studentStats.new1 > 0 && (
+                                <PortalTooltip
+                                    content={
+                                        <div className="bg-gray-800 text-white text-xs px-3 py-2 rounded shadow-lg max-h-96 overflow-y-auto">
+                                            <div className="font-bold text-pink-300 mb-1">신입 ({studentStats.new1}명)</div>
+                                            {studentStats.newStudents.map(s => (
+                                                <div key={s.id} className="whitespace-nowrap">
+                                                    {s.name}/{formatSchoolGrade(s.school, s.grade) || '미입력'}
+                                                    {s.enrollmentDate && ` (입학: ${s.enrollmentDate})`}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    }
+                                >
+                                    <div className="flex items-center gap-1 px-2 py-0.5 bg-pink-900/50 border border-pink-700/50 rounded-sm cursor-pointer">
+                                        <span className="text-xxs text-pink-400 font-medium">신입</span>
+                                        <span className="text-xs font-bold text-pink-300">{studentStats.new1}</span>
+                                    </div>
+                                </PortalTooltip>
                             )}
                             {/* 예정 (대기 + 퇴원예정) */}
                             {(studentStats.waiting > 0 || studentStats.withdrawnFuture > 0) && (
