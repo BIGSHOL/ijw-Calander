@@ -6281,8 +6281,8 @@ exports.processConsultationRecording = functions
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 8192,
+                    model: "claude-sonnet-4-6",
+                    max_tokens: 64000,
                     messages: [{
                         role: "user",
                         content: `당신은 학원 학부모 상담 기록을 깊이 있게 분석하는 교육 상담 전문가입니다.
@@ -6494,8 +6494,8 @@ exports.reanalyzeConsultationReport = functions
                 method: "POST",
                 headers: { "x-api-key": anthropicKey, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 8192,
+                    model: "claude-sonnet-4-6",
+                    max_tokens: 64000,
                     messages: [{
                         role: "user",
                         content: `당신은 학원 학부모 상담 기록을 깊이 있게 분석하는 교육 상담 전문가입니다.
@@ -6748,8 +6748,8 @@ exports.processRegistrationRecording = functions
                     method: "POST",
                     headers: claudeHeaders,
                     body: JSON.stringify({
-                        model: "claude-sonnet-4-20250514",
-                        max_tokens: 4096,
+                        model: "claude-sonnet-4-6",
+                        max_tokens: 64000,
                         messages: [{ role: "user", content: `당신은 학원 등록 상담 내용을 분석하여 상담 기록 양식에 맞게 구조화하는 전문가입니다.
 
 학생: ${studentName}
@@ -6831,8 +6831,8 @@ ${fullText}
                     method: "POST",
                     headers: claudeHeaders,
                     body: JSON.stringify({
-                        model: "claude-sonnet-4-20250514",
-                        max_tokens: 8192,
+                        model: "claude-sonnet-4-6",
+                        max_tokens: 64000,
                         messages: [{ role: "user", content: `당신은 학원 학부모 상담 기록을 깊이 있게 분석하는 교육 상담 전문가입니다.
 
 다음은 학부모와 학원 상담사 간의 상담 녹음을 텍스트로 변환한 것입니다.
@@ -7279,8 +7279,8 @@ exports.processMeetingRecording = functions
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 8192,
+                    model: "claude-sonnet-4-6",
+                    max_tokens: 64000,
                     messages: [{ role: "user", content: `당신은 학원 내부 회의 기록을 정밀하게 분석하는 조직 관리 전문가입니다.
 
 다음은 학원 교직원 회의/발표 녹음을 텍스트로 변환한 것입니다.
@@ -7444,8 +7444,8 @@ exports.reanalyzeMeetingReport = functions
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 8192,
+                    model: "claude-sonnet-4-6",
+                    max_tokens: 64000,
                     messages: [{ role: "user", content: `당신은 학원 내부 회의 기록을 정밀하게 분석하는 조직 관리 전문가입니다.
 
 다음은 학원 교직원 회의/발표 녹음을 텍스트로 변환한 것입니다.
