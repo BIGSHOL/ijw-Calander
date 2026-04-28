@@ -5213,7 +5213,12 @@ async function scrapeMakeEduShuttleStudentsInternal() {
             : `${kstYear}${String(kstMonth).padStart(2, '0')}`;       // 202604
         await page.evaluate((val) => {
             const fromYm = document.querySelector('#fromYm');
-            if (fromYm) fromYm.value = val;
+            if (fromYm) {
+                fromYm.value = val;
+                // 메이크에듀 폼이 onChange/onInput을 듣고 있을 수 있으므로 이벤트 발생
+                fromYm.dispatchEvent(new Event('change', { bubbles: true }));
+                fromYm.dispatchEvent(new Event('input', { bubbles: true }));
+            }
         }, targetYMValue);
         logger.info(`[scrapeMakeEduShuttle] Set fromYm to ${targetYMValue} (${needPrevMonth ? '전월부터' : '당월'} 조회)`);
 
@@ -5233,6 +5238,18 @@ async function scrapeMakeEduShuttleStudentsInternal() {
         } catch (e) {
             logger.info("[scrapeMakeEduShuttle] Search button click:", e.message);
         }
+
+        // 검색 결과 행이 실제로 그려질 때까지 명시적으로 대기 (최대 30초)
+        try {
+            await page.waitForFunction(
+                () => document.querySelectorAll('tr.list_tr, tr[id^="tr_"]').length > 0,
+                { timeout: 30000 }
+            );
+            logger.info("[scrapeMakeEduShuttle] Search result rows appeared");
+        } catch (e) {
+            logger.warn("[scrapeMakeEduShuttle] No result rows after search (timeout):", e.message);
+        }
+        await new Promise(r => setTimeout(r, 2000));
 
         // 3. 모든 페이지의 수납 데이터 크롤링
         const allBillingRows = [];
