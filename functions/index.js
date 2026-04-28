@@ -5490,6 +5490,42 @@ exports.scrapeMakeEduShuttleStudents = functions
         }
     });
 
+/**
+ * 셔틀버스 학생 자동 동기화 (매일 10:00 KST)
+ * - scrapeMakeEduShuttleStudentsInternal 호출 → shuttle_students 컬렉션 갱신
+ * - 결과는 makeEduShuttleSyncLogs 컬렉션에 기록
+ */
+exports.scheduledMakeEduShuttleSync = functions
+    .region("asia-northeast3")
+    .runWith({ timeoutSeconds: 540, memory: "2GB", secrets: ["MAKEEDU_USERNAME", "MAKEEDU_PASSWORD"] })
+    .pubsub.schedule("0 10 * * *")
+    .timeZone("Asia/Seoul")
+    .onRun(async (context) => {
+        logger.info("[scheduledMakeEduShuttleSync] Start");
+        try {
+            const result = await scrapeMakeEduShuttleStudentsInternal();
+            logger.info("[scheduledMakeEduShuttleSync] Result:", result);
+            await db.collection("makeEduShuttleSyncLogs").add({
+                type: "scheduled",
+                success: true,
+                totalStudents: result?.totalStudents || 0,
+                shuttleStudents: result?.shuttleStudents || 0,
+                shuttleNames: result?.shuttleNames || [],
+                executedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            return result;
+        } catch (err) {
+            logger.error("[scheduledMakeEduShuttleSync] Error:", err);
+            await db.collection("makeEduShuttleSyncLogs").add({
+                type: "scheduled",
+                success: false,
+                error: err.message,
+                executedAt: admin.firestore.FieldValue.serverTimestamp(),
+            }).catch(() => {});
+            throw err;
+        }
+    });
+
 // ========================================================================
 // MakeEdu 상담내역 테스트 조회 (관리자용 - DB 저장 없이 파싱 결과만 반환)
 // ========================================================================
