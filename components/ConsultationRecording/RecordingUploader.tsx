@@ -1,10 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Upload, Mic, MicOff, Calendar, User, Users, X, Square, ArrowDownToLine, ExternalLink, ArrowDownFromLine } from 'lucide-react';
+import { Upload, Mic, MicOff, Calendar, User, Users, X, Square, ArrowDownToLine, ExternalLink } from 'lucide-react';
 import { useUploadConsultationRecording } from '../../hooks/useConsultationRecording';
 import { useStudents } from '../../hooks/useStudents';
 import { format } from 'date-fns';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { getApp } from 'firebase/app';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
 import { startRecoverySession, saveChunk, checkRecovery, recoverRecording, clearRecovery } from '../../utils/recordingRecovery';
 import { openRecorderPopup } from '../../utils/recorderPopup';
@@ -54,24 +52,9 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [isPopupRecording, setIsPopupRecording] = useState(false);
 
-  // 실시간 전사 (AssemblyAI WebSocket) - 인라인 fallback용
-  const wsRef = useRef<WebSocket | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const processorRef = useRef<ScriptProcessorNode | null>(null);
-  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
-  const [liveTranscript, setLiveTranscript] = useState<string[]>([]);
-  const [interimText, setInterimText] = useState('');
-  const [autoScroll, setAutoScroll] = useState(true);
-  const transcriptRef = useRef<HTMLDivElement>(null);
-  const [speechStatus, setSpeechStatus] = useState<'off' | 'starting' | 'active' | 'error'>('off');
+  // 실시간 전사 기능 제거됨 (불안정한 WebSocket 스트리밍 → 녹음 후 batch 전사로 전환)
+  // 녹음 chunk 복구용 인덱스만 유지
   const chunkIndexRef = useRef(0);
-
-  // 전사 자동 스크롤
-  useEffect(() => {
-    if (autoScroll && transcriptRef.current) {
-      transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
-    }
-  }, [liveTranscript, interimText, autoScroll]);
 
   // 녹음 복구
   const [recoveryFile, setRecoveryFile] = useState<File | null>(null);
@@ -176,15 +159,11 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
     return () => window.removeEventListener('beforeunload', handler);
   }, [isRecording]);
 
-  // 탭 비활성화 후 복귀 시 AudioContext resume (녹음 중단 방지)
+  // 탭 비활성화 후 복귀 시 MediaRecorder 상태 체크 (녹음 중단 감지)
   useEffect(() => {
     if (!isRecording) return;
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        if (audioContextRef.current?.state === 'suspended') {
-          audioContextRef.current.resume().catch(() => {});
-        }
-        // MediaRecorder가 비활성 중 멈춘 경우 감지
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'inactive') {
           setError('탭 전환 중 녹음이 중단되었습니다. 녹음된 부분은 저장되었습니다.');
           setIsRecording(false);
@@ -207,135 +186,10 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
     });
   }, []);
 
-  // AssemblyAI 실시간 전사 시작
-  const startRealtimeTranscription = async (stream: MediaStream) => {
-    setSpeechStatus('starting');
-
-    try {
-      // 1. Cloud Function에서 임시 토큰 발급
-      const fns = getFunctions(getApp(), 'asia-northeast3');
-      const createToken = httpsCallable<Record<string, never>, { token: string }>(fns, 'createRealtimeToken');
-      const { data } = await createToken({});
-      const token = data.token;
-
-      // 2. WebSocket 연결 (v3 Universal Streaming)
-      const params = new URLSearchParams({
-        sample_rate: '16000',
-        speech_model: 'whisper-rt',
-        token,
-      });
-      const ws = new WebSocket(
-        `wss://streaming.assemblyai.com/v3/ws?${params}`
-      );
-
-      ws.binaryType = 'arraybuffer';
-
-      ws.onopen = () => {
-        console.log('[AssemblyAI RT] Connected');
-        setSpeechStatus('active');
-      };
-
-      ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data);
-        // v3 Turn 형식
-        if (msg.type === 'Turn') {
-          if (msg.end_of_turn && msg.transcript) {
-            setLiveTranscript(prev => [...prev, msg.transcript]);
-            setInterimText('');
-          } else if (!msg.end_of_turn && msg.transcript) {
-            setInterimText(msg.transcript);
-          }
-        }
-        // v3 Begin/Termination
-        else if (msg.type === 'Begin') {
-          console.log('[AssemblyAI RT] Session:', msg.id);
-        }
-      };
-
-      ws.onerror = (e) => {
-        console.warn('[AssemblyAI RT] WebSocket error:', e);
-        setSpeechStatus('error');
-      };
-
-      ws.onclose = () => {
-        console.log('[AssemblyAI RT] Disconnected');
-        setSpeechStatus((prev) => prev === 'error' ? 'error' : 'off');
-      };
-
-      wsRef.current = ws;
-
-      // 3. AudioContext로 PCM 16-bit mono 16kHz 스트림 생성
-      const audioContext = new AudioContext({ sampleRate: 16000 });
-      audioContextRef.current = audioContext;
-
-      const source = audioContext.createMediaStreamSource(stream);
-      sourceRef.current = source;
-
-      // ScriptProcessorNode로 PCM 데이터 추출 (4096 buffer)
-      const processor = audioContext.createScriptProcessor(4096, 1, 1);
-      processorRef.current = processor;
-
-      processor.onaudioprocess = (e) => {
-        if (ws.readyState !== WebSocket.OPEN) return;
-
-        const inputData = e.inputBuffer.getChannelData(0);
-        // Float32 → Int16 PCM (little-endian) 변환
-        const pcm16 = new Int16Array(inputData.length);
-        for (let i = 0; i < inputData.length; i++) {
-          const s = Math.max(-1, Math.min(1, inputData[i]));
-          pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-        }
-
-        // v3: raw PCM 바이너리로 직접 전송
-        ws.send(pcm16.buffer);
-      };
-
-      source.connect(processor);
-      processor.connect(audioContext.destination);
-
-    } catch (err: any) {
-      console.error('[AssemblyAI RT] Init failed:', err);
-      setSpeechStatus('error');
-    }
-  };
-
-  const stopRealtimeTranscription = () => {
-    // WebSocket 종료 메시지 (v3)
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'Terminate' }));
-      wsRef.current.close();
-    }
-    wsRef.current = null;
-
-    // AudioContext 정리
-    if (processorRef.current) {
-      processorRef.current.disconnect();
-      processorRef.current = null;
-    }
-    if (sourceRef.current) {
-      sourceRef.current.disconnect();
-      sourceRef.current = null;
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
-
-    setInterimText('');
-    setSpeechStatus('off');
-  };
-
-  // AssemblyAI 토큰 발급 (팝업/인라인 공용)
-  const getAssemblyToken = useCallback(async (): Promise<string | null> => {
-    try {
-      const fns = getFunctions(getApp(), 'asia-northeast3');
-      const createToken = httpsCallable<Record<string, never>, { token: string }>(fns, 'createRealtimeToken');
-      const { data } = await createToken({});
-      return data.token;
-    } catch {
-      return null;
-    }
-  }, []);
+  // 실시간 전사 관련 함수 제거됨
+  // (startRealtimeTranscription / stopRealtimeTranscription / getAssemblyToken)
+  // 사유: AssemblyAI v3 streaming WebSocket 이 학원 환경에서 자주 끊기거나 빈 응답.
+  //       녹음 후 batch transcription(processConsultationRecording)에서 더 정확한 결과 도출.
 
   // 팝업 녹음 완료 → 자동 업로드+분석 시작
   const autoSubmitFile = useCallback(async (file: File) => {
@@ -403,7 +257,6 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
           setIsPopupRecording(false);
         },
       },
-      getAssemblyToken,
     );
 
     if (opened) {
@@ -411,7 +264,7 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
       setSelectedFile(null);
     }
     return opened;
-  }, [getAssemblyToken, autoSubmitFile]);
+  }, [autoSubmitFile]);
 
   // 녹음 버튼 클릭 핸들러: 팝업 우선, 차단 시 인라인 fallback
   const handleRecordClick = useCallback(() => {
@@ -479,11 +332,6 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
       setRecordSeconds(0);
       setSelectedFile(null);
       setError('');
-      setLiveTranscript([]);
-      setInterimText('');
-
-      // 실시간 전사 시작 (AssemblyAI WebSocket)
-      startRealtimeTranscription(stream);
 
       timerRef.current = setInterval(() => {
         setRecordSeconds(prev => prev + 1);
@@ -498,7 +346,6 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
     }
-    stopRealtimeTranscription();
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -767,51 +614,13 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
           )}
         </div>
 
-        {/* 실시간 전사 미리보기 */}
-        {(isRecording || liveTranscript.length > 0) && (
-          <div className="bg-gray-50 border rounded-sm p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${
-                  speechStatus === 'active' ? 'bg-green-500 animate-pulse'
-                  : speechStatus === 'starting' ? 'bg-yellow-500 animate-pulse'
-                  : speechStatus === 'error' ? 'bg-red-500'
-                  : isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-300'
-                }`} />
-                <span className="text-xs font-medium text-gray-500">
-                  {speechStatus === 'error'
-                    ? '음성인식 미지원 — 녹음은 정상 진행 중'
-                    : speechStatus === 'starting'
-                    ? '음성인식 연결 중...'
-                    : isRecording
-                    ? '실시간 전사 (미리보기)'
-                    : '전사 미리보기 — 정확한 결과는 분석 후 확인'}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAutoScroll(v => !v)}
-                className={`flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded border transition-colors ${
-                  autoScroll ? 'bg-blue-50 border-blue-300 text-blue-600' : 'bg-white border-gray-300 text-gray-400'
-                }`}
-                title={autoScroll ? '자동 스크롤 끄기' : '자동 스크롤 켜기'}
-              >
-                <ArrowDownFromLine className="w-3 h-3" />
-                자동스크롤
-              </button>
-            </div>
-            <div
-              ref={transcriptRef}
-              className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap max-h-48 overflow-auto"
-            >
-              {liveTranscript.join(' ')}
-              {interimText && (
-                <span className="text-gray-400">{liveTranscript.length > 0 ? ' ' : ''}{interimText}</span>
-              )}
-              {!liveTranscript.length && !interimText && isRecording && (
-                <span className="text-gray-400">말씀하시면 여기에 텍스트가 표시됩니다...</span>
-              )}
-            </div>
+        {/* 녹음 중 단순 표시 (실시간 전사 제거 — 녹음 후 batch 분석으로 정확한 결과 도출) */}
+        {isRecording && (
+          <div className="bg-gray-50 border rounded-sm px-4 py-3 flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-xs font-medium text-gray-600">
+              녹음 중 · 정지 후 자동으로 AI 분석이 시작됩니다
+            </span>
           </div>
         )}
 

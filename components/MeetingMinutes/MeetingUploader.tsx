@@ -1,9 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Upload, Mic, MicOff, Calendar, User, Users, X, Square, PenLine, ExternalLink, ArrowDownFromLine } from 'lucide-react';
+import { Upload, Mic, MicOff, Calendar, User, Users, X, Square, PenLine, ExternalLink } from 'lucide-react';
 import { useUploadMeetingRecording } from '../../hooks/useMeetingRecording';
 import { format } from 'date-fns';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { getApp } from 'firebase/app';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
 import { startRecoverySession, saveChunk, checkRecovery, recoverRecording, clearRecovery } from '../../utils/recordingRecovery';
 import { openRecorderPopup } from '../../utils/recorderPopup';
@@ -45,25 +43,10 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [isPopupRecording, setIsPopupRecording] = useState(false);
 
-  // 실시간 전사 (인라인 fallback용)
-  const wsRef = useRef<WebSocket | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const processorRef = useRef<ScriptProcessorNode | null>(null);
-  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
-  const [liveTranscript, setLiveTranscript] = useState<string[]>([]);
-  const [interimText, setInterimText] = useState('');
-  const [autoScroll, setAutoScroll] = useState(true);
-  const transcriptRef = useRef<HTMLDivElement>(null);
-  const [speechStatus, setSpeechStatus] = useState<'off' | 'starting' | 'active' | 'error'>('off');
+  // 실시간 전사 기능 제거됨 (불안정한 WebSocket 스트리밍 → 녹음 후 batch 전사로 전환)
+  // 녹음 chunk 복구용 인덱스만 유지
   const chunkIndexRef = useRef(0);
   const [recoveryFile, setRecoveryFile] = useState<File | null>(null);
-
-  // 전사 자동 스크롤
-  useEffect(() => {
-    if (autoScroll && transcriptRef.current) {
-      transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
-    }
-  }, [liveTranscript, interimText, autoScroll]);
 
   // 참석자 태그 추가
   const addAttendee = (name: string) => {
@@ -101,15 +84,11 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
     return () => window.removeEventListener('beforeunload', handler);
   }, [isRecording]);
 
-  // 탭 비활성화 후 복귀 시 AudioContext resume (녹음 중단 방지)
+  // 탭 비활성화 후 복귀 시 MediaRecorder 상태 체크
   useEffect(() => {
     if (!isRecording) return;
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        if (audioContextRef.current?.state === 'suspended') {
-          audioContextRef.current.resume().catch(() => {});
-        }
-        // MediaRecorder가 비활성 중 멈춘 경우 감지
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'inactive') {
           setError('탭 전환 중 녹음이 중단되었습니다. 녹음된 부분은 저장되었습니다.');
           setIsRecording(false);
@@ -130,91 +109,10 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
     });
   }, []);
 
-  // AssemblyAI 실시간 전사
-  const startRealtimeTranscription = async (stream: MediaStream) => {
-    setSpeechStatus('starting');
-    try {
-      const fns = getFunctions(getApp(), 'asia-northeast3');
-      const createToken = httpsCallable<Record<string, never>, { token: string }>(fns, 'createRealtimeToken');
-      const { data } = await createToken({});
-      const token = data.token;
-
-      const params = new URLSearchParams({
-        sample_rate: '16000',
-        speech_model: 'whisper-rt',
-        token,
-      });
-      const ws = new WebSocket(`wss://streaming.assemblyai.com/v3/ws?${params}`);
-      ws.binaryType = 'arraybuffer';
-
-      ws.onopen = () => setSpeechStatus('active');
-      ws.onmessage = (event) => {
-        const msg = JSON.parse(event.data);
-        if (msg.type === 'Turn') {
-          if (msg.end_of_turn && msg.transcript) {
-            setLiveTranscript(prev => [...prev, msg.transcript]);
-            setInterimText('');
-          } else if (!msg.end_of_turn && msg.transcript) {
-            setInterimText(msg.transcript);
-          }
-        }
-      };
-      ws.onerror = () => setSpeechStatus('error');
-      ws.onclose = () => setSpeechStatus(prev => prev === 'error' ? 'error' : 'off');
-      wsRef.current = ws;
-
-      const audioContext = new AudioContext({ sampleRate: 16000 });
-      audioContextRef.current = audioContext;
-      const source = audioContext.createMediaStreamSource(stream);
-      sourceRef.current = source;
-      const processor = audioContext.createScriptProcessor(4096, 1, 1);
-      processorRef.current = processor;
-
-      processor.onaudioprocess = (e) => {
-        if (ws.readyState !== WebSocket.OPEN) return;
-        const inputData = e.inputBuffer.getChannelData(0);
-        const pcm16 = new Int16Array(inputData.length);
-        for (let i = 0; i < inputData.length; i++) {
-          const s = Math.max(-1, Math.min(1, inputData[i]));
-          pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-        }
-        ws.send(pcm16.buffer);
-      };
-
-      source.connect(processor);
-      processor.connect(audioContext.destination);
-    } catch {
-      setSpeechStatus('error');
-    }
-  };
-
-  const stopRealtimeTranscription = () => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'Terminate' }));
-      wsRef.current.close();
-    }
-    wsRef.current = null;
-    processorRef.current?.disconnect();
-    processorRef.current = null;
-    sourceRef.current?.disconnect();
-    sourceRef.current = null;
-    audioContextRef.current?.close();
-    audioContextRef.current = null;
-    setInterimText('');
-    setSpeechStatus('off');
-  };
-
-  // AssemblyAI 토큰 발급
-  const getAssemblyToken = useCallback(async (): Promise<string | null> => {
-    try {
-      const fns = getFunctions(getApp(), 'asia-northeast3');
-      const createToken = httpsCallable<Record<string, never>, { token: string }>(fns, 'createRealtimeToken');
-      const { data } = await createToken({});
-      return data.token;
-    } catch {
-      return null;
-    }
-  }, []);
+  // 실시간 전사 관련 함수 제거됨
+  // (startRealtimeTranscription / stopRealtimeTranscription / getAssemblyToken)
+  // 사유: AssemblyAI v3 streaming WebSocket 이 학원 환경에서 자주 끊기거나 빈 응답.
+  //       녹음 후 batch transcription(processMeetingRecording)에서 더 정확한 결과 도출.
 
   // 팝업 녹음 완료 → 자동 업로드+분석 시작
   const autoSubmitFile = useCallback(async (file: File) => {
@@ -260,14 +158,13 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
           setIsPopupRecording(false);
         },
       },
-      getAssemblyToken,
     );
     if (opened) {
       setIsPopupRecording(true);
       setSelectedFile(null);
     }
     return opened;
-  }, [getAssemblyToken, autoSubmitFile]);
+  }, [autoSubmitFile]);
 
   // 녹음 버튼: 팝업 우선, 차단 시 인라인 fallback
   const handleRecordClick = useCallback(() => {
@@ -322,9 +219,6 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
       setRecordSeconds(0);
       setSelectedFile(null);
       setError('');
-      setLiveTranscript([]);
-      setInterimText('');
-      startRealtimeTranscription(stream);
       timerRef.current = setInterval(() => setRecordSeconds(prev => prev + 1), 1000);
     } catch {
       setError('마이크 접근이 거부되었습니다. 브라우저 권한을 확인해주세요.');
@@ -333,7 +227,6 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
 
   const stopRecording = () => {
     if (mediaRecorderRef.current?.state === 'recording') mediaRecorderRef.current.stop();
-    stopRealtimeTranscription();
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     setIsRecording(false);
   };
@@ -548,46 +441,13 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
           )}
         </div>
 
-        {/* 실시간 전사 미리보기 */}
-        {(isRecording || liveTranscript.length > 0) && (
-          <div className="bg-gray-50 border rounded-sm p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${
-                  speechStatus === 'active' ? 'bg-green-500 animate-pulse'
-                  : speechStatus === 'starting' ? 'bg-yellow-500 animate-pulse'
-                  : speechStatus === 'error' ? 'bg-red-500'
-                  : isRecording ? 'bg-red-500 animate-pulse' : 'bg-gray-300'
-                }`} />
-                <span className="text-xs font-medium text-gray-500">
-                  {speechStatus === 'error' ? '음성인식 미지원 — 녹음은 정상 진행 중'
-                    : speechStatus === 'starting' ? '음성인식 연결 중...'
-                    : isRecording ? '실시간 전사 (미리보기)'
-                    : '전사 미리보기 — 정확한 결과는 분석 후 확인'}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAutoScroll(v => !v)}
-                className={`flex items-center gap-1 px-1.5 py-0.5 text-[10px] rounded border transition-colors ${
-                  autoScroll ? 'bg-blue-50 border-blue-300 text-blue-600' : 'bg-white border-gray-300 text-gray-400'
-                }`}
-                title={autoScroll ? '자동 스크롤 끄기' : '자동 스크롤 켜기'}
-              >
-                <ArrowDownFromLine className="w-3 h-3" />
-                자동스크롤
-              </button>
-            </div>
-            <div
-              ref={transcriptRef}
-              className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap max-h-48 overflow-auto"
-            >
-              {liveTranscript.join(' ')}
-              {interimText && <span className="text-gray-400">{liveTranscript.length > 0 ? ' ' : ''}{interimText}</span>}
-              {!liveTranscript.length && !interimText && isRecording && (
-                <span className="text-gray-400">말씀하시면 여기에 텍스트가 표시됩니다...</span>
-              )}
-            </div>
+        {/* 녹음 중 단순 표시 (실시간 전사 제거 — 녹음 후 batch 분석으로 정확한 결과 도출) */}
+        {isRecording && (
+          <div className="bg-gray-50 border rounded-sm px-4 py-3 flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-xs font-medium text-gray-600">
+              녹음 중 · 정지 후 자동으로 AI 분석이 시작됩니다
+            </span>
           </div>
         )}
 

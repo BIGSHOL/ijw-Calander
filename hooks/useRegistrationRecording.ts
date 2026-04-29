@@ -204,19 +204,8 @@ export function useRegistrationRecording() {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // AssemblyAI 토큰 발급
-  const getAssemblyToken = useCallback(async (): Promise<string | null> => {
-    try {
-      const fns = getFunctions(getApp(), 'asia-northeast3');
-      const createToken = httpsCallable<Record<string, never>, { token: string }>(fns, 'createRealtimeToken');
-      const { data } = await createToken({});
-      return data.token;
-    } catch {
-      return null;
-    }
-  }, []);
-
   // 팝업 녹음 시작 (우선)
+  // (실시간 전사용 AssemblyAI 토큰 발급은 제거됨 — 녹음 후 batch transcription 으로 대체)
   const startPopupRecording = useCallback((): Promise<File> => {
     return new Promise((resolve, reject) => {
       const opened = openRecorderPopup(
@@ -235,7 +224,6 @@ export function useRegistrationRecording() {
             reject(new Error('녹음 창이 닫혔습니다.'));
           },
         },
-        getAssemblyToken,
       );
 
       if (!opened) {
@@ -244,7 +232,7 @@ export function useRegistrationRecording() {
         setIsPopupRecording(true);
       }
     });
-  }, [getAssemblyToken]);
+  }, []);
 
   // 인라인 녹음 (fallback)
   const startRecording = useCallback(async () => {

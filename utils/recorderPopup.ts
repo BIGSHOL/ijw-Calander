@@ -6,16 +6,18 @@
  * 1. 메인 창에서 openRecorderPopup() 호출 → about:blank 팝업 생성
  * 2. 팝업이 'recorder-ready' 전송 → 메인 창이 'start' 응답
  * 3. 팝업이 자동으로 녹음 시작
- * 4. 메인 창이 AssemblyAI 토큰 발급 후 'token' 전송 → 팝업이 실시간 전사 연결
- * 5. 녹음 완료 시 팝업이 'recording-complete' + ArrayBuffer 전송
- * 6. 메인 창에서 File 객체로 변환하여 기존 업로드 플로우 이어감
+ * 4. 녹음 완료 시 팝업이 'recording-complete' + ArrayBuffer 전송 + 자동 다운로드(백업)
+ * 5. 메인 창에서 File 객체로 변환하여 기존 업로드 플로우 이어감
+ *
+ * NOTE: 실시간 전사 기능은 제거됨 (불안정한 WebSocket 스트리밍).
+ *       녹음 후 batch transcription(AssemblyAI POST /v2/transcript) 에서 더 정확한 결과 도출.
  */
 
-const POPUP_WIDTH = 420;
-const POPUP_HEIGHT = 620;
+const POPUP_WIDTH = 380;
+const POPUP_HEIGHT = 460;
 
 export interface RecorderPopupCallbacks {
-  onComplete: (file: File, duration: number, transcriptPreview: string[]) => void;
+  onComplete: (file: File, duration: number) => void;
   onError: (message: string) => void;
   onClose: () => void;
 }
@@ -27,7 +29,6 @@ export interface RecorderPopupCallbacks {
 export function openRecorderPopup(
   title: string,
   callbacks: RecorderPopupCallbacks,
-  getAssemblyToken?: () => Promise<string | null>,
 ): boolean {
   const left = Math.round((screen.width - POPUP_WIDTH) / 2);
   const top = Math.round((screen.height - POPUP_HEIGHT) / 2);
@@ -53,23 +54,15 @@ export function openRecorderPopup(
     switch (data.type) {
       case 'recorder-ready':
         popup.postMessage({ type: 'start' }, origin);
-        // 토큰 비동기 발급 (녹음은 먼저 시작됨)
-        if (getAssemblyToken) {
-          getAssemblyToken().then(token => {
-            if (token && !popup.closed) {
-              popup.postMessage({ type: 'token', token }, origin);
-            }
-          }).catch(() => {});
-        }
         break;
 
       case 'recording-complete': {
         completed = true;
-        const { arrayBuffer, mimeType, fileName, duration, transcriptPreview } = data;
+        const { arrayBuffer, mimeType, fileName, duration } = data;
         if (arrayBuffer && mimeType && fileName) {
           const blob = new Blob([arrayBuffer], { type: mimeType });
           const file = new File([blob], fileName, { type: mimeType });
-          callbacks.onComplete(file, duration || 0, transcriptPreview || []);
+          callbacks.onComplete(file, duration || 0);
         }
         break;
       }
@@ -123,24 +116,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 @keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.05);opacity:.9}}
 .stop-shape{width:24px;height:24px;background:#ef4444;border-radius:4px}
 .status{font-size:13px;color:#6b7280;margin:6px 0;min-height:20px}
-.transcript{width:100%;max-width:380px;margin-top:20px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:14px;flex:1;overflow-y:auto;max-height:260px;display:none}
-.t-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.t-dot{width:8px;height:8px;border-radius:50%;background:#d1d5db;flex-shrink:0}
-.t-dot.on{background:#22c55e;animation:pulse 1.5s infinite}
-.t-dot.wait{background:#eab308;animation:pulse 1.5s infinite}
-.t-dot.err{background:#ef4444}
-.t-label{font-size:12px;font-weight:500;color:#6b7280;flex:1}
-.t-scroll-btn{display:flex;align-items:center;gap:3px;padding:1px 6px;font-size:10px;border-radius:4px;border:1px solid #d1d5db;background:#fff;color:#9ca3af;cursor:pointer;transition:all .15s}
-.t-scroll-btn.on{background:#eff6ff;border-color:#93c5fd;color:#2563eb}
-.t-text{font-size:13px;line-height:1.6;color:#374151;white-space:pre-wrap}
-.t-text .dim{color:#9ca3af}
-.t-text .ph{color:#d1d5db}
-.warn{margin-top:16px;padding:8px 12px;background:#fefce8;border:1px solid #fde68a;border-radius:6px;font-size:12px;color:#854d0e;text-align:center;width:100%;max-width:380px;display:none}
+.warn{margin-top:16px;padding:8px 12px;background:#fefce8;border:1px solid #fde68a;border-radius:6px;font-size:12px;color:#854d0e;text-align:center;width:100%;max-width:320px;display:none}
 .done{text-align:center;margin-top:24px;display:none}
 .done .chk{width:48px;height:48px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
 .done p{font-size:14px;color:#374151}
 .done .sub{font-size:12px;color:#9ca3af;margin-top:4px}
-.err-msg{margin-top:12px;padding:8px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;font-size:13px;color:#dc2626;text-align:center;width:100%;max-width:380px;display:none}
+.err-msg{margin-top:12px;padding:8px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;font-size:13px;color:#dc2626;text-align:center;width:100%;max-width:320px;display:none}
 </style>
 </head>
 <body>
@@ -160,14 +141,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <p class="status" id="sts">준비 중...</p>
 <div class="err-msg" id="errMsg"></div>
 <div class="warn" id="wrn">녹음 중에는 이 창을 닫지 마세요</div>
-<div class="transcript" id="tbox">
-  <div class="t-head">
-    <div class="t-dot" id="tdot"></div>
-    <span class="t-label" id="tlab">실시간 전사</span>
-    <button class="t-scroll-btn on" id="scrollBtn" onclick="toggleAutoScroll()">&#8595; 자동스크롤</button>
-  </div>
-  <div class="t-text" id="ttxt"><span class="ph">말씀하시면 여기에 텍스트가 표시됩니다...</span></div>
-</div>
 <div class="done" id="done">
   <div class="chk">
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -180,65 +153,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 <script>
 (function(){
   var recording=false, mr=null, chunks=[], sec=0, ti=null, mime='';
-  var ws=null, actx=null, proc=null, src=null, txts=[], interim='', autoScroll=true;
   var $=function(id){return document.getElementById(id)};
   var tmr=$('tmr'),btn=$('btn'),mic=$('mic'),stp=$('stp'),sts=$('sts');
-  var tbox=$('tbox'),tdot=$('tdot'),tlab=$('tlab'),ttxt=$('ttxt'),scrollBtn=$('scrollBtn');
   var wrn=$('wrn'),done=$('done'),doneInfo=$('doneInfo'),errMsg=$('errMsg');
   var origin=window.opener?window.location.origin:'*';
 
   function fmt(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
 
-  window.toggleAutoScroll=function(){autoScroll=!autoScroll;scrollBtn.className='t-scroll-btn'+(autoScroll?' on':'');if(autoScroll)tbox.scrollTop=tbox.scrollHeight};
-
-  function updTxt(){
-    var h=txts.join(' ');
-    if(interim) h+=(txts.length?' ':'')+('<span class="dim">'+interim+'</span>');
-    if(!h&&recording) h='<span class="ph">말씀하시면 여기에 텍스트가 표시됩니다...</span>';
-    ttxt.innerHTML=h;
-    if(autoScroll) tbox.scrollTop=tbox.scrollHeight;
-  }
-
   function showErr(msg){errMsg.textContent=msg;errMsg.style.display='block'}
-
-  // AssemblyAI 전사 연결
-  function connectStt(token,stream){
-    tdot.className='t-dot wait';tlab.textContent='음성인식 연결 중...';
-    try{
-      var p=new URLSearchParams({sample_rate:'16000',speech_model:'whisper-rt',token:token});
-      ws=new WebSocket('wss://streaming.assemblyai.com/v3/ws?'+p);
-      ws.binaryType='arraybuffer';
-      ws.onopen=function(){tdot.className='t-dot on';tlab.textContent='실시간 전사 (미리보기)'};
-      ws.onmessage=function(ev){
-        try{var m=JSON.parse(ev.data);if(m.type==='Turn'){if(m.end_of_turn&&m.transcript){txts.push(m.transcript);interim=''}else if(!m.end_of_turn&&m.transcript){interim=m.transcript}updTxt()}}catch(e){}
-      };
-      ws.onerror=function(){tdot.className='t-dot err';tlab.textContent='음성인식 미지원 — 녹음은 정상 진행 중'};
-      ws.onclose=function(){if(!recording){tdot.className='t-dot'}};
-
-      actx=new AudioContext({sampleRate:16000});
-      src=actx.createMediaStreamSource(stream);
-      proc=actx.createScriptProcessor(4096,1,1);
-      proc.onaudioprocess=function(e){
-        if(!ws||ws.readyState!==WebSocket.OPEN)return;
-        var inp=e.inputBuffer.getChannelData(0),pcm=new Int16Array(inp.length);
-        for(var i=0;i<inp.length;i++){var s=Math.max(-1,Math.min(1,inp[i]));pcm[i]=s<0?s*0x8000:s*0x7FFF}
-        ws.send(pcm.buffer);
-      };
-      src.connect(proc);proc.connect(actx.destination);
-    }catch(e){tdot.className='t-dot err';tlab.textContent='음성인식 초기화 실패'}
-  }
-
-  function stopStt(){
-    if(ws&&ws.readyState===WebSocket.OPEN){try{ws.send(JSON.stringify({type:'Terminate'}))}catch(e){}ws.close()}ws=null;
-    if(proc){proc.disconnect();proc=null}if(src){src.disconnect();src=null}if(actx){actx.close();actx=null}
-  }
-
-  var pendingStream=null;
 
   function start(){
     navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
-      pendingStream=stream;
-      chunks=[];txts=[];interim='';sec=0;
+      chunks=[];sec=0;
       mime=MediaRecorder.isTypeSupported('audio/webm;codecs=opus')?'audio/webm;codecs=opus':
            MediaRecorder.isTypeSupported('audio/mp4')?'audio/mp4':'audio/webm';
       mr=new MediaRecorder(stream,{mimeType:mime});
@@ -263,7 +189,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         if(window.opener&&!window.opener.closed){
           blob.arrayBuffer().then(function(ab){
             try{
-              window.opener.postMessage({type:'recording-complete',arrayBuffer:ab,mimeType:mime,fileName:fn,duration:sec,transcriptPreview:txts},origin,[ab]);
+              window.opener.postMessage({type:'recording-complete',arrayBuffer:ab,mimeType:mime,fileName:fn,duration:sec},origin,[ab]);
             }catch(e){}
             showComplete(blob,true);
           });
@@ -284,7 +210,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
       // 완료 UI 표시
       function showComplete(b,hasOpener){
-        btn.style.display='none';sts.style.display='none';tmr.style.display='none';wrn.style.display='none';tbox.style.display='none';errMsg.style.display='none';
+        btn.style.display='none';sts.style.display='none';tmr.style.display='none';wrn.style.display='none';errMsg.style.display='none';
         done.style.display='block';doneInfo.textContent=fmt(sec)+' · '+(b.size/1024/1024).toFixed(1)+'MB';
         if(hasOpener){
           $('doneInfo').textContent+=' (백업 파일 다운로드 + 자동 분석 시작)';
@@ -297,7 +223,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       }
       mr.start(1000);recording=true;
       btn.classList.add('rec');btn.disabled=false;mic.style.display='none';stp.style.display='block';
-      sts.textContent='녹음 중 — 버튼을 눌러 정지';wrn.style.display='block';tbox.style.display='block';tmr.classList.add('rec');
+      sts.textContent='녹음 중 — 버튼을 눌러 정지';wrn.style.display='block';tmr.classList.add('rec');
       ti=setInterval(function(){sec++;tmr.textContent=fmt(sec)},1000);
     }).catch(function(){
       sts.textContent='마이크 접근이 거부되었습니다.';btn.disabled=false;
@@ -307,13 +233,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
   function stop(){
     if(mr&&mr.state==='recording')mr.stop();
-    stopStt();recording=false;
+    recording=false;
     if(ti){clearInterval(ti);ti=null}
     btn.classList.remove('rec');sts.textContent='처리 중...';tmr.classList.remove('rec');
   }
 
   function cleanup(){
-    stopStt();
     if(mr&&mr.state!=='inactive'){try{mr.stream.getTracks().forEach(function(t){t.stop()});mr.stop()}catch(e){}}
     recording=false;if(ti){clearInterval(ti);ti=null}
   }
@@ -335,9 +260,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   // 메인 창과의 통신
   window.addEventListener('message',function(ev){
     if(ev.data.type==='start'){start()}
-    else if(ev.data.type==='token'&&ev.data.token){
-      if(pendingStream&&recording)connectStt(ev.data.token,pendingStream);
-    }
   });
 
   // 준비 완료 알림
