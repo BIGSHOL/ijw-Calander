@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { Plus, Trash2, ChevronLeft, ChevronRight, FileText, List, Download, Search, X, Check, Paperclip, Image as ImageIcon } from 'lucide-react';
+import { Plus, Trash2, ChevronLeft, ChevronRight, FileText, List, Download, Search, X, Check, Paperclip, Image as ImageIcon, Copy } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useExpenses, useCreateExpense, useDeleteExpense, useToggleApproval, useUpdateReceipt, useUpdateReceiptUrls } from '../../hooks/useExpenses';
 import { Expense, ExpenseItem } from '../../types/expense';
@@ -35,14 +35,24 @@ interface ExpensesTabProps {
 const ExpensesTab: React.FC<ExpensesTabProps> = ({ currentUser, staffMember }) => {
   const [viewMode, setViewMode] = useState<'list' | 'create'>('list');
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  // 복제(불러와서 새 결의서로 저장) 모드용 state — 매월 반복 결의서를 빠르게 입력하기 위함
+  const [cloningExpense, setCloningExpense] = useState<Expense | null>(null);
 
   const handleEdit = useCallback((expense: Expense) => {
     setEditingExpense(expense);
+    setCloningExpense(null);
+    setViewMode('create');
+  }, []);
+
+  const handleClone = useCallback((expense: Expense) => {
+    setCloningExpense(expense);
+    setEditingExpense(null);
     setViewMode('create');
   }, []);
 
   const handleBackToList = useCallback(() => {
     setEditingExpense(null);
+    setCloningExpense(null);
     setViewMode('list');
   }, []);
 
@@ -52,11 +62,11 @@ const ExpensesTab: React.FC<ExpensesTabProps> = ({ currentUser, staffMember }) =
       <div className="bg-white border-b px-4 py-2 flex items-center justify-between flex-shrink-0">
         <h2 className="text-sm font-bold text-gray-800">지출결의서 관리대장</h2>
         <div className="flex gap-1 bg-gray-100 rounded p-0.5">
-          <button onClick={() => { setViewMode('list'); setEditingExpense(null); }}
+          <button onClick={() => { setViewMode('list'); setEditingExpense(null); setCloningExpense(null); }}
             className={`px-2.5 py-1 text-xs rounded flex items-center gap-1 transition-colors ${viewMode === 'list' ? 'bg-white shadow-sm font-bold text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}>
             <List size={12} /> 관리대장
           </button>
-          <button onClick={() => { setViewMode('create'); setEditingExpense(null); }}
+          <button onClick={() => { setViewMode('create'); setEditingExpense(null); setCloningExpense(null); }}
             className={`px-2.5 py-1 text-xs rounded flex items-center gap-1 transition-colors ${viewMode === 'create' ? 'bg-white shadow-sm font-bold text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}>
             <FileText size={12} /> 결의서 작성
           </button>
@@ -65,16 +75,16 @@ const ExpensesTab: React.FC<ExpensesTabProps> = ({ currentUser, staffMember }) =
 
       {/* 콘텐츠 */}
       {viewMode === 'list' ? (
-        <ExpenseListView onEdit={handleEdit} onNewClick={() => setViewMode('create')} staffMember={staffMember} currentUser={currentUser} />
+        <ExpenseListView onEdit={handleEdit} onClone={handleClone} onNewClick={() => setViewMode('create')} staffMember={staffMember} currentUser={currentUser} />
       ) : (
-        <ExpenseFormView editData={editingExpense} onBack={handleBackToList} currentUser={currentUser} staffMember={staffMember} />
+        <ExpenseFormView editData={editingExpense} cloneFrom={cloningExpense} onBack={handleBackToList} currentUser={currentUser} staffMember={staffMember} />
       )}
     </div>
   );
 };
 
 // ==================== 관리대장 목록 뷰 ====================
-const ExpenseListView: React.FC<{ onEdit: (e: Expense) => void; onNewClick: () => void; staffMember?: StaffMember; currentUser?: UserProfile | null }> = ({ onEdit, onNewClick, staffMember, currentUser }) => {
+const ExpenseListView: React.FC<{ onEdit: (e: Expense) => void; onClone: (e: Expense) => void; onNewClick: () => void; staffMember?: StaffMember; currentUser?: UserProfile | null }> = ({ onEdit, onClone, onNewClick, staffMember, currentUser }) => {
   const { data: expenses = [], isLoading } = useExpenses();
   const deleteMutation = useDeleteExpense();
   const toggleApproval = useToggleApproval();
@@ -232,12 +242,13 @@ const ExpenseListView: React.FC<{ onEdit: (e: Expense) => void; onNewClick: () =
               <th className="px-1 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap">대표</th>
               <th className="px-1 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap">집행자</th>
               <th className="px-1 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap">첨부</th>
+              <th className="px-1 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap">복제</th>
               <th className="px-1 py-1.5 text-center font-medium text-gray-600 whitespace-nowrap">삭제</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {pageExpenses.length === 0 ? (
-              <tr><td colSpan={12} className="text-center py-12 text-gray-400">등록된 지출 내역이 없습니다.</td></tr>
+              <tr><td colSpan={13} className="text-center py-12 text-gray-400">등록된 지출 내역이 없습니다.</td></tr>
             ) : pageExpenses.map((expense) => {
               const checks = expense.approvalChecks || {};
               const sym = expense.currency || '₩';
@@ -297,6 +308,11 @@ const ExpenseListView: React.FC<{ onEdit: (e: Expense) => void; onNewClick: () =
                   {(expense.receiptUrls?.length || 0) > 0 && (
                     <span className="text-[9px] text-blue-500 ml-0.5">{expense.receiptUrls!.length}</span>
                   )}
+                </td>
+                <td className="px-1 py-2 text-center" onClick={e => e.stopPropagation()}>
+                  <button onClick={() => onClone(expense)}
+                    title="이 결의서를 불러와 새 결의서로 작성 (날짜·작성자 자동 갱신, 영수증 미포함)"
+                    className="p-0.5 rounded text-blue-400 hover:bg-blue-50 hover:text-blue-600"><Copy size={12} /></button>
                 </td>
                 <td className="px-1 py-2 text-center" onClick={e => e.stopPropagation()}>
                   <button onClick={() => handleDelete(expense)}
@@ -486,35 +502,47 @@ const ReceiptUploadModal: React.FC<{
   );
 };
 
-// ==================== 결의서 작성/수정 뷰 ====================
+// ==================== 결의서 작성/수정/복제 뷰 ====================
 const ExpenseFormView: React.FC<{
   editData: Expense | null;
+  cloneFrom: Expense | null;
   onBack: () => void;
   currentUser?: UserProfile | null;
   staffMember?: StaffMember;
-}> = ({ editData, onBack, currentUser, staffMember }) => {
+}> = ({ editData, cloneFrom, onBack, currentUser, staffMember }) => {
   const createMutation = useCreateExpense();
   const previewRef = useRef<HTMLDivElement>(null);
   const today = getTodayKST();
 
-  // 작성자/직위 기본값: staffMember > currentUser > ''
-  const defaultAuthor = editData?.author || staffMember?.name || currentUser?.displayName || currentUser?.name || currentUser?.koreanName || '';
-  const defaultPosition = editData?.position || staffMember?.jobTitle || currentUser?.jobTitle || '';
+  // 모드 분기: 수정(editData) > 복제(cloneFrom) > 신규
+  const isEditMode = !!editData;
+  const isCloneMode = !editData && !!cloneFrom;
+  const initSource = editData || cloneFrom;
+
+  // 작성자/직위:
+  // - 수정 모드: 원본 데이터 유지 (editData 우선)
+  // - 복제 모드: 항상 현재 로그인 사용자로 갱신 (원본 작성자 그대로 두면 잘못된 결재 흐름)
+  // - 신규 모드: 현재 사용자
+  const currentUserName = staffMember?.name || currentUser?.displayName || currentUser?.name || currentUser?.koreanName || '';
+  const currentUserPosition = staffMember?.jobTitle || currentUser?.jobTitle || '';
+  const defaultAuthor = isEditMode ? (editData?.author || currentUserName) : currentUserName;
+  const defaultPosition = isEditMode ? (editData?.position || currentUserPosition) : currentUserPosition;
 
   // 폼 상태
-  const [title, setTitle] = useState(editData?.title || '');
+  const [title, setTitle] = useState(initSource?.title || '');
   const [author, setAuthor] = useState(defaultAuthor);
-  const [department, setDepartment] = useState(editData?.department || '');
+  const [department, setDepartment] = useState(initSource?.department || '');
   const [position, setPosition] = useState(defaultPosition);
-  const [createdDate, setCreatedDate] = useState(editData?.createdDate || today);
-  const [expenseDate, setExpenseDate] = useState(editData?.expenseDate || today);
-  const [currency, setCurrency] = useState(editData?.currency || '₩');
-  const [paymentMethod, setPaymentMethod] = useState(editData?.paymentMethod || '카드결제');
-  const [bankName, setBankName] = useState(editData?.bankName || '');
-  const [accountNumber, setAccountNumber] = useState(editData?.accountNumber || '-');
-  const [memo, setMemo] = useState(editData?.memo || '');
+  // 복제 모드는 작성일·지출일을 today 로 자동 갱신 (사용자가 수정 가능)
+  const [createdDate, setCreatedDate] = useState(isCloneMode ? today : (editData?.createdDate || today));
+  const [expenseDate, setExpenseDate] = useState(isCloneMode ? today : (editData?.expenseDate || today));
+  const [currency, setCurrency] = useState(initSource?.currency || '₩');
+  const [paymentMethod, setPaymentMethod] = useState(initSource?.paymentMethod || '카드결제');
+  const [bankName, setBankName] = useState(initSource?.bankName || '');
+  const [accountNumber, setAccountNumber] = useState(initSource?.accountNumber || '-');
+  const [memo, setMemo] = useState(initSource?.memo || '');
   const [items, setItems] = useState<ExpenseItem[]>(
-    editData?.items?.length ? editData.items : [{ ...EMPTY_ITEM }]
+    initSource?.items?.length ? initSource.items.map(it => ({ ...it })) : [{ ...EMPTY_ITEM }]
   );
   const [isSaving, setIsSaving] = useState(false);
 
@@ -546,6 +574,8 @@ const ExpenseFormView: React.FC<{
     try {
       const validItems = items.filter(i => i.purpose || i.vendor || i.description || i.unitPrice > 0);
       const existingChecks = editData?.approvalChecks || {};
+      // 복제 모드: id 없이 신규 저장 + 결재상태/영수증/createdBy 모두 초기화
+      // 수정 모드: 기존 id 유지 + 결재 체크/영수증/createdBy 보존
       await createMutation.mutateAsync({
         ...(editData?.id ? { id: editData.id } : {}),
         title: title.trim(),
@@ -559,20 +589,19 @@ const ExpenseFormView: React.FC<{
         paymentMethod,
         bankName: bankName.trim(),
         accountNumber: accountNumber.trim(),
-        approvalStatus: editData?.approvalStatus || 'pending',
-        approvalChecks: {
-          ...existingChecks,
-          author: { checked: true, date: today },
-        },
+        approvalStatus: isEditMode ? (editData?.approvalStatus || 'pending') : 'pending',
+        approvalChecks: isEditMode
+          ? { ...existingChecks, author: { checked: true, date: today } }
+          : { author: { checked: true, date: today } },
         memo: memo.trim(),
         totalAmount,
-        receiptUrl: editData?.receiptUrl || '',
-        receiptUrls: editData?.receiptUrls || [],
-        createdAt: editData?.createdAt || new Date().toISOString(),
+        receiptUrl: isEditMode ? (editData?.receiptUrl || '') : '',
+        receiptUrls: isEditMode ? (editData?.receiptUrls || []) : [],
+        createdAt: isEditMode ? (editData?.createdAt || new Date().toISOString()) : new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        createdBy: editData?.createdBy || currentUser?.uid || '',
+        createdBy: isEditMode ? (editData?.createdBy || currentUser?.uid || '') : (currentUser?.uid || ''),
       });
-      alert(editData ? '수정되었습니다.' : '저장되었습니다.');
+      alert(isEditMode ? '수정되었습니다.' : (isCloneMode ? '복제하여 새 결의서로 저장되었습니다.' : '저장되었습니다.'));
       onBack();
     } catch (err) {
       console.error('지출결의서 저장 실패:', err);
@@ -580,7 +609,7 @@ const ExpenseFormView: React.FC<{
     } finally {
       setIsSaving(false);
     }
-  }, [title, author, department, position, createdDate, expenseDate, items, currency, paymentMethod, bankName, accountNumber, memo, totalAmount, editData, createMutation, onBack, currentUser, today]);
+  }, [title, author, department, position, createdDate, expenseDate, items, currency, paymentMethod, bankName, accountNumber, memo, totalAmount, editData, isEditMode, isCloneMode, createMutation, onBack, currentUser, today]);
 
   // PNG 다운로드
   const handleDownload = useCallback(async () => {
@@ -605,9 +634,29 @@ const ExpenseFormView: React.FC<{
       <div className="w-full md:w-[340px] bg-white border-r overflow-auto p-4 flex flex-col gap-4">
         {/* 헤더 */}
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold text-gray-800">{editData ? '결의서 수정' : '결의서 작성'}</h3>
+          <h3 className="text-sm font-bold text-gray-800">
+            {isEditMode ? '결의서 수정' : isCloneMode ? '결의서 복제 (새로 저장)' : '결의서 작성'}
+          </h3>
           <button onClick={onBack} className="text-xs text-gray-500 hover:text-gray-700">← 목록</button>
         </div>
+
+        {/* 복제 모드 안내 배너 */}
+        {isCloneMode && (
+          <div className="bg-blue-50 border border-blue-200 rounded p-2 text-[11px] text-blue-800 leading-relaxed">
+            <div className="flex items-start gap-1.5">
+              <Copy size={12} className="text-blue-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold">기존 결의서 복제 — 새 결의서로 저장됩니다.</span>
+                <ul className="mt-1 list-disc list-inside space-y-0.5 text-blue-700">
+                  <li>날짜는 오늘로 자동 설정 (필요 시 직접 수정)</li>
+                  <li>작성자/직위는 현재 로그인 사용자로 갱신</li>
+                  <li>영수증 파일과 결재 체크는 포함되지 않음 (새로 첨부·결재)</li>
+                  <li>제목·항목·메모는 원본 그대로 복사 (필요 시 수정 가능)</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* 기본 정보 */}
         <div>
