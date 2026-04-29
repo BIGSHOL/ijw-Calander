@@ -357,10 +357,12 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     const [selectedStudentClassName, setSelectedStudentClassName] = useState<string | null>(null);
     const [copiedStudent, setCopiedStudent] = useState<{ studentIds: string[]; className: string } | null>(null);
     const [cutStudent, setCutStudent] = useState<{ studentIds: string[]; className: string } | null>(null);
-    const { enrollExistingStudent, smartRemoveStudent, deleteEnrollmentRecord } = useClassOperations();
+    const { enrollExistingStudent, smartRemoveStudent, deleteEnrollmentRecord, getEnrollmentSnapshot, restoreEnrollmentSnapshot } = useClassOperations();
     // 엑셀뷰 보류 작업 (저장 전까지 DB 미반영)
     const [pendingExcelDeletes, setPendingExcelDeletes] = useState<Array<{ studentId: string; className: string; type: 'active' | 'withdrawn' }>>([]);
     const [pendingExcelEnrollments, setPendingExcelEnrollments] = useState<Array<{ studentId: string; className: string; enrollmentDate?: string }>>([]);
+    // 저장 직후 "퇴원생 새로고침" 복구용 스냅샷 (세션 내 1회 한정, F5 시 사라짐)
+    const [lastDeletedSnapshots, setLastDeletedSnapshots] = useState<Array<{ studentId: string; studentName: string; className: string; type: 'active' | 'withdrawn'; snapshot: { path: string; data: any } }>>([]);
     // 메모이제이션: 복합키 Set (studentId_className)
     const pendingExcelDeleteIds = useMemo(() =>
         pendingExcelDeletes.length > 0 ? new Set(pendingExcelDeletes.map(d => `${d.studentId}_${d.className}`)) : undefined,
@@ -774,11 +776,23 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         // 1. 기존 드래그 이동 저장
                         if (pendingMovesCount > 0) await handleSavePendingMoves();
 
-                        // 2. 보류 삭제 실행
+                        // 2. 보류 삭제 실행 (삭제 전 스냅샷 백업하여 "퇴원생 새로고침" 복구 가능)
                         console.log('[Excel Save] 보류 삭제 시작:', pendingExcelDeletes);
+                        const deletedSnapshots: Array<{ studentId: string; studentName: string; className: string; type: 'active' | 'withdrawn'; snapshot: { path: string; data: any } }> = [];
                         try {
                             for (const del of pendingExcelDeletes) {
                                 console.log(`[Excel Delete] ${del.studentId}를 ${del.className}에서 삭제 중... (type: ${del.type})`);
+                                // 삭제 전 enrollment 스냅샷 보존
+                                const snap = await getEnrollmentSnapshot(del.className, del.studentId);
+                                if (snap) {
+                                    deletedSnapshots.push({
+                                        studentId: del.studentId,
+                                        studentName: studentMap[del.studentId]?.name || del.studentId,
+                                        className: del.className,
+                                        type: del.type,
+                                        snapshot: snap,
+                                    });
+                                }
                                 if (del.type === 'withdrawn') {
                                     await deleteEnrollmentRecord(del.className, del.studentId);
                                     console.log(`[Excel Delete] ${del.studentId} 퇴원생 기록 삭제 완료`);
@@ -815,12 +829,47 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                                 queryClient.refetchQueries({ queryKey: ['students'] }),
                             ]);
                             console.log('[Excel Save] 저장 완료!');
+                            // 저장 직후 복구 가능한 스냅샷 보관 (이번 저장에 한해서만, 다음 저장 시 덮어씀)
+                            if (deletedSnapshots.length > 0) {
+                                setLastDeletedSnapshots(deletedSnapshots);
+                                showExcelToast(`${deletedSnapshots.length}명 삭제됨 · "퇴원생 새로고침"으로 되돌리기 가능`);
+                            }
                         } catch (error) {
                             console.error('엑셀 보류 작업 저장 오류:', error);
                             alert('일부 작업 저장에 실패했습니다.');
                         }
                         setPendingExcelDeletes([]);
                         setPendingExcelEnrollments([]);
+                    }}
+                    lastDeletedCount={lastDeletedSnapshots.length}
+                    handleRestoreLastDeleted={async () => {
+                        if (lastDeletedSnapshots.length === 0) return;
+                        console.log('[Restore] 퇴원생 새로고침 시작:', lastDeletedSnapshots);
+                        try {
+                            for (const item of lastDeletedSnapshots) {
+                                await restoreEnrollmentSnapshot(item.snapshot);
+                                console.log(`[Restore] ${item.studentName} (${item.className}) 복구 완료`);
+                            }
+                            await Promise.all([
+                                queryClient.invalidateQueries({ queryKey: ['students'] }),
+                                queryClient.invalidateQueries({ queryKey: ['timetableClasses'] }),
+                                queryClient.invalidateQueries({ queryKey: ['mathClasses'] }),
+                                queryClient.invalidateQueries({ queryKey: ['mathClassStudents'] }),
+                                queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] }),
+                                queryClient.invalidateQueries({ queryKey: ['classStudents'] }),
+                            ]);
+                            await Promise.all([
+                                queryClient.refetchQueries({ queryKey: ['timetableClasses'] }),
+                                queryClient.refetchQueries({ queryKey: ['mathClasses'] }),
+                                queryClient.refetchQueries({ queryKey: ['students'] }),
+                            ]);
+                            const names = lastDeletedSnapshots.map(s => s.studentName).join(', ');
+                            showExcelToast(`복구: ${names}`);
+                            setLastDeletedSnapshots([]);
+                        } catch (error) {
+                            console.error('퇴원생 새로고침 복구 오류:', error);
+                            alert('일부 학생 복구에 실패했습니다.');
+                        }
                     }}
                     handleCancelPendingMoves={() => {
                         handleCancelPendingMoves();
@@ -938,6 +987,15 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         studentFilter={studentFilter}
                         shuttleStudentNames={shuttleStudentNames}
                         weeklyAbsent={weeklyAbsent}
+                        isExcelMode={true}
+                        selectedClassId={selectedClassId}
+                        onCellSelect={setSelectedClassId}
+                        selectedStudentIds={selectedStudentIds}
+                        selectedStudentClassName={selectedStudentClassName}
+                        onStudentSelect={handleExcelStudentSelect}
+                        onStudentMultiSelect={handleExcelStudentMultiSelect}
+                        pendingExcelDeleteIds={pendingExcelDeleteIds}
+                        pendingExcelEnrollments={pendingExcelEnrollments.length > 0 ? pendingExcelEnrollments : undefined}
                     />
                 </div>
                 )}

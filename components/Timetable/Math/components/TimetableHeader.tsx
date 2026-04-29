@@ -102,6 +102,9 @@ interface TimetableHeaderProps {
     handleSavePendingMoves: () => void;
     handleCancelPendingMoves: () => void;
     isSaving: boolean;
+    // 퇴원생 새로고침 (저장 직후 마지막 삭제 묶음 복구 — 세션 한정)
+    lastDeletedCount?: number;
+    handleRestoreLastDeleted?: () => void;
     // 조회/수정 모드
     mode: 'view' | 'edit';
     setMode: (mode: 'view' | 'edit') => void;
@@ -194,6 +197,8 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     handleSavePendingMoves,
     handleCancelPendingMoves,
     isSaving,
+    lastDeletedCount = 0,
+    handleRestoreLastDeleted,
     mode,
     setMode,
     canEdit,
@@ -1417,6 +1422,18 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                 ↩ 취소
                             </button>
                         </div>
+                    )}
+
+                    {/* 퇴원생 새로고침 — 저장 직후 마지막 삭제 묶음 복구 (세션 내 1회 한정) */}
+                    {lastDeletedCount > 0 && handleRestoreLastDeleted && (
+                        <button
+                            onClick={handleRestoreLastDeleted}
+                            disabled={isSaving}
+                            className="px-2 py-1 bg-blue-500 text-white rounded-sm text-xs font-bold hover:bg-blue-600 disabled:opacity-50 flex items-center gap-1"
+                            title={`방금 저장한 ${lastDeletedCount}명 삭제 되돌리기`}
+                        >
+                            🔄 퇴원생 새로고침 ({lastDeletedCount})
+                        </button>
                     )}
 
                     {/* 신입 연결 (구 "메이크 에듀 연결하기") — 헤더 우측 끝 */}

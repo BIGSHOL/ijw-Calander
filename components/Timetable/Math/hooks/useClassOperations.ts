@@ -562,6 +562,23 @@ export const useClassOperations = () => {
         queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
     };
 
+    // 삭제 직전 enrollment 스냅샷 (복구 기능용 — path + data 보존)
+    const getEnrollmentSnapshot = async (className: string, studentId: string, subject?: string) => {
+        const subjectKey = subject === 'english' ? 'english' : MATH_SUBJECTS;
+        const enrollDoc = await findEnrollmentDoc(studentId, subjectKey, className);
+        if (!enrollDoc) return null;
+        return { path: enrollDoc.ref.path, data: enrollDoc.data() };
+    };
+
+    // 스냅샷으로 enrollment 복구 (퇴원생 새로고침용)
+    const restoreEnrollmentSnapshot = async (snapshot: { path: string; data: any }) => {
+        const ref = doc(db, snapshot.path);
+        await setDoc(ref, snapshot.data);
+        invalidateMathCaches();
+        queryClient.invalidateQueries({ queryKey: ['classDetail'] });
+        queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });
+    };
+
     return {
         checkConsecutiveSchedule,
         addClass,
@@ -573,6 +590,8 @@ export const useClassOperations = () => {
         withdrawStudent,
         restoreStudent,
         smartRemoveStudent,
-        deleteEnrollmentRecord
+        deleteEnrollmentRecord,
+        getEnrollmentSnapshot,
+        restoreEnrollmentSnapshot,
     };
 };
