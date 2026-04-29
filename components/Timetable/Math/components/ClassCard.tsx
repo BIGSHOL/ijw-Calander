@@ -1276,7 +1276,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 isMergedCell ? (
                     <div className="flex-1 flex flex-col overflow-hidden min-w-0 min-h-0">
                         <div
-                            className={`flex-1 px-1 py-0 transition-colors min-w-0 min-h-0 overflow-y-auto no-scrollbar fade-bottom overscroll-contain ${dragOverZone === 'common' ? 'bg-indigo-100 ring-2 ring-inset ring-indigo-400' : ''}`}
+                            className={`flex-1 px-1 py-0 transition-colors min-w-0 min-h-0 overflow-y-auto no-scrollbar fade-bottom overscroll-auto ${dragOverZone === 'common' ? 'bg-indigo-100 ring-2 ring-inset ring-indigo-400' : ''}`}
                             onDragOver={(e) => {
                                 if (!canEdit) return;
                                 e.preventDefault();
@@ -1600,7 +1600,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                     </div>
                 ) : (
                     <div className="flex-1 flex flex-col overflow-hidden min-w-0 min-h-0">
-                        <div className="flex-1 px-0.5 py-0.5 min-w-0 min-h-0 overflow-y-auto no-scrollbar fade-bottom overscroll-contain">
+                        <div className="flex-1 px-0.5 py-0.5 min-w-0 min-h-0 overflow-y-auto no-scrollbar fade-bottom overscroll-auto">
                             <div className={`${fontSizeClass} font-bold text-indigo-600 mb-0 overflow-hidden whitespace-nowrap`}>{activeStudents.length}명 - 재원생</div>
                             <ul className="flex flex-col min-w-0 list-none">
                                 {activeStudents.map(s => {
