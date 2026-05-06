@@ -238,11 +238,6 @@ export async function initializeRoomsCollection(): Promise<number> {
     { name: '프리미엄1', floor: '프리미엄관', capacity: 12, preferredSubjects: ['english'] as SubjectType[], building: '프리미엄관', category: '바른', order: 30, isActive: true },
     { name: '프리미엄2', floor: '프리미엄관', capacity: 12, preferredSubjects: ['english'] as SubjectType[], building: '프리미엄관', category: '바른', order: 31, isActive: true },
     { name: 'LAB', floor: '프리미엄관', capacity: 15, preferredSubjects: ['english'] as SubjectType[], building: '프리미엄관', category: '본원', order: 32, isActive: true },
-    // 고등
-    { name: '고등801', floor: '8층', capacity: 20, preferredSubjects: ['math'] as SubjectType[], building: '고등', category: '고등', order: 40, isActive: true },
-    { name: '고등802', floor: '8층', capacity: 20, preferredSubjects: ['math'] as SubjectType[], building: '고등', category: '고등', order: 41, isActive: true },
-    { name: '고등803', floor: '8층', capacity: 20, preferredSubjects: ['math'] as SubjectType[], building: '고등', category: '고등', order: 42, isActive: true },
-    { name: '고등804', floor: '8층', capacity: 20, preferredSubjects: ['math'] as SubjectType[], building: '고등', category: '고등', order: 43, isActive: true },
   ];
 
   const batch = writeBatch(db);
