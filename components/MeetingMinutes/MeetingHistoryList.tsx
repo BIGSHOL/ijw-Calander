@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, FileText, Clock, AlertCircle, Loader2, Trash2, Pencil, Check, X, RefreshCw, Users } from 'lucide-react';
+import { Search, FileText, Clock, AlertCircle, Loader2, Trash2, Pencil, Check, X, RefreshCw, Users, UserCheck } from 'lucide-react';
 import { useMeetingReports, useDeleteMeetingReport, useUpdateMeetingReportTitle, useReanalyzeMeetingReport, useRetryMeetingProcessing } from '../../hooks/useMeetingRecording';
 import { usePermissions } from '../../hooks/usePermissions';
 import { format } from 'date-fns';
@@ -185,8 +185,16 @@ export function MeetingHistoryList({ onSelectReport, userProfile }: MeetingHisto
                   <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400">
                     <span>{report.meetingDate}</span>
                     {report.attendees?.length > 0 && (
-                      <span className="flex items-center gap-0.5">
-                        <Users size={10} /> {report.attendees.length}명
+                      <span
+                        className="flex items-center gap-0.5 truncate max-w-[200px]"
+                        title={
+                          report.attendeesReconciled && report.originalAttendees
+                            ? `조정됨 (원본: ${report.originalAttendees.join(', ')})`
+                            : report.attendees.join(', ')
+                        }
+                      >
+                        {report.attendeesReconciled ? <UserCheck size={10} className="flex-shrink-0 text-blue-500" /> : <Users size={10} className="flex-shrink-0" />}
+                        {' '}{report.attendees.join(', ')}
                       </span>
                     )}
                     {report.durationSeconds != null && report.durationSeconds > 0 && (

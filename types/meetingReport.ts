@@ -54,6 +54,15 @@ export interface MeetingReport {
   report?: MeetingReportSection;
   speakerRoles?: Record<string, string>;
 
+  // 참석자 조정 (AI 분석 후 불일치 시)
+  originalAttendees?: string[];        // 원본 입력 참석자
+  attendeesReconciled?: boolean;       // 조정 여부
+  attendeesReconciledDetail?: {
+    added: string[];    // AI가 새로 발견한 참석자
+    removed: string[];  // 입력에만 있고 AI가 식별 못한 참석자
+    kept: string[];     // 매칭된 참석자
+  };
+
   // 수정 추적
   lastEditedBy?: string;       // 수정자 uid
   lastEditedByName?: string;   // 수정자 이름

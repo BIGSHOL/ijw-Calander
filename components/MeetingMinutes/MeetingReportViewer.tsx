@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, Download, ChevronDown, ChevronUp, Clock, Users, Calendar, RefreshCw, Loader2, Pencil, Check, X, AlertCircle } from 'lucide-react';
+import { FileText, Download, ChevronDown, ChevronUp, Clock, Users, Calendar, RefreshCw, Loader2, Pencil, Check, X, AlertCircle, UserCheck } from 'lucide-react';
 import type { MeetingReport, UserProfile } from '../../types';
 import { useReanalyzeMeetingReport } from '../../hooks/useMeetingRecording';
 import { useUpdateConsultationReportContent } from '../../hooks/useConsultationRecording';
@@ -89,6 +89,9 @@ export function MeetingReportViewer({ report, canEdit, currentUser }: MeetingRep
       `제목: ${report.title}`,
       `회의일: ${report.meetingDate}`,
       `참석자: ${(report.attendees || []).join(', ') || '미지정'}`,
+      ...(report.attendeesReconciled && report.originalAttendees
+        ? [`  (원본 입력: ${report.originalAttendees.join(', ')})`, `  (AI 분석 후 조정됨)`]
+        : []),
       report.recorder ? `기록자: ${report.recorder}` : '',
       report.durationSeconds ? `녹음 길이: ${Math.floor(report.durationSeconds / 60)}분 ${report.durationSeconds % 60}초` : '',
       `생성일: ${format(new Date(report.createdAt), 'yyyy-MM-dd HH:mm')}`,
@@ -148,8 +151,8 @@ export function MeetingReportViewer({ report, canEdit, currentUser }: MeetingRep
               <Calendar size={12} /> {report.meetingDate}
             </span>
             {report.attendees?.length > 0 && (
-              <span className="flex items-center gap-1">
-                <Users size={12} /> {report.attendees.length}명
+              <span className="flex items-center gap-1" title={report.attendees.join(', ')}>
+                <Users size={12} /> {report.attendees.join(', ')}
               </span>
             )}
             {report.durationSeconds != null && report.durationSeconds > 0 && (
@@ -195,6 +198,35 @@ export function MeetingReportViewer({ report, canEdit, currentUser }: MeetingRep
             <span className="ml-auto text-gray-400 flex-shrink-0">
               {format(new Date(report.fileExpiredAt), 'yyyy-MM-dd')} 삭제
             </span>
+          )}
+        </div>
+      )}
+
+      {/* 참석자 조정 배너 */}
+      {report.attendeesReconciled && report.attendeesReconciledDetail && (
+        <div className="mx-5 mt-4 px-4 py-3 bg-blue-50 border border-blue-200 rounded-sm">
+          <div className="flex items-center gap-2 text-sm font-medium text-blue-800">
+            <UserCheck size={14} className="flex-shrink-0" />
+            AI 분석 결과에 따라 참석자가 조정되었습니다
+          </div>
+          <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-xs text-blue-700">
+            {report.attendeesReconciledDetail.added.length > 0 && (
+              <span>
+                <span className="font-medium text-green-700">+ 추가:</span>{' '}
+                {report.attendeesReconciledDetail.added.join(', ')}
+              </span>
+            )}
+            {report.attendeesReconciledDetail.removed.length > 0 && (
+              <span>
+                <span className="font-medium text-red-600">- 제외:</span>{' '}
+                <span className="line-through">{report.attendeesReconciledDetail.removed.join(', ')}</span>
+              </span>
+            )}
+          </div>
+          {report.originalAttendees && report.originalAttendees.length > 0 && (
+            <p className="mt-1.5 text-[11px] text-blue-500">
+              원본 입력: {report.originalAttendees.join(', ')}
+            </p>
           )}
         </div>
       )}
