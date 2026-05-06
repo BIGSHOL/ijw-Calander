@@ -211,11 +211,26 @@ const TuitionCalculatorTab: React.FC<TuitionCalculatorTabProps> = ({ userProfile
     );
   };
 
-  // 출력
+  // 출력 (A4 세로 강제)
   const handlePrint = () => {
+    // 전역 @page landscape 규칙을 덮어쓰기 위해 동적 스타일 주입
+    // (@page는 셀렉터 안에 중첩될 수 없어 CSS만으로는 분기 불가)
+    const styleEl = document.createElement('style');
+    styleEl.id = 'tuition-print-page-rule';
+    styleEl.textContent = `
+      @media print {
+        @page { size: A4 portrait; margin: 10mm; }
+        html, body { min-width: auto !important; }
+        #root { min-width: auto !important; }
+      }
+    `;
+    document.head.appendChild(styleEl);
+
     document.body.classList.add('tuition-print-mode');
     window.print();
     document.body.classList.remove('tuition-print-mode');
+
+    styleEl.remove();
   };
 
   // 청구서 저장

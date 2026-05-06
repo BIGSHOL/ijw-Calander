@@ -583,13 +583,8 @@ body.tuition-print-mode {
     display: none !important;
   }
 
-  /* A4 세로 */
-  body.tuition-print-mode {
-    @page {
-      size: A4 portrait;
-      margin: 10mm;
-    }
-  }
+  /* A4 세로 페이지 규칙은 handlePrint()에서 동적으로 주입함
+     (@page는 셀렉터 내부 중첩이 표준 미지원이라 무효 처리됨) */
 
   /* 인쇄 전용 영역 표시 */
   body.tuition-print-mode .print\\:block {
