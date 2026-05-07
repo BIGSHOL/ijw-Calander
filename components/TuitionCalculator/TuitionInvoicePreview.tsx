@@ -240,7 +240,7 @@ export const TuitionInvoicePreview: React.FC<TuitionInvoicePreviewProps> = ({
   const finalTotal = courseTotal + extraTotal - discountTotal;
 
   return (
-    <div className="w-full h-full bg-white flex flex-col overflow-hidden">
+    <div className="w-full h-full bg-white flex flex-col overflow-hidden break-keep">
       {/* 로고 */}
       <div className="p-2 pb-1">
         <img
@@ -256,17 +256,18 @@ export const TuitionInvoicePreview: React.FC<TuitionInvoicePreviewProps> = ({
           수강료 안내문
         </h1>
         <div className="border-2 border-[#081429]">
+          {/* 라벨은 좁게(w-20), 작성일 값은 한 줄로 강제 + 컨텐츠 폭 자동 fit (whitespace-nowrap) */}
           <div className="flex border-b border-[#373d41]">
-            <div className="w-24 bg-[#081429]/10 p-2 text-center font-bold flex items-center justify-center text-sm border-r border-[#373d41] text-[#081429]">학생 이름</div>
-            <div className="flex-1 p-2 text-center font-medium flex items-center justify-center border-r border-[#373d41]">{studentInfo.name || '-'}</div>
-            <div className="w-24 bg-[#081429]/10 p-2 text-center font-bold flex items-center justify-center text-sm border-r border-[#373d41] text-[#081429]">학교/학년</div>
-            <div className="flex-1 p-2 text-center font-medium flex items-center justify-center border-r border-[#373d41]">{studentInfo.school || '-'}</div>
-            <div className="w-24 bg-[#081429]/10 p-2 text-center font-bold flex items-center justify-center text-sm border-r border-[#373d41] text-[#081429]">작성일</div>
-            <div className="flex-1 p-2 text-center font-medium flex items-center justify-center">{currentDate}</div>
+            <div className="w-20 shrink-0 bg-[#081429]/10 p-2 text-center font-bold flex items-center justify-center text-sm border-r border-[#373d41] text-[#081429] whitespace-nowrap">학생 이름</div>
+            <div className="flex-1 p-2 text-center font-medium flex items-center justify-center border-r border-[#373d41] whitespace-nowrap">{studentInfo.name || '-'}</div>
+            <div className="w-20 shrink-0 bg-[#081429]/10 p-2 text-center font-bold flex items-center justify-center text-sm border-r border-[#373d41] text-[#081429] whitespace-nowrap">학교/학년</div>
+            <div className="flex-1 p-2 text-center font-medium flex items-center justify-center border-r border-[#373d41] whitespace-nowrap">{studentInfo.school || '-'}</div>
+            <div className="w-20 shrink-0 bg-[#081429]/10 p-2 text-center font-bold flex items-center justify-center text-sm border-r border-[#373d41] text-[#081429] whitespace-nowrap">작성일</div>
+            <div className="shrink-0 px-3 py-2 text-center font-medium flex items-center justify-center whitespace-nowrap">{currentDate}</div>
           </div>
           <div className="flex">
-            <div className="w-24 bg-[#081429]/10 p-2 text-center font-bold flex items-center justify-center text-sm border-r border-[#373d41] text-[#081429]">수강 기간</div>
-            <div className="flex-1 p-2 text-center font-medium text-[#373d41] flex items-center justify-center">
+            <div className="w-20 shrink-0 bg-[#081429]/10 p-2 text-center font-bold flex items-center justify-center text-sm border-r border-[#373d41] text-[#081429] whitespace-nowrap">수강 기간</div>
+            <div className="flex-1 p-2 text-center font-medium text-[#373d41] flex items-center justify-center whitespace-nowrap">
               {studentInfo.startDate || '____.__.__'}
               <span className="mx-2">~</span>
               {studentInfo.endDate || '____.__.__'}
@@ -433,11 +434,12 @@ export const TuitionInvoicePreview: React.FC<TuitionInvoicePreviewProps> = ({
             </ul>
 
             <h4 className="font-bold text-[#081429] mb-1 text-[10px]">환불 규정</h4>
-            <table className="w-full border-collapse border border-[#373d41]/50 text-[8px] text-center mb-1">
+            {/* break-keep: 한국어 단어 단위 줄바꿈 (단어 중간에서 깨지지 않음) */}
+            <table className="w-full border-collapse border border-[#373d41]/50 text-[8px] text-center mb-1 break-keep">
               <thead>
                 <tr className="bg-[#081429]/10 font-bold text-[#081429]">
-                  <th className="border border-[#373d41]/50 p-1 w-[25%]">구분</th>
-                  <th className="border border-[#373d41]/50 p-1 w-[45%]" colSpan={2}>반환사유 발생일</th>
+                  <th className="border border-[#373d41]/50 p-1 w-[28%]">구분</th>
+                  <th className="border border-[#373d41]/50 p-1 w-[42%]" colSpan={2}>반환사유 발생일</th>
                   <th className="border border-[#373d41]/50 p-1 w-[30%]">반환금액</th>
                 </tr>
               </thead>
