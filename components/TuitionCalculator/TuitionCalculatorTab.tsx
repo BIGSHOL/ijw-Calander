@@ -483,28 +483,18 @@ const TuitionCalculatorTab: React.FC<TuitionCalculatorTabProps> = ({ userProfile
               />
             </div>
 
-            {/* 오른쪽: 미리보기 (화면) */}
-            <div className="w-full lg:flex-[2] no-print">
-              <TuitionInvoicePreview
-                studentInfo={studentInfo}
-                selectedCourses={selectedCourses}
-                selectedExtras={selectedExtras}
-                selectedDiscounts={selectedDiscounts}
-                sessionPeriods={sessionPeriods}
-                holidayDateSet={holidayDateSet}
-              />
-            </div>
-
-            {/* 인쇄 전용 (전체 크기) */}
-            <div className="hidden print:block print:w-full">
-              <TuitionInvoicePreview
-                studentInfo={studentInfo}
-                selectedCourses={selectedCourses}
-                selectedExtras={selectedExtras}
-                selectedDiscounts={selectedDiscounts}
-                sessionPeriods={sessionPeriods}
-                holidayDateSet={holidayDateSet}
-              />
+            {/* 오른쪽: 미리보기 (화면=인쇄 동일, A4 폭 고정) */}
+            <div className="w-full lg:flex-[2] flex justify-center">
+              <div className="w-full max-w-[794px] bg-white shadow-md print:shadow-none print:max-w-none">
+                <TuitionInvoicePreview
+                  studentInfo={studentInfo}
+                  selectedCourses={selectedCourses}
+                  selectedExtras={selectedExtras}
+                  selectedDiscounts={selectedDiscounts}
+                  sessionPeriods={sessionPeriods}
+                  holidayDateSet={holidayDateSet}
+                />
+              </div>
             </div>
           </div>
         )}

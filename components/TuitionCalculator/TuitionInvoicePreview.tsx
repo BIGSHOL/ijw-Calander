@@ -240,19 +240,19 @@ export const TuitionInvoicePreview: React.FC<TuitionInvoicePreviewProps> = ({
   const finalTotal = courseTotal + extraTotal - discountTotal;
 
   return (
-    <div className="w-full h-full bg-white shadow-2xl print:shadow-none flex flex-col overflow-hidden">
+    <div className="w-full h-full bg-white flex flex-col overflow-hidden">
       {/* 로고 */}
-      <div className="p-4 print:p-2 print:pb-1">
+      <div className="p-2 pb-1">
         <img
           src="/logo_garo.png"
           alt="인재원 로고"
-          className="h-16 print:h-12 object-contain"
+          className="h-12 object-contain"
         />
       </div>
 
       {/* 헤더 */}
-      <div className="p-8 pt-2 pb-4 print:px-0 print:py-2 print:pb-1 border-b-4 border-double border-[#081429]">
-        <h1 className="text-3xl print:text-xl font-black text-center text-[#081429] mb-8 print:mb-2 tracking-widest">
+      <div className="px-0 py-2 pb-1 border-b-4 border-double border-[#081429]">
+        <h1 className="text-xl font-black text-center text-[#081429] mb-2 tracking-widest">
           수강료 안내문
         </h1>
         <div className="border-2 border-[#081429]">
@@ -275,18 +275,18 @@ export const TuitionInvoicePreview: React.FC<TuitionInvoicePreviewProps> = ({
         </div>
       </div>
 
-      <div className="p-8 pt-4 print:px-0 print:py-1 flex-1 flex flex-col">
+      <div className="px-0 py-1 flex-1 flex flex-col">
         {/* 과목 테이블 */}
-        <div className="mb-4 print:mb-1">
-          <table className="w-full text-sm print:text-xs border-collapse border-2 border-[#081429]">
+        <div className="mb-1">
+          <table className="w-full text-xs border-collapse border-2 border-[#081429]">
             <thead>
               <tr className="bg-[#fdb813]/20 text-[#081429]">
-                <th className="border border-[#373d41] p-1.5 print:p-0.5 w-[15%]">과목</th>
-                <th className="border border-[#373d41] p-1.5 print:p-0.5 w-[30%]">반</th>
-                <th className="border border-[#373d41] p-1.5 print:p-0.5 w-[15%]">요일</th>
-                <th className="border border-[#373d41] p-1.5 print:p-0.5 w-[10%]">시수</th>
-                <th className="border border-[#373d41] p-1.5 print:p-0.5 w-[15%]">금액</th>
-                <th className="border border-[#373d41] p-1.5 print:p-0.5 w-[15%]">기타</th>
+                <th className="border border-[#373d41] p-0.5 w-[15%]">과목</th>
+                <th className="border border-[#373d41] p-0.5 w-[30%]">반</th>
+                <th className="border border-[#373d41] p-0.5 w-[15%]">요일</th>
+                <th className="border border-[#373d41] p-0.5 w-[10%]">시수</th>
+                <th className="border border-[#373d41] p-0.5 w-[15%]">금액</th>
+                <th className="border border-[#373d41] p-0.5 w-[15%]">기타</th>
               </tr>
             </thead>
             <tbody>
@@ -295,40 +295,40 @@ export const TuitionInvoicePreview: React.FC<TuitionInvoicePreviewProps> = ({
                   const isSubtotal = line.isSubtotal;
                   return (
                     <tr key={idx} className={isSubtotal ? 'bg-[#081429]/5' : ''}>
-                      <td className={`border border-[#373d41] p-1.5 print:p-0.5 text-center font-bold ${
+                      <td className={`border border-[#373d41] p-0.5 text-center font-bold ${
                         line.category === TuitionSubjectType.ENGLISH ? 'text-[#081429]' : 'text-[#373d41]'
                       }`}>
                         {isSubtotal ? '' : `${line.month} ${line.category}`}
                       </td>
-                      <td className={`border border-[#373d41] p-1.5 print:p-0.5 text-center ${isSubtotal ? 'font-bold text-[#081429]' : ''}`}>
+                      <td className={`border border-[#373d41] p-0.5 text-center ${isSubtotal ? 'font-bold text-[#081429]' : ''}`}>
                         {line.name}
                       </td>
-                      <td className="border border-[#373d41] p-1.5 print:p-0.5 text-center">{line.days}</td>
-                      <td className={`border border-[#373d41] p-1.5 print:p-0.5 text-center ${isSubtotal ? 'font-bold' : ''}`}>
+                      <td className="border border-[#373d41] p-0.5 text-center">{line.days}</td>
+                      <td className={`border border-[#373d41] p-0.5 text-center ${isSubtotal ? 'font-bold' : ''}`}>
                         {`${line.sessions}회`}
                       </td>
-                      <td className={`border border-[#373d41] p-1.5 print:p-0.5 text-right font-medium ${isSubtotal ? 'font-bold text-[#081429]' : ''}`}>
+                      <td className={`border border-[#373d41] p-0.5 text-right font-medium ${isSubtotal ? 'font-bold text-[#081429]' : ''}`}>
                         {`${line.price.toLocaleString()}원`}
                       </td>
-                      <td className="border border-[#373d41] p-1.5 print:p-0.5 text-center text-xs text-[#373d41]">{line.note}</td>
+                      <td className="border border-[#373d41] p-0.5 text-center text-xs text-[#373d41]">{line.note}</td>
                     </tr>
                   );
                 })
               ) : (
                 selectedCourses.map((course, idx) => (
                   <tr key={idx}>
-                    <td className={`border border-[#373d41] p-1.5 print:p-0.5 text-center font-bold ${
+                    <td className={`border border-[#373d41] p-0.5 text-center font-bold ${
                       course.category === TuitionSubjectType.ENGLISH ? 'text-[#081429]' : 'text-[#373d41]'
                     }`}>
                       {course.category}
                     </td>
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-center">{course.name}</td>
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-center">{course.days}</td>
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-center">{`${course.sessions}회`}</td>
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-right font-medium">
+                    <td className="border border-[#373d41] p-0.5 text-center">{course.name}</td>
+                    <td className="border border-[#373d41] p-0.5 text-center">{course.days}</td>
+                    <td className="border border-[#373d41] p-0.5 text-center">{`${course.sessions}회`}</td>
+                    <td className="border border-[#373d41] p-0.5 text-right font-medium">
                       {`${course.price.toLocaleString()}원`}
                     </td>
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-center text-xs text-[#373d41]">{course.note}</td>
+                    <td className="border border-[#373d41] p-0.5 text-center text-xs text-[#373d41]">{course.note}</td>
                   </tr>
                 ))
               )}
@@ -338,59 +338,59 @@ export const TuitionInvoicePreview: React.FC<TuitionInvoicePreviewProps> = ({
 
         {/* 기타/할인 테이블 */}
         {(selectedExtras.length > 0 || selectedDiscounts.length > 0) && (
-          <div className="mb-4 print:mb-1">
-            <table className="w-full text-sm print:text-xs border-collapse border-2 border-[#081429]">
+          <div className="mb-1">
+            <table className="w-full text-xs border-collapse border-2 border-[#081429]">
               <thead>
                 <tr className="bg-[#fdb813]/20 text-[#081429]">
-                  <th className="border border-[#373d41] p-1.5 print:p-0.5 w-[25%]">구분</th>
-                  <th className="border border-[#373d41] p-1.5 print:p-0.5 w-[45%]">상세내용</th>
-                  <th className="border border-[#373d41] p-1.5 print:p-0.5 w-[15%]">금액</th>
-                  <th className="border border-[#373d41] p-1.5 print:p-0.5 w-[15%]">기타</th>
+                  <th className="border border-[#373d41] p-0.5 w-[25%]">구분</th>
+                  <th className="border border-[#373d41] p-0.5 w-[45%]">상세내용</th>
+                  <th className="border border-[#373d41] p-0.5 w-[15%]">금액</th>
+                  <th className="border border-[#373d41] p-0.5 w-[15%]">기타</th>
                 </tr>
               </thead>
               <tbody>
                 {selectedExtras.map((extra, idx) => (
                   <tr key={`extra-${idx}`}>
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-center">
+                    <td className="border border-[#373d41] p-0.5 text-center">
                       {extra.category === 'textbook' ? '교재비' : extra.name}
                     </td>
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-center">
+                    <td className="border border-[#373d41] p-0.5 text-center">
                       {extra.category === 'textbook' ? extra.name : (extra.note || '-')}
                     </td>
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-right">
+                    <td className="border border-[#373d41] p-0.5 text-right">
                       {extra.price.toLocaleString()}원
                     </td>
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-center text-xs text-[#373d41]">
+                    <td className="border border-[#373d41] p-0.5 text-center text-xs text-[#373d41]">
                       {extra.category === 'textbook' ? extra.note : ''}
                     </td>
                   </tr>
                 ))}
                 {selectedExtras.length > 1 && (
                   <tr className="bg-[#081429]/5">
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-center"></td>
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-center font-bold text-[#081429]">기타 소계</td>
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-right font-bold text-[#081429]">{extraTotal.toLocaleString()}원</td>
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-center"></td>
+                    <td className="border border-[#373d41] p-0.5 text-center"></td>
+                    <td className="border border-[#373d41] p-0.5 text-center font-bold text-[#081429]">기타 소계</td>
+                    <td className="border border-[#373d41] p-0.5 text-right font-bold text-[#081429]">{extraTotal.toLocaleString()}원</td>
+                    <td className="border border-[#373d41] p-0.5 text-center"></td>
                   </tr>
                 )}
                 {selectedDiscounts.map((discount, idx) => (
                   <tr key={`discount-${idx}`}>
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-center font-bold text-[#081429]">할인</td>
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-center text-[#081429]">{discount.name}</td>
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-right font-bold text-[#081429]">
+                    <td className="border border-[#373d41] p-0.5 text-center font-bold text-[#081429]">할인</td>
+                    <td className="border border-[#373d41] p-0.5 text-center text-[#081429]">{discount.name}</td>
+                    <td className="border border-[#373d41] p-0.5 text-right font-bold text-[#081429]">
                       -{discount.amount.toLocaleString()}원
                     </td>
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-center"></td>
+                    <td className="border border-[#373d41] p-0.5 text-center"></td>
                   </tr>
                 ))}
                 {selectedDiscounts.length > 1 && (
                   <tr className="bg-[#081429]/5">
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-center"></td>
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-center font-bold text-[#081429]">할인 소계</td>
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-right font-bold text-[#081429]">
+                    <td className="border border-[#373d41] p-0.5 text-center"></td>
+                    <td className="border border-[#373d41] p-0.5 text-center font-bold text-[#081429]">할인 소계</td>
+                    <td className="border border-[#373d41] p-0.5 text-right font-bold text-[#081429]">
                       -{discountTotal.toLocaleString()}원
                     </td>
-                    <td className="border border-[#373d41] p-1.5 print:p-0.5 text-center"></td>
+                    <td className="border border-[#373d41] p-0.5 text-center"></td>
                   </tr>
                 )}
               </tbody>
@@ -399,25 +399,25 @@ export const TuitionInvoicePreview: React.FC<TuitionInvoicePreviewProps> = ({
         )}
 
         {/* 최종 납부 금액 */}
-        <div className="flex justify-end mb-4 print:mb-1">
+        <div className="flex justify-end mb-1">
           <div className="flex items-center border-2 border-[#081429]">
-            <div className="bg-[#081429]/10 px-3 py-1.5 print:px-2 print:py-0.5">
-              <span className="font-bold text-[#081429] text-sm print:text-xs">최종 납부 금액</span>
+            <div className="bg-[#081429]/10 px-2 py-0.5">
+              <span className="font-bold text-[#081429] text-xs">최종 납부 금액</span>
             </div>
-            <div className="bg-[#fdb813] px-4 py-1.5 print:px-3 print:py-0.5">
-              <span className="text-xl print:text-base font-black text-[#081429]">{finalTotal.toLocaleString()} 원</span>
+            <div className="bg-[#fdb813] px-3 py-0.5">
+              <span className="text-base font-black text-[#081429]">{finalTotal.toLocaleString()} 원</span>
             </div>
           </div>
         </div>
 
         {/* 학원 수칙 및 환불 규정 */}
         <div className="mt-auto">
-          <h3 className="text-base print:text-sm font-bold text-center text-[#081429] mb-2 print:mb-1">
+          <h3 className="text-sm font-bold text-center text-[#081429] mb-1">
             학원 수칙 및 환불 규정
           </h3>
-          <div className="bg-[#081429]/5 p-3 print:p-2 rounded-lg border border-[#373d41]/30 text-[#373d41] leading-relaxed">
-            <h4 className="font-bold text-[#081429] mb-1.5 print:mb-1 text-sm print:text-[10px]">학원 수칙</h4>
-            <ul className="list-decimal pl-4 print:pl-3 mb-3 print:mb-2 space-y-0.5 print:space-y-0 text-[13px] print:text-[9px] leading-snug">
+          <div className="bg-[#081429]/5 p-2 rounded-lg border border-[#373d41]/30 text-[#373d41] leading-relaxed">
+            <h4 className="font-bold text-[#081429] mb-1 text-[10px]">학원 수칙</h4>
+            <ul className="list-decimal pl-3 mb-2 space-y-0 text-[9px] leading-snug">
               <li>
                 규칙적인 학습을 위해 지각, 결석을 허용하지 않으며 별도의 보강이 없습니다.
                 <br /><span className="text-[#373d41]/80">(단, 건강상의 문제나 증명가능한 공식행사는 예외 보강이 1회 이루어집니다.)</span>
@@ -432,8 +432,8 @@ export const TuitionInvoicePreview: React.FC<TuitionInvoicePreviewProps> = ({
               </li>
             </ul>
 
-            <h4 className="font-bold text-[#081429] mb-1.5 print:mb-1 text-sm print:text-[10px]">환불 규정</h4>
-            <table className="w-full border-collapse border border-[#373d41]/50 text-[12px] print:text-[8px] text-center mb-2 print:mb-1">
+            <h4 className="font-bold text-[#081429] mb-1 text-[10px]">환불 규정</h4>
+            <table className="w-full border-collapse border border-[#373d41]/50 text-[8px] text-center mb-1">
               <thead>
                 <tr className="bg-[#081429]/10 font-bold text-[#081429]">
                   <th className="border border-[#373d41]/50 p-1 w-[25%]">구분</th>
@@ -479,16 +479,16 @@ export const TuitionInvoicePreview: React.FC<TuitionInvoicePreviewProps> = ({
               </tbody>
             </table>
 
-            <div className="space-y-0.5 print:space-y-0">
-              <p className="text-[12px] print:text-[8px] text-[#373d41] leading-snug">
+            <div className="space-y-0">
+              <p className="text-[8px] text-[#373d41] leading-snug">
                 1. 총 교습시간은 교습기간 중의 총 교습기간을 말하며, 반환금액의 산정은 반환사유가 발생한 날까지 경과된 교습시간을 기준으로 한다.
               </p>
-              <p className="text-[12px] print:text-[8px] text-[#081429] font-bold leading-snug">
+              <p className="text-[8px] text-[#081429] font-bold leading-snug">
                 2. 원격교습의 경우 반환금액은 교습내용을 실제 수강한 부분(인터넷으로 수강하거나 학습기기로 저장한 것을 말한다)에 해당하는 금액을 뺀 금액으로 한다.
               </p>
             </div>
 
-            <div className="mt-2 print:mt-1 text-[#373d41]/60 text-[11px] print:text-[7px] text-right">
+            <div className="mt-1 text-[#373d41]/60 text-[7px] text-right">
               * 본 영수증은 소득공제용(현금영수증)으로 사용하실 수 없습니다. 별도 요청 부탁드립니다.
             </div>
           </div>
