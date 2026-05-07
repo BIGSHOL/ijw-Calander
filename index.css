@@ -22,8 +22,9 @@ body {
 
 /* Print Styles */
 @media print {
+  /* 페이지 크기/방향은 각 인쇄 기능에서 동적으로 지정 (전역 강제 X)
+     기본값 = 브라우저/사용자 설정 (보통 A4 세로) */
   @page {
-    size: landscape;
     margin: 5mm;
   }
   body {
