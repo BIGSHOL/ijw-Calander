@@ -483,17 +483,21 @@ const TuitionCalculatorTab: React.FC<TuitionCalculatorTabProps> = ({ userProfile
               />
             </div>
 
-            {/* 오른쪽: 미리보기 (화면=인쇄 동일, A4 폭 고정) */}
+            {/* 오른쪽: 미리보기 (A4 페이지 시뮬레이션 — 화면=인쇄 100% 동일)
+                - 화면: 794×1123px (A4 portrait @96dpi), 10mm padding(인쇄 마진과 동일), 그림자
+                - 인쇄: 박스/그림자/사이즈 모두 풀어주고 @page 마진에 위임 */}
             <div className="w-full lg:flex-[2] flex justify-center">
-              <div className="w-full max-w-[794px] bg-white shadow-md print:shadow-none print:max-w-none">
-                <TuitionInvoicePreview
-                  studentInfo={studentInfo}
-                  selectedCourses={selectedCourses}
-                  selectedExtras={selectedExtras}
-                  selectedDiscounts={selectedDiscounts}
-                  sessionPeriods={sessionPeriods}
-                  holidayDateSet={holidayDateSet}
-                />
+              <div className="bg-white shadow-md print:shadow-none w-[794px] min-h-[1123px] print:w-full print:min-h-0 print:!w-full">
+                <div className="p-[10mm] print:p-0">
+                  <TuitionInvoicePreview
+                    studentInfo={studentInfo}
+                    selectedCourses={selectedCourses}
+                    selectedExtras={selectedExtras}
+                    selectedDiscounts={selectedDiscounts}
+                    sessionPeriods={sessionPeriods}
+                    holidayDateSet={holidayDateSet}
+                  />
+                </div>
               </div>
             </div>
           </div>
