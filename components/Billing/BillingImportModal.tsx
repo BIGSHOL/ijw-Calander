@@ -133,6 +133,13 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
   const { importBillings: importTextbookBillings } = useTextbooks();
 
   const detectedMonth = parsedData.length > 0 ? parsedData[0].month : '';
+  // 사용자가 수동으로 변경 가능한 청구월 (초기값 = 자동 추정)
+  const [overrideMonth, setOverrideMonth] = useState('');
+  // 파일 파싱 시마다 자동 추정값으로 초기화
+  React.useEffect(() => {
+    if (detectedMonth) setOverrideMonth(detectedMonth);
+  }, [detectedMonth]);
+  const finalMonth = overrideMonth || detectedMonth;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -190,7 +197,9 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
     if (parsedData.length === 0) return;
     setIsImporting(true);
     try {
-      const result = await onImport(parsedData, detectedMonth);
+      // 사용자가 변경한 청구월 사용 (저장 시 모든 행의 month를 통일)
+      const recordsForImport = parsedData.map(r => ({ ...r, month: finalMonth }));
+      const result = await onImport(recordsForImport, finalMonth);
 
       // 교재 행이 있으면 textbook_billings로 자동 전송
       let textbookAdded = 0;
@@ -317,8 +326,16 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
                 {/* 통계 카드 */}
                 <div className="grid grid-cols-3 gap-2 text-sm">
                   <div className="bg-blue-50 rounded-sm p-2 border border-blue-100">
-                    <p className="text-xxs text-blue-600 font-medium">청구월</p>
-                    <p className="font-bold text-sm text-blue-700">{detectedMonth}</p>
+                    <p className="text-xxs text-blue-600 font-medium mb-0.5">청구월 (수정 가능)</p>
+                    <input
+                      type="month"
+                      value={overrideMonth}
+                      onChange={e => setOverrideMonth(e.target.value)}
+                      className="font-bold text-sm text-blue-700 bg-white rounded px-1.5 py-0.5 w-full border border-blue-200 focus:outline-none focus:border-blue-400"
+                    />
+                    {detectedMonth && overrideMonth && overrideMonth !== detectedMonth && (
+                      <p className="text-[10px] text-blue-500 mt-0.5">자동 추정: {detectedMonth}</p>
+                    )}
                   </div>
                   <div className="bg-gray-50 rounded-sm p-2 border border-gray-100">
                     <p className="text-xxs text-gray-500 font-medium">학생 수</p>

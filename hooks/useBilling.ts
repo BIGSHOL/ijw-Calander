@@ -68,7 +68,7 @@ function docToBillingRecord(id: string, data: DocumentData): BillingRecord {
  * - xlsx 일괄 import
  * - React Query 기반 캐싱
  */
-export function useBilling(month?: string) {
+export function useBilling(month?: string, enabled = true) {
   const queryClient = useQueryClient();
 
   // 수납 목록 조회
@@ -79,6 +79,7 @@ export function useBilling(month?: string) {
     refetch,
   } = useQuery<BillingRecord[]>({
     queryKey: ['billing', month],
+    enabled,
     queryFn: async () => {
       const q = month
         ? query(collection(db, COL_BILLING), where('month', '==', month))
@@ -237,3 +238,47 @@ export function useBilling(month?: string) {
 }
 
 export default useBilling;
+
+/**
+ * 월별 수납 요약 (월 카드 그리드용)
+ * 모든 billing 문서를 가져와 클라이언트에서 월별 집계
+ */
+export interface BillingMonthSummary {
+  month: string;        // YYYY-MM
+  count: number;        // 건수
+  totalCharge: number;  // 총 청구액
+  totalPaid: number;    // 총 납부액
+  totalUnpaid: number;  // 총 미납액
+}
+
+export function useBillingMonthSummaries() {
+  return useQuery<BillingMonthSummary[]>({
+    queryKey: ['billing', 'month-summaries'],
+    queryFn: async () => {
+      const snapshot = await getDocs(collection(db, COL_BILLING));
+      const map = new Map<string, BillingMonthSummary>();
+      for (const d of snapshot.docs) {
+        const data = d.data();
+        const month = (data.month as string) || '';
+        if (!month) continue;
+        const cur = map.get(month) || {
+          month,
+          count: 0,
+          totalCharge: 0,
+          totalPaid: 0,
+          totalUnpaid: 0,
+        };
+        cur.count++;
+        cur.totalCharge += Number(data.billedAmount) || 0;
+        cur.totalPaid += Number(data.paidAmount) || 0;
+        cur.totalUnpaid += Number(data.unpaidAmount) || 0;
+        map.set(month, cur);
+      }
+      // 최신 월부터 (내림차순)
+      return Array.from(map.values()).sort((a, b) => b.month.localeCompare(a.month));
+    },
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 15,
+    refetchOnWindowFocus: false,
+  });
+}
