@@ -444,11 +444,13 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                 }
                 e.preventDefault();
 
-                // 시뮬레이션 모드: scenarioEnrollments에서 즉시 제거
+                // 시뮬레이션 모드: scenarioEnrollments에서 즉시 제거 (단일 history 엔트리)
                 if (isScenarioMode) {
                     const className = selectedStudentClassName;
-                    selectedStudentIds.forEach(sid => {
-                        simulation.removeStudentFromClass(className, sid);
+                    simulation.batchEdit(() => {
+                        selectedStudentIds.forEach(sid => {
+                            simulation.removeStudentFromClass(className, sid);
+                        });
                     });
                     const names = [...selectedStudentIds].map(id => studentMap[id]?.name || id).join(', ');
                     showExcelToast(`삭제: ${names}`);
@@ -554,9 +556,11 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     if (!targetClass || targetClass.className === cutStudent.className) return;
                     e.preventDefault();
                     if (isScenarioMode) {
-                        // 시뮬: scenarioEnrollments에서 직접 이동
-                        cutStudent.studentIds.forEach(sid => {
-                            simulation.moveStudent(cutStudent.className, targetClass.className, sid);
+                        // 시뮬: scenarioEnrollments에서 직접 이동 (단일 history 엔트리)
+                        simulation.batchEdit(() => {
+                            cutStudent.studentIds.forEach(sid => {
+                                simulation.moveStudent(cutStudent.className, targetClass.className, sid);
+                            });
                         });
                         const names = cutStudent.studentIds.map(id => studentMap[id]?.name || id);
                         const nameStr = names.length <= 3 ? names.join(', ') : `${names.slice(0, 2).join(', ')} 외 ${names.length - 2}명`;
@@ -596,14 +600,16 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                 }
 
                 if (isScenarioMode) {
-                    // 시뮬: scenarioEnrollments에 직접 추가 (modal 거치지 않음)
+                    // 시뮬: scenarioEnrollments에 직접 추가 (modal 거치지 않음, 단일 history 엔트리)
                     const targetSimClass = simulation.getScenarioClassByName(targetClass.className);
                     if (!targetSimClass) return;
                     const today = getTodayKST();
-                    newStudentIds.forEach(sid => {
-                        simulation.addStudentToClass(targetClass.className, sid, {
-                            subject: targetSimClass.subject,
-                            enrollmentDate: today,
+                    simulation.batchEdit(() => {
+                        newStudentIds.forEach(sid => {
+                            simulation.addStudentToClass(targetClass.className, sid, {
+                                subject: targetSimClass.subject,
+                                enrollmentDate: today,
+                            });
                         });
                     });
                     const names = newStudentIds.map(id => studentMap[id]?.name || id);
@@ -798,18 +804,35 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     const handleGridDrop = useCallback((e: React.DragEvent, toClassId: string, toZone?: string) => {
         if (isScenarioMode) {
             e.preventDefault();
-            const studentId = e.dataTransfer.getData('studentId');
             const fromClassId = e.dataTransfer.getData('fromClassId');
-
-            if (!studentId || !fromClassId) return;
-            if (fromClassId === toClassId) return;
+            if (!fromClassId || fromClassId === toClassId) return;
 
             const fromClass = simulation.getScenarioClass(fromClassId);
             const toClass = simulation.getScenarioClass(toClassId);
+            if (!fromClass || !toClass) return;
 
-            if (fromClass && toClass) {
-                simulation.moveStudent(fromClass.className, toClass.className, studentId);
+            // 다중 학생 드래그
+            const multiIdsJson = e.dataTransfer.getData('multiStudentIds');
+            if (multiIdsJson) {
+                try {
+                    const multiIds = JSON.parse(multiIdsJson) as string[];
+                    if (multiIds.length > 0) {
+                        simulation.batchEdit(() => {
+                            multiIds.forEach(sid => {
+                                simulation.moveStudent(fromClass.className, toClass.className, sid);
+                            });
+                        });
+                        return;
+                    }
+                } catch (err) {
+                    console.error('[handleGridDrop sim] multiStudentIds parsing error:', err);
+                }
             }
+
+            // 단일 학생
+            const studentId = e.dataTransfer.getData('studentId');
+            if (!studentId) return;
+            simulation.moveStudent(fromClass.className, toClass.className, studentId);
         } else {
             // handleDrop이 멀티/단일 학생 드롭 + 같은 반 zone 이동을 모두 처리
             handleDrop(e, toClassId, toZone);

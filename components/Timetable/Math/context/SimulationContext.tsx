@@ -119,6 +119,8 @@ export interface MathSimulationContextValue extends ScenarioState {
   undoAll: () => number;  // 모든 변경 되돌리기 — 되돌린 개수 반환
   canUndo: boolean;
   historyDepth: number;  // 현재 history 스택 크기
+  // 다중 작업을 단일 history 엔트리로 묶음 (예: 다중 학생 이동)
+  batchEdit: (fn: () => void) => void;
 
   // Scenario operations
   loadFromLive: () => Promise<void>;
@@ -177,13 +179,31 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
   };
   const [history, setHistory] = useState<HistoryEntry[]>([]);
 
-  const pushHistory = useCallback(() => {
+  // batch 진행 중에는 개별 edit op의 pushHistory를 건너뜀
+  const batchInProgress = useRef(false);
+
+  const pushHistorySnapshot = useCallback(() => {
     const { scenarioClasses, scenarioEnrollments } = stateRef.current;
     setHistory(prev => {
       const next = [...prev, { scenarioClasses, scenarioEnrollments }];
       return next.length > HISTORY_LIMIT ? next.slice(-HISTORY_LIMIT) : next;
     });
   }, []);
+
+  const pushHistory = useCallback(() => {
+    if (batchInProgress.current) return;
+    pushHistorySnapshot();
+  }, [pushHistorySnapshot]);
+
+  const batchEdit = useCallback((fn: () => void) => {
+    pushHistorySnapshot();  // 단일 스냅샷
+    batchInProgress.current = true;
+    try {
+      fn();
+    } finally {
+      batchInProgress.current = false;
+    }
+  }, [pushHistorySnapshot]);
 
   // ============ INTERNAL LOAD FROM LIVE ============
 
@@ -214,7 +234,8 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
       };
     });
 
-    // 2. Process enrollments
+    // 2. Process enrollments — useSubjectClassStudents와 동일한 "현재 활성" 필터 적용
+    const todayStr = new Date().toISOString().split('T')[0];
 
     const scenarioEnrollments: Record<string, Record<string, ScenarioEnrollment>> = {};
     enrollmentsSnapshot.docs.forEach(docSnap => {
@@ -224,10 +245,37 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
       const classId = data.classId as string;
 
       if (!studentId || !className) return;
-      if (data.withdrawalDate) return;  // Skip withdrawn only (onHold는 포함)
+
+      // 취소된 예약 제외
+      if (data.cancelledAt) return;
+      // 퇴원 제외
+      if (data.withdrawalDate) return;
+
+      const startDate = convertTimestampToDate(data.enrollmentDate || data.startDate);
+      const endDate = convertTimestampToDate(data.endDate);
+      const wdDate = convertTimestampToDate(data.withdrawalDate);
+
+      // 모순 record 가드 — startDate > endDate 인 깨진 record 무시
+      const effEnd = wdDate || endDate;
+      if (startDate && effEnd && startDate > effEnd) return;
+
+      // 종료된 등록 제외 (endDate <= today)
+      if (endDate && endDate <= todayStr) return;
+
+      // 미래 예정 등록 제외 (현재 시점 시간표만 반영)
+      if (startDate && startDate > todayStr) return;
 
       if (!scenarioEnrollments[className]) {
         scenarioEnrollments[className] = {};
+      }
+
+      // 동일 학생이 같은 반에 중복 enrollment(예: 과거+현재) 있을 때
+      // 최신 enrollmentDate를 우선
+      const existing = scenarioEnrollments[className][studentId];
+      if (existing) {
+        const existingStart = existing.enrollmentDate || '';
+        const newStart = startDate || '';
+        if (existingStart >= newStart) return;
       }
 
       scenarioEnrollments[className][studentId] = {
@@ -236,9 +284,9 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
         classId,
         subject: (data.subject === 'highmath' ? 'highmath' : 'math') as 'math' | 'highmath',
         underline: data.underline,
-        enrollmentDate: convertTimestampToDate(data.enrollmentDate || data.startDate),
-        withdrawalDate: convertTimestampToDate(data.withdrawalDate),
-        onHold: data.onHold || false,  // onHold 상태 유지
+        enrollmentDate: startDate,
+        withdrawalDate: wdDate,
+        onHold: data.onHold || false,
         attendanceDays: data.attendanceDays || [],
         _raw: data,
       };
@@ -752,6 +800,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     undoAll,
     canUndo,
     historyDepth,
+    batchEdit,
     loadFromLive,
     saveToScenario,
     updateScenario,
@@ -773,6 +822,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     undoAll,
     canUndo,
     historyDepth,
+    batchEdit,
     loadFromLive,
     saveToScenario,
     updateScenario,
