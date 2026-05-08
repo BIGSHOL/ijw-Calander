@@ -114,6 +114,10 @@ export interface MathSimulationContextValue extends ScenarioState {
   removeStudentFromClass: (className: string, studentId: string) => void;
   moveStudent: (fromClass: string, toClass: string, studentId: string) => void;
 
+  // Undo (Ctrl+Z)
+  undo: () => boolean;  // true = undo 실행, false = 스택 비어있음
+  canUndo: boolean;
+
   // Scenario operations
   loadFromLive: () => Promise<void>;
   saveToScenario: (name: string, description: string, userId: string, userName: string) => Promise<string>;
@@ -160,6 +164,24 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
   // Ref for stable access in callbacks
   const stateRef = useRef(state);
   stateRef.current = state;
+
+  // ============ UNDO HISTORY ============
+  // 편집 작업 직전의 (scenarioClasses, scenarioEnrollments) 스냅샷 스택
+  // 최대 50개 유지 (메모리 보호)
+  const HISTORY_LIMIT = 50;
+  type HistoryEntry = {
+    scenarioClasses: Record<string, ScenarioClass>;
+    scenarioEnrollments: Record<string, Record<string, ScenarioEnrollment>>;
+  };
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+
+  const pushHistory = useCallback(() => {
+    const { scenarioClasses, scenarioEnrollments } = stateRef.current;
+    setHistory(prev => {
+      const next = [...prev, { scenarioClasses, scenarioEnrollments }];
+      return next.length > HISTORY_LIMIT ? next.slice(-HISTORY_LIMIT) : next;
+    });
+  }, []);
 
   // ============ INTERNAL LOAD FROM LIVE ============
 
@@ -234,6 +256,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
   const enterScenarioMode = useCallback(async () => {
     // Load current live data into draft
     await loadFromLiveInternal();
+    setHistory([]);
     setState(prev => ({
       ...prev,
       isScenarioMode: true,
@@ -248,6 +271,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
         return;
       }
     }
+    setHistory([]);
     setState({
       isScenarioMode: false,
       scenarioClasses: {},
@@ -321,6 +345,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
   // ============ EDIT OPERATIONS ============
 
   const updateScenarioClass = useCallback((classId: string, updates: Partial<ScenarioClass>) => {
+    pushHistory();
     setState(prev => ({
       ...prev,
       scenarioClasses: {
@@ -332,13 +357,14 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
       },
       isDirty: true,
     }));
-  }, []);
+  }, [pushHistory]);
 
   const addStudentToClass = useCallback((
     className: string,
     studentId: string,
     enrollmentData?: Partial<ScenarioEnrollment>
   ) => {
+    pushHistory();
     setState(prev => {
       const classEnrollments = prev.scenarioEnrollments[className] || {};
 
@@ -359,9 +385,10 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
         isDirty: true,
       };
     });
-  }, []);
+  }, [pushHistory]);
 
   const removeStudentFromClass = useCallback((className: string, studentId: string) => {
+    pushHistory();
     setState(prev => {
       const classEnrollments = { ...prev.scenarioEnrollments[className] };
       delete classEnrollments[studentId];
@@ -375,9 +402,10 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
         isDirty: true,
       };
     });
-  }, []);
+  }, [pushHistory]);
 
   const moveStudent = useCallback((fromClass: string, toClass: string, studentId: string) => {
+    pushHistory();
     setState(prev => {
       const fromEnrollments = { ...prev.scenarioEnrollments[fromClass] };
       const toEnrollments = prev.scenarioEnrollments[toClass] || {};
@@ -403,6 +431,25 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
         isDirty: true,
       };
     });
+  }, [pushHistory]);
+
+  // ============ UNDO ============
+
+  const undo = useCallback((): boolean => {
+    let didUndo = false;
+    setHistory(prev => {
+      if (prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      setState(s => ({
+        ...s,
+        scenarioClasses: last.scenarioClasses,
+        scenarioEnrollments: last.scenarioEnrollments,
+        isDirty: true,
+      }));
+      didUndo = true;
+      return prev.slice(0, -1);
+    });
+    return didUndo;
   }, []);
 
   // ============ SCENARIO OPERATIONS ============
@@ -414,6 +461,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
       }
     }
     await loadFromLiveInternal();
+    setHistory([]);
     setState(prev => ({
       ...prev,
       isDirty: false,
@@ -525,6 +573,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     const scenario = docSnap.data();
 
     if (scenario.version === 2) {
+      setHistory([]);
       setState(prev => ({
         ...prev,
         scenarioClasses: scenario.classes || {},
@@ -665,6 +714,8 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
 
   // ============ CONTEXT VALUE ============
 
+  const canUndo = history.length > 0;
+
   const value = useMemo<MathSimulationContextValue>(() => ({
     ...state,
     enterScenarioMode,
@@ -676,6 +727,8 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     addStudentToClass,
     removeStudentFromClass,
     moveStudent,
+    undo,
+    canUndo,
     loadFromLive,
     saveToScenario,
     updateScenario,
@@ -693,6 +746,8 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     addStudentToClass,
     removeStudentFromClass,
     moveStudent,
+    undo,
+    canUndo,
     loadFromLive,
     saveToScenario,
     updateScenario,

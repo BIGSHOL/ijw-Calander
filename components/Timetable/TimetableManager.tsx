@@ -489,7 +489,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
             if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z' || e.code === 'KeyZ')) {
                 e.preventDefault();
                 if (isScenarioMode) {
-                    showExcelToast('시뮬레이션 모드에서는 실행 취소가 지원되지 않습니다');
+                    const undone = simulation.undo();
+                    showExcelToast(undone ? '실행 취소' : '취소할 작업 없음');
                     return;
                 }
                 console.log('[Ctrl+Z] 실행 취소');
