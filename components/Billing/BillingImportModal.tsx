@@ -9,7 +9,7 @@ import { useEscapeClose } from '../../hooks/useEscapeClose';
 interface BillingImportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImport: (records: Omit<BillingRecord, 'id'>[], month: string) => Promise<{ added: number; updated: number }>;
+  onImport: (records: Omit<BillingRecord, 'id'>[], month: string) => Promise<{ added: number; updated: number; deleted?: number }>;
   onNavigateToTextbooks?: (file: File) => void;
 }
 
@@ -59,29 +59,29 @@ function parsePaidDate(raw: string | number): string {
 }
 
 /**
- * 앱스크립트 정리 로직 반영: 교재 행 제거 + 동일 학생 병합 + 이름 정렬
+ * 정리 로직 (attendance 스타일):
+ * - 교재 행 제거 (별도 처리됨)
+ * - 같은 학생-학년-학교-수납명-담임강사 조합만 병합 (금액 합산)
+ *   → 같은 학생의 다른 수납건은 별도 행으로 유지 (1수납건 = 1행)
+ * - 이름 → 청구액 내림차순 정렬
  */
 function cleanupParsedRows(rows: ParsedRow[]): { cleaned: ParsedRow[]; textbookRows: ParsedRow[]; mergedCount: number } {
   // 1) 교재 행 제거 (수납명 또는 구분에 "교재" 포함)
   const textbookRows = rows.filter(r =>
-    r.billingName.includes('교재') || r.category === '교재'
+    r.billingName.includes('교재') || r.category === '교재',
   );
   const nonTextbook = rows.filter(r =>
-    !r.billingName.includes('교재') && r.category !== '교재'
+    !r.billingName.includes('교재') && r.category !== '교재',
   );
 
-  // 2) 동일 학생 병합 (이름 기준: 수납명 합치기, 금액 합산)
-  const studentMap = new Map<string, ParsedRow>();
+  // 2) 같은 행 병합 — 학생/학년/학교/수납명/담임강사가 모두 같으면 합산
+  //    같은 학생의 다른 수납건(예: 수강료 vs 시험비)은 별도 행 유지
+  const map = new Map<string, ParsedRow>();
   let mergedCount = 0;
   for (const row of nonTextbook) {
-    const key = row.studentName;
-    const existing = studentMap.get(key);
+    const key = [row.studentName, row.grade, row.school, row.billingName, row.teacher].join('||');
+    const existing = map.get(key);
     if (existing) {
-      // 수납명 합치기 (중복 아닌 것만)
-      const existingNames = existing.billingName.split(' + ');
-      if (!existingNames.includes(row.billingName)) {
-        existing.billingName = existing.billingName + ' + ' + row.billingName;
-      }
       // 금액 합산
       existing.billedAmount += row.billedAmount;
       existing.discountAmount += row.discountAmount;
@@ -89,27 +89,23 @@ function cleanupParsedRows(rows: ParsedRow[]): { cleaned: ParsedRow[]; textbookR
       existing.paidAmount += row.paidAmount;
       existing.unpaidAmount += row.unpaidAmount;
       // 메모 합치기
-      if (row.memo && row.memo !== existing.memo) {
-        existing.memo = existing.memo ? existing.memo + ' / ' + row.memo : row.memo;
-      }
-      // 담임강사: 비어있으면 채우기
-      if (!existing.teacher && row.teacher) {
-        existing.teacher = row.teacher;
+      if (row.memo && !existing.memo.includes(row.memo)) {
+        existing.memo = existing.memo ? `${existing.memo}\n${row.memo}` : row.memo;
       }
       // 수납여부: 하나라도 미납이면 미납
-      if (row.status === 'pending') {
-        existing.status = 'pending';
-      }
+      if (row.status === 'pending') existing.status = 'pending';
       mergedCount++;
     } else {
-      // 새 학생 - 복사본 저장 (원본 변경 방지)
-      studentMap.set(key, { ...row });
+      map.set(key, { ...row });
     }
   }
 
-  // 3) 이름 기준 정렬
-  const cleaned = Array.from(studentMap.values())
-    .sort((a, b) => a.studentName.localeCompare(b.studentName, 'ko'));
+  // 3) 이름순 → 청구액 내림차순 정렬
+  const cleaned = Array.from(map.values()).sort((a, b) => {
+    const nameCmp = a.studentName.localeCompare(b.studentName, 'ko');
+    if (nameCmp !== 0) return nameCmp;
+    return b.billedAmount - a.billedAmount;
+  });
 
   return { cleaned, textbookRows, mergedCount };
 }
@@ -129,7 +125,7 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
   const [cleanupInfo, setCleanupInfo] = useState<{ textbookRemoved: number; mergedCount: number } | null>(null);
   const [fileName, setFileName] = useState('');
   const [isImporting, setIsImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ success: boolean; added: number; updated: number; textbookAdded?: number } | null>(null);
+  const [importResult, setImportResult] = useState<{ success: boolean; added: number; updated: number; deleted?: number; textbookAdded?: number } | null>(null);
   const { importBillings: importTextbookBillings } = useTextbooks();
 
   const detectedMonth = parsedData.length > 0 ? parsedData[0].month : '';
@@ -195,6 +191,11 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
 
   const handleImport = async () => {
     if (parsedData.length === 0) return;
+    // attendance 스타일: 해당 월 기존 데이터 모두 삭제 후 새로 등록 (1수납건/행)
+    if (!confirm(
+      `${finalMonth}의 기존 수납 데이터가 있다면 모두 삭제하고 ${parsedData.length}건을 새로 등록합니다.\n\n` +
+      `진행하시겠습니까?`,
+    )) return;
     setIsImporting(true);
     try {
       // 사용자가 변경한 청구월 사용 (저장 시 모든 행의 month를 통일)
@@ -222,7 +223,7 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
         }
       }
 
-      setImportResult({ success: true, added: result.added, updated: result.updated, textbookAdded });
+      setImportResult({ success: true, added: result.added, updated: result.updated, deleted: result.deleted, textbookAdded });
     } catch (err) {
       console.error('Import failed:', err);
       setImportResult({ success: false, added: 0, updated: 0 });
@@ -463,6 +464,11 @@ export const BillingImportModal: React.FC<BillingImportModalProps> = ({
                     <div className="flex items-center gap-2">
                       <Check className="w-5 h-5 text-emerald-600 shrink-0" />
                       <div className="text-sm text-emerald-700 font-medium">
+                        {(importResult.deleted ?? 0) > 0 && (
+                          <span className="text-orange-600 font-normal mr-1">
+                            기존 {importResult.deleted!.toLocaleString()}건 삭제 →
+                          </span>
+                        )}
                         <span>수납 {importResult.added.toLocaleString()}건 추가</span>
                         {importResult.updated > 0 && (
                           <span className="text-blue-600 font-normal ml-1">
