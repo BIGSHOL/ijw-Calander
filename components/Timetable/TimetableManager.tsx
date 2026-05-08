@@ -379,12 +379,26 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     const [acHighlightStudentId, setAcHighlightStudentId] = useState<string | null>(null);
 
     // 엑셀 모드 학생 등록 (바로 DB 반영하지 않고 pending에 추가)
+    // 시뮬레이션 모드에서는 scenarioEnrollments에 즉시 반영
     const handleEnrollStudentPending = useCallback((studentId: string, className: string) => {
+        if (isScenarioMode) {
+            const targetClass = simulation.getScenarioClassByName(className);
+            if (!targetClass) return;
+            const existing = simulation.scenarioEnrollments[className]?.[studentId];
+            if (existing) return;
+            simulation.addStudentToClass(className, studentId, {
+                subject: targetClass.subject,
+                enrollmentDate: getTodayKST(),
+            });
+            const name = studentMap[studentId]?.name || studentId;
+            showExcelToast(`등록: ${name}`);
+            return;
+        }
         if (pendingExcelEnrollments.some(e => e.studentId === studentId && e.className === className)) return;
         setPendingExcelEnrollments(prev => [...prev, { studentId, className }]);
         const name = studentMap[studentId]?.name || studentId;
         showExcelToast(`등록 대기: ${name}`);
-    }, [pendingExcelEnrollments, studentMap, showExcelToast]);
+    }, [isScenarioMode, simulation, pendingExcelEnrollments, studentMap, showExcelToast]);
 
     // 엑셀 모드 보류 등록 취소
     const handleCancelPendingEnroll = useCallback((studentId: string, className: string) => {
@@ -428,6 +442,20 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     return;
                 }
                 e.preventDefault();
+
+                // 시뮬레이션 모드: scenarioEnrollments에서 즉시 제거
+                if (isScenarioMode) {
+                    const className = selectedStudentClassName;
+                    selectedStudentIds.forEach(sid => {
+                        simulation.removeStudentFromClass(className, sid);
+                    });
+                    const names = [...selectedStudentIds].map(id => studentMap[id]?.name || id).join(', ');
+                    showExcelToast(`삭제: ${names}`);
+                    setSelectedStudentIds(new Set());
+                    setSelectedStudentClassName(null);
+                    return;
+                }
+
                 console.log(`[Delete Key] ${selectedStudentIds.size}명의 학생을 삭제 대기 목록에 추가합니다.`);
 
                 const className = selectedStudentClassName;
@@ -460,6 +488,10 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
             // Ctrl+Z: 마지막 보류 작업 취소 (한국어 IME에서 e.key가 'ㅋ'일 수 있으므로 e.code도 체크)
             if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z' || e.code === 'KeyZ')) {
                 e.preventDefault();
+                if (isScenarioMode) {
+                    showExcelToast('시뮬레이션 모드에서는 실행 취소가 지원되지 않습니다');
+                    return;
+                }
                 console.log('[Ctrl+Z] 실행 취소');
                 // 보류 등록이 있으면 마지막 등록 취소, 없으면 마지막 삭제 취소
                 if (pendingExcelEnrollments.length > 0) {
@@ -519,6 +551,17 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     const targetClass = filteredClasses.find(c => c.id === selectedClassId);
                     if (!targetClass || targetClass.className === cutStudent.className) return;
                     e.preventDefault();
+                    if (isScenarioMode) {
+                        // 시뮬: scenarioEnrollments에서 직접 이동
+                        cutStudent.studentIds.forEach(sid => {
+                            simulation.moveStudent(cutStudent.className, targetClass.className, sid);
+                        });
+                        const names = cutStudent.studentIds.map(id => studentMap[id]?.name || id);
+                        const nameStr = names.length <= 3 ? names.join(', ') : `${names.slice(0, 2).join(', ')} 외 ${names.length - 2}명`;
+                        showExcelToast(`이동: ${nameStr} → ${targetClass.className}`);
+                        setCutStudent(null);
+                        return;
+                    }
                     const fromClass = filteredClasses.find(c => c.className === cutStudent.className);
                     if (fromClass) {
                         handleMultiDrop(cutStudent.studentIds, fromClass.id, selectedClassId);
@@ -550,6 +593,24 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     return;
                 }
 
+                if (isScenarioMode) {
+                    // 시뮬: scenarioEnrollments에 직접 추가 (modal 거치지 않음)
+                    const targetSimClass = simulation.getScenarioClassByName(targetClass.className);
+                    if (!targetSimClass) return;
+                    const today = getTodayKST();
+                    newStudentIds.forEach(sid => {
+                        simulation.addStudentToClass(targetClass.className, sid, {
+                            subject: targetSimClass.subject,
+                            enrollmentDate: today,
+                        });
+                    });
+                    const names = newStudentIds.map(id => studentMap[id]?.name || id);
+                    const nameStr = names.length <= 3 ? names.join(', ') : `${names.slice(0, 2).join(', ')} 외 ${names.length - 2}명`;
+                    showExcelToast(`등록: ${nameStr} → ${targetClass.className}`);
+                    if (skipped > 0) alert(`${skipped}명은 이미 소속되어 제외됩니다.`);
+                    return;
+                }
+
                 setPasteModalInfo({
                     studentIds: newStudentIds,
                     targetClassName: targetClass.className,
@@ -562,7 +623,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [viewType, mode, selectedStudentIds, selectedStudentClassName, copiedStudent, cutStudent, selectedClassId, filteredClasses, pendingExcelDeletes, pendingExcelEnrollments, showExcelToast, studentMap, undoLastMove, handleMultiDrop]);
+    }, [viewType, mode, selectedStudentIds, selectedStudentClassName, copiedStudent, cutStudent, selectedClassId, filteredClasses, pendingExcelDeletes, pendingExcelEnrollments, showExcelToast, studentMap, undoLastMove, handleMultiDrop, isScenarioMode, simulation]);
 
     // 이미지 내보내기용 그룹 상태
     const [exportGroups, setExportGroups] = useState<ExportGroup[]>([]);
