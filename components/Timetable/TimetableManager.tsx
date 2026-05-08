@@ -1327,7 +1327,7 @@ interface TimetableManagerProps {
     setIsTimetableSettingsOpen?: (value: boolean) => void;
 }
 
-const TimetableManager = ({
+const TimetableManagerInner = ({
     subjectTab: externalSubjectTab,
     onSubjectChange,
     viewType: externalViewType,
@@ -2406,7 +2406,6 @@ const TimetableManager = ({
 
     return (
     <>
-        <MathSimulationProvider>
             <MathTimetableContent
                 weekLabel={weekLabel}
                 goToPrevWeek={goToPrevWeek}
@@ -2545,10 +2544,15 @@ const TimetableManager = ({
                     onClose={() => setWithdrawalModalInfo(null)}
                 />
             )}
-        </MathSimulationProvider>
         {makeEduSyncModalElement}
     </>
     );
 };
+
+const TimetableManager = (props: TimetableManagerProps) => (
+    <MathSimulationProvider>
+        <TimetableManagerInner {...props} />
+    </MathSimulationProvider>
+);
 
 export default TimetableManager;
