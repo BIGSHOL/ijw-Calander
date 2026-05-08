@@ -714,6 +714,11 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     // 메모이즈된 콜백: TimetableGrid에 전달되는 인라인 함수를 안정화하여 불필요한 리렌더링 방지
     const handleClassClick = useCallback((cls: TimetableClass) => {
         if (!canEditMath) return;
+        // 시뮬레이션 모드에서는 수업 편집 차단 (실데이터 직접 수정 방지)
+        if (isScenarioMode) {
+            showExcelToast('시뮬레이션 모드에서는 수업 편집이 불가능합니다');
+            return;
+        }
         const classInfo: ClassInfo = {
             className: cls.className,
             subject: cls.subject === '수학' ? 'math' : cls.subject === '고등수학' ? 'highmath' : 'english',
@@ -728,7 +733,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
             pendingTeacherReason: cls.pendingTeacherReason,
         };
         setSelectedClassInfo(classInfo);
-    }, [canEditMath, setSelectedClassInfo]);
+    }, [canEditMath, isScenarioMode, showExcelToast, setSelectedClassInfo]);
 
     const handleStudentClick = useCallback((studentId: string) => {
         const student = studentMap[studentId];
