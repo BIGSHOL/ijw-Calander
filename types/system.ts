@@ -40,7 +40,8 @@ export type AppTab =
   // Phase 7: 경비 관리
   | 'expenses'
   // 지원
-  | 'logs';
+  | 'logs'
+  | 'timetable-test';
 
 // Tab Metadata - 각 탭의 메타정보 (확장 가능)
 export interface TabMetadata {
@@ -98,6 +99,7 @@ export const TAB_META: Record<AppTab, Omit<TabMetadata, 'id'>> = {
   // 지원
   help: { label: '도움말', icon: '❓' },
   logs: { label: '로그보기', icon: '📋' },
+  'timetable-test': { label: '시간표 테스트', icon: '🧪' },
 };
 
 // Tab Group 구조 - 무한 확장 가능
@@ -164,7 +166,7 @@ export const TAB_GROUPS: TabGroup[] = [
     id: 'support',
     label: '지원',
     icon: '❓',
-    tabs: ['help', 'logs'],
+    tabs: ['help', 'timetable-test', 'logs'],
     order: 7,
   },
 ];
@@ -251,7 +253,7 @@ export const TAB_PRIMARY_PERMISSIONS: Partial<Record<AppTab, string[]>> = {
 // Note: master always has access to all tabs (handled in code)
 export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
   master: [
-    'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'attendance-test', 'daily-attendance', 'payment', 'gantt',
+    'dashboard', 'notices', 'calendar', 'timetable', 'timetable-test', 'attendance', 'attendance-test', 'daily-attendance', 'payment', 'gantt',
     'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment',
     'student-consultations', 'staff', 'billing', 'role-management', 'resources', 'withdrawal',
     'homework', 'exams', 'textbooks', 'contracts', 'reports', 'payroll', 'analytics',
@@ -259,7 +261,7 @@ export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
     'tuition-calculator', 'meeting-minutes', 'expenses',
   ],
   admin: [
-    'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'attendance-test', 'daily-attendance', 'payment', 'gantt',
+    'dashboard', 'notices', 'calendar', 'timetable', 'timetable-test', 'attendance', 'attendance-test', 'daily-attendance', 'payment', 'gantt',
     'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment',
     'student-consultations', 'staff', 'billing', 'role-management', 'resources', 'withdrawal',
     'homework', 'exams', 'textbooks', 'contracts', 'reports', 'payroll', 'analytics',
@@ -267,35 +269,35 @@ export const DEFAULT_TAB_PERMISSIONS: TabPermissionConfig = {
     'tuition-calculator', 'meeting-minutes', 'expenses',
   ],
   manager: [
-    'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'daily-attendance',
+    'dashboard', 'notices', 'calendar', 'timetable', 'timetable-test', 'attendance', 'daily-attendance',
     'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment',
     'student-consultations', 'staff', 'billing', 'resources', 'withdrawal',
     'homework', 'exams', 'textbooks', 'contracts', 'reports', 'analytics',
     'parent-portal', 'sms-notifications', 'shuttle', 'help', 'tuition-calculator', 'meeting-minutes',
   ],
   math_lead: [
-    'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'daily-attendance',
+    'dashboard', 'notices', 'calendar', 'timetable', 'timetable-test', 'attendance', 'daily-attendance',
     'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment',
     'student-consultations', 'withdrawal', 'resources',
     'homework', 'exams', 'textbooks', 'reports', 'parent-portal', 'help',
   ],
   english_lead: [
-    'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'daily-attendance',
+    'dashboard', 'notices', 'calendar', 'timetable', 'timetable-test', 'attendance', 'daily-attendance',
     'consultation', 'students', 'grades', 'classes', 'classroom', 'classroom-assignment',
     'student-consultations', 'withdrawal', 'resources',
     'homework', 'exams', 'textbooks', 'reports', 'parent-portal', 'help',
   ],
   math_teacher: [
-    'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'daily-attendance',
+    'dashboard', 'notices', 'calendar', 'timetable', 'timetable-test', 'attendance', 'daily-attendance',
     'consultation', 'students', 'grades',
     'homework', 'exams', 'reports', 'parent-portal', 'help',
   ],
   english_teacher: [
-    'dashboard', 'notices', 'calendar', 'timetable', 'attendance', 'daily-attendance',
+    'dashboard', 'notices', 'calendar', 'timetable', 'timetable-test', 'attendance', 'daily-attendance',
     'consultation', 'students', 'grades',
     'homework', 'exams', 'reports', 'parent-portal', 'help',
   ],
-  user: ['dashboard', 'notices', 'calendar', 'attendance', 'daily-attendance', 'help'],
+  user: ['dashboard', 'notices', 'calendar', 'timetable-test', 'attendance', 'daily-attendance', 'help'],
 };
 
 // Google Calendar 동기화 설정

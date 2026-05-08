@@ -8,6 +8,7 @@ import { StaffMember } from '../../types';
 const DashboardTab = React.lazy(() => import('../Dashboard/DashboardTab'));
 const CalendarBoard = React.lazy(() => import('../Calendar/CalendarBoard').then(m => ({ default: m.default })));
 const TimetableManager = React.lazy(() => import('../Timetable/TimetableManager'));
+const TimetableTest = React.lazy(() => import('../Timetable/TimetableTest'));
 const PaymentReport = React.lazy(() => import('../PaymentReport/PaymentReport'));
 const GanttManager = React.lazy(() => import('../Gantt/GanttManager'));
 const ConsultationManager = React.lazy(() => import('../RegistrationConsultation/ConsultationManager'));
@@ -520,6 +521,12 @@ export const TabContent: React.FC<TabContentProps> = ({
         <Suspense fallback={<TabLoadingFallback />}>
           <div className="w-full flex-1 overflow-hidden">
             <MeetingMinutesTab userProfile={effectiveProfile} />
+          </div>
+        </Suspense>
+      ) : appMode === 'timetable-test' ? (
+        <Suspense fallback={<TabLoadingFallback />}>
+          <div className="w-full flex-1 overflow-hidden">
+            <TimetableTest currentUser={effectiveProfile} staffMember={effectiveStaffMember} />
           </div>
         </Suspense>
       ) : null}

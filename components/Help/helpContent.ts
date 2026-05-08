@@ -618,6 +618,20 @@ const tabHelpData: Record<AppTab, Omit<HelpEntry, 'tab' | 'icon' | 'group'>> = {
       },
     ],
   },
+  'timetable-test': {
+    title: '시간표 테스트',
+    overview: '본인 시간표를 시뮬레이션하는 환경입니다. 편집 내용은 브라우저에만 저장되며 원본 시간표에는 절대 반영되지 않습니다.',
+    sections: [
+      {
+        title: '용도',
+        items: [
+          '실제 시간표를 변경하기 전에 미리 연습/시뮬레이션',
+          '본인이 담당하는 수업만 필터링하여 보기',
+          '마음껏 수정해도 원본 데이터는 안전 (localStorage에만 저장)',
+        ],
+      },
+    ],
+  },
   'role-management': {
     title: '역할 관리',
     overview: '역할별 세부 권한과 탭 접근 권한을 설정합니다. Master 전용 기능입니다.',

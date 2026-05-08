@@ -112,6 +112,9 @@ export const useTabPermissions = (userProfile: UserProfile | null) => {
             // 도움말은 모든 사용자에게 항상 접근 가능
             if (tab === 'help') return true;
 
+            // 시간표 테스트는 시뮬레이션 환경 — 역할 무관 누구나 접근 가능 (원본 시간표에 영향 0)
+            if (tab === 'timetable-test') return true;
+
             // '출석부 테스트' = 관리자(admin) 전용 탭. 코드 레벨 강제 — Firestore 설정 관계없이 잠금.
             // master 는 line 30 에서 이미 모든 탭 통과. 시뮬레이션으로 admin 가장 시에만 여기서 허용.
             if (tab === 'attendance-test') return userRole === 'admin';
