@@ -432,8 +432,9 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
             }
 
             // Del 키: 선택된 학생을 보류 삭제 목록에 추가 (저장 시 실행) - edit 모드에서만
+            // (시뮬레이션 모드는 항상 edit 의미이므로 가드 우회)
             if (e.key === 'Delete') {
-                if (mode !== 'edit') {
+                if (mode !== 'edit' && !isScenarioMode) {
                     console.log('[Delete Key] 조회 모드에서는 삭제가 불가능합니다.');
                     return; // 조회 모드에서는 삭제 불가
                 }
@@ -519,9 +520,9 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
 
             if (!e.ctrlKey && !e.metaKey) return;
 
-            // Ctrl+X: 잘라내기 (이동 의도) - edit 모드에서만
+            // Ctrl+X: 잘라내기 (이동 의도) - edit 모드에서만 (시뮬은 항상 edit)
             if (e.key === 'x' || e.key === 'X' || e.code === 'KeyX') {
-                if (mode !== 'edit') return;
+                if (mode !== 'edit' && !isScenarioMode) return;
                 if (selectedStudentIds.size > 0 && selectedStudentClassName) {
                     setCutStudent({ studentIds: [...selectedStudentIds], className: selectedStudentClassName });
                     setCopiedStudent(null);
@@ -546,8 +547,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
             }
 
             if (e.key === 'v' || e.key === 'V' || e.code === 'KeyV') {
-                // Ctrl+V: 잘라내기 상태면 이동 - edit 모드에서만
-                if (mode !== 'edit') return;
+                // Ctrl+V: 잘라내기 상태면 이동 - edit 모드에서만 (시뮬은 항상 edit)
+                if (mode !== 'edit' && !isScenarioMode) return;
                 if (cutStudent && selectedClassId) {
                     const targetClass = filteredClasses.find(c => c.id === selectedClassId);
                     if (!targetClass || targetClass.className === cutStudent.className) return;
@@ -837,9 +838,14 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     viewType={viewType}
                     setIsTeacherOrderModalOpen={setIsTeacherOrderModalOpen}
                     setIsViewSettingsOpen={setIsViewSettingsOpen}
-                    pendingMovesCount={pendingMovesCount + pendingExcelDeletes.length + pendingExcelEnrollments.length}
+                    pendingMovesCount={isScenarioMode ? simulation.historyDepth : (pendingMovesCount + pendingExcelDeletes.length + pendingExcelEnrollments.length)}
                     scheduledMovesCount={scheduledMovesCount}
                     handleSavePendingMoves={async () => {
+                        // 시뮬레이션 모드: 시나리오 저장 모달 열기 (publish는 별도 버튼)
+                        if (isScenarioMode) {
+                            setIsScenarioModalOpen(true);
+                            return;
+                        }
                         // 1. 기존 드래그 이동 저장
                         if (pendingMovesCount > 0) await handleSavePendingMoves();
 
@@ -939,6 +945,15 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         }
                     }}
                     handleCancelPendingMoves={() => {
+                        // 시뮬레이션 모드: 모든 시뮬 변경 되돌리기 (history 비움)
+                        if (isScenarioMode) {
+                            const depth = simulation.historyDepth;
+                            if (depth === 0) return;
+                            if (!confirm(`시뮬레이션 변경 ${depth}건을 모두 되돌리시겠습니까?`)) return;
+                            const count = simulation.undoAll();
+                            showExcelToast(`${count}건 되돌림`);
+                            return;
+                        }
                         handleCancelPendingMoves();
                         setPendingExcelDeletes([]);
                         setPendingExcelEnrollments([]);

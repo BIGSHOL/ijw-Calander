@@ -116,7 +116,9 @@ export interface MathSimulationContextValue extends ScenarioState {
 
   // Undo (Ctrl+Z)
   undo: () => boolean;  // true = undo 실행, false = 스택 비어있음
+  undoAll: () => number;  // 모든 변경 되돌리기 — 되돌린 개수 반환
   canUndo: boolean;
+  historyDepth: number;  // 현재 history 스택 크기
 
   // Scenario operations
   loadFromLive: () => Promise<void>;
@@ -452,6 +454,24 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     return didUndo;
   }, []);
 
+  // 전체 되돌리기 — 가장 오래된 스냅샷(시뮬 진입 직후 상태)으로 복원 후 history 비움
+  const undoAll = useCallback((): number => {
+    let count = 0;
+    setHistory(prev => {
+      if (prev.length === 0) return prev;
+      count = prev.length;
+      const earliest = prev[0];
+      setState(s => ({
+        ...s,
+        scenarioClasses: earliest.scenarioClasses,
+        scenarioEnrollments: earliest.scenarioEnrollments,
+        isDirty: false,
+      }));
+      return [];
+    });
+    return count;
+  }, []);
+
   // ============ SCENARIO OPERATIONS ============
 
   const loadFromLive = useCallback(async () => {
@@ -715,6 +735,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
   // ============ CONTEXT VALUE ============
 
   const canUndo = history.length > 0;
+  const historyDepth = history.length;
 
   const value = useMemo<MathSimulationContextValue>(() => ({
     ...state,
@@ -728,7 +749,9 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     removeStudentFromClass,
     moveStudent,
     undo,
+    undoAll,
     canUndo,
+    historyDepth,
     loadFromLive,
     saveToScenario,
     updateScenario,
@@ -747,7 +770,9 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     removeStudentFromClass,
     moveStudent,
     undo,
+    undoAll,
     canUndo,
+    historyDepth,
     loadFromLive,
     saveToScenario,
     updateScenario,
