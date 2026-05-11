@@ -562,8 +562,9 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
     const [showConsultationPicker, setShowConsultationPicker] = useState(false);
 
     // 기존 등록상담에 저장된 AI 분석 보고서 복원
-    // 1순위: initialData.recordingReportId (정상 저장된 케이스)
-    // 2순위: studentName + consultationDate로 registration_recording_reports에서 매칭 (레거시 자동 연결)
+    // 1순위: initialData.recordingReportId (정상 저장된 케이스 - registration_recording_reports)
+    // 2순위: studentName + consultationDate로 두 컬렉션 매칭
+    //        (registration_recording_reports → consultation_reports 순)
     useEffect(() => {
         let cancelled = false;
         (async () => {
@@ -571,18 +572,15 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                 recording.loadExistingReport(initialData.recordingReportId);
                 return;
             }
-            if (initialData?.studentName && initialData?.consultationDate) {
-                const foundId = await recording.findReportByMatch(
+            if (initialData?.studentName && initialData?.consultationDate && !cancelled) {
+                await recording.loadAnalysisReportByMatch(
                     initialData.studentName,
                     initialData.consultationDate
                 );
-                if (foundId && !cancelled) {
-                    recording.loadExistingReport(foundId);
-                }
             }
         })();
         return () => { cancelled = true; };
-    }, [initialData?.recordingReportId, initialData?.studentName, initialData?.consultationDate, recording.loadExistingReport, recording.findReportByMatch]);
+    }, [initialData?.recordingReportId, initialData?.studentName, initialData?.consultationDate, recording.loadExistingReport, recording.loadAnalysisReportByMatch]);
 
     // 오디오 파일 드래그 앤 드롭 핸들러
     const handleRecordingDrop = useCallback((e: React.DragEvent) => {

@@ -333,37 +333,81 @@ export function useRegistrationRecording() {
     setReportId(existingReportId);
   }, []);
 
-  // 학생이름 + 상담일자 매칭으로 보고서 찾기 (recordingReportId 미저장 레거시 데이터 자동 연결용)
-  // Firestore 컴포지트 인덱스 불필요: studentName 단일 where + 나머지는 클라이언트 필터
-  // 가장 최근 completed 보고서 1건 반환
-  const findReportByMatch = useCallback(async (
+  // 학생이름 + 상담일자 매칭으로 분석 보고서 찾아 reportData에 직접 주입
+  // (recordingReportId 미저장 레거시 데이터 + 학생상담 측 분석된 데이터 자동 연결)
+  //
+  // 검색 우선순위:
+  //   1. registration_recording_reports — 등록상담 자체 분석 (report 필드 있는 경우)
+  //   2. consultation_reports — 학생상담 측 구조화 분석 ("등록상담 녹음에서 불러와서 상담분석"으로 생성)
+  // Firestore 컴포지트 인덱스 불필요: studentName 단일 where + 클라이언트 필터
+  const loadAnalysisReportByMatch = useCallback(async (
     studentNameToMatch: string,
     consultationDateToMatch: string
-  ): Promise<string | null> => {
+  ): Promise<{ collectionName: string; id: string } | null> => {
     if (!studentNameToMatch || !consultationDateToMatch) return null;
-    try {
-      const q = query(
-        collection(db, 'registration_recording_reports'),
-        where('studentName', '==', studentNameToMatch),
-        limit(20)
-      );
-      const snapshot = await getDocs(q);
-      if (snapshot.empty) return null;
-      const matches = snapshot.docs
-        .map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) }))
-        .filter(d =>
-          (d as { consultationDate?: string }).consultationDate === consultationDateToMatch &&
-          (d as { status?: string }).status === 'completed'
-        )
-        .sort((a, b) =>
-          ((b as { createdAt?: number }).createdAt ?? 0) -
-          ((a as { createdAt?: number }).createdAt ?? 0)
+    // 날짜 정규화: consultations(ISO+time) vs reports(date-only) 형식 차이 흡수
+    const normalizeDate = (s?: string) => (s || '').slice(0, 10);
+    const targetDate = normalizeDate(consultationDateToMatch);
+
+    for (const collectionName of ['registration_recording_reports', 'consultation_reports']) {
+      try {
+        const q = query(
+          collection(db, collectionName),
+          where('studentName', '==', studentNameToMatch),
+          limit(20)
         );
-      return matches[0]?.id ?? null;
-    } catch (err) {
-      console.warn('[useRegistrationRecording] findReportByMatch 실패:', err);
-      return null;
+        const snapshot = await getDocs(q);
+        if (snapshot.empty) continue;
+        type ReportDoc = {
+          id: string;
+          consultationDate?: string;
+          status?: string;
+          report?: unknown;
+          createdAt?: number;
+          speakerRoles?: Record<string, string>;
+          transcription?: string;
+          speakerLabels?: unknown;
+          durationSeconds?: number;
+          consultantName?: string;
+          counselorName?: string;
+          extractedData?: Record<string, unknown>;
+        };
+        const matches = snapshot.docs
+          .map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as ReportDoc)
+          .filter(d =>
+            normalizeDate(d.consultationDate) === targetDate &&
+            d.status === 'completed' &&
+            !!d.report // report 필드 있는 doc만
+          )
+          .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+
+        if (matches[0]) {
+          const match = matches[0];
+          // reportData에 직접 주입 (onSnapshot 우회 — 두 컬렉션 schema 동일)
+          setReportData({
+            report: match.report as ConsultationReportSection | undefined,
+            speakerRoles: match.speakerRoles,
+            transcription: match.transcription,
+            speakerLabels: match.speakerLabels as SpeakerUtterance[] | undefined,
+            durationSeconds: match.durationSeconds,
+            studentName: studentNameToMatch,
+            consultationDate: match.consultationDate,
+            consultantName: match.consultantName || match.counselorName,
+          });
+          // registration_recording_reports에서 찾은 경우만 reportId 설정(편집/onSnapshot용)
+          if (collectionName === 'registration_recording_reports') {
+            setReportId(match.id);
+          }
+          if (match.extractedData) {
+            setExtractedData(match.extractedData as RegistrationExtractedData);
+          }
+          return { collectionName, id: match.id };
+        }
+      } catch (err) {
+        console.warn(`[useRegistrationRecording] ${collectionName} 매칭 실패:`, err);
+      }
     }
+    return null;
   }, []);
 
   // 기존 storagePath로 분석 (교차 분석용 — 파일 업로드 건너뜀)
@@ -412,7 +456,7 @@ export function useRegistrationRecording() {
     uploadAndProcess,
     processFromPath,
     loadExistingReport,
-    findReportByMatch,
+    loadAnalysisReportByMatch,
     uploadProgress,
     status,
     statusMessage,
