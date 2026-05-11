@@ -1027,6 +1027,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     onExportExcel={(viewType === 'excel' || viewType === 'teacher') ? async () => {
                         try {
                             const { exportMathTimetableToExcel } = await import('./Math/utils/excelExport');
+                            const mondayDate = weekDates['월']?.date;
+                            const refDate = mondayDate ? getWeekReferenceDate(mondayDate) : undefined;
                             await exportMathTimetableToExcel({
                                 weekLabel,
                                 filteredClasses,
@@ -1039,6 +1041,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                                 subjectFilter: currentSubjectFilter,
                                 showHoldStudents,
                                 showWithdrawnStudents,
+                                referenceDate: refDate,
                             });
                         } catch (err) {
                             console.error('엑셀 저장 실패:', err);
