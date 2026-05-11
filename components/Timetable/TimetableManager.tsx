@@ -1023,8 +1023,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     setFontSize={setFontSize}
                     // 이미지 저장 (모든 viewType에서 사용 가능)
                     onExportImage={() => setIsExportModalOpen(true)}
-                    // 엑셀 저장 (수학 기본뷰 = teacher viewType 한정)
-                    onExportExcel={viewType === 'teacher' ? async () => {
+                    // 엑셀 저장 (수학 기본뷰 = excel viewType, 내부적으로 teacher 기준 그리드)
+                    onExportExcel={(viewType === 'excel' || viewType === 'teacher') ? async () => {
                         try {
                             const { exportMathTimetableToExcel } = await import('./Math/utils/excelExport');
                             await exportMathTimetableToExcel({
