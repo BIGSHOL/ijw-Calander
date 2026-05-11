@@ -101,6 +101,10 @@ export interface ConsultationRecord {
   // 예비원생/재원생 연동
   registeredStudentId?: string;  // 전환된 학생 ID (students 컬렉션)
 
+  // AI 녹음 분석 보고서 연동 (registration_recording_reports 컬렉션 문서 ID)
+  // 모달 재오픈 시 AI 분석 탭 복원용
+  recordingReportId?: string;
+
   // === 과목별 상담 정보 ===
   mainSubject?: 'math' | 'english' | 'korean' | 'science' | 'etc';  // 메인 상담 과목
   mathConsultation?: SubjectConsultationDetail;

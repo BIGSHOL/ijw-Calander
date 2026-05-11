@@ -561,6 +561,29 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
     const [isDragOver, setIsDragOver] = useState(false);
     const [showConsultationPicker, setShowConsultationPicker] = useState(false);
 
+    // 기존 등록상담에 저장된 AI 분석 보고서 복원
+    // 1순위: initialData.recordingReportId (정상 저장된 케이스)
+    // 2순위: studentName + consultationDate로 registration_recording_reports에서 매칭 (레거시 자동 연결)
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            if (initialData?.recordingReportId) {
+                recording.loadExistingReport(initialData.recordingReportId);
+                return;
+            }
+            if (initialData?.studentName && initialData?.consultationDate) {
+                const foundId = await recording.findReportByMatch(
+                    initialData.studentName,
+                    initialData.consultationDate
+                );
+                if (foundId && !cancelled) {
+                    recording.loadExistingReport(foundId);
+                }
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [initialData?.recordingReportId, initialData?.studentName, initialData?.consultationDate, recording.loadExistingReport, recording.findReportByMatch]);
+
     // 오디오 파일 드래그 앤 드롭 핸들러
     const handleRecordingDrop = useCallback((e: React.DragEvent) => {
         e.preventDefault();
@@ -779,7 +802,9 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                 englishConsultation: englishConsult,
                 koreanConsultation: koreanConsult,
                 scienceConsultation: scienceConsult,
-                etcConsultation: etcConsult
+                etcConsultation: etcConsult,
+                // AI 녹음 분석 보고서 연동: 새 분석이 있으면 그 ID, 없으면 기존 값 유지
+                recordingReportId: recording.reportId || initialData?.recordingReportId || undefined,
             };
 
             // Firestore는 undefined 값을 지원하지 않으므로 제거

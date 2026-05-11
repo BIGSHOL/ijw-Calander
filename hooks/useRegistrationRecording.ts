@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ref, uploadBytesResumable } from 'firebase/storage';
-import { collection, doc, getDocs, onSnapshot, orderBy, query, limit } from 'firebase/firestore';
+import { collection, doc, getDocs, onSnapshot, orderBy, query, limit, where } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getApp } from 'firebase/app';
 import { db, storage } from '../firebaseConfig';
@@ -326,6 +326,46 @@ export function useRegistrationRecording() {
     setRecordingDuration(0);
   }, []);
 
+  // 기존 보고서 ID로 분석 결과 로드 (모달 재오픈 시 AI 분석 탭 복원용)
+  // setReportId만 호출하면 위의 onSnapshot useEffect가 자동으로 registration_recording_reports 문서를 구독함
+  const loadExistingReport = useCallback((existingReportId: string | null | undefined) => {
+    if (!existingReportId) return;
+    setReportId(existingReportId);
+  }, []);
+
+  // 학생이름 + 상담일자 매칭으로 보고서 찾기 (recordingReportId 미저장 레거시 데이터 자동 연결용)
+  // Firestore 컴포지트 인덱스 불필요: studentName 단일 where + 나머지는 클라이언트 필터
+  // 가장 최근 completed 보고서 1건 반환
+  const findReportByMatch = useCallback(async (
+    studentNameToMatch: string,
+    consultationDateToMatch: string
+  ): Promise<string | null> => {
+    if (!studentNameToMatch || !consultationDateToMatch) return null;
+    try {
+      const q = query(
+        collection(db, 'registration_recording_reports'),
+        where('studentName', '==', studentNameToMatch),
+        limit(20)
+      );
+      const snapshot = await getDocs(q);
+      if (snapshot.empty) return null;
+      const matches = snapshot.docs
+        .map(d => ({ id: d.id, ...(d.data() as Record<string, unknown>) }))
+        .filter(d =>
+          (d as { consultationDate?: string }).consultationDate === consultationDateToMatch &&
+          (d as { status?: string }).status === 'completed'
+        )
+        .sort((a, b) =>
+          ((b as { createdAt?: number }).createdAt ?? 0) -
+          ((a as { createdAt?: number }).createdAt ?? 0)
+        );
+      return matches[0]?.id ?? null;
+    } catch (err) {
+      console.warn('[useRegistrationRecording] findReportByMatch 실패:', err);
+      return null;
+    }
+  }, []);
+
   // 기존 storagePath로 분석 (교차 분석용 — 파일 업로드 건너뜀)
   const processFromPath = useCallback(async (params: {
     storagePath: string;
@@ -371,6 +411,8 @@ export function useRegistrationRecording() {
   return {
     uploadAndProcess,
     processFromPath,
+    loadExistingReport,
+    findReportByMatch,
     uploadProgress,
     status,
     statusMessage,
