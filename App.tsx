@@ -21,7 +21,6 @@ import { useClasses } from './hooks/useClasses';
 import { useGradePromotion } from './hooks/useGradePromotion';
 import { useEnrollmentIntegrity } from './hooks/useEnrollmentIntegrity';
 import { usePushNotification } from './hooks/usePushNotification';
-import { useAutoFilterMyTimetable } from './hooks/useAutoFilterMyTimetable';
 
 // State management hooks
 import {
@@ -197,13 +196,6 @@ const App: React.FC = () => {
       s.email === effectiveProfile.email
     );
   }, [effectiveProfile, isSimulating, currentStaffMember, staffWithAccounts]);
-
-  // 선생님 계정 로그인 시 시간표에서 본인 강사만 자동 visible (localStorage only, DB 영향 없음)
-  useAutoFilterMyTimetable({
-    profile: effectiveProfile,
-    staffMember: effectiveStaffMember,
-    teachers,
-  });
 
   // Global data for search
   const shouldLoadGlobalData = !!currentUser && (isGlobalSearchOpen || appMode === 'students');
