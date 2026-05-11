@@ -4,9 +4,10 @@
 import React, { useMemo, useState } from 'react';
 import { addDays, format } from 'date-fns';
 import { EN_PERIODS, EN_WEEKDAYS, getContrastColor, formatClassNameWithBreaks } from './englishUtils';
-import { ClassKeywordColor, Teacher } from '../../../types';
+import { Teacher } from '../../../types';
 import PortalTooltip from '../../Common/PortalTooltip';
 import { useClassStudents } from './hooks/useClassStudents';
+import { useClasses } from '../../../hooks/useClasses';
 import { getWeekReferenceDate } from '../../../utils/dateUtils';
 
 interface MergedClass {
@@ -35,7 +36,6 @@ interface EnglishRoomTabProps {
     teachers: string[];
     scheduleData: ScheduleData;
     teachersData: Teacher[];
-    classKeywords?: ClassKeywordColor[];
     currentUser: any;
     labRooms?: string[];
     studentMap?: Record<string, any>;
@@ -46,7 +46,17 @@ interface EnglishRoomTabProps {
     filterRoom?: string;  // 강의실 필터 (부모에서 관리)
 }
 
-const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData, teachersData, classKeywords = [], currentUser, labRooms = [], studentMap = {}, currentWeekStart, viewSize = 'medium', visibleWeekdays: propVisibleWeekdays, filterRoom: propFilterRoom = 'all' }) => {
+const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData, teachersData, currentUser, labRooms = [], studentMap = {}, currentWeekStart, viewSize = 'medium', visibleWeekdays: propVisibleWeekdays, filterRoom: propFilterRoom = 'all' }) => {
+    // 영어 수업 데이터 (수업별 직접 색상 lookup용)
+    const { data: englishClassesData = [] } = useClasses('english');
+    const classColorByName = useMemo(() => {
+        const map = new Map<string, { bgColor?: string; textColor?: string }>();
+        englishClassesData.forEach(c => {
+            if (c.className) map.set(c.className, { bgColor: c.bgColor, textColor: c.textColor });
+        });
+        return map;
+    }, [englishClassesData]);
+
     // 부모에서 전달받은 visibleWeekdays 사용 (없으면 전체 요일)
     const visibleWeekdays = propVisibleWeekdays || new Set(EN_WEEKDAYS);
     // 강의실 필터는 부모에서 관리
@@ -253,15 +263,15 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
                                             const cellData = roomScheduleData[cellKey];
                                             const isLabRoom = labRooms.includes(room);
 
-                                            // 키워드 색상 매칭
-                                            const matchedKw = cellData?.className
-                                                ? classKeywords.find(kw => cellData.className?.includes(kw.keyword))
+                                            // 색상 매칭: 수업별 직접 색상 사용 (없으면 기본 회색)
+                                            // 색상은 className 텍스트 영역에만 적용 (셀 전체 배경 X)
+                                            const directColor = cellData?.className
+                                                ? classColorByName.get(cellData.className)
+                                                : undefined;
+                                            const matchedKw = directColor?.bgColor
+                                                ? { bgColor: directColor.bgColor, textColor: directColor.textColor || '#111827' }
                                                 : null;
-
-                                            // 셀 배경 스타일
-                                            const cellBgStyle = matchedKw
-                                                ? { backgroundColor: matchedKw.bgColor }
-                                                : {};
+                                            const cellBgStyle = {};
 
                                             // 셀 높이를 너비와 동일하게 설정 (정사각형)
                                             const cellHeightClass =
@@ -294,8 +304,11 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
                                                     {cellData?.className && (
                                                         <>
                                                             <div
-                                                                className={`${viewSize === 'small' ? 'text-micro' : 'text-xxs'}`}
-                                                                style={matchedKw ? { color: matchedKw.textColor } : { color: '#374151' }}
+                                                                className={`${viewSize === 'small' ? 'text-micro' : 'text-xxs'} font-bold inline-block`}
+                                                                style={matchedKw
+                                                                    ? { backgroundColor: matchedKw.bgColor, color: matchedKw.textColor, borderRadius: '4px', padding: '2px 4px' }
+                                                                    : { color: '#374151' }
+                                                                }
                                                             >
                                                                 {formatClassNameWithBreaks(cellData.className).map((part, idx, arr) => (
                                                                     <React.Fragment key={idx}>
@@ -307,7 +320,7 @@ const EnglishRoomTab: React.FC<EnglishRoomTabProps> = ({ teachers, scheduleData,
                                                             {viewSize !== 'small' && (
                                                                 <div
                                                                     className="text-micro"
-                                                                    style={{ color: matchedKw ? getContrastColor(matchedKw.bgColor) : '#9CA3AF', opacity: matchedKw ? 0.85 : 1 }}
+                                                                    style={{ color: '#9CA3AF' }}
                                                                 >
                                                                     {cellData.teacher}
                                                                 </div>

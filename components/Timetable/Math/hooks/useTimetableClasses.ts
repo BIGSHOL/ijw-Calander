@@ -117,6 +117,8 @@ export const useTimetableClasses = () => {
                     pendingTeacher: data.pendingTeacher,
                     pendingTeacherDate: data.pendingTeacherDate,
                     pendingTeacherReason: data.pendingTeacherReason,
+                    bgColor: data.bgColor,
+                    textColor: data.textColor,
                 };
             });
 

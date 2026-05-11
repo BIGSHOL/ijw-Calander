@@ -7,7 +7,6 @@ import {
   useDepartments,
   useTeachers,
   useHolidays,
-  useClassKeywords,
   useStaffWithAccounts,
   useAllStaff,
   useSystemConfig,
@@ -125,24 +124,6 @@ describe('useFirebaseQueries', () => {
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toHaveLength(1);
-    });
-  });
-
-  describe('useClassKeywords', () => {
-    it('키워드 order 정렬', async () => {
-      vi.mocked(getDocs).mockResolvedValue({
-        docs: [
-          { id: 'k1', data: () => ({ keyword: '초등', order: 2 }) },
-          { id: 'k2', data: () => ({ keyword: '중등', order: 1 }) },
-        ],
-      } as any);
-
-      const { result } = renderHook(() => useClassKeywords(), {
-        wrapper: createWrapper(),
-      });
-
-      await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(result.current.data![0].keyword).toBe('중등');
     });
   });
 

@@ -58,6 +58,8 @@ export interface ScenarioClass {
   slotUnderlines?: Record<string, boolean>; // "월-5" -> true/false (슬롯별 밑줄)
   underline?: boolean;
   mainTeacher?: string;
+  bgColor?: string;
+  textColor?: string;
   // ... 기타 필드
 }
 
@@ -439,6 +441,8 @@ export const ScenarioProvider: React.FC<ScenarioProviderProps> = ({ children }) 
         underline: data.underline,
         // mainTeacher가 없으면 teacher 필드를 사용 (호환성)
         mainTeacher: data.mainTeacher || data.teacher,
+        bgColor: data.bgColor,
+        textColor: data.textColor,
       };
     });
 

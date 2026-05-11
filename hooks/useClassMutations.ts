@@ -40,6 +40,8 @@ export interface CreateClassData {
   studentIds: string[];
   slotTeachers?: Record<string, string>;
   slotRooms?: Record<string, string>;
+  bgColor?: string;
+  textColor?: string;
 }
 
 export const useCreateClass = () => {
@@ -47,7 +49,7 @@ export const useCreateClass = () => {
 
   return useMutation({
     mutationFn: async (classData: CreateClassData) => {
-      const { className, teacher, subject, schedule = [], room, studentIds, slotTeachers, slotRooms } = classData;
+      const { className, teacher, subject, schedule = [], room, studentIds, slotTeachers, slotRooms, bgColor, textColor } = classData;
 
 
       // 1. classes 컬렉션에 수업 추가
@@ -70,6 +72,8 @@ export const useCreateClass = () => {
       if (room) classDoc.room = room;
       if (slotTeachers && Object.keys(slotTeachers).length > 0) classDoc.slotTeachers = slotTeachers;
       if (slotRooms && Object.keys(slotRooms).length > 0) classDoc.slotRooms = slotRooms;
+      if (bgColor) classDoc.bgColor = bgColor;
+      if (textColor) classDoc.textColor = textColor;
 
       const classRef = await addDoc(collection(db, COL_CLASSES), classDoc);
       const classId = classRef.id;
@@ -132,6 +136,9 @@ export interface UpdateClassData {
   pendingSchedule?: string[];       // 예정 스케줄 (레거시 형식)
   pendingScheduleDate?: string;     // 적용 예정일
   clearPending?: boolean;           // 즉시 적용 시 pending 필드 삭제
+  // 수업 카드 색상 (string=설정, null=명시적 삭제, undefined=변경 안함)
+  bgColor?: string | null;
+  textColor?: string | null;
 }
 
 export const useUpdateClass = () => {
@@ -139,7 +146,7 @@ export const useUpdateClass = () => {
 
   return useMutation({
     mutationFn: async (updateData: UpdateClassData) => {
-      const { originalClassName, originalSubject, newClassName, newTeacher, newSchedule = [], newRoom, slotTeachers, slotRooms, memo, pendingSchedule, pendingScheduleDate, clearPending } = updateData;
+      const { originalClassName, originalSubject, newClassName, newTeacher, newSchedule = [], newRoom, slotTeachers, slotRooms, memo, pendingSchedule, pendingScheduleDate, clearPending, bgColor, textColor } = updateData;
 
       let classesUpdated = 0;
       let enrollmentsUpdated = 0;
@@ -201,6 +208,13 @@ export const useUpdateClass = () => {
             updatePayload.pendingSchedule = deleteField();
             updatePayload.pendingLegacySchedule = deleteField();
             updatePayload.pendingScheduleDate = deleteField();
+          }
+          // 수업 색상 (string=설정, null=Firestore 필드 삭제)
+          if (bgColor !== undefined) {
+            updatePayload.bgColor = bgColor === null ? deleteField() : bgColor;
+          }
+          if (textColor !== undefined) {
+            updatePayload.textColor = textColor === null ? deleteField() : textColor;
           }
           await updateDoc(docSnap.ref, updatePayload);
         });

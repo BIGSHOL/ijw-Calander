@@ -14,6 +14,12 @@
       "port": 3000
     },
     {
+      "name": "vite-dev-3002",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "3002", "--strictPort"],
+      "port": 3002
+    },
+    {
       "name": "vite-preview",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "preview", "--", "--port", "4173", "--strictPort"],

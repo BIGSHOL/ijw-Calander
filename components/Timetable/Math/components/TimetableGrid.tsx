@@ -1,5 +1,5 @@
 import React, { useMemo, useRef } from 'react';
-import { TimetableClass, Teacher, ClassKeywordColor } from '../../../../types';
+import { TimetableClass, Teacher } from '../../../../types';
 import { getClassesForCell, getConsecutiveSpan, shouldSkipCell, isSameClassNameSet } from '../utils/gridUtils';
 import ClassCard from './ClassCard';
 import { WEEKEND_PERIOD_TIMES, ALL_WEEKDAYS, LEGACY_TO_UNIFIED_PERIOD_MAP, MATH_GROUP_DISPLAY, MATH_GROUP_PERIOD_IDS, MATH_GROUPED_PERIODS, MATH_PERIOD_TIMES } from '../../constants';
@@ -58,8 +58,6 @@ interface TimetableGridProps {
     studentMap: Record<string, any>;
     // Timetable View Mode
     timetableViewMode: 'day-based' | 'teacher-based';
-    // Keyword Colors
-    classKeywords?: ClassKeywordColor[];
     // Student Click
     onStudentClick?: (studentId: string) => void;
     // Pending Moved Students (드래그 이동 대기 중)
@@ -132,7 +130,6 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     currentSubjectFilter,
     studentMap,
     timetableViewMode,
-    classKeywords = [],
     onStudentClick,
     pendingMovedStudentIds,
     pendingMoveSchedules,
@@ -178,6 +175,12 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
     const { byClassId, byClassName, byStudentName } = useClassTextbookMap();
     const getLatestTextbook = (cls: TimetableClass) =>
         byClassId.get(cls.id) || byClassName.get(cls.className) || null;
+
+    // 수업명 슬롯 색상 헬퍼 (수업별 직접 색상 적용 - bg-white 덮어씀)
+    const getNameSlotBgStyle = (cls: TimetableClass | undefined): React.CSSProperties | undefined =>
+        cls?.bgColor ? { backgroundColor: cls.bgColor } : undefined;
+    const getNameTextStyle = (cls: TimetableClass | undefined): React.CSSProperties | undefined =>
+        cls?.bgColor ? { color: cls.textColor || '#111827' } : undefined;
 
     
     // 학생별 최근 보고서 (진도 정보)
@@ -453,7 +456,6 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     onDragLeave={onDragLeave}
                     onDrop={onDrop}
                     studentMap={studentMap}
-                    classKeywords={classKeywords}
                     onStudentClick={onStudentClick}
                     currentDay={colSpan === 1 ? day : undefined}
                     mergedDays={colSpan > 1 ? mergedDaysForCell : undefined}
@@ -757,8 +759,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                     ) : sameClass ? (
                                                                         /* 같은 수업: 반명 슬롯 2칸 합쳐서 표시 + 학생 영역 */
                                                                         <div className="flex flex-col h-full">
-                                                                            <div style={{ height: `${NAME_SLOT_H * 2}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
-                                                                                <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{firstClasses[0].className}{firstClasses[0].room ? ` ${firstClasses[0].room}` : ''}</span>
+                                                                            <div style={{ height: `${NAME_SLOT_H * 2}px`, ...getNameSlotBgStyle(firstClasses[0]) }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
+                                                                                <span className="text-xs font-bold text-black leading-tight text-center px-0.5" style={getNameTextStyle(firstClasses[0])}>{firstClasses[0].className}{firstClasses[0].room ? ` ${firstClasses[0].room}` : ''}</span>
                                                                             </div>
                                                                             <div className="flex-1 min-h-0">
                                                                                 {renderCellClassCards(firstClasses, day, firstPeriodIndex, resource, colSpan, mergedDaysForCell, false)}
@@ -767,14 +769,14 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                     ) : (
                                                                         /* 다른 수업 / 한쪽만 수업: 반명 슬롯 2개 + 학생 영역 */
                                                                         <div className="flex flex-col h-full">
-                                                                            <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-b-black bg-white">
+                                                                            <div style={{ height: `${NAME_SLOT_H}px`, ...getNameSlotBgStyle(firstClasses[0]) }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-b-black bg-white">
                                                                                 {firstClasses.length > 0 && (
-                                                                                    <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{firstClasses[0].className}</span>
+                                                                                    <span className="text-xs font-bold text-black leading-tight text-center px-0.5" style={getNameTextStyle(firstClasses[0])}>{firstClasses[0].className}</span>
                                                                                 )}
                                                                             </div>
-                                                                            <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
+                                                                            <div style={{ height: `${NAME_SLOT_H}px`, ...getNameSlotBgStyle(secondClasses[0]) }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
                                                                                 {secondClasses.length > 0 && (
-                                                                                    <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{secondClasses[0].className}</span>
+                                                                                    <span className="text-xs font-bold text-black leading-tight text-center px-0.5" style={getNameTextStyle(secondClasses[0])}>{secondClasses[0].className}</span>
                                                                                 )}
                                                                             </div>
                                                                             <div className="flex-1 min-h-0">
@@ -1269,8 +1271,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                     onDragLeave={onDragLeave}
                                                                     onDrop={onDrop}
                                                                     studentMap={studentMap}
-                                                                    classKeywords={classKeywords}
-                                                                    onStudentClick={onStudentClick}
+                                                                                                                    onStudentClick={onStudentClick}
                                                                     currentDay={day}
                                                                     fontSize={fontSize}
                                                                     rowHeight={rowHeight}
@@ -1326,8 +1327,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 ) : sameClass ? (
                                                                     /* 같은 수업: 반명 슬롯 2칸 합쳐서 표시 + 학생 영역 */
                                                                     <div className="flex flex-col h-full">
-                                                                        <div style={{ height: `${NAME_SLOT_H * 2}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
-                                                                            <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{firstClasses[0].className}{firstClasses[0].room ? ` ${firstClasses[0].room}` : ''}</span>
+                                                                        <div style={{ height: `${NAME_SLOT_H * 2}px`, ...getNameSlotBgStyle(firstClasses[0]) }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
+                                                                            <span className="text-xs font-bold text-black leading-tight text-center px-0.5" style={getNameTextStyle(firstClasses[0])}>{firstClasses[0].className}{firstClasses[0].room ? ` ${firstClasses[0].room}` : ''}</span>
                                                                         </div>
                                                                         <div className="flex-1 min-h-0">
                                                                             {renderDayBasedClassCards(firstClasses, firstPeriodIndex, false)}
@@ -1336,14 +1337,14 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                 ) : (
                                                                     /* 다른 수업 / 한쪽만 수업: 반명 슬롯 2개 + 학생 영역 */
                                                                     <div className="flex flex-col h-full">
-                                                                        <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-b-black bg-white">
+                                                                        <div style={{ height: `${NAME_SLOT_H}px`, ...getNameSlotBgStyle(firstClasses[0]) }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-b-black bg-white">
                                                                             {firstClasses.length > 0 && (
-                                                                                <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{firstClasses[0].className}</span>
+                                                                                <span className="text-xs font-bold text-black leading-tight text-center px-0.5" style={getNameTextStyle(firstClasses[0])}>{firstClasses[0].className}</span>
                                                                             )}
                                                                         </div>
-                                                                        <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
+                                                                        <div style={{ height: `${NAME_SLOT_H}px`, ...getNameSlotBgStyle(secondClasses[0]) }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
                                                                             {secondClasses.length > 0 && (
-                                                                                <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{secondClasses[0].className}</span>
+                                                                                <span className="text-xs font-bold text-black leading-tight text-center px-0.5" style={getNameTextStyle(secondClasses[0])}>{secondClasses[0].className}</span>
                                                                             )}
                                                                         </div>
                                                                         <div className="flex-1 min-h-0">
@@ -1446,8 +1447,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                                 onDragLeave={onDragLeave}
                                                                                 onDrop={onDrop}
                                                                                 studentMap={studentMap}
-                                                                                classKeywords={classKeywords}
-                                                                                onStudentClick={onStudentClick}
+                                                                                                                                            onStudentClick={onStudentClick}
                                                                                 currentDay={day}
                                                                                 fontSize={fontSize}
                                                                                 rowHeight={rowHeight}
@@ -1584,8 +1584,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                                                         onDragLeave={onDragLeave}
                                                                         onDrop={onDrop}
                                                                         studentMap={studentMap}
-                                                                        classKeywords={classKeywords}
-                                                                        onStudentClick={onStudentClick}
+                                                                                                                            onStudentClick={onStudentClick}
                                                                         currentDay={day}
                                                                         fontSize={fontSize}
                                                                         rowHeight={rowHeight}
@@ -1690,7 +1689,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                 isDragOver={dragOverClassId === cls.id}
                 onClick={onClassClick} onDragStart={onDragStart}
                 onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
-                studentMap={studentMap} classKeywords={classKeywords}
+                studentMap={studentMap}
                 onStudentClick={onStudentClick} currentDay={day}
                 fontSize={fontSize} rowHeight={rowHeight} cellSizePx={cellSizePx}
                 showHoldStudents={showHoldStudents} showWithdrawnStudents={showWithdrawnStudents}
@@ -1739,8 +1738,8 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                             </div>
                         ) : sameClass ? (
                             <div className="flex flex-col h-full">
-                                <div style={{ height: `${NAME_SLOT_H * 2}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
-                                    <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{firstClasses[0].className}{firstClasses[0].room ? ` ${firstClasses[0].room}` : ''}</span>
+                                <div style={{ height: `${NAME_SLOT_H * 2}px`, ...getNameSlotBgStyle(firstClasses[0]) }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
+                                    <span className="text-xs font-bold text-black leading-tight text-center px-0.5" style={getNameTextStyle(firstClasses[0])}>{firstClasses[0].className}{firstClasses[0].room ? ` ${firstClasses[0].room}` : ''}</span>
                                 </div>
                                 <div className="flex-1 min-h-0">
                                     {firstClasses.map(cls => renderDayCard(cls, day, firstPeriodIndex, resource, false))}
@@ -1748,11 +1747,11 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                             </div>
                         ) : (
                             <div className="flex flex-col h-full">
-                                <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-b-black bg-white">
-                                    {firstClasses.length > 0 && <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{firstClasses[0].className}</span>}
+                                <div style={{ height: `${NAME_SLOT_H}px`, ...getNameSlotBgStyle(firstClasses[0]) }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-b-black bg-white">
+                                    {firstClasses.length > 0 && <span className="text-xs font-bold text-black leading-tight text-center px-0.5" style={getNameTextStyle(firstClasses[0])}>{firstClasses[0].className}</span>}
                                 </div>
-                                <div style={{ height: `${NAME_SLOT_H}px` }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
-                                    {secondClasses.length > 0 && <span className="text-xs font-bold text-black leading-tight text-center px-0.5">{secondClasses[0].className}</span>}
+                                <div style={{ height: `${NAME_SLOT_H}px`, ...getNameSlotBgStyle(secondClasses[0]) }} className="shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white">
+                                    {secondClasses.length > 0 && <span className="text-xs font-bold text-black leading-tight text-center px-0.5" style={getNameTextStyle(secondClasses[0])}>{secondClasses[0].className}</span>}
                                 </div>
                                 <div className="flex-1 min-h-0">
                                     {firstClasses.length > 0
@@ -2020,7 +2019,7 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                     isDragOver={mergedClassesForCard ? cellClasses.some(c => dragOverClassId === c.id) : dragOverClassId === cls.id}
                     onClick={onClassClick} onDragStart={onDragStart} onDragOver={onDragOver}
                     onDragLeave={onDragLeave} onDrop={onDrop} studentMap={studentMap}
-                    classKeywords={classKeywords} onStudentClick={onStudentClick}
+                    onStudentClick={onStudentClick}
                     currentDay={colSpan === 1 ? day : undefined}
                     mergedDays={colSpan > 1 ? mergedDays : undefined}
                     fontSize={fontSize} rowHeight={rowHeight} cellSizePx={cellSizePx}
@@ -2122,12 +2121,12 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                 </div>
                             ) : sameClass ? (
                                 <div className="flex flex-col h-full">
-                                    <div style={{ height: `${NAME_SLOT_H * 2}px` }}
+                                    <div style={{ height: `${NAME_SLOT_H * 2}px`, ...getNameSlotBgStyle(firstClasses[0]) }}
                                         className={`shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white ${isExcelMode ? 'cursor-pointer hover:bg-blue-50' : ''}`}
                                         onClick={() => handleNameClick(firstClasses[0])}
                                         onDoubleClick={() => handleNameDblClick(firstClasses[0])}
                                     >
-                                        <span className="text-xs font-bold text-black leading-tight text-center px-0.5 select-none">{firstClasses[0].className}{firstClasses[0].room ? ` ${firstClasses[0].room}` : ''}</span>
+                                        <span className="text-xs font-bold text-black leading-tight text-center px-0.5 select-none" style={getNameTextStyle(firstClasses[0])}>{firstClasses[0].className}{firstClasses[0].room ? ` ${firstClasses[0].room}` : ''}</span>
                                     </div>
                                     <div className="flex-1 min-h-0">
                                         {renderCards(firstClasses, day, firstPeriodIndex, resource, colSpan, mergedDays, false, true)}
@@ -2135,19 +2134,19 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
                                 </div>
                             ) : (
                                 <div className="flex flex-col h-full">
-                                    <div style={{ height: `${NAME_SLOT_H}px` }}
+                                    <div style={{ height: `${NAME_SLOT_H}px`, ...getNameSlotBgStyle(firstClasses[0]) }}
                                         className={`shrink-0 flex items-center justify-center overflow-hidden border-b border-b-black bg-white ${isExcelMode && firstClasses.length > 0 ? 'cursor-pointer hover:bg-blue-50' : ''}`}
                                         onClick={() => firstClasses.length > 0 && handleNameClick(firstClasses[0])}
                                         onDoubleClick={() => firstClasses.length > 0 && handleNameDblClick(firstClasses[0])}
                                     >
-                                        {firstClasses.length > 0 && <span className="text-xs font-bold text-black leading-tight text-center px-0.5 select-none">{firstClasses[0].className}</span>}
+                                        {firstClasses.length > 0 && <span className="text-xs font-bold text-black leading-tight text-center px-0.5 select-none" style={getNameTextStyle(firstClasses[0])}>{firstClasses[0].className}</span>}
                                     </div>
-                                    <div style={{ height: `${NAME_SLOT_H}px` }}
+                                    <div style={{ height: `${NAME_SLOT_H}px`, ...getNameSlotBgStyle(secondClasses[0]) }}
                                         className={`shrink-0 flex items-center justify-center overflow-hidden border-b border-black bg-white ${isExcelMode && secondClasses.length > 0 ? 'cursor-pointer hover:bg-blue-50' : ''}`}
                                         onClick={() => secondClasses.length > 0 && handleNameClick(secondClasses[0])}
                                         onDoubleClick={() => secondClasses.length > 0 && handleNameDblClick(secondClasses[0])}
                                     >
-                                        {secondClasses.length > 0 && <span className="text-xs font-bold text-black leading-tight text-center px-0.5 select-none">{secondClasses[0].className}</span>}
+                                        {secondClasses.length > 0 && <span className="text-xs font-bold text-black leading-tight text-center px-0.5 select-none" style={getNameTextStyle(secondClasses[0])}>{secondClasses[0].className}</span>}
                                     </div>
                                     <div className="flex-1 min-h-0">
                                         {firstClasses.length > 0 ? renderCards(firstClasses, day, firstPeriodIndex, resource, colSpan, mergedDays, false, true)

@@ -3,7 +3,7 @@ import { collection, onSnapshot, getDocs, doc, setDoc, updateDoc, deleteDoc, wri
 import { db } from '../../../firebaseConfig';
 import { listenerRegistry } from '../../../utils/firebaseCleanup';
 import { CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
-import { Teacher, ClassKeywordColor, TimetableStudent } from '../../../types';
+import { Teacher, TimetableStudent } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { useClasses } from '../../../hooks/useClasses';
 import ScheduledDateModal from '../Math/components/ScheduledDateModal';
@@ -33,7 +33,6 @@ interface EnglishTimetableProps {
     onSwitchToMath?: () => void;
     viewType: 'teacher' | 'class' | 'room' | 'excel';
     teachers?: Teacher[];
-    classKeywords?: ClassKeywordColor[];
     currentUser: any;
     studentMap: Record<string, any>;
     // 주차 이동 시 배정 예정/퇴원 예정 미리보기용
@@ -70,7 +69,7 @@ interface ScheduleCell {
 type ScheduleData = Record<string, ScheduleCell>;
 
 // Inner component that uses SimulationContext
-const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [], classKeywords = [], currentUser, studentMap, currentWeekStart, weekLabel, goToPrevWeek, goToNextWeek, goToThisWeek, timetableSubject, setTimetableSubject, setTimetableViewType, mathViewMode, setMathViewMode, hasPermissionFn, setIsTimetableSettingsOpen, userDepartments, shuttleStudentNames, onMakeEduSyncOpen }) => {
+const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwitchToMath, viewType, teachers: propsTeachers = [], currentUser, studentMap, currentWeekStart, weekLabel, goToPrevWeek, goToNextWeek, goToThisWeek, timetableSubject, setTimetableSubject, setTimetableViewType, mathViewMode, setMathViewMode, hasPermissionFn, setIsTimetableSettingsOpen, userDepartments, shuttleStudentNames, onMakeEduSyncOpen }) => {
     // Removed local activeTab state, using viewType prop
     const [shuttleOnly, setShuttleOnly] = useState(false);
     const [schoolFilter, setSchoolFilter] = useState<string[]>([]);
@@ -1727,7 +1726,6 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                     scheduleData={scheduleData}
                                     onRefresh={handleRefresh}
                                     onUpdateLocal={handleLocalUpdate}
-                                    classKeywords={classKeywords}
                                     currentUser={currentUser}
                                     targetCollection={isSimulationMode ? CLASS_DRAFT_COLLECTION : CLASS_COLLECTION}
                                     isSimulationMode={isSimulationMode}
@@ -1757,7 +1755,6 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 teachers={teachers}
                                 teachersData={teachersData}
                                 scheduleData={scheduleData}
-                                classKeywords={classKeywords}
                                 currentUser={currentUser}
                                 isSimulationMode={isSimulationMode}
                                 studentMap={studentMap}
@@ -1798,7 +1795,6 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                     teachers={teachers}
                                     teachersData={teachersData}
                                     scheduleData={scheduleData}
-                                    classKeywords={classKeywords}
                                     currentUser={currentUser}
                                     isSimulationMode={isSimulationMode}
                                     studentMap={studentMap}
@@ -1852,7 +1848,6 @@ const EnglishTimetableInner: React.FC<EnglishTimetableProps> = ({ onClose, onSwi
                                 teachers={teachers}
                                 teachersData={teachersData}
                                 scheduleData={scheduleData}
-                                classKeywords={classKeywords}
                                 currentUser={currentUser}
                                 labRooms={labRooms}
                                 studentMap={studentMap}

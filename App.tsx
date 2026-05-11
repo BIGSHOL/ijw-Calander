@@ -3,7 +3,7 @@ import { addYears, subYears, format } from 'date-fns';
 import { CalendarEvent, AppTab, TAB_META, TAB_GROUPS } from './types';
 import { AttendanceViewMode, SessionPeriod } from './components/Attendance/types';
 import { usePermissions } from './hooks/usePermissions';
-import { useDepartments, useTeachers, useHolidays, useClassKeywords, useSystemConfig, useStaffWithAccounts } from './hooks/useFirebaseQueries';
+import { useDepartments, useTeachers, useHolidays, useSystemConfig, useStaffWithAccounts } from './hooks/useFirebaseQueries';
 import { useGanttProjects } from './hooks/useGanttProjects';
 import { useSessionPeriods } from './hooks/useSessionPeriods';
 import { convertGanttProjectsToCalendarEvents } from './utils/ganttToCalendar';
@@ -142,7 +142,6 @@ const App: React.FC = () => {
   const { data: departments = [] } = useDepartments(!!currentUser && appMode === 'calendar');
   const { data: teachers = [] } = useTeachers(!!currentUser && (appMode === 'attendance' || appMode === 'attendance-test' || appMode === 'timetable'));
   const { data: holidays = [] } = useHolidays(!!currentUser && appMode === 'calendar');
-  const { data: classKeywords = [] } = useClassKeywords(!!currentUser && appMode === 'timetable');
 
   // Auth
   const { userProfile, setUserProfile, authLoading, handleLogout } = useAuth({
@@ -829,7 +828,6 @@ const App: React.FC = () => {
                   timetableViewType,
                   setTimetableViewType: setTimetableViewType as any,
                   teachers,
-                  classKeywords,
                   mathViewMode,
                   setMathViewMode: setMathViewMode as any,
                   hasPermission,

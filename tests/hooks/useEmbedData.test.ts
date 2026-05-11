@@ -15,7 +15,7 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { useEmbedMathData } from '../../hooks/useEmbedData';
 import { collection, getDocs, query, where, collectionGroup } from 'firebase/firestore';
-import { TimetableClass, Teacher, ClassKeywordColor } from '../../types';
+import { TimetableClass, Teacher } from '../../types';
 import { EmbedSettings } from '../../types/embed';
 
 // Mock Firebase modules
@@ -94,11 +94,9 @@ describe('useEmbedData', () => {
     },
   ];
 
-  const mockKeywords: ClassKeywordColor[] = [
-    { id: 'kw1', keyword: '심화', color: '#ff0000', order: 1 },
-    { id: 'kw2', keyword: '기본', color: '#00ff00', order: 2 },
-    { id: 'kw3', keyword: '특강', color: '#0000ff', order: 3 },
-  ];
+  // [DEPRECATED] 키워드 색상 시스템 폐기됨 (수업 1:1 색상으로 대체)
+  // 잔여 참조를 위해 빈 배열로 stub 처리
+  const mockKeywords: Array<{ id: string; keyword: string; color: string; order: number }> = [];
 
   const mockStudents = [
     { id: 'student1', name: '학생1', grade: 1 },
@@ -169,15 +167,6 @@ describe('useEmbedData', () => {
       };
     });
 
-    // Mock keywords query
-    const keywordDocs = mockKeywords.map(k => {
-      const { id, ...dataWithoutId } = k;
-      return {
-        id: k.id,
-        data: () => dataWithoutId,
-      };
-    });
-
     // Mock students query
     const studentDocs = mockStudents.map(s => {
       const { id, ...dataWithoutId } = s;
@@ -212,8 +201,6 @@ describe('useEmbedData', () => {
           return Promise.resolve({ docs: classesDocs } as any);
         case 'staff':
           return Promise.resolve({ docs: staffDocs } as any);
-        case 'classKeywords':
-          return Promise.resolve({ docs: keywordDocs } as any);
         case 'students':
           return Promise.resolve({ docs: studentDocs } as any);
         case 'enrollments': {

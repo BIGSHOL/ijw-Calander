@@ -75,6 +75,7 @@ const ConsultationFormEmbed: React.FC<ConsultationFormEmbedProps> = ({ tokenValu
         if (root) {
             root.style.setProperty('overflow', 'auto', 'important');
             root.style.setProperty('height', 'auto', 'important');
+            root.style.setProperty('min-width', '0', 'important');
         }
     }, []);
 

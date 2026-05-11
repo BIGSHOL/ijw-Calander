@@ -2,7 +2,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { collection, getDocs, orderBy, query, doc, getDoc, where } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
-import { Department, Teacher, Holiday, ClassKeywordColor, SystemConfig, StaffMember } from '../types';
+import { Department, Teacher, Holiday, SystemConfig, StaffMember } from '../types';
 
 // departments 컬렉션 - 30분 캐시 (거의 변경 안됨)
 // 영문 필드명 사용: name, order, color, defaultColor, defaultTextColor, defaultBorderColor, category
@@ -87,23 +87,6 @@ export const useHolidays = (enabled: boolean = true) => {
         },
         staleTime: 1000 * 60 * 60, // 1시간
         gcTime: 1000 * 60 * 120, // 2시간
-        refetchOnWindowFocus: false, // 정적 데이터 - 윈도우 포커스 재조회 불필요
-        enabled,
-    });
-};
-
-// 수업 키워드 색상 - 30분 캐시 (거의 변경 안됨)
-export const useClassKeywords = (enabled: boolean = true) => {
-    return useQuery({
-        queryKey: ['classKeywords'],
-        queryFn: async () => {
-            const snapshot = await getDocs(collection(db, 'classKeywords'));
-            return snapshot.docs
-                .map(d => ({ id: d.id, ...d.data() } as ClassKeywordColor))
-                .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
-        },
-        staleTime: 1000 * 60 * 30, // 30분
-        gcTime: 1000 * 60 * 60, // 1시간
         refetchOnWindowFocus: false, // 정적 데이터 - 윈도우 포커스 재조회 불필요
         enabled,
     });

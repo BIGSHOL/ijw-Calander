@@ -2,10 +2,11 @@ import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { X, Download, Loader2, Image as ImageIcon, CheckSquare, Square, Users, Settings, Eye, FileSpreadsheet } from 'lucide-react';
 import { addDays, format } from 'date-fns';
 import html2canvas from 'html2canvas';
-import { Teacher, ClassKeywordColor } from '../../../types';
+import { Teacher } from '../../../types';
 import { EN_PERIODS, EN_WEEKDAYS, getCellKey, getTeacherColor, getContrastColor, formatClassNameWithBreaks } from './englishUtils';
 import { useEscapeClose } from '../../../hooks/useEscapeClose';
 import { useDraggable } from '../../../hooks/useDraggable';
+import { useClasses } from '../../../hooks/useClasses';
 
 interface ScheduleCell {
   className?: string;
@@ -26,7 +27,6 @@ interface EnglishExportModalProps {
   teachersData: Teacher[];
   scheduleData: ScheduleData;
   visibleWeekdays: Set<string>;
-  classKeywords?: ClassKeywordColor[];  // 키워드별 색상 설정
   currentWeekStart?: Date;  // 주차 시작일 (날짜 표시용)
 }
 
@@ -37,7 +37,6 @@ const EnglishExportModal: React.FC<EnglishExportModalProps> = ({
   teachersData,
   scheduleData,
   visibleWeekdays,
-  classKeywords = [],
   currentWeekStart
 }) => {
   const [selectedTeachers, setSelectedTeachers] = useState<Set<string>>(new Set(teachers));
@@ -68,11 +67,25 @@ const EnglishExportModal: React.FC<EnglishExportModalProps> = ({
     return dates;
   }, [currentWeekStart]);
 
-  // 키워드 색상 매칭 함수
+  // 영어 수업 데이터 (수업별 직접 색상 lookup용)
+  const { data: englishClassesData = [] } = useClasses('english');
+  const classColorByName = useMemo(() => {
+    const map = new Map<string, { bgColor?: string; textColor?: string }>();
+    englishClassesData.forEach(c => {
+      if (c.className) map.set(c.className, { bgColor: c.bgColor, textColor: c.textColor });
+    });
+    return map;
+  }, [englishClassesData]);
+
+  // 색상 매칭 함수: 수업별 직접 색상 사용 (없으면 null=기본 회색)
   const getKeywordColor = useCallback((className: string | undefined) => {
-    if (!className || classKeywords.length === 0) return null;
-    return classKeywords.find(kw => className.includes(kw.keyword)) || null;
-  }, [classKeywords]);
+    if (!className) return null;
+    const direct = classColorByName.get(className);
+    if (direct?.bgColor) {
+      return { bgColor: direct.bgColor, textColor: direct.textColor || '#111827' };
+    }
+    return null;
+  }, [classColorByName]);
 
   const toggleWeekday = (day: string) => {
     setSelectedWeekdays(prev => {
@@ -158,8 +171,8 @@ const EnglishExportModal: React.FC<EnglishExportModalProps> = ({
                   const cellData = scheduleData[cellKey];
                   const matchedKw = getKeywordColor(cellData?.className);
 
-                  const cellBgColor = matchedKw?.bgColor || (cellData?.className ? '#f0fdf4' : '#ffffff');
-                  const cellTextColor = matchedKw ? getContrastColor(matchedKw.bgColor) : '#1f2937';
+                  // 셀 자체는 흰색 — 색상은 수업명 칩에만 적용 (통합뷰 패턴)
+                  const cellBgColor = '#ffffff';
 
                   return (
                     <td
@@ -169,10 +182,13 @@ const EnglishExportModal: React.FC<EnglishExportModalProps> = ({
                     >
                       {cellData?.className && (
                         <div className="flex flex-col items-center justify-center h-full p-1">
-                          {/* 수업명 */}
+                          {/* 수업명 칩 (색상이 적용되는 영역) */}
                           <div
                             className="text-xs font-bold text-center leading-tight"
-                            style={{ color: cellTextColor }}
+                            style={matchedKw
+                              ? { backgroundColor: matchedKw.bgColor, color: matchedKw.textColor, borderRadius: '4px', padding: '2px 6px' }
+                              : { color: '#1f2937' }
+                            }
                           >
                             {formatClassNameWithBreaks(cellData.className).map((part, idx) => (
                               <React.Fragment key={idx}>
@@ -188,7 +204,7 @@ const EnglishExportModal: React.FC<EnglishExportModalProps> = ({
                               <div className="w-4/5 border-t border-gray-300 my-1"></div>
                               <div
                                 className="text-[10px] font-medium"
-                                style={{ color: matchedKw ? cellTextColor : '#6B7280' }}
+                                style={{ color: '#6B7280' }}
                               >
                                 {cellData.room}
                               </div>

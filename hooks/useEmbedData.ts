@@ -5,13 +5,12 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { collection, getDocs, query, where, collectionGroup } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
-import { TimetableClass, Teacher, TimetableStudent, ClassKeywordColor } from '../types';
+import { TimetableClass, Teacher, TimetableStudent } from '../types';
 import { EmbedSettings } from '../types/embed';
 
 interface EmbedMathData {
   classes: TimetableClass[];
   teachers: Teacher[];
-  classKeywords: ClassKeywordColor[];
   studentMap: Record<string, any>;
   loading: boolean;
   error: string | null;
@@ -20,7 +19,6 @@ interface EmbedMathData {
 // 간단한 메모리 캐시 (세션 동안 유지)
 const cache: {
   staff?: Teacher[];
-  classKeywords?: ClassKeywordColor[];
   timestamp?: number;
 } = {};
 const CACHE_TTL = 5 * 60 * 1000; // 5분
@@ -38,7 +36,6 @@ const isCacheValid = () => {
 export function useEmbedMathData(settings?: EmbedSettings): EmbedMathData {
   const [classes, setClasses] = useState<TimetableClass[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [classKeywords, setClassKeywords] = useState<ClassKeywordColor[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,19 +53,14 @@ export function useEmbedMathData(settings?: EmbedSettings): EmbedMathData {
 
       try {
         // ===== Phase 1: 병렬로 기본 데이터 로드 =====
-        const [classesResult, staffResult, keywordsResult] = await Promise.all([
-          // 1. 수학 수업 로드
+        const [classesResult, staffResult] = await Promise.all([
+          // 1. 수학 수업 로드 (bgColor/textColor 필드 포함)
           getDocs(query(collection(db, 'classes'), where('subject', '==', 'math'))),
 
           // 2. 강사 데이터 (캐시 확인)
           isCacheValid() && cache.staff
             ? Promise.resolve(null)
             : getDocs(collection(db, 'staff')),
-
-          // 3. 키워드 색상 (캐시 확인)
-          isCacheValid() && cache.classKeywords
-            ? Promise.resolve(null)
-            : getDocs(collection(db, 'classKeywords')),
         ]);
 
         // 수업 데이터 처리
@@ -120,18 +112,6 @@ export function useEmbedMathData(settings?: EmbedSettings): EmbedMathData {
           loadedTeachers = cache.staff!;
         }
         setTeachers(loadedTeachers);
-
-        // 키워드 색상 처리 (캐시 또는 새로 로드)
-        let loadedKeywords: ClassKeywordColor[];
-        if (keywordsResult) {
-          loadedKeywords = keywordsResult.docs
-            .map(doc => ({ id: doc.id, ...doc.data() } as ClassKeywordColor))
-            .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
-          cache.classKeywords = loadedKeywords;
-        } else {
-          loadedKeywords = cache.classKeywords!;
-        }
-        setClassKeywords(loadedKeywords);
 
         // ===== Phase 2: 학생 데이터 최적화 로드 =====
         if (settings?.showStudentList !== false) {
@@ -253,5 +233,5 @@ export function useEmbedMathData(settings?: EmbedSettings): EmbedMathData {
     return map;
   }, [students]);
 
-  return { classes, teachers, classKeywords, studentMap, loading, error };
+  return { classes, teachers, studentMap, loading, error };
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from 'react';
-import { TimetableClass, Teacher, ClassKeywordColor, TimetableSubjectType } from '../../types';
+import { TimetableClass, Teacher, TimetableSubjectType } from '../../types';
 import { usePermissions } from '../../hooks/usePermissions';
 import { VideoLoading } from '../Common/VideoLoading';
 import { getTodayKST, getWeekReferenceDate } from '../../utils/dateUtils';
@@ -176,7 +176,6 @@ interface MathTimetableContentProps {
     currentSubjectFilter: string;
     studentMap: Record<string, UnifiedStudent>;
     timetableViewMode: string;
-    classKeywords: ClassKeywordColor[];
     setSelectedClassInfo: (info: ClassInfo | null) => void;
     setSelectedStudentForModal: (student: UnifiedStudent | null) => void;
     isAddClassOpen: boolean;
@@ -289,7 +288,6 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     currentSubjectFilter,
     studentMap,
     timetableViewMode,
-    classKeywords,
     setSelectedClassInfo,
     setSelectedStudentForModal,
     isAddClassOpen,
@@ -1083,7 +1081,6 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         studentMap={studentMap}
                         timetableViewMode={timetableViewMode === 'day-based' ? 'day-based' : 'teacher-based'}
                         weekdayGroupOrder={mathConfig.weekdayGroupOrder}
-                        classKeywords={classKeywords}
                         onStudentClick={handleStudentClick}
                         pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap} pendingMoveToMap={pendingMoveToMap}
                         pendingMoveSchedules={pendingMoveSchedules}
@@ -1139,7 +1136,6 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         studentMap={studentMap}
                         timetableViewMode={timetableViewMode === 'day-based' ? 'day-based' : 'teacher-based'}
                         weekdayGroupOrder={mathConfig.weekdayGroupOrder}
-                        classKeywords={classKeywords}
                         onStudentClick={handleStudentClick}
                         pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap} pendingMoveToMap={pendingMoveToMap}
                         pendingMoveSchedules={pendingMoveSchedules}
@@ -1193,7 +1189,6 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         timetableViewMode={timetableViewMode === 'excel-day' ? 'day-based' : 'teacher-based'}
                         weekdayGroupOrder={mathConfig.weekdayGroupOrder}
                         isUnifiedTable={true}
-                        classKeywords={classKeywords}
                         onStudentClick={handleStudentClick}
                         pendingMovedStudentIds={pendingMovedStudentIds} pendingMoveFromMap={pendingMoveFromMap} pendingMoveToMap={pendingMoveToMap}
                         pendingMoveSchedules={pendingMoveSchedules}
@@ -1230,8 +1225,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                             classes={filteredClasses}
                             teachers={sortedTeachers}
                             teachersData={teachers}
-                            classKeywords={classKeywords}
-                            currentUser={currentUser}
+                                currentUser={currentUser}
                             studentMap={studentMap}
                             classesData={classesData}
                             isSimulationMode={isScenarioMode}
@@ -1422,7 +1416,6 @@ interface TimetableManagerProps {
     selectedDays?: string[];
     onSelectedDaysChange?: (days: string[]) => void;
     teachers?: Teacher[];  // Centralized from App.tsx
-    classKeywords?: ClassKeywordColor[]; // For keyword color coding
     currentUser: any; // Using any for now to avoid circular dependency or import issues if common
     // 수학 뷰 모드 (날짜별/강사별/엑셀모드)
     mathViewMode?: string;
@@ -1442,7 +1435,6 @@ const TimetableManagerInner = ({
     selectedDays: externalSelectedDays,
     onSelectedDaysChange,
     teachers: propsTeachers = [],
-    classKeywords = [],
     currentUser,
     mathViewMode: externalMathViewMode,
     onMathViewModeChange,
@@ -2381,7 +2373,6 @@ const TimetableManagerInner = ({
                         onSwitchToMath={() => setSubjectTab('math')}
                         viewType={viewType}
                         teachers={propsTeachers}
-                        classKeywords={classKeywords}
                         currentUser={currentUser}
                         studentMap={studentMap} // Pass global student map
                         currentWeekStart={currentMonday}
@@ -2566,7 +2557,6 @@ const TimetableManagerInner = ({
                 currentSubjectFilter={currentSubjectFilter}
                 studentMap={studentMap}
                 timetableViewMode={timetableViewMode}
-                classKeywords={classKeywords}
                 setSelectedClassInfo={setSelectedClassInfo}
                 setSelectedStudentForModal={setSelectedStudentForModal}
                 isAddClassOpen={isAddClassOpen}

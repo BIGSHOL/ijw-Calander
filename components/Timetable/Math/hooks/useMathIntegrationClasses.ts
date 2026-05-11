@@ -28,6 +28,8 @@ export interface MathClassInfo {
     scheduleMap: Record<string, Record<string, MathScheduleCell>>;  // periodId -> day -> cell
     visiblePeriods: MathPeriodInfo[];  // 표시할 교시 목록
     finalDays: string[];  // 수업이 있는 요일 목록
+    bgColor?: string;
+    textColor?: string;
     roomByDay: Record<string, string>;  // 요일별 강의실
     roomBySlot: Record<string, string>;  // 교시-요일별 강의실 (key: "periodId-day")
     teacherCounts: Record<string, number>;  // 강사별 수업 횟수
@@ -186,6 +188,8 @@ export const useMathIntegrationClasses = (
                 teacherCounts,
                 schedule: cls.schedule || [],
                 isWeekendOnly,
+                bgColor: (cls as any).bgColor,
+                textColor: (cls as any).textColor,
             };
         }).sort((a, b) => {
             // 주말 전용 수업은 뒤로

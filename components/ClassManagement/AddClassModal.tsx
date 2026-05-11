@@ -44,6 +44,9 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
   const [subject, setSubject] = useState<SubjectType>(defaultSubject);
   const [mainTeacher, setMainTeacher] = useState('');
   const [room, setRoom] = useState('');
+  // 수업 색상 (선택, 빈 값 = 기본 회색)
+  const [bgColor, setBgColor] = useState<string>('');
+  const [textColor, setTextColor] = useState<string>('');
 
   // 스케줄 (그리드 선택)
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set()); // "월-5" 형태
@@ -297,6 +300,8 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
       studentIds: selectedStudentIds,
       slotTeachers: filteredSlotTeachers,
       slotRooms: filteredSlotRooms,
+      ...(bgColor.trim() ? { bgColor: bgColor.trim() } : {}),
+      ...(textColor.trim() ? { textColor: textColor.trim() } : {}),
     };
 
     try {
@@ -426,6 +431,52 @@ const AddClassModal: React.FC<AddClassModalProps> = ({ onClose, defaultSubject =
                   )}
                 </select>
               </div>}
+              {/* 색상 (선택) */}
+              <div className="flex items-center gap-2 px-1.5 py-1">
+                <span className="w-14 shrink-0 text-xs font-medium text-primary-700">색상</span>
+                <div className="flex-1 flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xxs text-gray-500">배경</span>
+                    <input
+                      type="color"
+                      value={bgColor || '#e5e7eb'}
+                      onChange={(e) => setBgColor(e.target.value)}
+                      className="w-6 h-6 rounded cursor-pointer"
+                      title="배경색"
+                    />
+                    {bgColor && <span className="text-xxs text-gray-500 font-mono">{bgColor}</span>}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xxs text-gray-500">글자</span>
+                    <input
+                      type="color"
+                      value={textColor || '#111827'}
+                      onChange={(e) => setTextColor(e.target.value)}
+                      className="w-6 h-6 rounded cursor-pointer"
+                      title="글자색"
+                    />
+                    {textColor && <span className="text-xxs text-gray-500 font-mono">{textColor}</span>}
+                  </div>
+                  {bgColor && (
+                    <span
+                      className="px-1.5 py-0.5 text-xs font-bold rounded border border-gray-200"
+                      style={{ backgroundColor: bgColor, color: textColor || '#111827' }}
+                    >
+                      {className || '미리보기'}
+                    </span>
+                  )}
+                  {(bgColor || textColor) && (
+                    <button
+                      type="button"
+                      onClick={() => { setBgColor(''); setTextColor(''); }}
+                      className="text-xxs px-1.5 py-0.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
+                      title="색상 제거 (기본 회색)"
+                    >
+                      초기화
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 

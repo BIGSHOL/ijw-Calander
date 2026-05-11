@@ -8,7 +8,7 @@ import { storage, STORAGE_KEYS } from '../../../utils/localStorage';
 import { getWeekReferenceDate } from '../../../utils/dateUtils';
 import { EN_PERIODS, EN_WEEKDAYS, getTeacherColor, INJAE_PERIODS, isInjaeClass, numberLevelUp, classLevelUp, isMaxLevel, isValidLevel, DEFAULT_ENGLISH_LEVELS, CLASS_COLLECTION, CLASS_DRAFT_COLLECTION } from './englishUtils';
 import { usePermissions } from '../../../hooks/usePermissions';
-import { Teacher, TimetableStudent, ClassKeywordColor, EnglishLevel } from '../../../types';
+import { Teacher, TimetableStudent, EnglishLevel } from '../../../types';
 import IntegrationViewSettings, { IntegrationSettings } from './IntegrationViewSettings';
 import LevelSettingsModal from './LevelSettingsModal';
 import LevelUpConfirmModal from './LevelUpConfirmModal';
@@ -41,7 +41,6 @@ interface EnglishClassTabProps {
     teachers: string[];
     scheduleData: ScheduleData;
     teachersData?: Teacher[];
-    classKeywords?: ClassKeywordColor[];  // For keyword color coding
     currentUser: any;
     isSimulationMode?: boolean;  // 시뮬레이션 모드 여부
     studentMap: Record<string, any>;
@@ -105,7 +104,6 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
     teachers,
     scheduleData,
     teachersData = [],
-    classKeywords = [],
     currentUser,
     isSimulationMode = false,
     studentMap,
@@ -670,7 +668,6 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                     subject="english"
                                                     displayOptions={settings.displayOptions}
                                                     teachersData={teachersData}
-                                                    classKeywords={[]}
                                                     currentUser={currentUser}
                                                     isSimulationMode={isSimulationMode}
                                                     classStudentData={classDataMap[group.classes[0].name]}
@@ -698,7 +695,6 @@ const EnglishClassTab: React.FC<EnglishClassTabProps> = ({
                                                 onToggleHidden={() => toggleHidden(cls.name)}
                                                 displayOptions={settings.displayOptions}
                                                 teachersData={teachersData}
-                                                classKeywords={classKeywords}
                                                 currentUser={currentUser}
                                                 englishLevels={englishLevels}
                                                 isSimulationMode={isSimulationMode}

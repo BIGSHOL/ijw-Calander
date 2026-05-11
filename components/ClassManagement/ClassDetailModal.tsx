@@ -76,6 +76,9 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
       pendingTeacher: latest.pendingTeacher,
       pendingTeacherDate: latest.pendingTeacherDate,
       pendingTeacherReason: latest.pendingTeacherReason,
+      // 색상도 Firestore 최신값으로 — 저장 직후 invalidate된 데이터 즉시 반영
+      bgColor: latest.bgColor,
+      textColor: latest.textColor,
     } as typeof classInfo;
   }, [classInfo, subjectClassesList]);
 
@@ -136,6 +139,20 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
   const [teacher, setTeacher] = useState(classInfo.teacher);
   const [room, setRoom] = useState(classInfo.room || '');
   const [memo, setMemo] = useState('');
+  // 수업 색상 (빈 문자열 = 미설정 = 회색 기본값)
+  // effectiveClassInfo는 useMemo 결과이므로 아래에서 useEffect로 동기화
+  const [bgColor, setBgColor] = useState<string>(classInfo.bgColor || '');
+  const [textColor, setTextColor] = useState<string>(classInfo.textColor || '');
+
+  // 편집 모드 진입 시 또는 Firestore 최신 색상값 변경 시 state 동기화
+  // (저장 직후 invalidate로 effectiveClassInfo가 갱신되면 자동 반영)
+  useEffect(() => {
+    if (isEditMode) {
+      setBgColor(effectiveClassInfo.bgColor || '');
+      setTextColor(effectiveClassInfo.textColor || '');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, effectiveClassInfo.bgColor, effectiveClassInfo.textColor]);
 
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
   const [slotTeachers, setSlotTeachers] = useState<Record<string, string>>(initialSlotTeachers || {});
@@ -439,10 +456,15 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
           room: room.trim(),
           slotTeachers: filteredSlotTeachers,
           slotRooms: filteredSlotRooms,
+          bgColor: bgColor.trim() || undefined,
+          textColor: textColor.trim() || undefined,
         };
         simulationContext.updateScenarioClassWithHistory(classInfo.id!, updates, `수업 수정: ${originalClassName}`);
         setIsEditMode(false);
       } else {
+        // bgColor/textColor: 빈 문자열이면 명시적 삭제(null), 값이 있으면 그 값으로 저장
+        const trimmedBg = bgColor.trim();
+        const trimmedTxt = textColor.trim();
         const updateData: UpdateClassData = {
           originalClassName: classInfo.className,
           originalSubject: classInfo.subject,
@@ -453,9 +475,13 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
           slotTeachers: filteredSlotTeachers,
           slotRooms: filteredSlotRooms,
           memo: memo.trim(),
+          bgColor: trimmedBg ? trimmedBg : null,
+          textColor: trimmedTxt ? trimmedTxt : null,
         };
 
+        console.log('[DEBUG ClassDetailModal] mutation 호출:', updateData);
         await updateClassMutation.mutateAsync(updateData);
+        console.log('[DEBUG ClassDetailModal] mutation 완료. classId:', classInfo.id);
 
         const hasStudentChanges = studentsToAdd.size > 0 || studentsToRemove.size > 0 || Object.keys(studentAttendanceDays).length > 0 || Object.keys(studentUnderlines).length > 0 || Object.keys(studentSlotTeachers).length > 0 || Object.keys(studentEnrollmentDates).length > 0;
         if (hasStudentChanges) {
@@ -724,6 +750,51 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                             </>
                           )}
                         </select>
+                      </div>
+                      <div className="flex items-center gap-2 px-1.5 py-0.5">
+                        <span className="w-16 shrink-0 text-xs font-medium text-primary-700">색상</span>
+                        <div className="flex-1 flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-1">
+                            <span className="text-xxs text-gray-500">배경</span>
+                            <input
+                              type="color"
+                              value={bgColor || '#e5e7eb'}
+                              onChange={(e) => setBgColor(e.target.value)}
+                              className="w-6 h-6 rounded cursor-pointer"
+                              title="배경색"
+                            />
+                            {bgColor && <span className="text-xxs text-gray-500 font-mono">{bgColor}</span>}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xxs text-gray-500">글자</span>
+                            <input
+                              type="color"
+                              value={textColor || '#111827'}
+                              onChange={(e) => setTextColor(e.target.value)}
+                              className="w-6 h-6 rounded cursor-pointer"
+                              title="글자색"
+                            />
+                            {textColor && <span className="text-xxs text-gray-500 font-mono">{textColor}</span>}
+                          </div>
+                          {bgColor && (
+                            <span
+                              className="px-1.5 py-0.5 text-xs font-bold rounded border border-gray-200"
+                              style={{ backgroundColor: bgColor, color: textColor || '#111827' }}
+                            >
+                              {className || '미리보기'}
+                            </span>
+                          )}
+                          {(bgColor || textColor) && (
+                            <button
+                              type="button"
+                              onClick={() => { setBgColor(''); setTextColor(''); }}
+                              className="text-xxs px-1.5 py-0.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded"
+                              title="색상 제거 (기본 회색)"
+                            >
+                              초기화
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

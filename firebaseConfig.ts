@@ -518,3 +518,9 @@ if (typeof window !== 'undefined') {
     (window as any).cleanupBrokenEnrollments = cleanupBrokenEnrollments;
 }
 
+// ======== 키워드 → 수업 색상 마이그레이션 (master/admin 전용) ========
+import { migrateKeywordColorsToClasses as _migrateKeywordColorsToClasses } from './utils/migrations/migrateKeywordColorsToClasses';
+if (typeof window !== 'undefined') {
+    (window as any).migrateKeywordColorsToClasses = _migrateKeywordColorsToClasses;
+}
+

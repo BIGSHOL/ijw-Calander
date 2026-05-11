@@ -33,6 +33,8 @@ export interface ClassInfo {
     roomByDay: Record<string, string>;
     roomBySlot: Record<string, string>;  // key: "periodId-day", value: room
     teacherCounts: Record<string, number>;
+    bgColor?: string;
+    textColor?: string;
 }
 
 // 시뮬레이션용 클래스 데이터 타입 (SimulationContext의 ScenarioClass와 호환)
@@ -218,9 +220,14 @@ export const useEnglishClasses = (
                 // mainTeacher가 없으면 teacher 필드를 fallback으로 사용 (Firebase classes 컬렉션은 teacher 필드 사용)
                 const scenarioClass = scenarioClasses[c.classId];
                 c.mainTeacher = scenarioClass.mainTeacher || scenarioClass.teacher || '';
+                // 시뮬레이션의 색상도 적용
+                c.bgColor = scenarioClass.bgColor;
+                c.textColor = scenarioClass.textColor;
             } else {
                 const classFromDB = classesData.find(cls => cls.id === c.classId);
                 c.mainTeacher = classFromDB?.teacher || '';
+                c.bgColor = classFromDB?.bgColor;
+                c.textColor = classFromDB?.textColor;
             }
 
             // 1. Weekend Shift Logic

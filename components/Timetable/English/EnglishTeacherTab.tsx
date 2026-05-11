@@ -7,7 +7,7 @@ import { Edit3, Move } from 'lucide-react';
 import { addDays, format } from 'date-fns';
 import { EN_PERIODS, EN_WEEKDAYS, getCellKey, getTeacherColor, getContrastColor, formatClassNameWithBreaks, isExcludedStudent } from './englishUtils';
 import { usePermissions } from '../../../hooks/usePermissions';
-import { Teacher, ClassKeywordColor } from '../../../types';
+import { Teacher } from '../../../types';
 import BatchInputBar, { InputData, MergedClass, ClassSuggestion } from './BatchInputBar';
 import MoveConfirmBar from './MoveConfirmBar';
 import MoveSelectionModal from './MoveSelectionModal';
@@ -38,7 +38,6 @@ interface EnglishTeacherTabProps {
     scheduleData: ScheduleData;
     onRefresh?: () => void;
     onUpdateLocal?: (newData: ScheduleData) => void;
-    classKeywords?: ClassKeywordColor[];  // For keyword color coding
     currentUser: any;
     targetCollection?: string;
     isSimulationMode?: boolean;  // 시뮬레이션 모드 여부
@@ -59,7 +58,7 @@ interface EnglishTeacherTabProps {
 
 type ViewSize = 'small' | 'medium' | 'large';
 
-const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teachersData, scheduleData, onUpdateLocal, classKeywords = [], currentUser, isSimulationMode = false, labRooms = [], studentMap = {}, currentWeekStart, headerMode = 'view', viewSize: propViewSize, setViewSize: propSetViewSize, visibleWeekdays: propVisibleWeekdays, setVisibleWeekdays: propSetVisibleWeekdays, isExportModalOpen: propIsExportModalOpen, setExportModalOpen: propSetExportModalOpen }) => {
+const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teachersData, scheduleData, onUpdateLocal, currentUser, isSimulationMode = false, labRooms = [], studentMap = {}, currentWeekStart, headerMode = 'view', viewSize: propViewSize, setViewSize: propSetViewSize, visibleWeekdays: propVisibleWeekdays, setVisibleWeekdays: propSetVisibleWeekdays, isExportModalOpen: propIsExportModalOpen, setExportModalOpen: propSetExportModalOpen }) => {
     const { hasPermission } = usePermissions(currentUser);
     const canEditEnglish = hasPermission('timetable.english.edit');
     // 조회 권한이 있으면 이미지 저장 가능 (편집 권한 포함)
@@ -202,19 +201,30 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
         return dates;
     }, [currentWeekStart]);
 
-    // 셀 키워드 매칭 Map (성능 최적화: O(n*m) → O(n) + O(1))
+    // 셀 색상 매칭 Map (수업별 직접 색상 사용, 없으면 기본 회색)
     const cellKeywordMap = useMemo(() => {
-        const map = new Map<string, ClassKeywordColor | null>();
+        const map = new Map<string, { bgColor: string; textColor: string } | null>();
+        // classId 또는 className으로 빠른 lookup용 Map
+        const classByIdOrName = new Map<string, typeof englishClasses[number]>();
+        englishClasses.forEach(c => {
+            if (c.id) classByIdOrName.set(`id:${c.id}`, c);
+            if (c.className) classByIdOrName.set(`name:${c.className}`, c);
+        });
         Object.entries(scheduleData).forEach(([key, cell]) => {
             if (!cell.className) {
                 map.set(key, null);
                 return;
             }
-            const matched = classKeywords.find(kw => cell.className!.includes(kw.keyword));
-            map.set(key, matched || null);
+            const directClass = (cell.classId && classByIdOrName.get(`id:${cell.classId}`))
+                || classByIdOrName.get(`name:${cell.className}`);
+            if (directClass?.bgColor) {
+                map.set(key, { bgColor: directClass.bgColor, textColor: directClass.textColor || '#111827' });
+            } else {
+                map.set(key, null);
+            }
         });
         return map;
-    }, [scheduleData, classKeywords]);
+    }, [scheduleData, englishClasses]);
 
     // Toggle weekday visibility
     const toggleWeekday = (day: string) => {
@@ -788,13 +798,10 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                                             const isMoveMode = mode === 'move';
                                             const hasContent = !!cellData?.className;
 
-                                            // 키워드 색상 매칭 (Map에서 O(1) 조회)
+                                            // 색상 매칭 (Map에서 O(1) 조회)
+                                            // 색상은 className 칩에만 적용 (셀 전체 배경 X)
                                             const matchedKw = cellKeywordMap.get(cellKey);
-
-                                            // 셀 배경 스타일 결정
-                                            const cellBgStyle = matchedKw
-                                                ? { backgroundColor: matchedKw.bgColor }
-                                                : {};
+                                            const cellBgStyle = {};
 
                                             // LAB실 학생수 계산 (배지 + 툴팁 공용)
                                             const isLabRoom = !!(cellData?.room && labRooms.includes(cellData.room));
@@ -999,7 +1006,6 @@ const EnglishTeacherTab: React.FC<EnglishTeacherTabProps> = ({ teachers, teacher
                 teachersData={teachersData}
                 scheduleData={scheduleData}
                 visibleWeekdays={visibleWeekdays}
-                classKeywords={classKeywords}
                 currentWeekStart={currentWeekStart}
             />
         </div>

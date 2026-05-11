@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { ClassKeywordColor } from '../../types';
 import { db } from '../../firebaseConfig';
-import { setDoc, doc, deleteDoc, collection, onSnapshot, getDoc, getDocs, query, where } from 'firebase/firestore';
+import { setDoc, doc, collection, onSnapshot, getDoc, getDocs, query, where } from 'firebase/firestore';
 import { listenerRegistry } from '../../utils/firebaseCleanup';
-import { X, Check, Clock, Hash, DoorOpen, ChevronUp, ChevronDown, FlaskConical, Plus, Settings } from 'lucide-react';
+import { X, Clock, Hash, DoorOpen, ChevronUp, ChevronDown, FlaskConical, Settings } from 'lucide-react';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { useDraggable } from '../../hooks/useDraggable';
 
@@ -42,40 +41,15 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
     const [activeTab, setActiveTab] = useState<TabType>('general');
 
     // --- General Tab State ---
-    const [classKeywords, setClassKeywords] = useState<ClassKeywordColor[]>([]);
-    const [newKeyword, setNewKeyword] = useState('');
-    const [newKeywordBgColor, setNewKeywordBgColor] = useState('#fee2e2');
-    const [newKeywordTextColor, setNewKeywordTextColor] = useState('#dc2626');
-
     // 스케줄 표기 설정
     const [scheduleDisplay, setScheduleDisplay] = useState<ScheduleDisplaySettings>(DEFAULT_SCHEDULE_DISPLAY);
     const [scheduleDisplayLoading, setScheduleDisplayLoading] = useState(true);
-
-    // Edit State
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [editKeyword, setEditKeyword] = useState('');
-    const [editBgColor, setEditBgColor] = useState('');
-    const [editTextColor, setEditTextColor] = useState('');
 
     // --- Room Tab State ---
     const [availableRooms, setAvailableRooms] = useState<string[]>([]);
     const [labRooms, setLabRooms] = useState<string[]>([]);
     const [roomOrder, setRoomOrder] = useState<string[]>([]);
     const [roomsLoading, setRoomsLoading] = useState(true);
-
-    // Subscribe to classKeywords collection
-    useEffect(() => {
-        if (!isOpen) return;
-
-        const unsubscribe = onSnapshot(collection(db, 'classKeywords'), (snapshot) => {
-            const keywords = snapshot.docs.map(d => ({
-                id: d.id,
-                ...d.data()
-            } as ClassKeywordColor)).sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
-            setClassKeywords(keywords);
-        });
-        return listenerRegistry.register('ClassSettingsModal', unsubscribe);
-    }, [isOpen]);
 
     // 스케줄 표기 설정 로드
     useEffect(() => {
@@ -182,73 +156,6 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
         }
     };
 
-    // --- General Tab Handlers ---
-    const handleAddKeyword = async () => {
-        if (!newKeyword.trim()) return;
-        try {
-            const id = `keyword_${Date.now()}`;
-            await setDoc(doc(db, 'classKeywords', id), {
-                keyword: newKeyword.trim(),
-                bgColor: newKeywordBgColor,
-                textColor: newKeywordTextColor,
-                order: classKeywords.length
-            });
-            // 캐시 무효화 - 시간표 즉시 반영
-            queryClient.invalidateQueries({ queryKey: ['classKeywords'] });
-            setNewKeyword('');
-            setNewKeywordBgColor('#fee2e2');
-            setNewKeywordTextColor('#dc2626');
-        } catch (e) {
-            console.error(e);
-            alert('저장 실패');
-        }
-    };
-
-    const handleStartEdit = (kw: ClassKeywordColor) => {
-        setEditingId(kw.id);
-        setEditKeyword(kw.keyword);
-        setEditBgColor(kw.bgColor);
-        setEditTextColor(kw.textColor);
-    };
-
-    const handleSaveEdit = async (id: string) => {
-        if (!editKeyword.trim()) return;
-        try {
-            const existing = classKeywords.find(k => k.id === id);
-            await setDoc(doc(db, 'classKeywords', id), {
-                keyword: editKeyword.trim(),
-                bgColor: editBgColor,
-                textColor: editTextColor,
-                order: existing?.order ?? 999
-            }, { merge: true });
-            // 캐시 무효화 - 시간표 즉시 반영
-            queryClient.invalidateQueries({ queryKey: ['classKeywords'] });
-            setEditingId(null);
-        } catch (e) {
-            console.error(e);
-            alert('수정 실패');
-        }
-    };
-
-    const handleCancelEdit = () => {
-        setEditingId(null);
-        setEditKeyword('');
-        setEditBgColor('');
-        setEditTextColor('');
-    };
-
-    const handleDeleteKeyword = async (id: string, keyword: string) => {
-        if (!confirm(`'${keyword}' 키워드를 삭제하시겠습니까?`)) return;
-        try {
-            await deleteDoc(doc(db, 'classKeywords', id));
-            // 캐시 무효화 - 시간표 즉시 반영
-            queryClient.invalidateQueries({ queryKey: ['classKeywords'] });
-        } catch (e) {
-            console.error(e);
-            alert('삭제 실패');
-        }
-    };
-
     // --- Room Tab Handlers ---
     const handleToggleLabRoom = async (room: string) => {
         const newLabRooms = labRooms.includes(room)
@@ -310,142 +217,14 @@ const ClassSettingsModal: React.FC<ClassSettingsModalProps> = ({
     // --- General Tab Content ---
     const renderGeneralTab = () => (
         <div className="space-y-2">
-            {/* Section 1: 수업 키워드 관리 */}
-            <div className="bg-white border border-gray-200 overflow-hidden">
-                <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
-                    <Hash className="w-3 h-3 text-primary" />
-                    <h3 className="text-primary font-bold text-xs">수업 키워드 관리</h3>
-                </div>
-                <div className="px-1.5 py-1">
-                    <p className="text-xs text-gray-500 mb-3">
-                        수업명에 특정 단어가 포함되면 색상을 자동으로 적용합니다.
-                    </p>
-
-                    {/* 키워드 목록 */}
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
-                        {classKeywords.map(kw => (
-                            <div key={kw.id}>
-                                {editingId === kw.id ? (
-                                    <div className="p-1.5 rounded border-2 border-blue-400 bg-blue-50 space-y-1">
-                                        <input
-                                            type="text"
-                                            value={editKeyword}
-                                            onChange={(e) => setEditKeyword(e.target.value)}
-                                            className="w-full px-1.5 py-0.5 border border-gray-300 rounded text-xs font-semibold outline-none focus:border-blue-400"
-                                            autoFocus
-                                        />
-                                        <div className="flex items-center gap-1">
-                                            <input
-                                                type="color"
-                                                value={editBgColor}
-                                                onChange={(e) => setEditBgColor(e.target.value)}
-                                                className="w-5 h-5 rounded cursor-pointer"
-                                            />
-                                            <input
-                                                type="color"
-                                                value={editTextColor}
-                                                onChange={(e) => setEditTextColor(e.target.value)}
-                                                className="w-5 h-5 rounded cursor-pointer"
-                                            />
-                                            <button
-                                                onClick={() => handleSaveEdit(kw.id)}
-                                                className="flex-1 px-1 py-0.5 bg-blue-600 text-white rounded text-xxs font-bold hover:bg-blue-700"
-                                            >
-                                                <Check size={10} className="inline" />
-                                            </button>
-                                            <button
-                                                onClick={handleCancelEdit}
-                                                className="px-1 py-0.5 bg-gray-400 text-white rounded text-xxs font-bold hover:bg-gray-500"
-                                            >
-                                                <X size={10} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div
-                                        className="relative group p-1.5 rounded border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                                        style={{ backgroundColor: kw.bgColor, color: kw.textColor }}
-                                        onClick={() => canEdit && handleStartEdit(kw)}
-                                    >
-                                        <span className="text-xs block truncate">{kw.keyword}</span>
-                                        {canEdit && (
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); handleDeleteKeyword(kw.id, kw.keyword); }}
-                                                className="absolute top-0.5 right-0.5 opacity-0 group-hover:opacity-100 p-0.5 rounded bg-white/90 hover:bg-white shadow-sm transition-all"
-                                                title="삭제"
-                                            >
-                                                <X size={10} className="text-red-600" />
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                        {classKeywords.length === 0 && (
-                            <div className="col-span-full py-4 text-center text-gray-400 text-xs">
-                                등록된 키워드가 없습니다.
-                            </div>
-                        )}
-                    </div>
-                </div>
+            {/* 안내 메시지 */}
+            <div className="bg-blue-50 border border-blue-200 px-2 py-1.5 rounded">
+                <p className="text-xs text-blue-700">
+                    수업별 색상은 각 수업의 정보 편집 화면에서 직접 설정할 수 있습니다.
+                </p>
             </div>
 
-            {/* Section 2: 키워드 추가 */}
-            {canEdit && (
-                <div className="bg-white border border-gray-200 overflow-hidden">
-                    <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
-                        <Plus className="w-3 h-3 text-primary" />
-                        <h3 className="text-primary font-bold text-xs">키워드 추가</h3>
-                    </div>
-                    <div className="px-1.5 py-1">
-                        <div className="flex items-end gap-2">
-                            <div className="flex-1">
-                                <label className="text-xs font-semibold text-gray-600 block mb-1">키워드</label>
-                                <input
-                                    type="text"
-                                    placeholder="예: Phonics"
-                                    value={newKeyword}
-                                    onChange={(e) => setNewKeyword(e.target.value)}
-                                    className="w-full px-2 py-1 border border-gray-200 rounded text-xs focus:border-accent outline-none"
-                                    onKeyDown={(e) => e.key === 'Enter' && handleAddKeyword()}
-                                />
-                            </div>
-                            <div>
-                                <label className="text-xs font-semibold text-gray-600 block mb-1">배경색</label>
-                                <div className="flex items-center gap-1">
-                                    <input
-                                        type="color"
-                                        value={newKeywordBgColor}
-                                        onChange={(e) => setNewKeywordBgColor(e.target.value)}
-                                        className="w-6 h-6 rounded cursor-pointer"
-                                    />
-                                    <span className="text-xxs text-gray-500 font-mono">{newKeywordBgColor}</span>
-                                </div>
-                            </div>
-                            <div>
-                                <label className="text-xs font-semibold text-gray-600 block mb-1">글자색</label>
-                                <div className="flex items-center gap-1">
-                                    <input
-                                        type="color"
-                                        value={newKeywordTextColor}
-                                        onChange={(e) => setNewKeywordTextColor(e.target.value)}
-                                        className="w-6 h-6 rounded cursor-pointer"
-                                    />
-                                    <span className="text-xxs text-gray-500 font-mono">{newKeywordTextColor}</span>
-                                </div>
-                            </div>
-                            <button
-                                onClick={handleAddKeyword}
-                                className="px-3 py-1 bg-primary text-white rounded text-xs font-bold hover:brightness-110 whitespace-nowrap"
-                            >
-                                추가
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Section 3: 스케줄 표기 방식 */}
+            {/* Section: 스케줄 표기 방식 */}
             <div className="bg-white border border-gray-200 overflow-hidden">
                 <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 border-b border-gray-200">
                     <Clock className="w-3 h-3 text-primary" />

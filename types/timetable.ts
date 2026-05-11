@@ -91,6 +91,9 @@ export interface TimetableClass {
   pendingTeacher?: string;          // 변경 예정 담임 (staffId 또는 이름)
   pendingTeacherDate?: string;      // 적용 예정일 (YYYY-MM-DD)
   pendingTeacherReason?: string;    // 사유 메모 (옵션)
+  // 수업 카드 색상 (수업 단위 1:1 색상 시스템)
+  bgColor?: string;
+  textColor?: string;
 }
 
 export interface Teacher {
@@ -107,15 +110,6 @@ export interface Teacher {
   order?: number;
   defaultRoom?: string; // 기본 강의실 (자동 입력용)
   departments?: string[]; // 소속 (시간표/학생관리 가시성)
-}
-
-// 수업 키워드 색상 설정
-export interface ClassKeywordColor {
-  id: string;
-  keyword: string;      // 키워드 (예: 'Phonics', 'Grammar')
-  bgColor: string;      // 배경색
-  textColor: string;    // 글자색
-  order?: number;
 }
 
 // English Level System

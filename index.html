@@ -2,7 +2,15 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=1280" />
+    <script>
+      // 임베드 모드는 모바일 반응형, 관리자 UI는 1280px 데스크탑 고정
+      (function(){
+        var isEmbed = location.search.indexOf('embed=') !== -1;
+        document.write('<meta name="viewport" content="' +
+          (isEmbed ? 'width=device-width,initial-scale=1' : 'width=1280') +
+          '">');
+      })();
+    </script>
     <title>인재원 Eywa</title>
     <meta name="description" content="침산동 수학/영어/과학 학원" />
 

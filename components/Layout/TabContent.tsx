@@ -92,7 +92,6 @@ interface TabContentProps {
     timetableViewType: string;
     setTimetableViewType: (type: string) => void;
     teachers: any[];
-    classKeywords: any[];
     mathViewMode: string;
     setMathViewMode: (mode: string) => void;
     hasPermission: (perm: string) => boolean;
@@ -284,7 +283,6 @@ export const TabContent: React.FC<TabContentProps> = ({
               onViewTypeChange={timetableProps.setTimetableViewType}
               currentUser={effectiveProfile}
               teachers={timetableProps.teachers}
-              classKeywords={timetableProps.classKeywords}
               mathViewMode={timetableProps.mathViewMode as any}
               onMathViewModeChange={timetableProps.setMathViewMode}
               hasPermissionFn={timetableProps.hasPermission}

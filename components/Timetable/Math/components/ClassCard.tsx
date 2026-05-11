@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { TimetableClass, ClassKeywordColor, Teacher } from '../../../../types';
+import { TimetableClass, Teacher } from '../../../../types';
 import { getSubjectTheme } from '../utils/gridUtils';
 import { Clock, BookOpen } from 'lucide-react';
 import { MATH_PERIOD_INFO, MATH_PERIOD_TIMES, WEEKEND_PERIOD_INFO, WEEKEND_PERIOD_TIMES } from '../../constants';
@@ -225,7 +225,6 @@ interface ClassCardProps {
     onDragLeave: (e: React.DragEvent) => void;
     onDrop: (e: React.DragEvent, toClassId: string, toZone?: string) => void;
     studentMap: Record<string, any>;
-    classKeywords?: ClassKeywordColor[];
     onStudentClick?: (studentId: string) => void;  // 학생 클릭 시 상세 모달 (조회/수정 모두)
     currentDay?: string;
     mergedDays?: string[];
@@ -293,7 +292,6 @@ const ClassCard: React.FC<ClassCardProps> = ({
     onDragLeave,
     onDrop,
     studentMap,
-    classKeywords = [],
     onStudentClick,
     currentDay,
     mergedDays = [],
@@ -582,10 +580,16 @@ const ClassCard: React.FC<ClassCardProps> = ({
             studentName: latest.studentName
         };
     }, [cls.studentList, latestTextbook, latestReports]);
-    // 키워드 매칭으로 색상 결정
+    // 색상 결정: 수업별 직접 색상 사용 (없으면 기본 회색)
     const matchedKeyword = useMemo(() => {
-        return classKeywords.find(kw => cls.className?.includes(kw.keyword));
-    }, [cls.className, classKeywords]);
+        if (cls.className?.includes('CR1C')) {
+            console.log('[DEBUG ClassCard] cls:', { className: cls.className, bgColor: cls.bgColor, textColor: cls.textColor, id: cls.id });
+        }
+        if (cls.bgColor) {
+            return { bgColor: cls.bgColor, textColor: cls.textColor || '#111827' } as { bgColor: string; textColor: string };
+        }
+        return null;
+    }, [cls.bgColor, cls.textColor, cls.className, cls.id]);
     const hasSearchMatch = searchQuery && cls.studentList?.some(s => s.name.includes(searchQuery));
 
     // 엑셀 모드: 이 카드에 선택된 학생이 있는지 확인 (테두리 드래그용)
@@ -909,10 +913,12 @@ const ClassCard: React.FC<ClassCardProps> = ({
     // 1교시당 4명 기준 (1명당 약 21px)
     const maxStudentHeight = span * 4 * 21; // span * 4명 * 21px
 
-    // 카드 전체 배경색 스타일 (키워드 색상 또는 흰색)
-    const cardBgStyle = matchedKeyword
-        ? { backgroundColor: matchedKeyword.bgColor }
-        : { backgroundColor: '#ffffff' };
+    // 카드 root는 항상 흰색 (수업 색상은 className 헤더에만 적용)
+    const cardBgStyle = { backgroundColor: '#ffffff' };
+    // 수업명 헤더 배경색 (수업별 색상)
+    const headerBgStyle = matchedKeyword
+        ? { backgroundColor: matchedKeyword.bgColor, color: matchedKeyword.textColor }
+        : { backgroundColor: '#EFF6FF', color: '#111827' };
 
     // 수정 모드에서 수업명 헤더 클릭 핸들러
     const handleClassHeaderClick = (e: React.MouseEvent) => {
@@ -1119,12 +1125,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 <div
                     ref={headerRef}
                     onClick={handleClassHeaderClick}
-                    className={`relative text-center font-bold px-0.5 mx-auto ${canEdit ? 'cursor-pointer hover:brightness-95' : 'cursor-pointer'} ${showStudents ? 'border-b border-gray-300' : ''} flex flex-col items-center justify-center shrink-0 overflow-hidden`}
+                    className={`relative text-center font-bold px-0.5 w-full ${canEdit ? 'cursor-pointer hover:brightness-95' : 'cursor-pointer'} ${showStudents ? 'border-b border-gray-300' : ''} flex flex-col items-center justify-center shrink-0 overflow-hidden`}
                     style={{
-                        width: `${cellSizePx}px`,
-                        maxWidth: `${cellSizePx}px`,
+                        minWidth: `${cellSizePx}px`,
                         padding: '2px 2px',
-                        color: matchedKeyword ? matchedKeyword.textColor : '#111827'
+                        ...headerBgStyle,
                     }}
                     title={`${cls.className}${cls.room ? `\n${cls.room}` : ''}`}
                     onMouseEnter={() => !canEdit && setShowScheduleTooltip(true)}
@@ -1154,7 +1159,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         <span className="absolute top-0 left-0 z-10 text-[10px] leading-none bg-gray-800 text-white px-0.5 py-0.5 font-bold whitespace-nowrap animate-pulse">{`합반${idx + 1}`}</span>
                                         <div className="min-w-0 w-full text-center pt-1">
                                             {lines.map((line, i) => (
-                                                <span key={i} className={`block leading-tight ${titleFontSizeClass} whitespace-nowrap overflow-hidden text-black`}>{line}</span>
+                                                <span key={i} className={`block leading-tight ${titleFontSizeClass} whitespace-nowrap overflow-hidden`}>{line}</span>
                                             ))}
                                         </div>
                                     </div>
@@ -1169,7 +1174,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                         )}
                         <div className="relative min-w-0 w-full">
                             {classNameLines.map((line, i) => (
-                                <span key={i} className={`block leading-tight ${titleFontSizeClass} whitespace-nowrap overflow-hidden text-black`}>{line}</span>
+                                <span key={i} className={`block leading-tight ${titleFontSizeClass} whitespace-nowrap overflow-hidden`}>{line}</span>
                             ))}
                         </div>
                         </>

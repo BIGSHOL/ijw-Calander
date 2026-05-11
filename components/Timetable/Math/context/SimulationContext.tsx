@@ -64,6 +64,8 @@ export interface ScenarioClass {
   slotRooms?: Record<string, string>;     // "월-5" -> "Room"
   underline?: boolean;
   mainTeacher?: string;
+  bgColor?: string;
+  textColor?: string;
   // 라이브 원본 doc data 전체 보관 (publish 시 머지하여 미관리 필드 손실 방지)
   _raw?: Record<string, any>;
 }
@@ -230,6 +232,8 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
         slotRooms: data.slotRooms || {},
         underline: data.underline,
         mainTeacher: data.mainTeacher,
+        bgColor: data.bgColor,
+        textColor: data.textColor,
         _raw: data,
       };
     });

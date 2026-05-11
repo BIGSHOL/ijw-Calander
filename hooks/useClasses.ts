@@ -25,6 +25,9 @@ export interface ClassInfo {
     pendingTeacher?: string;
     pendingTeacherDate?: string;
     pendingTeacherReason?: string;
+    // 수업 카드 색상 (수업 단위 1:1 색상 시스템)
+    bgColor?: string;
+    textColor?: string;
 }
 
 /**
@@ -124,6 +127,8 @@ export const useClasses = (subjectOrEnabled?: SubjectType | boolean, enabled = t
                     pendingTeacher: data.pendingTeacher,
                     pendingTeacherDate: data.pendingTeacherDate,
                     pendingTeacherReason: data.pendingTeacherReason,
+                    bgColor: data.bgColor,
+                    textColor: data.textColor,
                 };
             });
 

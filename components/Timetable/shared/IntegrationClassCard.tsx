@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Eye, EyeOff, Users, MoreVertical, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle, Clock, Settings } from 'lucide-react';
-import { Teacher, TimetableStudent, ClassKeywordColor, EnglishLevel } from '../../../types';
+import { Teacher, TimetableStudent, EnglishLevel } from '../../../types';
 import IntegrationMiniGridRow, { PeriodInfo, ScheduleCell } from './IntegrationMiniGridRow';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
 import { formatDateKey, getWeekReferenceDate } from '../../../utils/dateUtils';
@@ -30,6 +30,8 @@ export interface IntegrationClassInfo {
     finalDays: string[];
     formattedRoomStr?: string;
     weekendShift?: number;  // 영어용
+    bgColor?: string;
+    textColor?: string;
 }
 
 export interface DisplayOptions {
@@ -289,7 +291,6 @@ interface IntegrationClassCardProps {
     subject: 'english' | 'math';
     displayOptions?: DisplayOptions;
     teachersData: Teacher[];
-    classKeywords?: ClassKeywordColor[];
     currentUser: any;
     isSimulationMode?: boolean;
     classStudentData?: ClassStudentData;
@@ -363,7 +364,6 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
     subject,
     displayOptions = { showStudents: true, showRoom: true, showTeacher: true, showSchedule: true },
     teachersData,
-    classKeywords = [],
     currentUser,
     isSimulationMode = false,
     classStudentData,
@@ -586,15 +586,13 @@ const IntegrationClassCard: React.FC<IntegrationClassCardProps> = ({
         }
     };
 
-    // 키워드 색상 찾기
+    // 색상 결정: 수업별 직접 색상 사용 (없으면 기본 회색)
     const keywordColor = useMemo(() => {
-        for (const kw of classKeywords) {
-            if (classInfo.name.includes(kw.keyword)) {
-                return kw;
-            }
+        if (classInfo.bgColor) {
+            return { bgColor: classInfo.bgColor, textColor: classInfo.textColor || '#111827' } as { bgColor: string; textColor: string };
         }
         return null;
-    }, [classInfo.name, classKeywords]);
+    }, [classInfo.bgColor, classInfo.textColor]);
 
     // 수업 스케줄 정보 생성 (영어 마우스 오버 툴팁용)
     const scheduleInfo = useMemo(() => {

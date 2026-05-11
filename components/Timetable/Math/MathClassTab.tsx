@@ -5,7 +5,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Settings } from 'lucide-react';
 import { doc, collection, query, where, getDocs, updateDoc, deleteField, deleteDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
-import { Teacher, TimetableStudent, ClassKeywordColor, TimetableClass } from '../../../types';
+import { Teacher, TimetableStudent, TimetableClass } from '../../../types';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { getWeekReferenceDate } from '../../../utils/dateUtils';
 
@@ -34,7 +34,6 @@ interface MathClassTabProps {
     classes: TimetableClass[];
     teachers: string[];
     teachersData?: Teacher[];
-    classKeywords?: ClassKeywordColor[];
     currentUser: any;
     studentMap: Record<string, any>;
     classesData?: ClassInfoFromHook[];
@@ -75,7 +74,6 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
     classes,
     teachers,
     teachersData = [],
-    classKeywords = [],
     currentUser,
     studentMap,
     classesData = [],
@@ -463,7 +461,6 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                                                     subject="math"
                                                     displayOptions={settings.displayOptions}
                                                     teachersData={teachersData}
-                                                    classKeywords={[]}
                                                     currentUser={currentUser}
                                                     isSimulationMode={isSimulationMode}
                                                     classStudentData={classDataMap[group.classes[0].name]}
@@ -483,7 +480,6 @@ const MathClassTab: React.FC<MathClassTabProps> = ({
                                                 onToggleHidden={() => toggleHidden(cls.name)}
                                                 displayOptions={settings.displayOptions}
                                                 teachersData={teachersData}
-                                                classKeywords={classKeywords}
                                                 currentUser={currentUser}
                                                 isSimulationMode={isSimulationMode}
                                                 classStudentData={classDataMap[cls.name]}
