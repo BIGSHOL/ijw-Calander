@@ -2,7 +2,8 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { addDays } from 'date-fns';
 import {
     ChevronLeft, ChevronRight, Search, X, Settings, Eye, EyeOff, Edit, SlidersHorizontal,
-    ArrowRightLeft, Copy, Upload, Save, Link2, Users, ChevronUp, ChevronDown, GripVertical, Download, Calendar as CalendarIcon
+    ArrowRightLeft, Copy, Upload, Save, Link2, Users, ChevronUp, ChevronDown, GripVertical, Download, Calendar as CalendarIcon,
+    Share, FileSpreadsheet, Image as ImageIcon
 } from 'lucide-react';
 import {
     DndContext,
@@ -144,6 +145,7 @@ interface TimetableHeaderProps {
     setFontSize?: (size: 'small' | 'normal' | 'large') => void;
     // 통합뷰 전용 props
     onExportImage?: () => void;  // 이미지 저장 버튼 클릭 핸들러
+    onExportExcel?: () => void;  // 엑셀 저장 버튼 클릭 핸들러
     // 통합뷰 표시 옵션 (class viewType)
     integrationDisplayOptions?: {
         showStudents?: boolean;
@@ -180,6 +182,9 @@ interface TimetableHeaderProps {
     // 강사 숨김 필터
     hiddenTeachers?: string[];
     onToggleTeacherHidden?: (teacher: string) => void;
+    // 퇴원 리스트 전역 토글
+    withdrawnAllExpanded?: boolean;
+    onToggleAllWithdrawn?: () => void;
 }
 
 const TimetableHeader: React.FC<TimetableHeaderProps> = ({
@@ -234,6 +239,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     setFontSize,
     // 통합뷰 전용
     onExportImage,
+    onExportExcel,
     integrationDisplayOptions,
     onIntegrationDisplayOptionsChange,
     // 퇴원 관리 권한
@@ -257,6 +263,8 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     weeklyAbsent,
     hiddenTeachers = [],
     onToggleTeacherHidden,
+    withdrawnAllExpanded = false,
+    onToggleAllWithdrawn,
 }) => {
     // 드롭다운 상태
     const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
@@ -866,14 +874,14 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                     <div className="w-px h-4 bg-white/20 mx-1"></div>
 
                     {/* 더보기 드롭다운 (공유 + 저장 통합) */}
-                    {(onExportImage || (isMaster && onOpenEmbedManager)) && (
+                    {(onExportImage || onExportExcel || (isMaster && onOpenEmbedManager)) && (
                         <div className="relative" ref={moreDropdownRef}>
                             <button
                                 onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
                                 className="px-2 py-1 border border-white/20 rounded-sm text-xs font-medium text-gray-300 hover:bg-white/10 transition-colors flex items-center gap-1"
                                 title="더보기"
                             >
-                                <Download size={12} />
+                                <Share size={12} />
                                 내보내기
                             </button>
                             {isMoreDropdownOpen && (
@@ -886,8 +894,20 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                             }}
                                             className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
                                         >
-                                            <Download size={12} />
+                                            <ImageIcon size={12} />
                                             이미지 저장
+                                        </button>
+                                    )}
+                                    {onExportExcel && (
+                                        <button
+                                            onClick={() => {
+                                                onExportExcel();
+                                                setIsMoreDropdownOpen(false);
+                                            }}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-green-700 hover:bg-green-50 transition-colors"
+                                        >
+                                            <FileSpreadsheet size={12} />
+                                            엑셀저장
                                         </button>
                                     )}
                                     {isMaster && onOpenEmbedManager && (
@@ -1023,12 +1043,6 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                     본원
                                                 </button>
                                                 <button
-                                                    onClick={() => onRoomFilterChange('barun', !roomFilter.barun)}
-                                                    className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${roomFilter.barun ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-gray-100 text-gray-400 border-gray-200'}`}
-                                                >
-                                                    바른
-                                                </button>
-                                                <button
                                                     onClick={() => onRoomFilterChange('godeung', !roomFilter.godeung)}
                                                     className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${roomFilter.godeung ? 'bg-purple-500 text-white border-purple-500' : 'bg-gray-100 text-gray-400 border-gray-200'}`}
                                                 >
@@ -1138,6 +1152,17 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                         }`}
                                                     >{label}</button>
                                                 ))}
+                                                {onToggleAllWithdrawn && (
+                                                    <button
+                                                        onClick={onToggleAllWithdrawn}
+                                                        className={`py-0.5 px-1.5 rounded text-xxs border ${
+                                                            withdrawnAllExpanded
+                                                                ? 'bg-gray-700 text-white border-gray-700'
+                                                                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                                                        }`}
+                                                        title="모든 셀의 퇴원생 리스트 펼치기/접기"
+                                                    >퇴원</button>
+                                                )}
                                             </div>
                                         </div>
                                     )}

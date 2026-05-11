@@ -144,6 +144,11 @@ export default defineConfig(({ mode }) => {
               return 'xlsx';
             }
 
+            // ExcelJS - lazy load (수학 시간표 엑셀저장 전용)
+            if (id.includes('exceljs') || id.includes('archiver') || id.includes('unzipper')) {
+              return 'exceljs';
+            }
+
             // Google AI
             if (id.includes('@google/genai') || id.includes('@google/generative-ai')) {
               return 'google-ai';

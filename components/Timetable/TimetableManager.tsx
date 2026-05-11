@@ -167,6 +167,9 @@ interface MathTimetableContentProps {
     setShowHoldStudents: (show: boolean) => void;
     showWithdrawnStudents: boolean;
     setShowWithdrawnStudents: (show: boolean) => void;
+    withdrawnAllExpanded: boolean;
+    withdrawnSyncToken: number;
+    onToggleAllWithdrawn: () => void;
     dragOverClassId: string | null;
     handleDragStart: (e: React.DragEvent, studentId: string, classId: string, zone?: string) => void;
     handleDragOver: (e: React.DragEvent, classId: string) => void;
@@ -279,6 +282,9 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     setShowHoldStudents,
     showWithdrawnStudents,
     setShowWithdrawnStudents,
+    withdrawnAllExpanded,
+    withdrawnSyncToken,
+    onToggleAllWithdrawn,
     dragOverClassId,
     handleDragStart,
     handleDragOver,
@@ -1009,12 +1015,36 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     setShowHoldStudents={setShowHoldStudents}
                     showWithdrawnStudents={showWithdrawnStudents}
                     setShowWithdrawnStudents={setShowWithdrawnStudents}
+                    withdrawnAllExpanded={withdrawnAllExpanded}
+                    onToggleAllWithdrawn={onToggleAllWithdrawn}
                     cellSize={cellSize}
                     setCellSize={setCellSize}
                     fontSize={fontSize}
                     setFontSize={setFontSize}
                     // 이미지 저장 (모든 viewType에서 사용 가능)
                     onExportImage={() => setIsExportModalOpen(true)}
+                    // 엑셀 저장 (수학 기본뷰 = teacher viewType 한정)
+                    onExportExcel={viewType === 'teacher' ? async () => {
+                        try {
+                            const { exportMathTimetableToExcel } = await import('./Math/utils/excelExport');
+                            await exportMathTimetableToExcel({
+                                weekLabel,
+                                filteredClasses,
+                                allResources,
+                                orderedSelectedDays,
+                                weekDates,
+                                teachers,
+                                currentPeriods,
+                                studentMap,
+                                subjectFilter: currentSubjectFilter,
+                                showHoldStudents,
+                                showWithdrawnStudents,
+                            });
+                        } catch (err) {
+                            console.error('엑셀 저장 실패:', err);
+                            alert('엑셀 저장에 실패했습니다. 콘솔을 확인해주세요.');
+                        }
+                    } : undefined}
                     // 통합뷰 전용 props
                     integrationDisplayOptions={viewType === 'class' ? mathIntegrationSettings.displayOptions : undefined}
                     onIntegrationDisplayOptionsChange={viewType === 'class' ? handleIntegrationDisplayOptionChange : undefined}
@@ -1071,6 +1101,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         showStudents={showStudents}
                         showHoldStudents={showHoldStudents}
                         showWithdrawnStudents={showWithdrawnStudents}
+                        withdrawnAllExpanded={withdrawnAllExpanded}
+                        withdrawnSyncToken={withdrawnSyncToken}
                         dragOverClassId={dragOverClassId}
                         onClassClick={handleClassClick}
                         onDragStart={handleGridDragStart}
@@ -1126,6 +1158,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         showStudents={showStudents}
                         showHoldStudents={showHoldStudents}
                         showWithdrawnStudents={showWithdrawnStudents}
+                        withdrawnAllExpanded={withdrawnAllExpanded}
+                        withdrawnSyncToken={withdrawnSyncToken}
                         dragOverClassId={dragOverClassId}
                         onClassClick={handleClassClick}
                         onDragStart={handleGridDragStart}
@@ -1178,6 +1212,8 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         showStudents={showStudents}
                         showHoldStudents={showHoldStudents}
                         showWithdrawnStudents={showWithdrawnStudents}
+                        withdrawnAllExpanded={withdrawnAllExpanded}
+                        withdrawnSyncToken={withdrawnSyncToken}
                         dragOverClassId={dragOverClassId}
                         onClassClick={handleClassClick}
                         onDragStart={handleGridDragStart}
@@ -1657,6 +1693,16 @@ const TimetableManagerInner = ({
     const [showHoldStudents, setShowHoldStudents] = useState(viewSettings.showHoldStudents ?? true);
     const [showWithdrawnStudents, setShowWithdrawnStudents] = useState(viewSettings.showWithdrawnStudents ?? true);
 
+    // 퇴원 리스트 전역 토글 (출석 필터의 '퇴원' 버튼이 제어)
+    // - withdrawnAllExpanded: 마지막으로 누른 토글 값 (true=모두 열림, false=모두 닫힘)
+    // - withdrawnSyncToken: 클릭마다 증가, ClassCard가 이 값 변경을 감지해 로컬 상태 동기화
+    const [withdrawnAllExpanded, setWithdrawnAllExpanded] = useState(false);
+    const [withdrawnSyncToken, setWithdrawnSyncToken] = useState(0);
+    const handleToggleAllWithdrawn = useCallback(() => {
+        setWithdrawnAllExpanded(prev => !prev);
+        setWithdrawnSyncToken(t => t + 1);
+    }, []);
+
     // 강의실 필터 (멀티 선택: 본원/바른/고등)
     const [roomFilter, setRoomFilter] = useState<{ main: boolean; barun: boolean; godeung: boolean }>(() => {
         try {
@@ -1673,6 +1719,9 @@ const TimetableManagerInner = ({
     const handleRoomFilterChange = useCallback((type: 'main' | 'barun' | 'godeung', value: boolean) => {
         setRoomFilter(prev => {
             const next = { ...prev, [type]: value };
+            // 시각 통합: 바른+고등 필터를 하나로 묶음 (둘 중 하나 토글 시 동시 적용)
+            if (type === 'godeung') next.barun = value;
+            if (type === 'barun') next.godeung = value;
             storage.setString(STORAGE_KEYS.MATH_ROOM_FILTER, JSON.stringify(next));
             return next;
         });
@@ -1924,14 +1973,17 @@ const TimetableManagerInner = ({
         let base = localClasses.filter(c => c.subject === currentSubjectFilter);
 
 
-        // 강의실 필터 (본원/바른/고등 멀티 선택)
-        if (!roomFilter.main || !roomFilter.barun || !roomFilter.godeung) {
+        // 강의실 필터 (본원/고등 멀티 선택, 바른은 고등에 시각 통합)
+        if (!roomFilter.main || !roomFilter.godeung) {
             base = base.filter(c => {
                 const room = c.room || '';
-                const isBarun = room.startsWith('바른') || room.startsWith('프리미엄');
-                const isGodeung = room.includes('고등');
-                if (isGodeung) return roomFilter.godeung;
-                if (isBarun) return roomFilter.barun;
+                // '고등' 그룹 = 바른+프리미엄+고수 prefix 또는 '고등' 포함
+                const isGodeungGroup =
+                    room.startsWith('바른') ||
+                    room.startsWith('프리미엄') ||
+                    room.startsWith('고수') ||
+                    room.includes('고등');
+                if (isGodeungGroup) return roomFilter.godeung;
                 return roomFilter.main;
             });
         }
@@ -2548,6 +2600,9 @@ const TimetableManagerInner = ({
                 setShowHoldStudents={setShowHoldStudents}
                 showWithdrawnStudents={showWithdrawnStudents}
                 setShowWithdrawnStudents={setShowWithdrawnStudents}
+                withdrawnAllExpanded={withdrawnAllExpanded}
+                withdrawnSyncToken={withdrawnSyncToken}
+                onToggleAllWithdrawn={handleToggleAllWithdrawn}
                 dragOverClassId={dragOverClassId}
                 handleDragStart={handleDragStart}
                 handleDragOver={handleDragOver}
