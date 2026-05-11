@@ -51,7 +51,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
 
   // ==================== 공통 상태 ====================
   const [isEditMode, setIsEditMode] = useState(false);
-  const [activeViewTab, setActiveViewTab] = useState<ViewTabType>('schedule');
+  const [activeViewTab, setActiveViewTab] = useState<ViewTabType>('info');
   const [activeEditTab, setActiveEditTab] = useState<EditTabType>('info');
   const [showHandoverModal, setShowHandoverModal] = useState(false);
 
@@ -479,9 +479,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
           textColor: trimmedTxt ? trimmedTxt : null,
         };
 
-        console.log('[DEBUG ClassDetailModal] mutation 호출:', updateData);
         await updateClassMutation.mutateAsync(updateData);
-        console.log('[DEBUG ClassDetailModal] mutation 완료. classId:', classInfo.id);
 
         const hasStudentChanges = studentsToAdd.size > 0 || studentsToRemove.size > 0 || Object.keys(studentAttendanceDays).length > 0 || Object.keys(studentUnderlines).length > 0 || Object.keys(studentSlotTeachers).length > 0 || Object.keys(studentEnrollmentDates).length > 0;
         if (hasStudentChanges) {
@@ -599,7 +597,7 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                   </button>
                 )}
                 {canEdit && (
-                  <button onClick={() => { setActiveEditTab('schedule'); setIsEditMode(true); }} disabled={isPending} className="bg-accent hover:bg-[#e5a60f] text-primary px-1.5 py-0.5 text-xs font-semibold disabled:opacity-50 transition-colors flex items-center gap-1">
+                  <button onClick={() => { setActiveEditTab('info'); setIsEditMode(true); }} disabled={isPending} className="bg-accent hover:bg-[#e5a60f] text-primary px-1.5 py-0.5 text-xs font-semibold disabled:opacity-50 transition-colors flex items-center gap-1">
                     <Edit className="w-3 h-3" />수정
                   </button>
                 )}
@@ -659,11 +657,11 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
         <div className="flex items-center gap-4 px-2 py-1 border-b border-gray-200 bg-white">
           {isEditMode ? (
             <>
-              <button onClick={() => setActiveEditTab('schedule')} className={`flex items-center gap-1 text-xs font-medium transition-colors ${activeEditTab === 'schedule' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
-                <Calendar className="w-3 h-3" />스케줄
-              </button>
               <button onClick={() => setActiveEditTab('info')} className={`flex items-center gap-1 text-xs font-medium transition-colors ${activeEditTab === 'info' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
                 <BookOpen className="w-3 h-3" />수업정보
+              </button>
+              <button onClick={() => setActiveEditTab('schedule')} className={`flex items-center gap-1 text-xs font-medium transition-colors ${activeEditTab === 'schedule' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
+                <Calendar className="w-3 h-3" />스케줄
               </button>
               <button onClick={() => !isSimulationMode && setActiveEditTab('students')} disabled={isSimulationMode} className={`flex items-center gap-1 text-xs font-medium transition-colors ${activeEditTab === 'students' ? 'text-primary' : isSimulationMode ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-gray-600'}`}>
                 <Users className="w-3 h-3" />학생({finalStudentCount})
@@ -671,11 +669,11 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
             </>
           ) : (
             <>
-              <button onClick={() => setActiveViewTab('schedule')} className={`flex items-center gap-1 text-xs font-medium transition-colors ${activeViewTab === 'schedule' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
-                <Calendar className="w-3 h-3" />스케줄
-              </button>
               <button onClick={() => setActiveViewTab('info')} className={`flex items-center gap-1 text-xs font-medium transition-colors ${activeViewTab === 'info' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
                 <BookOpen className="w-3 h-3" />수업정보
+              </button>
+              <button onClick={() => setActiveViewTab('schedule')} className={`flex items-center gap-1 text-xs font-medium transition-colors ${activeViewTab === 'schedule' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
+                <Calendar className="w-3 h-3" />스케줄
               </button>
               <button onClick={() => setActiveViewTab('students')} className={`flex items-center gap-1 text-xs font-medium transition-colors ${activeViewTab === 'students' ? 'text-primary' : 'text-gray-400 hover:text-gray-600'}`}>
                 <Users className="w-3 h-3" />학생({classDetail?.studentCount || studentCount || 0})
@@ -1266,6 +1264,33 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                       <div className="flex items-center gap-2 px-1.5 py-0.5">
                         <span className="w-12 shrink-0 text-xs font-medium text-primary-700">교실</span>
                         <span className="flex-1 text-xs text-primary">{roomDisplay || '-'}</span>
+                      </div>
+                      <div className="flex items-center gap-2 px-1.5 py-0.5">
+                        <span className="w-12 shrink-0 text-xs font-medium text-primary-700">색상</span>
+                        <div className="flex-1 flex items-center gap-2 flex-wrap">
+                          {effectiveClassInfo.bgColor ? (
+                            <>
+                              <div className="flex items-center gap-1">
+                                <span className="text-xxs text-gray-500">배경</span>
+                                <div className="w-5 h-5 rounded border border-gray-300" style={{ backgroundColor: effectiveClassInfo.bgColor }} title="배경색" />
+                                <span className="text-xxs text-gray-500 font-mono">{effectiveClassInfo.bgColor}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-xxs text-gray-500">글자</span>
+                                <div className="w-5 h-5 rounded border border-gray-300" style={{ backgroundColor: effectiveClassInfo.textColor || '#111827' }} title="글자색" />
+                                <span className="text-xxs text-gray-500 font-mono">{effectiveClassInfo.textColor || '#111827'}</span>
+                              </div>
+                              <span
+                                className="px-1.5 py-0.5 text-xs font-bold rounded border border-gray-200"
+                                style={{ backgroundColor: effectiveClassInfo.bgColor, color: effectiveClassInfo.textColor || '#111827' }}
+                              >
+                                {classInfo.className}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-xs text-gray-400">미설정 (기본 회색)</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

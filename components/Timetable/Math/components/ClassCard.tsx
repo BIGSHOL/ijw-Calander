@@ -582,14 +582,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
     }, [cls.studentList, latestTextbook, latestReports]);
     // 색상 결정: 수업별 직접 색상 사용 (없으면 기본 회색)
     const matchedKeyword = useMemo(() => {
-        if (cls.className?.includes('CR1C')) {
-            console.log('[DEBUG ClassCard] cls:', { className: cls.className, bgColor: cls.bgColor, textColor: cls.textColor, id: cls.id });
-        }
         if (cls.bgColor) {
             return { bgColor: cls.bgColor, textColor: cls.textColor || '#111827' } as { bgColor: string; textColor: string };
         }
         return null;
-    }, [cls.bgColor, cls.textColor, cls.className, cls.id]);
+    }, [cls.bgColor, cls.textColor]);
     const hasSearchMatch = searchQuery && cls.studentList?.some(s => s.name.includes(searchQuery));
 
     // 엑셀 모드: 이 카드에 선택된 학생이 있는지 확인 (테두리 드래그용)
