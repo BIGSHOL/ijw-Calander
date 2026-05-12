@@ -1477,8 +1477,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
                         </div>
 
-                        {/* 대기 + 퇴원 (스크롤 영역 바깥, 셀 하단 고정) */}
-                        {(showHoldStudents || showWithdrawnStudents) && (
+                        {/* 대기 + 퇴원 (스크롤 영역 바깥, 셀 하단 고정)
+                            퇴원은 토글 OFF 여도 DOM 유지 (display:none) — 토글 ON 즉시 표시 */}
+                        {(showHoldStudents || commonStudents.withdrawnFuture.length > 0 || commonStudents.withdrawn.length > 0) && (
                             <div className="flex-shrink-0 overflow-visible">
                                 {showHoldStudents && allMergedHoldStudents.length > 0 && (
                                     <div className="px-0.5 py-0 bg-pink-50 border-b border-pink-200">
@@ -1542,10 +1543,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         </ul>
                                     </div>
                                 )}
-                                {showWithdrawnStudents && commonStudents.withdrawn.length > 0 && (
+                                {commonStudents.withdrawn.length > 0 && (
                                     <div className="px-0.5 py-0 bg-gray-100">
-                                        <div className={`${fontSizeClass} font-bold text-gray-600 overflow-hidden whitespace-nowrap`}>{commonStudents.withdrawn.length}명 - 퇴원</div>
-                                        <ul className="flex flex-col gap-0 list-none">
+                                        <div className={`${fontSizeClass} font-bold text-gray-600 overflow-hidden whitespace-nowrap`}>{showWithdrawnStudents ? '▼' : '▶'} {commonStudents.withdrawn.length}명 - 퇴원</div>
+                                        {showWithdrawnStudents && <ul className="flex flex-col gap-0 list-none">
                                             {commonStudents.withdrawn.map(s => {
                                                 let text = s.name;
                                                 if (showSchool || showGrade) {
@@ -1570,7 +1571,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     </li>
                                                 );
                                             })}
-                                        </ul>
+                                        </ul>}
                                     </div>
                                 )}
                             </div>
@@ -1758,11 +1759,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                     </div>
                                 )}
 
-                                {/* 퇴원생 Section */}
-                                {showWithdrawnStudents && withdrawnStudents.length > 0 && (
+                                {/* 퇴원생 Section — 헤더는 항상 표시, 리스트만 showWithdrawnStudents로 토글 */}
+                                {withdrawnStudents.length > 0 && (
                                     <div className="px-0.5 py-0 bg-gray-100">
-                                        <div className={`${fontSizeClass} font-bold text-gray-600 overflow-hidden whitespace-nowrap`}>{withdrawnStudents.length}명 - 퇴원</div>
-                                        <ul className="flex flex-col gap-0 list-none">
+                                        <div className={`${fontSizeClass} font-bold text-gray-600 overflow-hidden whitespace-nowrap`}>{showWithdrawnStudents ? '▼' : '▶'} {withdrawnStudents.length}명 - 퇴원</div>
+                                        {showWithdrawnStudents && <ul className="flex flex-col gap-0 list-none">
                                             {withdrawnStudents.map(s => {
                                                 let text = s.name;
                                                 if (showSchool || showGrade) {
@@ -1786,7 +1787,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                     </li>
                                                 );
                                             })}
-                                        </ul>
+                                        </ul>}
                                     </div>
                                 )}
                             </div>
