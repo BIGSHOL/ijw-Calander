@@ -1,9 +1,7 @@
 import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import {
-  DollarSign, Plus, Upload, ArrowLeft, Loader2, AlertCircle, Link2, Cloud, CheckSquare,
+  DollarSign, Plus, Upload, ArrowLeft, Loader2, AlertCircle, Link2, Cloud, Clock,
 } from 'lucide-react';
-import { collection, getCountFromServer } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
 import { ColumnFilter } from '../Common/ColumnFilter';
 import { Pagination } from '../Common/Pagination';
 import { BillingForm } from './BillingForm';
@@ -20,8 +18,8 @@ const BillingImportModal = lazy(() =>
 const MakeEduBillingSyncModal = lazy(() =>
   import('./MakeEduBillingSyncModal').then(m => ({ default: m.MakeEduBillingSyncModal })),
 );
-const MakeEduBillingReviewModal = lazy(() =>
-  import('./MakeEduBillingReviewModal').then(m => ({ default: m.MakeEduBillingReviewModal })),
+const MakeEduBillingHistoryModal = lazy(() =>
+  import('./MakeEduBillingHistoryModal').then(m => ({ default: m.MakeEduBillingHistoryModal })),
 );
 
 interface BillingManagerProps {
@@ -63,19 +61,8 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile, onNavigate
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isMakeEduSyncOpen, setIsMakeEduSyncOpen] = useState(false);
-  const [isMakeEduReviewOpen, setIsMakeEduReviewOpen] = useState(false);
-  const [pendingCount, setPendingCount] = useState(0);
+  const [isMakeEduHistoryOpen, setIsMakeEduHistoryOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<UnifiedStudent | null>(null);
-
-  const refreshPendingCount = async () => {
-    try {
-      const snap = await getCountFromServer(collection(db, 'billing_makeedu_pending'));
-      setPendingCount(snap.data().count);
-    } catch {
-      // count() 미지원 환경 대비 — 무시
-    }
-  };
-  useEffect(() => { refreshPendingCount(); }, []);
 
   // 컬럼 필터 (Set으로 변환)
   const columnFilters = useMemo(() => {
@@ -250,23 +237,17 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile, onNavigate
               <button
                 onClick={() => setIsMakeEduSyncOpen(true)}
                 className="inline-flex items-center gap-2 px-3 py-2 rounded-sm border border-blue-600 text-blue-600 text-sm hover:bg-blue-50 transition-colors"
-                title="메이크에듀 상세수납 페이지에서 직접 가져옴"
               >
                 <Cloud className="w-4 h-4" />
                 MakeEdu 동기화
               </button>
               <button
-                onClick={() => setIsMakeEduReviewOpen(true)}
-                className="relative inline-flex items-center gap-2 px-3 py-2 rounded-sm border border-amber-600 text-amber-700 text-sm hover:bg-amber-50 transition-colors"
-                title="동기화된 데이터를 검토 후 실 수납에 반영"
+                onClick={() => setIsMakeEduHistoryOpen(true)}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-sm border border-gray-300 text-gray-700 text-sm hover:bg-gray-50 transition-colors"
+                title="자동/수동 동기화 실행 내역 (최근 20건)"
               >
-                <CheckSquare className="w-4 h-4" />
-                검토 후 반영
-                {pendingCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-amber-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                    {pendingCount > 99 ? '99+' : pendingCount}
-                  </span>
-                )}
+                <Clock className="w-4 h-4" />
+                동기화 내역
               </button>
               <button
                 onClick={() => setIsImportOpen(true)}
@@ -333,16 +314,15 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile, onNavigate
           <Suspense fallback={null}>
             <MakeEduBillingSyncModal
               isOpen={isMakeEduSyncOpen}
-              onClose={() => { setIsMakeEduSyncOpen(false); refreshPendingCount(); }}
-              onSyncComplete={() => { refreshPendingCount(); }}
+              onClose={() => setIsMakeEduSyncOpen(false)}
             />
           </Suspense>
         )}
-        {isMakeEduReviewOpen && (
+        {isMakeEduHistoryOpen && (
           <Suspense fallback={null}>
-            <MakeEduBillingReviewModal
-              isOpen={isMakeEduReviewOpen}
-              onClose={() => { setIsMakeEduReviewOpen(false); refreshPendingCount(); }}
+            <MakeEduBillingHistoryModal
+              isOpen={isMakeEduHistoryOpen}
+              onClose={() => setIsMakeEduHistoryOpen(false)}
             />
           </Suspense>
         )}
@@ -379,21 +359,15 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile, onNavigate
             <button
               onClick={() => setIsMakeEduSyncOpen(true)}
               className="inline-flex items-center gap-2 px-3 py-2 rounded-sm border border-blue-600 text-blue-600 text-sm hover:bg-blue-50 transition-colors"
-              title="메이크에듀 상세수납 페이지에서 직접 가져옴"
             >
               <Cloud className="w-4 h-4" /> MakeEdu 동기화
             </button>
             <button
-              onClick={() => setIsMakeEduReviewOpen(true)}
-              className="relative inline-flex items-center gap-2 px-3 py-2 rounded-sm border border-amber-600 text-amber-700 text-sm hover:bg-amber-50 transition-colors"
-              title="동기화된 데이터를 검토 후 실 수납에 반영"
+              onClick={() => setIsMakeEduHistoryOpen(true)}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-sm border border-gray-300 text-gray-700 text-sm hover:bg-gray-50 transition-colors"
+              title="자동/수동 동기화 실행 내역 (최근 20건)"
             >
-              <CheckSquare className="w-4 h-4" /> 검토 후 반영
-              {pendingCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-amber-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                  {pendingCount > 99 ? '99+' : pendingCount}
-                </span>
-              )}
+              <Clock className="w-4 h-4" /> 동기화 내역
             </button>
             <button
               onClick={() => setIsImportOpen(true)}
@@ -763,16 +737,15 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile, onNavigate
         <Suspense fallback={null}>
           <MakeEduBillingSyncModal
             isOpen={isMakeEduSyncOpen}
-            onClose={() => { setIsMakeEduSyncOpen(false); refreshPendingCount(); }}
-            onSyncComplete={() => { refreshPendingCount(); }}
+            onClose={() => setIsMakeEduSyncOpen(false)}
           />
         </Suspense>
       )}
-      {isMakeEduReviewOpen && (
+      {isMakeEduHistoryOpen && (
         <Suspense fallback={null}>
-          <MakeEduBillingReviewModal
-            isOpen={isMakeEduReviewOpen}
-            onClose={() => { setIsMakeEduReviewOpen(false); refreshPendingCount(); }}
+          <MakeEduBillingHistoryModal
+            isOpen={isMakeEduHistoryOpen}
+            onClose={() => setIsMakeEduHistoryOpen(false)}
           />
         </Suspense>
       )}

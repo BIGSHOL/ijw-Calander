@@ -8389,11 +8389,23 @@ exports.scrapeMakeEduBillings = functions
     .https.onCall(async (data, context) => {
         const fromYm = String(data?.fromYm || '').replace(/[^0-9]/g, '');
         const toYm = String(data?.toYm || '').replace(/[^0-9]/g, '') || fromYm;
-        logger.info(`[scrapeMakeEduBillings] onCall fromYm=${fromYm}, toYm=${toYm}`);
+        const uid = context.auth?.uid || null;
+        logger.info(`[scrapeMakeEduBillings] onCall fromYm=${fromYm}, toYm=${toYm}, uid=${uid}`);
         try {
             const result = await scrapeMakeEduBillingsInternal(fromYm, toYm);
-            const meta = { fromYm, toYm, type: 'manual', triggeredBy: context.auth?.uid || null };
+            const meta = { fromYm, toYm, type: 'manual', triggeredBy: uid };
             const writeRes = await writePendingBillings(result.rows, meta);
+            // 동기화 내역 로그 (수동)
+            await db.collection("makeEduBillingSyncLogs").add({
+                type: "manual",
+                success: true,
+                fromYm,
+                toYm,
+                totalRows: result.totalRows,
+                saved: writeRes.saved,
+                triggeredBy: uid,
+                executedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
             return {
                 ok: true,
                 totalRows: result.totalRows,
@@ -8403,6 +8415,15 @@ exports.scrapeMakeEduBillings = functions
             };
         } catch (error) {
             logger.error("[scrapeMakeEduBillings] Error:", error);
+            await db.collection("makeEduBillingSyncLogs").add({
+                type: "manual",
+                success: false,
+                fromYm,
+                toYm,
+                error: (error && error.message) || String(error),
+                triggeredBy: uid,
+                executedAt: admin.firestore.FieldValue.serverTimestamp(),
+            }).catch(() => {});
             if (error.code) throw error;
             throw new functions.https.HttpsError("internal", error.message || "상세수납 크롤링 실패");
         }
