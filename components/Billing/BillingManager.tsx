@@ -110,18 +110,12 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
   // billing record를 학생 정보로 보강 (school·teacher 매칭)
   // - 우선순위: studentId → name+grade → name 단일 매치
   // - record에 이미 값이 있으면 그 값 우선 (수동 편집 보호)
-  // - 담임강사 매칭 우선순위:
-  //   1) 청구명 끝의 "(강사명)" 직접 명시 (예: 교재비)
-  //   2) 학생 enrollments에서 청구명과 매칭되는 수업의 teacher
-  //   3) fallback: 활성 enrollment 강사들 " / " 결합
+  // - 담임강사 매칭:
+  //   · 카테고리가 'other' (수업료) 인 경우만 매칭 시도
+  //   · 교재/시스템사용료/스쿨버스비는 빈값 ("-") 유지
+  //   · 수업료 매칭: enrollment 와 청구명 비교 (exact → 정규화 → 부분포함 → 코드매칭)
+  //   · 매칭 실패 시 전체 활성 enrollment 강사 " / " 결합 (fallback)
   const records = useMemo<BillingRecord[]>(() => {
-    // 청구명 끝의 "(강사명)" 추출 (한글 2~4자)
-    const extractTeacherFromParen = (name: string): string | null => {
-      if (!name) return null;
-      const m = name.match(/\(([가-힣]{2,4})\)\s*$/);
-      return m ? m[1] : null;
-    };
-
     // 수업 코드 추출 (MS2B, JJ2I, CR1D 같은 패턴: 대문자2~4 + 숫자1~2 + 선택 대문자1)
     const extractClassCode = (name: string): string | null => {
       if (!name) return null;
@@ -181,21 +175,22 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
       }
       if (!matched) return r;
 
-      const enrollments = (matched.enrollments || []).filter(e => !e.endDate);
+      // 비수업 카테고리(교재/시스템사용료/스쿨버스비)는 담임강사 매칭 스킵
+      // — 수업과 무관한 청구라 매칭이 의미 없음
+      const category = classifyBillingCategory(r.billingName);
+      const isClassRelated = category === 'other';
 
-      // 1순위: 청구명 괄호 안 강사 (가장 명시적)
-      let teacherStr = extractTeacherFromParen(r.billingName);
-
-      // 2순위: 청구명 ↔ enrollment 매칭
-      if (!teacherStr) {
+      let teacherStr: string | null = null;
+      if (isClassRelated) {
+        const enrollments = (matched.enrollments || []).filter(e => !e.endDate);
+        // 1순위: 청구명 ↔ enrollment 매칭 (수업 코드/이름 정확 매칭)
         teacherStr = findMatchingTeacher(r.billingName, enrollments);
-      }
-
-      // 3순위 (fallback): 전체 활성 enrollment 강사 결합
-      if (!teacherStr) {
-        const teacherSet = new Set<string>();
-        enrollments.forEach(e => { if (e.teacher) teacherSet.add(e.teacher); });
-        teacherStr = Array.from(teacherSet).join(' / ');
+        // 2순위 (fallback): 전체 활성 enrollment 강사 결합 — 매칭 실패한 수업료
+        if (!teacherStr) {
+          const teacherSet = new Set<string>();
+          enrollments.forEach(e => { if (e.teacher) teacherSet.add(e.teacher); });
+          teacherStr = Array.from(teacherSet).join(' / ') || null;
+        }
       }
 
       return {
