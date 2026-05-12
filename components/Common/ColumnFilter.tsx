@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 
 interface Props {
   values: string[];
@@ -32,18 +33,49 @@ export const ColumnFilter: React.FC<Props> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const ref = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // 외부 클릭 시 닫기
+  // 드롭다운 위치 — viewport 좌표 (fixed). 부모 overflow 클립 회피용 portal 렌더링.
+  const [pos, setPos] = useState<{ top: number; left?: number; right?: number } | null>(null);
+
+  useEffect(() => {
+    if (!open || !buttonRef.current) {
+      setPos(null);
+      return;
+    }
+    const rect = buttonRef.current.getBoundingClientRect();
+    if (align === 'right') {
+      setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    } else {
+      setPos({ top: rect.bottom + 4, left: rect.left });
+    }
+  }, [open, align]);
+
+  // 외부 클릭 시 닫기 — portal 드롭다운까지 포함
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-        setSearch('');
-      }
+      const target = e.target as Node;
+      if (buttonRef.current?.contains(target)) return;
+      if (dropdownRef.current?.contains(target)) return;
+      setOpen(false);
+      setSearch('');
     };
     if (open) document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  // 스크롤/리사이즈 시 닫기 (위치 어긋남 방지)
+  useEffect(() => {
+    if (!open) return;
+    const close = () => { setOpen(false); setSearch(''); };
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
   }, [open]);
 
   const uniqueValues = useMemo(
@@ -87,8 +119,9 @@ export const ColumnFilter: React.FC<Props> = ({
   };
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={wrapperRef} className="relative">
       <button
+        ref={buttonRef}
         onClick={() => setOpen(!open)}
         className={`flex items-center gap-1 px-2 py-1.5 font-medium select-none whitespace-nowrap hover:text-gray-700 ${
           align === 'right' ? 'justify-end w-full' : align === 'center' ? 'justify-center w-full' : ''
@@ -101,11 +134,15 @@ export const ColumnFilter: React.FC<Props> = ({
         {hasFilter && <span className="w-1.5 h-1.5 rounded-sm bg-blue-500 ml-0.5" />}
       </button>
 
-      {open && (
+      {open && pos && createPortal(
         <div
-          className={`absolute top-full mt-1 z-50 w-64 rounded-sm border border-gray-200 bg-white shadow-lg ${
-            align === 'right' ? 'right-0' : 'left-0'
-          }`}
+          ref={dropdownRef}
+          style={{
+            position: 'fixed',
+            top: pos.top,
+            ...(pos.right !== undefined ? { right: pos.right } : { left: pos.left }),
+          }}
+          className="z-[200] w-64 rounded-sm border border-gray-200 bg-white shadow-lg"
         >
           {/* 정렬 */}
           <div className="border-b border-gray-200 p-1">
@@ -182,7 +219,8 @@ export const ColumnFilter: React.FC<Props> = ({
               확인
             </button>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
