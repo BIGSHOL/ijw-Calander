@@ -1303,7 +1303,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 onDrop(e, cls.id, 'common');
                             }}
                         >
-                            <div className={`${fontSizeClass} font-bold text-indigo-600 mb-0 overflow-hidden whitespace-nowrap`}>{commonStudents.active.length + partialActiveCount}명 - 재원생</div>
+                            <div className={`${fontSizeClass} text-indigo-600 mb-0 overflow-hidden whitespace-nowrap`}><span className="font-bold">{commonStudents.active.length + partialActiveCount}명</span> - 재원생</div>
                             <ul className="flex flex-col gap-0 min-w-0 list-none">
                                 {commonStudents.active.map(s => {
                                     const isHighlighted = !!(searchQuery && s.name.includes(searchQuery));
@@ -1609,7 +1609,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 ) : (
                     <div className="flex-1 flex flex-col min-w-0 min-h-0">
                         <div className="flex-1 px-0.5 py-0.5 min-w-0 min-h-0 overscroll-auto">
-                            <div className={`${fontSizeClass} font-bold text-indigo-600 mb-0 overflow-hidden whitespace-nowrap`}>{activeStudents.length}명 - 재원생</div>
+                            <div className={`${fontSizeClass} text-indigo-600 mb-0 overflow-hidden whitespace-nowrap`}><span className="font-bold">{activeStudents.length}명</span> - 재원생</div>
                             <ul className="flex flex-col min-w-0 list-none">
                                 {activeStudents.map(s => {
                                     const isHighlighted = !!(searchQuery && s.name.includes(searchQuery));
