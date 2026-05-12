@@ -1024,10 +1024,10 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                             <button
                                 onClick={() => setIsViewDropdownOpen(!isViewDropdownOpen)}
                                 className="px-2 py-1 border border-white/20 rounded-sm text-xs font-medium text-gray-300 hover:bg-white/10 transition-colors flex items-center gap-1"
-                                title="보기 설정"
+                                title="필터"
                             >
                                 <SlidersHorizontal size={12} />
-                                보기
+                                필터
                             </button>
                             {isViewDropdownOpen && (
                                 <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-sm shadow-lg z-50 w-[320px] max-h-[500px] overflow-y-auto">
@@ -1038,13 +1038,13 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                             <div className="flex gap-1">
                                                 <button
                                                     onClick={() => onRoomFilterChange('main', !roomFilter.main)}
-                                                    className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${roomFilter.main ? 'bg-blue-500 text-white border-blue-500' : 'bg-gray-100 text-gray-400 border-gray-200'}`}
+                                                    className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${roomFilter.main ? 'bg-gray-700 text-white border-gray-700' : 'bg-gray-100 text-gray-400 border-gray-200'}`}
                                                 >
                                                     본원
                                                 </button>
                                                 <button
                                                     onClick={() => onRoomFilterChange('godeung', !roomFilter.godeung)}
-                                                    className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${roomFilter.godeung ? 'bg-purple-500 text-white border-purple-500' : 'bg-gray-100 text-gray-400 border-gray-200'}`}
+                                                    className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${roomFilter.godeung ? 'bg-gray-700 text-white border-gray-700' : 'bg-gray-100 text-gray-400 border-gray-200'}`}
                                                 >
                                                     고등
                                                 </button>
@@ -1063,7 +1063,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                         onClick={() => onStudentFilterChange({ ...studentFilter, shuttle: val })}
                                                         className={`flex-1 py-1.5 px-2 rounded-sm text-xxs font-bold border ${
                                                             studentFilter.shuttle === val
-                                                                ? 'bg-yellow-400 text-yellow-900 border-yellow-500'
+                                                                ? 'bg-gray-700 text-white border-gray-700'
                                                                 : 'bg-gray-100 text-gray-400 border-gray-200'
                                                         }`}
                                                     >
