@@ -639,25 +639,27 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
         <div className="flex flex-col flex-shrink-0 min-w-0">
             {/* Main Header Row */}
             <div className={`bg-primary min-h-[2.5rem] flex items-center gap-3 pl-4 border-b border-gray-700 text-xs min-w-0 flex-wrap py-1 overflow-visible ${isSimulationMode ? 'bg-orange-900 border-orange-700' : ''}`}>
-                {/* Subject & View Controls */}
+                {/* Subject & View Controls — readonly-allow: 시간표 테스트에서도 클릭 가능 */}
                 {timetableSubject && setTimetableSubject && hasPermission && (
-                    <SubjectControls
-                        timetableSubject={timetableSubject}
-                        setTimetableSubject={setTimetableSubject}
-                        viewType={viewType}
-                        setTimetableViewType={setTimetableViewType}
-                        mathViewMode={mathViewMode}
-                        setMathViewMode={setMathViewMode}
-                        hasPermission={hasPermission}
-                        setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
-                        userDepartments={userDepartments}
-                        isMaster={isMaster}
-                        onMakeEduSyncOpen={onMakeEduSyncOpen}
-                    />
+                    <div className="readonly-allow flex items-center">
+                        <SubjectControls
+                            timetableSubject={timetableSubject}
+                            setTimetableSubject={setTimetableSubject}
+                            viewType={viewType}
+                            setTimetableViewType={setTimetableViewType}
+                            mathViewMode={mathViewMode}
+                            setMathViewMode={setMathViewMode}
+                            hasPermission={hasPermission}
+                            setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
+                            userDepartments={userDepartments}
+                            isMaster={isMaster}
+                            onMakeEduSyncOpen={onMakeEduSyncOpen}
+                        />
+                    </div>
                 )}
 
-                {/* Left: Week Info */}
-                <div className="flex items-center gap-3 flex-shrink-0">
+                {/* Left: Week Info — readonly-allow: 주차 화살표 + 통계 드롭다운(조회용) 클릭 가능 */}
+                <div className="readonly-allow flex items-center gap-3 flex-shrink-0">
                     <span className="text-gray-300 font-medium w-[14em] flex-shrink-0">{weekLabel}</span>
                     <div className="flex items-center gap-1">
                         <button

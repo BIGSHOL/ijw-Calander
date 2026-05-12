@@ -13,7 +13,7 @@
  * ║     을 stub하여 격리해야 함. 그 전까지는 상단 빨간 배너로 경고 표시.  ║
  * ╚══════════════════════════════════════════════════════════════════════╝
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Eye } from 'lucide-react';
 import { UserProfile, StaffMember, TimetableSubjectType } from '../../types';
 import TimetableManager from './TimetableManager';
@@ -25,7 +25,7 @@ interface TimetableTestProps {
   staffMember?: StaffMember;
 }
 
-// 편집/수정 관련 권한 — 테스트 모드에서 false 강제
+// 편집/수정 관련 권한 — 테스트 모드에서 false 강제 (다중방어 #1)
 const EDIT_PERMISSION_PATTERNS = [
   '.edit', '.create', '.delete', '.manage', '.update', '.move',
   '.approve', '.assign', '.bucket', '.drag', '.handover',
@@ -53,13 +53,22 @@ const TimetableTest: React.FC<TimetableTestProps> = ({ currentUser }) => {
     };
   }, [hasPermission]);
 
+  // 다중방어 #2: pointer-events:none 으로 main#main-content 전체 차단
+  // 예외: .readonly-allow 클래스 가진 요소만 클릭 가능 (주차 네비, 과목/뷰 토글, 학생 통계 드롭다운)
+  useEffect(() => {
+    document.body.classList.add('timetable-readonly');
+    return () => {
+      document.body.classList.remove('timetable-readonly');
+    };
+  }, []);
+
   return (
     <div className="w-full h-full flex flex-col min-h-0">
       {/* READ-ONLY 안내 배너 */}
-      <div className="flex-shrink-0 bg-blue-600 text-white px-3 py-1.5 flex items-center gap-2 text-xs font-bold border-b border-blue-800">
+      <div className="flex-shrink-0 bg-blue-600 text-white px-3 py-1.5 flex items-center gap-2 text-xs font-bold border-b border-blue-800 readonly-allow">
         <Eye size={14} />
-        <span>읽기 전용 모드 — 진짜 시간표와 독립된 상태,</span>
-        <span className="text-blue-100">주차 이동·조회·필터는 가능, 편집 작업만 차단됩니다.</span>
+        <span>읽기 전용 모드 — 주차 이동·과목 전환·통계 조회만 가능,</span>
+        <span className="text-blue-100">편집 작업 모두 차단됩니다.</span>
         <span className="ml-auto text-blue-200">리팩토링 검증용</span>
       </div>
 
