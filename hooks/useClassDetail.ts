@@ -77,12 +77,39 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
         where('className', '==', className)
       );
       const studentsQuery = query(collection(db, 'students'));
+      // Audit fallback: 기존 데이터용 timetable_logs 조회 (audit 필드 없는 enrollment 대비)
+      const logsQuery = query(
+        collection(db, 'timetable_logs'),
+        where('subject', '==', subject),
+        where('className', '==', className)
+      );
 
-      const [classesSnapshot, enrollmentsSnapshot, studentsSnapshot] = await Promise.all([
+      const [classesSnapshot, enrollmentsSnapshot, studentsSnapshot, logsSnapshot] = await Promise.all([
         getDocs(classesQuery).catch(() => null),
         getDocs(enrollmentsQuery).catch(() => null),
         getDocs(studentsQuery).catch(() => null),
+        getDocs(logsQuery).catch(() => null),
       ]);
+
+      // timetable_logs → 학생별 최신 항목 (action별 분리 - enroll/withdraw)
+      const studentLogLatest: Record<string, { changedBy: string; timestamp: string; action: string }> = {};
+      if (logsSnapshot) {
+        logsSnapshot.docs.forEach(d => {
+          const data = d.data() as any;
+          const sid = data.studentId;
+          if (!sid) return;
+          const ts = data.timestamp;
+          if (!ts) return;
+          const prev = studentLogLatest[sid];
+          if (!prev || ts > prev.timestamp) {
+            studentLogLatest[sid] = {
+              changedBy: data.changedBy || 'unknown',
+              timestamp: ts,
+              action: data.action || '',
+            };
+          }
+        });
+      }
 
       // 1. Process classes data
       if (classesSnapshot && classesSnapshot.docs.length > 0) {
@@ -216,6 +243,26 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
         for (const doc of studentsSnapshot.docs) {
           if (studentIds.has(doc.id)) {
             const data = doc.data() as UnifiedStudent;
+            // Audit fallback: enrollment record에 audit 필드 없으면 timetable_logs 사용
+            let auditName = studentAuditName[doc.id];
+            let auditRole = studentAuditRole[doc.id];
+            let auditAt = studentAuditAt[doc.id];
+            let auditAction = studentAuditAction[doc.id];
+            if (!auditName) {
+              const logEntry = studentLogLatest[doc.id];
+              if (logEntry) {
+                // log의 changedBy는 이메일 또는 displayName — 이메일이면 @ 앞부분만
+                const cb = logEntry.changedBy;
+                auditName = cb.includes('@') ? cb.split('@')[0] : cb;
+                auditAt = logEntry.timestamp;
+                // log action → 우리 enum
+                if (logEntry.action.includes('withdraw')) auditAction = 'withdrawn';
+                else if (logEntry.action.includes('enroll')) auditAction = 'enrolled';
+                else if (logEntry.action.includes('transfer')) auditAction = 'transferred';
+                else if (logEntry.action.includes('restore')) auditAction = 'restored';
+                // role은 알 수 없음 (log에 미저장)
+              }
+            }
             students.push({
               id: doc.id,
               name: data.name,
@@ -230,10 +277,10 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
               isScheduled: studentIsScheduled[doc.id] || false,
               isWithdrawn: studentIsWithdrawn[doc.id] || false,
               withdrawalDate: studentWithdrawalDates[doc.id],
-              lastModifiedByName: studentAuditName[doc.id],
-              lastModifiedByRole: studentAuditRole[doc.id],
-              lastModifiedAt: studentAuditAt[doc.id],
-              lastAction: studentAuditAction[doc.id],
+              lastModifiedByName: auditName,
+              lastModifiedByRole: auditRole,
+              lastModifiedAt: auditAt,
+              lastAction: auditAction,
             });
           }
         }
