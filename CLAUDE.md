@@ -252,6 +252,21 @@ VITE_OLD_FIREBASE_* (레거시 마이그레이션)
 - TypeScript strict: false (유연성)
 - Path alias: `@` = 프로젝트 루트
 
+## 커밋·배포 워크플로우 (필수 준수)
+
+작업 후 배포할 때 반드시 다음 순서로 진행한다 — 다른 디바이스에서 푸시된 최신 커밋과 충돌하지 않도록.
+
+1. **최신 origin 확인**: `git fetch origin` + `git log --oneline -5 HEAD` vs `git log --oneline -5 origin/main`
+2. **로컬이 뒤처져 있으면 머지**:
+   - 로컬 변경분이 commit 안 됐다면: `git stash` → `git pull origin main` → `git stash pop` (충돌 해결)
+   - 로컬에 이미 commit 했다면: `git pull --rebase origin main` (충돌 해결)
+3. **재커밋** (필요 시): 머지 결과를 반영해서 새 커밋 생성 (amend 금지, 새 커밋)
+4. **푸시**: `git push origin main`
+5. **빌드**: `npm run build`
+6. **배포**: `npx firebase deploy --only hosting`
+
+빌드/배포는 build → deploy 순서로만 진행. 빌드 실패 시 deploy 금지.
+
 ## Skills
 
 커스텀 검증 및 유지보수 스킬은 `.claude/skills/`에 정의되어 있습니다.

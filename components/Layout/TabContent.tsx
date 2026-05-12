@@ -380,7 +380,7 @@ export const TabContent: React.FC<TabContentProps> = ({
       ) : appMode === 'billing' ? (
         <Suspense fallback={<TabLoadingFallback />}>
           <div className="w-full flex-1 overflow-hidden">
-            <BillingManager userProfile={effectiveProfile} onNavigateToTextbooks={onNavigateToTab ? () => onNavigateToTab('textbooks') : undefined} />
+            <BillingManager userProfile={effectiveProfile} />
           </div>
         </Suspense>
       ) : appMode === 'daily-attendance' ? (

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import {
-  DollarSign, Plus, Upload, ArrowLeft, Loader2, AlertCircle, Link2, Cloud, Clock,
+  DollarSign, Plus, ArrowLeft, Loader2, AlertCircle, Link2, Cloud, Clock,
 } from 'lucide-react';
 import { ColumnFilter } from '../Common/ColumnFilter';
 import { Pagination } from '../Common/Pagination';
@@ -11,10 +11,6 @@ import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { BillingRecord, UnifiedStudent } from '../../types';
 import StudentDetailModal from '../StudentManagement/StudentDetailModal';
 
-// xlsx 라이브러리 포함 모달은 lazy loading (-60KB gzip)
-const BillingImportModal = lazy(() =>
-  import('./BillingImportModal').then(m => ({ default: m.BillingImportModal })),
-);
 const MakeEduBillingSyncModal = lazy(() =>
   import('./MakeEduBillingSyncModal').then(m => ({ default: m.MakeEduBillingSyncModal })),
 );
@@ -24,7 +20,6 @@ const MakeEduBillingHistoryModal = lazy(() =>
 
 interface BillingManagerProps {
   userProfile?: any;
-  onNavigateToTextbooks?: () => void;
 }
 
 const PAGE_SIZE = 30;
@@ -42,7 +37,7 @@ function formatMonth(m: string): string {
   return `${year}년 ${parseInt(month, 10)}월`;
 }
 
-const BillingManager: React.FC<BillingManagerProps> = ({ userProfile, onNavigateToTextbooks }) => {
+const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
   // ─── Persistent state (localStorage) ───
   const [selectedMonth, setSelectedMonth] = useLocalStorage<string | null>(
     'billing.selectedMonth', null,
@@ -59,7 +54,6 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile, onNavigate
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<BillingRecord>>({});
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isImportOpen, setIsImportOpen] = useState(false);
   const [isMakeEduSyncOpen, setIsMakeEduSyncOpen] = useState(false);
   const [isMakeEduHistoryOpen, setIsMakeEduHistoryOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<UnifiedStudent | null>(null);
@@ -85,7 +79,7 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile, onNavigate
   const { data: monthSummaries = [] } = useBillingMonthSummaries();
 
   // 상세 화면: 선택된 월 records (selectedMonth가 있을 때만 활성)
-  const { records, isLoading, createRecord, updateRecord, deleteRecord, importRecords } =
+  const { records, isLoading, createRecord, updateRecord, deleteRecord } =
     useBilling(selectedMonth || undefined, !!selectedMonth);
 
   const { students } = useStudents(false); // 재원생만
@@ -197,12 +191,6 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile, onNavigate
   };
 
   // ─── Import / Form ───
-  const handleImport = async (parsedRecords: Omit<BillingRecord, 'id'>[], month: string) => {
-    const result = await importRecords.mutateAsync({ records: parsedRecords, month });
-    if (month) setSelectedMonth(month);
-    return result;
-  };
-
   const handleFormSubmit = async (data: Partial<BillingRecord>) => {
     await createRecord.mutateAsync({
       ...data,
@@ -249,13 +237,6 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile, onNavigate
                 <Clock className="w-4 h-4" />
                 동기화 내역
               </button>
-              <button
-                onClick={() => setIsImportOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors"
-              >
-                <Upload className="w-4 h-4" />
-                Excel 업로드
-              </button>
             </div>
           </div>
         </header>
@@ -265,7 +246,7 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile, onNavigate
             <div className="flex flex-col items-center justify-center py-24 text-gray-500">
               <AlertCircle className="w-12 h-12 mb-4 opacity-50" />
               <p>등록된 수납 데이터가 없습니다.</p>
-              <p className="text-sm mt-1">Excel 업로드 버튼을 눌러 데이터를 등록하세요.</p>
+              <p className="text-sm mt-1">MakeEdu 동기화 버튼을 눌러 데이터를 동기화하세요.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-6xl mx-auto">
@@ -296,20 +277,6 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile, onNavigate
         </main>
 
         {/* Modals */}
-        {isImportOpen && (
-          <Suspense fallback={null}>
-            <BillingImportModal
-              isOpen={isImportOpen}
-              onClose={() => setIsImportOpen(false)}
-              onImport={handleImport}
-              onNavigateToTextbooks={onNavigateToTextbooks ? (file: File) => {
-                setIsImportOpen(false);
-                onNavigateToTextbooks();
-                void file;
-              } : undefined}
-            />
-          </Suspense>
-        )}
         {isMakeEduSyncOpen && (
           <Suspense fallback={null}>
             <MakeEduBillingSyncModal
@@ -368,12 +335,6 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile, onNavigate
               title="자동/수동 동기화 실행 내역 (최근 20건)"
             >
               <Clock className="w-4 h-4" /> 동기화 내역
-            </button>
-            <button
-              onClick={() => setIsImportOpen(true)}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-sm border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              <Upload className="w-4 h-4" /> Excel 업로드
             </button>
             <button
               onClick={() => setIsFormOpen(true)}
@@ -718,20 +679,6 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile, onNavigate
           initialData={null}
           selectedMonth={selectedMonth || ''}
         />
-      )}
-      {isImportOpen && (
-        <Suspense fallback={null}>
-          <BillingImportModal
-            isOpen={isImportOpen}
-            onClose={() => setIsImportOpen(false)}
-            onImport={handleImport}
-            onNavigateToTextbooks={onNavigateToTextbooks ? (file: File) => {
-              setIsImportOpen(false);
-              onNavigateToTextbooks();
-              void file;
-            } : undefined}
-          />
-        </Suspense>
       )}
       {isMakeEduSyncOpen && (
         <Suspense fallback={null}>
