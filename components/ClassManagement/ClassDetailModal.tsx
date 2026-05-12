@@ -958,6 +958,20 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                                   <span className={`truncate ${isMarkedForRemoval ? 'text-gray-400' : 'text-gray-800'}`}>{student.name}</span>
                                   <span className="text-[10px] text-gray-400 flex-shrink-0">{formatSchoolGrade(student.school, student.grade)}</span>
                                   {isMath && attendanceDaysText && !isMarkedForRemoval && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium flex-shrink-0">{attendanceDaysText}만</span>}
+                                  {(() => {
+                                    const auditLabel = formatAuditLabel(student);
+                                    if (!auditLabel) return null;
+                                    const actionLabel = actionToLabel(student.lastAction);
+                                    return (
+                                      <span
+                                        className="text-[10px] text-gray-400 ml-auto pr-1 flex-shrink-0"
+                                        onClick={(e) => e.stopPropagation()}
+                                        title={student.lastModifiedAt ? `${actionLabel}: ${student.lastModifiedAt}` : actionLabel}
+                                      >
+                                        {actionLabel && `${actionLabel}: `}{auditLabel}
+                                      </span>
+                                    );
+                                  })()}
                                 </div>
                                 <button type="button" onClick={(e) => { e.stopPropagation(); toggleRemoveStudent(student.id); }} className={`p-1 rounded transition-colors flex-shrink-0 ${isMarkedForRemoval ? 'text-blue-600 hover:bg-blue-100' : 'text-red-500 hover:bg-red-100'}`} title={isMarkedForRemoval ? '제거 취소' : '수업에서 제외'}>
                                   {isMarkedForRemoval ? <span className="text-xs font-medium">취소</span> : <UserMinus size={14} />}
