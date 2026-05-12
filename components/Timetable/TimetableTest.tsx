@@ -14,7 +14,7 @@
  * ╚══════════════════════════════════════════════════════════════════════╝
  */
 import React, { useState, useMemo } from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import { UserProfile, StaffMember, TimetableSubjectType } from '../../types';
 import TimetableManager from './TimetableManager';
 import { useTeachers } from '../../hooks/useFirebaseQueries';
@@ -25,6 +25,16 @@ interface TimetableTestProps {
   staffMember?: StaffMember;
 }
 
+// 편집/수정 관련 권한 — 테스트 모드에서 false 강제
+const EDIT_PERMISSION_PATTERNS = [
+  '.edit', '.create', '.delete', '.manage', '.update', '.move',
+  '.approve', '.assign', '.bucket', '.drag', '.handover',
+];
+
+const isEditPermission = (perm: string): boolean => {
+  return EDIT_PERMISSION_PATTERNS.some(suffix => perm.endsWith(suffix) || perm.includes(suffix + '_'));
+};
+
 const TimetableTest: React.FC<TimetableTestProps> = ({ currentUser }) => {
   // 진짜 시간표와 격리된 독립 상태
   const [subjectTab, setSubjectTab] = useState<TimetableSubjectType | 'shuttle' | 'all'>('math');
@@ -34,23 +44,26 @@ const TimetableTest: React.FC<TimetableTestProps> = ({ currentUser }) => {
 
   const { data: teachers = [] } = useTeachers(true);
 
-  // 권한 체크 함수 — 진짜 시간표와 동일 로직
+  // 권한 체크 함수 — 편집 권한은 모두 false 강제 (조회·이동·드롭다운은 통과)
   const { hasPermission } = usePermissions(currentUser);
   const hasPermissionFn = useMemo(() => {
-    return (perm: string) => hasPermission(perm as any);
+    return (perm: string) => {
+      if (isEditPermission(perm)) return false;
+      return hasPermission(perm as any);
+    };
   }, [hasPermission]);
 
   return (
     <div className="w-full h-full flex flex-col min-h-0">
-      {/* 경고 배너 (Phase 2 전까지) */}
-      <div className="flex-shrink-0 bg-red-600 text-white px-3 py-1.5 flex items-center gap-2 text-xs font-bold border-b border-red-800">
-        <AlertTriangle size={14} />
-        <span>⚠️ 테스트 모드 — 진짜 시간표와 독립된 상태이지만,</span>
-        <span className="text-yellow-200">변경(드래그·저장·삭제)은 실제 데이터에 반영됩니다.</span>
-        <span className="ml-auto text-red-100">읽기만 권장</span>
+      {/* READ-ONLY 안내 배너 */}
+      <div className="flex-shrink-0 bg-blue-600 text-white px-3 py-1.5 flex items-center gap-2 text-xs font-bold border-b border-blue-800">
+        <Eye size={14} />
+        <span>읽기 전용 모드 — 진짜 시간표와 독립된 상태,</span>
+        <span className="text-blue-100">주차 이동·조회·필터는 가능, 편집 작업만 차단됩니다.</span>
+        <span className="ml-auto text-blue-200">리팩토링 검증용</span>
       </div>
 
-      {/* 실제 시간표 임베드 */}
+      {/* 실제 시간표 임베드 (pointer-events:none 적용됨) */}
       <div className="flex-1 min-h-0">
         <TimetableManager
           subjectTab={subjectTab as any}
