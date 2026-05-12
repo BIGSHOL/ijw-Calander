@@ -8020,3 +8020,431 @@ const googleCalendarSync = require("./googleCalendarSync");
 exports.syncEventToGcal = googleCalendarSync.syncEventToGcal;
 exports.triggerGcalSync = googleCalendarSync.triggerGcalSync;
 
+// ============================================================
+// MakeEdu 상세수납(payUnionDeList.do) 크롤링 → billing_makeedu_pending
+// ============================================================
+// Q1: 임시 컬렉션 저장 → 사용자 검토 후 billing으로 반영 (안전 모드)
+// Q2: 반영 시 동일 키(externalStudentId__month__billingName) 덮어쓰기
+// Q3: 자동 동기화 매일 03:00 KST, 당월만
+// Q4: 수동 동기화 fromYm ~ toYm 범위 선택 가능
+
+/**
+ * 상세수납 페이지 스크래핑 (fromYm ~ toYm)
+ * - 셔틀 동기화 패턴 재사용 (login + listSize=500 + fromYm/toYm 설정 + 페이지네이션)
+ * - 모든 컬럼 파싱 (BillingImportModal의 xlsx 매핑과 호환)
+ */
+async function scrapeMakeEduBillingsInternal(fromYm, toYm) {
+    const userId = process.env.MAKEEDU_USERNAME;
+    const userPwd = process.env.MAKEEDU_PASSWORD;
+    if (!userId || !userPwd) {
+        throw new Error("MakeEdu 로그인 정보가 설정되지 않았습니다.");
+    }
+    if (!fromYm || !/^\d{6}$/.test(fromYm)) throw new Error(`잘못된 fromYm: ${fromYm}`);
+    if (!toYm || !/^\d{6}$/.test(toYm)) throw new Error(`잘못된 toYm: ${toYm}`);
+    if (fromYm > toYm) throw new Error(`fromYm(${fromYm})이 toYm(${toYm})보다 큽니다.`);
+
+    const baseUrl = "https://school.makeedu.co.kr";
+    const billingUrl = `${baseUrl}/pay/payUnionDeList.do`;
+
+    logger.info(`[scrapeMakeEduBillings] fromYm=${fromYm}, toYm=${toYm}`);
+
+    let browser = null;
+    try {
+        browser = await puppeteer.launch({
+            args: chromium.args,
+            defaultViewport: chromium.defaultViewport,
+            executablePath: await chromium.executablePath(),
+            headless: chromium.headless,
+        });
+        const page = await browser.newPage();
+
+        // 1. 로그인
+        await page.goto(baseUrl, { waitUntil: "networkidle2", timeout: 30000 });
+        await new Promise(r => setTimeout(r, 3000));
+        await page.evaluate((id, pw) => {
+            document.querySelector('input[name="membId"]').value = id;
+            document.querySelector('input[name="password"]').value = pw;
+        }, userId, userPwd);
+        try {
+            await Promise.all([
+                page.waitForNavigation({ waitUntil: "networkidle2", timeout: 15000 }),
+                page.evaluate(() => {
+                    if (typeof fn_login === "function") { fn_login(); return; }
+                    const btn = document.querySelector('input[type="submit"], button[type="submit"]');
+                    if (btn) { btn.click(); return; }
+                    const buttons = Array.from(document.querySelectorAll('a, button'));
+                    const loginBtn = buttons.find(b => (b.textContent || '').trim().includes('로그인'));
+                    if (loginBtn) loginBtn.click();
+                }),
+            ]);
+        } catch (navErr) {
+            logger.info("[scrapeMakeEduBillings] Login nav:", navErr.message);
+            await new Promise(r => setTimeout(r, 5000));
+        }
+
+        // 2. 상세수납 페이지 이동
+        await page.goto(billingUrl, { waitUntil: "networkidle2", timeout: 60000 });
+        await new Promise(r => setTimeout(r, 5000));
+
+        // 3. listSize=500
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                await page.waitForSelector('#listSize', { timeout: 10000 });
+                await page.select('#listSize', '500');
+                break;
+            } catch (e) {
+                await new Promise(r => setTimeout(r, 3000));
+            }
+        }
+        await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 15000 }).catch(() => {});
+        await new Promise(r => setTimeout(r, 3000));
+
+        // 4. fromYm + toYm 설정 (양쪽 모두 설정 필수)
+        try { await page.waitForSelector('#fromYm', { timeout: 10000 }); } catch (e) {}
+        await page.evaluate((from, to) => {
+            const setVal = (sel, val) => {
+                const el = document.querySelector(sel);
+                if (!el) return;
+                const native = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                native.call(el, val);
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('blur', { bubbles: true }));
+            };
+            setVal('#fromYm', from);
+            setVal('#toYm', to);
+            // hidden ym 필드도 같이 설정 (혹시 endYm 등)
+            const hidden = document.querySelectorAll('input[type="hidden"]');
+            hidden.forEach(h => {
+                const name = (h.name || '').toLowerCase();
+                if (name === 'endym' || name === 'toym') {
+                    const native = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                    native.call(h, to);
+                }
+                if (name === 'fromym' || name === 'startym') {
+                    const native = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                    native.call(h, from);
+                }
+            });
+        }, fromYm, toYm);
+
+        // 5. 검색 클릭
+        try {
+            await Promise.all([
+                page.waitForNavigation({ waitUntil: "networkidle2", timeout: 30000 }).catch(() => {}),
+                page.evaluate(() => {
+                    const btn = document.querySelector('#btnSrch') ||
+                                document.querySelector('a.btn_search, button.btn_search, input.btn_search');
+                    if (btn) { btn.click(); return; }
+                    const buttons = Array.from(document.querySelectorAll('a, button'));
+                    const searchBtn = buttons.find(b => (b.textContent || '').trim() === '검색');
+                    if (searchBtn) searchBtn.click();
+                }),
+            ]);
+            await new Promise(r => setTimeout(r, 5000));
+        } catch (e) {
+            logger.info("[scrapeMakeEduBillings] Search:", e.message);
+        }
+
+        try {
+            await page.waitForFunction(
+                () => document.querySelectorAll('tr.list_tr, tr[id^="tr_"]').length > 0,
+                { timeout: 30000 }
+            );
+        } catch (e) {
+            logger.warn("[scrapeMakeEduBillings] No result rows:", e.message);
+        }
+        await new Promise(r => setTimeout(r, 2000));
+
+        // 6. 모든 페이지 크롤링 (상세 필드 추출)
+        const allRows = [];
+        let pageNum = 1;
+        const maxPages = 50;
+        while (pageNum <= maxPages) {
+            logger.info(`[scrapeMakeEduBillings] Page ${pageNum}...`);
+            const pageData = await page.evaluate(() => {
+                const rows = document.querySelectorAll('tr.list_tr, tr[id^="tr_"]');
+                const data = [];
+                const cellText = (td) => (td ? (td.innerText || td.textContent || '').trim() : '');
+                const onlyDigits = (s) => (s || '').replace(/[^0-9]/g, '');
+
+                for (const row of rows) {
+                    const tds = row.querySelectorAll('td');
+                    if (tds.length < 5) continue;
+
+                    // 학생명
+                    let nameLink = row.querySelector('a.dl_pop.st_') ||
+                                   row.querySelector('a.dl_pop') ||
+                                   row.querySelector("a[onclick*='stuInfo']");
+                    if (!nameLink) {
+                        const tdLinks = row.querySelectorAll('td a');
+                        for (const a of tdLinks) {
+                            const t = (a.innerText || '').trim();
+                            if (t.length >= 2 && t.length <= 5) { nameLink = a; break; }
+                        }
+                    }
+                    const studentName = nameLink ? nameLink.innerText.trim() : '';
+                    if (!studentName) continue;
+
+                    // 학생 onclick에서 학생 고유번호 추출 (stuInfo('번호') 패턴)
+                    let externalStudentId = '';
+                    if (nameLink) {
+                        const oc = nameLink.getAttribute('onclick') || '';
+                        const m = oc.match(/['"]([\w\d_-]+)['"]/);
+                        if (m) externalStudentId = m[1];
+                    }
+
+                    // 청구월
+                    const payYmLink = row.querySelector('a.btnPayYmChg');
+                    const billingMonth = payYmLink ? payYmLink.innerText.trim() : '';
+
+                    // 청구일 (input[name=payReqDd])
+                    let billingDay = 0;
+                    const reqDdInput = row.querySelector('input[name="payReqDd"]');
+                    if (reqDdInput) billingDay = Number(reqDdInput.value) || 0;
+
+                    // 구분 (청구일 td 다음 td)
+                    let category = '';
+                    let categoryTdIdx = -1;
+                    for (let j = 0; j < tds.length; j++) {
+                        if (tds[j].querySelector('input[name="payReqDd"]')) {
+                            categoryTdIdx = j;
+                            category = cellText(tds[j + 1]);
+                            break;
+                        }
+                    }
+
+                    // 수납명 (a.btnPayName) — 없으면 구분 다음 td 텍스트
+                    const payNameLink = row.querySelector('a.btnPayName');
+                    let billingName = payNameLink ? payNameLink.innerText.trim() : '';
+                    if (!billingName && categoryTdIdx >= 0) {
+                        billingName = cellText(tds[categoryTdIdx + 2]);
+                    }
+
+                    // 수납여부 (체크박스 — name='isPay' 또는 클래스 '완납')
+                    let status = 'pending';
+                    const paidCb = row.querySelector('input[type="checkbox"][name*="isPay"], input[type="checkbox"][name*="paid"], input.chk_paid');
+                    if (paidCb && paidCb.checked) status = 'paid';
+                    // fallback: 텍스트 '완납' 라벨 옆 체크박스 체크 상태
+                    if (status === 'pending') {
+                        const allCb = row.querySelectorAll('input[type="checkbox"]');
+                        // 첫 번째 (행 선택용) 제외, 두 번째가 완납 체크박스인 경우
+                        if (allCb.length >= 2 && allCb[1].checked) status = 'paid';
+                    }
+
+                    // 금액 필드 — input[type='text'] 안의 value 또는 td 텍스트
+                    // td 인덱스로 시도 (categoryTdIdx 기준 상대 위치)
+                    const readMoneyInput = (td) => {
+                        if (!td) return 0;
+                        const inp = td.querySelector('input[type="text"], input:not([type])');
+                        if (inp) return Number(onlyDigits(inp.value)) || 0;
+                        return Number(onlyDigits(cellText(td))) || 0;
+                    };
+                    // 청구액(0)/할인액(1)/적립금(2)/실제낸금액(3)/미납금액(4) — 수납여부 td 다음 5개
+                    let billedAmount = 0, discountAmount = 0, pointsUsed = 0, paidAmount = 0, unpaidAmount = 0;
+                    if (categoryTdIdx >= 0) {
+                        const moneyStart = categoryTdIdx + 4; // 청구일·구분·수납명·수납여부 다음
+                        billedAmount = readMoneyInput(tds[moneyStart]);
+                        discountAmount = readMoneyInput(tds[moneyStart + 1]);
+                        pointsUsed = readMoneyInput(tds[moneyStart + 2]);
+                        paidAmount = readMoneyInput(tds[moneyStart + 3]);
+                        unpaidAmount = readMoneyInput(tds[moneyStart + 4]);
+                    }
+
+                    // 결제수단 (select)
+                    let paymentMethod = '';
+                    const paySel = row.querySelector('select[name*="payMethod"], select[name*="payment"]');
+                    if (paySel) paymentMethod = (paySel.value || paySel.options[paySel.selectedIndex]?.text || '').trim();
+                    if (!paymentMethod) {
+                        // fallback: 모든 select 중에서 결제수단 후보
+                        const allSel = row.querySelectorAll('select');
+                        for (const s of allSel) {
+                            const v = (s.value || '').trim();
+                            if (v && v !== '선택' && !v.match(/^\d+$/)) { paymentMethod = v; break; }
+                        }
+                    }
+
+                    // 수납일 — input[type='text'] with date pattern (YYYY-MM-DD)
+                    let paidDate = '';
+                    const dateInputs = row.querySelectorAll('input[type="text"]');
+                    for (const inp of dateInputs) {
+                        const v = (inp.value || '').trim();
+                        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) { paidDate = v; break; }
+                    }
+
+                    // 메모 — input[name*='memo'] 또는 마지막 줄 input
+                    let memo = '';
+                    const memoInp = row.querySelector('input[name*="memo"], textarea[name*="memo"]');
+                    if (memoInp) memo = (memoInp.value || '').trim();
+
+                    // 학년 — 이름 td 다음 td
+                    let grade = '';
+                    const nameTd = nameLink ? nameLink.closest('td') : null;
+                    if (nameTd && nameTd.nextElementSibling) {
+                        grade = cellText(nameTd.nextElementSibling);
+                    }
+
+                    data.push({
+                        studentName,
+                        externalStudentId,
+                        grade,
+                        billingMonth,
+                        billingDay,
+                        category,
+                        billingName,
+                        status,
+                        billedAmount,
+                        discountAmount,
+                        pointsUsed,
+                        paidAmount,
+                        unpaidAmount,
+                        paymentMethod,
+                        paidDate,
+                        memo,
+                    });
+                }
+                return data;
+            });
+
+            logger.info(`[scrapeMakeEduBillings] Page ${pageNum}: ${pageData.length} rows`);
+            allRows.push(...pageData);
+            if (pageData.length === 0) break;
+
+            const hasNext = await page.evaluate((cur) => {
+                const links = document.querySelectorAll('.paging a.gotoPage, .paging a');
+                const next = String(cur + 1);
+                for (const a of links) {
+                    const title = a.getAttribute('title') || '';
+                    const text = (a.innerText || '').trim();
+                    if (title.includes(next) || text === next) { a.click(); return true; }
+                }
+                return false;
+            }, pageNum);
+            if (!hasNext) break;
+            pageNum++;
+            await new Promise(r => setTimeout(r, 3000));
+            try { await page.waitForSelector('tr.list_tr, tr[id^="tr_"]', { timeout: 15000 }); } catch (e) {}
+            await new Promise(r => setTimeout(r, 2000));
+        }
+
+        logger.info(`[scrapeMakeEduBillings] Total rows: ${allRows.length}`);
+
+        // 7. 청구월 정규화 (2026.05 → 2026-05)
+        const normalizeYM = (ym) => (ym || '').replace(/[./]/g, '-').substring(0, 7);
+        const normalized = allRows.map(r => ({
+            ...r,
+            month: normalizeYM(r.billingMonth),
+        }));
+
+        return {
+            rows: normalized,
+            totalRows: normalized.length,
+            fromYm,
+            toYm,
+        };
+    } finally {
+        if (browser) await browser.close();
+    }
+}
+
+/**
+ * 스크래핑 결과를 billing_makeedu_pending 컬렉션에 저장
+ * - 기존 pending 모두 삭제 후 신규 삽입 (덮어쓰기)
+ */
+async function writePendingBillings(rows, meta) {
+    const PENDING = 'billing_makeedu_pending';
+
+    // 기존 pending 모두 삭제
+    const existing = await db.collection(PENDING).get();
+    if (existing.size > 0) {
+        const bs = 450;
+        for (let i = 0; i < existing.docs.length; i += bs) {
+            const b = db.batch();
+            existing.docs.slice(i, i + bs).forEach(d => b.delete(d.ref));
+            await b.commit();
+        }
+    }
+
+    // 신규 삽입
+    const now = new Date().toISOString();
+    if (rows.length === 0) return { saved: 0 };
+    const bs = 450;
+    for (let i = 0; i < rows.length; i += bs) {
+        const b = db.batch();
+        rows.slice(i, i + bs).forEach(r => {
+            const ref = db.collection(PENDING).doc();
+            b.set(ref, { ...r, fetchedAt: now, syncMeta: meta });
+        });
+        await b.commit();
+    }
+    return { saved: rows.length };
+}
+
+/**
+ * 클라이언트 호출용: 수동 동기화 (월 범위 지정)
+ */
+exports.scrapeMakeEduBillings = functions
+    .region("asia-northeast3")
+    .runWith({ timeoutSeconds: 540, memory: "2GB", secrets: ["MAKEEDU_USERNAME", "MAKEEDU_PASSWORD"] })
+    .https.onCall(async (data, context) => {
+        const fromYm = String(data?.fromYm || '').replace(/[^0-9]/g, '');
+        const toYm = String(data?.toYm || '').replace(/[^0-9]/g, '') || fromYm;
+        logger.info(`[scrapeMakeEduBillings] onCall fromYm=${fromYm}, toYm=${toYm}`);
+        try {
+            const result = await scrapeMakeEduBillingsInternal(fromYm, toYm);
+            const meta = { fromYm, toYm, type: 'manual', triggeredBy: context.auth?.uid || null };
+            const writeRes = await writePendingBillings(result.rows, meta);
+            return {
+                ok: true,
+                totalRows: result.totalRows,
+                saved: writeRes.saved,
+                fromYm,
+                toYm,
+            };
+        } catch (error) {
+            logger.error("[scrapeMakeEduBillings] Error:", error);
+            if (error.code) throw error;
+            throw new functions.https.HttpsError("internal", error.message || "상세수납 크롤링 실패");
+        }
+    });
+
+/**
+ * 자동 동기화: 매일 03:00 KST, 당월만
+ */
+exports.scheduledMakeEduBillingSync = functions
+    .region("asia-northeast3")
+    .runWith({ timeoutSeconds: 540, memory: "2GB", secrets: ["MAKEEDU_USERNAME", "MAKEEDU_PASSWORD"] })
+    .pubsub.schedule("0 3 * * *")
+    .timeZone("Asia/Seoul")
+    .onRun(async () => {
+        const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+        const yyyy = kst.getUTCFullYear();
+        const mm = String(kst.getUTCMonth() + 1).padStart(2, '0');
+        const ym = `${yyyy}${mm}`;
+        logger.info(`[scheduledMakeEduBillingSync] Start ym=${ym}`);
+        try {
+            const result = await scrapeMakeEduBillingsInternal(ym, ym);
+            const meta = { fromYm: ym, toYm: ym, type: 'scheduled' };
+            const writeRes = await writePendingBillings(result.rows, meta);
+            await db.collection("makeEduBillingSyncLogs").add({
+                type: "scheduled",
+                success: true,
+                fromYm: ym,
+                toYm: ym,
+                totalRows: result.totalRows,
+                saved: writeRes.saved,
+                executedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            return result;
+        } catch (err) {
+            logger.error("[scheduledMakeEduBillingSync] Error:", err);
+            await db.collection("makeEduBillingSyncLogs").add({
+                type: "scheduled",
+                success: false,
+                error: err.message || String(err),
+                executedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            return null;
+        }
+    });
+

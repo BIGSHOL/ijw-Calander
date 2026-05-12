@@ -1,7 +1,9 @@
 import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import {
-  DollarSign, Plus, Upload, ArrowLeft, Loader2, AlertCircle, Link2,
+  DollarSign, Plus, Upload, ArrowLeft, Loader2, AlertCircle, Link2, Cloud, CheckSquare,
 } from 'lucide-react';
+import { collection, getCountFromServer } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
 import { ColumnFilter } from '../Common/ColumnFilter';
 import { Pagination } from '../Common/Pagination';
 import { BillingForm } from './BillingForm';
@@ -14,6 +16,12 @@ import StudentDetailModal from '../StudentManagement/StudentDetailModal';
 // xlsx 라이브러리 포함 모달은 lazy loading (-60KB gzip)
 const BillingImportModal = lazy(() =>
   import('./BillingImportModal').then(m => ({ default: m.BillingImportModal })),
+);
+const MakeEduBillingSyncModal = lazy(() =>
+  import('./MakeEduBillingSyncModal').then(m => ({ default: m.MakeEduBillingSyncModal })),
+);
+const MakeEduBillingReviewModal = lazy(() =>
+  import('./MakeEduBillingReviewModal').then(m => ({ default: m.MakeEduBillingReviewModal })),
 );
 
 interface BillingManagerProps {
@@ -54,7 +62,20 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile, onNavigate
   const [editValues, setEditValues] = useState<Partial<BillingRecord>>({});
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isMakeEduSyncOpen, setIsMakeEduSyncOpen] = useState(false);
+  const [isMakeEduReviewOpen, setIsMakeEduReviewOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
   const [selectedStudent, setSelectedStudent] = useState<UnifiedStudent | null>(null);
+
+  const refreshPendingCount = async () => {
+    try {
+      const snap = await getCountFromServer(collection(db, 'billing_makeedu_pending'));
+      setPendingCount(snap.data().count);
+    } catch {
+      // count() 미지원 환경 대비 — 무시
+    }
+  };
+  useEffect(() => { refreshPendingCount(); }, []);
 
   // 컬럼 필터 (Set으로 변환)
   const columnFilters = useMemo(() => {
@@ -225,13 +246,36 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile, onNavigate
                 <p className="text-sm text-gray-500">월별 수납 내역 — 카드 클릭 시 상세 보기</p>
               </div>
             </div>
-            <button
-              onClick={() => setIsImportOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors"
-            >
-              <Upload className="w-4 h-4" />
-              Excel 업로드
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsMakeEduSyncOpen(true)}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-sm border border-blue-600 text-blue-600 text-sm hover:bg-blue-50 transition-colors"
+                title="메이크에듀 상세수납 페이지에서 직접 가져옴"
+              >
+                <Cloud className="w-4 h-4" />
+                MakeEdu 동기화
+              </button>
+              <button
+                onClick={() => setIsMakeEduReviewOpen(true)}
+                className="relative inline-flex items-center gap-2 px-3 py-2 rounded-sm border border-amber-600 text-amber-700 text-sm hover:bg-amber-50 transition-colors"
+                title="동기화된 데이터를 검토 후 실 수납에 반영"
+              >
+                <CheckSquare className="w-4 h-4" />
+                검토 후 반영
+                {pendingCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-amber-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {pendingCount > 99 ? '99+' : pendingCount}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setIsImportOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-sm bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 transition-colors"
+              >
+                <Upload className="w-4 h-4" />
+                Excel 업로드
+              </button>
+            </div>
           </div>
         </header>
 
@@ -285,6 +329,23 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile, onNavigate
             />
           </Suspense>
         )}
+        {isMakeEduSyncOpen && (
+          <Suspense fallback={null}>
+            <MakeEduBillingSyncModal
+              isOpen={isMakeEduSyncOpen}
+              onClose={() => { setIsMakeEduSyncOpen(false); refreshPendingCount(); }}
+              onSyncComplete={() => { refreshPendingCount(); }}
+            />
+          </Suspense>
+        )}
+        {isMakeEduReviewOpen && (
+          <Suspense fallback={null}>
+            <MakeEduBillingReviewModal
+              isOpen={isMakeEduReviewOpen}
+              onClose={() => { setIsMakeEduReviewOpen(false); refreshPendingCount(); }}
+            />
+          </Suspense>
+        )}
       </div>
     );
   }
@@ -315,6 +376,25 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile, onNavigate
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsMakeEduSyncOpen(true)}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-sm border border-blue-600 text-blue-600 text-sm hover:bg-blue-50 transition-colors"
+              title="메이크에듀 상세수납 페이지에서 직접 가져옴"
+            >
+              <Cloud className="w-4 h-4" /> MakeEdu 동기화
+            </button>
+            <button
+              onClick={() => setIsMakeEduReviewOpen(true)}
+              className="relative inline-flex items-center gap-2 px-3 py-2 rounded-sm border border-amber-600 text-amber-700 text-sm hover:bg-amber-50 transition-colors"
+              title="동기화된 데이터를 검토 후 실 수납에 반영"
+            >
+              <CheckSquare className="w-4 h-4" /> 검토 후 반영
+              {pendingCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-amber-600 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                  {pendingCount > 99 ? '99+' : pendingCount}
+                </span>
+              )}
+            </button>
             <button
               onClick={() => setIsImportOpen(true)}
               className="inline-flex items-center gap-2 px-3 py-2 rounded-sm border border-gray-300 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -676,6 +756,23 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile, onNavigate
               onNavigateToTextbooks();
               void file;
             } : undefined}
+          />
+        </Suspense>
+      )}
+      {isMakeEduSyncOpen && (
+        <Suspense fallback={null}>
+          <MakeEduBillingSyncModal
+            isOpen={isMakeEduSyncOpen}
+            onClose={() => { setIsMakeEduSyncOpen(false); refreshPendingCount(); }}
+            onSyncComplete={() => { refreshPendingCount(); }}
+          />
+        </Suspense>
+      )}
+      {isMakeEduReviewOpen && (
+        <Suspense fallback={null}>
+          <MakeEduBillingReviewModal
+            isOpen={isMakeEduReviewOpen}
+            onClose={() => { setIsMakeEduReviewOpen(false); refreshPendingCount(); }}
           />
         </Suspense>
       )}
