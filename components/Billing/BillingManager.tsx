@@ -85,10 +85,59 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
   const { data: monthSummaries = [] } = useBillingMonthSummaries();
 
   // 상세 화면: 선택된 월 records (selectedMonth가 있을 때만 활성)
-  const { records, isLoading, createRecord, updateRecord, deleteRecord } =
+  const { records: rawRecords, isLoading, createRecord, updateRecord, deleteRecord } =
     useBilling(selectedMonth || undefined, !!selectedMonth);
 
-  const { students } = useStudents(false); // 재원생만
+  // 퇴원생까지 포함 — 과거 청구가 퇴원 후에도 매칭되도록
+  const { students } = useStudents(true);
+
+  // 학생 매칭 인덱스 (id, name+grade, name)
+  const studentLookups = useMemo(() => {
+    const byId = new Map<string, UnifiedStudent>();
+    const byNameGrade = new Map<string, UnifiedStudent>();
+    const byName = new Map<string, UnifiedStudent[]>();
+    students.forEach(s => {
+      byId.set(s.id, s);
+      const ng = `${s.name || ''}__${s.grade || ''}`;
+      if (!byNameGrade.has(ng)) byNameGrade.set(ng, s);
+      const list = byName.get(s.name || '') || [];
+      list.push(s);
+      byName.set(s.name || '', list);
+    });
+    return { byId, byNameGrade, byName };
+  }, [students]);
+
+  // billing record를 학생 정보로 보강 (school·teacher 매칭)
+  // - 우선순위: studentId → name+grade → name 단일 매치
+  // - record에 이미 값이 있으면 그 값 우선 (수동 편집 보호)
+  const records = useMemo<BillingRecord[]>(() => {
+    return rawRecords.map(r => {
+      let matched: UnifiedStudent | undefined;
+      if (r.studentId) matched = studentLookups.byId.get(r.studentId);
+      if (!matched && r.studentName) {
+        matched = studentLookups.byNameGrade.get(`${r.studentName}__${r.grade || ''}`);
+        if (!matched) {
+          const list = studentLookups.byName.get(r.studentName) || [];
+          if (list.length === 1) matched = list[0];
+          // 동명이인은 매칭하지 않음 (정확도 우선)
+        }
+      }
+      if (!matched) return r;
+
+      // 담임강사: 활성 enrollment 중 첫 항목의 teacher (여러 과목이면 " / " 결합)
+      const enrollments = (matched.enrollments || []).filter(e => !e.endDate);
+      const teacherSet = new Set<string>();
+      enrollments.forEach(e => { if (e.teacher) teacherSet.add(e.teacher); });
+      const teacherStr = Array.from(teacherSet).join(' / ');
+
+      return {
+        ...r,
+        school: r.school || matched.school || '',
+        teacher: r.teacher || teacherStr || '',
+        studentId: r.studentId || matched.id,
+      };
+    });
+  }, [rawRecords, studentLookups]);
 
   // 컬럼 고유값 (필터 드롭다운용)
   const columnValues = useMemo(() => {
