@@ -32,6 +32,14 @@ export interface Enrollment {
   cancelledBy?: string;     // 취소한 사용자 (audit)
   cancelReason?: string;    // 취소 사유 메모 (옵션)
 
+  // ====== Audit: 최종 수정자 (재원/퇴원 처리 히스토리) ======
+  // 신규 등록/퇴원/복원 모두 이 필드를 갱신 — UI 표시는 "{name} {roleLabel} · {date}"
+  lastModifiedBy?: string;       // uid (영구 키)
+  lastModifiedByName?: string;   // 당시 표시 이름 (eg "이성우")
+  lastModifiedByRole?: string;   // 당시 역할 코드 (eg "math_teacher", "admin")
+  lastModifiedAt?: string;       // ISO timestamp
+  lastAction?: 'enrolled' | 'withdrawn' | 'restored' | 'transferred';
+
   // Migration metadata
   migrated?: boolean;
   migratedAt?: string;

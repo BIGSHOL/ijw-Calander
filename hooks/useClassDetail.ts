@@ -22,6 +22,11 @@ export interface ClassStudent {
   isScheduled?: boolean;  // 미래 시작일 (배정 예정)
   isWithdrawn?: boolean;  // 퇴원/종료됨
   withdrawalDate?: string;  // 퇴원/종료일
+  // Audit (최종 수정자) — 등록/퇴원/복원 처리한 사람 정보
+  lastModifiedByName?: string;   // eg "이성우"
+  lastModifiedByRole?: string;   // eg "math_teacher", "admin"
+  lastModifiedAt?: string;       // ISO timestamp
+  lastAction?: 'enrolled' | 'withdrawn' | 'restored' | 'transferred';
 }
 
 export interface ClassDetail {
@@ -108,6 +113,11 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
       const studentIsWithdrawnOnly: Record<string, boolean> = {};  // 퇴원 enrollment만 있는지
       const studentWithdrawalDates: Record<string, string> = {};  // studentId -> withdrawalDate
       const studentEnrollmentStartDates: Record<string, string> = {};  // enrollment별 시작일
+      // Audit: 학생별 최종 수정자 (활성 enrollment 우선, 없으면 퇴원/예약 enrollment)
+      const studentAuditName: Record<string, string> = {};
+      const studentAuditRole: Record<string, string> = {};
+      const studentAuditAt: Record<string, string> = {};
+      const studentAuditAction: Record<string, 'enrolled' | 'withdrawn' | 'restored' | 'transferred'> = {};
 
       // KST 기준 오늘 날짜로 미래 enrollment 필터링
       const today = getTodayKST();
@@ -138,6 +148,11 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
               if (data.underline !== undefined) {
                 studentUnderline[studentId] = data.underline;
               }
+              // Audit: 활성 enrollment은 항상 우선 (재원생 정보용)
+              if (data.lastModifiedByName) studentAuditName[studentId] = data.lastModifiedByName;
+              if (data.lastModifiedByRole) studentAuditRole[studentId] = data.lastModifiedByRole;
+              if (data.lastModifiedAt) studentAuditAt[studentId] = data.lastModifiedAt;
+              if (data.lastAction) studentAuditAction[studentId] = data.lastAction;
             } else if (isFutureStart && !hasEndDate) {
               // 미래 시작일 enrollment (배정 예정)
               studentIsScheduledOnly[studentId] = true;
@@ -146,6 +161,10 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
                 studentEnrollmentIds[studentId] = doc.id;
                 studentOnHold[studentId] = data.onHold || false;
                 if (startDate) studentEnrollmentStartDates[studentId] = startDate;
+                if (data.lastModifiedByName) studentAuditName[studentId] = data.lastModifiedByName;
+                if (data.lastModifiedByRole) studentAuditRole[studentId] = data.lastModifiedByRole;
+                if (data.lastModifiedAt) studentAuditAt[studentId] = data.lastModifiedAt;
+                if (data.lastAction) studentAuditAction[studentId] = data.lastAction;
               }
             } else if (hasEndDate) {
               // 퇴원/종료 enrollment
@@ -156,6 +175,10 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
                 studentEnrollmentIds[studentId] = doc.id;
                 studentOnHold[studentId] = data.onHold || false;
                 if (startDate) studentEnrollmentStartDates[studentId] = startDate;
+                if (data.lastModifiedByName) studentAuditName[studentId] = data.lastModifiedByName;
+                if (data.lastModifiedByRole) studentAuditRole[studentId] = data.lastModifiedByRole;
+                if (data.lastModifiedAt) studentAuditAt[studentId] = data.lastModifiedAt;
+                if (data.lastAction) studentAuditAction[studentId] = data.lastAction;
               }
             }
 
@@ -207,6 +230,10 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
               isScheduled: studentIsScheduled[doc.id] || false,
               isWithdrawn: studentIsWithdrawn[doc.id] || false,
               withdrawalDate: studentWithdrawalDates[doc.id],
+              lastModifiedByName: studentAuditName[doc.id],
+              lastModifiedByRole: studentAuditRole[doc.id],
+              lastModifiedAt: studentAuditAt[doc.id],
+              lastAction: studentAuditAction[doc.id],
             });
           }
         }

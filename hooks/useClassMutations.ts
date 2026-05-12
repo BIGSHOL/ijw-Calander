@@ -18,6 +18,7 @@ import { db } from '../firebaseConfig';
 import { SubjectType } from '../types';
 import { getTodayKST, formatDateKST } from '../utils/dateUtils';
 import { logTimetableChange } from './useTimetableLog';
+import { buildAuditFields } from '../utils/getCurrentActor';
 
 const COL_STUDENTS = 'students';
 const COL_CLASSES = 'classes';
@@ -896,6 +897,12 @@ export const useManageClassStudents = () => {
         transferFromClass = {}
       } = data;
 
+      // Audit 필드 사전 계산 (한 번만 actor 조회)
+      const auditTransferred = await buildAuditFields('transferred');
+      const auditEnrolled = await buildAuditFields('enrolled');
+      const auditRestored = await buildAuditFields('restored');
+      const auditWithdrawn = await buildAuditFields('withdrawn');
+
       // 반이동 학생 처리: 기존 수업 enrollment에 endDate 설정
       const transferStudentIds = Object.keys(transferMode).filter(id => transferMode[id] === 'transfer');
 
@@ -925,6 +932,7 @@ export const useManageClassStudents = () => {
               endDate: endDate,
               updatedAt: new Date().toISOString(),
               transferTo: className,  // 어디로 반이동했는지 기록
+              ...auditTransferred,
             });
           });
 
@@ -965,6 +973,7 @@ export const useManageClassStudents = () => {
               teacher: teacher,
               schedule,
               updatedAt: new Date().toISOString(),
+              ...auditRestored,
             };
             if (studentAttendanceDays[studentId] && studentAttendanceDays[studentId].length > 0) {
               updateData.attendanceDays = studentAttendanceDays[studentId];
@@ -994,6 +1003,7 @@ export const useManageClassStudents = () => {
               startDate,
               enrollmentDate: startDate,
               createdAt: new Date().toISOString(),
+              ...auditEnrolled,
             };
             if (studentAttendanceDays[studentId] && studentAttendanceDays[studentId].length > 0) {
               enrollmentData.attendanceDays = studentAttendanceDays[studentId];
@@ -1030,7 +1040,8 @@ export const useManageClassStudents = () => {
             await updateDoc(docSnap.ref, {
               endDate: yesterday,
               withdrawalDate: yesterday,  // useClassDetail 필터링 + 시간표 퇴원 섹션 표시용
-              updatedAt: new Date().toISOString()
+              updatedAt: new Date().toISOString(),
+              ...auditWithdrawn,
             });
           });
 

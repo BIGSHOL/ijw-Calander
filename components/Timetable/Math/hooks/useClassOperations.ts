@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { db } from '../../../../firebaseConfig';
 import { TimetableClass } from '../../../../types';
 import { logTimetableChange } from '../../../../hooks/useTimetableLog';
+import { buildAuditFields } from '../../../../utils/getCurrentActor';
 
 const COL_CLASSES = 'classes';
 
@@ -361,8 +362,10 @@ export const useClassOperations = () => {
         // enrollment에 withdrawalDate 설정 (쿼리로 찾기 - math/highmath 모두 검색)
         const enrollDoc = await findEnrollmentDoc(studentId, MATH_SUBJECTS, className);
         if (enrollDoc) {
+            const audit = await buildAuditFields('withdrawn');
             await updateDoc(enrollDoc.ref, {
-                withdrawalDate: yesterdayStr
+                withdrawalDate: yesterdayStr,
+                ...audit,
             });
         }
 
@@ -390,10 +393,12 @@ export const useClassOperations = () => {
         // enrollment에서 withdrawalDate/endDate 제거 (쿼리로 찾기 - math/highmath 모두 검색)
         const enrollDoc = await findEnrollmentDoc(studentId, MATH_SUBJECTS, className);
         if (enrollDoc) {
+            const audit = await buildAuditFields('restored');
             await updateDoc(enrollDoc.ref, {
                 withdrawalDate: null,
                 endDate: null,
-                onHold: false
+                onHold: false,
+                ...audit,
             });
         }
 
@@ -434,6 +439,7 @@ export const useClassOperations = () => {
 
         if (endedDoc) {
             // 기존 퇴원 enrollment 부활: endDate/withdrawalDate 제거 + 시작일 갱신
+            const auditRestored = await buildAuditFields('restored');
             await updateDoc(endedDoc.ref, {
                 endDate: null,
                 withdrawalDate: null,
@@ -443,9 +449,11 @@ export const useClassOperations = () => {
                 teacher: classTeacher,
                 schedule: classSchedule,
                 updatedAt: now,
+                ...auditRestored,
             });
         } else {
             const enrollmentRef = doc(db, 'students', studentId, 'enrollments', classId);
+            const auditEnrolled = await buildAuditFields('enrolled');
             await setDoc(enrollmentRef, {
                 classId,
                 className,
@@ -455,6 +463,7 @@ export const useClassOperations = () => {
                 schedule: classSchedule,
                 enrollmentDate: enrollmentDate || now.split('T')[0],
                 createdAt: now,
+                ...auditEnrolled,
             });
         }
 
@@ -513,10 +522,12 @@ export const useClassOperations = () => {
                 classSnapshot = await getDocs(query(classesRef, where('className', '==', className), where('subject', '==', 'highmath')));
             }
 
+            const auditSmartWd = await buildAuditFields('withdrawn');
             const updateBase: Record<string, any> = {
                 endDate: today,
                 withdrawalDate: today,
                 updatedAt: new Date().toISOString(),
+                ...auditSmartWd,
             };
             if (!classSnapshot.empty) {
                 const classData = classSnapshot.docs[0].data();
@@ -573,7 +584,8 @@ export const useClassOperations = () => {
     // 스냅샷으로 enrollment 복구 (퇴원생 새로고침용)
     const restoreEnrollmentSnapshot = async (snapshot: { path: string; data: any }) => {
         const ref = doc(db, snapshot.path);
-        await setDoc(ref, snapshot.data);
+        const audit = await buildAuditFields('restored');
+        await setDoc(ref, { ...snapshot.data, ...audit });
         invalidateMathCaches();
         queryClient.invalidateQueries({ queryKey: ['classDetail'] });
         queryClient.invalidateQueries({ queryKey: ['englishClassStudents'] });

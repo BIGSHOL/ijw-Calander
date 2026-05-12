@@ -4,6 +4,7 @@ import { ClassStudent } from '../../hooks/useClassDetail';
 import { UnifiedStudent } from '../../types';
 import { formatSchoolGrade } from '../../utils/studentUtils';
 import SubjectBadges from '../Common/SubjectBadges';
+import { formatAuditLabel, actionToLabel } from '../../utils/getCurrentActor';
 
 interface ClassStudentListProps {
   students: ClassStudent[];
@@ -85,6 +86,20 @@ const ClassStudentList: React.FC<ClassStudentListProps> = ({
                   {student.attendanceDays!.join(', ')}만
                 </span>
               )}
+              {/* Audit: 최종 처리자 (있을 때만) */}
+              {(() => {
+                const label = formatAuditLabel(student);
+                if (!label) return null;
+                const action = actionToLabel(student.lastAction);
+                return (
+                  <span
+                    className="text-xxs text-gray-400 ml-auto"
+                    title={student.lastModifiedAt ? `${action}: ${student.lastModifiedAt}` : action}
+                  >
+                    {action && `${action}: `}{label}
+                  </span>
+                );
+              })()}
             </div>
             {/* 과목 배지 (2번째 줄) */}
             <SubjectBadges enrollments={studentMap[student.id]?.enrollments} />

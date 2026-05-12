@@ -20,6 +20,7 @@ import { getTodayKST } from '../../utils/dateUtils';
 import { useClassOperations } from '../Timetable/Math/hooks/useClassOperations';
 import { useRooms } from '../../hooks/useRooms';
 import { useDraggable } from '../../hooks/useDraggable';
+import { formatAuditLabel, actionToLabel } from '../../utils/getCurrentActor';
 
 interface ClassDetailModalProps {
   classInfo: ClassInfo;
@@ -1058,27 +1059,39 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                       </button>
                       {showEditWithdrawn && (
                         <div className="max-h-32 overflow-y-auto divide-y divide-gray-100">
-                          {withdrawnStudents.map(student => (
-                            <div key={student.id} className="flex items-center justify-between px-2.5 py-1.5 text-sm hover:bg-gray-50">
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-400 line-through">{student.name}</span>
-                                <span className="text-[10px] text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
-                                {student.withdrawalDate && <span className="text-xxs text-gray-400">~{student.withdrawalDate}</span>}
+                          {withdrawnStudents.map(student => {
+                            const auditLabel = formatAuditLabel(student);
+                            const actionLabel = actionToLabel(student.lastAction);
+                            return (
+                              <div key={student.id} className="flex items-center justify-between px-2.5 py-1.5 text-sm hover:bg-gray-50">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <span className="text-xs text-gray-400 line-through">{student.name}</span>
+                                  <span className="text-[10px] text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
+                                  {student.withdrawalDate && <span className="text-xxs text-gray-400">~{student.withdrawalDate}</span>}
+                                  {auditLabel && (
+                                    <span
+                                      className="text-xxs text-gray-400 flex-shrink-0 ml-auto pr-1"
+                                      title={student.lastModifiedAt ? `${actionLabel}: ${student.lastModifiedAt}` : actionLabel}
+                                    >
+                                      {actionLabel && `${actionLabel}: `}{auditLabel}
+                                    </span>
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (window.confirm(`${student.name}의 수업 기록을 완전히 삭제하시겠습니까?`)) {
+                                      await deleteEnrollmentRecord(classInfo.className, student.id, classInfo.subject);
+                                    }
+                                  }}
+                                  className="text-red-400 hover:text-red-600 p-1 transition-colors"
+                                  title="수업 기록 삭제"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
                               </div>
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  if (window.confirm(`${student.name}의 수업 기록을 완전히 삭제하시겠습니까?`)) {
-                                    await deleteEnrollmentRecord(classInfo.className, student.id, classInfo.subject);
-                                  }
-                                }}
-                                className="text-red-400 hover:text-red-600 p-1 transition-colors"
-                                title="수업 기록 삭제"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -1381,23 +1394,35 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
                       </button>
                       {showWithdrawn && (
                         <div className="divide-y divide-gray-100 max-h-[200px] overflow-y-auto">
-                          {withdrawnStudents.map(student => (
-                            <div
-                              key={student.id}
-                              className="flex items-center justify-between gap-2 px-2 py-1.5 hover:bg-gray-50 transition-colors"
-                            >
+                          {withdrawnStudents.map(student => {
+                            const auditLabel = formatAuditLabel(student);
+                            const actionLabel = actionToLabel(student.lastAction);
+                            return (
                               <div
-                                onClick={() => onStudentClick?.(student.id)}
-                                className={`flex items-center gap-2 flex-1 ${onStudentClick ? 'cursor-pointer hover:text-accent' : ''}`}
+                                key={student.id}
+                                className="flex items-center justify-between gap-2 px-2 py-1.5 hover:bg-gray-50 transition-colors"
                               >
-                                <span className="text-xs font-medium text-gray-400 line-through">{student.name}</span>
-                                <span className="text-xs text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
-                                {student.withdrawalDate && (
-                                  <span className="text-xxs text-gray-400">~{student.withdrawalDate}</span>
+                                <div
+                                  onClick={() => onStudentClick?.(student.id)}
+                                  className={`flex items-center gap-2 flex-1 min-w-0 ${onStudentClick ? 'cursor-pointer hover:text-accent' : ''}`}
+                                >
+                                  <span className="text-xs font-medium text-gray-400 line-through">{student.name}</span>
+                                  <span className="text-xs text-gray-400">{formatSchoolGrade(student.school, student.grade)}</span>
+                                  {student.withdrawalDate && (
+                                    <span className="text-xxs text-gray-400">~{student.withdrawalDate}</span>
+                                  )}
+                                </div>
+                                {auditLabel && (
+                                  <span
+                                    className="text-xxs text-gray-400 flex-shrink-0"
+                                    title={student.lastModifiedAt ? `${actionLabel}: ${student.lastModifiedAt}` : actionLabel}
+                                  >
+                                    {actionLabel && `${actionLabel}: `}{auditLabel}
+                                  </span>
                                 )}
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </div>
