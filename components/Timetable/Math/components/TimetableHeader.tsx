@@ -1152,17 +1152,6 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                         }`}
                                                     >{label}</button>
                                                 ))}
-                                                {onToggleAllWithdrawn && (
-                                                    <button
-                                                        onClick={onToggleAllWithdrawn}
-                                                        className={`py-0.5 px-1.5 rounded text-xxs border ${
-                                                            withdrawnAllExpanded
-                                                                ? 'bg-gray-700 text-white border-gray-700'
-                                                                : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
-                                                        }`}
-                                                        title="모든 셀의 퇴원생 리스트 펼치기/접기"
-                                                    >퇴원</button>
-                                                )}
                                             </div>
                                         </div>
                                     )}
