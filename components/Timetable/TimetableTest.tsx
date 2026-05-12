@@ -1,116 +1,37 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════════╗
- * ║  ⚠️  ORIGINAL TIMETABLE IS READ-ONLY HERE — DO NOT BREAK THIS  ⚠️    ║
+ * ║  ⚠️  시간표 테스트 — 진짜 시간표의 READ-ONLY 미러   ⚠️                ║
  * ╠══════════════════════════════════════════════════════════════════════╣
- * ║  이 파일은 "시간표 테스트" 시뮬레이션 환경입니다.                     ║
- * ║  - 진짜 시간표 컴포넌트(TimetableManager) 코드는 0줄 수정함.         ║
- * ║  - TimetableGrid (시각화 sub-component) 만 직접 호출.                ║
- * ║  - 모든 mutation 핸들러는 no-op 으로 주입 → 편집 불가 (read-only).   ║
- * ║  - 원본 Firestore (`classes` 컬렉션) 에 절대 쓰지 않음.               ║
- * ║  - 강사 visibility 토글 UI(IntegrationViewSettings) 도 import 안 함  ║
- * ║    → 진짜 시간표와 같은 localStorage 키를 건드릴 통로 자체가 없음.    ║
+ * ║  사용자 결정(2026-05-12): 시간표 테스트 탭은 진짜 시간표(Timetable-  ║
+ * ║  Manager)를 그대로 임베드하여 데이터 누락 가능성을 영구히 차단.      ║
  * ║                                                                      ║
- * ║  허용 import (read 값만 destructure, update 함수는 호출 X):           ║
- * ║    - useTimetableClasses, useTeachers                                ║
- * ║    - useMathConfig (mathConfig 만 사용, handleSave* 호출 X)           ║
- * ║    - useStudents (students 만 destructure, mutation 함수 X)          ║
+ * ║  편집 차단 방식: 본체를 감싸는 div 에 pointer-events:none 적용.      ║
+ * ║   - 모든 클릭/드래그/드롭 이벤트가 DOM 단에서 무력화됨               ║
+ * ║   - 휠/트랙패드 스크롤은 그대로 동작 (휠은 pointer-event 가 아님)    ║
+ * ║   - 사용자 액션을 통한 mutation 경로가 원천 차단됨                   ║
  * ║                                                                      ║
- * ║  금지 (절대 호출하지 말 것):                                          ║
- * ║    - firebase/firestore 의 setDoc, updateDoc, addDoc, deleteDoc 등   ║
- * ║    - useStudents 가 반환하는 add/update/delete 등 mutation 함수      ║
- * ║    - useMathConfig 가 반환하는 handleSave* mutation 함수             ║
+ * ║  단점 (의도된 동작):                                                  ║
+ * ║   - 학생 상세 모달도 못 열림 (보기 전용)                              ║
+ * ║   - hover highlight 등 시각 효과 비활성                              ║
+ * ║                                                                      ║
+ * ║  추후 view-only 모달 등 일부 인터랙션이 필요해지면 TimetableManager  ║
+ * ║  에 `readOnly` prop 을 추가하는 방향으로 리팩터링.                   ║
  * ╚══════════════════════════════════════════════════════════════════════╝
  */
-import React, { useMemo } from 'react';
-import {
-  TimetableClass,
-  Teacher,
-  UserProfile,
-  StaffMember,
-  UnifiedStudent,
-} from '../../types';
-import { useTimetableClasses } from './Math/hooks/useTimetableClasses';
-import { useTeachers } from '../../hooks/useFirebaseQueries';
-import { useMathConfig } from './Math/hooks/useMathConfig';
-import { useStudents } from '../../hooks/useStudents';
-import { VideoLoading } from '../Common/VideoLoading';
-import TimetableGrid from './Math/components/TimetableGrid';
-import { MATH_PERIODS, ALL_WEEKDAYS } from './constants';
+import React from 'react';
+import { UserProfile, StaffMember } from '../../types';
+import TimetableManager from './TimetableManager';
 
 interface TimetableTestProps {
   currentUser: UserProfile | null;
   staffMember?: StaffMember;
 }
 
-const NO_OP_VOID = () => {};
-const NO_OP_DRAG = (_e?: React.DragEvent) => {};
-
-const TimetableTest: React.FC<TimetableTestProps> = ({ currentUser, staffMember }) => {
-  const myName =
-    staffMember?.name ??
-    currentUser?.name ??
-    currentUser?.koreanName ??
-    currentUser?.displayName ??
-    '';
-
-  // 데이터 fetch (전부 read 만 — mutation 함수 destructure 안 함)
-  const { classes: allClasses = [], loading: classesLoading } = useTimetableClasses();
-  const { data: teachers = [] } = useTeachers();
-  const { mathConfig } = useMathConfig();
-  const { students: globalStudents = [] } = useStudents(true);
-
-  // 본인 수업 필터 (담임 또는 부담임)
-  const myClasses = useMemo<TimetableClass[]>(() => {
-    if (!myName) return [];
-    return allClasses.filter((cls: TimetableClass) => {
-      if (cls.teacher === myName) return true;
-      const slotValues = Object.values(cls.slotTeachers ?? {});
-      return slotValues.includes(myName);
-    });
-  }, [allClasses, myName]);
-
-  // 수학 수업만 (TimetableGrid 가 수학 전용 컴포넌트)
-  const myMathClasses = useMemo<TimetableClass[]>(
-    () => myClasses.filter((c) => c.subject === 'math' || c.subject === '수학'),
-    [myClasses]
-  );
-
-  // studentMap — 진짜 시간표와 동일 패턴 (TimetableManager.tsx:1520)
-  const studentMap = useMemo<Record<string, UnifiedStudent>>(() => {
-    const map: Record<string, UnifiedStudent> = {};
-    globalStudents.forEach((s) => {
-      map[s.id] = s;
-    });
-    return map;
-  }, [globalStudents]);
-
-  // 이번 주 월~일 날짜
-  const weekDates = useMemo(() => {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const monday = new Date(today);
-    monday.setDate(today.getDate() + diffToMonday);
-    monday.setHours(0, 0, 0, 0);
-
-    const result: Record<string, { date: Date; formatted: string }> = {};
-    ALL_WEEKDAYS.forEach((day, idx) => {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + idx);
-      result[day] = {
-        date: d,
-        formatted: `${d.getMonth() + 1}/${d.getDate()}`,
-      };
-    });
-    return result;
-  }, []);
-
-  // teacher 뷰: 본인 1명만
-  const allResources = useMemo(() => (myName ? [myName] : []), [myName]);
-
+const TimetableTest: React.FC<TimetableTestProps> = ({ currentUser }) => {
   return (
     <div className="w-full h-full flex flex-col bg-gray-50">
-      <div className="px-6 py-4 bg-white border-b border-gray-200 flex items-center gap-3">
+      {/* 헤더 — 클릭 가능 영역 (시간표 본체와 분리) */}
+      <div className="px-6 py-3 bg-white border-b border-gray-200 flex items-center gap-3 shrink-0">
         <span className="text-2xl">🧪</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
@@ -123,88 +44,22 @@ const TimetableTest: React.FC<TimetableTestProps> = ({ currentUser, staffMember 
             </span>
           </div>
           <p className="text-xs text-gray-500 mt-0.5 truncate">
-            {myName
-              ? `${myName} 님의 수학 시간표 (진짜 시간표와 동일 UI · 본인 필터링)`
-              : '로그인 정보 없음'}
+            진짜 시간표와 100% 동일한 데이터·UI · 모든 클릭/편집 차단 (스크롤만 가능)
           </p>
         </div>
-        <span className="text-[10px] text-gray-400 font-mono px-2 py-1 bg-gray-100 rounded">
-          진짜 그리드 · 통합테이블 · 본인 필터
-        </span>
       </div>
 
-      <div className="flex-1 overflow-hidden flex flex-col">
-        {classesLoading ? (
-          <div className="flex items-center justify-center flex-1">
-            <VideoLoading className="h-32" />
-          </div>
-        ) : !myName ? (
-          <Empty>로그인된 사용자 정보를 가져올 수 없습니다.</Empty>
-        ) : myMathClasses.length === 0 ? (
-          <Empty>
-            <span className="font-semibold">{myName}</span> 님이 담당하는{' '}
-            <strong>수학</strong> 수업이 없습니다.
-            <div className="text-xs text-gray-500 mt-2">
-              · 일치 키: <code className="bg-gray-100 px-1 rounded">teacher === "{myName}"</code> 또는{' '}
-              <code className="bg-gray-100 px-1 rounded">slotTeachers</code> 에 본인 이름 포함
-            </div>
-          </Empty>
-        ) : (
-          <div className="flex-1 flex flex-col overflow-hidden p-4 min-h-0">
-            <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded mb-3 text-xs text-blue-900 flex items-start gap-2">
-              <span>ℹ️</span>
-              <span>
-                진짜 시간표의 통합 테이블 모드(teacher-based + isUnifiedTable + weekdayGroupOrder)와 동일.
-                모든 편집/드래그 핸들러는 no-op으로 무력화되어 원본 데이터는 절대 변경되지 않습니다.
-              </span>
-            </div>
-            <div className="flex-1 overflow-auto min-h-0">
-              <TimetableGrid
-                filteredClasses={myMathClasses}
-                allResources={allResources}
-                orderedSelectedDays={ALL_WEEKDAYS}
-                weekDates={weekDates}
-                viewType="teacher"
-                currentPeriods={MATH_PERIODS}
-                teachers={teachers as Teacher[]}
-                searchQuery=""
-                canEdit={false}
-                mode="view"
-                columnWidth="normal"
-                rowHeight="normal"
-                fontSize="normal"
-                showClassName
-                showSchool
-                showGrade
-                showEmptyRooms={false}
-                showStudents
-                showHoldStudents
-                showWithdrawnStudents={false}
-                dragOverClassId={null}
-                onClassClick={NO_OP_VOID}
-                onDragStart={NO_OP_DRAG}
-                onDragOver={NO_OP_DRAG}
-                onDragLeave={NO_OP_DRAG}
-                onDrop={NO_OP_DRAG}
-                currentSubjectFilter="math"
-                studentMap={studentMap}
-                timetableViewMode="teacher-based"
-                isUnifiedTable
-                weekdayGroupOrder={mathConfig.weekdayGroupOrder}
-                isTestView
-              />
-            </div>
-          </div>
-        )}
+      {/* 시간표 본체 — pointer-events:none 으로 사용자 액션 봉인.
+          flex-col + overflow-hidden 으로 TimetableManager 내부의 h-full/flex-1 이
+          제대로 동작하도록 명시적인 flex container 로 구성 */}
+      <div
+        className="flex-1 min-h-0 flex flex-col overflow-hidden"
+        style={{ pointerEvents: 'none' }}
+      >
+        <TimetableManager currentUser={currentUser} />
       </div>
     </div>
   );
 };
-
-const Empty: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="max-w-md mx-auto mt-12 bg-white border border-gray-200 rounded-lg p-6 text-center text-sm text-gray-700">
-    {children}
-  </div>
-);
 
 export default TimetableTest;
