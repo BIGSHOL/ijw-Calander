@@ -1,26 +1,24 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════════╗
- * ║  ⚠️  시간표 테스트 — 진짜 시간표의 READ-ONLY 미러   ⚠️                ║
+ * ║  시간표 테스트 — 독립 상태로 TimetableManager 임베드                 ║
  * ╠══════════════════════════════════════════════════════════════════════╣
- * ║  사용자 결정(2026-05-12): 시간표 테스트 탭은 진짜 시간표(Timetable-  ║
- * ║  Manager)를 그대로 임베드하여 데이터 누락 가능성을 영구히 차단.      ║
- * ║                                                                      ║
- * ║  편집 차단 방식: 본체를 감싸는 div 에 pointer-events:none 적용.      ║
- * ║   - 모든 클릭/드래그/드롭 이벤트가 DOM 단에서 무력화됨               ║
- * ║   - 휠/트랙패드 스크롤은 그대로 동작 (휠은 pointer-event 가 아님)    ║
- * ║   - 사용자 액션을 통한 mutation 경로가 원천 차단됨                   ║
- * ║                                                                      ║
- * ║  단점 (의도된 동작):                                                  ║
- * ║   - 학생 상세 모달도 못 열림 (보기 전용)                              ║
- * ║   - hover highlight 등 시각 효과 비활성                              ║
- * ║                                                                      ║
- * ║  추후 view-only 모달 등 일부 인터랙션이 필요해지면 TimetableManager  ║
- * ║  에 `readOnly` prop 을 추가하는 방향으로 리팩터링.                   ║
+ * ║  Phase 1 (현재): 화면 정상 표시 + 진짜 시간표와 독립적인 state.      ║
+ * ║  - subject/viewType/mathViewMode 등 시간표 컨트롤 상태를 별도 useState║
+ * ║    로 관리. 실 시간표 탭의 동일 상태와 격리됨 (탭 전환해도 양쪽 따로) ║
+ * ║  - TimetableManager 가 사용하는 useClasses/useStudents 등 쿼리는      ║
+ * ║    그대로 Firestore 를 읽음 → 데이터는 실시간 동기화                  ║
+ * ║                                                                       ║
+ * ║  ⚠️ Phase 2 (TODO): 현재 mutation(저장/삭제/드래그) 은 진짜 Firestore ║
+ * ║     에 반영됨. 시뮬레이션 모드를 자동 활성화하거나 useClassMutations  ║
+ * ║     을 stub하여 격리해야 함. 그 전까지는 상단 빨간 배너로 경고 표시.  ║
  * ╚══════════════════════════════════════════════════════════════════════╝
  */
-import React from 'react';
-import { UserProfile, StaffMember } from '../../types';
+import React, { useState, useMemo } from 'react';
+import { AlertTriangle } from 'lucide-react';
+import { UserProfile, StaffMember, TimetableSubjectType } from '../../types';
 import TimetableManager from './TimetableManager';
+import { useTeachers } from '../../hooks/useFirebaseQueries';
+import { usePermissions } from '../../hooks/usePermissions';
 
 interface TimetableTestProps {
   currentUser: UserProfile | null;
@@ -28,35 +26,44 @@ interface TimetableTestProps {
 }
 
 const TimetableTest: React.FC<TimetableTestProps> = ({ currentUser }) => {
+  // 진짜 시간표와 격리된 독립 상태
+  const [subjectTab, setSubjectTab] = useState<TimetableSubjectType | 'shuttle' | 'all'>('math');
+  const [viewType, setViewType] = useState<string>('excel');
+  const [mathViewMode, setMathViewMode] = useState<string>('excel-teacher');
+  const [, setIsTimetableSettingsOpen] = useState(false);
+
+  const { data: teachers = [] } = useTeachers(true);
+
+  // 권한 체크 함수 — 진짜 시간표와 동일 로직
+  const { hasPermission } = usePermissions(currentUser);
+  const hasPermissionFn = useMemo(() => {
+    return (perm: string) => hasPermission(perm as any);
+  }, [hasPermission]);
+
   return (
-    <div className="w-full h-full flex flex-col bg-gray-50">
-      {/* 헤더 — 클릭 가능 영역 (시간표 본체와 분리) */}
-      <div className="px-6 py-3 bg-white border-b border-gray-200 flex items-center gap-3 shrink-0">
-        <span className="text-2xl">🧪</span>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl font-bold text-gray-900">시간표 테스트 (시뮬레이션)</h1>
-            <span className="px-1.5 py-0.5 bg-green-100 text-green-800 text-[10px] font-bold rounded border border-green-300">
-              🔒 원본 보호
-            </span>
-            <span className="px-1.5 py-0.5 bg-gray-100 text-gray-700 text-[10px] font-bold rounded border border-gray-300">
-              👁️ read-only
-            </span>
-          </div>
-          <p className="text-xs text-gray-500 mt-0.5 truncate">
-            진짜 시간표와 100% 동일한 데이터·UI · 모든 클릭/편집 차단 (스크롤만 가능)
-          </p>
-        </div>
+    <div className="w-full h-full flex flex-col min-h-0">
+      {/* 경고 배너 (Phase 2 전까지) */}
+      <div className="flex-shrink-0 bg-red-600 text-white px-3 py-1.5 flex items-center gap-2 text-xs font-bold border-b border-red-800">
+        <AlertTriangle size={14} />
+        <span>⚠️ 테스트 모드 — 진짜 시간표와 독립된 상태이지만,</span>
+        <span className="text-yellow-200">변경(드래그·저장·삭제)은 실제 데이터에 반영됩니다.</span>
+        <span className="ml-auto text-red-100">읽기만 권장</span>
       </div>
 
-      {/* 시간표 본체 — pointer-events:none 으로 사용자 액션 봉인.
-          flex-col + overflow-hidden 으로 TimetableManager 내부의 h-full/flex-1 이
-          제대로 동작하도록 명시적인 flex container 로 구성 */}
-      <div
-        className="flex-1 min-h-0 flex flex-col overflow-hidden"
-        style={{ pointerEvents: 'none' }}
-      >
-        <TimetableManager currentUser={currentUser} />
+      {/* 실제 시간표 임베드 */}
+      <div className="flex-1 min-h-0">
+        <TimetableManager
+          subjectTab={subjectTab as any}
+          onSubjectChange={setSubjectTab as any}
+          viewType={viewType as any}
+          onViewTypeChange={setViewType}
+          currentUser={currentUser}
+          teachers={teachers}
+          mathViewMode={mathViewMode}
+          onMathViewModeChange={setMathViewMode}
+          hasPermissionFn={hasPermissionFn}
+          setIsTimetableSettingsOpen={setIsTimetableSettingsOpen}
+        />
       </div>
     </div>
   );
