@@ -45,6 +45,35 @@ const currentMonth = () => {
 // "2026-04" → "202604"
 const toYm6 = (ymd: string) => ymd.replace(/-/g, '');
 
+// ─── 수납명 카테고리 분류 ───
+type Category = 'textbook' | 'gangaSystem' | 'shuttle' | 'other';
+const CATEGORY_LABELS: Record<Category, string> = {
+  textbook: '교재 (시스템 사용료 제외)',
+  gangaSystem: '교재 강아 시스템 사용료',
+  shuttle: '스쿨버스비',
+  other: '나머지',
+};
+const ALL_CATEGORIES: Category[] = ['textbook', 'gangaSystem', 'shuttle', 'other'];
+
+const classifyCategory = (billingName: string): Category => {
+  const name = billingName || '';
+  // "교재 강아 시스템 사용료" — 정확히 이 문구가 들어간 항목 (가장 구체적이므로 먼저 매칭)
+  if (/교재\s*강아\s*시스템\s*사용료/.test(name)) return 'gangaSystem';
+  // 스쿨버스/셔틀/통학버스
+  if (/스쿨버스|셔틀|통학버스/.test(name)) return 'shuttle';
+  // "교재"가 들어가지만 "시스템 사용료"가 아닌 항목 (gangaSystem은 이미 위에서 걸러짐)
+  if (/교재/.test(name) && !/시스템\s*사용료/.test(name)) return 'textbook';
+  return 'other';
+};
+
+// 학년 정렬 키 (초1<초2<...<초6<중1<중2<중3<고1<고2<고3<기타)
+const gradeOrder = (g: string): number => {
+  const m = g.match(/^(초|중|고)([0-9]+)$/);
+  if (!m) return 9999;
+  const base = m[1] === '초' ? 0 : m[1] === '중' ? 100 : 200;
+  return base + Number(m[2]);
+};
+
 export const MakeEduBillingSyncModal: React.FC<MakeEduBillingSyncModalProps> = ({
   isOpen,
   onClose,
@@ -58,6 +87,11 @@ export const MakeEduBillingSyncModal: React.FC<MakeEduBillingSyncModalProps> = (
   const [isLoadingPending, setIsLoadingPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingRow[]>([]);
+  // 필터 (보기 전용 — 저장 시에는 전체 대상)
+  const [enabledCategories, setEnabledCategories] = useState<Set<Category>>(
+    () => new Set(ALL_CATEGORIES),
+  );
+  const [enabledGrades, setEnabledGrades] = useState<Set<string> | null>(null); // null = 전체
 
   // useBilling.importRecords mutation만 사용 (query 비활성)
   const { importRecords } = useBilling('', false);
@@ -159,6 +193,68 @@ export const MakeEduBillingSyncModal: React.FC<MakeEduBillingSyncModalProps> = (
     });
     return map;
   }, [pending]);
+
+  // 카테고리별 행 카운트
+  const categoryCounts = useMemo(() => {
+    const counts: Record<Category, number> = { textbook: 0, gangaSystem: 0, shuttle: 0, other: 0 };
+    pending.forEach(r => { counts[classifyCategory(r.billingName)]++; });
+    return counts;
+  }, [pending]);
+
+  // 학년 목록 + 카운트
+  const grades = useMemo(() => {
+    const map = new Map<string, number>();
+    pending.forEach(r => {
+      const g = r.grade || '(미지정)';
+      map.set(g, (map.get(g) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .sort((a, b) => gradeOrder(a[0]) - gradeOrder(b[0]) || a[0].localeCompare(b[0], 'ko'));
+  }, [pending]);
+
+  // 학년 필터 상태가 null이면 전체 활성으로 초기화 (pending 변경 시마다 새 학년 자동 포함)
+  useEffect(() => {
+    if (pending.length === 0) return;
+    if (enabledGrades === null) {
+      setEnabledGrades(new Set(grades.map(([g]) => g)));
+    } else {
+      // 신규 학년이 생기면 자동 포함
+      const current = new Set(enabledGrades);
+      let changed = false;
+      grades.forEach(([g]) => { if (!current.has(g)) { current.add(g); changed = true; } });
+      if (changed) setEnabledGrades(current);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pending]);
+
+  // 필터 적용 (보기 전용)
+  const filteredPending = useMemo(() => {
+    return pending.filter(r => {
+      const cat = classifyCategory(r.billingName);
+      if (!enabledCategories.has(cat)) return false;
+      const g = r.grade || '(미지정)';
+      if (enabledGrades && !enabledGrades.has(g)) return false;
+      return true;
+    });
+  }, [pending, enabledCategories, enabledGrades]);
+
+  const toggleCategory = (c: Category) => {
+    const next = new Set(enabledCategories);
+    if (next.has(c)) next.delete(c); else next.add(c);
+    setEnabledCategories(next);
+  };
+  const setAllCategories = (on: boolean) => {
+    setEnabledCategories(on ? new Set(ALL_CATEGORIES) : new Set());
+  };
+
+  const toggleGrade = (g: string) => {
+    const next = new Set(enabledGrades || []);
+    if (next.has(g)) next.delete(g); else next.add(g);
+    setEnabledGrades(next);
+  };
+  const setAllGrades = (on: boolean) => {
+    setEnabledGrades(on ? new Set(grades.map(([g]) => g)) : new Set());
+  };
 
   const handleSave = async () => {
     if (pending.length === 0) return;
@@ -320,6 +416,66 @@ export const MakeEduBillingSyncModal: React.FC<MakeEduBillingSyncModalProps> = (
           </div>
         )}
 
+        {/* Filters (preview 전용 — 저장은 전체 대상) */}
+        {hasPending && (
+          <div className="border-b border-gray-200 bg-white px-4 py-2 space-y-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xxs font-bold text-gray-600 w-14 shrink-0">카테고리</span>
+              {ALL_CATEGORIES.map(c => {
+                const on = enabledCategories.has(c);
+                return (
+                  <button
+                    key={c}
+                    onClick={() => toggleCategory(c)}
+                    className={`px-2 py-0.5 text-xxs rounded-sm border transition-colors ${
+                      on
+                        ? 'bg-blue-100 border-blue-400 text-blue-800 font-bold'
+                        : 'bg-gray-100 border-gray-200 text-gray-400'
+                    }`}
+                  >
+                    {CATEGORY_LABELS[c]} ({categoryCounts[c]})
+                  </button>
+                );
+              })}
+              <button
+                onClick={() => setAllCategories(true)}
+                className="text-xxs text-gray-500 underline ml-1 hover:text-gray-700"
+              >전체</button>
+              <button
+                onClick={() => setAllCategories(false)}
+                className="text-xxs text-gray-500 underline hover:text-gray-700"
+              >없음</button>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xxs font-bold text-gray-600 w-14 shrink-0">학년</span>
+              {grades.map(([g, count]) => {
+                const on = enabledGrades ? enabledGrades.has(g) : true;
+                return (
+                  <button
+                    key={g}
+                    onClick={() => toggleGrade(g)}
+                    className={`px-2 py-0.5 text-xxs rounded-sm border transition-colors ${
+                      on
+                        ? 'bg-emerald-100 border-emerald-400 text-emerald-800 font-bold'
+                        : 'bg-gray-100 border-gray-200 text-gray-400'
+                    }`}
+                  >
+                    {g} ({count})
+                  </button>
+                );
+              })}
+              <button
+                onClick={() => setAllGrades(true)}
+                className="text-xxs text-gray-500 underline ml-1 hover:text-gray-700"
+              >전체</button>
+              <button
+                onClick={() => setAllGrades(false)}
+                className="text-xxs text-gray-500 underline hover:text-gray-700"
+              >없음</button>
+            </div>
+          </div>
+        )}
+
         {/* Preview Table */}
         <div className="flex-1 overflow-auto">
           {isLoadingPending ? (
@@ -332,6 +488,11 @@ export const MakeEduBillingSyncModal: React.FC<MakeEduBillingSyncModalProps> = (
               <Cloud size={32} className="mb-3 opacity-40" />
               <p>청구월 범위를 선택하고 "동기화 시작"을 눌러주세요.</p>
               <p className="text-xxs mt-2">가져온 데이터는 이 화면에서 확인 후 "저장"을 눌러야 실 수납에 반영됩니다.</p>
+            </div>
+          ) : filteredPending.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 text-sm text-gray-400">
+              <p>필터 조건에 맞는 행이 없습니다.</p>
+              <p className="text-xxs mt-1">위 필터를 조정해 보세요.</p>
             </div>
           ) : (
             <table className="w-full text-xs">
@@ -353,7 +514,7 @@ export const MakeEduBillingSyncModal: React.FC<MakeEduBillingSyncModalProps> = (
                 </tr>
               </thead>
               <tbody>
-                {pending.map(r => (
+                {filteredPending.map(r => (
                   <tr key={r.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="px-2 py-1 text-gray-600">{r.month || r.billingMonth}</td>
                     <td className="px-2 py-1 font-medium">{r.studentName}</td>
@@ -385,11 +546,14 @@ export const MakeEduBillingSyncModal: React.FC<MakeEduBillingSyncModalProps> = (
 
         {/* Footer summary */}
         {hasPending && (
-          <div className="px-4 py-2 border-t border-gray-200 bg-gray-50 text-xxs text-gray-600 flex items-center gap-3">
+          <div className="px-4 py-2 border-t border-gray-200 bg-gray-50 text-xxs text-gray-600 flex items-center gap-3 flex-wrap">
             <CheckCircle size={11} className="text-emerald-600" />
-            총 {pending.length}건 · {byMonth.size}개월
+            <span>
+              표시 {filteredPending.length}건 / 전체 {pending.length}건 · {byMonth.size}개월
+            </span>
+            <span className="text-gray-400">저장 시 전체 {pending.length}건이 반영됩니다 (필터는 보기 전용)</span>
             {pending[0]?.syncMeta && (
-              <span className="text-gray-400">
+              <span className="text-gray-400 ml-auto">
                 [{pending[0].syncMeta.fromYm} ~ {pending[0].syncMeta.toYm}, {pending[0].syncMeta.type === 'scheduled' ? '자동' : '수동'}]
               </span>
             )}
