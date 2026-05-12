@@ -83,13 +83,28 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
         where('subject', '==', subject),
         where('className', '==', className)
       );
+      // staff 컬렉션 — log의 changedBy(이메일) → 실제 이름 변환용
+      const staffQuery = query(collection(db, 'staff'));
 
-      const [classesSnapshot, enrollmentsSnapshot, studentsSnapshot, logsSnapshot] = await Promise.all([
+      const [classesSnapshot, enrollmentsSnapshot, studentsSnapshot, logsSnapshot, staffSnapshot] = await Promise.all([
         getDocs(classesQuery).catch(() => null),
         getDocs(enrollmentsQuery).catch(() => null),
         getDocs(studentsQuery).catch(() => null),
         getDocs(logsQuery).catch(() => null),
+        getDocs(staffQuery).catch(() => null),
       ]);
+
+      // staff: 이메일 + uid → { name, role } 매핑
+      const staffByEmail: Record<string, { name: string; role: string }> = {};
+      const staffByUid: Record<string, { name: string; role: string }> = {};
+      if (staffSnapshot) {
+        staffSnapshot.docs.forEach(d => {
+          const data = d.data() as any;
+          const entry = { name: data.name || '', role: data.systemRole || data.role || 'user' };
+          if (data.email) staffByEmail[String(data.email).toLowerCase()] = entry;
+          if (data.uid) staffByUid[data.uid] = entry;
+        });
+      }
 
       // timetable_logs → 학생별 최신 항목 (action별 분리 - enroll/withdraw)
       const studentLogLatest: Record<string, { changedBy: string; timestamp: string; action: string }> = {};
@@ -251,16 +266,23 @@ export const useClassDetail = (className: string, subject: SubjectType) => {
             if (!auditName) {
               const logEntry = studentLogLatest[doc.id];
               if (logEntry) {
-                // log의 changedBy는 이메일 또는 displayName — 이메일이면 @ 앞부분만
+                // log의 changedBy → staff 컬렉션에서 실제 이름 + role 변환
                 const cb = logEntry.changedBy;
-                auditName = cb.includes('@') ? cb.split('@')[0] : cb;
+                const cbLower = cb.toLowerCase();
+                const matchedStaff = staffByEmail[cbLower] || staffByUid[cb];
+                if (matchedStaff && matchedStaff.name) {
+                  auditName = matchedStaff.name;
+                  auditRole = matchedStaff.role;
+                } else {
+                  // staff 매칭 실패 → 이메일이면 @ 앞부분만, 아니면 그대로
+                  auditName = cb.includes('@') ? cb.split('@')[0] : cb;
+                }
                 auditAt = logEntry.timestamp;
                 // log action → 우리 enum
                 if (logEntry.action.includes('withdraw')) auditAction = 'withdrawn';
                 else if (logEntry.action.includes('enroll')) auditAction = 'enrolled';
                 else if (logEntry.action.includes('transfer')) auditAction = 'transferred';
                 else if (logEntry.action.includes('restore')) auditAction = 'restored';
-                // role은 알 수 없음 (log에 미저장)
               }
             }
             students.push({
