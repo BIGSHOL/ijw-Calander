@@ -110,7 +110,64 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
   // billing record를 학생 정보로 보강 (school·teacher 매칭)
   // - 우선순위: studentId → name+grade → name 단일 매치
   // - record에 이미 값이 있으면 그 값 우선 (수동 편집 보호)
+  // - 담임강사 매칭 우선순위:
+  //   1) 청구명 끝의 "(강사명)" 직접 명시 (예: 교재비)
+  //   2) 학생 enrollments에서 청구명과 매칭되는 수업의 teacher
+  //   3) fallback: 활성 enrollment 강사들 " / " 결합
   const records = useMemo<BillingRecord[]>(() => {
+    // 청구명 끝의 "(강사명)" 추출 (한글 2~4자)
+    const extractTeacherFromParen = (name: string): string | null => {
+      if (!name) return null;
+      const m = name.match(/\(([가-힣]{2,4})\)\s*$/);
+      return m ? m[1] : null;
+    };
+
+    // 수업 코드 추출 (MS2B, JJ2I, CR1D 같은 패턴: 대문자2~4 + 숫자1~2 + 선택 대문자1)
+    const extractClassCode = (name: string): string | null => {
+      if (!name) return null;
+      const m = name.match(/\b[A-Z]{2,4}\d{1,2}[A-Z]?\b/);
+      return m ? m[0] : null;
+    };
+
+    // 요일 토큰 제거 (월목, 화금, 수, 월수금 등)
+    const stripDays = (name: string) =>
+      name.replace(/\s+[월화수목금토일]{1,4}\s*$/, '').trim();
+
+    // 학생 enrollments에서 청구명과 매칭되는 수업 찾기
+    const findMatchingTeacher = (
+      billingName: string,
+      enrollments: NonNullable<UnifiedStudent['enrollments']>,
+    ): string | null => {
+      if (!billingName || enrollments.length === 0) return null;
+      const normalized = stripDays(billingName);
+
+      // 1) exact / 정규화 exact
+      let hit = enrollments.find(e => e.className && (
+        e.className === billingName ||
+        e.className === normalized ||
+        stripDays(e.className) === normalized
+      ));
+      if (hit?.teacher) return hit.teacher;
+
+      // 2) 부분 포함 — 청구명이 className을 포함하거나 그 반대 (긴 className 우선)
+      const sortedByLen = [...enrollments].sort(
+        (a, b) => (b.className?.length || 0) - (a.className?.length || 0)
+      );
+      hit = sortedByLen.find(e =>
+        e.className && (billingName.includes(e.className) || e.className.includes(normalized))
+      );
+      if (hit?.teacher) return hit.teacher;
+
+      // 3) 수업 코드 매칭 (MS2B, JJ2I 등 — 수학 코드 패턴)
+      const billCode = extractClassCode(billingName);
+      if (billCode) {
+        hit = enrollments.find(e => extractClassCode(e.className || '') === billCode);
+        if (hit?.teacher) return hit.teacher;
+      }
+
+      return null;
+    };
+
     return rawRecords.map(r => {
       let matched: UnifiedStudent | undefined;
       if (r.studentId) matched = studentLookups.byId.get(r.studentId);
@@ -124,11 +181,22 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
       }
       if (!matched) return r;
 
-      // 담임강사: 활성 enrollment 중 첫 항목의 teacher (여러 과목이면 " / " 결합)
       const enrollments = (matched.enrollments || []).filter(e => !e.endDate);
-      const teacherSet = new Set<string>();
-      enrollments.forEach(e => { if (e.teacher) teacherSet.add(e.teacher); });
-      const teacherStr = Array.from(teacherSet).join(' / ');
+
+      // 1순위: 청구명 괄호 안 강사 (가장 명시적)
+      let teacherStr = extractTeacherFromParen(r.billingName);
+
+      // 2순위: 청구명 ↔ enrollment 매칭
+      if (!teacherStr) {
+        teacherStr = findMatchingTeacher(r.billingName, enrollments);
+      }
+
+      // 3순위 (fallback): 전체 활성 enrollment 강사 결합
+      if (!teacherStr) {
+        const teacherSet = new Set<string>();
+        enrollments.forEach(e => { if (e.teacher) teacherSet.add(e.teacher); });
+        teacherStr = Array.from(teacherSet).join(' / ');
+      }
 
       return {
         ...r,
