@@ -45,34 +45,14 @@ const currentMonth = () => {
 // "2026-04" → "202604"
 const toYm6 = (ymd: string) => ymd.replace(/-/g, '');
 
-// ─── 수납명 카테고리 분류 ───
-type Category = 'textbook' | 'gangaSystem' | 'shuttle' | 'other';
-const CATEGORY_LABELS: Record<Category, string> = {
-  textbook: '교재 (시스템 사용료 제외)',
-  gangaSystem: '교재 강아 시스템 사용료',
-  shuttle: '스쿨버스비',
-  other: '나머지',
-};
-const ALL_CATEGORIES: Category[] = ['textbook', 'gangaSystem', 'shuttle', 'other'];
-
-const classifyCategory = (billingName: string): Category => {
-  const name = billingName || '';
-  // "교재 강아 시스템 사용료" — 정확히 이 문구가 들어간 항목 (가장 구체적이므로 먼저 매칭)
-  if (/교재\s*강아\s*시스템\s*사용료/.test(name)) return 'gangaSystem';
-  // 스쿨버스/셔틀/통학버스
-  if (/스쿨버스|셔틀|통학버스/.test(name)) return 'shuttle';
-  // "교재"가 들어가지만 "시스템 사용료"가 아닌 항목 (gangaSystem은 이미 위에서 걸러짐)
-  if (/교재/.test(name) && !/시스템\s*사용료/.test(name)) return 'textbook';
-  return 'other';
-};
-
-// 학년 정렬 키 (초1<초2<...<초6<중1<중2<중3<고1<고2<고3<기타)
-const gradeOrder = (g: string): number => {
-  const m = g.match(/^(초|중|고)([0-9]+)$/);
-  if (!m) return 9999;
-  const base = m[1] === '초' ? 0 : m[1] === '중' ? 100 : 200;
-  return base + Number(m[2]);
-};
+// 수납명 카테고리 분류 / 학년 정렬 — utils/billingCategories.ts 재사용
+import {
+  BillingCategory as Category,
+  BILLING_CATEGORIES as ALL_CATEGORIES,
+  BILLING_CATEGORY_LABELS as CATEGORY_LABELS,
+  classifyBillingCategory as classifyCategory,
+  gradeSortKey as gradeOrder,
+} from '../../utils/billingCategories';
 
 export const MakeEduBillingSyncModal: React.FC<MakeEduBillingSyncModalProps> = ({
   isOpen,

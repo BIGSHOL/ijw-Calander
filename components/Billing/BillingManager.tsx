@@ -10,6 +10,12 @@ import { useStudents } from '../../hooks/useStudents';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { BillingRecord, UnifiedStudent } from '../../types';
 import StudentDetailModal from '../StudentManagement/StudentDetailModal';
+import {
+  BILLING_CATEGORIES,
+  BILLING_CATEGORY_LABELS,
+  classifyBillingCategory,
+  gradeSortKey,
+} from '../../utils/billingCategories';
 
 const MakeEduBillingSyncModal = lazy(() =>
   import('./MakeEduBillingSyncModal').then(m => ({ default: m.MakeEduBillingSyncModal })),
@@ -87,7 +93,7 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
   // 컬럼 고유값 (필터 드롭다운용)
   const columnValues = useMemo(() => {
     const cols: Record<string, string[]> = {};
-    const keys: SortKey[] = ['studentName', 'school', 'grade', 'billingName', 'teacher', 'status'];
+    const keys: SortKey[] = ['studentName', 'school', 'grade', 'teacher', 'status'];
     for (const key of keys) {
       const set = new Set<string>();
       records.forEach(r => {
@@ -96,6 +102,15 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
       });
       cols[key] = Array.from(set);
     }
+    // 수납명 컬럼은 4가지 카테고리 라벨로 그룹화 (교재/교재 강아 시스템 사용료/스쿨버스비/나머지)
+    // 실제 존재하는 카테고리만 노출
+    const presentCats = new Set<string>();
+    records.forEach(r => {
+      presentCats.add(BILLING_CATEGORY_LABELS[classifyBillingCategory(r.billingName)]);
+    });
+    cols['billingName'] = BILLING_CATEGORIES
+      .map(c => BILLING_CATEGORY_LABELS[c])
+      .filter(label => presentCats.has(label));
     return cols;
   }, [records]);
 
@@ -121,7 +136,14 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
         list = [];
         break;
       }
-      list = list.filter(r => sel.has(String((r as any)[key] ?? '')));
+      if (key === 'billingName') {
+        // 수납명 컬럼은 4 카테고리 기준 매칭
+        list = list.filter(r =>
+          sel.has(BILLING_CATEGORY_LABELS[classifyBillingCategory(r.billingName)])
+        );
+      } else {
+        list = list.filter(r => sel.has(String((r as any)[key] ?? '')));
+      }
     }
 
     // 정렬
@@ -375,16 +397,11 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
           <span className="ml-auto text-sm text-gray-500">{filtered.length}건</span>
         </div>
 
-        {/* 테이블 */}
+        {/* 테이블 — 결과가 0건이어도 thead(컬럼 필터)는 유지하여 사용자가 필터 재조정 가능하도록 */}
         <div className="rounded-sm border border-gray-200 bg-white overflow-x-auto">
           {isLoading ? (
             <div className="flex items-center justify-center h-64">
               <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
-            </div>
-          ) : paged.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-              <AlertCircle className="w-12 h-12 mb-4 opacity-50" />
-              <p>{records.length === 0 ? '수납 내역이 없습니다.' : '검색 결과가 없습니다.'}</p>
             </div>
           ) : (
             <table className="min-w-full text-xs">
@@ -419,6 +436,7 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
                       sortKey={sortKey === 'grade' ? sortKey : null}
                       sortDir={sortDir}
                       onSort={d => handleSort('grade', d)}
+                      sortFn={(a, b) => gradeSortKey(a) - gradeSortKey(b) || a.localeCompare(b, 'ko')}
                     >학년</ColumnFilter>
                   </th>
                   <th className="text-left">
@@ -429,6 +447,10 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
                       sortKey={sortKey === 'billingName' ? sortKey : null}
                       sortDir={sortDir}
                       onSort={d => handleSort('billingName', d)}
+                      sortFn={(a, b) => {
+                        const order = BILLING_CATEGORIES.map(c => BILLING_CATEGORY_LABELS[c]);
+                        return order.indexOf(a) - order.indexOf(b);
+                      }}
                     >수납명</ColumnFilter>
                   </th>
                   <th className="text-right">
@@ -501,6 +523,18 @@ const BillingManager: React.FC<BillingManagerProps> = ({ userProfile }) => {
                 </tr>
               </thead>
               <tbody>
+                {paged.length === 0 && (
+                  <tr>
+                    <td colSpan={12} className="px-3 py-12 text-center text-gray-500">
+                      <AlertCircle className="w-10 h-10 mb-3 opacity-50 mx-auto" />
+                      <p className="text-sm">
+                        {records.length === 0
+                          ? '수납 내역이 없습니다.'
+                          : '필터 조건에 맞는 결과가 없습니다. 컬럼 헤더를 클릭하여 필터를 조정하세요.'}
+                      </p>
+                    </td>
+                  </tr>
+                )}
                 {paged.map((r, idx) => {
                   const isEditing = editingId === r.id;
                   return (

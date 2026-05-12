@@ -9,6 +9,8 @@ interface Props {
   onSort: (dir: 'asc' | 'desc') => void;
   children: React.ReactNode;
   align?: 'left' | 'right' | 'center';
+  /** 필터 드롭다운 내 값 목록의 정렬 비교 함수. 미지정 시 한글 localeCompare. */
+  sortFn?: (a: string, b: string) => number;
 }
 
 /**
@@ -26,6 +28,7 @@ export const ColumnFilter: React.FC<Props> = ({
   onSort,
   children,
   align = 'left',
+  sortFn,
 }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -44,8 +47,8 @@ export const ColumnFilter: React.FC<Props> = ({
   }, [open]);
 
   const uniqueValues = useMemo(
-    () => [...values].sort((a, b) => a.localeCompare(b, 'ko')),
-    [values],
+    () => [...values].sort(sortFn || ((a, b) => a.localeCompare(b, 'ko'))),
+    [values, sortFn],
   );
 
   const filteredValues = useMemo(() => {
