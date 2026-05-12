@@ -774,9 +774,14 @@ const ClassCard: React.FC<ClassCardProps> = ({
             .filter(s => s.onHold && !s.withdrawalDate && isStudentAttendingAllMergedDays(s))
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
             .filter(filterStudent);
-        // 퇴원 학생: 과거/오늘 날짜 + 반이동이 아닌 실제 퇴원만
+        // 퇴원 학생: 과거/오늘 날짜 + 반이동이 아닌 실제 퇴원 + 30일 이내
+        // (헤더 퇴원 카운트·단일 셀 퇴원 필터와 일관성 유지)
         const commonWithdrawn = allStudents
-            .filter(s => s.withdrawalDate && s.withdrawalDate <= today && !s.isTransferred)
+            .filter(s => {
+                if (!s.withdrawalDate || s.withdrawalDate > today || s.isTransferred) return false;
+                const daysSince = Math.floor((refDateMs - new Date(s.withdrawalDate).getTime()) / (1000 * 60 * 60 * 24));
+                return daysSince <= 30;
+            })
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
             .filter(filterStudent);
         // 퇴원예정: 재원생 섹션에서 가로줄로 표시하므로 별도 섹션은 빈 배열
