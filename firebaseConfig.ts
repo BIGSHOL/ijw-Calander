@@ -524,3 +524,62 @@ if (typeof window !== 'undefined') {
     (window as any).migrateKeywordColorsToClasses = _migrateKeywordColorsToClasses;
 }
 
+// ======== 퇴원 카운트 진단: 시간표 헤더에 안 보이는 퇴원생 찾기 ========
+// 사용법: window.diagnoseWithdrawn('박서연C') — 특정 학생만 / 또는 인수 없이 전체
+async function diagnoseWithdrawn(searchName?: string): Promise<void> {
+    console.log(`🔍 퇴원 카운트 진단 시작${searchName ? ` (대상: ${searchName})` : ''}`);
+    const today = new Date().toISOString().split('T')[0];
+    const refDateMs = new Date(today).getTime();
+
+    const studentsSnap = await getDocs(collection(dbInstance, 'students'));
+    const studentMap: Record<string, any> = {};
+    studentsSnap.docs.forEach(d => { studentMap[d.id] = d.data(); });
+
+    const matches: any[] = [];
+
+    for (const studentDoc of studentsSnap.docs) {
+        const sid = studentDoc.id;
+        const sdata = studentDoc.data() as any;
+        if (searchName && !(sdata.name || '').includes(searchName)) continue;
+
+        const enrollSnap = await getDocs(collection(dbInstance, 'students', sid, 'enrollments'));
+        const enrollments = enrollSnap.docs.map(e => ({ id: e.id, ...(e.data() as any) }));
+
+        // 수학/고등수학 퇴원 enrollment 만
+        const mathEnrolls = enrollments.filter((e: any) => e.subject === 'math' || e.subject === 'highmath');
+        const withdrawn = mathEnrolls.filter((e: any) => {
+            const wd = e.withdrawalDate || e.endDate;
+            if (!wd || wd > today || e.isTransferred) return false;
+            const daysSince = Math.floor((refDateMs - new Date(wd).getTime()) / 86400000);
+            return daysSince <= 30;
+        });
+        const transferred = mathEnrolls.filter((e: any) => e.isTransferred && (e.withdrawalDate || e.endDate));
+        const active = mathEnrolls.filter((e: any) => !e.withdrawalDate && !e.endDate);
+
+        if (withdrawn.length > 0 || transferred.length > 0 || (searchName && active.length >= 0)) {
+            matches.push({
+                id: sid,
+                name: sdata.name,
+                school: sdata.school,
+                grade: sdata.grade,
+                status: sdata.status,
+                활성: active.map((e: any) => `${e.className}(${e.subject})`).join(', '),
+                퇴원_30일이내: withdrawn.map((e: any) => `${e.className} ~${e.withdrawalDate || e.endDate}${e.isTransferred ? ' (반이동)' : ''}`).join(', '),
+                반이동표시: transferred.map((e: any) => `${e.className}`).join(', '),
+            });
+        }
+    }
+
+    if (matches.length === 0) {
+        console.log('❌ 일치하는 학생 없음');
+        return;
+    }
+    console.log(`📊 ${matches.length}명 찾음`);
+    console.table(matches);
+    console.log('💡 헤더 퇴원 카운트는 "퇴원_30일이내" 컬럼 값이 있는 학생만 잡힘. 반이동표시 컬럼은 isTransferred=true라 제외됨.');
+}
+
+if (typeof window !== 'undefined') {
+    (window as any).diagnoseWithdrawn = diagnoseWithdrawn;
+}
+
