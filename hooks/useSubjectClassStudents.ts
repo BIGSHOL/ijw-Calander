@@ -84,6 +84,18 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
         Object.entries(studentMap).forEach(([studentId, student]) => {
             if (!student.enrollments) return;
 
+            // 학생 프로필의 startDate 를 firstSubjectEnrollmentDate 의 안전한 fallback 으로 사용
+            // — enrollment 의 enrollmentDate/startDate 가 반이동/부활 처리 시 덮어쓰여 손실되어도
+            //   학원 최초 등록일은 student 프로필 레벨에 보존됨 (write-side 버그 방어선)
+            // — 신입 빨강 오판정 (예: 박지율) 방지: 학원에 오래 다닌 학생은 절대 신입으로 안 잡힘
+            const profileStart = convertTimestampToDate((student as any).startDate);
+            if (profileStart) {
+                const cur = studentFirstSubjectStartDate[studentId];
+                if (!cur || profileStart < cur) {
+                    studentFirstSubjectStartDate[studentId] = profileStart;
+                }
+            }
+
             student.enrollments.forEach((enrollment: any) => {
                 if (!subjects.includes(enrollment.subject)) return;
                 // 취소된 예약은 활성/종료 어디에도 카운트 안 함 (반이동 감지 정확성을 위해)

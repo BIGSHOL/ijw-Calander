@@ -930,6 +930,10 @@ export const useManageClassStudents = () => {
           const updateOps = snapshot.docs.map(async (docSnap) => {
             await updateDoc(docSnap.ref, {
               endDate: endDate,
+              // Path 1(드래그) 과 일관성: withdrawalDate, isTransferred 도 함께 박아야
+              // useSubjectClassStudents 의 hasEndDate / studentEndedClasses / isTransferredIn 판정이 정확히 동작
+              withdrawalDate: endDate,
+              isTransferred: true,
               updatedAt: new Date().toISOString(),
               transferTo: className,  // 어디로 반이동했는지 기록
               ...auditTransferred,
@@ -964,10 +968,13 @@ export const useManageClassStudents = () => {
 
           if (endedDoc) {
             // 기존 종료 enrollment 부활: endDate/withdrawalDate 제거 + 시작일 갱신
+            // ⚠️ enrollmentDate 는 절대 덮어쓰지 않음 — firstSubjectEnrollmentDate(신입 판정 기준)
+            //    계산이 enrollment.enrollmentDate 의 min 을 사용하므로, 부활 시 원래 첫 등록일을 보존해야
+            //    "기존 학생이 신입(빨강)으로 잘못 표시되는 박지율 케이스" 가 발생하지 않음.
+            // — startDate 만 새 active 기간 시작일로 갱신
             const updateData: any = {
               endDate: null,
               withdrawalDate: null,
-              enrollmentDate: startDate,
               startDate: startDate,
               staffId: teacher,
               teacher: teacher,
@@ -975,6 +982,11 @@ export const useManageClassStudents = () => {
               updatedAt: new Date().toISOString(),
               ...auditRestored,
             };
+            // enrollmentDate 필드가 없는 레거시 doc 의 경우만 startDate 로 백필 (기존 값 있으면 보존)
+            const existingEnrollmentDate = endedDoc.data().enrollmentDate;
+            if (!existingEnrollmentDate) {
+              updateData.enrollmentDate = startDate;
+            }
             if (studentAttendanceDays[studentId] && studentAttendanceDays[studentId].length > 0) {
               updateData.attendanceDays = studentAttendanceDays[studentId];
             }
