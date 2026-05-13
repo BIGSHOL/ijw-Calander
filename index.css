@@ -502,18 +502,16 @@ tbody:not(.timetable-body) tr {
   overflow-anchor: none;
 }
 
-/* 시간표 테스트(시뮬레이션) 페이지 read-only 차단
-   - main#main-content 안의 모든 pointer 인터랙션만 차단
-     → 사이드바(<aside>)는 영향 받지 않아 다른 탭으로 이동 가능
-   - 휠/트랙패드 스크롤은 pointer-event 가 아니므로 그대로 동작
-   - TimetableTest 컴포넌트 mount 동안만 body 에 클래스 부여됨 */
+/* 시간표 테스트(시뮬레이션) 페이지 read-only — 시각 힌트만.
+   실제 차단은 TimetableTest 의 JS capture-phase 이벤트 핸들러가 담당.
+   pointer-events:none 방식은 휠 스크롤까지 죽여서(브라우저는 wheel 도 pointer-event 로 취급)
+   시간표 아래 영역을 볼 수가 없었음. JS 차단으로 wheel/scroll 은 보존됨. */
 body.timetable-readonly main#main-content {
-  pointer-events: none !important;
+  cursor: not-allowed;
 }
-/* 시간표 테스트에서 예외로 클릭 허용할 영역 (주차 네비게이션, 과목/뷰 토글, 학생 통계 드롭다운 등) */
 body.timetable-readonly main#main-content .readonly-allow,
 body.timetable-readonly main#main-content .readonly-allow * {
-  pointer-events: auto !important;
+  cursor: auto;
 }
 
 /* GPU 가속 활성화 (애니메이션 요소) */

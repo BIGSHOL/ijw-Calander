@@ -53,12 +53,29 @@ const TimetableTest: React.FC<TimetableTestProps> = ({ currentUser }) => {
     };
   }, [hasPermission]);
 
-  // 다중방어 #2: pointer-events:none 으로 main#main-content 전체 차단
-  // 예외: .readonly-allow 클래스 가진 요소만 클릭 가능 (주차 네비, 과목/뷰 토글, 학생 통계 드롭다운)
+  // 다중방어 #2: capture-phase 이벤트 차단 — wheel/scroll 은 통과, click/drag 류만 막음
+  // CSS pointer-events:none 방식은 휠 스크롤까지 죽여서 시간표 아래 영역을 볼 수가 없었음.
+  // 이제 JS capture 로 편집성 이벤트만 selectively 차단 → 스크롤·hover·focus 모두 정상.
+  // 예외: .readonly-allow 클래스 가진 요소 (주차 네비, 과목/뷰 토글, 학생 통계 드롭다운)
   useEffect(() => {
-    document.body.classList.add('timetable-readonly');
+    document.body.classList.add('timetable-readonly'); // 시각 힌트(cursor)용 — 차단은 JS 가 담당
+    const main = document.getElementById('main-content');
+    if (!main) return () => { document.body.classList.remove('timetable-readonly'); };
+
+    const blockEvent = (e: Event) => {
+      const target = e.target as HTMLElement | null;
+      if (target && target.closest && target.closest('.readonly-allow')) return; // 허용영역
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    // 편집/드래그/컨텍스트 류 이벤트만 차단. wheel/scroll/touchmove/keyboard 는 통과.
+    const blockedEvents = ['click', 'mousedown', 'mouseup', 'dblclick', 'dragstart', 'dragenter', 'dragover', 'drop', 'contextmenu'];
+    blockedEvents.forEach(ev => main.addEventListener(ev, blockEvent, true));
+
     return () => {
       document.body.classList.remove('timetable-readonly');
+      blockedEvents.forEach(ev => main.removeEventListener(ev, blockEvent, true));
     };
   }, []);
 
