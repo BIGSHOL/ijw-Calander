@@ -569,6 +569,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
             const base = studentMap[studentId] || student;
             withdrawnStudents.push({ id: studentId, name: base.name || student.name, school: base.school || '', grade: base.grade || '', withdrawalDate: student.withdrawalDate });
         });
+        withdrawnStudents.sort((a, b) => (b.withdrawalDate || '').localeCompare(a.withdrawalDate || ''));
 
         const withdrawnFutureStudents: Array<{ id: string; name: string; school: string; grade: string; withdrawalDate?: string }> = [];
         withdrawnFutureByStudentId.forEach((student, studentId) => {
