@@ -986,6 +986,14 @@ const ClassCard: React.FC<ClassCardProps> = ({
             .sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', 'ko'));
     }, [autoCompleteQuery, studentMap, cls, isExcelMode]);
 
+    // 셀 단위 퇴원 섹션 접기/펼치기 — 글로벌 showWithdrawnStudents 와 별개로 동작.
+    // 글로벌(필터)이 바뀌면 useEffect 로 로컬도 동기화 → 모든 셀이 즉시 따라감.
+    // 사용자가 특정 셀 헤더만 클릭해서 그 셀만 토글하는 UX 보장.
+    const [localShowWithdrawn, setLocalShowWithdrawn] = useState(showWithdrawnStudents);
+    useEffect(() => {
+        setLocalShowWithdrawn(showWithdrawnStudents);
+    }, [showWithdrawnStudents]);
+
     // 이 반에 대한 보류 등록 학생 (저장 전 가상 표시)
     const pendingEnrollmentStudents = useMemo(() => {
         if (!pendingExcelEnrollments || pendingExcelEnrollments.length === 0) return [];
@@ -1574,8 +1582,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 )}
                                 {commonStudents.withdrawn.length > 0 && (
                                     <div className="px-0.5 py-0 bg-gray-100">
-                                        <div className={`${fontSizeClass} font-bold text-gray-600 overflow-hidden whitespace-nowrap`}>{showWithdrawnStudents ? '▼' : '▶'} {commonStudents.withdrawn.length}명 - 퇴원</div>
-                                        {showWithdrawnStudents && <ul className="flex flex-col gap-0 list-none">
+                                        <div
+                                            onClick={(e) => { e.stopPropagation(); setLocalShowWithdrawn(v => !v); }}
+                                            className={`${fontSizeClass} font-bold text-gray-600 overflow-hidden whitespace-nowrap cursor-pointer select-none`}
+                                        >{localShowWithdrawn ? '▼' : '▶'} {commonStudents.withdrawn.length}명 - 퇴원</div>
+                                        {localShowWithdrawn && <ul className="flex flex-col gap-0 list-none">
                                             {commonStudents.withdrawn.map(s => {
                                                 let text = s.name;
                                                 if (showSchool || showGrade) {
@@ -1788,11 +1799,14 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                     </div>
                                 )}
 
-                                {/* 퇴원생 Section — 헤더는 항상 표시, 리스트만 showWithdrawnStudents로 토글 */}
+                                {/* 퇴원생 Section — 헤더는 항상 표시, 리스트는 로컬 토글로 접기/펼치기 */}
                                 {withdrawnStudents.length > 0 && (
                                     <div className="px-0.5 py-0 bg-gray-100">
-                                        <div className={`${fontSizeClass} font-bold text-gray-600 overflow-hidden whitespace-nowrap`}>{showWithdrawnStudents ? '▼' : '▶'} {withdrawnStudents.length}명 - 퇴원</div>
-                                        {showWithdrawnStudents && <ul className="flex flex-col gap-0 list-none">
+                                        <div
+                                            onClick={(e) => { e.stopPropagation(); setLocalShowWithdrawn(v => !v); }}
+                                            className={`${fontSizeClass} font-bold text-gray-600 overflow-hidden whitespace-nowrap cursor-pointer select-none`}
+                                        >{localShowWithdrawn ? '▼' : '▶'} {withdrawnStudents.length}명 - 퇴원</div>
+                                        {localShowWithdrawn && <ul className="flex flex-col gap-0 list-none">
                                             {withdrawnStudents.map(s => {
                                                 let text = s.name;
                                                 if (showSchool || showGrade) {
