@@ -962,8 +962,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
         return Object.values(studentMap)
             .filter((s: any) =>
                 s.name?.toLowerCase().includes(query) &&
-                !existingIds.has(s.id) &&
-                s.status !== 'withdrawn'
+                !existingIds.has(s.id)
             )
             .sort((a: any, b: any) => (a.name || '').localeCompare(b.name || '', 'ko'));
     }, [autoCompleteQuery, studentMap, cls, isExcelMode]);
@@ -981,10 +980,15 @@ const ClassCard: React.FC<ClassCardProps> = ({
     }, [pendingExcelEnrollments, cls.className, studentMap]);
 
     const handleEnrollStudent = useCallback((studentId: string) => {
+        const student = studentMap?.[studentId];
+        if (student?.status === 'withdrawn') {
+            const ok = window.confirm(`퇴원 학생을 재등록하시겠습니까?\n\n학생: ${student.name}`);
+            if (!ok) return;
+        }
         onEnrollStudent?.(studentId, cls.className);
         setAutoCompleteQuery('');
         setShowAutoComplete(false);
-    }, [onEnrollStudent, cls.className]);
+    }, [onEnrollStudent, cls.className, studentMap]);
 
     // 병합 셀 내 zone 드래그 오버 상태 (로컬)
     const [dragOverZone, setDragOverZone] = useState<string | null>(null);
@@ -1895,8 +1899,13 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         }}
                                         className={`px-1.5 py-0.5 text-xxs cursor-pointer flex flex-col ${idx === acHighlightIndex ? 'bg-blue-100' : 'hover:bg-blue-50'}`}
                                     >
-                                        <div className="flex justify-between">
-                                            <span className="font-medium">{s.name}</span>
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-medium flex items-center gap-1">
+                                                {s.name}
+                                                {s.status === 'withdrawn' && (
+                                                    <span className="px-1 rounded bg-gray-200 text-gray-600 text-[10px] leading-none py-0.5">퇴원</span>
+                                                )}
+                                            </span>
                                             <span className="text-gray-400">{formatSchoolGrade(s.school, s.grade)}</span>
                                         </div>
                                         <SubjectBadges enrollments={s.enrollments} />
