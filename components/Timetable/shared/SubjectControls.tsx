@@ -134,7 +134,8 @@ export default function SubjectControls({
     };
 
     const defaultOptions = viewOptions.filter(o => o.category === 'default');
-    const devOptions = viewOptions.filter(o => o.category === 'dev');
+    // 사용자 결정(2026-05-13): 기본뷰 외 dev 옵션은 모두 숨김. devOptions 는 의도적으로 비움.
+    const devOptions: ViewOption[] = [];
 
     return (
         <div className="flex items-center gap-1.5">

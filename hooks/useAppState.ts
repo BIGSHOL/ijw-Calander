@@ -243,12 +243,16 @@ export function useTimetableState() {
   });
   const [timetableViewType, _setTimetableViewType] = useState<'teacher' | 'room' | 'class' | 'excel'>(() => {
     const saved = storage.getString(STORAGE_KEYS.TIMETABLE_VIEW_TYPE);
-    return (saved as 'teacher' | 'room' | 'class' | 'excel') || 'class';
+    // 기본뷰(='excel') 외 옵션은 UI 에서 숨겨졌으므로 기본값을 'excel' 로 고정
+    return (saved as 'teacher' | 'room' | 'class' | 'excel') || 'excel';
   });
   const [mathViewMode, _setMathViewMode] = useState<string>(() => {
     const saved = storage.getString(STORAGE_KEYS.TIMETABLE_MATH_VIEW_MODE);
-    // 강사별뷰(teacher-based) 숨김 → 기본값 day-based
-    return saved === 'teacher-based' ? 'day-based' : (saved || 'day-based');
+    const initialSubject = (storage.getString(STORAGE_KEYS.TIMETABLE_SUBJECT) as TimetableSubjectType) || 'math';
+    const defaultForSubject = initialSubject === 'highmath' ? 'excel-day' : 'excel-teacher';
+    // 기본뷰 한정으로 유효한 모드만 허용 — 그 외(legacy 'teacher-based','day-based' 등)는 과목 기본값으로 치환
+    if (saved === 'excel-teacher' || saved === 'excel-day') return saved;
+    return defaultForSubject;
   });
 
   const setTimetableSubject = useCallback((value: TimetableSubjectType) => {
@@ -268,6 +272,26 @@ export function useTimetableState() {
     _setMathViewMode(value);
     storage.setString(STORAGE_KEYS.TIMETABLE_MATH_VIEW_MODE, value);
   }, []);
+
+  // 정규화 가드 — 기본뷰 외 옵션은 UI 에서 숨겨졌으므로 stale localStorage 가
+  // 'room'/'class'/'teacher' 등으로 남아있으면 자동으로 'excel' 로 치유.
+  useEffect(() => {
+    if (timetableViewType !== 'excel') {
+      _setTimetableViewType('excel');
+      storage.setString(STORAGE_KEYS.TIMETABLE_VIEW_TYPE, 'excel');
+    }
+  }, [timetableViewType]);
+
+  // 과목 전환 시 해당 과목의 기본뷰 mathViewMode 로 정렬
+  useEffect(() => {
+    if (timetableSubject === 'math' && mathViewMode !== 'excel-teacher') {
+      _setMathViewMode('excel-teacher');
+      storage.setString(STORAGE_KEYS.TIMETABLE_MATH_VIEW_MODE, 'excel-teacher');
+    } else if (timetableSubject === 'highmath' && mathViewMode !== 'excel-day') {
+      _setMathViewMode('excel-day');
+      storage.setString(STORAGE_KEYS.TIMETABLE_MATH_VIEW_MODE, 'excel-day');
+    }
+  }, [timetableSubject, mathViewMode]);
 
   return {
     timetableSubject,
