@@ -956,9 +956,20 @@ const ClassCard: React.FC<ClassCardProps> = ({
     const autoCompleteResults = useMemo(() => {
         if (!isExcelMode || !autoCompleteQuery.trim() || !studentMap) return [];
         const query = autoCompleteQuery.trim().toLowerCase();
-        const existingIds = new Set(
-            (cls.studentIds || cls.studentList?.map((s: any) => s.id) || [])
-        );
+        // 활성 등록 학생만 existingIds 에 포함 — 퇴원생은 재등록 가능해야 하므로 검색 결과 노출
+        const existingIds = new Set<string>();
+        if (cls.studentList && cls.studentList.length > 0) {
+            cls.studentList.forEach((s: any) => {
+                const isWithdrawn = !!s.withdrawalDate;
+                if (!isWithdrawn) existingIds.add(s.id);
+            });
+        } else if (cls.studentIds) {
+            cls.studentIds.forEach((id: string) => {
+                const s = studentMap[id];
+                const isWithdrawn = s?.status === 'withdrawn' || !!s?.withdrawalDate;
+                if (!isWithdrawn) existingIds.add(id);
+            });
+        }
         return Object.values(studentMap)
             .filter((s: any) =>
                 s.name?.toLowerCase().includes(query) &&
@@ -981,8 +992,9 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
     const handleEnrollStudent = useCallback((studentId: string) => {
         const student = studentMap?.[studentId];
-        if (student?.status === 'withdrawn') {
-            const ok = window.confirm(`퇴원 학생을 재등록하시겠습니까?\n\n학생: ${student.name}`);
+        const isWithdrawn = student?.status === 'withdrawn' || !!student?.withdrawalDate;
+        if (isWithdrawn) {
+            const ok = window.confirm(`퇴원 학생을 재등록하시겠습니까?\n\n학생: ${student?.name ?? ''}`);
             if (!ok) return;
         }
         onEnrollStudent?.(studentId, cls.className);
@@ -1902,7 +1914,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         <div className="flex justify-between items-center">
                                             <span className="font-medium flex items-center gap-1">
                                                 {s.name}
-                                                {s.status === 'withdrawn' && (
+                                                {(s.status === 'withdrawn' || !!s.withdrawalDate) && (
                                                     <span className="px-1 rounded bg-gray-200 text-gray-600 text-[10px] leading-none py-0.5">퇴원</span>
                                                 )}
                                             </span>
