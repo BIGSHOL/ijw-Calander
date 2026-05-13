@@ -487,6 +487,11 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
 
         const today = currentWeekStart ? formatDateKey(currentWeekStart) : formatDateKey(new Date());
         const refDate = new Date(today);
+        // 주차 마지막일(일요일) — "그 주에 발생하는 퇴원도 그 주 카운트에 포함" 기준
+        // 30일 윈도우는 여전히 refDate(월요일) 기준 유지
+        const weekEndDate = new Date(refDate);
+        weekEndDate.setDate(weekEndDate.getDate() + 6);
+        const weekEnd = formatDateKey(weekEndDate);
 
         // 같은 학생이 여러 반에 나타날 수 있음 (한 반은 퇴원, 다른 반은 재원 등).
         // 우선순위 = 재원(3) > 대기(2) > 퇴원(1). 가장 높은 상태를 그 학생의 대표 상태로 채택.
@@ -546,14 +551,14 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
         filteredClasses.forEach(cls => {
             cls.studentList?.forEach((student: any) => {
                 if (!student.withdrawalDate || student.isTransferred) return; // 반이동 제외
-                if (student.withdrawalDate > today) {
+                if (student.withdrawalDate > weekEnd) {
                     // 미래 퇴원 예정 — 가장 가까운 날짜를 우선
                     const existing = withdrawnFutureByStudentId.get(student.id);
                     if (!existing || student.withdrawalDate < existing.withdrawalDate) {
                         withdrawnFutureByStudentId.set(student.id, student);
                     }
                 } else {
-                    const daysSince = Math.floor((refDate.getTime() - new Date(student.withdrawalDate).getTime()) / (1000 * 60 * 60 * 24));
+                    const daysSince = Math.floor((weekEndDate.getTime() - new Date(student.withdrawalDate).getTime()) / (1000 * 60 * 60 * 24));
                     if (daysSince > 30) return;
                     // 가장 최근 withdrawalDate 보유한 record를 우선
                     const existing = withdrawnByStudentId.get(student.id);

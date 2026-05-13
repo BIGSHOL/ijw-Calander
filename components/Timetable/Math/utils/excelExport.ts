@@ -168,8 +168,16 @@ const buildCellPayload = (
         });
     });
 
-    const today = referenceDateStr;
-    const refDateMs = new Date(today).getTime();
+    // 주차 마지막일(일요일) 기준 — 그 주에 발생하는 퇴원도 그 주에 포함되도록
+    const today = (() => {
+        const d = new Date(referenceDateStr);
+        d.setDate(d.getDate() + 6);
+        const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const dd = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${dd}`;
+    })();
+    const weekEndMs = new Date(today).getTime();
+    // 신입 sort 가중치 계산용 — 입학일 30일 윈도우는 refDateStr(월요일) 기준 유지
+    const refDateMs = new Date(referenceDateStr).getTime();
 
     // 분류 (재원/대기/퇴원) + cellDays 기준 attendingCellDays 계산
     const activeAll: StudentWithMeta[] = [];
@@ -186,7 +194,7 @@ const buildCellPayload = (
         const hasActiveWithdrawal = s.withdrawalDate && s.withdrawalDate <= today && !s.isTransferred;
 
         if (hasActiveWithdrawal) {
-            const daysSince = Math.floor((refDateMs - new Date(s.withdrawalDate).getTime()) / 86400000);
+            const daysSince = Math.floor((weekEndMs - new Date(s.withdrawalDate).getTime()) / 86400000);
             if (daysSince <= 30) withdrawnAll.push(meta);
         } else if (s.onHold && !s.withdrawalDate) {
             holdAll.push(meta);
@@ -390,6 +398,14 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
 
     // ─── 전체 학생 집계 (상단 합계 행용) ───
     const refMs0 = new Date(refStr).getTime();
+    // 주차 마지막일(일요일) 기준 — 퇴원 미래/과거 분기 및 30일 윈도우 통일
+    const weekEndStr0 = (() => {
+        const d = new Date(refStr);
+        d.setDate(d.getDate() + 6);
+        const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const dd = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${dd}`;
+    })();
+    const weekEndMs0 = new Date(weekEndStr0).getTime();
     const allStudentsAggMap = new Map<string, any>();
     filteredClasses.forEach(c => {
         (c.studentList || []).forEach((s: any) => {
@@ -399,10 +415,10 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
 
     let totalActive = 0, totalHold = 0, totalWithdrawn = 0, totalNew30 = 0, totalTransferIn = 0;
     allStudentsAggMap.forEach((s: any) => {
-        const isFutureWithdrawal = s.withdrawalDate && s.withdrawalDate > refStr;
-        const hasActiveWithdrawal = s.withdrawalDate && s.withdrawalDate <= refStr && !s.isTransferred;
+        const isFutureWithdrawal = s.withdrawalDate && s.withdrawalDate > weekEndStr0;
+        const hasActiveWithdrawal = s.withdrawalDate && s.withdrawalDate <= weekEndStr0 && !s.isTransferred;
         if (hasActiveWithdrawal) {
-            const daysSince = Math.floor((refMs0 - new Date(s.withdrawalDate).getTime()) / 86400000);
+            const daysSince = Math.floor((weekEndMs0 - new Date(s.withdrawalDate).getTime()) / 86400000);
             if (daysSince <= 30) totalWithdrawn++;
         } else if (s.onHold && !s.withdrawalDate) {
             totalHold++;

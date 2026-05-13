@@ -340,6 +340,14 @@ const ClassCard: React.FC<ClassCardProps> = ({
     // 주차 기준일: referenceDate가 있으면 해당 날짜, 없으면 오늘
     const refDateStr = referenceDate || formatDateKey(new Date());
     const refDateMs = new Date(refDateStr).getTime();
+    // 주차 마지막일(일요일) — 그 주에 발생하는 퇴원/반이동도 그 주에 반영
+    // 30일 윈도우, 미래/과거 분기, 종료 분류 모두 weekEnd 기준으로 통일 (일관성)
+    const weekEndStr = useMemo(() => {
+        const d = new Date(refDateStr);
+        d.setDate(d.getDate() + 6);
+        return formatDateKey(d);
+    }, [refDateStr]);
+    const weekEndMs = useMemo(() => new Date(weekEndStr).getTime(), [weekEndStr]);
     // 컴팩트 모드 여부
     const isCompact = rowHeight === 'compact';
 
@@ -645,7 +653,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
     // 전체 학생 목록 가져오기 (합반수업 시 모든 수업의 학생을 합침)
     const allStudents = useMemo(() => {
-        const today = refDateStr;
+        const today = weekEndStr;
         const classesToProcess = isMergedClass ? mergedClasses! : [cls];
 
         const allStudentsList: any[] = [];
@@ -737,7 +745,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
             return { commonStudents: { active: [], hold: [], withdrawn: [], withdrawnFuture: [] }, partialStudentsByDay: null };
         }
 
-        const today = refDateStr;
+        const today = weekEndStr;
 
         // 신입생 정렬 가중치 함수 (영어 시간표와 동일)
         const getEnrollmentWeight = (student: any) => {
@@ -779,7 +787,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
         const commonWithdrawn = allStudents
             .filter(s => {
                 if (!s.withdrawalDate || s.withdrawalDate > today || s.isTransferred) return false;
-                const daysSince = Math.floor((refDateMs - new Date(s.withdrawalDate).getTime()) / (1000 * 60 * 60 * 24));
+                const daysSince = Math.floor((weekEndMs - new Date(s.withdrawalDate).getTime()) / (1000 * 60 * 60 * 24));
                 return daysSince <= 30;
             })
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
@@ -823,7 +831,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
         }
 
         const filterDay = currentDay || '';
-        const today = refDateStr;
+        const today = weekEndStr;
 
         // 신입생 정렬 가중치 함수 (영어 시간표와 동일)
         const getEnrollmentWeight = (student: any) => {
@@ -873,7 +881,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
         const withdrawn = allStudents
             .filter(s => {
                 if (!s.withdrawalDate || s.withdrawalDate > today || s.isTransferred) return false;
-                const daysSince = Math.floor((refDateMs - new Date(s.withdrawalDate).getTime()) / (1000 * 60 * 60 * 24));
+                const daysSince = Math.floor((weekEndMs - new Date(s.withdrawalDate).getTime()) / (1000 * 60 * 60 * 24));
                 return daysSince <= 30;
             })
             .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'))
@@ -1349,11 +1357,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             isPendingMoved={!!pendingMoveToMap?.get(cls.id)?.has(s.id)}
                                             isPendingMovedFrom={!!pendingMoveFromMap?.get(cls.id)?.has(s.id)}
                                             pendingScheduledDate={pendingMoveSchedules?.get(s.id) || undefined}
-                                            isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
-                                            transferScheduledDate={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
-                                            transferTo={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.transferTo : undefined}
-                                            isWithdrawalScheduled={!!(!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
-                                            withdrawalScheduledDate={!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
+                                            isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > weekEndStr)}
+                                            transferScheduledDate={s.isTransferred && s.withdrawalDate && s.withdrawalDate > weekEndStr ? s.withdrawalDate : undefined}
+                                            transferTo={s.isTransferred && s.withdrawalDate && s.withdrawalDate > weekEndStr ? s.transferTo : undefined}
+                                            isWithdrawalScheduled={!!(!s.isTransferred && s.withdrawalDate && s.withdrawalDate > weekEndStr)}
+                                            withdrawalScheduledDate={!s.isTransferred && s.withdrawalDate && s.withdrawalDate > weekEndStr ? s.withdrawalDate : undefined}
                                             classLabel={isMergedClass ? s._classLabel : undefined}
                                             textbookInfo={studentTextbookMap?.get(s.name) || null}
                                             isExcelMode={isExcelMode}
@@ -1438,11 +1446,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                                                 isPendingMoved={!!pendingMoveToMap?.get(cls.id)?.has(s.id)}
                                             isPendingMovedFrom={!!pendingMoveFromMap?.get(cls.id)?.has(s.id)}
                                                                 pendingScheduledDate={pendingMoveSchedules?.get(s.id) || undefined}
-                                                                isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
-                                                                transferScheduledDate={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
-                                                                transferTo={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.transferTo : undefined}
-                                                                isWithdrawalScheduled={!!(!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
-                                                                withdrawalScheduledDate={!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
+                                                                isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > weekEndStr)}
+                                                                transferScheduledDate={s.isTransferred && s.withdrawalDate && s.withdrawalDate > weekEndStr ? s.withdrawalDate : undefined}
+                                                                transferTo={s.isTransferred && s.withdrawalDate && s.withdrawalDate > weekEndStr ? s.transferTo : undefined}
+                                                                isWithdrawalScheduled={!!(!s.isTransferred && s.withdrawalDate && s.withdrawalDate > weekEndStr)}
+                                                                withdrawalScheduledDate={!s.isTransferred && s.withdrawalDate && s.withdrawalDate > weekEndStr ? s.withdrawalDate : undefined}
                                                                 classLabel={isMergedClass ? s._classLabel : undefined}
                                                                 textbookInfo={studentTextbookMap?.get(s.name) || null}
                                                                 isExcelMode={isExcelMode}
@@ -1654,11 +1662,11 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                             isPendingMoved={!!pendingMoveToMap?.get(cls.id)?.has(s.id)}
                                             isPendingMovedFrom={!!pendingMoveFromMap?.get(cls.id)?.has(s.id)}
                                             pendingScheduledDate={pendingMoveSchedules?.get(s.id) || undefined}
-                                            isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
-                                            transferScheduledDate={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
-                                            transferTo={s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.transferTo : undefined}
-                                            isWithdrawalScheduled={!!(!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr)}
-                                            withdrawalScheduledDate={!s.isTransferred && s.withdrawalDate && s.withdrawalDate > refDateStr ? s.withdrawalDate : undefined}
+                                            isTransferScheduled={!!(s.isTransferred && s.withdrawalDate && s.withdrawalDate > weekEndStr)}
+                                            transferScheduledDate={s.isTransferred && s.withdrawalDate && s.withdrawalDate > weekEndStr ? s.withdrawalDate : undefined}
+                                            transferTo={s.isTransferred && s.withdrawalDate && s.withdrawalDate > weekEndStr ? s.transferTo : undefined}
+                                            isWithdrawalScheduled={!!(!s.isTransferred && s.withdrawalDate && s.withdrawalDate > weekEndStr)}
+                                            withdrawalScheduledDate={!s.isTransferred && s.withdrawalDate && s.withdrawalDate > weekEndStr ? s.withdrawalDate : undefined}
                                             classLabel={isMergedClass ? s._classLabel : undefined}
                                             textbookInfo={studentTextbookMap?.get(s.name) || null}
                                             isExcelMode={isExcelMode}

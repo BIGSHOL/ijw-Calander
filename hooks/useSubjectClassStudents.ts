@@ -58,6 +58,14 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
         }
 
         const today = referenceDate || formatDateKey(new Date());
+        // 주차 마지막일(일요일) — withdrawalDate 보존 기준
+        // 그 주에 발생하는 퇴원/반이동도 그 주 시간표/카운트에 반영하기 위함
+        // (Monday 기준이면 mid-week 퇴원이 다음 주차에 가야만 잡힘)
+        const weekEnd = (() => {
+            const d = new Date(today);
+            d.setDate(d.getDate() + 6);
+            return formatDateKey(d);
+        })();
 
         // 1단계: 반이동 감지용 활성/종료 등록 수업 수집
         const studentActiveClasses: Record<string, Set<string>> = {};
@@ -100,9 +108,9 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
 
                 const withdrawalDate = convertTimestampToDate(enrollment.withdrawalDate);
                 const endDate = convertTimestampToDate(enrollment.endDate);
-                // 기준일(referenceDate) 대비 종료 여부 판단
+                // 주차 마지막일(weekEnd) 까지 종료된 경우 ended 분류 — 그 주에 발생한 퇴원/반이동도 그 주에 반영
                 const effectiveEndDate = withdrawalDate || endDate;
-                const hasEndDate = effectiveEndDate ? effectiveEndDate <= today : false;
+                const hasEndDate = effectiveEndDate ? effectiveEndDate <= weekEnd : false;
 
                 if (!hasEndDate) {
                     if (!studentActiveClasses[studentId]) {
@@ -173,9 +181,9 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
 
                 const isScheduled = startDate && startDate > today;
 
-                // 기준일 대비 종료 여부 (endDate가 기준일과 같거나 이전이면 종료)
+                // 주차 마지막일 기준 종료 여부 (그 주 안에 퇴원/반이동한 학생도 그 주에 잡히도록 weekEnd 사용)
                 const effectiveEndDate2 = withdrawalDate || endDate;
-                const hasEndDate = effectiveEndDate2 ? effectiveEndDate2 <= today : false;
+                const hasEndDate = effectiveEndDate2 ? effectiveEndDate2 <= weekEnd : false;
                 const activeClasses = studentActiveClasses[studentId] || new Set();
                 const endedClasses = studentEndedClasses[studentId] || new Set();
 
@@ -240,7 +248,7 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                     // 학생의 같은 과목 전체 중 가장 이른 startDate — 신입 판정/입학일 툴팁 기준
                     // (재등록/반이동 후에도 진짜 첫 수학 입학일을 유지)
                     firstSubjectEnrollmentDate: studentFirstSubjectStartDate[studentId],
-                    // 기준일 기준으로 종료된 경우만 withdrawalDate 표시
+                    // hasEndDate(weekEnd 기준)면 withdrawalDate 보존 — 그 주에 퇴원한 학생도 그 주에 표시
                     withdrawalDate: hasEndDate ? (withdrawalDate || endDate) : undefined,
                     // 대기 분류는 다음 모두 만족할 때만:
                     //  - isScheduled (startDate 미래)
