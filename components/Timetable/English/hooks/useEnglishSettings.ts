@@ -78,6 +78,16 @@ export const useEnglishSettings = () => {
         return () => unsub();
     }, []);
 
+    // useAutoFilterMyTimetable 이 localStorage 를 외부에서 갱신하면 알려주는 커스텀 이벤트.
+    // 같은 탭 내 localStorage write 는 native 'storage' 이벤트를 발사하지 않아서 필요.
+    useEffect(() => {
+        const handler = () => {
+            setLocalHiddenTeachers(storage.getJSON<string[]>(STORAGE_KEYS.ENGLISH_HIDDEN_TEACHERS, []));
+        };
+        window.addEventListener('englishHiddenTeachersChanged', handler);
+        return () => window.removeEventListener('englishHiddenTeachersChanged', handler);
+    }, []);
+
     // Load English Levels
     useEffect(() => {
         const unsub = onSnapshot(doc(db, 'settings', 'english_levels'), (docSnap) => {

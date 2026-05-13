@@ -104,6 +104,16 @@ export const useMathSettings = () => {
         return () => unsub();
     }, []);
 
+    // useAutoFilterMyTimetable 이 localStorage 를 외부에서 갱신하면 알려주는 커스텀 이벤트.
+    // 같은 탭 내 localStorage write 는 native 'storage' 이벤트를 발사하지 않아서 필요.
+    useEffect(() => {
+        const handler = () => {
+            setLocalHiddenTeachers(storage.getJSON<string[]>(STORAGE_KEYS.MATH_HIDDEN_TEACHERS, []));
+        };
+        window.addEventListener('mathHiddenTeachersChanged', handler);
+        return () => window.removeEventListener('mathHiddenTeachersChanged', handler);
+    }, []);
+
     // Migration: className 기반 customGroups → classId 기반으로 자동 변환
     const classIdMigrationDone = useRef(false);
     useEffect(() => {

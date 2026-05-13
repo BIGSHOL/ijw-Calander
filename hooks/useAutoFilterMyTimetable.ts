@@ -79,10 +79,13 @@ export function useAutoFilterMyTimetable({ profile, staffMember, teachers }: Par
     if (isMath) {
       const hidden = collectHiddenNames(myName, teachers, ['math', 'highmath']);
       storage.setJSON(STORAGE_KEYS.MATH_HIDDEN_TEACHERS, hidden);
+      // 같은 탭 내에서는 'storage' 이벤트가 발사되지 않으므로 커스텀 이벤트로 소비자(useMathSettings) 깨움
+      window.dispatchEvent(new Event('mathHiddenTeachersChanged'));
     }
     if (isEnglish) {
       const hidden = collectHiddenNames(myName, teachers, ['english']);
       storage.setJSON(STORAGE_KEYS.ENGLISH_HIDDEN_TEACHERS, hidden);
+      window.dispatchEvent(new Event('englishHiddenTeachersChanged'));
     }
 
     appliedForStaffIdRef.current = staffMember.id;
