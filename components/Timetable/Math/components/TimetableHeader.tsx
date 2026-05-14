@@ -543,14 +543,16 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                 activeStudentIds.add(student.id);
             }
             // 신입 (반이동 제외) — onHold/active 모두에 적용
-            // 기준 = 이 과목 지난수업 0개 AND 입학일 60일 이내
+            // 기준 = 이 과목 지난수업 0개 AND 입학일 30일 이내 (미래 startDate 포함)
             // (예: 김수민 — 영어 재학중 + 수학 첫 등록, startDate 미래여도 신입)
+            // 사용자 결정(2026-05-13): 카운트 윈도우는 원래의 30일 유지. 31-60일은
+            // ClassCard 핑크 스타일링만 (count 에는 안 들어감).
             if (!student.isTransferredIn && !student.hasPastInSubject) {
                 const enrollDate = student.firstSubjectEnrollmentDate || student.enrollmentDate || student.startDate;
                 if (enrollDate) {
                     const daysSince = Math.floor((refDate.getTime() - new Date(enrollDate).getTime()) / (1000 * 60 * 60 * 24));
-                    // 미래 입학일(daysSince < 0)도 신입으로 인정
-                    if (daysSince <= 60) newStudentIds.add(student.id);
+                    // 미래 입학일(daysSince < 0)도 신입으로 인정 — 하한 >= 0 제거
+                    if (daysSince <= 30) newStudentIds.add(student.id);
                 }
             }
         });
