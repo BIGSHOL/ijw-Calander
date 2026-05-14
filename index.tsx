@@ -6,9 +6,12 @@ import { queryClient } from './queryClient';
 
 import ErrorBoundary from './components/Common/ErrorBoundary';
 
-// 배포 후 청크 해시 변경으로 인한 로딩 실패 시 자동 새로고침
-window.addEventListener('vite:preloadError', () => {
-  window.location.reload();
+// 배포 후 청크 해시 변경으로 인한 로딩 실패 시:
+// 자동 reload 대신 토스트(VersionUpdateToast)에 시그널만 전달.
+// 사용자가 작업 중인 폼 데이터를 잃지 않도록 명시적 새로고침을 요구함.
+window.addEventListener('vite:preloadError', (e) => {
+  e.preventDefault?.(); // 기본 동작(콘솔 에러) 억제
+  window.dispatchEvent(new CustomEvent('app:preload-error'));
 });
 
 const rootElement = document.getElementById('root');

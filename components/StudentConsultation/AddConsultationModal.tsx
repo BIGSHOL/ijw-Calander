@@ -8,6 +8,7 @@ import { SUBJECT_COLORS } from '../../utils/styleUtils';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { formatDateKey } from '../../utils/dateUtils';
 import { useDraggable } from '../../hooks/useDraggable';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 
 interface AddConsultationModalProps {
     onClose: () => void;
@@ -32,6 +33,9 @@ const AddConsultationModal: React.FC<AddConsultationModalProps> = ({
 }) => {
     useEscapeClose(onClose);
   const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
+
+    // 모달 열려있는 동안 새로고침/이탈 가드 (vite:preloadError 자동 reload 방지 포함)
+    useUnsavedChangesGuard(true);
 
     const currentUser = userProfile ? {
         uid: userProfile.uid,

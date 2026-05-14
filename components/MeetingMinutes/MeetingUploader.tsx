@@ -6,6 +6,7 @@ import { getKoreanErrorMessage } from '../../utils/errorMessages';
 import { startRecoverySession, saveChunk, checkRecovery, recoverRecording, clearRecovery } from '../../utils/recordingRecovery';
 import { openRecorderPopup } from '../../utils/recorderPopup';
 import { savePending, getPendingByFileName, removePending } from '../../utils/pendingRecordings';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 
 const ACCEPTED_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/wav', 'audio/webm', 'audio/ogg'];
 const ACCEPTED_EXTENSIONS = ['.mp3', '.m4a', '.wav', '.webm', '.ogg'];
@@ -77,13 +78,9 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
     };
   }, []);
 
-  // 녹음 중 탭 닫기/새로고침 방지
-  useEffect(() => {
-    if (!isRecording) return;
-    const handler = (e: BeforeUnloadEvent) => { e.preventDefault(); };
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [isRecording]);
+  // 녹음 중이거나 폼 입력 중일 때 탭 닫기/새로고침 방지 (vite:preloadError 자동 reload 방지 포함)
+  const isDirty = isRecording || isUploading || !!title.trim() || attendees.length > 0 || !!selectedFile;
+  useUnsavedChangesGuard(isDirty);
 
   // 탭 비활성화 후 복귀 시 MediaRecorder 상태 체크
   useEffect(() => {

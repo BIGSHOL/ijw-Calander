@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import type { ImportedExcel, ImportChanges } from './utils/excelImport';
 import { useEscapeClose } from '../../../hooks/useEscapeClose';
+import { useUnsavedChangesGuard } from '../../../hooks/useUnsavedChangesGuard';
 
 interface ExcelImportPreviewModalProps {
     isOpen: boolean;
@@ -33,6 +34,9 @@ export const ExcelImportPreviewModal: React.FC<ExcelImportPreviewModalProps> = (
 }) => {
     useEscapeClose(onClose);
     const [isApplying, setIsApplying] = useState(false);
+
+    // 미리보기 모달이 열려있는 동안 새로고침/이탈 가드 (적용 안 누르면 변경 사항이 휘발됨)
+    useUnsavedChangesGuard(isOpen);
 
     // 검증
     const validation = useMemo(() => {

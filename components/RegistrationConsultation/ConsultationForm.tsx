@@ -7,6 +7,7 @@ import {
     Pencil, Eye, FlaskConical, Mic, MicOff, Upload, Loader2, Square, ArrowDownToLine
 } from 'lucide-react';
 import { useRegistrationRecording, RegistrationExtractedData } from '../../hooks/useRegistrationRecording';
+import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
 import { savePending, getPendingByFileName, removePending } from '../../utils/pendingRecordings';
 import { RecordingPickerModal, type SelectedRecording } from '../ConsultationRecording/RecordingPickerModal';
@@ -410,6 +411,9 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
 
     // 조회/편집 모드 (initialData가 있으면 기본 조회모드)
     const [isViewMode, setIsViewMode] = useState(false);
+
+    // 편집 모드 + 모달 열림 시 새로고침/이탈 가드 (vite:preloadError 자동 reload 방지 포함)
+    useUnsavedChangesGuard(isOpen && !isViewMode);
 
     // 확장 섹션 펼침 상태
     const [showAcademyInfo, setShowAcademyInfo] = useState(false);
