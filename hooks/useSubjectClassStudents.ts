@@ -105,7 +105,14 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                 const className = enrollment.className as string;
                 if (!className) return;
 
-                const startDateForFirst = convertTimestampToDate(enrollment.enrollmentDate || enrollment.startDate);
+                // firstSubjectEnrollmentDate = 실제 첫 수업 시작일.
+                // enrollmentDate(=행정상 record 생성/갱신일) 가 startDate(=실제 시작일) 보다
+                // 늦은 경우 (반이동 후 새 record 발급 등) startDate 가 더 정확.
+                // 사용자 결정(2026-05-13): 박지율 케이스 — enrollmentDate=5/4 지만 startDate=4/1
+                // 이라 startDate 가 진짜 수학 첫 시작일. 두 값 중 더 이른 날짜 채택.
+                const _en = convertTimestampToDate(enrollment.enrollmentDate);
+                const _st = convertTimestampToDate(enrollment.startDate);
+                const startDateForFirst = (_en && _st) ? (_en < _st ? _en : _st) : (_en || _st);
                 if (startDateForFirst) {
                     const cur = studentFirstSubjectStartDate[studentId];
                     if (!cur || startDateForFirst < cur) {
