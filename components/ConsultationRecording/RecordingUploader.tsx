@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
 import { startRecoverySession, saveChunk, checkRecovery, recoverRecording, clearRecovery } from '../../utils/recordingRecovery';
 import { openRecorderPopup } from '../../utils/recorderPopup';
+import { savePending, getPendingByFileName, removePending } from '../../utils/pendingRecordings';
 import { RecordingPickerModal, type SelectedRecording } from './RecordingPickerModal';
 
 const ACCEPTED_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/wav', 'audio/webm', 'audio/ogg'];
@@ -241,30 +242,40 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
   // 팝업 녹음 시작 (우선 시도)
   const startPopupRecording = useCallback(() => {
     setError('');
+    const pending = savePending('student-consultation', {
+      selectedStudents,
+      consultantName,
+      consultationDate,
+    });
     const opened = openRecorderPopup(
       '상담 녹음',
       {
         onComplete: (file, _duration, _transcriptPreview) => {
           setIsPopupRecording(false);
-          // 녹음 완료 → 자동으로 업로드+분석 시작
+          removePending(pending.id);
           autoSubmitFile(file);
         },
         onError: (message) => {
           setError(message);
           setIsPopupRecording(false);
+          removePending(pending.id);
         },
         onClose: () => {
           setIsPopupRecording(false);
+          // pending 유지 (메인 죽었을 때 다시 들어와서 파일 끌어놓을 수도)
         },
       },
+      { fileToken: pending.fileToken },
     );
 
     if (opened) {
       setIsPopupRecording(true);
       setSelectedFile(null);
+    } else {
+      removePending(pending.id);
     }
     return opened;
-  }, [autoSubmitFile]);
+  }, [selectedStudents, consultantName, consultationDate, autoSubmitFile]);
 
   // 녹음 버튼 클릭 핸들러: 팝업 우선, 차단 시 인라인 fallback
   const handleRecordClick = useCallback(() => {
@@ -373,6 +384,16 @@ export function RecordingUploader({ onUploadStart }: RecordingUploaderProps) {
     }
     setError('');
     setSelectedFile(file);
+
+    // 파일명 토큰으로 pending 컨텍스트 자동 복원
+    const pending = getPendingByFileName(file.name);
+    if (pending && pending.type === 'student-consultation') {
+      const ctx = pending.context || {};
+      if (Array.isArray(ctx.selectedStudents)) setSelectedStudents(ctx.selectedStudents);
+      if (ctx.consultantName) setConsultantName(ctx.consultantName);
+      if (ctx.consultationDate) setConsultationDate(ctx.consultationDate);
+      removePending(pending.id);
+    }
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {

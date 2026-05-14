@@ -700,6 +700,27 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
     const bodyStartRow = rowIdx;
     const refDateMs = new Date(refStr).getTime();
 
+    // ─── 라운드트립 메타데이터 (Phase 1) ───
+    // 가져오기 시 셀 위치 ↔ 의미 매핑 복원용. _meta hidden 시트로 출력.
+    // 학생 추가/삭제/이동 + 반이름 변경 + 수업 색상 변경 감지.
+    type MetaEntry = {
+        kind: 'class_name' | 'class_room' | 'student';
+        row: number;
+        startCol: number;
+        endCol: number;
+        section?: 'active' | 'hold' | 'withdrawn';     // student kind 전용
+        subPeriod?: 'top' | 'bot' | 'both';            // class_name/class_room 전용
+        classId?: string;                              // 수업 식별
+        classNameSnapshot?: string;                    // 수업명 (라운드트립 비교용)
+        roomSnapshot?: string;                         // 강의실 (라운드트립 비교용)
+        studentId?: string;                            // 학생 식별
+        studentNameSnapshot?: string;                  // 학생 표시 텍스트 (라운드트립 비교용)
+        sourceClassId?: string;                        // 학생이 속한 수업 (이동 감지용)
+        bgColorSnapshot?: string;                      // class_name 셀 배경 ARGB (색상 변경 감지용)
+        textColorSnapshot?: string;                    // class_name 셀 글자 ARGB
+    };
+    const metaEntries: MetaEntry[] = [];
+
     // 셀별 active/hold 사용 행 수 (공통 + max 부분 등원)
     const cellActiveRows = (c: ResolvedCell): number => {
         if (!c.payload) return 0;
@@ -835,6 +856,10 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
             const botNames = Array.from(new Set((subBotClasses || []).map(c => c.className).filter(Boolean) as string[]));
             const cellSplitsSub = needsSubRows && cellNeedsSubSplit(cell);
 
+            // 합반의 경우 첫 수업 id를 대표값으로 (Phase 2에서 합반 처리 보강 예정)
+            const primaryClassId = payload.classes[0]?.id || '';
+            const primaryClassName = payload.uniqueClassNames[0] || '';
+
             if (!needsSubRows || !cellSplitsSub) {
                 // 분할 안 함 → subTopRow ~ subBotRow 세로 병합 (둘 다 같은 수업 또는 교시 전체가 분할 불요)
                 if (needsSubRows) {
@@ -850,6 +875,19 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
                 nc.font = { bold: true, color: { argb: nameFg }, size: 10 };
                 nc.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
                 nc.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
+
+                // 메타: 통합 수업명 셀
+                metaEntries.push({
+                    kind: 'class_name',
+                    row: subTopRow,
+                    startCol,
+                    endCol,
+                    subPeriod: 'both',
+                    classId: primaryClassId,
+                    classNameSnapshot: primaryClassName,
+                    bgColorSnapshot: nameBg,
+                    textColorSnapshot: nameFg,
+                });
             } else {
                 // Sub-period 분할: 위/아래 각각 표시
                 // 위 (1-1)
@@ -862,6 +900,18 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
                     ntc.value = topNames.map((name, i) => isMergedClass ? `[${i + 1}] ${name}` : name).join('\n');
                     ntc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: topBg } };
                     ntc.font = { bold: true, color: { argb: topFg }, size: 10 };
+
+                    metaEntries.push({
+                        kind: 'class_name',
+                        row: subTopRow,
+                        startCol,
+                        endCol,
+                        subPeriod: 'top',
+                        classId: topFirst?.id || '',
+                        classNameSnapshot: topNames[0] || '',
+                        bgColorSnapshot: topBg,
+                        textColorSnapshot: topFg,
+                    });
                 } else {
                     ntc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EMPTY_BG } };
                 }
@@ -878,6 +928,18 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
                     nbc.value = botNames.map((name, i) => isMergedClass ? `[${i + 1}] ${name}` : name).join('\n');
                     nbc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: botBg } };
                     nbc.font = { bold: true, color: { argb: botFg }, size: 10 };
+
+                    metaEntries.push({
+                        kind: 'class_name',
+                        row: subBotRow,
+                        startCol,
+                        endCol,
+                        subPeriod: 'bot',
+                        classId: botFirst?.id || '',
+                        classNameSnapshot: botNames[0] || '',
+                        bgColorSnapshot: botBg,
+                        textColorSnapshot: botFg,
+                    });
                 } else {
                     nbc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EMPTY_BG } };
                 }
@@ -893,6 +955,16 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
             rc.font = { color: { argb: 'FF374151' }, size: 9 };
             rc.alignment = { horizontal: 'center', vertical: 'middle' };
             rc.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
+
+            // 메타: 강의실 셀
+            metaEntries.push({
+                kind: 'class_room',
+                row: roomRow,
+                startCol,
+                endCol,
+                classId: primaryClassId,
+                roomSnapshot: roomText,
+            });
 
             // 3) 재원 헤더 ("N명 - 재원생")
             const ah = mergeAndGet(activeHeaderRow);
@@ -918,11 +990,23 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
                     const c = mergeAndGet(row);
                     const meta = commonActive[i];
                     const style = resolveStudentStyle(meta.student, refDateMs);
-                    c.value = formatStudentRowText(meta, isMergedClass);
+                    const textVal = formatStudentRowText(meta, isMergedClass);
+                    c.value = textVal;
                     c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.bgARGB } };
                     c.font = { bold: style.bold, color: { argb: style.fgARGB }, size: 9, name: 'Malgun Gothic' };
                     c.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
                     c.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
+
+                    metaEntries.push({
+                        kind: 'student',
+                        row,
+                        startCol,
+                        endCol,
+                        section: 'active',
+                        studentId: meta.student.id || '',
+                        studentNameSnapshot: textVal,
+                        sourceClassId: primaryClassId,
+                    });
                 } else if (i < commonActive.length + partialActiveMax) {
                     // 부분 등원: 요일 컬럼에만 표시
                     const pIdx = i - commonActive.length;
@@ -932,9 +1016,21 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
                         if (pIdx < dayList.length) {
                             const meta = dayList[pIdx];
                             const style = resolveStudentStyle(meta.student, refDateMs);
-                            cc.value = formatStudentRowText(meta, isMergedClass);
+                            const textVal = formatStudentRowText(meta, isMergedClass);
+                            cc.value = textVal;
                             cc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.bgARGB } };
                             cc.font = { bold: style.bold, color: { argb: style.fgARGB }, size: 9, name: 'Malgun Gothic' };
+
+                            metaEntries.push({
+                                kind: 'student',
+                                row,
+                                startCol: col,
+                                endCol: col,
+                                section: 'active',
+                                studentId: meta.student.id || '',
+                                studentNameSnapshot: textVal,
+                                sourceClassId: primaryClassId,
+                            });
                         } else {
                             cc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
                         }
@@ -976,11 +1072,23 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
                     if (i < commonHold.length) {
                         const c = mergeAndGet(row);
                         const meta = commonHold[i];
-                        c.value = formatStudentRowText(meta, isMergedClass);
+                        const textVal = formatStudentRowText(meta, isMergedClass);
+                        c.value = textVal;
                         c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
                         c.font = { color: { argb: 'FF92400E' }, size: 9, name: 'Malgun Gothic' };
                         c.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
                         c.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
+
+                        metaEntries.push({
+                            kind: 'student',
+                            row,
+                            startCol,
+                            endCol,
+                            section: 'hold',
+                            studentId: meta.student.id || '',
+                            studentNameSnapshot: textVal,
+                            sourceClassId: primaryClassId,
+                        });
                     } else if (i < commonHold.length + partialHoldMax) {
                         const pIdx = i - commonHold.length;
                         dayCols.forEach(({ day, col }, dci) => {
@@ -988,9 +1096,21 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
                             const cc = sheet.getCell(row, col);
                             if (pIdx < dayList.length) {
                                 const meta = dayList[pIdx];
-                                cc.value = formatStudentRowText(meta, isMergedClass);
+                                const textVal = formatStudentRowText(meta, isMergedClass);
+                                cc.value = textVal;
                                 cc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
                                 cc.font = { color: { argb: 'FF92400E' }, size: 9, name: 'Malgun Gothic' };
+
+                                metaEntries.push({
+                                    kind: 'student',
+                                    row,
+                                    startCol: col,
+                                    endCol: col,
+                                    section: 'hold',
+                                    studentId: meta.student.id || '',
+                                    studentNameSnapshot: textVal,
+                                    sourceClassId: primaryClassId,
+                                });
                             } else {
                                 cc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
                             }
@@ -1026,8 +1146,20 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
                     const c = mergeAndGet(row);
                     if (i < payload.withdrawnStudents.length) {
                         const meta = payload.withdrawnStudents[i];
-                        c.value = formatStudentRowText(meta, isMergedClass);
+                        const textVal = formatStudentRowText(meta, isMergedClass);
+                        c.value = textVal;
                         c.font = { color: { argb: 'FFD1D5DB' }, size: 9, name: 'Malgun Gothic' };
+
+                        metaEntries.push({
+                            kind: 'student',
+                            row,
+                            startCol,
+                            endCol,
+                            section: 'withdrawn',
+                            studentId: meta.student.id || '',
+                            studentNameSnapshot: textVal,
+                            sourceClassId: primaryClassId,
+                        });
                     }
                     c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: WITHDRAWN_BG } };
                     c.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
@@ -1070,6 +1202,33 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
             c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EMPTY_BG } };
             c.border = { top: THIN, bottom: THICK, left: THIN, right: THICK };
         }
+    });
+
+    // ─── _meta hidden 시트 작성 (라운드트립 가져오기용) ───
+    // 첫 행: 스키마 버전 + 워크북 메타 (가져오기 시 호환성 체크용)
+    // 헤더 행: 컬럼 이름
+    // 본문: metaEntries
+    const metaSheet = workbook.addWorksheet('_meta', { state: 'hidden' });
+    // 스키마 헤더
+    metaSheet.addRow(['__schema_version__', 'subjectFilter', 'weekLabel', 'referenceDate', 'sheetName']);
+    metaSheet.addRow(['1', subjectFilter || '수학', weekLabel, refStr, safeSheetName]);
+    metaSheet.addRow([]); // 빈 행
+    // entry 헤더
+    metaSheet.addRow([
+        'kind', 'row', 'startCol', 'endCol',
+        'section', 'subPeriod',
+        'classId', 'classNameSnapshot', 'roomSnapshot',
+        'studentId', 'studentNameSnapshot', 'sourceClassId',
+        'bgColorSnapshot', 'textColorSnapshot',
+    ]);
+    metaEntries.forEach(e => {
+        metaSheet.addRow([
+            e.kind, e.row, e.startCol, e.endCol,
+            e.section || '', e.subPeriod || '',
+            e.classId || '', e.classNameSnapshot || '', e.roomSnapshot || '',
+            e.studentId || '', e.studentNameSnapshot || '', e.sourceClassId || '',
+            e.bgColorSnapshot || '', e.textColorSnapshot || '',
+        ]);
     });
 
     // 다운로드

@@ -483,8 +483,15 @@ const ClassCard: React.FC<ClassCardProps> = ({
 
         // schedule 배열에서 요일별 교시와 시간 정보 추출
         // schedule 형식: ["월 1-1", "목 1-2"] 또는 ["월 1", "목 2"]
-        cls.schedule.forEach(item => {
-            const parts = item.split(' ');
+        // 방어 코드 — object {day, periodId} 도 허용 (레거시/import 깨진 데이터 대응)
+        cls.schedule.forEach((item: any) => {
+            const s: string = typeof item === 'string'
+                ? item
+                : (item && typeof item === 'object')
+                    ? `${item.day || ''} ${item.periodId || ''}`.trim()
+                    : '';
+            if (!s) return;
+            const parts = s.split(' ');
             if (parts.length < 2) return;
 
             const day = parts[0];

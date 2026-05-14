@@ -206,7 +206,7 @@ export function useRegistrationRecording() {
 
   // 팝업 녹음 시작 (우선)
   // (실시간 전사용 AssemblyAI 토큰 발급은 제거됨 — 녹음 후 batch transcription 으로 대체)
-  const startPopupRecording = useCallback((): Promise<File> => {
+  const startPopupRecording = useCallback((options?: { fileToken?: string }): Promise<File> => {
     return new Promise((resolve, reject) => {
       const opened = openRecorderPopup(
         '등록상담 녹음',
@@ -224,6 +224,7 @@ export function useRegistrationRecording() {
             reject(new Error('녹음 창이 닫혔습니다.'));
           },
         },
+        { fileToken: options?.fileToken },
       );
 
       if (!opened) {

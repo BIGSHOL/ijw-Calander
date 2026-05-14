@@ -35,6 +35,13 @@ import { storage, STORAGE_KEYS } from '../../utils/localStorage';
 import EmbedTokenManager from '../Embed/EmbedTokenManager';
 import { useMathSettings, type MathIntegrationSettings } from './Math/hooks/useMathSettings';
 import ExportImageModal, { ExportGroup } from '../Common/ExportImageModal';
+// 엑셀 가져오기 미리보기 모달 (lazy — 사용 시점에만 로드)
+const ImportPreviewModalLazy = React.lazy(() =>
+    import('./Math/ExcelImportPreviewModal').then(m => ({ default: m.ExcelImportPreviewModal }))
+);
+const ImportHistoryModalLazy = React.lazy(() =>
+    import('./Math/ImportHistoryModal').then(m => ({ default: m.ImportHistoryModal }))
+);
 import type { ExportGroupInfo } from './Math/MathClassTab';
 import WithdrawalStudentDetail from '../WithdrawalManagement/WithdrawalStudentDetail';
 import { WithdrawalEntry } from '../../hooks/useWithdrawalFilters';
@@ -56,11 +63,18 @@ const SUBJECT_TO_PERIOD_KEY: Record<string, 'math' | 'english' | 'science' | 'ko
 };
 
 // 스케줄 문자열 배열("월 1교시", "수 3" 등)을 {요일, 시작, 끝} 슬롯으로 변환
-export function parseScheduleSlots(schedule: string[] | undefined, subject: string): Array<{ day: string; start: string; end: string }> {
+export function parseScheduleSlots(schedule: any[] | undefined, subject: string): Array<{ day: string; start: string; end: string }> {
     if (!schedule || schedule.length === 0) return [];
     const periodKey = SUBJECT_TO_PERIOD_KEY[subject] || 'math';
     const slots: Array<{ day: string; start: string; end: string }> = [];
-    for (const s of schedule) {
+    for (const item of schedule) {
+        // 방어 코드 — string 또는 {day, periodId} object 둘 다 허용
+        const s: string = typeof item === 'string'
+            ? item
+            : (item && typeof item === 'object')
+                ? `${(item as any).day || ''} ${(item as any).periodId || ''}`.trim()
+                : '';
+        if (!s) continue;
         const parts = s.split(' ');
         if (parts.length < 2) continue;
         const day = parts[0];
@@ -348,6 +362,19 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     const [loading, setLoading] = useState(false);
     const queryClient = useQueryClient();
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    // 엑셀 가져오기 미리보기 모달 (Phase 3)
+    const [isImportPreviewOpen, setIsImportPreviewOpen] = useState(false);
+    const [importedExcelData, setImportedExcelData] = useState<any>(null);
+    const [importExcelChanges, setImportExcelChanges] = useState<any>(null);
+    // 가져오기 이력 / 되돌리기 모달 (Phase 5)
+    const [isImportHistoryOpen, setIsImportHistoryOpen] = useState(false);
+    // 검증/표시용 — filteredClasses 기준
+    const knownClassIds = useMemo(() => new Set(filteredClasses.map(c => c.id)), [filteredClasses]);
+    const classNameById = useMemo(() => {
+        const m = new Map<string, string>();
+        filteredClasses.forEach(c => { if (c.id) m.set(c.id, c.className || ''); });
+        return m;
+    }, [filteredClasses]);
     const gridRef = React.useRef<HTMLDivElement>(null);
     // 엑셀뷰 토스트 알림 (Ctrl+Z, Del, Ctrl+C 등 피드백)
     const [excelToast, setExcelToast] = useState<string | null>(null);
@@ -1051,6 +1078,33 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                             alert('엑셀 저장에 실패했습니다. 콘솔을 확인해주세요.');
                         }
                     } : undefined}
+                    // 가져오기 이력 / 되돌리기 (Phase 5)
+                    onOpenImportHistory={(viewType === 'excel' || viewType === 'teacher') ? () => setIsImportHistoryOpen(true) : undefined}
+                    // 엑셀 가져오기 (Phase 3 — 미리보기 모달, 적용은 Phase 4에서)
+                    onImportExcel={(viewType === 'excel' || viewType === 'teacher') ? () => {
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = '.xlsx';
+                        input.onchange = async (ev) => {
+                            const file = (ev.target as HTMLInputElement).files?.[0];
+                            if (!file) return;
+                            try {
+                                const { parseImportedExcel, computeChanges, buildStudentLookups } =
+                                    await import('./Math/utils/excelImport');
+                                const imported = await parseImportedExcel(file);
+                                const students = Object.values(studentMap);
+                                const lookups = buildStudentLookups(students);
+                                const changes = computeChanges(imported, lookups);
+                                setImportedExcelData(imported);
+                                setImportExcelChanges(changes);
+                                setIsImportPreviewOpen(true);
+                            } catch (err: any) {
+                                console.error('엑셀 가져오기 실패:', err);
+                                alert(`엑셀 가져오기 실패:\n${err?.message || err}`);
+                            }
+                        };
+                        input.click();
+                    } : undefined}
                     // 통합뷰 전용 props
                     integrationDisplayOptions={viewType === 'class' ? mathIntegrationSettings.displayOptions : undefined}
                     onIntegrationDisplayOptionsChange={viewType === 'class' ? handleIntegrationDisplayOptionChange : undefined}
@@ -1403,6 +1457,157 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                     groups={viewType === 'class' ? exportGroups : undefined}
                     onGroupsChanged={viewType === 'class' ? handleExportGroupsChanged : undefined}
                 />
+
+                {/* 가져오기 이력 / 되돌리기 모달 (Phase 5) */}
+                {isImportHistoryOpen && (
+                    <Suspense fallback={null}>
+                        <ImportHistoryModalLazy
+                            isOpen={isImportHistoryOpen}
+                            onClose={() => setIsImportHistoryOpen(false)}
+                            onRestored={() => {
+                                // 복원 후 시간표 즉시 갱신
+                                queryClient.invalidateQueries({ queryKey: ['classes'] });
+                                queryClient.invalidateQueries({ queryKey: ['students'] });
+                                queryClient.invalidateQueries({ queryKey: ['math-class-students'] });
+                            }}
+                        />
+                    </Suspense>
+                )}
+
+                {/* 엑셀 가져오기 미리보기 모달 (Phase 3-4) */}
+                {isImportPreviewOpen && (
+                    <Suspense fallback={null}>
+                        <ImportPreviewModalLazy
+                            isOpen={isImportPreviewOpen}
+                            onClose={() => setIsImportPreviewOpen(false)}
+                            imported={importedExcelData}
+                            changes={importExcelChanges}
+                            currentWeekLabel={weekLabel}
+                            knownClassIds={knownClassIds}
+                            studentMap={studentMap}
+                            classNameById={classNameById}
+                            onApply={async (changes) => {
+                                try {
+                                    // 1) 스냅샷 + 적용 + 로그를 dynamic import
+                                    const [
+                                        { applyImportChanges, collectAffectedRefs },
+                                        { createSnapshot },
+                                        { writeImportLog },
+                                    ] = await Promise.all([
+                                        import('./Math/utils/applyImportChanges'),
+                                        import('../../utils/timetableSnapshot'),
+                                        import('../../utils/timetableImportLog'),
+                                    ]);
+
+                                    // 2) 영향 받는 데이터 식별 → 스냅샷 생성
+                                    const { pairs, classIds } = collectAffectedRefs(changes);
+                                    const summary = {
+                                        additions: changes.studentAdditions.length,
+                                        removals: changes.studentRemovals.length,
+                                        moves: changes.studentMoves.length,
+                                        renames: changes.classNameRenames.length,
+                                        colorChanges: changes.classColorChanges.length,
+                                    };
+                                    const snapshotId = await createSnapshot(
+                                        {
+                                            weekLabel,
+                                            referenceDate: importedExcelData?.referenceDate || '',
+                                            subjectFilter: currentSubjectFilter,
+                                            createdBy: '',
+                                            summary,
+                                        },
+                                        pairs,
+                                        classIds,
+                                    );
+
+                                    // 3) 변경 적용 (메타 전달 — 반이름 변경 시 영향받는 학생만 순회)
+                                    const result = await applyImportChanges(changes, importedExcelData);
+
+                                    // 4) 이력 로그 (Firestore 는 undefined 불허 → 빈 배열로)
+                                    // details: 미리보기 모달과 같은 디테일을 이력에서도 펼쳐볼 수 있도록
+                                    const lookupStudentName = (studentId: string, fallback?: string) => {
+                                        const s = studentMap[studentId];
+                                        if (!s) return fallback || studentId;
+                                        const schoolGrade = `${s.grade || ''}${s.school || ''}`.trim();
+                                        return schoolGrade ? `${s.name}/${schoolGrade}` : (s.name || studentId);
+                                    };
+                                    const lookupClassName = (classId: string) => classNameById.get(classId) || `(${classId.slice(0, 8)}...)`;
+                                    const details = {
+                                        additions: importExcelChanges?.studentAdditions?.map((a: any) => ({
+                                            studentName: a.text || (a.matchedStudentId ? lookupStudentName(a.matchedStudentId) : ''),
+                                            targetClassName: lookupClassName(a.targetClassId),
+                                            matched: !!a.matchedStudentId,
+                                        })) || [],
+                                        removals: importExcelChanges?.studentRemovals?.map((r: any) => ({
+                                            studentName: lookupStudentName(r.studentId, r.studentNameSnapshot),
+                                            sourceClassName: lookupClassName(r.sourceClassId),
+                                        })) || [],
+                                        moves: importExcelChanges?.studentMoves?.map((m: any) => ({
+                                            studentName: lookupStudentName(m.studentId, m.studentNameSnapshot),
+                                            fromClassName: lookupClassName(m.fromClassId),
+                                            toClassName: lookupClassName(m.toClassId),
+                                            fromDay: m.fromDay || '',
+                                            toDay: m.toDay || '',
+                                            fromTeacher: m.fromTeacher || '',
+                                            toTeacher: m.toTeacher || '',
+                                            teacherChanged: !!m.teacherChanged,
+                                        })) || [],
+                                        renames: importExcelChanges?.classNameRenames?.map((r: any) => ({
+                                            oldName: r.oldName || '',
+                                            newName: r.newName || '',
+                                        })) || [],
+                                        colorChanges: importExcelChanges?.classColorChanges?.map((c: any) => ({
+                                            className: c.className || '',
+                                            oldBg: c.oldBg || '',
+                                            newBg: c.newBg || '',
+                                            oldFg: c.oldFg || '',
+                                            newFg: c.newFg || '',
+                                        })) || [],
+                                    };
+                                    const logId = await writeImportLog({
+                                        weekLabel,
+                                        referenceDate: importedExcelData?.referenceDate || '',
+                                        subjectFilter: currentSubjectFilter,
+                                        snapshotId,
+                                        result: {
+                                            additions: result.appliedAdditions,
+                                            removals: result.appliedRemovals,
+                                            moves: result.appliedMoves,
+                                            renames: result.appliedRenames,
+                                            colorChanges: result.appliedColorChanges,
+                                            errors: result.errors,  // 빈 배열도 OK
+                                        },
+                                        details,
+                                    });
+
+                                    // 5) 캐시 무효화 → 시간표 즉시 갱신
+                                    queryClient.invalidateQueries({ queryKey: ['classes'] });
+                                    queryClient.invalidateQueries({ queryKey: ['students'] });
+                                    queryClient.invalidateQueries({ queryKey: ['math-class-students'] });
+
+                                    const errorText = result.errors.length > 0
+                                        ? `\n\n⚠ 오류 ${result.errors.length}건:\n${result.errors.slice(0, 5).join('\n')}`
+                                        : '';
+                                    alert(
+                                        `✅ 적용 완료\n\n` +
+                                        `· 추가 ${result.appliedAdditions}건\n` +
+                                        `· 삭제 ${result.appliedRemovals}건\n` +
+                                        `· 이동 ${result.appliedMoves}건\n` +
+                                        `· 반이름 변경 ${result.appliedRenames}건\n` +
+                                        `· 색상 변경 ${result.appliedColorChanges}건\n\n` +
+                                        `스냅샷: ${snapshotId.slice(0, 20)}...\n` +
+                                        `로그: ${logId.slice(0, 20)}...` +
+                                        errorText
+                                    );
+                                    setIsImportPreviewOpen(false);
+                                } catch (err: any) {
+                                    console.error('[엑셀 가져오기 적용 실패]', err);
+                                    alert(`적용 실패:\n${err?.message || err}`);
+                                }
+                            }}
+                        />
+                    </Suspense>
+                )}
 
                 {/* 붙여넣기 등록일 선택 모달 */}
                 {pasteModalInfo && (

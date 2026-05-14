@@ -46,12 +46,74 @@ async function fetchAllEnrollmentsOptimized(students: UnifiedStudent[]): Promise
 
             const student = studentMap.get(studentId);
             if (student) {
+                const data = enrollDoc.data() as any;
+                // schedule 정규화 — string array 강제 (object array 가 들어와도 화면 깨짐 방지)
+                // 손상된 데이터 (legacy/import 사고) 대응. 정상 데이터는 그대로 통과.
+                if (Array.isArray(data.schedule)) {
+                    data.schedule = data.schedule
+                        .map((s: any) =>
+                            typeof s === 'string'
+                                ? s
+                                : (s && typeof s === 'object')
+                                    ? `${s.day || ''} ${s.periodId || ''}`.trim()
+                                    : ''
+                        )
+                        .filter((s: string) => !!s);
+                }
                 student.enrollments = student.enrollments || [];
                 student.enrollments.push({
                     id: enrollDoc.id,
-                    ...enrollDoc.data()
+                    ...data,
                 } as any);
             }
+        });
+
+        // ─── 활성 enrollment dedup (사전 차단) ───
+        //   같은 학생이 같은 classId 에 여러 활성 enrollment 가지면 (legacy / import 사고 등)
+        //   가장 최신 enrollment 만 활성으로 표시 — 시간표 중복/충돌 방지
+        //   종료된 enrollment 는 그대로 (지난 수업 이력 표시 보존)
+        studentMap.forEach(student => {
+            if (!student.enrollments || student.enrollments.length === 0) return;
+            const activeByClassId = new Map<string, any>();
+            const inactives: any[] = [];
+
+            student.enrollments.forEach((enr: any) => {
+                if (enr.endDate || enr.withdrawalDate || enr.cancelledAt) {
+                    inactives.push(enr);
+                    return;
+                }
+                const classId = enr.classId || enr.id;
+                if (!classId) {
+                    inactives.push(enr);
+                    return;
+                }
+                const existing = activeByClassId.get(classId);
+                if (!existing) {
+                    activeByClassId.set(classId, enr);
+                } else {
+                    // 더 최신 enrollment 우선 (createdAt > enrollmentDate > startDate 순)
+                    const timeOf = (e: any) => {
+                        const t = e.createdAt || e.enrollmentDate || e.startDate;
+                        if (!t) return 0;
+                        try {
+                            // Firestore Timestamp 객체 케이스
+                            if (typeof t === 'object' && typeof t.toDate === 'function') {
+                                return t.toDate().getTime();
+                            }
+                            return new Date(t).getTime() || 0;
+                        } catch {
+                            return 0;
+                        }
+                    };
+                    if (timeOf(enr) > timeOf(existing)) {
+                        // 옛 enrollment 는 inactives 로 보내지 않음 — 시간표 표시에서 무시
+                        // (Firestore 실제 데이터는 그대로 유지 — 이건 hydrate 결과만 정제)
+                        activeByClassId.set(classId, enr);
+                    }
+                    // else: existing 유지, enr 는 무시
+                }
+            });
+            student.enrollments = [...Array.from(activeByClassId.values()), ...inactives];
         });
     } catch (err) {
         console.warn('Failed to fetch enrollments via collectionGroup:', err);

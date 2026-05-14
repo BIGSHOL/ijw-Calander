@@ -22,6 +22,14 @@ export interface RecorderPopupCallbacks {
   onClose: () => void;
 }
 
+export interface RecorderPopupOptions {
+  /**
+   * 파일명에 포함될 토큰 (pendingRecordings.savePending() 의 fileToken).
+   * 메인 창이 죽었을 때 다음 진입 시 다운로드된 파일을 매칭하기 위해 사용.
+   */
+  fileToken?: string;
+}
+
 /**
  * 녹음 팝업 창을 열고 녹음 완료 시 콜백 호출
  * @returns true: 팝업 열림, false: 팝업 차단됨 (인라인 녹음으로 fallback 필요)
@@ -29,6 +37,7 @@ export interface RecorderPopupCallbacks {
 export function openRecorderPopup(
   title: string,
   callbacks: RecorderPopupCallbacks,
+  options: RecorderPopupOptions = {},
 ): boolean {
   const left = Math.round((screen.width - POPUP_WIDTH) / 2);
   const top = Math.round((screen.height - POPUP_HEIGHT) / 2);
@@ -44,7 +53,7 @@ export function openRecorderPopup(
   const origin = window.location.origin;
   let completed = false;
 
-  popup.document.write(generateRecorderHTML(title));
+  popup.document.write(generateRecorderHTML(title, options.fileToken));
   popup.document.close();
 
   const handleMessage = (event: MessageEvent) => {
@@ -89,11 +98,13 @@ export function openRecorderPopup(
 
 // --------------- 팝업 HTML 생성 ---------------
 
-function generateRecorderHTML(title: string): string {
+function generateRecorderHTML(title: string, fileToken?: string): string {
   // HTML 이스케이프
   const safeTitle = title.replace(/[<>&"]/g, c =>
     ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c] || c)
   );
+  // 토큰은 영숫자만 허용 (안전)
+  const safeToken = fileToken && /^[A-Za-z0-9]+$/.test(fileToken) ? fileToken : '';
 
   return `<!DOCTYPE html>
 <html lang="ko">
@@ -181,7 +192,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         var d=new Date();
         var ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'_'+
           String(d.getHours()).padStart(2,'0')+String(d.getMinutes()).padStart(2,'0')+String(d.getSeconds()).padStart(2,'0');
-        var fn='녹음_'+ds+'.'+ext;
+        // 토큰이 있으면 파일명에 포함하여 메인 창에서 컨텍스트 매칭 가능 (pendingRecordings)
+        var tok=${JSON.stringify(safeToken)};
+        var fn='녹음_'+(tok?tok+'_':'')+ds+'.'+ext;
 
         // 이중 안전: 항상 자동 다운로드 + 메인 창에 전달
         downloadBlob(blob,fn);

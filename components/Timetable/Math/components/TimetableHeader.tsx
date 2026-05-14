@@ -146,6 +146,8 @@ interface TimetableHeaderProps {
     // 통합뷰 전용 props
     onExportImage?: () => void;  // 이미지 저장 버튼 클릭 핸들러
     onExportExcel?: () => void;  // 엑셀 저장 버튼 클릭 핸들러
+    onImportExcel?: () => void;  // 엑셀 가져오기 (라운드트립 — 테스트 중)
+    onOpenImportHistory?: () => void;  // 엑셀 가져오기 이력 + 되돌리기
     // 통합뷰 표시 옵션 (class viewType)
     integrationDisplayOptions?: {
         showStudents?: boolean;
@@ -242,6 +244,8 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     // 통합뷰 전용
     onExportImage,
     onExportExcel,
+    onImportExcel,
+    onOpenImportHistory,
     integrationDisplayOptions,
     onIntegrationDisplayOptionsChange,
     // 퇴원 관리 권한
@@ -909,7 +913,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                     <div className="w-px h-4 bg-white/20 mx-1"></div>
 
                     {/* 더보기 드롭다운 (공유 + 저장 통합) */}
-                    {(onExportImage || onExportExcel || (isMaster && onOpenEmbedManager)) && (
+                    {(onExportImage || onExportExcel || onImportExcel || onOpenImportHistory || (isMaster && onOpenEmbedManager)) && (
                         <div className="relative" ref={moreDropdownRef}>
                             <button
                                 onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
@@ -920,40 +924,62 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                 내보내기
                             </button>
                             {isMoreDropdownOpen && (
-                                <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-sm shadow-lg z-50 min-w-[140px]">
+                                <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-sm shadow-lg z-50 min-w-[180px] py-1">
+                                    {/* 그룹 1: 내보내기 */}
                                     {onExportImage && (
                                         <button
-                                            onClick={() => {
-                                                onExportImage();
-                                                setIsMoreDropdownOpen(false);
-                                            }}
-                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
+                                            onClick={() => { onExportImage(); setIsMoreDropdownOpen(false); }}
+                                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
                                         >
-                                            <ImageIcon size={12} />
+                                            <ImageIcon size={12} className="text-gray-500" />
                                             이미지 저장
                                         </button>
                                     )}
                                     {onExportExcel && (
                                         <button
-                                            onClick={() => {
-                                                onExportExcel();
-                                                setIsMoreDropdownOpen(false);
-                                            }}
-                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-green-700 hover:bg-green-50 transition-colors"
+                                            onClick={() => { onExportExcel(); setIsMoreDropdownOpen(false); }}
+                                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
                                         >
-                                            <FileSpreadsheet size={12} />
-                                            엑셀저장
+                                            <FileSpreadsheet size={12} className="text-gray-500" />
+                                            엑셀 저장
                                         </button>
+                                    )}
+
+                                    {/* 그룹 2: 가져오기 (구분선) */}
+                                    {(onImportExcel || onOpenImportHistory) && (onExportImage || onExportExcel) && (
+                                        <div className="my-1 border-t border-gray-100" />
+                                    )}
+                                    {onImportExcel && (
+                                        <button
+                                            onClick={() => { onImportExcel(); setIsMoreDropdownOpen(false); }}
+                                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
+                                            title="라운드트립 — 내보낸 엑셀을 수정해서 다시 가져오기"
+                                        >
+                                            <FileSpreadsheet size={12} className="text-gray-500" />
+                                            엑셀 가져오기
+                                        </button>
+                                    )}
+                                    {onOpenImportHistory && (
+                                        <button
+                                            onClick={() => { onOpenImportHistory(); setIsMoreDropdownOpen(false); }}
+                                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
+                                            title="가져오기 이력 + 되돌리기 (자동 스냅샷으로 1클릭 복원)"
+                                        >
+                                            <FileSpreadsheet size={12} className="text-gray-500" />
+                                            가져오기 이력 / 되돌리기
+                                        </button>
+                                    )}
+
+                                    {/* 그룹 3: 공유 (구분선) */}
+                                    {isMaster && onOpenEmbedManager && (onExportImage || onExportExcel || onImportExcel || onOpenImportHistory) && (
+                                        <div className="my-1 border-t border-gray-100" />
                                     )}
                                     {isMaster && onOpenEmbedManager && (
                                         <button
-                                            onClick={() => {
-                                                onOpenEmbedManager();
-                                                setIsMoreDropdownOpen(false);
-                                            }}
-                                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-indigo-700 hover:bg-indigo-50 transition-colors"
+                                            onClick={() => { onOpenEmbedManager(); setIsMoreDropdownOpen(false); }}
+                                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
                                         >
-                                            <Link2 size={12} />
+                                            <Link2 size={12} className="text-gray-500" />
                                             공유 링크 관리
                                         </button>
                                     )}

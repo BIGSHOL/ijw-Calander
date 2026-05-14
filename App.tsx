@@ -53,6 +53,7 @@ import EmbedRouter, { isEmbedMode } from './components/Embed/EmbedRouter';
 // Layout components
 import { AppHeader } from './components/Layout/AppHeader';
 import { TabContent } from './components/Layout/TabContent';
+import { PendingRecordingsBanner } from './components/Common/PendingRecordingsBanner';
 import { ModalManager } from './components/Layout/ModalManager';
 import { EdutrixReportsProvider } from './components/EdutrixReportsProvider';
 
@@ -794,6 +795,8 @@ const App: React.FC = () => {
               setIsTimetableSettingsOpen,
             } : undefined}
           />
+
+          <PendingRecordingsBanner onNavigate={setAppMode} />
 
           <main id="main-content" className="flex-1 flex flex-row overflow-hidden min-w-0" role="main">
             <HeaderCollapseProvider isHeaderCollapsed={isHeaderCollapsed}>

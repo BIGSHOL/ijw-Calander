@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
 import { startRecoverySession, saveChunk, checkRecovery, recoverRecording, clearRecovery } from '../../utils/recordingRecovery';
 import { openRecorderPopup } from '../../utils/recorderPopup';
+import { savePending, getPendingByFileName, removePending } from '../../utils/pendingRecordings';
 
 const ACCEPTED_TYPES = ['audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/wav', 'audio/webm', 'audio/ogg'];
 const ACCEPTED_EXTENSIONS = ['.mp3', '.m4a', '.wav', '.webm', '.ogg'];
@@ -142,29 +143,46 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
   // 팝업 녹음 시작
   const startPopupRecording = useCallback(() => {
     setError('');
+    // 메인 창이 죽어도 다음 진입 시 컨텍스트 복원 가능하도록 pending 저장
+    const pending = savePending('meeting', {
+      title,
+      attendees,
+      meetingDate,
+      recorder,
+    });
     const opened = openRecorderPopup(
       '회의 녹음',
       {
         onComplete: (file) => {
           setIsPopupRecording(false);
-          // 녹음 완료 → 자동으로 업로드+분석 시작
+          // 정상 완료: pending 제거하고 자동 분석
+          removePending(pending.id);
           autoSubmitFile(file);
         },
         onError: (message) => {
           setError(message);
           setIsPopupRecording(false);
+          // 에러 시에도 pending 제거 (재시도 시 새로 생성)
+          removePending(pending.id);
         },
         onClose: () => {
           setIsPopupRecording(false);
+          // 팝업이 닫힌 경우: 사용자가 직접 닫았거나 파일 다운로드 후 자동 닫힘
+          // pending 은 유지 — 사용자가 다시 들어와서 파일 끌어놓을 수도 있음
+          // (만료 시 자동 정리됨)
         },
       },
+      { fileToken: pending.fileToken },
     );
     if (opened) {
       setIsPopupRecording(true);
       setSelectedFile(null);
+    } else {
+      // 팝업이 안 열렸으면 pending 의미 없음
+      removePending(pending.id);
     }
     return opened;
-  }, [autoSubmitFile]);
+  }, [title, attendees, meetingDate, recorder, autoSubmitFile]);
 
   // 녹음 버튼: 팝업 우선, 차단 시 인라인 fallback
   const handleRecordClick = useCallback(() => {
@@ -243,6 +261,18 @@ export function MeetingUploader({ onUploadStart }: MeetingUploaderProps) {
     if (err) { setError(err); return; }
     setError('');
     setSelectedFile(file);
+
+    // 파일명에 pending 토큰이 있으면 컨텍스트 자동 복원
+    const pending = getPendingByFileName(file.name);
+    if (pending && pending.type === 'meeting') {
+      const ctx = pending.context || {};
+      if (ctx.title) setTitle(ctx.title);
+      if (Array.isArray(ctx.attendees)) setAttendees(ctx.attendees);
+      if (ctx.meetingDate) setMeetingDate(ctx.meetingDate);
+      if (ctx.recorder) setRecorder(ctx.recorder);
+      // 매칭 성공 → 다음 진입 시 안내 안 보이도록 제거
+      removePending(pending.id);
+    }
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
