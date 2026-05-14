@@ -3,7 +3,7 @@ import { addDays } from 'date-fns';
 import {
     ChevronLeft, ChevronRight, Search, X, Settings, Eye, EyeOff, Edit, SlidersHorizontal,
     ArrowRightLeft, Copy, Upload, Save, Link2, Users, ChevronUp, ChevronDown, GripVertical, Download, Calendar as CalendarIcon,
-    Share, FileSpreadsheet, Image as ImageIcon
+    Share, FileSpreadsheet, Image as ImageIcon, RotateCcw
 } from 'lucide-react';
 import {
     DndContext,
@@ -182,6 +182,8 @@ interface TimetableHeaderProps {
     // 강사 숨김 필터
     hiddenTeachers?: string[];
     onToggleTeacherHidden?: (teacher: string) => void;
+    // 필터 초기화 (강의실/셔틀/학년/학교/강사 숨김 모두 default 로) — 그룹/강사 순서는 보존
+    onResetFilters?: () => void;
     // 퇴원 리스트 전역 토글
     withdrawnAllExpanded?: boolean;
     onToggleAllWithdrawn?: () => void;
@@ -263,6 +265,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     weeklyAbsent,
     hiddenTeachers = [],
     onToggleTeacherHidden,
+    onResetFilters,
     withdrawnAllExpanded = false,
     onToggleAllWithdrawn,
 }) => {
@@ -1372,6 +1375,20 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                 </div>
                                                 );
                                             })()}
+
+                                            {/* === 필터 초기화 === 강의실/셔틀/학년/학교/강사 숨김 모두 default 로 (그룹/강사 순서는 보존) */}
+                                            {onResetFilters && (
+                                                <div className="px-3 py-2 border-t border-gray-100">
+                                                    <button
+                                                        onClick={onResetFilters}
+                                                        className="w-full py-1.5 px-2 rounded-sm text-xxs font-bold border border-gray-300 bg-white text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-colors flex items-center justify-center gap-1"
+                                                        title="강의실·셔틀·학년·학교·강사 숨김 필터를 모두 초기화 (그룹/강사 순서는 유지)"
+                                                    >
+                                                        <RotateCcw size={11} />
+                                                        필터 초기화
+                                                    </button>
+                                                </div>
+                                            )}
 
                                             {/* === 개발자 5. 표시 옵션 === */}
                                             <div className="px-3 py-2 bg-gray-50">

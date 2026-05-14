@@ -232,6 +232,8 @@ interface MathTimetableContentProps {
     updateMathIntegrationSettings: (settings: MathIntegrationSettings) => void;
     userDepartments?: ('math' | 'highmath' | 'english')[];
     onMakeEduSyncOpen?: () => void;
+    // 필터 초기화 (강의실/셔틀/학년/학교/강사 숨김 모두 default 로) — 그룹/강사 순서는 보존
+    onResetFilters?: () => void;
 }
 
 const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
@@ -338,6 +340,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     updateMathIntegrationSettings,
     userDepartments,
     onMakeEduSyncOpen,
+    onResetFilters,
 }) => {
     const simulation = useMathSimulation();
     const { isScenarioMode, currentScenarioName, enterScenarioMode, exitScenarioMode, loadFromLive, publishToLive } = simulation;
@@ -1078,6 +1081,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                             : [...current, teacher];
                         updateMathIntegrationSettings({ ...mathIntegrationSettings, hiddenTeachers: newHidden });
                     }}
+                    onResetFilters={onResetFilters}
                 />
 
                 {/* Timetable Content - viewType에 따라 분기 */}
@@ -2659,6 +2663,15 @@ const TimetableManagerInner = ({
                 updateMathIntegrationSettings={updateOuterMathSettings}
                 userDepartments={userDepartments}
                 onMakeEduSyncOpen={() => setIsMakeEduSyncOpen(true)}
+                onResetFilters={() => {
+                    // 강의실: 모두 보이기 (필터 미적용)
+                    setRoomFilter({ main: true, barun: true, godeung: true });
+                    storage.setString(STORAGE_KEYS.MATH_ROOM_FILTER, JSON.stringify({ main: true, barun: true, godeung: true }));
+                    // 학생 필터(학교/학년/셔틀/출석): 모두 초기 default
+                    setStudentFilter({ schools: [], grades: [], shuttle: 'all' });
+                    // 강사 숨김: 모두 해제 (그룹/강사 순서는 보존 — sortGroupOrder, sortedTeacherOrder 등 안 건드림)
+                    updateOuterMathSettings({ ...outerMathSettings, hiddenTeachers: [] });
+                }}
             />
             {/* 드래그 반이동 날짜 선택 모달 */}
             {dateModalInfo && (
