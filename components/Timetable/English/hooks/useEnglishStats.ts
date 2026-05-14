@@ -116,6 +116,8 @@ export const useEnglishStats = (
             if (student.withdrawalDate && student.isTransferred) return;
 
             // 대기/예정 (onHold) - 전역 상태 무관하게 대기로 카운트
+            // early return 제거 — onHold 학생도 이 과목 처음이면 신입 detection 통과해야 함
+            // 사용자 결정(2026-05-13): "예정이더라도 처음 듣는 학생이면 신입"
             if (student.onHold) {
                 const enrollDate = student.enrollmentDate || student.startDate;
                 if (enrollDate) {
@@ -124,16 +126,14 @@ export const useEnglishStats = (
                 } else {
                     waitingStudentIds.add(studentId);
                 }
-                return;
+            } else {
+                // 재원생 — 전역 상태가 'active'인 학생만 카운트
+                if (baseStatus !== 'active') return;
+                activeStudentIds.add(studentId);
             }
 
-            // 재원생 — 전역 상태가 'active'인 학생만 카운트
-            if (baseStatus !== 'active') return;
-            activeStudentIds.add(studentId);
-
-            // 신입 (반이동 제외)
-            // 기준 = 이 과목 지난수업 0개 AND 입학일 60일 이내 (사용자 결정 2026-05-13)
-            // 다른 과목 재학생이 이 과목 첫 등록 시 신입으로 잡히도록 hasPastInSubject 게이트 추가.
+            // 신입 (반이동 제외) — onHold/active 모두에 적용
+            // 기준 = 이 과목 지난수업 0개 AND 입학일 60일 이내
             if (!student.isTransferredIn && !student.hasPastInSubject) {
                 const enrollDate = student.firstSubjectEnrollmentDate || student.enrollmentDate || student.startDate;
                 if (enrollDate) {

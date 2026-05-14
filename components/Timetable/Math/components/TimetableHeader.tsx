@@ -531,19 +531,21 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                 } else {
                     onHoldStudentIds.add(student.id);
                 }
-                return;
+                // early return 제거 — onHold(예정) 학생도 이 과목 처음이면 신입으로 잡혀야 함
+                // 사용자 결정(2026-05-13): "예정이더라도 수학 처음 듣는 학생이면 신입"
+                // 단 activeStudentIds 에는 안 들어감 (재원생 카운트와 분리 유지)
+            } else {
+                // 재원생
+                activeStudentIds.add(student.id);
             }
-            // 재원생
-            activeStudentIds.add(student.id);
-            // 신입 (반이동 제외)
-            // 기준 = 이 과목 지난수업 0개 AND 입학일 60일 이내 (사용자 결정 2026-05-13)
-            // 다른 과목 재학생이 이 과목 첫 등록 시 신입으로 잡히도록
-            // (예: 김수민 — 영어 재학중 + 수학 첫 등록).
+            // 신입 (반이동 제외) — onHold/active 모두에 적용
+            // 기준 = 이 과목 지난수업 0개 AND 입학일 60일 이내
+            // (예: 김수민 — 영어 재학중 + 수학 첫 등록, startDate 미래여도 신입)
             if (!student.isTransferredIn && !student.hasPastInSubject) {
                 const enrollDate = student.firstSubjectEnrollmentDate || student.enrollmentDate || student.startDate;
                 if (enrollDate) {
                     const daysSince = Math.floor((refDate.getTime() - new Date(enrollDate).getTime()) / (1000 * 60 * 60 * 24));
-                    // 미래 입학일(daysSince < 0)도 신입으로 인정 — 김수민처럼 다음 주 시작 케이스 포함
+                    // 미래 입학일(daysSince < 0)도 신입으로 인정
                     if (daysSince <= 60) newStudentIds.add(student.id);
                 }
             }
