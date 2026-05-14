@@ -57,7 +57,6 @@ describe('useTextbookRequests', () => {
     expect(result.current).toHaveProperty('deleteRequest');
     expect(result.current).toHaveProperty('saveAccountSettings');
     expect(result.current).toHaveProperty('saveCatalog');
-    expect(result.current).toHaveProperty('autoMatchBillings');
   });
 
   it('should default requests to empty array', async () => {
@@ -114,6 +113,5 @@ describe('useTextbookRequests', () => {
     expect(typeof result.current.deleteRequest.mutateAsync).toBe('function');
     expect(typeof result.current.saveAccountSettings.mutateAsync).toBe('function');
     expect(typeof result.current.saveCatalog.mutateAsync).toBe('function');
-    expect(typeof result.current.autoMatchBillings).toBe('function');
   });
 });

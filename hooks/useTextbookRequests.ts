@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '../firebaseConfig';
-import { collection, query, orderBy, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc, addDoc, where } from 'firebase/firestore';
 import { TEXTBOOK_CATALOG, TextbookCatalogItem, DEFAULT_SUBJECT } from '../data/textbookCatalog';
 
 // ===== Types =====
@@ -32,6 +32,62 @@ export interface AccountSettings {
   bankName: string;
   accountNumber: string;
   accountHolder: string;
+}
+
+// ===== Helpers =====
+
+/**
+ * 단일 교재 요청서를 textbook_billings 컬렉션으로 자동 upsert.
+ * - 등록+납부+주문 모두 ✓ 이고 아직 copiedToBilling=false 일 때 호출
+ * - 동일 키(학생명+교재명+월) 존재 시 신규 추가 안 함 (멱등성)
+ * - 성공 시 요청서에 copiedToBilling=true, copiedAt=now 설정
+ * - 참조: 메이크에듀 동기화 후 자동 매칭과 동일한 학생/교재 키 정책 사용
+ */
+async function autoCopySingleRequestToBilling(req: TextbookRequest): Promise<void> {
+  // 학생 정보 조회 (grade, school) — 이름 일치 첫 건
+  const studentsSnap = await getDocs(collection(db, 'students'));
+  let studentInfo = { id: '', grade: '', school: '' };
+  for (const d of studentsSnap.docs) {
+    const data = d.data() as { name?: string; grade?: string; school?: string };
+    if (data.name === req.studentName) {
+      studentInfo = { id: d.id, grade: data.grade || '', school: data.school || '' };
+      break;
+    }
+  }
+
+  // 청구월: requestDate(YYYY-MM-DD) → YYYYMM
+  const month = (req.requestDate || '').slice(0, 7).replace('-', '');
+  if (!month) return;
+
+  // 중복 키 체크 (학생명 + 교재명 + 월)
+  const existingSnap = await getDocs(query(
+    collection(db, 'textbook_billings'),
+    where('studentName', '==', req.studentName),
+    where('textbookName', '==', req.bookName),
+    where('month', '==', month),
+  ));
+
+  const now = new Date().toISOString();
+  if (existingSnap.empty) {
+    await addDoc(collection(db, 'textbook_billings'), {
+      studentId: studentInfo.id,
+      studentName: req.studentName,
+      grade: studentInfo.grade,
+      school: studentInfo.school,
+      textbookName: req.bookName,
+      amount: req.price,
+      month,
+      matched: true,
+      importedAt: now,
+      sourceRequestId: req.id,
+    });
+  }
+
+  // 요청서에 복사 완료 플래그
+  await updateDoc(doc(db, 'textbook_requests', req.id), {
+    copiedToBilling: true,
+    copiedAt: now,
+  });
 }
 
 // ===== Hook =====
@@ -109,6 +165,7 @@ export function useTextbookRequests() {
   });
 
   // 요청서 업데이트
+  // 옵션 ②-a: 등록+납부+주문 모두 ✓ 이고 아직 textbook_billings 복사 안 됐으면 자동 upsert
   const updateRequest = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<TextbookRequest> }) => {
       const now = new Date().toISOString();
@@ -123,9 +180,27 @@ export function useTextbookRequests() {
       if (updates.isOrdered === true) updatesWithTimestamps.orderedAt = now;
       else if (updates.isOrdered === false) updatesWithTimestamps.orderedAt = null;
 
-      await updateDoc(doc(db, 'textbook_requests', id), updatesWithTimestamps);
+      const requestRef = doc(db, 'textbook_requests', id);
+      await updateDoc(requestRef, updatesWithTimestamps);
+
+      // 자동 textbook_billings 복사 (옵션 ②-a)
+      const snap = await getDoc(requestRef);
+      if (!snap.exists()) return;
+      const req = { id, ...snap.data() } as TextbookRequest;
+      if (req.isCompleted && req.isPaid && req.isOrdered && !req.copiedToBilling) {
+        try {
+          await autoCopySingleRequestToBilling(req);
+        } catch (e) {
+          // 자동 복사 실패해도 mutation 자체는 성공 유지 (수동 복사 가능)
+          console.error('autoCopySingleRequestToBilling failed:', e);
+        }
+      }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['textbookRequests'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['textbookRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['textbookBillings'] });
+      queryClient.invalidateQueries({ queryKey: ['studentTextbookBillings'] });
+    },
     onError: (error: Error) => { console.error('updateRequest failed:', error); },
   });
 
@@ -159,127 +234,6 @@ export function useTextbookRequests() {
     onError: (error: Error) => { console.error('saveCatalog failed:', error); },
   });
 
-  // 수납 자동 매칭: billing 데이터로 미납 요청 자동 업데이트
-  const autoMatchBillings = async (billings: { studentName: string; textbookName: string }[]) => {
-    const currentRequests = queryClient.getQueryData<TextbookRequest[]>(['textbookRequests']) || requests;
-    const unpaidRequests = currentRequests.filter(r => !r.isPaid);
-    if (unpaidRequests.length === 0 || billings.length === 0) return { matched: 0 };
-
-    const normalize = (s: string) => s.replace(/\s+/g, '').toLowerCase();
-    const batch = writeBatch(db);
-    let matched = 0;
-    const matchedIds = new Set<string>();
-
-    for (const billing of billings) {
-      const normalizedStudent = normalize(billing.studentName);
-      const normalizedBook = normalize(billing.textbookName);
-
-      const match = unpaidRequests.find(r => {
-        if (matchedIds.has(r.id)) return false;
-        const nameMatch = normalize(r.studentName) === normalizedStudent;
-        if (!nameMatch) return false;
-        const reqBook = normalize(r.bookName);
-        return reqBook.includes(normalizedBook) || normalizedBook.includes(reqBook);
-      });
-
-      if (match) {
-        matchedIds.add(match.id);
-        batch.update(doc(db, 'textbook_requests', match.id), {
-          isPaid: true,
-          paidAt: new Date().toISOString(),
-        });
-        matched++;
-      }
-    }
-
-    if (matched > 0) {
-      await batch.commit();
-      queryClient.invalidateQueries({ queryKey: ['textbookRequests'] });
-    }
-
-    return { matched };
-  };
-
-  // 완료된 요청 → 수납 내역(textbook_billings)으로 복사
-  const copyToBillings = useMutation({
-    mutationFn: async (targetRequests: TextbookRequest[]) => {
-      // 학생 정보 조회 (grade, school 매핑용)
-      const studentsSnap = await getDocs(collection(db, 'students'));
-      const studentMap = new Map<string, { id: string; grade: string; school: string }>();
-      studentsSnap.docs.forEach(d => {
-        const data = d.data();
-        studentMap.set(data.name, {
-          id: d.id,
-          grade: data.grade || '',
-          school: data.school || '',
-        });
-      });
-
-      // 기존 billing 중복 체크
-      const billingsSnap = await getDocs(collection(db, 'textbook_billings'));
-      const existingKeys = new Set<string>();
-      billingsSnap.docs.forEach(d => {
-        const data = d.data();
-        existingKeys.add(`${data.studentName}_${data.textbookName}_${data.month}`);
-      });
-
-      const now = new Date().toISOString();
-      const batch = writeBatch(db);
-      let copied = 0;
-      let skipped = 0;
-      const copiedIds: string[] = [];
-
-      for (const req of targetRequests) {
-        const month = req.requestDate.slice(0, 7).replace('-', ''); // YYYY-MM-DD → YYYYMM
-        const key = `${req.studentName}_${req.bookName}_${month}`;
-
-        if (existingKeys.has(key)) {
-          skipped++;
-          // 이미 복사된 건이지만 copiedToBilling 플래그만 갱신
-          if (!req.copiedToBilling) copiedIds.push(req.id);
-          continue;
-        }
-
-        const student = studentMap.get(req.studentName);
-        const billingRef = doc(collection(db, 'textbook_billings'));
-        batch.set(billingRef, {
-          studentId: student?.id || '',
-          studentName: req.studentName,
-          grade: student?.grade || '',
-          school: student?.school || '',
-          textbookName: req.bookName,
-          amount: req.price,
-          month,
-          matched: true,
-          importedAt: now,
-          sourceRequestId: req.id,
-        });
-        existingKeys.add(key);
-        copiedIds.push(req.id);
-        copied++;
-      }
-
-      // 요청서에 copiedToBilling 플래그 설정
-      for (const id of copiedIds) {
-        batch.update(doc(db, 'textbook_requests', id), {
-          copiedToBilling: true,
-          copiedAt: now,
-        });
-      }
-
-      if (copied > 0 || copiedIds.length > 0) {
-        await batch.commit();
-      }
-
-      return { copied, skipped };
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['textbookRequests'] });
-      queryClient.invalidateQueries({ queryKey: ['textbookBillings'] });
-    },
-    onError: (error: Error) => { console.error('copyToBillings failed:', error); },
-  });
-
   // 통계
   const stats = useMemo(() => {
     const total = requests.length;
@@ -302,7 +256,5 @@ export function useTextbookRequests() {
     deleteRequest,
     saveAccountSettings,
     saveCatalog,
-    autoMatchBillings,
-    copyToBillings,
   };
 }

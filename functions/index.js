@@ -8381,6 +8381,227 @@ async function writePendingBillings(rows, meta) {
 }
 
 /**
+ * YYYYMM 범위에서 모든 YYYY-MM 배열 생성
+ * 예: ymRangeList('202601', '202603') → ['2026-01', '2026-02', '2026-03']
+ */
+function ymRangeList(fromYm, toYm) {
+    const result = [];
+    if (!fromYm || !toYm) return result;
+    let y = parseInt(fromYm.substring(0, 4), 10);
+    let m = parseInt(fromYm.substring(4, 6), 10);
+    const endY = parseInt(toYm.substring(0, 4), 10);
+    const endM = parseInt(toYm.substring(4, 6), 10);
+    if (isNaN(y) || isNaN(m) || isNaN(endY) || isNaN(endM)) return result;
+    let guard = 0;
+    while ((y < endY || (y === endY && m <= endM)) && guard < 240) { // 최대 20년 안전 가드
+        result.push(`${String(y).padStart(4, '0')}-${String(m).padStart(2, '0')}`);
+        m++;
+        if (m > 12) { m = 1; y++; }
+        guard++;
+    }
+    return result;
+}
+
+/**
+ * billing_makeedu_pending 의 ym 범위 데이터를 billing 컬렉션에 자동 반영 (replace 모드)
+ * - ymList: 'YYYY-MM' 형식 배열
+ * - 월별로 billing 의 해당 월 전체 삭제 → pending 데이터로 신규 삽입
+ * - useBilling.importRecords (hooks/useBilling.ts:183) 의 replaceMonth=true 와 동일 패턴
+ * - timestamp 는 ISO 8601 (tz-aware)
+ */
+async function applyPendingToBilling(ymList) {
+    if (!Array.isArray(ymList) || ymList.length === 0) {
+        return { added: 0, deleted: 0, monthsProcessed: 0 };
+    }
+
+    const BATCH_LIMIT = 450;
+    let totalAdded = 0;
+    let totalDeleted = 0;
+    let monthsProcessed = 0;
+
+    for (const month of ymList) {
+        // 1) 해당 월 pending 조회
+        const pendingSnap = await db.collection('billing_makeedu_pending').where('month', '==', month).get();
+        if (pendingSnap.empty) {
+            logger.info(`[applyPendingToBilling] month=${month} no pending rows, skip`);
+            continue;
+        }
+        const pendingRows = pendingSnap.docs.map(d => d.data());
+
+        // 2) billing 의 해당 월 데이터 전체 삭제 (replace)
+        const existingSnap = await db.collection('billing').where('month', '==', month).get();
+        let batch = db.batch();
+        let opCount = 0;
+        for (const docRef of existingSnap.docs) {
+            batch.delete(docRef.ref);
+            opCount++; totalDeleted++;
+            if (opCount % BATCH_LIMIT === 0) {
+                await batch.commit();
+                batch = db.batch();
+            }
+        }
+
+        // 3) pending → billing 신규 삽입 (BillingRecord 매핑)
+        const now = new Date().toISOString();
+        for (const r of pendingRows) {
+            const record = {
+                externalStudentId: r.externalStudentId || '',
+                studentName: r.studentName || '',
+                grade: r.grade || '',
+                school: '',
+                parentPhone: '',
+                studentPhone: '',
+                category: r.category || '',
+                month: r.month || month,
+                billingDay: Number(r.billingDay) || 0,
+                billingName: r.billingName || '',
+                status: r.status === 'paid' ? 'paid' : 'pending',
+                billedAmount: Number(r.billedAmount) || 0,
+                discountAmount: Number(r.discountAmount) || 0,
+                pointsUsed: Number(r.pointsUsed) || 0,
+                paidAmount: Number(r.paidAmount) || 0,
+                unpaidAmount: Number(r.unpaidAmount) || 0,
+                paymentMethod: r.paymentMethod || '',
+                cardCompany: '',
+                paidDate: r.paidDate || '',
+                cashReceipt: '',
+                memo: r.memo || '',
+                createdAt: now,
+                updatedAt: now,
+            };
+            const ref = db.collection('billing').doc();
+            batch.set(ref, record);
+            opCount++; totalAdded++;
+            if (opCount % BATCH_LIMIT === 0) {
+                await batch.commit();
+                batch = db.batch();
+            }
+        }
+
+        if (opCount % BATCH_LIMIT !== 0) {
+            await batch.commit();
+        }
+        monthsProcessed++;
+        logger.info(`[applyPendingToBilling] month=${month} deleted=${existingSnap.size}, added=${pendingRows.length}`);
+    }
+
+    return { added: totalAdded, deleted: totalDeleted, monthsProcessed };
+}
+
+/**
+ * billing 의 status='paid' 행을 기준으로 textbook_requests 자동 매칭/미러링
+ * - ymList: 'YYYY-MM' 형식 배열
+ * - 매칭 정책 (정규화 없음, 정합성 우선):
+ *   * 학생명 완전 일치 (string ===)
+ *   * 교재명 양방향 부분 일치 (billingName.includes(bookName) || bookName.includes(billingName))
+ *   * 두 조건 모두 만족해야 매칭 성공
+ * - 매칭 성공 → isCompleted=true, isPaid=true, completedAt/paidAt=now
+ * - 매칭 실패 + 자동 ON 흔적 (isCompleted || isPaid) → false 미러링 (환불/취소 자동 반영)
+ * - isOrdered 는 건드리지 않음 (수동 영역)
+ */
+async function mirrorTextbookRequestsFromBilling(ymList) {
+    if (!Array.isArray(ymList) || ymList.length === 0) {
+        return { matched: 0, mirrored: 0, paidCandidates: 0, unmatchedPaidSamples: [] };
+    }
+
+    // 1) billing 의 paid 행 (ym 범위) — 월별 개별 쿼리 (composite index 불필요)
+    const paidRows = [];
+    for (const month of ymList) {
+        const snap = await db.collection('billing').where('month', '==', month).get();
+        snap.docs.forEach(d => {
+            const data = d.data();
+            if (data.status === 'paid') paidRows.push(data);
+        });
+    }
+
+    // 2) textbook_requests 중 requestDate 가 ymList 범위 내인 것
+    const requestsSnap = await db.collection('textbook_requests').get();
+    const targetRequests = [];
+    requestsSnap.docs.forEach(d => {
+        const data = d.data();
+        const ym = (data.requestDate || '').substring(0, 7);
+        if (ymList.includes(ym)) {
+            targetRequests.push({ id: d.id, ref: d.ref, ...data });
+        }
+    });
+
+    if (paidRows.length === 0 && targetRequests.length === 0) {
+        logger.info(`[mirrorTextbookRequestsFromBilling] No data for ymList=${ymList.join(',')}`);
+        return { matched: 0, mirrored: 0, paidCandidates: 0, unmatchedPaidSamples: [] };
+    }
+
+    const matchedIds = new Set();
+    const now = new Date().toISOString();
+    const BATCH_LIMIT = 450;
+    let batch = db.batch();
+    let opCount = 0;
+    let matched = 0;
+    let mirrored = 0;
+    const unmatchedPaidSamples = [];
+
+    // 3a) paid 행 → 요청서 매칭 (정규화 없음, 학생명 완전 일치 + 교재명 양방향 부분 일치)
+    for (const billing of paidRows) {
+        const bStudent = billing.studentName || '';
+        const bBookName = billing.billingName || '';
+        if (!bStudent || !bBookName) continue;
+
+        const candidate = targetRequests.find(r => {
+            if (matchedIds.has(r.id)) return false;
+            if (r.studentName !== bStudent) return false;
+            const reqBook = r.bookName || '';
+            if (!reqBook) return false;
+            return bBookName.includes(reqBook) || reqBook.includes(bBookName);
+        });
+
+        if (candidate) {
+            matchedIds.add(candidate.id);
+            batch.update(candidate.ref, {
+                isCompleted: true,
+                isPaid: true,
+                completedAt: now,
+                paidAt: now,
+            });
+            matched++; opCount++;
+            if (opCount % BATCH_LIMIT === 0) {
+                await batch.commit();
+                batch = db.batch();
+            }
+        } else if (unmatchedPaidSamples.length < 10) {
+            unmatchedPaidSamples.push({
+                studentName: bStudent,
+                billingName: bBookName,
+                month: billing.month,
+            });
+        }
+    }
+
+    // 3b) 미러링: 매칭 안 됐는데 자동 ON 흔적 있는 요청서 → false 로 되돌림
+    for (const r of targetRequests) {
+        if (matchedIds.has(r.id)) continue;
+        if (!r.isCompleted && !r.isPaid) continue;
+        batch.update(r.ref, {
+            isCompleted: false,
+            isPaid: false,
+            completedAt: null,
+            paidAt: null,
+        });
+        mirrored++; opCount++;
+        if (opCount % BATCH_LIMIT === 0) {
+            await batch.commit();
+            batch = db.batch();
+        }
+    }
+
+    if (opCount % BATCH_LIMIT !== 0) {
+        await batch.commit();
+    }
+
+    logger.info(`[mirrorTextbookRequestsFromBilling] paidCandidates=${paidRows.length}, matched=${matched}, mirrored=${mirrored}, unmatchedSamples=${unmatchedPaidSamples.length}`);
+
+    return { matched, mirrored, paidCandidates: paidRows.length, unmatchedPaidSamples };
+}
+
+/**
  * 클라이언트 호출용: 수동 동기화 (월 범위 지정)
  */
 exports.scrapeMakeEduBillings = functions
@@ -8395,6 +8616,10 @@ exports.scrapeMakeEduBillings = functions
             const result = await scrapeMakeEduBillingsInternal(fromYm, toYm);
             const meta = { fromYm, toYm, type: 'manual', triggeredBy: uid };
             const writeRes = await writePendingBillings(result.rows, meta);
+            // pending → billing 자동 반영 + textbook_requests 자동 매칭/미러링
+            const ymList = ymRangeList(fromYm, toYm);
+            const applyRes = await applyPendingToBilling(ymList);
+            const mirrorRes = await mirrorTextbookRequestsFromBilling(ymList);
             // 동기화 내역 로그 (수동)
             await db.collection("makeEduBillingSyncLogs").add({
                 type: "manual",
@@ -8403,6 +8628,13 @@ exports.scrapeMakeEduBillings = functions
                 toYm,
                 totalRows: result.totalRows,
                 saved: writeRes.saved,
+                billingApplied: applyRes.added,
+                billingDeleted: applyRes.deleted,
+                monthsProcessed: applyRes.monthsProcessed,
+                textbookMatched: mirrorRes.matched,
+                textbookMirrored: mirrorRes.mirrored,
+                textbookPaidCandidates: mirrorRes.paidCandidates,
+                unmatchedPaidSamples: mirrorRes.unmatchedPaidSamples,
                 triggeredBy: uid,
                 executedAt: admin.firestore.FieldValue.serverTimestamp(),
             });
@@ -8410,6 +8642,9 @@ exports.scrapeMakeEduBillings = functions
                 ok: true,
                 totalRows: result.totalRows,
                 saved: writeRes.saved,
+                billingApplied: applyRes.added,
+                textbookMatched: mirrorRes.matched,
+                textbookMirrored: mirrorRes.mirrored,
                 fromYm,
                 toYm,
             };
@@ -8447,6 +8682,10 @@ exports.scheduledMakeEduBillingSync = functions
             const result = await scrapeMakeEduBillingsInternal(ym, ym);
             const meta = { fromYm: ym, toYm: ym, type: 'scheduled' };
             const writeRes = await writePendingBillings(result.rows, meta);
+            // pending → billing 자동 반영 + textbook_requests 자동 매칭/미러링
+            const ymList = ymRangeList(ym, ym);
+            const applyRes = await applyPendingToBilling(ymList);
+            const mirrorRes = await mirrorTextbookRequestsFromBilling(ymList);
             await db.collection("makeEduBillingSyncLogs").add({
                 type: "scheduled",
                 success: true,
@@ -8454,6 +8693,13 @@ exports.scheduledMakeEduBillingSync = functions
                 toYm: ym,
                 totalRows: result.totalRows,
                 saved: writeRes.saved,
+                billingApplied: applyRes.added,
+                billingDeleted: applyRes.deleted,
+                monthsProcessed: applyRes.monthsProcessed,
+                textbookMatched: mirrorRes.matched,
+                textbookMirrored: mirrorRes.mirrored,
+                textbookPaidCandidates: mirrorRes.paidCandidates,
+                unmatchedPaidSamples: mirrorRes.unmatchedPaidSamples,
                 executedAt: admin.firestore.FieldValue.serverTimestamp(),
             });
             return result;

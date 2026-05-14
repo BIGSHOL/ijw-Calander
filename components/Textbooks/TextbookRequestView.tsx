@@ -16,9 +16,8 @@ import FileText from 'lucide-react/dist/esm/icons/file-text';
 import User from 'lucide-react/dist/esm/icons/user';
 import BookOpen from 'lucide-react/dist/esm/icons/book-open';
 import CreditCard from 'lucide-react/dist/esm/icons/credit-card';
-import Chrome from 'lucide-react/dist/esm/icons/chrome';
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
-import Copy from 'lucide-react/dist/esm/icons/copy';
+import Sparkles from 'lucide-react/dist/esm/icons/sparkles';
 import Settings from 'lucide-react/dist/esm/icons/settings';
 import Check from 'lucide-react/dist/esm/icons/check';
 import X from 'lucide-react/dist/esm/icons/x';
@@ -317,7 +316,7 @@ interface TextbookRequestViewProps {
 }
 
 export default function TextbookRequestView({ isAdmin = false, canEdit = false, currentUserName, initialTab, onRequestCreated }: TextbookRequestViewProps) {
-  const { requests, requestsLoading, accountSettings, catalog, createRequest, updateRequest, deleteRequest, copyToBillings, saveAccountSettings } =
+  const { requests, requestsLoading, accountSettings, catalog, createRequest, updateRequest, deleteRequest, saveAccountSettings } =
     useTextbookRequests();
 
   const effectiveAdmin = isAdmin;
@@ -561,31 +560,6 @@ export default function TextbookRequestView({ isAdmin = false, canEdit = false, 
     },
     [deleteRequest]
   );
-
-  // 완료된 요청 → 수납 내역 복사
-  const uncopiedCompleteCount = useMemo(
-    () => requests.filter(r => isFullyComplete(r) && !r.copiedToBilling).length,
-    [requests]
-  );
-
-  const [isCopying, setIsCopying] = useState(false);
-  const handleCopyToBillings = useCallback(async () => {
-    const targets = requests.filter(r => isFullyComplete(r) && !r.copiedToBilling);
-    if (targets.length === 0) {
-      alert('복사할 새로운 완료 건이 없습니다.');
-      return;
-    }
-    if (!window.confirm(`완료된 요청 ${targets.length}건을 수납 내역으로 복사하시겠습니까?\n(원본 데이터는 유지됩니다)`)) return;
-    setIsCopying(true);
-    try {
-      const result = await copyToBillings.mutateAsync(targets);
-      alert(`수납 내역 복사 완료!\n신규 복사: ${result.copied}건${result.skipped > 0 ? `\n이미 존재: ${result.skipped}건` : ''}`);
-    } catch (err) {
-      console.error('copyToBillings failed:', err);
-      alert('수납 내역 복사에 실패했습니다.');
-    }
-    setIsCopying(false);
-  }, [requests, copyToBillings]);
 
   // 요청 내역에서 이미지 재다운로드
   const historyPreviewRef = useRef<HTMLDivElement>(null);
@@ -870,31 +844,22 @@ export default function TextbookRequestView({ isAdmin = false, canEdit = false, 
       {subTab === 'history' && (
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-6xl mx-auto p-4 space-y-4">
-            {/* Chrome Extension Banner */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 space-y-2">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <div className="flex items-center gap-2 text-blue-800 font-medium text-sm">
-                  <Chrome size={16} className="shrink-0" />
-                  <span>메이크에듀 연동이 필요하신가요?</span>
+            {/* 자동 동기화 안내 */}
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3">
+              <div className="flex items-start gap-2">
+                <Sparkles size={16} className="shrink-0 text-emerald-600 mt-0.5" />
+                <div className="text-xs text-emerald-800 space-y-1 flex-1">
+                  <p className="font-semibold text-emerald-900">자동 동기화 활성</p>
+                  <p>
+                    매일 새벽 3시 메이크에듀 수납이 자동 반영되어 <strong>등록 · 납부</strong>가 자동으로 체크됩니다. 환불 · 취소도 자동 미러링됩니다.
+                  </p>
+                  <p>
+                    학원에서 출판사로 발주 완료 시 <strong>&quot;주문&quot;</strong>만 체크하면 학생 페이지 교재 히스토리에도 자동 추가됩니다.
+                  </p>
+                  <p className="text-[11px] text-emerald-600 mt-1">
+                    * 즉시 반영이 필요하면 <strong>수납 관리 → MakeEdu 동기화</strong>를 사용하세요. 매칭이 누락된 건은 수동으로 토글할 수 있습니다.
+                  </p>
                 </div>
-                <div className="flex items-center gap-3 sm:ml-auto">
-                  <a
-                    href="/makeedu-sync-extension.zip"
-                    download
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors shrink-0"
-                  >
-                    <Download size={12} />
-                    확장 프로그램 다운로드
-                  </a>
-                </div>
-              </div>
-              <div className="text-[11px] text-blue-700 space-y-0.5 border-t border-blue-200 pt-2">
-                <p className="font-semibold text-blue-800 mb-1">설치 및 사용 방법:</p>
-                <p>1. 위 버튼을 눌러 ZIP 파일을 다운로드한 후 압축을 해제합니다.</p>
-                <p>2. Chrome 주소창에 <span className="font-mono bg-blue-100 px-1 rounded">chrome://extensions</span> 입력 → 우측 상단 <span className="font-semibold">개발자 모드</span> 활성화</p>
-                <p>3. <span className="font-semibold">압축 해제된 확장 프로그램을 로드합니다</span> 클릭 → 압축 해제한 폴더 선택</p>
-                <p>4. 메이크에듀 사이트에 로그인 → 확장 프로그램 아이콘 클릭 → <span className="font-semibold">교재 수납 데이터 동기화</span></p>
-                <p className="text-blue-500 mt-1">* 동기화된 데이터는 아래 목록에 자동으로 반영됩니다.</p>
               </div>
             </div>
 
@@ -931,21 +896,6 @@ export default function TextbookRequestView({ isAdmin = false, canEdit = false, 
                     </span>
                   )}
                 </button>
-                {effectiveAdmin && historyFilter === 'complete' && (
-                  <button
-                    onClick={handleCopyToBillings}
-                    disabled={isCopying || uncopiedCompleteCount === 0}
-                    className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5"
-                  >
-                    {isCopying ? <Loader2 size={13} className="animate-spin" /> : <Copy size={13} />}
-                    수납 내역으로 복사
-                    {uncopiedCompleteCount > 0 && (
-                      <span className="bg-white/25 px-1.5 py-0.5 rounded-full text-[11px]">
-                        {uncopiedCompleteCount}
-                      </span>
-                    )}
-                  </button>
-                )}
               </div>
               <div className="relative sm:ml-auto sm:w-64">
                 <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
