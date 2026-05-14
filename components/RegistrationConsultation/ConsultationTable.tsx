@@ -176,17 +176,25 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
         setCurrentPage(1);
     }, [searchTerm, filters]);
 
-    // 대시보드 도넛 차트 드릴다운: 외부 token이 갱신될 때마다 해당 필터로 교체 (필터 패널은 사용자가 직접 펼침)
+    // 대시보드 도넛 차트 드릴다운: 외부 token이 갱신될 때마다 해당 차원만 적용
+    // 두 도넛(등록현황↔과목별)은 서로의 결과를 클리어 — 차트 클릭은 단일 차원 드릴다운으로 간주
+    // 사용자가 패널에서 직접 적용한 다른 차원(학년/상담자/경로/전환여부)은 보존
     useEffect(() => {
         if (!pendingStatusFilter) return;
-        setFilters(prev => ({ ...prev, status: pendingStatusFilter.values }));
-        storage.setString(STORAGE_KEYS.CONSULTATION_TABLE_FILTERS, JSON.stringify({ ...loadSavedFilters(), status: pendingStatusFilter.values }));
+        setFilters(prev => {
+            const next = { ...prev, status: pendingStatusFilter.values, subject: [] };
+            storage.setString(STORAGE_KEYS.CONSULTATION_TABLE_FILTERS, JSON.stringify(next));
+            return next;
+        });
     }, [pendingStatusFilter?.token]);
 
     useEffect(() => {
         if (!pendingSubjectFilter) return;
-        setFilters(prev => ({ ...prev, subject: pendingSubjectFilter.values }));
-        storage.setString(STORAGE_KEYS.CONSULTATION_TABLE_FILTERS, JSON.stringify({ ...loadSavedFilters(), subject: pendingSubjectFilter.values }));
+        setFilters(prev => {
+            const next = { ...prev, subject: pendingSubjectFilter.values, status: [] };
+            storage.setString(STORAGE_KEYS.CONSULTATION_TABLE_FILTERS, JSON.stringify(next));
+            return next;
+        });
     }, [pendingSubjectFilter?.token]);
 
     // 팝오버 외부 클릭 시 닫기
