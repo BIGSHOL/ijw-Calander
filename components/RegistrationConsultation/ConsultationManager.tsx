@@ -59,6 +59,20 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
     const [showSettings, setShowSettings] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
 
+    // 대시보드 도넛 차트 드릴다운 → 테이블 필터 강제 적용 (token으로 재발화 보장)
+    const [pendingStatusFilter, setPendingStatusFilter] = useState<{ values: string[]; token: number } | undefined>(undefined);
+    const [pendingSubjectFilter, setPendingSubjectFilter] = useState<{ values: string[]; token: number } | undefined>(undefined);
+
+    const handleDrilldownStatus = useCallback((status: string) => {
+        setPendingStatusFilter({ values: [status], token: Date.now() });
+        setView('table');
+    }, []);
+
+    const handleDrilldownSubject = useCallback((subject: string) => {
+        setPendingSubjectFilter({ values: [subject], token: Date.now() });
+        setView('table');
+    }, []);
+
     // Modal State
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingRecord, setEditingRecord] = useState<ConsultationRecord | null>(null);
@@ -846,7 +860,9 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                         <ConsultationDashboard
                             data={consultations}
                             month={selectedMonth}
-                            year={selectedYear === 'all' ? new Date().getFullYear() : parseInt(selectedYear, 10)}
+                            year={selectedYear === 'all' ? 'all' : parseInt(selectedYear, 10)}
+                            onStatusClick={handleDrilldownStatus}
+                            onSubjectClick={handleDrilldownSubject}
                         />
                     )}
 
@@ -868,6 +884,8 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                             onShowFiltersChange={setShowFilters}
                             conversionStatusMap={conversionStatusMap}
                             onLinkStudent={handleLinkStudent}
+                            pendingStatusFilter={pendingStatusFilter}
+                            pendingSubjectFilter={pendingSubjectFilter}
                         />
                     )}
 

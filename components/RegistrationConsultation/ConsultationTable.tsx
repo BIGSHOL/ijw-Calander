@@ -23,6 +23,9 @@ interface ConsultationTableProps {
     onShowFiltersChange?: (show: boolean) => void; // 필터 패널 토글 콜백
     conversionStatusMap?: Map<string, { status: 'converted' | 'matched' | 'pending' | 'ambiguous'; studentId?: string; candidates?: { id: string; name: string }[] }>; // 전환 상태 맵
     onLinkStudent?: (consultationId: string, studentId: string) => void; // 동명이인 선택 시 연결
+    // 대시보드 도넛 차트 클릭 → 테이블 드릴다운용 (변경 시마다 해당 필터로 강제 설정)
+    pendingStatusFilter?: { values: string[]; token: number };
+    pendingSubjectFilter?: { values: string[]; token: number };
 }
 
 // 필터 상태 타입
@@ -147,7 +150,8 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
     currentUserId, canEdit = false, canManage = false, canConvert = false,
     searchTerm = '', showSettings = false, onShowSettingsChange,
     showFilters = false, onShowFiltersChange,
-    conversionStatusMap, onLinkStudent
+    conversionStatusMap, onLinkStudent,
+    pendingStatusFilter, pendingSubjectFilter
 }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(loadSavedColumns);
@@ -171,6 +175,21 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
     useEffect(() => {
         setCurrentPage(1);
     }, [searchTerm, filters]);
+
+    // 대시보드 도넛 차트 드릴다운: 외부 token이 갱신될 때마다 해당 필터로 교체 + 필터 패널 노출
+    useEffect(() => {
+        if (!pendingStatusFilter) return;
+        setFilters(prev => ({ ...prev, status: pendingStatusFilter.values }));
+        storage.setString(STORAGE_KEYS.CONSULTATION_TABLE_FILTERS, JSON.stringify({ ...loadSavedFilters(), status: pendingStatusFilter.values }));
+        onShowFiltersChange?.(true);
+    }, [pendingStatusFilter?.token]);
+
+    useEffect(() => {
+        if (!pendingSubjectFilter) return;
+        setFilters(prev => ({ ...prev, subject: pendingSubjectFilter.values }));
+        storage.setString(STORAGE_KEYS.CONSULTATION_TABLE_FILTERS, JSON.stringify({ ...loadSavedFilters(), subject: pendingSubjectFilter.values }));
+        onShowFiltersChange?.(true);
+    }, [pendingSubjectFilter?.token]);
 
     // 팝오버 외부 클릭 시 닫기
     useEffect(() => {

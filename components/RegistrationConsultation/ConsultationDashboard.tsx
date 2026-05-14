@@ -5,23 +5,30 @@ import {
 } from 'recharts';
 import { ConsultationRecord, ConsultationStatus, CONSULTATION_CHART_COLORS } from '../../types';
 import { StatsCard } from './StatsCard';
+import { isRegisteredStatus } from '../../hooks/useConsultations';
 import { Users, UserCheck, Percent, CreditCard } from 'lucide-react';
 
 interface DashboardProps {
     data: ConsultationRecord[];
     month: 'all' | string;
-    year?: number;
+    year?: number | 'all';
+    onStatusClick?: (status: string) => void;
+    onSubjectClick?: (subject: string) => void;
 }
 
 // Status options for chart
 const STATUS_OPTIONS = Object.values(ConsultationStatus);
 
 // Helper component for the new Donut Chart design with interactive legend
-const DonutChartSection = ({ title, data, totalValue, totalLabel = "Total" }: { title: string, data: { name: string, value: number }[], totalValue: string | number, totalLabel?: string }) => {
+const DonutChartSection = ({ title, data, totalValue, totalLabel = "Total", onItemClick }: { title: string, data: { name: string, value: number }[], totalValue: string | number, totalLabel?: string, onItemClick?: (name: string) => void }) => {
     const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
     const onPieEnter = (_: any, index: number) => {
         setActiveIndex(index);
+    };
+
+    const handleItemClick = (name: string) => {
+        if (onItemClick) onItemClick(name);
     };
 
     return (
@@ -41,6 +48,8 @@ const DonutChartSection = ({ title, data, totalValue, totalLabel = "Total" }: { 
                                 stroke="none"
                                 onMouseEnter={onPieEnter}
                                 onMouseLeave={() => setActiveIndex(null)}
+                                onClick={(entry: any) => entry?.name && handleItemClick(entry.name)}
+                                cursor={onItemClick ? 'pointer' : undefined}
                             >
                                 {data.map((entry, index) => (
                                     <Cell
@@ -76,6 +85,8 @@ const DonutChartSection = ({ title, data, totalValue, totalLabel = "Total" }: { 
                             key={index}
                             onMouseEnter={() => setActiveIndex(index)}
                             onMouseLeave={() => setActiveIndex(null)}
+                            onClick={() => handleItemClick(entry.name)}
+                            title={onItemClick ? `${entry.name} 항목만 목록에서 보기` : undefined}
                             className={`flex items-center justify-between text-xs p-1.5 rounded-sm transition-all duration-300 cursor-pointer border ${activeIndex === index
                                 ? 'bg-white border-indigo-200 shadow-sm'
                                 : 'bg-transparent border-transparent hover:bg-slate-50'
@@ -104,24 +115,16 @@ const DonutChartSection = ({ title, data, totalValue, totalLabel = "Total" }: { 
     );
 };
 
-export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, year = new Date().getFullYear() }) => {
-    // Constants for grouping
-    const registeredStatuses = useMemo(() => [
-        ConsultationStatus.EngMathRegistered,
-        ConsultationStatus.MathRegistered,
-        ConsultationStatus.EngRegistered,
-        ConsultationStatus.KoreanRegistered,
-        ConsultationStatus.ScienceRegistered,
-        ConsultationStatus.Registered,
-        'registered' as ConsultationStatus, // 레거시 데이터 호환
-    ], []);
-
+export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, year = new Date().getFullYear(), onStatusClick, onSubjectClick }) => {
     const pendingStatuses = useMemo(() => [
         ConsultationStatus.PendingThisMonth,
         ConsultationStatus.PendingFuture
     ], []);
 
     // Filter data based on selected month
+    // - year='all'이면 모든 연도 포함 (날짜 없는 레코드도 포함하여 테이블과 카운트 일치)
+    // - month='all' + 특정 year면 해당 연도 데이터
+    // - 특정 month면 해당 연/월 데이터 (날짜 없는 레코드는 자연히 제외)
     const filteredData = useMemo(() => {
         const getDate = (r: ConsultationRecord) => {
             const dStr = r.consultationDate || r.createdAt || '';
@@ -129,6 +132,11 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
             const d = new Date(dStr);
             return isNaN(d.getTime()) ? null : d;
         };
+
+        if (year === 'all') {
+            // 전체 연도 - 날짜 없는 레코드도 통계에 포함
+            return data;
+        }
 
         if (month === 'all') {
             return data.filter(r => {
@@ -148,7 +156,7 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
     // Helper to calculate stats for a dataset
     const getStats = (dataset: ConsultationRecord[]) => {
         const total = dataset.length;
-        const registered = dataset.filter(r => registeredStatuses.includes(r.status)).length;
+        const registered = dataset.filter(r => isRegisteredStatus(r.status)).length;
         const pending = dataset.filter(r => pendingStatuses.includes(r.status)).length;
         const conversion = total > 0 ? (registered / total) * 100 : 0;
 
@@ -165,9 +173,9 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
 
     const currentStats = useMemo(() => getStats(filteredData), [filteredData]);
 
-    // Previous Month Stats for Trends
+    // Previous Month Stats for Trends - year='all' 또는 month='all'이면 전월 비교 비활성
     const prevMonthStats = useMemo(() => {
-        if (month === 'all') return null;
+        if (month === 'all' || year === 'all') return null;
         const monthNum = parseInt(month, 10);
         const prevMonthNum = monthNum === 1 ? 12 : monthNum - 1;
         const prevYear = monthNum === 1 ? year - 1 : year;
@@ -233,11 +241,15 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
         return Object.keys(counts).map(key => ({ name: key, value: counts[key] })).sort((a, b) => b.value - a.value);
     }, [filteredData]);
 
-    // Chart Data: Daily Trend
+    // Chart Data: Daily Trend - consultationDate 없거나 invalid면 createdAt 폴백, 둘 다 없으면 건너뜀
     const dailyData = useMemo(() => {
         const counts: Record<string, number> = {};
         filteredData.forEach(r => {
-            const day = new Date(r.consultationDate).getDate();
+            const dStr = r.consultationDate || r.createdAt || '';
+            if (!dStr) return;
+            const date = new Date(dStr);
+            if (isNaN(date.getTime())) return;
+            const day = date.getDate();
             const label = `${day}일`;
             counts[label] = (counts[label] || 0) + 1;
         });
@@ -246,7 +258,7 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
             .map(key => ({ name: key, consultations: counts[key] }));
     }, [filteredData]);
 
-    const monthDisplay = month === 'all' ? '전체' : `${month}월`;
+    const monthDisplay = year === 'all' ? '전체 연도' : (month === 'all' ? `${year}년 전체` : `${year}년 ${month}월`);
 
     return (
         <div className="space-y-3 animate-fade-in pb-4">
@@ -301,12 +313,14 @@ export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, y
                     data={statusData}
                     totalValue={`${currentStats.total}건`}
                     totalLabel="총 상담"
+                    onItemClick={onStatusClick}
                 />
                 <DonutChartSection
                     title="과목별 상담 분포"
                     data={subjectData}
                     totalValue={`${currentStats.total}건`}
                     totalLabel="총 상담"
+                    onItemClick={onSubjectClick}
                 />
             </div>
 

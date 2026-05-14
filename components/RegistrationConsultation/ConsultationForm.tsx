@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useRegistrationRecording, RegistrationExtractedData } from '../../hooks/useRegistrationRecording';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
+import { savePending, getPendingByFileName, removePending } from '../../utils/pendingRecordings';
 import { RecordingPickerModal, type SelectedRecording } from '../ConsultationRecording/RecordingPickerModal';
 import type { ConsultationReportSection, SpeakerUtterance } from '../../types/consultationReport';
 import { HighlightedReportText } from '../../utils/HighlightedReportText';
@@ -594,6 +595,31 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
         }
     }, []);
 
+    // recordingFile 변경 시 파일명 토큰으로 pending 컨텍스트 자동 복원
+    useEffect(() => {
+        if (!recordingFile) return;
+        const pending = getPendingByFileName(recordingFile.name);
+        if (pending && pending.type === 'registration-consultation') {
+            const ctx = pending.context || {};
+            setFormData(prev => ({
+                ...prev,
+                studentName: ctx.studentName ?? prev.studentName,
+                consultationDate: ctx.consultationDate ?? prev.consultationDate,
+                counselor: ctx.counselor ?? prev.counselor,
+                schoolName: ctx.schoolName ?? prev.schoolName,
+                grade: ctx.grade ?? prev.grade,
+                parentName: ctx.parentName ?? prev.parentName,
+                parentRelation: ctx.parentRelation ?? prev.parentRelation,
+                parentPhone: ctx.parentPhone ?? prev.parentPhone,
+                address: ctx.address ?? prev.address,
+                birthDate: ctx.birthDate ?? prev.birthDate,
+                gender: ctx.gender ?? prev.gender,
+                siblings: ctx.siblings ?? prev.siblings,
+            }));
+            removePending(pending.id);
+        }
+    }, [recordingFile]);
+
     const handleRecordingDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -730,17 +756,36 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
 
     // 팝업 녹음 → 자동 분석 시작
     const handlePopupRecording = useCallback(async () => {
+        // 등록상담 컨텍스트 (학생/학부모 정보)를 pending 메타에 저장
+        // → 메인이 죽어도 다음 진입 시 파일명 토큰으로 복원 가능
+        const pending = savePending('registration-consultation', {
+            studentName: formData.studentName,
+            consultationDate: formData.consultationDate,
+            counselor: formData.counselor,
+            schoolName: formData.schoolName,
+            grade: formData.grade,
+            parentName: formData.parentName,
+            parentRelation: formData.parentRelation,
+            parentPhone: formData.parentPhone,
+            address: formData.address,
+            birthDate: formData.birthDate,
+            gender: formData.gender,
+            siblings: formData.siblings,
+        });
         try {
-            const file = await recording.startPopupRecording();
+            const file = await recording.startPopupRecording({ fileToken: pending.fileToken });
+            removePending(pending.id);
             await handleStartAnalysis(file);
         } catch (err: any) {
+            // 팝업이 닫혔거나 에러난 경우 pending 은 유지 (메인 죽었을 때 시나리오 대비)
+            // 단 POPUP_BLOCKED 는 pending 의미 없으므로 제거
             if (err?.message === 'POPUP_BLOCKED') {
-                // 팝업 차단 → 인라인 녹음 fallback
+                removePending(pending.id);
                 recording.startRecording();
             }
             // '녹음 창이 닫혔습니다' 등은 무시
         }
-    }, [recording, handleStartAnalysis]);
+    }, [recording, handleStartAnalysis, formData]);
 
     // Performance: rerender-functional-setstate - 안정적인 핸들러
     const handleChange = useCallback((field: keyof typeof formData, value: any) => {
@@ -1250,6 +1295,21 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                     {...viewProps}
                                 />
                             </div>
+                            {/* 셔틀버스 신청 (강조 단독 줄) */}
+                            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-sm border border-amber-300 bg-amber-50">
+                                <input
+                                    id="shuttleBusRequest"
+                                    type="checkbox"
+                                    checked={formData.shuttleBusRequest || false}
+                                    onChange={e => setFormData({ ...formData, shuttleBusRequest: e.target.checked })}
+                                    className="rounded"
+                                    disabled={isViewMode}
+                                />
+                                <label htmlFor="shuttleBusRequest" className="flex items-center gap-1 text-xs font-bold text-amber-900 cursor-pointer">
+                                    <Bus size={14} />
+                                    셔틀버스 신청
+                                </label>
+                            </div>
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
                                     <label className={labelClass}><User size={12} className="inline mr-1" />성별</label>
@@ -1429,18 +1489,6 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                             {...viewProps}
                                         />
                                     </div>
-                                </div>
-                                <div>
-                                    <label className="flex items-center gap-2 text-sm">
-                                        <input
-                                            type="checkbox"
-                                            checked={formData.shuttleBusRequest || false}
-                                            onChange={e => setFormData({ ...formData, shuttleBusRequest: e.target.checked })}
-                                            className="rounded"
-                                            disabled={isViewMode}
-                                        />
-                                        <span className="text-slate-600"><Bus size={12} className="inline mr-1" />셔틀버스 신청</span>
-                                    </label>
                                 </div>
                             </div>
                         )}
