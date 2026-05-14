@@ -1335,7 +1335,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                 onDrop(e, cls.id, 'common');
                             }}
                         >
-                            <div className={`${fontSizeClass} text-indigo-600 mb-0 overflow-hidden whitespace-nowrap`}><span className="font-bold" style={{ fontSize: 'calc(1em + 1px)' }}><span className="text-red-600">{commonStudents.active.length + partialActiveCount}</span>명</span> - 재원생</div>
+                            <div className={`${fontSizeClass} text-black mb-0 overflow-hidden whitespace-nowrap`}><span className="font-bold" style={{ fontSize: 'calc(1em + 1px)' }}><span className="text-red-600">{commonStudents.active.length + partialActiveCount}</span>명</span> - 재원생</div>
                             <ul className="flex flex-col gap-0 min-w-0 list-none">
                                 {commonStudents.active.map(s => {
                                     const isHighlighted = !!(searchQuery && s.name.includes(searchQuery));
@@ -1644,7 +1644,7 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 ) : (
                     <div className="flex-1 flex flex-col min-w-0 min-h-0">
                         <div className="flex-1 px-0.5 py-0.5 min-w-0 min-h-0 overscroll-auto">
-                            <div className={`${fontSizeClass} text-indigo-600 mb-0 overflow-hidden whitespace-nowrap`}><span className="font-bold" style={{ fontSize: 'calc(1em + 1px)' }}><span className="text-red-600">{activeStudents.length}</span>명</span> - 재원생</div>
+                            <div className={`${fontSizeClass} text-black mb-0 overflow-hidden whitespace-nowrap`}><span className="font-bold" style={{ fontSize: 'calc(1em + 1px)' }}><span className="text-red-600">{activeStudents.length}</span>명</span> - 재원생</div>
                             <ul className="flex flex-col min-w-0 list-none">
                                 {activeStudents.map(s => {
                                     const isHighlighted = !!(searchQuery && s.name.includes(searchQuery));
