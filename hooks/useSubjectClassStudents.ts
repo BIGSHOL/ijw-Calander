@@ -260,6 +260,8 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                     // 학생의 같은 과목 전체 중 가장 이른 startDate — 신입 판정/입학일 툴팁 기준
                     // (재등록/반이동 후에도 진짜 첫 수학 입학일을 유지)
                     firstSubjectEnrollmentDate: studentFirstSubjectStartDate[studentId],
+                    // 이 과목에서 종료된 enrollment 가 있는지 (신입 판정의 1차 게이트)
+                    hasPastInSubject: (studentEndedClasses[studentId]?.size ?? 0) > 0,
                     // hasEndDate(weekEnd 기준)면 withdrawalDate 보존 — 그 주에 퇴원한 학생도 그 주에 표시
                     withdrawalDate: hasEndDate ? (withdrawalDate || endDate) : undefined,
                     // 대기 분류는 다음 모두 만족할 때만:
@@ -305,6 +307,7 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
                         enrollmentDate: classEnrollmentDate,
                         // 학생의 같은 과목 전체 첫 입학일 — 신입 판정 기준 (ClassCard / TimetableHeader / IntegrationCard 가 사용)
                         firstSubjectEnrollmentDate: enrollmentData.firstSubjectEnrollmentDate,
+                        hasPastInSubject: enrollmentData.hasPastInSubject ?? false,
                         withdrawalDate: enrollmentData.withdrawalDate,
                         onHold: enrollmentData.onHold,
                         isMoved: false,

@@ -52,6 +52,13 @@ export interface TimetableStudent {
    * 예: 2020-11-09 부터 수학을 한 학생이 오늘 새 반 등록 → 신입 표시 안 됨.
    */
   firstSubjectEnrollmentDate?: string;
+  /**
+   * 이 과목에서 종료된(지난) enrollment 가 하나라도 있는지 여부.
+   * 신입 판정 = (hasPastInSubject === false) AND (입학일 60일 이내).
+   * 사용자 결정(2026-05-13): firstSubjectEnrollmentDate 의 profile.startDate fallback 이
+   * 다른 과목 재학생을 신입으로 잡지 못하던 부작용을 회피하기 위해 도입.
+   */
+  hasPastInSubject?: boolean;
   withdrawalDate?: string; // 퇴원일 (YYYY-MM-DD)
   endDate?: string; // 종료일 (YYYY-MM-DD)
   onHold?: boolean; // 대기생 여부

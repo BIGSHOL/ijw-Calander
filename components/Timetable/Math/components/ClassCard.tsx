@@ -618,6 +618,10 @@ const ClassCard: React.FC<ClassCardProps> = ({
         if (student.isTransferredIn) {
             return { bg: 'bg-green-200', text: 'text-gray-900 font-bold' };
         }
+        // 신입 = (이 과목 지난수업 0개) AND (입학일 60일 이내)
+        // hasPastInSubject 가 true 면 다른 과목 이력은 무관하게 신입 아님 (예: 김지호 — 수학에 종료수업 있음)
+        // 다른 과목 재학생이라도 이 과목 신규 등록이면 hasPastInSubject=false → 신입으로 잡힘 (예: 김수민 — 영어 재학중 + 수학 첫 등록)
+        if (student.hasPastInSubject) return null;
         const baseDate = student.firstSubjectEnrollmentDate || student.enrollmentDate;
         if (baseDate) {
             const days = Math.ceil((refDateMs - new Date(baseDate).getTime()) / (1000 * 60 * 60 * 24));

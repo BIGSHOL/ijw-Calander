@@ -132,14 +132,14 @@ export const useEnglishStats = (
             activeStudentIds.add(studentId);
 
             // 신입 (반이동 제외)
-            // 기준 = 같은 과목 전체 첫 입학일 (firstSubjectEnrollmentDate).
-            //  - 같은 과목에서 새 반 재등록한 기존 학생이 신입으로 잘못 집계되던 버그 방지
-            if (!student.isTransferredIn) {
+            // 기준 = 이 과목 지난수업 0개 AND 입학일 60일 이내 (사용자 결정 2026-05-13)
+            // 다른 과목 재학생이 이 과목 첫 등록 시 신입으로 잡히도록 hasPastInSubject 게이트 추가.
+            if (!student.isTransferredIn && !student.hasPastInSubject) {
                 const enrollDate = student.firstSubjectEnrollmentDate || student.enrollmentDate || student.startDate;
                 if (enrollDate) {
                     const daysSince = Math.floor((refDate.getTime() - new Date(enrollDate).getTime()) / (1000 * 60 * 60 * 24));
-                    if (daysSince >= 0 && daysSince <= 30) new1StudentIds.add(studentId);
-                    else if (daysSince > 30 && daysSince <= 60) new2StudentIds.add(studentId);
+                    if (daysSince <= 30) new1StudentIds.add(studentId);
+                    else if (daysSince <= 60) new2StudentIds.add(studentId);
                 }
             }
         });

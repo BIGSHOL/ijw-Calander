@@ -127,6 +127,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
     //  - 같은 과목에서 새 반에 재등록한 기존 학생이 신입으로 잘못 표시되던 버그 방지
     const isNewStudent = useMemo(() => {
         if (student.isTransferredIn) return false; // 반이동은 별도 처리
+        if ((student as any).hasPastInSubject) return false; // 이 과목 지난수업 있으면 신입 아님
         const baseDate = student.firstSubjectEnrollmentDate || student.enrollmentDate;
         if (baseDate) {
             const todayMs = new Date(formatDateKey(new Date())).getTime();
@@ -134,7 +135,7 @@ const StudentItem: React.FC<StudentItemProps> = ({
             return days <= 30;
         }
         return false;
-    }, [student.firstSubjectEnrollmentDate, student.enrollmentDate, student.isTransferredIn]);
+    }, [student.firstSubjectEnrollmentDate, student.enrollmentDate, student.isTransferredIn, (student as any).hasPastInSubject]);
 
     // 반이동예정 여부 (isTransferred + isWithdrawalScheduled)
     const isTransferScheduled = !!(student.isTransferred && (student as any).isWithdrawalScheduled);
