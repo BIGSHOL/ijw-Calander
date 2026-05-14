@@ -84,17 +84,12 @@ export function useSubjectClassStudents(options: SubjectClassStudentOptions) {
         Object.entries(studentMap).forEach(([studentId, student]) => {
             if (!student.enrollments) return;
 
-            // 학생 프로필의 startDate 를 firstSubjectEnrollmentDate 의 안전한 fallback 으로 사용
-            // — enrollment 의 enrollmentDate/startDate 가 반이동/부활 처리 시 덮어쓰여 손실되어도
-            //   학원 최초 등록일은 student 프로필 레벨에 보존됨 (write-side 버그 방어선)
-            // — 신입 빨강 오판정 (예: 박지율) 방지: 학원에 오래 다닌 학생은 절대 신입으로 안 잡힘
-            const profileStart = convertTimestampToDate((student as any).startDate);
-            if (profileStart) {
-                const cur = studentFirstSubjectStartDate[studentId];
-                if (!cur || profileStart < cur) {
-                    studentFirstSubjectStartDate[studentId] = profileStart;
-                }
-            }
+            // 사용자 결정(2026-05-13): profile.startDate fallback 제거.
+            //  - 원래 의도: 박지율(학원 오래 다닌 학생) 새 반 등록 시 신입 오판정 방지
+            //  - 부작용: 김수민(영어 재학중, 수학 첫 등록)의 firstSubjectEnrollmentDate 가
+            //    영어 시작일로 오염되어 수학 신입 detection 통과 못함
+            //  - 해결: 박지율 보호는 hasPastInSubject(이 과목 종료수업 유무) 게이트로 대체.
+            //    firstSubjectEnrollmentDate 는 순수하게 "이 과목 enrollment 중 가장 이른 startDate" 의미로 환원.
 
             student.enrollments.forEach((enrollment: any) => {
                 if (!subjects.includes(enrollment.subject)) return;
