@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, Suspense, lazy } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, Suspense, lazy } from 'react';
 import { ConsultationRecord, UserProfile, UnifiedStudent, SchoolGrade, ConsultationSubject, ConsultationStatus, LevelTest } from '../../types';
 import { ConsultationDraft } from '../../types/consultationDraft';
 import { useConsultations, useCreateConsultation, useUpdateConsultation, useDeleteConsultation, isRegisteredStatus } from '../../hooks/useConsultations';
@@ -65,13 +65,22 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
 
     const handleDrilldownStatus = useCallback((status: string) => {
         setPendingStatusFilter({ values: [status], token: Date.now() });
+        setShowFilters(false); // 목록 진입 시 필터 패널은 접힌 상태 (사용자가 펼침 버튼으로 직접 확인)
         setView('table');
     }, []);
 
     const handleDrilldownSubject = useCallback((subject: string) => {
         setPendingSubjectFilter({ values: [subject], token: Date.now() });
+        setShowFilters(false);
         setView('table');
     }, []);
+
+    // 테이블 뷰로 진입할 때(어떤 경로든) 필터 패널은 기본 접힘 상태로 리셋
+    useEffect(() => {
+        if (view === 'table') {
+            setShowFilters(false);
+        }
+    }, [view]);
 
     // Modal State
     const [isFormOpen, setIsFormOpen] = useState(false);

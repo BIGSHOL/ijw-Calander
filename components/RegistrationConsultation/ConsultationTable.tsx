@@ -176,19 +176,17 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
         setCurrentPage(1);
     }, [searchTerm, filters]);
 
-    // 대시보드 도넛 차트 드릴다운: 외부 token이 갱신될 때마다 해당 필터로 교체 + 필터 패널 노출
+    // 대시보드 도넛 차트 드릴다운: 외부 token이 갱신될 때마다 해당 필터로 교체 (필터 패널은 사용자가 직접 펼침)
     useEffect(() => {
         if (!pendingStatusFilter) return;
         setFilters(prev => ({ ...prev, status: pendingStatusFilter.values }));
         storage.setString(STORAGE_KEYS.CONSULTATION_TABLE_FILTERS, JSON.stringify({ ...loadSavedFilters(), status: pendingStatusFilter.values }));
-        onShowFiltersChange?.(true);
     }, [pendingStatusFilter?.token]);
 
     useEffect(() => {
         if (!pendingSubjectFilter) return;
         setFilters(prev => ({ ...prev, subject: pendingSubjectFilter.values }));
         storage.setString(STORAGE_KEYS.CONSULTATION_TABLE_FILTERS, JSON.stringify({ ...loadSavedFilters(), subject: pendingSubjectFilter.values }));
-        onShowFiltersChange?.(true);
     }, [pendingSubjectFilter?.token]);
 
     // 팝오버 외부 클릭 시 닫기
@@ -235,6 +233,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
     const activeFilterCount = Object.values(filters).reduce((sum, arr) => sum + arr.length, 0);
 
     // 데이터에서 동적 필터 옵션 추출
+    // 상담자(counselor)는 "대표, 정유진" 같은 다중 입력을 콤마로 분리해 개별 이름만 옵션화
     const filterOptions = useMemo(() => {
         const statuses = new Set<string>();
         const subjects = new Set<string>();
@@ -246,7 +245,9 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
             if (r.status) statuses.add(String(r.status));
             if (r.subject) subjects.add(r.subject);
             if (r.grade) grades.add(r.grade);
-            if (r.counselor) counselors.add(r.counselor);
+            if (r.counselor) {
+                r.counselor.split(',').map(s => s.trim()).filter(Boolean).forEach(name => counselors.add(name));
+            }
             if (r.consultationPath) paths.add(r.consultationPath);
         }
 
@@ -277,7 +278,11 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
             if (filters.status.length > 0 && !filters.status.includes(String(r.status))) return false;
             if (filters.subject.length > 0 && !filters.subject.includes(r.subject)) return false;
             if (filters.grade.length > 0 && !filters.grade.includes(r.grade)) return false;
-            if (filters.counselor.length > 0 && !filters.counselor.includes(r.counselor)) return false;
+            // 상담자: r.counselor가 "대표, 정유진" 같은 복수 값이면 OR 매칭
+            if (filters.counselor.length > 0) {
+                const names = (r.counselor || '').split(',').map(s => s.trim()).filter(Boolean);
+                if (!names.some(n => filters.counselor.includes(n))) return false;
+            }
             if (filters.consultationPath.length > 0 && !filters.consultationPath.includes(r.consultationPath)) return false;
             // 전환여부 필터
             if (filters.conversion.length > 0) {
