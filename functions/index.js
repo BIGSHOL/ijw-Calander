@@ -8536,14 +8536,17 @@ async function applyPendingToBilling(ymList) {
 }
 
 /**
- * billing 의 status='paid' 행을 기준으로 textbook_requests 자동 매칭/미러링
+ * billing 의 status='paid' 행을 기준으로 textbook_requests 자동 매칭
  * - ymList: 'YYYY-MM' 형식 배열
  * - 매칭 정책 (정규화 없음, 정합성 우선):
  *   * 학생명 완전 일치 (string ===)
  *   * 교재명 양방향 부분 일치 (billingName.includes(bookName) || bookName.includes(billingName))
  *   * 두 조건 모두 만족해야 매칭 성공
  * - 매칭 성공 → isCompleted=true, isPaid=true, completedAt/paidAt=now
- * - 매칭 실패 + 자동 ON 흔적 (isCompleted || isPaid) → false 미러링 (환불/취소 자동 반영)
+ * - 매칭 실패 시 아무것도 하지 않음 (false 롤백 금지)
+ *   ※ billing 에는 환불 상태가 없어(pending/paid 뿐) "매칭 실패=환불"로 단정 불가.
+ *     수동 처리·스크래핑 누락·학생명/교재명 불일치 건이 동기화 때마다 롤백되던
+ *     버그가 있어 미러링(자동 false 되돌림)을 제거함. 환불은 수동 토글로 처리.
  * - isOrdered 는 건드리지 않음 (수동 영역)
  */
 async function mirrorTextbookRequestsFromBilling(ymList) {
@@ -8583,7 +8586,6 @@ async function mirrorTextbookRequestsFromBilling(ymList) {
     let batch = db.batch();
     let opCount = 0;
     let matched = 0;
-    let mirrored = 0;
     const unmatchedPaidSamples = [];
 
     // 3a) paid 행 → 요청서 매칭 (정규화 없음, 학생명 완전 일치 + 교재명 양방향 부분 일치)
@@ -8622,30 +8624,16 @@ async function mirrorTextbookRequestsFromBilling(ymList) {
         }
     }
 
-    // 3b) 미러링: 매칭 안 됐는데 자동 ON 흔적 있는 요청서 → false 로 되돌림
-    for (const r of targetRequests) {
-        if (matchedIds.has(r.id)) continue;
-        if (!r.isCompleted && !r.isPaid) continue;
-        batch.update(r.ref, {
-            isCompleted: false,
-            isPaid: false,
-            completedAt: null,
-            paidAt: null,
-        });
-        mirrored++; opCount++;
-        if (opCount % BATCH_LIMIT === 0) {
-            await batch.commit();
-            batch = db.batch();
-        }
-    }
+    // 3b) 미러링 제거됨: 매칭 실패를 환불로 단정해 정상 처리 건을 롤백하던 버그.
+    //     동기화는 "매칭 성공 → ON" 만 수행하고, OFF(되돌림)는 절대 자동으로 하지 않음.
 
     if (opCount % BATCH_LIMIT !== 0) {
         await batch.commit();
     }
 
-    logger.info(`[mirrorTextbookRequestsFromBilling] paidCandidates=${paidRows.length}, matched=${matched}, mirrored=${mirrored}, unmatchedSamples=${unmatchedPaidSamples.length}`);
+    logger.info(`[mirrorTextbookRequestsFromBilling] paidCandidates=${paidRows.length}, matched=${matched}, unmatchedSamples=${unmatchedPaidSamples.length}`);
 
-    return { matched, mirrored, paidCandidates: paidRows.length, unmatchedPaidSamples };
+    return { matched, mirrored: 0, paidCandidates: paidRows.length, unmatchedPaidSamples };
 }
 
 /**
