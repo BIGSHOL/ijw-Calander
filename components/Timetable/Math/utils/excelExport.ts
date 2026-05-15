@@ -385,11 +385,12 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
     }
 
     // 열 너비 (ExcelJS 문자 단위 — Google Sheets에서 약 width*7 px)
-    // 7.5 → 약 52px (전체 시간표를 한눈에 보기 위한 좁은 너비)
-    // 수요일은 단독 요일(1열)이라 월/목·화/금 병합 셀과 시각 균형을 위해 약 167px
-    const PERIOD_COL_W = 7.5;
-    const DAY_COL_W = 7.5;
-    const WED_COL_W = 15; // 수요일 단독 요일 — 약 104px (다른 열의 2배)
+    // - 교시 열: 약 80px (시간 표기가 잘리지 않게)
+    // - 평일 요일 열: 약 52px (월/목·화/금은 2열 병합이라 좁아도 균형)
+    // - 수요일·주말 열: 약 104px (단독 요일이라 2배 너비)
+    const PERIOD_COL_W = 11.5; // 교시 열 — 약 80px
+    const DAY_COL_W = 7.5;     // 평일 요일 열 — 약 52px
+    const WED_COL_W = 15;      // 수요일·주말 단독 요일 — 약 104px
 
     sheet.getColumn(WEEKDAY_PERIOD_COL).width = PERIOD_COL_W;
     for (let c = WEEKDAY_FIRST_DAY_COL; c <= WEEKDAY_LAST_DAY_COL; c++) {
@@ -407,8 +408,9 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
     });
     if (hasWeekend) {
         sheet.getColumn(WEEKEND_PERIOD_COL).width = PERIOD_COL_W;
+        // 주말 요일(토/일)도 단독 요일이라 수요일과 동일하게 넓게
         for (let c = WEEKEND_FIRST_DAY_COL; c <= WEEKEND_LAST_DAY_COL; c++) {
-            sheet.getColumn(c).width = DAY_COL_W;
+            sheet.getColumn(c).width = WED_COL_W;
         }
     }
 
