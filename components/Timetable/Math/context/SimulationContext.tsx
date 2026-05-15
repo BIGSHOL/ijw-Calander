@@ -124,6 +124,14 @@ export interface MathSimulationContextValue extends ScenarioState {
   // 다중 작업을 단일 history 엔트리로 묶음 (예: 다중 학생 이동)
   batchEdit: (fn: () => void) => void;
 
+  // 시각 diff (실시간 모드의 pendingExcel*과 동일 형태 — UI에서 그대로 사용)
+  scenarioDiff: {
+    addedIds: Set<string>;                          // 신규 등록 학생 (전역)
+    moveFromMap: Map<string, Set<string>>;          // classId → 출발지 학생 ids
+    moveToMap: Map<string, Set<string>>;            // classId → 도착지 학생 ids
+    removedFromClassIds: Map<string, Set<string>>;  // classId → 삭제 학생 ids (이동 아닌 단순 삭제)
+  };
+
   // Scenario operations
   loadFromLive: () => Promise<void>;
   saveToScenario: (name: string, description: string, userId: string, userName: string) => Promise<string>;
@@ -167,9 +175,16 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     currentScenarioName: null,
   });
 
+  // 시뮬 진입 시점 스냅샷 — 시각 diff(추가/삭제/이동 표시) 계산용
+  const [initialEnrollments, setInitialEnrollments] = useState<
+    Record<string, Record<string, ScenarioEnrollment>>
+  >({});
+
   // Ref for stable access in callbacks
   const stateRef = useRef(state);
   stateRef.current = state;
+  const initialEnrollmentsRef = useRef(initialEnrollments);
+  initialEnrollmentsRef.current = initialEnrollments;
 
   // ============ UNDO HISTORY ============
   // 편집 작업 직전의 (scenarioClasses, scenarioEnrollments) 스냅샷 스택
@@ -309,7 +324,8 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
 
   const enterScenarioMode = useCallback(async () => {
     // Load current live data into draft
-    await loadFromLiveInternal();
+    const result = await loadFromLiveInternal();
+    setInitialEnrollments(result.scenarioEnrollments); // 시각 diff 기준선
     setHistory([]);
     setState(prev => ({
       ...prev,
@@ -326,6 +342,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
       }
     }
     setHistory([]);
+    setInitialEnrollments({});
     setState({
       isScenarioMode: false,
       scenarioClasses: {},
@@ -342,6 +359,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     studentMap: Record<string, any>
   ) => {
     const { isScenarioMode, scenarioEnrollments } = stateRef.current;
+    const initial = initialEnrollmentsRef.current;
     const result: Record<string, { studentList: ScenarioStudent[]; studentIds: string[] }> = {};
 
     classNames.forEach(className => {
@@ -352,16 +370,24 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
       }
 
       const enrollments = scenarioEnrollments[className] || {};
-      const studentIds = Object.keys(enrollments);
+      const initialEnrollmentsForClass = initial[className] || {};
 
-      const studentList: ScenarioStudent[] = studentIds
+      // 현재 + 초기 학생 ID 합집합 — 초기에 있었으나 지금 없는 학생도 표시 (취소선)
+      const allIds = Array.from(new Set([
+        ...Object.keys(enrollments),
+        ...Object.keys(initialEnrollmentsForClass),
+      ]));
+
+      const studentList: ScenarioStudent[] = allIds
         .map(id => {
           const baseStudent = studentMap[id];
-          const enrollment = enrollments[id];
+          const enrollment = enrollments[id] || initialEnrollmentsForClass[id];
 
           if (!baseStudent || baseStudent.status !== 'active') return null;
 
           const studentEnrollmentDate = enrollment?.enrollmentDate || baseStudent.startDate;
+          const isScenarioRemoved = !enrollments[id] && !!initialEnrollmentsForClass[id];
+          const isScenarioAdded = !!enrollments[id] && !initialEnrollmentsForClass[id];
 
           return {
             id,
@@ -375,14 +401,15 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
             onHold: enrollment?.onHold,
             isMoved: false,
             attendanceDays: enrollment?.attendanceDays || [],
-            isScenarioAdded: false,
+            isScenarioAdded,
+            isScenarioRemoved,
           } as ScenarioStudent;
         })
         .filter(Boolean) as ScenarioStudent[];
 
       studentList.sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ko'));
 
-      result[className] = { studentList, studentIds };
+      result[className] = { studentList, studentIds: allIds };
     });
 
     return result;
@@ -532,7 +559,8 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
         return;
       }
     }
-    await loadFromLiveInternal();
+    const result = await loadFromLiveInternal();
+    setInitialEnrollments(result.scenarioEnrollments);
     setHistory([]);
     setState(prev => ({
       ...prev,
@@ -646,6 +674,8 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
 
     if (scenario.version === 2) {
       setHistory([]);
+      // 시나리오 로드 시점을 새 기준선으로 (이후 편집이 diff로 표시되도록)
+      setInitialEnrollments(scenario.enrollments || {});
       setState(prev => ({
         ...prev,
         scenarioClasses: scenario.classes || {},
@@ -789,6 +819,61 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
   const canUndo = history.length > 0;
   const historyDepth = history.length;
 
+  // 시각 diff 계산 — initialEnrollments vs 현재 scenarioEnrollments
+  const scenarioDiff = useMemo(() => {
+    const addedIds = new Set<string>();
+    const moveFromMap = new Map<string, Set<string>>();
+    const moveToMap = new Map<string, Set<string>>();
+    const removedFromClassIds = new Map<string, Set<string>>();
+
+    // className → classId
+    const classNameToId: Record<string, string> = {};
+    Object.entries(state.scenarioClasses).forEach(([id, cls]) => {
+      classNameToId[cls.className] = id;
+    });
+
+    // 학생 위치 추적
+    const initialPos: Record<string, string> = {};
+    Object.entries(initialEnrollments).forEach(([className, students]) => {
+      Object.keys(students).forEach(id => { initialPos[id] = className; });
+    });
+    const currentPos: Record<string, string> = {};
+    Object.entries(state.scenarioEnrollments).forEach(([className, students]) => {
+      Object.keys(students).forEach(id => { currentPos[id] = className; });
+    });
+
+    const allIds = new Set([...Object.keys(initialPos), ...Object.keys(currentPos)]);
+    allIds.forEach(id => {
+      const initial = initialPos[id];
+      const current = currentPos[id];
+      if (initial && current && initial !== current) {
+        // 다른 반으로 이동
+        const fromId = classNameToId[initial];
+        const toId = classNameToId[current];
+        if (fromId) {
+          if (!moveFromMap.has(fromId)) moveFromMap.set(fromId, new Set());
+          moveFromMap.get(fromId)!.add(id);
+        }
+        if (toId) {
+          if (!moveToMap.has(toId)) moveToMap.set(toId, new Set());
+          moveToMap.get(toId)!.add(id);
+        }
+      } else if (!initial && current) {
+        // 신규 추가 (어디에도 없던 학생)
+        addedIds.add(id);
+      } else if (initial && !current) {
+        // 단순 삭제 (이동 아님)
+        const fromId = classNameToId[initial];
+        if (fromId) {
+          if (!removedFromClassIds.has(fromId)) removedFromClassIds.set(fromId, new Set());
+          removedFromClassIds.get(fromId)!.add(id);
+        }
+      }
+    });
+
+    return { addedIds, moveFromMap, moveToMap, removedFromClassIds };
+  }, [initialEnrollments, state.scenarioEnrollments, state.scenarioClasses]);
+
   const value = useMemo<MathSimulationContextValue>(() => ({
     ...state,
     enterScenarioMode,
@@ -805,6 +890,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     canUndo,
     historyDepth,
     batchEdit,
+    scenarioDiff,
     loadFromLive,
     saveToScenario,
     updateScenario,
@@ -827,6 +913,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     canUndo,
     historyDepth,
     batchEdit,
+    scenarioDiff,
     loadFromLive,
     saveToScenario,
     updateScenario,

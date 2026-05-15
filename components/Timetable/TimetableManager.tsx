@@ -398,10 +398,39 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
     // 저장 직후 "퇴원생 새로고침" 복구용 스냅샷 (세션 내 1회 한정, F5 시 사라짐)
     const [lastDeletedSnapshots, setLastDeletedSnapshots] = useState<Array<{ studentId: string; studentName: string; className: string; type: 'active' | 'withdrawn'; snapshot: { path: string; data: any } }>>([]);
     // 메모이제이션: 복합키 Set (studentId_className)
-    const pendingExcelDeleteIds = useMemo(() =>
-        pendingExcelDeletes.length > 0 ? new Set(pendingExcelDeletes.map(d => `${d.studentId}_${d.className}`)) : undefined,
-        [pendingExcelDeletes]
-    );
+    const pendingExcelDeleteIds = useMemo(() => {
+        // 시뮬 모드: scenarioDiff.removedFromClassIds → studentId_className 형식
+        if (isScenarioMode) {
+            const set = new Set<string>();
+            simulation.scenarioDiff.removedFromClassIds.forEach((ids, classId) => {
+                const cls = simulation.scenarioClasses[classId];
+                const className = cls?.className;
+                if (!className) return;
+                ids.forEach(id => set.add(`${id}_${className}`));
+            });
+            return set.size > 0 ? set : undefined;
+        }
+        return pendingExcelDeletes.length > 0
+            ? new Set(pendingExcelDeletes.map(d => `${d.studentId}_${d.className}`))
+            : undefined;
+    }, [isScenarioMode, simulation.scenarioDiff, simulation.scenarioClasses, pendingExcelDeletes]);
+
+    // 시뮬용 신규 추가 학생 마커 — 비-시뮬의 pendingExcelEnrollments 자리에 전달
+    const effectivePendingExcelEnrollments = useMemo<
+        Array<{ studentId: string; className: string; enrollmentDate?: string }>
+    >(() => {
+        if (!isScenarioMode) return pendingExcelEnrollments;
+        const list: Array<{ studentId: string; className: string; enrollmentDate?: string }> = [];
+        simulation.scenarioDiff.addedIds.forEach(id => {
+            for (const [className, students] of Object.entries(simulation.scenarioEnrollments)) {
+                if ((students as any)[id]) {
+                    list.push({ studentId: id, className });
+                    return;
+                }
+            }
+        });
+        return list;
+    }, [isScenarioMode, simulation.scenarioDiff, simulation.scenarioEnrollments, pendingExcelEnrollments]);
     // 붙여넣기 등록일 선택 모달 상태
     const [pasteModalInfo, setPasteModalInfo] = useState<{
         studentIds: string[];
@@ -1190,7 +1219,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         onStudentSelect={handleExcelStudentSelect}
                         onStudentMultiSelect={handleExcelStudentMultiSelect}
                         pendingExcelDeleteIds={pendingExcelDeleteIds}
-                        pendingExcelEnrollments={pendingExcelEnrollments.length > 0 ? pendingExcelEnrollments : undefined}
+                        pendingExcelEnrollments={effectivePendingExcelEnrollments.length > 0 ? effectivePendingExcelEnrollments : undefined}
                     />
                 </div>
                 )}
@@ -1307,7 +1336,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         onStudentMultiSelect={handleExcelStudentMultiSelect}
                         onWithdrawalDrop={!isScenarioMode ? onWithdrawalDrop : undefined}
                         pendingExcelDeleteIds={pendingExcelDeleteIds}
-                        pendingExcelEnrollments={pendingExcelEnrollments.length > 0 ? pendingExcelEnrollments : undefined}
+                        pendingExcelEnrollments={effectivePendingExcelEnrollments.length > 0 ? effectivePendingExcelEnrollments : undefined}
                         studentFilter={studentFilter}
                         shuttleStudentNames={shuttleStudentNames}
                         weeklyAbsent={weeklyAbsent}
@@ -1690,6 +1719,9 @@ const TimetableManagerInner = ({
     setIsTimetableSettingsOpen: externalSetIsTimetableSettingsOpen,
 }: TimetableManagerProps) => {
     const queryClient = useQueryClient();
+    // 시뮬레이션 컨텍스트 — outer 단계에서도 시각 diff 필요 (pendingMove*, pendingExcel* derive용)
+    const simulation = useMathSimulation();
+    const { isScenarioMode } = simulation;
     // master는 항상 전체 보기 (자동전체보기), 그 외는 소속 기반 필터링
     const userDepartments: ('math' | 'highmath' | 'english' | 'science' | 'korean')[] = currentUser?.role === 'master'
         ? ['math', 'highmath', 'english', 'science', 'korean']
@@ -2425,13 +2457,23 @@ const TimetableManagerInner = ({
     }, [viewType, filteredClasses, sortedTeachers, outerMathSettings.hiddenTeachers]);
 
     // 메모이즈: 매 렌더마다 new Set() 생성 방지
-    const pendingMovedStudentIds = useMemo(() =>
-        pendingMoves.length > 0 ? new Set(pendingMoves.map(m => m.studentId)) : undefined,
-        [pendingMoves]
-    );
+    const pendingMovedStudentIds = useMemo(() => {
+        // 시뮬 모드: scenarioDiff.moveToMap의 도착지 학생 전체
+        if (isScenarioMode) {
+            const set = new Set<string>();
+            simulation.scenarioDiff.moveToMap.forEach(ids => ids.forEach(id => set.add(id)));
+            return set.size > 0 ? set : undefined;
+        }
+        return pendingMoves.length > 0 ? new Set(pendingMoves.map(m => m.studentId)) : undefined;
+    }, [isScenarioMode, simulation.scenarioDiff, pendingMoves]);
 
     // 이동 출발지 classId → studentId Set (취소선 표시용)
     const pendingMoveFromMap = useMemo(() => {
+        if (isScenarioMode) {
+            return simulation.scenarioDiff.moveFromMap.size > 0
+                ? simulation.scenarioDiff.moveFromMap
+                : undefined;
+        }
         if (pendingMoves.length === 0) return undefined;
         const map = new Map<string, Set<string>>();
         pendingMoves.forEach(m => {
@@ -2441,12 +2483,17 @@ const TimetableManagerInner = ({
             }
         });
         return map;
-    }, [pendingMoves]);
+    }, [isScenarioMode, simulation.scenarioDiff, pendingMoves]);
 
     // 이동 도착지 classId → studentId Set (보라색 하이라이트 표시용).
     // 기존 pendingMovedStudentIds(flat Set)만으로 하이라이트하면 같은 학생이 등록된 다른 반들에도
     // 보라색 표시가 섞여 나와 버그였음 → 도착지 반에서만 하이라이트되도록 classId로 스코핑.
     const pendingMoveToMap = useMemo(() => {
+        if (isScenarioMode) {
+            return simulation.scenarioDiff.moveToMap.size > 0
+                ? simulation.scenarioDiff.moveToMap
+                : undefined;
+        }
         if (pendingMoves.length === 0) return undefined;
         const map = new Map<string, Set<string>>();
         pendingMoves.forEach(m => {
@@ -2454,7 +2501,7 @@ const TimetableManagerInner = ({
             map.get(m.toClassId)!.add(m.studentId);
         });
         return map;
-    }, [pendingMoves]);
+    }, [isScenarioMode, simulation.scenarioDiff, pendingMoves]);
 
     // 예정일 스케줄 Map (studentId → scheduledDate, 툴팁 표시용)
     const pendingMoveSchedules = useMemo(() => {
