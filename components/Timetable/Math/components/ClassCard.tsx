@@ -685,17 +685,12 @@ const ClassCard: React.FC<ClassCardProps> = ({
                 return s.enrollmentDate <= today;
             });
 
-            // 주차 기준일(refDateStr) 기준으로 isScheduled/onHold 재계산
-            // 훅에서는 실제 오늘 기준으로 설정하지만, 미래 주 미리보기 시 기준일이 다름
-            students = students.map(s => {
-                const recalcIsScheduled = s.enrollmentDate ? s.enrollmentDate > today : false;
-                // isScheduled(배정 예정)로 인한 onHold는 기준일 기준으로 재계산, 명시적 onHold는 유지
-                const recalcOnHold = s.isScheduled ? recalcIsScheduled : s.onHold;
-                if (recalcIsScheduled !== s.isScheduled || recalcOnHold !== s.onHold) {
-                    return { ...s, isScheduled: recalcIsScheduled, onHold: recalcOnHold };
-                }
-                return s;
-            });
+            // [제거됨] isScheduled/onHold 재계산 (구 491ffb224, 2026-02-26)
+            // 사유: 훅 useSubjectClassStudents가 이미 주차별 referenceDate로 정확히 계산함.
+            //  재계산은 일요일(weekEndStr) 기준이라 훅·엑셀 내보내기(월요일 기준)와 어긋나,
+            //  이번 주 안에 시작하는 대기생(예정)을 재원생으로 잘못 표시했음
+            //  (587e951f에서 훅 onHold에 명시적 enrollment.onHold가 추가된 뒤 충돌).
+            //  → 훅 값을 단일 소스로 신뢰한다 (excelExport.ts와 동일).
 
             // 합반수업일 때 classLabel 태깅 - 번호 인덱스 사용
             // 두 수업 모두 등록된 학생은 라벨을 합침 (예: "1,2")
