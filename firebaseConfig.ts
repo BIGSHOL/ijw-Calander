@@ -590,84 +590,148 @@ if (typeof window !== 'undefined') {
 //
 // 처리 내용:
 //   - timetable_logs 컬렉션 전체 스캔
-//   - changedBy 가 이메일 형식(@ 포함)인 경우 staff.email 매칭으로 한글 이름 조회
-//   - 매칭되면 changedBy 를 staff.name 으로 교체 + changedByUid/changedByRole 백필
-//   - 매칭 실패한 이메일은 그대로 두고 로그로 출력 (수동 검토 가능)
+//   - **재직자(status='active')** staff 만 email→name 매핑 대상으로 사용
+//     (퇴사자/비활성 staff 가 같은 이메일을 갖더라도 매핑에서 제외)
+//   - 두 가지 케이스 모두 처리:
+//     1) changedBy 가 이메일 형식인 신규 로그 → 재직자 한글 이름으로 변환
+//     2) 이전 마이그레이션에서 퇴사자 이름으로 잘못 매핑된 로그 (예: "이희영")
+//        → changedByUid 로 staff 조회 → status='resigned'/'inactive' 이면
+//        해당 staff 의 email 로 재직자 재조회 후 교체 (예: "이희영" → "박소선")
+//   - 매칭 실패는 그대로 두고 로그로 출력
 async function migrateLogActors(opts: { apply?: boolean } = {}): Promise<{
     scanned: number;
     eligibleEmails: number;
+    resignedReassignable: number;
     matched: number;
     applied: number;
     unmatchedEmails: string[];
 }> {
     const apply = !!opts.apply;
-    console.log(`🔍 로그 처리자 마이그레이션 ${apply ? '(APPLY MODE)' : '(DRY-RUN)'}`);
+    console.log(`🔍 로그 처리자 마이그레이션 ${apply ? '(APPLY MODE)' : '(DRY-RUN)'} — 재직자 기준`);
 
-    // 1. staff 컬렉션 → email→staff 매핑 구축 (uid 필드도 필요시 staffIndex 조회)
+    // 1. staff 컬렉션 → 매핑 구축
+    //    emailToActiveStaff: 이메일 → 재직자 (퇴사자 제외)
+    //    uidToStaff: uid → staff (퇴사/이전 staff 도 포함 — 이전 마이그레이션 결과 복구용)
     const staffSnap = await getDocs(collection(dbInstance, 'staff'));
-    interface StaffInfo { name: string; uid?: string; systemRole?: string; }
-    const emailToStaff = new Map<string, StaffInfo>();
+    interface StaffInfo { name: string; uid?: string; systemRole?: string; status?: string; email?: string; }
+    const emailToActiveStaff = new Map<string, StaffInfo>();
+    const uidToStaff = new Map<string, StaffInfo>();
+
     staffSnap.docs.forEach(d => {
         const data = d.data() as any;
         const email = (data.email || '').trim().toLowerCase();
-        if (!email) return;
-        emailToStaff.set(email, {
+        const status = data.status || 'active';
+        const info: StaffInfo = {
             name: data.name || data.koreanName || email,
             uid: data.uid,
             systemRole: data.systemRole,
-        });
+            status,
+            email,
+        };
+        // 재직자만 email 매핑 대상
+        if (email && status === 'active') {
+            // 같은 이메일을 가진 재직자가 둘 이상이면 첫 번째 보존 (희박 케이스 — 경고만)
+            if (emailToActiveStaff.has(email)) {
+                console.warn(`[migrate] 같은 이메일 재직자 중복: ${email}`);
+            } else {
+                emailToActiveStaff.set(email, info);
+            }
+        }
+        if (data.uid) {
+            uidToStaff.set(data.uid, info);
+        }
     });
-    console.log(`📋 staff 컬렉션 email 매핑: ${emailToStaff.size}건`);
+    console.log(`📋 재직자 email 매핑: ${emailToActiveStaff.size}건 / 전체 staff: ${staffSnap.size}명`);
 
     // 2. timetable_logs 전체 스캔
     const logsSnap = await getDocs(collection(dbInstance, 'timetable_logs'));
     console.log(`📊 timetable_logs 전체: ${logsSnap.size}건`);
 
-    interface UpdateItem { id: string; oldName: string; newName: string; uid?: string; role?: string; }
+    interface UpdateItem {
+        id: string;
+        kind: 'email-to-name' | 'resigned-to-active';
+        oldName: string;
+        newName: string;
+        uid?: string;
+        role?: string;
+    }
     const updates: UpdateItem[] = [];
     const unmatched = new Set<string>();
-    let eligibleCount = 0;
+    let eligibleEmails = 0;
+    let resignedReassignable = 0;
 
     logsSnap.docs.forEach(d => {
         const data: any = d.data();
         const changedBy: string = (data.changedBy || '').trim();
-        if (!changedBy || !changedBy.includes('@')) return;
-        eligibleCount += 1;
-        const staffInfo = emailToStaff.get(changedBy.toLowerCase());
-        if (!staffInfo) {
-            unmatched.add(changedBy);
+        if (!changedBy) return;
+
+        // 케이스 1: changedBy 가 이메일 형식 → 재직자로 변환
+        if (changedBy.includes('@')) {
+            eligibleEmails += 1;
+            const active = emailToActiveStaff.get(changedBy.toLowerCase());
+            if (!active) {
+                unmatched.add(changedBy);
+                return;
+            }
+            updates.push({
+                id: d.id,
+                kind: 'email-to-name',
+                oldName: changedBy,
+                newName: active.name,
+                uid: active.uid,
+                role: active.systemRole,
+            });
             return;
         }
+
+        // 케이스 2: 이미 한글 이름이지만 changedByUid 가 퇴사자 staff 를 가리키는 경우
+        const uid = (data.changedByUid || '').trim();
+        if (!uid) return;
+        const staffByUid = uidToStaff.get(uid);
+        if (!staffByUid) return;
+        if (staffByUid.status === 'active') return; // 재직자면 그대로 OK
+        // 퇴사자/비활성 — 동일 이메일의 재직자 찾기
+        if (!staffByUid.email) return;
+        const replacement = emailToActiveStaff.get(staffByUid.email);
+        if (!replacement) return;
+        if (replacement.name === changedBy) return; // 이미 올바름
+        resignedReassignable += 1;
         updates.push({
             id: d.id,
+            kind: 'resigned-to-active',
             oldName: changedBy,
-            newName: staffInfo.name,
-            uid: staffInfo.uid,
-            role: staffInfo.systemRole,
+            newName: replacement.name,
+            uid: replacement.uid,
+            role: replacement.systemRole,
         });
     });
 
-    console.log(`✉️  이메일 형식 changedBy: ${eligibleCount}건`);
-    console.log(`✅ 매칭 가능: ${updates.length}건`);
-    console.log(`❌ 매칭 실패 이메일 (${unmatched.size}종): `, Array.from(unmatched));
+    console.log(`✉️  이메일 형식 changedBy: ${eligibleEmails}건`);
+    console.log(`🔄 퇴사자→재직자 재매핑 대상: ${resignedReassignable}건`);
+    console.log(`✅ 총 변환 가능: ${updates.length}건`);
+    console.log(`❌ 매칭 실패 이메일 (${unmatched.size}종):`, Array.from(unmatched));
 
     if (updates.length === 0) {
         console.log('변환할 항목 없음.');
-        return { scanned: logsSnap.size, eligibleEmails: eligibleCount, matched: 0, applied: 0, unmatchedEmails: Array.from(unmatched) };
+        return { scanned: logsSnap.size, eligibleEmails, resignedReassignable, matched: 0, applied: 0, unmatchedEmails: Array.from(unmatched) };
     }
 
-    // 매칭 결과 요약 (이메일 → 이름)
-    const summary = new Map<string, { name: string; count: number }>();
+    // 변환 요약 출력 (oldName → newName / count)
+    const summary = new Map<string, { newName: string; kind: string; count: number }>();
     updates.forEach(u => {
-        const cur = summary.get(u.oldName);
+        const key = `${u.kind}::${u.oldName}`;
+        const cur = summary.get(key);
         if (cur) cur.count += 1;
-        else summary.set(u.oldName, { name: u.newName, count: 1 });
+        else summary.set(key, { newName: u.newName, kind: u.kind, count: 1 });
     });
-    console.table(Array.from(summary.entries()).map(([email, info]) => ({ email, name: info.name, count: info.count })));
+    console.table(Array.from(summary.entries()).map(([key, info]) => {
+        const [kind, oldName] = key.split('::');
+        return { kind, oldName, newName: info.newName, count: info.count };
+    }));
 
     if (!apply) {
         console.log('💡 실제 적용하려면: window.migrateLogActors({ apply: true })');
-        return { scanned: logsSnap.size, eligibleEmails: eligibleCount, matched: updates.length, applied: 0, unmatchedEmails: Array.from(unmatched) };
+        return { scanned: logsSnap.size, eligibleEmails, resignedReassignable, matched: updates.length, applied: 0, unmatchedEmails: Array.from(unmatched) };
     }
 
     // 3. writeBatch 로 일괄 업데이트 (500건 제한)
@@ -690,7 +754,7 @@ async function migrateLogActors(opts: { apply?: boolean } = {}): Promise<{
     }
     if (batchCount > 0) await batch.commit();
     console.log(`✅ ${applied}건 적용 완료`);
-    return { scanned: logsSnap.size, eligibleEmails: eligibleCount, matched: updates.length, applied, unmatchedEmails: Array.from(unmatched) };
+    return { scanned: logsSnap.size, eligibleEmails, resignedReassignable, matched: updates.length, applied, unmatchedEmails: Array.from(unmatched) };
 }
 
 if (typeof window !== 'undefined') {
