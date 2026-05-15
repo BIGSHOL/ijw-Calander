@@ -348,69 +348,69 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               {kpiCards.map(card => <KPICard key={card.id} data={card} />)}
             </div>
 
-            {/* ── 재원생 & 과목별 추이 (통합 카드, 3 라인 겹침, 1단계 디자인 — mock) ── */}
-            <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100 mb-3">
-              {/* 헤더: 재원생 + Legend(과목별 카운트/변화량) */}
-              <div className="flex items-start justify-between mb-3 pb-2 border-b border-gray-100 gap-3 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xs font-bold text-primary">👥 재원생 현황</h3>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-bold text-gray-800">{activeStudents}</span>
-                    <span className="text-xxs text-gray-400">명</span>
-                  </div>
-                  <div className="flex items-center gap-0.5 text-xxs font-bold text-emerald-600 ml-2">
-                    <TrendingUp size={11} />
-                    <span>{newStudentsThisMonth - withdrawalData.count >= 0 ? '+' : ''}{newStudentsThisMonth - withdrawalData.count} 이번 달</span>
+            {/* ── 재원생 & 과목별 추이 (통합 카드, 3 라인 겹침, 1/3 너비) ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3">
+              <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
+                {/* 헤더: 재원생 + Legend */}
+                <div className="flex items-start justify-between mb-2 pb-2 border-b border-gray-100 gap-2 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-bold text-primary">👥 재원생</h3>
+                    <div className="flex items-baseline gap-0.5">
+                      <span className="text-xl font-bold text-gray-800">{activeStudents}</span>
+                      <span className="text-xxs text-gray-400">명</span>
+                    </div>
+                    <div className="flex items-center gap-0.5 text-xxs font-bold text-emerald-600">
+                      <TrendingUp size={10} />
+                      <span>{newStudentsThisMonth - withdrawalData.count >= 0 ? '+' : ''}{newStudentsThisMonth - withdrawalData.count}</span>
+                    </div>
                   </div>
                 </div>
-                {/* Legend */}
-                <div className="flex items-center gap-3 flex-wrap">
+                {/* Legend (가로) */}
+                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                   {trendCards.map(card => {
                     const first = card.trend[0]?.value ?? card.count;
                     const change = card.count - first;
                     const isUp = change >= 0;
                     return (
-                      <div key={card.key} className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: card.color }} />
+                      <div key={card.key} className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: card.color }} />
                         <span className="text-xxs font-bold text-gray-700">{card.label}</span>
-                        <span className="text-xs font-bold" style={{ color: card.color }}>{card.count}</span>
-                        <span className={`flex items-center gap-0.5 text-xxs font-bold ${isUp ? 'text-emerald-600' : 'text-red-500'}`}>
-                          {isUp ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                        <span className="text-xxs font-bold" style={{ color: card.color }}>{card.count}</span>
+                        <span className={`flex items-center text-micro font-bold ${isUp ? 'text-emerald-600' : 'text-red-500'}`}>
                           {isUp ? '+' : ''}{change}
                         </span>
                       </div>
                     );
                   })}
                 </div>
-              </div>
-
-              {/* 본문: 3 라인 겹친 통합 차트 */}
-              <div style={{ height: 220 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={combinedTrend} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
-                    <YAxis hide domain={['dataMin - 5', 'dataMax + 5']} />
-                    <Tooltip
-                      cursor={{ stroke: '#9ca3af', strokeDasharray: '3 3' }}
-                      contentStyle={{ fontSize: 11, padding: '4px 8px', border: '1px solid #e5e7eb', borderRadius: 4 }}
-                      labelFormatter={(d) => `D-${(combinedTrend.length - 1) - (d as number)}`}
-                    />
-                    {trendCards.map(card => (
-                      <Line
-                        key={card.key}
-                        type="monotone"
-                        dataKey={card.key}
-                        name={card.label}
-                        stroke={card.color}
-                        strokeWidth={2}
-                        dot={false}
-                        isAnimationActive
-                        animationDuration={700}
+                {/* 본문: 3 라인 겹친 통합 차트 (높이 축소) */}
+                <div style={{ height: 130 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={combinedTrend} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                      <YAxis hide domain={['dataMin - 5', 'dataMax + 5']} />
+                      <Tooltip
+                        cursor={{ stroke: '#9ca3af', strokeDasharray: '3 3' }}
+                        contentStyle={{ fontSize: 10, padding: '3px 6px', border: '1px solid #e5e7eb', borderRadius: 4 }}
+                        labelFormatter={(d) => `D-${(combinedTrend.length - 1) - (d as number)}`}
                       />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
+                      {trendCards.map(card => (
+                        <Line
+                          key={card.key}
+                          type="monotone"
+                          dataKey={card.key}
+                          name={card.label}
+                          stroke={card.color}
+                          strokeWidth={1.8}
+                          dot={false}
+                          isAnimationActive
+                          animationDuration={700}
+                        />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="text-micro text-gray-400 text-right mt-0.5">최근 30일 (mock)</div>
               </div>
-              <div className="text-micro text-gray-400 text-right mt-1">최근 30일 추이 (mock)</div>
             </div>
 
             {/* ── Row 2: 주간 출석 + 주의 필요 ── */}
