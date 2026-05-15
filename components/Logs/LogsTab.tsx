@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { collection, query, where, orderBy, limit, getDocs, startAfter, DocumentSnapshot } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { TimetableLogAction, TimetableLogEntry } from '../../hooks/useTimetableLog';
-import { ChevronDown, ChevronRight, Search, RefreshCw, ArrowUp, ArrowDown } from 'lucide-react';
+import { ChevronDown, Search, RefreshCw, ArrowUp, ArrowDown } from 'lucide-react';
 
 const SUBJECT_LABELS: Record<string, string> = {
   math: '수학',
@@ -103,8 +103,9 @@ const formatTime = (timestamp: string) => {
   }
 };
 
-const DiffView: React.FC<{ before?: Record<string, any>; after?: Record<string, any> }> = ({ before, after }) => {
-  if (!before && !after) return <span className="text-gray-400 text-xs">상세 정보 없음</span>;
+// 변경된 필드를 한 줄에 인라인으로 나열 — "key: 이전 → 이후" 형식, 여러 개는 " · " 구분
+const InlineDiff: React.FC<{ before?: Record<string, any>; after?: Record<string, any> }> = ({ before, after }) => {
+  if (!before && !after) return <span className="text-gray-300">-</span>;
 
   const allKeys = new Set([
     ...Object.keys(before || {}),
@@ -114,6 +115,14 @@ const DiffView: React.FC<{ before?: Record<string, any>; after?: Record<string, 
   // 불필요한 메타 필드 제외
   const skipKeys = new Set(['createdAt', 'updatedAt', 'timestamp']);
 
+  const fmt = (v: any): string => {
+    if (v === undefined || v === null) return '-';
+    if (typeof v === 'object') {
+      try { return JSON.stringify(v); } catch { return String(v); }
+    }
+    return String(v);
+  };
+
   const changedKeys = [...allKeys].filter(k => {
     if (skipKeys.has(k)) return false;
     const bVal = JSON.stringify(before?.[k]);
@@ -122,30 +131,22 @@ const DiffView: React.FC<{ before?: Record<string, any>; after?: Record<string, 
   });
 
   if (changedKeys.length === 0) {
-    return <span className="text-gray-400 text-xs">변경 내역 없음</span>;
+    return <span className="text-gray-300">변경 내역 없음</span>;
   }
 
   return (
-    <div className="grid grid-cols-[120px_1fr_1fr] gap-x-2 gap-y-1 text-xs">
-      <div className="font-semibold text-gray-500">필드</div>
-      <div className="font-semibold text-red-500">이전</div>
-      <div className="font-semibold text-green-600">이후</div>
-      {changedKeys.map(key => (
+    <span className="text-xxs whitespace-nowrap">
+      {changedKeys.map((key, idx) => (
         <React.Fragment key={key}>
-          <div className="text-gray-600 font-medium truncate" title={key}>{key}</div>
-          <div className="text-red-600 bg-red-50 px-1 rounded break-all">
-            {before?.[key] !== undefined ? (
-              typeof before[key] === 'object' ? JSON.stringify(before[key], null, 1) : String(before[key])
-            ) : <span className="text-gray-300">-</span>}
-          </div>
-          <div className="text-green-700 bg-green-50 px-1 rounded break-all">
-            {after?.[key] !== undefined ? (
-              typeof after[key] === 'object' ? JSON.stringify(after[key], null, 1) : String(after[key])
-            ) : <span className="text-gray-300">-</span>}
-          </div>
+          {idx > 0 && <span className="text-gray-300 mx-1">·</span>}
+          <span className="text-gray-500 font-medium">{key}</span>
+          <span className="text-gray-300">: </span>
+          <span className="text-red-600 bg-red-50 px-1 rounded">{fmt(before?.[key])}</span>
+          <span className="text-gray-400 mx-0.5">→</span>
+          <span className="text-green-700 bg-green-50 px-1 rounded">{fmt(after?.[key])}</span>
         </React.Fragment>
       ))}
-    </div>
+    </span>
   );
 };
 
@@ -163,7 +164,6 @@ const LogsTab: React.FC = () => {
   const [subjectFilter, setSubjectFilter] = useState<Set<string>>(new Set(['all']));
   const [actorFilter, setActorFilter] = useState<Set<string>>(new Set(['all']));
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSubjectDropdownOpen, setIsSubjectDropdownOpen] = useState(false);
   const [isActorDropdownOpen, setIsActorDropdownOpen] = useState(false);
@@ -319,15 +319,6 @@ const LogsTab: React.FC = () => {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [isActorDropdownOpen]);
-
-  const toggleExpand = (id: string) => {
-    setExpandedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
 
   const toggleActionFilter = (action: string) => {
     const newFilter = new Set(actionFilter);
@@ -564,7 +555,7 @@ const LogsTab: React.FC = () => {
         </span>
       </div>
 
-      {/* Table */}
+      {/* Table — 가로 스크롤 허용 (필드 변경내역이 가로로 길어질 수 있음) */}
       <div ref={scrollContainerRef} className="flex-1 overflow-auto">
         {isLoading ? (
           <div className="flex items-center justify-center h-full text-gray-400 text-sm">
@@ -575,86 +566,72 @@ const LogsTab: React.FC = () => {
             {logs.length === 0 ? '해당 날짜에 로그가 없습니다.' : '검색 결과가 없습니다.'}
           </div>
         ) : (
-          <table className="w-full text-xs">
+          <table className="text-xs" style={{ minWidth: '100%' }}>
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr className="border-b border-gray-200">
-                <th className="px-3 py-2 text-left font-medium text-gray-500 w-8"></th>
                 <th
-                  className="px-3 py-2 text-left font-medium text-gray-500 w-36 cursor-pointer select-none hover:text-gray-700"
+                  className="px-3 py-2 text-left font-medium text-gray-500 w-36 cursor-pointer select-none hover:text-gray-700 whitespace-nowrap"
                   onClick={() => handleSort('timestamp')}
                 >시간<SortIndicator k="timestamp" /></th>
                 <th
-                  className="px-3 py-2 text-left font-medium text-gray-500 w-24 cursor-pointer select-none hover:text-gray-700"
+                  className="px-3 py-2 text-left font-medium text-gray-500 w-24 cursor-pointer select-none hover:text-gray-700 whitespace-nowrap"
                   onClick={() => handleSort('action')}
                 >작업<SortIndicator k="action" /></th>
                 <th
-                  className="px-3 py-2 text-left font-medium text-gray-500 w-16 cursor-pointer select-none hover:text-gray-700"
+                  className="px-3 py-2 text-left font-medium text-gray-500 w-16 cursor-pointer select-none hover:text-gray-700 whitespace-nowrap"
                   onClick={() => handleSort('subject')}
                 >과목<SortIndicator k="subject" /></th>
                 <th
-                  className="px-3 py-2 text-left font-medium text-gray-500 w-28 cursor-pointer select-none hover:text-gray-700"
+                  className="px-3 py-2 text-left font-medium text-gray-500 w-28 cursor-pointer select-none hover:text-gray-700 whitespace-nowrap"
                   onClick={() => handleSort('className')}
                 >수업명<SortIndicator k="className" /></th>
                 <th
-                  className="px-3 py-2 text-left font-medium text-gray-500 w-24 cursor-pointer select-none hover:text-gray-700"
+                  className="px-3 py-2 text-left font-medium text-gray-500 w-24 cursor-pointer select-none hover:text-gray-700 whitespace-nowrap"
                   onClick={() => handleSort('studentName')}
                 >학생<SortIndicator k="studentName" /></th>
                 <th
-                  className="px-3 py-2 text-left font-medium text-gray-500 w-28 cursor-pointer select-none hover:text-gray-700"
+                  className="px-3 py-2 text-left font-medium text-gray-500 w-28 cursor-pointer select-none hover:text-gray-700 whitespace-nowrap"
                   onClick={() => handleSort('changedBy')}
                 >처리자<SortIndicator k="changedBy" /></th>
                 <th
-                  className="px-3 py-2 text-left font-medium text-gray-500 cursor-pointer select-none hover:text-gray-700"
+                  className="px-3 py-2 text-left font-medium text-gray-500 w-64 cursor-pointer select-none hover:text-gray-700 whitespace-nowrap"
                   onClick={() => handleSort('details')}
                 >상세<SortIndicator k="details" /></th>
+                <th className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap">변경 필드</th>
               </tr>
             </thead>
             <tbody>
-              {filteredLogs.map(log => {
-                const isExpanded = expandedIds.has(log.id);
-                return (
-                  <React.Fragment key={log.id}>
-                    <tr
-                      className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
-                      onClick={() => toggleExpand(log.id)}
-                    >
-                      <td className="px-3 py-2 text-gray-400">
-                        {isExpanded
-                          ? <ChevronDown size={12} />
-                          : <ChevronRight size={12} />}
-                      </td>
-                      <td className="px-3 py-2 text-gray-600 font-mono">
-                        {formatTime(log.timestamp)}
-                      </td>
-                      <td className="px-3 py-2">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${ACTION_COLORS[log.action] || 'bg-gray-100 text-gray-600'}`}>
-                          {ACTION_LABELS[log.action] || log.action}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-gray-600">{(log.subject && SUBJECT_LABELS[log.subject]) || log.subject || '-'}</td>
-                      <td className="px-3 py-2 text-gray-800 font-medium truncate max-w-[120px]" title={log.className}>
-                        {log.className || '-'}
-                      </td>
-                      <td className="px-3 py-2 text-gray-600 truncate max-w-[100px]" title={log.studentName}>
-                        {log.studentName || '-'}
-                      </td>
-                      <td className="px-3 py-2 text-gray-500 truncate max-w-[120px]" title={log.changedBy}>
-                        {log.changedBy || '-'}
-                      </td>
-                      <td className="px-3 py-2 text-gray-500 truncate max-w-[200px]" title={log.details}>
-                        {log.details}
-                      </td>
-                    </tr>
-                    {isExpanded && (
-                      <tr className="bg-gray-50">
-                        <td colSpan={8} className="px-6 py-3">
-                          <DiffView before={log.before} after={log.after} />
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })}
+              {filteredLogs.map(log => (
+                <tr
+                  key={log.id}
+                  className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                >
+                  <td className="px-3 py-2 text-gray-600 font-mono whitespace-nowrap">
+                    {formatTime(log.timestamp)}
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${ACTION_COLORS[log.action] || 'bg-gray-100 text-gray-600'}`}>
+                      {ACTION_LABELS[log.action] || log.action}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 text-gray-600 whitespace-nowrap">{(log.subject && SUBJECT_LABELS[log.subject]) || log.subject || '-'}</td>
+                  <td className="px-3 py-2 text-gray-800 font-medium whitespace-nowrap" title={log.className}>
+                    {log.className || '-'}
+                  </td>
+                  <td className="px-3 py-2 text-gray-600 whitespace-nowrap" title={log.studentName}>
+                    {log.studentName || '-'}
+                  </td>
+                  <td className="px-3 py-2 text-gray-500 whitespace-nowrap" title={log.changedBy}>
+                    {log.changedBy || '-'}
+                  </td>
+                  <td className="px-3 py-2 text-gray-500 whitespace-nowrap" title={log.details}>
+                    {log.details}
+                  </td>
+                  <td className="px-3 py-2 text-gray-600">
+                    <InlineDiff before={log.before} after={log.after} />
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         )}
