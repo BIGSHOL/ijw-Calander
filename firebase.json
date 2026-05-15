@@ -141,6 +141,9 @@
       "source": "functions",
       "codebase": "default",
       "disallowLegacyRuntimeConfig": true,
+      "predeploy": [
+        "npm run build:exporter"
+      ],
       "ignore": [
         "node_modules",
         ".git",

@@ -3,15 +3,15 @@
  *
  * 구성:
  * 1. Firestore onWrite 트리거 (classes/students/enrollments/staff) → settings/sheetsSync에 pendingSync 마킹
- * 2. onSchedule every 1 minute → 60초 idle 체크 후 syncAll() 실행
- *    (60초 디바운스: 변경 후 60초 동안 추가 변경 없으면 동기화)
+ * 2. onSchedule every 5 minutes → 5분 idle 체크 후 syncAll() 실행
+ *    (5분 디바운스: 변경 후 5분 동안 추가 변경 없으면 동기화)
  *    (30분 보정: 마지막 동기화 후 30분 경과하면 강제 실행)
  * 3. HTTPS callable syncTimetableSheetsNow → 권한 체크 후 즉시 동기화 (관리자만)
  *
- * 60초 디바운스 방식:
+ * 5분 디바운스 방식:
  *   - Firestore 변경 발생 시 settings/sheetsSync.lastChangeAt = now() 기록
- *   - onSchedule 매 분 실행:
- *       if (now - lastChangeAt >= 60s AND lastChangeAt > lastFullSyncAt) → syncAll()
+ *   - onSchedule 5분마다 실행:
+ *       if (now - lastChangeAt >= 5분 AND lastChangeAt > lastFullSyncAt) → syncAll()
  *       elif (now - lastFullSyncAt >= 30분) → syncAll() (보정)
  */
 
@@ -27,7 +27,7 @@ const DATABASE_ID = "restore20260319";
 const REGION = "asia-northeast3";
 const SETTINGS_DOC_PATH = "settings/sheetsSync";
 
-const DEBOUNCE_SECONDS = 60;
+const DEBOUNCE_SECONDS = 300; // 5분 — 변경 후 5분 idle이면 동기화
 const CORRECTION_MINUTES = 30;
 
 // ============ 변경 감지 → pendingSync 마킹 ============
@@ -81,14 +81,14 @@ const onStaffChange = onDocumentWritten(triggerOptions("staff"), async () => {
     return null;
 });
 
-// ============ 디바운스 스케줄러 (매 분 실행) ============
+// ============ 디바운스 스케줄러 (5분마다 실행) ============
 
 /**
- * 매 분 실행하면서 60초 idle 또는 30분 보정 조건에 맞으면 syncAll() 호출.
+ * 5분마다 실행하면서 5분 idle 또는 30분 보정 조건에 맞으면 syncAll() 호출.
  */
 const syncTimetableSheetsScheduled = onSchedule(
     {
-        schedule: "every 1 minutes",
+        schedule: "every 5 minutes",
         region: REGION,
         secrets: [GOOGLE_SERVICE_ACCOUNT_KEY],
         timeoutSeconds: 540,
@@ -105,7 +105,7 @@ const syncTimetableSheetsScheduled = onSchedule(
         const lastFullSyncAt = data.lastFullSyncAt && data.lastFullSyncAt.toMillis ? data.lastFullSyncAt.toMillis() : 0;
         const pendingSync = !!data.pendingSync;
 
-        // 1) 60초 디바운스 조건: pending 있고 마지막 변경 후 60초 경과 + 마지막 동기화보다 늦은 변경
+        // 1) 5분 디바운스 조건: pending 있고 마지막 변경 후 5분 경과 + 마지막 동기화보다 늦은 변경
         const debounceOk =
             pendingSync &&
             lastChangeAt > 0 &&
@@ -123,7 +123,7 @@ const syncTimetableSheetsScheduled = onSchedule(
         if (correctionOk && !debounceOk) {
             logger.info(`[SheetsSync] 30분 보정 동기화 실행`);
         } else {
-            logger.info(`[SheetsSync] 60초 디바운스 동기화 실행 (마지막 변경: ${Math.round((now - lastChangeAt) / 1000)}초 전)`);
+            logger.info(`[SheetsSync] 5분 디바운스 동기화 실행 (마지막 변경: ${Math.round((now - lastChangeAt) / 1000)}초 전)`);
         }
 
         try {
