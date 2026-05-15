@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, lazy, Suspense } from 'react';
+﻿import React, { useState, useMemo, useCallback, lazy, Suspense } from 'react';
 import { UnifiedStudent, UserProfile } from '../../../types';
 import { BookOpen, Plus, User, X, Loader2, Users, Trash2, ChevronDown, Calendar, RotateCcw } from 'lucide-react';
 import { restoreCancelledEnrollment } from '../../../utils/classMove';
@@ -12,7 +12,7 @@ import { SUBJECT_COLORS, SUBJECT_LABELS } from '../../../utils/styleUtils';
 import ClassDetailModal from '../../ClassManagement/ClassDetailModal';
 import { doc, getDoc, getDocs, collection, query, where, updateDoc, deleteDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { usePermissions } from '../../../hooks/usePermissions';
 import {
   SubjectForSchedule,
@@ -260,6 +260,77 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
   // 오늘 날짜 (미래 수업 구분용)
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  // ── 레거시 enrollment 처리자 fallback ──
+  // enrollment 에 enrollCreatedByName 이 없으면 timetable_logs 에서 가장 빠른 student_enroll
+  // 로그의 changedBy 를 처리자로 사용. studentId 와 studentName 양쪽으로 매칭 (math/english
+  // 시간표가 studentId 에 composite key 를 넣기도 함).
+  const { data: legacyHandlerMap } = useQuery<Map<string, { name: string; at: string }>>({
+    queryKey: ['enrollmentInitialHandlers', student.id, student.name],
+    enabled: !!student.id,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const handlerMap = new Map<string, { name: string; at: string }>();
+      const RELEVANT_ACTIONS = new Set([
+        'student_enroll', 'class_create', 'student_transfer', 'student_move', 'english_move',
+      ]);
+
+      const addEntry = (subject: string, className: string, changedBy: string, ts: string) => {
+        if (!subject || !className || !changedBy) return;
+        const key = `${subject}_${className}`;
+        const existing = handlerMap.get(key);
+        // 가장 빠른 (최초) 처리자만 보존
+        if (!existing || (ts && ts < existing.at)) {
+          handlerMap.set(key, { name: changedBy, at: ts });
+        }
+      };
+
+      const queries: Promise<any>[] = [];
+      // 1. studentId 매칭
+      try {
+        queries.push(getDocs(query(
+          collection(db, 'timetable_logs'),
+          where('studentId', '==', student.id),
+        )));
+      } catch { /* ignore */ }
+      // 2. studentName 매칭 (math/english timetable 에서 composite key 를 studentName 으로 박는 경우 대응)
+      if (student.name) {
+        try {
+          queries.push(getDocs(query(
+            collection(db, 'timetable_logs'),
+            where('studentName', '==', student.name),
+          )));
+        } catch { /* ignore */ }
+      }
+
+      const snapshots = await Promise.all(queries.map(p => p.catch(() => null)));
+      const seenDocIds = new Set<string>();
+      for (const snap of snapshots) {
+        if (!snap) continue;
+        snap.docs.forEach((d: any) => {
+          if (seenDocIds.has(d.id)) return;
+          seenDocIds.add(d.id);
+          const data = d.data();
+          if (!RELEVANT_ACTIONS.has(data.action)) return;
+          addEntry(data.subject, data.className, data.changedBy, data.timestamp);
+        });
+      }
+
+      return handlerMap;
+    },
+  });
+
+  // 그룹에 처리자가 없을 때 legacy 로그에서 보강
+  const resolveHandler = useCallback((group: GroupedEnrollment): string | undefined => {
+    if (group.enrollCreatedByName) return group.enrollCreatedByName;
+    const key = `${group.subject}_${group.className}`;
+    return legacyHandlerMap?.get(key)?.name;
+  }, [legacyHandlerMap]);
+  const resolveHandlerAt = useCallback((group: GroupedEnrollment): string | undefined => {
+    if (group.enrollCreatedAt) return group.enrollCreatedAt;
+    const key = `${group.subject}_${group.className}`;
+    return legacyHandlerMap?.get(key)?.at;
+  }, [legacyHandlerMap]);
 
   // 그룹에 enrollment 의 최초 처리자 정보를 합성 — 가장 이른 enrollCreatedAt 의 이름이 진실
   const mergeEnrollCreated = (existing: GroupedEnrollment, enrollment: any) => {
@@ -1095,9 +1166,9 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         {/* 처리자 (최초 처리자) */}
         <span
           className="w-20 shrink-0 text-xxs text-gray-600 whitespace-nowrap"
-          title={group.enrollCreatedAt ? `최초 처리일: ${group.enrollCreatedAt.slice(0, 10)}` : ''}
+          title={(() => { const at = resolveHandlerAt(group); return at ? `최초 처리일: ${at.slice(0, 10)}` : ''; })()}
         >
-          {group.enrollCreatedByName || <span className="text-gray-300">-</span>}
+          {resolveHandler(group) || <span className="text-gray-300">-</span>}
         </span>
 
         {/* 삭제 버튼 - readOnly 모드에서는 숨김 */}
@@ -1248,9 +1319,9 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         {/* 처리자 (최초 처리자) */}
         <span
           className="w-20 shrink-0 text-xxs text-gray-600 whitespace-nowrap"
-          title={group.enrollCreatedAt ? `최초 처리일: ${group.enrollCreatedAt.slice(0, 10)}` : ''}
+          title={(() => { const at = resolveHandlerAt(group); return at ? `최초 처리일: ${at.slice(0, 10)}` : ''; })()}
         >
-          {group.enrollCreatedByName || <span className="text-gray-300">-</span>}
+          {resolveHandler(group) || <span className="text-gray-300">-</span>}
         </span>
 
         {/* 이력 삭제 버튼 (권한이 있는 경우만) */}
@@ -1490,9 +1561,9 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
                     {/* 처리자 (최초 처리자) */}
                     <span
                       className="w-20 shrink-0 text-xxs text-gray-600 whitespace-nowrap"
-                      title={group.enrollCreatedAt ? `최초 처리일: ${group.enrollCreatedAt.slice(0, 10)}` : ''}
+                      title={(() => { const at = resolveHandlerAt(group); return at ? `최초 처리일: ${at.slice(0, 10)}` : ''; })()}
                     >
-                      {group.enrollCreatedByName || <span className="text-gray-300">-</span>}
+                      {resolveHandler(group) || <span className="text-gray-300">-</span>}
                     </span>
 
                     {/* 삭제 버튼 - readOnly 모드에서는 숨김 */}
