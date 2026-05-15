@@ -228,6 +228,7 @@ export function useEdutrixSync() {
                 attendanceNotes: Record<string, string>; // notes raw (특이사항, 호버용)
                 examInfoRaw: Record<string, string>;     // exam_info raw (분자/분모 보존)
                 assignmentScoreRaw: Record<string, string>; // assignment_score raw (⭕△X 판정용)
+                progressRaw: Record<string, string>;     // progress raw (Q2 진도 표시)
             }>();
 
             for (const report of reports) {
@@ -404,6 +405,7 @@ export function useEdutrixSync() {
                         attendanceNotes: {},
                         examInfoRaw: {},
                         assignmentScoreRaw: {},
+                        progressRaw: {},
                     });
                 }
                 const batch = attendanceBatch.get(docId)!;
@@ -425,6 +427,7 @@ export function useEdutrixSync() {
                 if (report.assignment_score !== null && report.assignment_score !== undefined) {
                     batch.assignmentScoreRaw[compositeKey] = String(report.assignment_score);
                 }
+                if (report.progress) batch.progressRaw[compositeKey] = String(report.progress);
 
                 result.matched++;
                 const statusParts: string[] = [finalValue === 1 ? '출석' : finalValue === 2 ? '지각' : '결석'];
@@ -475,6 +478,9 @@ export function useEdutrixSync() {
                         }
                         if (Object.keys(data.assignmentScoreRaw).length > 0) {
                             payload.assignmentScoreRaw = data.assignmentScoreRaw;
+                        }
+                        if (Object.keys(data.progressRaw).length > 0) {
+                            payload.progressRaw = data.progressRaw;
                         }
                         await setDoc(docRef, payload, { merge: true });
                     } catch (err) {

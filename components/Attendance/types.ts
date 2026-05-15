@@ -63,8 +63,9 @@ export interface Student {
   attitude?: Record<string, string>;          // study_attitude (Q4 태도 ⭕△X)
   classwork?: Record<string, string>;         // homework_today (Q2 하단 노란 네모 수업 과제)
   attendanceNotes?: Record<string, string>;   // notes (Q4 호버 특이사항)
-  examInfoRaw?: Record<string, string>;       // exam_info (Q3 분자/분모 그대로, 예: "20/25")
-  assignmentScoreRaw?: Record<string, string>; // assignment_score (Q2 ⭕△X 판정용 0~100)
+  examInfoRaw?: Record<string, string>;       // exam_info (Q4 분자/분모 그대로, 예: "20/25")
+  assignmentScoreRaw?: Record<string, string>; // assignment_score (과제 ⭕△X 판정용 0~100)
+  progressRaw?: Record<string, string>;        // progress (Q2 우상단 진도 표시)
 
   // Legacy/Optional Compatibility
   isHomeroom?: boolean;

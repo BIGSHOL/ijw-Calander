@@ -464,10 +464,13 @@ const StudentRow = React.memo(({
           student.attendanceNotes?.[compositeKey] ?? student.attendanceNotes?.[dateKey];
         const examInfoRaw =
           student.examInfoRaw?.[compositeKey] ?? student.examInfoRaw?.[dateKey];
+        const progressRaw =
+          student.progressRaw?.[compositeKey] ?? student.progressRaw?.[dateKey];
 
         const assignmentMark = getAssignmentMark(assignmentScoreRaw);
         const attitudeMark = getAttitudeMark(attitudeRaw);
         const hasClasswork = !!classworkRaw && String(classworkRaw).trim() !== '';
+        const hasProgress = !!progressRaw && String(progressRaw).trim() !== '';
 
         // 해당 날짜의 시험 목록 조회
         const examsOnDate = examsByDate?.get(dateKey) || [];
@@ -573,29 +576,41 @@ const StudentRow = React.memo(({
                 >
                   {q1Content}
                 </div>
-                {/* Q2: 과제 (우상단) - 1시 방향
-                    Edutrix assignment_score 있으면 ⭕△X 표시, 없으면 기존 체크 표시.
-                    하단에 작은 노란 네모(수업 과제 = homework_today) 오버레이. */}
+                {/* Q2: 진도 (우상단) - 1시 방향
+                    Edutrix progress 있으면 텍스트 표시 (호버에 전체).
+                    수업 과제(homework_today) 있으면 우하단 작은 노란 점.
+                    과제 ⭕△X(assignment_score)는 좌상단 작은 마크로 동거. */}
                 <div
                   onClick={() => onHomeworkChange?.(student.id, student.group || '', dateKey, !homeworkDone)}
                   className={`relative flex items-center justify-center border-b ${highlightWeekends && isWeekend ? 'border-gray-400' : 'border-gray-300/50'} cursor-pointer transition-colors ${
-                    assignmentMark
-                      ? MARK_COLORS[assignmentMark].bg
+                    hasProgress
+                      ? 'bg-indigo-50 hover:bg-indigo-100'
                       : homeworkDone
                         ? 'bg-emerald-100 hover:bg-emerald-200'
                         : otherQuadrantProps.className || 'hover:brightness-95'
                   }`}
-                  style={!assignmentMark && !homeworkDone ? otherQuadrantProps.style : undefined}
+                  style={!hasProgress && !homeworkDone ? otherQuadrantProps.style : undefined}
                   title={
-                    assignmentMark
-                      ? `과제 점수: ${assignmentScoreRaw ?? ''} (${assignmentMark})`
+                    hasProgress
+                      ? `진도: ${progressRaw}`
                       : (homeworkDone ? '과제 완료' : '과제 미완료')
                   }
                 >
-                  {assignmentMark ? (
-                    <span className={`text-nano font-black ${MARK_COLORS[assignmentMark].text}`}>{assignmentMark}</span>
+                  {hasProgress ? (
+                    <span className="text-nano font-bold text-indigo-700 leading-tight px-0.5 truncate max-w-full">
+                      {progressRaw}
+                    </span>
                   ) : (
                     homeworkDone && <Check className="w-2.5 h-2.5 text-emerald-600" />
+                  )}
+                  {/* 과제 ⭕△X (assignment_score) — 좌상단 작은 마크 */}
+                  {assignmentMark && (
+                    <span
+                      className={`absolute top-0 left-0 text-[7px] font-black leading-none px-0.5 ${MARK_COLORS[assignmentMark].text}`}
+                      title={`과제 점수: ${assignmentScoreRaw ?? ''} (${assignmentMark})`}
+                    >
+                      {assignmentMark}
+                    </span>
                   )}
                   {/* 수업 과제 (homework_today) — 우하단 작은 노란 점 */}
                   {hasClasswork && (
@@ -605,26 +620,25 @@ const StudentRow = React.memo(({
                     />
                   )}
                 </div>
-                {/* Q4: 태도 (좌하단) - 7시 방향
-                    Edutrix study_attitude 있으면 ⭕△X 표시 + 호버에 특이사항(notes).
-                    없으면 기존 쪽지시험 fallback. */}
+                {/* Q4: 시험 점수 (좌하단) - 7시 방향
+                    Edutrix exam_info 있으면 분자/분모 표시 (예: "20/25"), 없으면 기존 쪽지시험 fallback. */}
                 <div
                   className={`flex items-center justify-center border-r ${highlightWeekends && isWeekend ? 'border-gray-400' : 'border-gray-300/50'} ${
-                    attitudeMark
-                      ? MARK_COLORS[attitudeMark].bg
+                    examInfoRaw
+                      ? 'bg-blue-50'
                       : dailyExamScore
                         ? GRADE_COLORS[dailyExamScore.grade || 'F'].bg
                         : otherQuadrantProps.className || ''
                   }`}
-                  style={!attitudeMark && !dailyExamScore ? otherQuadrantProps.style : undefined}
+                  style={!examInfoRaw && !dailyExamScore ? otherQuadrantProps.style : undefined}
                   title={
-                    attitudeMark
-                      ? `태도: ${attitudeRaw}${notesRaw ? `\n특이사항: ${notesRaw}` : ''}`
-                      : (dailyExamScore ? `쪽지시험: ${dailyExamScore.score}/${dailyExamScore.maxScore} (${dailyExamScore.grade})` : (notesRaw ? `특이사항: ${notesRaw}` : undefined))
+                    examInfoRaw
+                      ? `시험: ${examInfoRaw}`
+                      : (dailyExamScore ? `쪽지시험: ${dailyExamScore.score}/${dailyExamScore.maxScore} (${dailyExamScore.grade})` : undefined)
                   }
                 >
-                  {attitudeMark ? (
-                    <span className={`text-nano font-black ${MARK_COLORS[attitudeMark].text}`}>{attitudeMark}</span>
+                  {examInfoRaw ? (
+                    <span className="text-nano font-bold text-blue-700 leading-none">{examInfoRaw}</span>
                   ) : (
                     dailyExamScore && (
                       <span className={`text-nano font-bold ${GRADE_COLORS[dailyExamScore.grade || 'F'].text}`}>
@@ -633,25 +647,28 @@ const StudentRow = React.memo(({
                     )
                   )}
                 </div>
-                {/* Q3: 시험 점수 (우하단) - 5시 방향
-                    Edutrix exam_info 있으면 분자/분모 표시 (예: "20/25"), 없으면 기존 fallback. */}
+                {/* Q3: 수업 태도 (우하단) - 5시 방향
+                    Edutrix study_attitude 있으면 ⭕△X 표시 + 호버에 raw값 + 특이사항(notes).
+                    호버는 title 속성으로 노출 (notes는 \n 으로 줄바꿈). */}
                 <div
                   className={`flex items-center justify-center ${
-                    examInfoRaw
-                      ? 'bg-blue-50'
+                    attitudeMark
+                      ? MARK_COLORS[attitudeMark].bg
                       : otherExamScore
                         ? GRADE_COLORS[otherExamScore.grade || 'F'].bg
                         : otherQuadrantProps.className || ''
                   }`}
-                  style={!examInfoRaw && !otherExamScore ? otherQuadrantProps.style : undefined}
+                  style={!attitudeMark && !otherExamScore ? otherQuadrantProps.style : undefined}
                   title={
-                    examInfoRaw
-                      ? `시험: ${examInfoRaw}`
-                      : (otherExamScore ? `시험: ${otherExamScore.score}/${otherExamScore.maxScore} (${otherExamScore.grade})` : undefined)
+                    attitudeMark
+                      ? `태도: ${attitudeRaw}${notesRaw ? `\n──────\n특이사항: ${notesRaw}` : ''}`
+                      : (notesRaw
+                          ? `특이사항: ${notesRaw}`
+                          : (otherExamScore ? `시험: ${otherExamScore.score}/${otherExamScore.maxScore} (${otherExamScore.grade})` : undefined))
                   }
                 >
-                  {examInfoRaw ? (
-                    <span className="text-nano font-bold text-blue-700 leading-none">{examInfoRaw}</span>
+                  {attitudeMark ? (
+                    <span className={`text-nano font-black ${MARK_COLORS[attitudeMark].text}`}>{attitudeMark}</span>
                   ) : (
                     otherExamScore && (
                       <span className={`text-nano font-bold ${GRADE_COLORS[otherExamScore.grade || 'F'].text}`}>
