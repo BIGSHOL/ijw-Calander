@@ -518,7 +518,9 @@ async function exportMathTimetableToExcel(params) {
   sheet.getRow(summaryRow).height = 24;
   sheet.mergeCells(summaryRow, 1, summaryRow, totalCols);
   const sumCell = sheet.getCell(summaryRow, 1);
-  sumCell.value = `${subjectFilter || "\uC218\uD559"} ${weekLabel}    |    \uC7AC\uC6D0 ${totalActive}\uBA85    |    \uC2E0\uC785(30\uC77C) ${totalNew30}\uBA85    |    \uBC18\uC774\uB3D9 ${totalTransferIn}\uBA85    |    \uB300\uAE30 ${totalHold}\uBA85    |    \uD1F4\uC6D0 ${totalWithdrawn}\uBA85    |    \uAE30\uC900\uC77C: ${refStr}`;
+  const _genNow = /* @__PURE__ */ new Date();
+  const genHHmm = `${String(_genNow.getHours()).padStart(2, "0")}:${String(_genNow.getMinutes()).padStart(2, "0")}`;
+  sumCell.value = `${subjectFilter || "\uC218\uD559"} ${weekLabel}    |    \uC7AC\uC6D0 ${totalActive}\uBA85    |    \uC2E0\uC785(30\uC77C) ${totalNew30}\uBA85    |    \uBC18\uC774\uB3D9 ${totalTransferIn}\uBA85    |    \uB300\uAE30 ${totalHold}\uBA85    |    \uD1F4\uC6D0 ${totalWithdrawn}\uBA85    |    \uAE30\uC900\uC77C: ${refStr} ${genHHmm}`;
   sumCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF111827" } };
   sumCell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11, name: "Malgun Gothic" };
   sumCell.alignment = { horizontal: "center", vertical: "middle" };

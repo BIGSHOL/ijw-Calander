@@ -479,7 +479,10 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
     sheet.getRow(summaryRow).height = 24;
     sheet.mergeCells(summaryRow, 1, summaryRow, totalCols);
     const sumCell = sheet.getCell(summaryRow, 1);
-    sumCell.value = `${subjectFilter || '수학'} ${weekLabel}    |    재원 ${totalActive}명    |    신입(30일) ${totalNew30}명    |    반이동 ${totalTransferIn}명    |    대기 ${totalHold}명    |    퇴원 ${totalWithdrawn}명    |    기준일: ${refStr}`;
+    // 생성 시각 (HH:mm, 24시간) — 시트가 언제 갱신됐는지 가독성
+    const _genNow = new Date();
+    const genHHmm = `${String(_genNow.getHours()).padStart(2, '0')}:${String(_genNow.getMinutes()).padStart(2, '0')}`;
+    sumCell.value = `${subjectFilter || '수학'} ${weekLabel}    |    재원 ${totalActive}명    |    신입(30일) ${totalNew30}명    |    반이동 ${totalTransferIn}명    |    대기 ${totalHold}명    |    퇴원 ${totalWithdrawn}명    |    기준일: ${refStr} ${genHHmm}`;
     sumCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF111827' } };
     sumCell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11, name: 'Malgun Gothic' };
     sumCell.alignment = { horizontal: 'center', vertical: 'middle' };
