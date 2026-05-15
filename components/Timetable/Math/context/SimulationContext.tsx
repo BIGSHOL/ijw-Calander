@@ -820,6 +820,8 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
   const historyDepth = history.length;
 
   // 시각 diff 계산 — initialEnrollments vs 현재 scenarioEnrollments
+  // 학생이 여러 반에 동시 등록될 수 있으므로 (학생, 반) 단위로 정확히 비교
+  // (이전엔 학생ID→단일 className 매핑이라 마지막 반만 기록되어 실제 잡은 반이 아닌 곳에 취소선 발생)
   const scenarioDiff = useMemo(() => {
     const addedIds = new Set<string>();
     const moveFromMap = new Map<string, Set<string>>();
@@ -832,42 +834,60 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
       classNameToId[cls.className] = id;
     });
 
-    // 학생 위치 추적
-    const initialPos: Record<string, string> = {};
+    // 학생별 초기/현재 소속 반 집합
+    const initialClassesByStudent: Record<string, Set<string>> = {};
     Object.entries(initialEnrollments).forEach(([className, students]) => {
-      Object.keys(students).forEach(id => { initialPos[id] = className; });
+      Object.keys(students).forEach(id => {
+        if (!initialClassesByStudent[id]) initialClassesByStudent[id] = new Set();
+        initialClassesByStudent[id].add(className);
+      });
     });
-    const currentPos: Record<string, string> = {};
+    const currentClassesByStudent: Record<string, Set<string>> = {};
     Object.entries(state.scenarioEnrollments).forEach(([className, students]) => {
-      Object.keys(students).forEach(id => { currentPos[id] = className; });
+      Object.keys(students).forEach(id => {
+        if (!currentClassesByStudent[id]) currentClassesByStudent[id] = new Set();
+        currentClassesByStudent[id].add(className);
+      });
     });
 
-    const allIds = new Set([...Object.keys(initialPos), ...Object.keys(currentPos)]);
+    const allIds = new Set([
+      ...Object.keys(initialClassesByStudent),
+      ...Object.keys(currentClassesByStudent),
+    ]);
     allIds.forEach(id => {
-      const initial = initialPos[id];
-      const current = currentPos[id];
-      if (initial && current && initial !== current) {
-        // 다른 반으로 이동
-        const fromId = classNameToId[initial];
-        const toId = classNameToId[current];
-        if (fromId) {
-          if (!moveFromMap.has(fromId)) moveFromMap.set(fromId, new Set());
-          moveFromMap.get(fromId)!.add(id);
-        }
-        if (toId) {
-          if (!moveToMap.has(toId)) moveToMap.set(toId, new Set());
-          moveToMap.get(toId)!.add(id);
-        }
-      } else if (!initial && current) {
-        // 신규 추가 (어디에도 없던 학생)
+      const initialSet = initialClassesByStudent[id] || new Set<string>();
+      const currentSet = currentClassesByStudent[id] || new Set<string>();
+      const removedClasses = [...initialSet].filter(c => !currentSet.has(c));
+      const addedClasses = [...currentSet].filter(c => !initialSet.has(c));
+
+      if (removedClasses.length > 0 && addedClasses.length > 0) {
+        // 이동: 빠진 각 반은 출발지(취소선), 새로 들어간 각 반은 도착지(보라색)
+        removedClasses.forEach(c => {
+          const fromId = classNameToId[c];
+          if (fromId) {
+            if (!moveFromMap.has(fromId)) moveFromMap.set(fromId, new Set());
+            moveFromMap.get(fromId)!.add(id);
+          }
+        });
+        addedClasses.forEach(c => {
+          const toId = classNameToId[c];
+          if (toId) {
+            if (!moveToMap.has(toId)) moveToMap.set(toId, new Set());
+            moveToMap.get(toId)!.add(id);
+          }
+        });
+      } else if (removedClasses.length > 0) {
+        // 순수 삭제 (어느 반에도 새로 추가 안 됨)
+        removedClasses.forEach(c => {
+          const fromId = classNameToId[c];
+          if (fromId) {
+            if (!removedFromClassIds.has(fromId)) removedFromClassIds.set(fromId, new Set());
+            removedFromClassIds.get(fromId)!.add(id);
+          }
+        });
+      } else if (addedClasses.length > 0) {
+        // 순수 추가
         addedIds.add(id);
-      } else if (initial && !current) {
-        // 단순 삭제 (이동 아님)
-        const fromId = classNameToId[initial];
-        if (fromId) {
-          if (!removedFromClassIds.has(fromId)) removedFromClassIds.set(fromId, new Set());
-          removedFromClassIds.get(fromId)!.add(id);
-        }
       }
     });
 
