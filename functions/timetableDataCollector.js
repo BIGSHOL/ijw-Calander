@@ -232,6 +232,21 @@ async function fetchTeachers(db) {
 }
 
 /**
+ * settings/math_config 문서에서 강사/요일 순서 조회
+ * 클라이언트 useMathConfig와 동일한 출처
+ */
+async function fetchMathConfig(db) {
+    const doc = await db.collection("settings").doc("math_config").get();
+    if (!doc.exists) return { teacherOrder: [], weekdayOrder: [], weekdayGroupOrder: [] };
+    const data = doc.data() || {};
+    return {
+        teacherOrder: Array.isArray(data.teacherOrder) ? data.teacherOrder : [],
+        weekdayOrder: Array.isArray(data.weekdayOrder) ? data.weekdayOrder : [],
+        weekdayGroupOrder: Array.isArray(data.weekdayGroupOrder) ? data.weekdayGroupOrder : [],
+    };
+}
+
+/**
  * 관리자 (master/admin) 이메일 조회
  */
 async function fetchAdminEmails(db) {
@@ -262,13 +277,26 @@ async function collectTimetableData() {
     const db = getFirestore(DATABASE_ID);
 
     // 병렬 fetch
-    const [classes, enrollments, studentMap, teachers, adminEmails] = await Promise.all([
+    const [classes, enrollments, studentMap, teachers, adminEmails, mathConfig] = await Promise.all([
         fetchMathClasses(db),
         fetchMathEnrollments(db),
         fetchStudents(db),
         fetchTeachers(db),
         fetchAdminEmails(db),
+        fetchMathConfig(db),
     ]);
+
+    // 강사 순서: math_config.teacherOrder 기반 정렬 (클라이언트와 일치)
+    // teacherOrder 배열에 없는 강사는 뒤에, 같은 그룹 내에서는 이름순
+    if (mathConfig.teacherOrder.length > 0) {
+        const orderMap = new Map(mathConfig.teacherOrder.map((name, idx) => [name, idx]));
+        teachers.sort((a, b) => {
+            const ai = orderMap.has(a.name) ? orderMap.get(a.name) : 99999;
+            const bi = orderMap.has(b.name) ? orderMap.get(b.name) : 99999;
+            if (ai !== bi) return ai - bi;
+            return (a.name || "").localeCompare(b.name || "", "ko");
+        });
+    }
 
     if (classes.length === 0) {
         return { exportParams: null, teachers, adminEmails };
