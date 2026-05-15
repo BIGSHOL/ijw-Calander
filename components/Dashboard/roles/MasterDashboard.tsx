@@ -91,7 +91,21 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   const consultationLoading = consultationStatsResult.loading;
 
   // ── 헬퍼 ──
-  const isActiveEnrollment = (e: any) => !e.withdrawalDate && !e.onHold;
+  // 사용자 결정(2026-05-15): 시간표 헤더 기준과 동일하게 카운트.
+  //  - cancelledAt / onHold / withdrawalDate(과거) 인 enrollment 제외
+  //  - 미래 startDate(=배정 예정) 인 enrollment 제외 — 오늘 기준 활성만
+  const isActiveEnrollment = (e: any) => {
+    if (e.cancelledAt) return false;
+    if (e.onHold) return false;
+    const startStr = (typeof e.enrollmentDate === 'string' && e.enrollmentDate) ||
+                     (typeof e.startDate === 'string' && e.startDate) || null;
+    if (!startStr) return false;
+    if (startStr > today) return false; // 미래 시작 (배정 예정)
+    const endStr = (typeof e.withdrawalDate === 'string' && e.withdrawalDate) ||
+                   (typeof e.endDate === 'string' && e.endDate) || null;
+    if (endStr && endStr <= today) return false;
+    return true;
+  };
 
   // ── 재원생 ──
   const activeStudents = useMemo(() =>
@@ -160,13 +174,16 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   }, [students, currentMonthStart, currentMonthEnd, newStudentsThisMonth]);
 
   // ── 과목별 분포 ──
+  // 사용자 결정(2026-05-15): math + highmath 를 '수학' 으로 합산 (시간표 헤더와 동일).
+  // 2과목 수강 판정은 normalized subject 기준 (math/highmath 가 같은 과목으로 묶임).
   const subjectDistribution = useMemo(() => {
     const activeList = students.filter(s => s.status === 'active');
     const subjectCounts = { math: 0, english: 0, korean: 0, science: 0, other: 0 };
     const multiSubjectCounts: Record<number, number> = {};
+    const normalizeSubject = (sub: string) => sub === 'highmath' ? 'math' : sub;
     activeList.forEach(s => {
       const active = s.enrollments?.filter(isActiveEnrollment) || [];
-      const unique = new Set(active.map(e => e.subject));
+      const unique = new Set(active.map(e => normalizeSubject(e.subject)));
       unique.forEach(sub => { if (sub in subjectCounts) subjectCounts[sub as keyof typeof subjectCounts]++; });
       if (unique.size >= 2) multiSubjectCounts[unique.size] = (multiSubjectCounts[unique.size] || 0) + 1;
     });
