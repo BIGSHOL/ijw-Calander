@@ -22,7 +22,6 @@ const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { logger } = require("firebase-functions");
 
 const { syncAll, GOOGLE_SERVICE_ACCOUNT_KEY, getAuthClient, getDriveClient, diagnoseFolderAccess, loadSheetsMapping, saveSheetsMapping, updateSheetContent } = require("./timetableSheetsSync");
-const { FieldValue } = require("firebase-admin/firestore");
 
 const DATABASE_ID = "restore20260319";
 const REGION = "asia-northeast3";
