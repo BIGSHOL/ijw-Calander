@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, Lock as LockIcon, LogIn, UserPlus, Mail, User, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { auth, db } from '../../firebaseConfig';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { doc, setDoc, collection, query, where, getDocs, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { StaffMember } from '../../types';
 import { useEscapeClose } from '../../hooks/useEscapeClose';
 import { getTodayKST } from '../../utils/dateUtils';
@@ -48,29 +48,34 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
             if (isSignUp) {
                 // Sign Up Logic
 
-                // 1. 이메일 중복 체크 (staff 컬렉션에서 이미 uid가 연동된 같은 이메일)
+                // 1. 이메일 중복 체크 — uid 유무와 무관하게 동일 이메일 staff가 존재하면 차단
+                //    (사전 등록 직원과의 연결은 관리자가 직원관리 탭에서 수동 병합)
                 const emailCheckQuery = query(
                     collection(db, 'staff'),
                     where('email', '==', email.trim())
                 );
                 const emailCheckSnap = await getDocs(emailCheckQuery);
-                const alreadyLinked = emailCheckSnap.docs.find(d => d.data().uid);
-                if (alreadyLinked) {
-                    setError('이미 계정이 연동된 이메일입니다. 로그인해주세요.');
+                if (!emailCheckSnap.empty) {
+                    const linked = emailCheckSnap.docs.some(d => d.data().uid);
+                    setError(linked
+                        ? '이미 계정이 연동된 이메일입니다. 로그인해주세요.'
+                        : '관리자가 사전 등록한 이메일입니다. 관리자에게 계정 연동을 요청해주세요.');
                     setLoading(false);
                     return;
                 }
 
-                // 2. 이름 중복 체크 (같은 이름의 staff가 이미 uid 연동되어 있으면 차단)
+                // 2. 이름 중복 체크 — uid 유무와 무관하게 동일 이름 staff가 존재하면 차단
                 if (displayName.trim()) {
                     const nameCheckQuery = query(
                         collection(db, 'staff'),
                         where('name', '==', displayName.trim())
                     );
                     const nameCheckSnap = await getDocs(nameCheckQuery);
-                    const nameWithUid = nameCheckSnap.docs.find(d => d.data().uid);
-                    if (nameWithUid) {
-                        setError('같은 이름으로 이미 가입된 직원이 있습니다. 관리자에게 문의해주세요.');
+                    if (!nameCheckSnap.empty) {
+                        const linked = nameCheckSnap.docs.some(d => d.data().uid);
+                        setError(linked
+                            ? '같은 이름으로 이미 가입된 직원이 있습니다. 관리자에게 문의해주세요.'
+                            : '관리자가 사전 등록한 직원과 이름이 동일합니다. 관리자에게 계정 연동을 요청해주세요.');
                         setLoading(false);
                         return;
                     }
@@ -87,47 +92,27 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, canClose = tru
                     .filter(Boolean);
                 const isMaster = masterEmails.includes(email.toLowerCase());
 
-                // 이메일로 기존 staff 검색 (기존 직원이 계정 연동하는 경우)
-                const emailQuery = query(
-                    collection(db, 'staff'),
-                    where('email', '==', user.email)
-                );
-                const emailSnapshot = await getDocs(emailQuery);
-
-                if (!emailSnapshot.empty) {
-                    // 기존 staff에 uid 연동
-                    const existingStaff = emailSnapshot.docs[0];
-                    await updateDoc(existingStaff.ref, {
-                        uid: user.uid,
-                        name: displayName.trim() || existingStaff.data().name,
-                        englishName: existingStaff.data().englishName || '',
-                        phone: phone.trim() || existingStaff.data().phone || '',
-                        systemRole: isMaster ? 'master' : (existingStaff.data().systemRole || 'user'),
-                        approvalStatus: isMaster ? 'approved' : (existingStaff.data().approvalStatus || 'pending'),
-                        updatedAt: new Date().toISOString(),
-                    });
-                } else {
-                    // 신규 staff 생성 (staff 컬렉션만 사용)
-                    const newStaffRef = doc(collection(db, 'staff'));
-                    const newStaff: Partial<StaffMember> = {
-                        id: newStaffRef.id,
-                        uid: user.uid,
-                        name: displayName.trim() || email.split('@')[0],
-                        englishName: '',
-                        phone: phone.trim() || '',
-                        email: user.email || '',
-                        role: 'staff',
-                        systemRole: isMaster ? 'master' : 'user',
-                        approvalStatus: isMaster ? 'approved' : 'pending',
-                        departmentPermissions: {},
-                        favoriteDepartments: [],
-                        hireDate: getTodayKST(),
-                        status: 'active',
-                        createdAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString(),
-                    };
-                    await setDoc(newStaffRef, newStaff);
-                }
+                // 신규 staff 문서 생성 — 기존 staff에 uid를 덮어쓰지 않고 항상 새 문서로 생성한다.
+                // 이메일로 기존 staff를 자동 매칭/연동하던 로직은 계정 탈취 위험으로 제거됨.
+                const newStaffRef = doc(collection(db, 'staff'));
+                const newStaff: Partial<StaffMember> = {
+                    id: newStaffRef.id,
+                    uid: user.uid,
+                    name: displayName.trim() || email.split('@')[0],
+                    englishName: '',
+                    phone: phone.trim() || '',
+                    email: user.email || '',
+                    role: 'staff',
+                    systemRole: isMaster ? 'master' : 'user',
+                    approvalStatus: isMaster ? 'approved' : 'pending',
+                    departmentPermissions: {},
+                    favoriteDepartments: [],
+                    hireDate: getTodayKST(),
+                    status: 'active',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                };
+                await setDoc(newStaffRef, newStaff);
 
                 if (!isMaster) {
                     setError('계정이 생성되었습니다. 관리자 승인 후 로그인이 가능합니다.');

@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { User, onAuthStateChanged, signOut } from 'firebase/auth';
-import { collection, doc, getDocs, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, doc, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { UserProfile, StaffMember } from '../types';
 import { staffToUserProfile, createNewStaffMember } from '../utils/staffHelpers';
@@ -88,36 +88,13 @@ export const useAuth = ({ setCurrentUser, systemConfig, onShowLogin }: UseAuthPa
                   });
                 }
               } else {
-                const emailQuery = query(
-                  collection(db, 'staff'),
-                  where('email', '==', user.email)
-                );
-                const emailSnapshot = await getDocs(emailQuery);
-
-                if (!emailSnapshot.empty) {
-                  const existingStaff = emailSnapshot.docs[0];
-                  const existingData = existingStaff.data();
-                  const linkedRole = isMasterEmail ? 'master' : (existingData.systemRole || 'user');
-                  const linkNow = new Date().toISOString();
-
-                  const indexRef = doc(db, 'staffIndex', user.uid);
-                  await setDoc(indexRef, {
-                    staffId: existingStaff.id,
-                    systemRole: linkedRole,
-                    updatedAt: linkNow,
-                  });
-
-                  await updateDoc(existingStaff.ref, {
-                    uid: user.uid,
-                    systemRole: linkedRole,
-                    approvalStatus: isMasterEmail ? 'approved' : (existingData.approvalStatus || 'pending'),
-                    updatedAt: linkNow,
-                  });
-                } else {
-                  const newStaff = await createNewStaffMember(user, !!isMasterEmail);
-                  const profile = staffToUserProfile(newStaff);
-                  setUserProfile(profile);
-                }
+                // uid로 연동된 staff 문서가 없음.
+                // 이메일로 기존 staff를 찾아 uid를 덮어쓰던 로직은 계정 탈취 위험으로 제거됨.
+                // (다른 사람이 같은 이메일의 staff 문서를 점거 → 한쪽 Auth 삭제 시 동반 손상)
+                // 기존 직원과의 연결은 관리자가 직원관리 탭에서 수동 병합한다.
+                const newStaff = await createNewStaffMember(user, !!isMasterEmail);
+                const profile = staffToUserProfile(newStaff);
+                setUserProfile(profile);
               }
               setAuthLoading(false);
             } catch (innerError) {

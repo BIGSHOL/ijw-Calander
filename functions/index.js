@@ -1589,6 +1589,39 @@ exports.deleteStaffAccount = functions
             );
         }
 
+        // 5-1. Auth 계정과 staff 문서의 이메일 정합성 검증
+        //      staff.uid가 다른 사람의 Auth 계정을 가리키는 불일치 상태에서
+        //      엉뚱한 계정이 삭제되는 사고를 막는다.
+        //      batch.commit() 전에 검증하므로, 불일치 시 Firestore/Auth 모두 손대지 않음.
+        if (targetUid) {
+            try {
+                const authUser = await admin.auth().getUser(targetUid);
+                const authEmail = (authUser.email || "").toLowerCase();
+                const staffEmail = (staffData.email || "").toLowerCase();
+                if (staffEmail && authEmail && authEmail !== staffEmail) {
+                    throw new functions.https.HttpsError(
+                        "failed-precondition",
+                        `삭제 대상 계정의 이메일이 직원 정보와 일치하지 않습니다. ` +
+                        `(직원 정보: ${staffData.email || "없음"}, 인증 계정: ${authUser.email || "없음"}) ` +
+                        `계정 연동(uid)을 먼저 바로잡은 뒤 다시 시도해주세요.`
+                    );
+                }
+            } catch (verifyError) {
+                // 위에서 던진 정합성 에러는 그대로 전파
+                if (verifyError instanceof functions.https.HttpsError) {
+                    throw verifyError;
+                }
+                // Auth 계정이 이미 삭제된 경우(user-not-found)는 Firestore 정리만 진행
+                if (verifyError.code !== "auth/user-not-found") {
+                    logger.error(`[deleteStaffAccount] Auth 정합성 확인 실패:`, verifyError);
+                    throw new functions.https.HttpsError(
+                        "internal",
+                        "계정 정보 확인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+                    );
+                }
+            }
+        }
+
         const batch = db.batch();
 
         // 6. staffIndex 삭제

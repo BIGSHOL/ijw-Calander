@@ -57,8 +57,11 @@ service cloud.firestore {
                        resource.data.systemRole == 'master');
 
       // Update: Self or users with master/admin systemRole in their staff document
+      //  - 본인 수정: uid 필드는 변경 불가 (계정 탈취 방지 - 다른 사람의 uid로 덮어쓰기 차단)
+      //  - master/admin: 병합·복구를 위해 uid 변경 허용
       allow update: if isAuthenticated() && (
-                      resource.data.uid == request.auth.uid ||
+                      (resource.data.uid == request.auth.uid &&
+                       request.resource.data.uid == resource.data.uid) ||
                       getStaffRoleByUid(request.auth.uid) in ['master', 'admin']
                     );
 
