@@ -174,8 +174,9 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   }, [students, currentMonthStart, currentMonthEnd, newStudentsThisMonth]);
 
   // ── 과목별 분포 ──
-  // 사용자 결정(2026-05-15): math + highmath 를 '수학' 으로 합산 (시간표 헤더와 동일).
-  // 2과목 수강 판정은 normalized subject 기준 (math/highmath 가 같은 과목으로 묶임).
+  // 사용자 결정(2026-05-15): 수학 시간표 헤더와 동일하게 'math' subject 만 카운트
+  // (highmath 는 별도 / '수학' = 수학 시간표 = math 만). 영어도 시간표 헤더와 동일.
+  // 2과목 판정은 normalized (math+highmath = 1과목) — 수학·고등수학 동시 수강은 1과목.
   const subjectDistribution = useMemo(() => {
     const activeList = students.filter(s => s.status === 'active');
     const subjectCounts = { math: 0, english: 0, korean: 0, science: 0, other: 0 };
@@ -183,9 +184,12 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     const normalizeSubject = (sub: string) => sub === 'highmath' ? 'math' : sub;
     activeList.forEach(s => {
       const active = s.enrollments?.filter(isActiveEnrollment) || [];
-      const unique = new Set(active.map(e => normalizeSubject(e.subject)));
-      unique.forEach(sub => { if (sub in subjectCounts) subjectCounts[sub as keyof typeof subjectCounts]++; });
-      if (unique.size >= 2) multiSubjectCounts[unique.size] = (multiSubjectCounts[unique.size] || 0) + 1;
+      // raw subject 카운트 (수학 라벨 = math 만)
+      const rawUnique = new Set(active.map(e => e.subject));
+      rawUnique.forEach(sub => { if (sub in subjectCounts) subjectCounts[sub as keyof typeof subjectCounts]++; });
+      // 2과목 판정만 normalized
+      const normalizedUnique = new Set(active.map(e => normalizeSubject(e.subject)));
+      if (normalizedUnique.size >= 2) multiSubjectCounts[normalizedUnique.size] = (multiSubjectCounts[normalizedUnique.size] || 0) + 1;
     });
     const result = [
       { subject: '수학', count: subjectCounts.math, color: SUBJECT_COLORS.math.bg },
@@ -223,14 +227,44 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subjectDistribution.map(d => `${d.subject}:${d.count}`).join('|')]);
 
-  // 신입/퇴원 추이 카드 (옆 박스용)
-  const enrollmentCards = useMemo(() => {
-    return [
-      { key: 'new', label: '신입', count: newStudentsThisMonth, color: COLOR_MAP['신입'], trend: generateMockTrend(Math.max(1, newStudentsThisMonth), 30, 0.18) },
-      { key: 'withdrawn', label: '퇴원', count: withdrawalData.count, color: COLOR_MAP['퇴원'], trend: generateMockTrend(Math.max(1, withdrawalData.count), 30, 0.18) },
-    ];
+  // 이번 달 신입/퇴원 — 과목별 (수학 math 만 / 영어)
+  const enrollmentBySubject = useMemo(() => {
+    let mathNew = 0, englishNew = 0, mathWithdrawn = 0, englishWithdrawn = 0;
+    students.forEach(s => {
+      const hasSubject = (sub: string) => s.enrollments?.some((e: any) => e.subject === sub) ?? false;
+      // 신입 = status='active' + 이번 달 학원 등록 시작
+      if (s.status === 'active') {
+        const sd = typeof s.startDate === 'string' ? new Date(s.startDate) : null;
+        if (sd && sd >= currentMonthStart && sd <= currentMonthEnd) {
+          if (hasSubject('math')) mathNew++;
+          if (hasSubject('english')) englishNew++;
+        }
+      }
+      // 퇴원 = status='withdrawn' + 이번 달 퇴원
+      if (s.status === 'withdrawn' && s.withdrawalDate) {
+        const wd = new Date(s.withdrawalDate);
+        if (wd >= currentMonthStart && wd <= currentMonthEnd) {
+          if (hasSubject('math')) mathWithdrawn++;
+          if (hasSubject('english')) englishWithdrawn++;
+        }
+      }
+    });
+    return { mathNew, englishNew, mathWithdrawn, englishWithdrawn };
+  }, [students, currentMonthStart, currentMonthEnd]);
+
+  // 신입 박스 (수학/영어 2라인)
+  const newCards = useMemo(() => [
+    { key: 'mathNew', label: '수학 신입', count: enrollmentBySubject.mathNew, color: COLOR_MAP['수학'], trend: generateMockTrend(Math.max(1, enrollmentBySubject.mathNew), 30, 0.18) },
+    { key: 'englishNew', label: '영어 신입', count: enrollmentBySubject.englishNew, color: COLOR_MAP['영어'], trend: generateMockTrend(Math.max(1, enrollmentBySubject.englishNew), 30, 0.18) },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [newStudentsThisMonth, withdrawalData.count]);
+  ], [enrollmentBySubject.mathNew, enrollmentBySubject.englishNew]);
+
+  // 퇴원 박스 (수학/영어 2라인)
+  const withdrawnCards = useMemo(() => [
+    { key: 'mathWithdrawn', label: '수학 퇴원', count: enrollmentBySubject.mathWithdrawn, color: COLOR_MAP['수학'], trend: generateMockTrend(Math.max(1, enrollmentBySubject.mathWithdrawn), 30, 0.18) },
+    { key: 'englishWithdrawn', label: '영어 퇴원', count: enrollmentBySubject.englishWithdrawn, color: COLOR_MAP['영어'], trend: generateMockTrend(Math.max(1, enrollmentBySubject.englishWithdrawn), 30, 0.18) },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [enrollmentBySubject.mathWithdrawn, enrollmentBySubject.englishWithdrawn]);
 
   // 통합 차트 데이터 헬퍼 — cards 배열을 받아 { day, [key1]: v1, [key2]: v2, ... } row 들로
   const makeCombined = (cards: typeof trendCards) => {
@@ -243,7 +277,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     });
   };
   const combinedTrend = useMemo(() => makeCombined(trendCards), [trendCards]);
-  const enrollmentCombined = useMemo(() => makeCombined(enrollmentCards), [enrollmentCards]);
+  const newCombined = useMemo(() => makeCombined(newCards), [newCards]);
+  const withdrawnCombined = useMemo(() => makeCombined(withdrawnCards), [withdrawnCards]);
 
   // 통합 추이 차트 카드 렌더러 — 재원생/과목 박스, 신입/퇴원 박스 동일 디자인.
   // - 꺾은선(linear), 최고/최저/오늘 마커 + 라벨
@@ -503,7 +538,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               {kpiCards.map(card => <KPICard key={card.id} data={card} />)}
             </div>
 
-            {/* ── 재원생/과목별 + 신입/퇴원 추이 (통합 박스 2개) ── */}
+            {/* ── 재원생 / 신입 / 퇴원 추이 (박스 3개) ── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3">
               {renderTrendCard({
                 title: '👥 재원생',
@@ -514,12 +549,20 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 combined: combinedTrend,
               })}
               {renderTrendCard({
-                title: '🆕 신입 / 퇴원',
-                totalUnit: '명 (이번달)',
-                total: newStudentsThisMonth + withdrawalData.count,
-                totalDelta: newStudentsThisMonth - withdrawalData.count,
-                cards: enrollmentCards,
-                combined: enrollmentCombined,
+                title: '🆕 신입 (이번달)',
+                totalUnit: '명',
+                total: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
+                totalDelta: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
+                cards: newCards,
+                combined: newCombined,
+              })}
+              {renderTrendCard({
+                title: '🚪 퇴원 (이번달)',
+                totalUnit: '명',
+                total: enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn,
+                totalDelta: -(enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn),
+                cards: withdrawnCards,
+                combined: withdrawnCombined,
               })}
             </div>
 
