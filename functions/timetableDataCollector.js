@@ -22,6 +22,18 @@ const DATABASE_ID = "restore20260319";
 const MATH_PERIODS = ["1-1", "1-2", "2-1", "2-2", "3-1", "3-2", "4-1", "4-2"];
 const ALL_WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
 
+// Unified periodId (1~8) → Legacy ("1-1", "1-2", ...) 매핑 (constants.ts convertToLegacyPeriodId 동일)
+// 클라이언트 useTimetableClasses가 schedule을 legacy 형식으로 변환하므로 server도 동일하게.
+const UNIFIED_TO_LEGACY_PERIOD_MAP = {
+    "1": "1-1", "2": "1-2",
+    "3": "2-1", "4": "2-2",
+    "5": "3-1", "6": "3-2",
+    "7": "4-1", "8": "4-2",
+};
+function convertToLegacyPeriodId(periodId) {
+    return UNIFIED_TO_LEGACY_PERIOD_MAP[periodId] || periodId;
+}
+
 // ============ KST 헬퍼 ============
 
 function getTodayKST() {
@@ -95,12 +107,16 @@ async function fetchMathClasses(db) {
 
     return snapshot.docs.map(doc => {
         const data = doc.data();
-        // schedule 형식 통일: [{day, periodId}] → "월 1-1" 형태 문자열 배열
+        // schedule 형식 통일: [{day, periodId(unified)}] → "월 1-1" (legacy) 형태 문자열 배열
+        // 클라이언트 useTimetableClasses와 동일한 변환 (timetableExporter의 매칭은 legacy 기준)
         const scheduleStrings = Array.isArray(data.schedule)
             ? data.schedule.map(slot => {
                 if (typeof slot === "string") return slot;
                 if (slot && typeof slot === "object") {
-                    return `${slot.day || ""} ${slot.periodId || ""}`.trim();
+                    const day = slot.day || "";
+                    const periodId = slot.periodId || "";
+                    const legacy = convertToLegacyPeriodId(periodId);
+                    return `${day} ${legacy}`.trim();
                 }
                 return "";
             }).filter(Boolean)
