@@ -79,6 +79,13 @@ service cloud.firestore {
       allow write: if hasRole(['master']) || hasPermission('settings.holidays');
     }
 
+    // 시간표 → Google Sheets 동기화 매핑 (Functions만 쓰기, 인증 사용자 읽기)
+    // Admin SDK는 rules 우회하므로 Functions에서는 정상 동작
+    match /settings/sheetsSync {
+      allow read: if isAuthenticated();
+      allow write: if false;
+    }
+
     match /settings/{document=**} {
       allow read: if isAuthenticated();
       allow write: if hasRole(['master']) || hasPermission('settings.access');

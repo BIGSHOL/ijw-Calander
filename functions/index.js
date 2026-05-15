@@ -8020,6 +8020,18 @@ const googleCalendarSync = require("./googleCalendarSync");
 exports.syncEventToGcal = googleCalendarSync.syncEventToGcal;
 exports.triggerGcalSync = googleCalendarSync.triggerGcalSync;
 
+// ============ 시간표 → Google Sheets 자동 동기화 ============
+// timetableSheetsSync.js: Drive/Sheets API + 시트 라이프사이클
+// timetableDataCollector.js: Firestore 데이터 수집
+// timetableSyncTriggers.js: Firestore onWrite + onSchedule + HTTPS endpoint
+const timetableSyncTriggers = require("./timetableSyncTriggers");
+exports.onTimetableClassesChange = timetableSyncTriggers.onClassesChange;
+exports.onTimetableStudentsChange = timetableSyncTriggers.onStudentsChange;
+exports.onTimetableEnrollmentsChange = timetableSyncTriggers.onEnrollmentsChange;
+exports.onTimetableStaffChange = timetableSyncTriggers.onStaffChange;
+exports.syncTimetableSheetsScheduled = timetableSyncTriggers.syncTimetableSheetsScheduled;
+exports.syncTimetableSheetsNow = timetableSyncTriggers.syncTimetableSheetsNow;
+
 // ============================================================
 // MakeEdu 상세수납(payUnionDeList.do) 크롤링 → billing_makeedu_pending
 // ============================================================

@@ -29,6 +29,7 @@ import WithdrawalStudentDetail from '../../../WithdrawalManagement/WithdrawalStu
 import { WithdrawalEntry } from '../../../../hooks/useWithdrawalFilters';
 import SubjectControls from '../../shared/SubjectControls';
 import type { TimetableSubjectType } from '../../../../types';
+import SheetsLinkPanel from './SheetsLinkPanel';
 
 // 드래그 가능한 요일 아이템
 const SortableWeekdayItem = ({ id, index, total, onMoveUp, onMoveDown }: { id: string; index: number; total: number; onMoveUp: () => void; onMoveDown: () => void }) => {
@@ -120,6 +121,9 @@ interface TimetableHeaderProps {
     // 공유 링크 (마스터 전용)
     isMaster?: boolean;
     onOpenEmbedManager?: () => void;
+    // Google Sheets 동기화 패널 (강사 시트 / 관리자 동기화)
+    currentStaffId?: string | null;
+    isAdmin?: boolean;
     // 학생 데이터 (카운트용)
     studentMap?: Record<string, UnifiedStudent>;
     currentWeekStart?: Date;
@@ -218,6 +222,8 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     onPublishDraftToLive,
     onOpenScenarioModal,
     isMaster = false,
+    currentStaffId = null,
+    isAdmin = false,
     onOpenEmbedManager,
     studentMap = {},
     currentWeekStart,
@@ -913,6 +919,9 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
 
                     {/* Separator */}
                     <div className="w-px h-4 bg-white/20 mx-1"></div>
+
+                    {/* Google 스프레드시트 동기화 (강사: 내 시트 / 관리자: 전체+동기화) */}
+                    <SheetsLinkPanel currentStaffId={currentStaffId} isAdmin={isAdmin} />
 
                     {/* 더보기 드롭다운 (공유 + 저장 통합) */}
                     {(onExportImage || onExportExcel || onImportExcel || onOpenImportHistory || (isMaster && onOpenEmbedManager)) && (
