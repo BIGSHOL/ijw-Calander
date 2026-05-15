@@ -267,13 +267,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   }, [recentExams]);
 
   // ── KPI 카드 ──
+  // 재원생 카드는 통합 추이 차트 헤더에 이미 표시되므로 중복 제거 (사용자 결정 2026-05-15).
   const kpiCards: KPICardData[] = [
-    {
-      id: 'students', label: '재원생', value: activeStudents, subValue: '명',
-      trend: newStudentsThisMonth > 0 ? 'up' : 'stable',
-      trendValue: newStudentsThisMonth > 0 ? `+${newStudentsThisMonth}` : undefined,
-      icon: '👥', color: 'rgb(8, 20, 41)' /* primary */,
-    },
     {
       id: 'attendance', label: '오늘 출석률', value: `${attendanceRate}%`,
       subValue: `${presentCount}/${totalCount}`,
