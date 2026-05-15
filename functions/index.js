@@ -8066,6 +8066,7 @@ exports.syncTimetableSheetsScheduled = timetableSyncTriggers.syncTimetableSheets
 exports.syncTimetableSheetsNow = timetableSyncTriggers.syncTimetableSheetsNow;
 exports.uploadTimetableXlsx = timetableSyncTriggers.uploadTimetableXlsx;
 exports.diagnoseSheetsFolder = timetableSyncTriggers.diagnoseSheetsFolder;
+exports.exportSheetAsXlsx = timetableSyncTriggers.exportSheetAsXlsx;
 
 // ============================================================
 // MakeEdu 상세수납(payUnionDeList.do) 크롤링 → billing_makeedu_pending

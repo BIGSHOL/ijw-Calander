@@ -1155,6 +1155,42 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         };
                         input.click();
                     } : undefined}
+                    // 스프레드시트에서 가져오기 (Google Sheets → 기존 엑셀 가져오기 엔진 재사용)
+                    onImportFromSheet={(viewType === 'excel' || viewType === 'teacher') ? async () => {
+                        const url = window.prompt(
+                            'Google 스프레드시트 URL 또는 ID를 입력하세요.\n\n' +
+                            '※ 시간표 동기화 / 엑셀 내보내기로 만든 시트만 가져올 수 있습니다.\n' +
+                            '※ 해당 시트는 서비스 계정에 공유되어 있거나 "링크 있는 모든 사용자"로 설정되어 있어야 합니다.'
+                        );
+                        if (!url || !url.trim()) return;
+                        try {
+                            const { getFunctions, httpsCallable } = await import('firebase/functions');
+                            const functions = getFunctions(undefined, 'asia-northeast3');
+                            const exportFn = httpsCallable<
+                                { spreadsheetId: string },
+                                { success: boolean; xlsxBase64: string; spreadsheetId: string }
+                            >(functions, 'exportSheetAsXlsx');
+                            const res = await exportFn({ spreadsheetId: url.trim() });
+                            const xlsxBase64 = res.data?.xlsxBase64;
+                            if (!xlsxBase64) throw new Error('스프레드시트에서 데이터를 가져오지 못했습니다.');
+                            // base64 → ArrayBuffer
+                            const binary = atob(xlsxBase64);
+                            const bytes = new Uint8Array(binary.length);
+                            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                            const { parseImportedExcel, computeChanges, buildStudentLookups } =
+                                await import('./Math/utils/excelImport');
+                            const imported = await parseImportedExcel(bytes.buffer);
+                            const students = Object.values(studentMap);
+                            const lookups = buildStudentLookups(students);
+                            const changes = computeChanges(imported, lookups);
+                            setImportedExcelData(imported);
+                            setImportExcelChanges(changes);
+                            setIsImportPreviewOpen(true);
+                        } catch (err: any) {
+                            console.error('스프레드시트 가져오기 실패:', err);
+                            alert(`스프레드시트 가져오기 실패:\n${err?.message || err}`);
+                        }
+                    } : undefined}
                     // 통합뷰 전용 props
                     integrationDisplayOptions={viewType === 'class' ? mathIntegrationSettings.displayOptions : undefined}
                     onIntegrationDisplayOptionsChange={viewType === 'class' ? handleIntegrationDisplayOptionChange : undefined}

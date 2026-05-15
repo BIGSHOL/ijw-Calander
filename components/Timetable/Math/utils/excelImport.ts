@@ -138,10 +138,13 @@ export interface ImportChanges {
 
 /**
  * 엑셀 파일을 파싱해서 _meta + 주 시트 데이터를 추출.
+ *
+ * @param input - 업로드된 File (엑셀 가져오기) 또는 ArrayBuffer
+ *                 (스프레드시트 가져오기 — Google Sheets를 Drive export한 xlsx)
  */
-export async function parseImportedExcel(file: File): Promise<ImportedExcel> {
+export async function parseImportedExcel(input: File | ArrayBuffer): Promise<ImportedExcel> {
     const ExcelJS = (await import('exceljs')).default;
-    const buffer = await file.arrayBuffer();
+    const buffer = input instanceof ArrayBuffer ? input : await input.arrayBuffer();
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer);
 

@@ -322,6 +322,78 @@ const diagnoseSheetsFolder = onCall(
     }
 );
 
+/**
+ * Google 스프레드시트를 xlsx로 export하여 클라이언트에 반환 (스프레드시트 가져오기용).
+ *
+ * 사용자가 시트 URL/ID를 입력 → 이 함수가 Drive API로 시트를 xlsx로 변환 →
+ * base64 반환 → 클라이언트가 기존 엑셀 가져오기 엔진(parseImportedExcel)으로 처리.
+ *
+ * 권한: master / admin만
+ */
+const exportSheetAsXlsx = onCall(
+    {
+        region: REGION,
+        secrets: [GOOGLE_SERVICE_ACCOUNT_KEY],
+        timeoutSeconds: 120,
+        memory: "512MiB",
+    },
+    async (request) => {
+        if (!request.auth) {
+            throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+        }
+        const uid = request.auth.uid;
+        const db = getFirestore(DATABASE_ID);
+        const indexDoc = await db.collection("staffIndex").doc(uid).get();
+        const role = indexDoc.exists ? indexDoc.data().systemRole : null;
+        if (role !== "master" && role !== "admin") {
+            throw new HttpsError("permission-denied", "관리자만 스프레드시트를 가져올 수 있습니다.");
+        }
+
+        // 시트 URL 또는 ID 파싱
+        let spreadsheetId = request.data && request.data.spreadsheetId;
+        if (!spreadsheetId || typeof spreadsheetId !== "string") {
+            throw new HttpsError("invalid-argument", "시트 URL 또는 ID가 필요합니다.");
+        }
+        spreadsheetId = String(spreadsheetId).trim();
+        // URL이면 /spreadsheets/d/<ID> 에서 ID 추출
+        const urlMatch = spreadsheetId.match(/\/spreadsheets\/d\/([A-Za-z0-9_-]+)/);
+        if (urlMatch) spreadsheetId = urlMatch[1];
+
+        try {
+            const auth = getAuthClient();
+            const { google } = require("googleapis");
+            const drive = google.drive({ version: "v3", auth });
+
+            // Google Sheets → xlsx export (files.export, 10MB 제한 — 시간표는 1MB 미만)
+            const res = await drive.files.export(
+                {
+                    fileId: spreadsheetId,
+                    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                },
+                { responseType: "arraybuffer" }
+            );
+
+            const buffer = Buffer.from(res.data);
+            const xlsxBase64 = buffer.toString("base64");
+            logger.info(`[SheetsSync] 스프레드시트 export 완료: ${spreadsheetId}, size=${buffer.length} bytes`);
+            return { success: true, xlsxBase64, spreadsheetId };
+        } catch (err) {
+            logger.error("[SheetsSync] 스프레드시트 export 실패:", err);
+            const msg = err.message || String(err);
+            if (err.code === 404 || /not found|notFound/i.test(msg)) {
+                throw new HttpsError(
+                    "not-found",
+                    "시트를 찾을 수 없습니다. 시트 URL을 확인하거나, 해당 시트가 서비스 계정(firebase-adminsdk-fbsvc@ijw-calander.iam.gserviceaccount.com)에 공유되어 있는지 확인해주세요."
+                );
+            }
+            if (err.code === 403 || /forbidden|permission/i.test(msg)) {
+                throw new HttpsError("permission-denied", "시트 접근 권한이 없습니다. 시트를 서비스 계정에 공유하거나 '링크 있는 누구나'로 설정해주세요.");
+            }
+            throw new HttpsError("internal", `스프레드시트 가져오기 실패: ${msg}`);
+        }
+    }
+);
+
 module.exports = {
     onClassesChange,
     onStudentsChange,
@@ -331,4 +403,5 @@ module.exports = {
     syncTimetableSheetsNow,
     uploadTimetableXlsx,
     diagnoseSheetsFolder,
+    exportSheetAsXlsx,
 };

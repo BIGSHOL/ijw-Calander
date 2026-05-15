@@ -154,6 +154,7 @@ interface TimetableHeaderProps {
     onExportImage?: () => void;  // 이미지 저장 버튼 클릭 핸들러
     onExportExcel?: () => void;  // 엑셀 저장 버튼 클릭 핸들러
     onImportExcel?: () => void;  // 엑셀 가져오기 (라운드트립 — 테스트 중)
+    onImportFromSheet?: () => void;  // Google 스프레드시트에서 가져오기
     onOpenImportHistory?: () => void;  // 엑셀 가져오기 이력 + 되돌리기
     // 통합뷰 표시 옵션 (class viewType)
     integrationDisplayOptions?: {
@@ -255,6 +256,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     onExportImage,
     onExportExcel,
     onImportExcel,
+    onImportFromSheet,
     onOpenImportHistory,
     integrationDisplayOptions,
     onIntegrationDisplayOptionsChange,
@@ -976,6 +978,16 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                         >
                                             <FileSpreadsheet size={12} className="text-gray-500" />
                                             엑셀 가져오기
+                                        </button>
+                                    )}
+                                    {onImportFromSheet && (
+                                        <button
+                                            onClick={() => { onImportFromSheet(); setIsMoreDropdownOpen(false); }}
+                                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
+                                            title="Google 스프레드시트 URL을 입력해 그 시트의 변경을 가져오기"
+                                        >
+                                            <FileSpreadsheet size={12} className="text-green-600" />
+                                            스프레드시트에서 가져오기
                                         </button>
                                     )}
                                     {onOpenImportHistory && (
