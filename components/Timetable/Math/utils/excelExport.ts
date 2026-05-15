@@ -6,7 +6,7 @@ import {
     LEGACY_TO_UNIFIED_PERIOD_MAP,
     WEEKEND_PERIOD_TIMES,
 } from '../../constants';
-import { getClassesForCell, isSameClassNameSet } from './gridUtils';
+import { getClassesForCell, isSameClassNameSet, getConsecutiveSpan, shouldSkipCell } from './gridUtils';
 import { formatSchoolGrade } from '../../../../utils/studentUtils';
 
 export interface ExportTimetableParams {
@@ -256,9 +256,20 @@ interface ResolvedCell {
     payload: CellPayload | null;
     isGroupRightEdge: boolean;
     dayCols: Array<{ day: string; col: number }>;
-    // Sub-period 정보 (1교시 = 1-1 + 1-2): 평일 셀만 사용, 주말은 단일
+    // Sub-period 정보 (1교시 = 1-1 + 1-2): 평일 셀만 사용
     subTopClasses?: TimetableClass[];  // 1-1, 2-1, 3-1, 4-1 (firstPeriod)
     subBotClasses?: TimetableClass[];  // 1-2, 2-2, 3-2, 4-2 (secondPeriod)
+}
+
+// 주말 셀: 슬롯 단위 + getConsecutiveSpan 으로 N슬롯 세로 병합
+interface WeekendCell {
+    startCol: number;
+    endCol: number;            // 가로 병합 (같은 className 세트 요일 묶음)
+    slotIndex: number;         // 시작 슬롯 인덱스 (0~7, weekendPeriods 기준)
+    slotSpan: number;          // 연속 슬롯 수 (1~)
+    payload: CellPayload | null;
+    isGroupRightEdge: boolean;
+    dayCols: Array<{ day: string; col: number }>;
 }
 
 // 학생 행 텍스트: "김아름/5칠성초" (합반 시 "[1] 김아름/5칠성초")
@@ -575,6 +586,32 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
         renderTeacherDayRow([weekendGroup], [WEEKEND_FIRST_DAY_COL], [totalWeekendDayCols]);
     }
 
+    // ════════════════════════════════════════════════════════════════
+    //  고정 행 시간 그리드 모델
+    //  - 평일·주말 모두 1시간 단위 슬롯 8개 (1-1, 1-2, ..., 4-2)
+    //  - 1슬롯 = 고정 SLOT_ROWS 행 → 교시(2슬롯) = GROUP_ROWS 행
+    //  - 평일: 1교시(2슬롯) 블록 단위로 렌더 (수업명·강의실 시각 묶음)
+    //  - 주말: 슬롯 단위 + getConsecutiveSpan 으로 N슬롯 세로 병합 → 학생 1회 표시
+    //  - 평일 1교시 ↔ 주말 2슬롯이 같은 행 범위를 공유 → 시간 정렬 자동
+    // ════════════════════════════════════════════════════════════════
+    const SLOT_ROWS = 12;                 // 1시간 슬롯당 고정 행 수
+    const GROUP_ROWS = SLOT_ROWS * 2;     // 1교시(2슬롯) = 24행
+
+    // 평일 교시 블록 내부 섹션 행 배분 (합계 = GROUP_ROWS)
+    //   수업명 2 / 강의실 1 / 재원헤더 1 / 재원 14 / 대기헤더 1 / 대기 2 / 퇴원헤더 1 / 퇴원 1 / 카운트 1 = 24
+    const WD_NAME_ROWS = 2;
+    const WD_ROOM_ROWS = 1;
+    const WD_ACTIVE_HEADER_ROWS = 1;
+    const WD_ACTIVE_ROWS = 14;
+    const WD_HOLD_HEADER_ROWS = 1;
+    const WD_HOLD_ROWS = 2;
+    const WD_WITHDRAWN_HEADER_ROWS = 1;
+    const WD_WITHDRAWN_ROWS = 1;
+    const WD_COUNT_ROWS = 1;
+
+    // 평일 8슬롯(legacy id) — getConsecutiveSpan/shouldSkipCell 의 periods 인자
+    const WEEKDAY_SLOTS = currentPeriods.slice();  // 수학: MATH_PERIODS = ['1-1'..'4-2']
+
     // 평일 교시 그룹 사전 계산
     const weekdayPeriodGroups = MATH_GROUPED_PERIODS
         .map(gid => {
@@ -608,10 +645,10 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
         });
     });
 
+    // 주말 8슬롯 — 평일과 동일한 1시간 단위 슬롯. getConsecutiveSpan 의 periods 인자
     const weekendPeriods = currentPeriods.filter(p => WEEKEND_PERIOD_TIMES[p]);
 
-    // 주말 교시 그룹 (평일과 동일하게 1-1+1-2 = 주말 1교시로 묶음)
-    // 한 수업이 1-1·1-2 연속이면 1개 셀로 병합 — 클라이언트 시간표 그리드와 일치
+    // 주말 교시 그룹 (평일 교시 라벨과 세로 정렬용 — 4그룹 = 8슬롯)
     const weekendPeriodGroups = MATH_GROUPED_PERIODS
         .map(gid => {
             const periodIds = MATH_GROUP_PERIOD_IDS[gid];
@@ -619,7 +656,6 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
             const hasFirst = weekendPeriods.includes(firstPeriod);
             const hasSecond = weekendPeriods.includes(secondPeriod);
             if (!hasFirst && !hasSecond) return null;
-            // 주말 그룹 시간: firstPeriod 시작 ~ secondPeriod 끝
             const firstTime = WEEKEND_PERIOD_TIMES[firstPeriod] || '';
             const secondTime = WEEKEND_PERIOD_TIMES[secondPeriod] || '';
             const startT = (firstTime || secondTime).split('~')[0] || '';
@@ -649,7 +685,8 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
         });
     }
 
-    // 셀 계산 헬퍼: 평일
+    // ─── 셀 계산 헬퍼: 평일 (교시 그룹 = 2슬롯 묶음) ───
+    // 평일 수업은 한 교시(2슬롯) 안에서 끝나므로 교시 그룹 단위로 셀을 만든다.
     const computeWeekdayCells = (pg: typeof weekdayPeriodGroups[0]): ResolvedCell[] => {
         const cells: ResolvedCell[] = [];
         weekdayGroups.forEach((group, gi) => {
@@ -701,7 +738,6 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
                         dayCols.push({ day: days[di + k], col: col + k });
                         cellDays.push(days[di + k]);
                     }
-                    // Sub-period 정보: 가로 병합 시 첫 컬럼의 sub-period 사용 (병합된 셀은 모두 같은 className set)
                     const payload = buildCellPayload(cellClasses, cellDays, refStr);
                     const startCol = col;
                     const endCol = col + colSpan - 1;
@@ -722,45 +758,97 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
         return cells;
     };
 
-    // 주말 셀 계산: 평일과 동일하게 1-1+1-2 sub-period 그룹 처리
-    // (한 수업이 두 sub-period 연속이면 1셀, 다르면 위/아래 분할 — cellNeedsSubSplit)
-    const computeWeekendCells = (pg: typeof weekendPeriodGroups[0]): ResolvedCell[] => {
-        const cells: ResolvedCell[] = [];
-        let col = WEEKEND_FIRST_DAY_COL;
+    // ─── 셀 계산 헬퍼: 주말 (1시간 슬롯 단위 + N슬롯 세로 병합) ───
+    // 클라이언트 TimetableGrid 주말 렌더와 동일:
+    //   - 각 슬롯(1시간)을 순회하며 getConsecutiveSpan 으로 연속 슬롯 수 계산
+    //   - shouldSkipCell 로 이미 위 슬롯 병합 범위에 포함된 슬롯은 skip
+    //   - 같은 className 세트 + 같은 span 인 이웃 요일은 가로 병합
+    const computeWeekendCells = (): WeekendCell[] => {
+        const cells: WeekendCell[] = [];
+        if (!hasWeekend) return cells;
         const groupEndCol = WEEKEND_LAST_DAY_COL;
-        weekendResources.forEach(({ resource, days }) => {
-            days.forEach(day => {
-                if (fullyEmptyWeekendCols.has(col)) {
+
+        // (resource,day) → 컬럼 매핑
+        const dayColMap = new Map<string, number>();
+        {
+            let col = WEEKEND_FIRST_DAY_COL;
+            weekendResources.forEach(({ resource, days }) => {
+                days.forEach(day => {
+                    dayColMap.set(`${resource}__${day}`, col);
                     col++;
-                    return;
-                }
-                const firstCls = pg.hasFirst ? getClassesForCell(filteredClasses, day, pg.firstPeriod, resource, 'teacher') : [];
-                const secondCls = pg.hasSecond ? getClassesForCell(filteredClasses, day, pg.secondPeriod, resource, 'teacher') : [];
-
-                // 1-1·1-2 수업 병합 (className 기준 중복 제거)
-                const mergedSet = new Map<string, TimetableClass>();
-                firstCls.forEach(c => mergedSet.set(c.className, c));
-                secondCls.forEach(c => { if (!mergedSet.has(c.className)) mergedSet.set(c.className, c); });
-                const cellClasses = Array.from(mergedSet.values());
-
-                const payload = buildCellPayload(cellClasses, [day], refStr);
-                cells.push({
-                    startCol: col,
-                    endCol: col,
-                    payload,
-                    isGroupRightEdge: col === groupEndCol,
-                    dayCols: [{ day, col }],
-                    subTopClasses: firstCls,
-                    subBotClasses: secondCls,
                 });
-                col++;
             });
+        }
+
+        weekendResources.forEach(({ resource, days }) => {
+            for (let si = 0; si < weekendPeriods.length; si++) {
+                const slot = weekendPeriods[si];
+                let di = 0;
+                while (di < days.length) {
+                    const day = days[di];
+                    const col = dayColMap.get(`${resource}__${day}`)!;
+                    if (fullyEmptyWeekendCols.has(col)) {
+                        di++;
+                        continue;
+                    }
+                    const cellClasses = getClassesForCell(filteredClasses, day, slot, resource, 'teacher');
+
+                    // 수직 병합 skip: 위 슬롯의 병합 범위에 포함되면 건너뜀
+                    const skip = cellClasses.some(cls =>
+                        shouldSkipCell(cls, day, si, cellClasses, weekendPeriods, filteredClasses, 'teacher')
+                    );
+                    if (skip) {
+                        di++;
+                        continue;
+                    }
+
+                    // 수직 병합 span (이 수업이 몇 슬롯 연속인지)
+                    const slotSpan = Math.max(1, ...cellClasses.map(cls =>
+                        getConsecutiveSpan(cls, day, si, weekendPeriods, filteredClasses, 'teacher')
+                    ));
+
+                    // 가로 병합: 같은 className 세트 + 같은 span 인 이웃 요일
+                    let colSpan = 1;
+                    if (cellClasses.length > 0) {
+                        for (let ni = di + 1; ni < days.length; ni++) {
+                            const nDay = days[ni];
+                            const nCol = dayColMap.get(`${resource}__${nDay}`)!;
+                            if (fullyEmptyWeekendCols.has(nCol)) break;
+                            const nClasses = getClassesForCell(filteredClasses, nDay, slot, resource, 'teacher');
+                            if (nClasses.length === 0) break;
+                            if (!isSameClassNameSet(cellClasses, nClasses)) break;
+                            const nSpan = Math.max(1, ...nClasses.map(c =>
+                                getConsecutiveSpan(c, nDay, si, weekendPeriods, filteredClasses, 'teacher')
+                            ));
+                            if (nSpan !== slotSpan) break;
+                            colSpan++;
+                        }
+                    }
+
+                    const dayCols: Array<{ day: string; col: number }> = [];
+                    const cellDays: string[] = [];
+                    for (let k = 0; k < colSpan; k++) {
+                        dayCols.push({ day: days[di + k], col: col + k });
+                        cellDays.push(days[di + k]);
+                    }
+                    const payload = buildCellPayload(cellClasses, cellDays, refStr);
+                    const endCol = col + colSpan - 1;
+                    cells.push({
+                        startCol: col,
+                        endCol,
+                        slotIndex: si,
+                        slotSpan,
+                        payload,
+                        isGroupRightEdge: endCol === groupEndCol,
+                        dayCols,
+                    });
+                    di += colSpan;
+                }
+            }
         });
         return cells;
     };
 
-    // 본문 시작 row (모든 교시의 헤더부터 카운트까지)
-    const bodyStartRow = rowIdx;
     const refDateMs = new Date(refStr).getTime();
 
     // ─── 라운드트립 메타데이터 (Phase 1) ───
@@ -784,20 +872,6 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
     };
     const metaEntries: MetaEntry[] = [];
 
-    // 셀별 active/hold 사용 행 수 (공통 + max 부분 등원)
-    const cellActiveRows = (c: ResolvedCell): number => {
-        if (!c.payload) return 0;
-        const cN = c.payload.active.common.length;
-        const pMax = Math.max(0, ...Object.values(c.payload.active.partialByDay).map(arr => arr.length));
-        return cN + pMax;
-    };
-    const cellHoldRows = (c: ResolvedCell): number => {
-        if (!c.payload) return 0;
-        const cN = c.payload.hold.common.length;
-        const pMax = Math.max(0, ...Object.values(c.payload.hold.partialByDay).map(arr => arr.length));
-        return cN + pMax;
-    };
-
     // 셀의 sub-period 구조: 상/하가 다른 수업이면 분할 필요
     const cellNeedsSubSplit = (c: ResolvedCell): boolean => {
         const topNames = new Set((c.subTopClasses || []).map(cls => cls.className).filter(Boolean) as string[]);
@@ -807,289 +881,435 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
         return false;
     };
 
-    const totalPeriodCount = Math.max(weekdayPeriodGroups.length, weekendPeriodGroups.length);
+    // ════════════════════════════════════════════════════════════════
+    //  고정 행 시간 그리드: 4개 교시 블록 (각 GROUP_ROWS 행)
+    //  - 평일·주말에 등장하는 교시 그룹의 합집합을 활성 블록으로 함
+    //  - 블록 g 는 bodyStartRow 부터 GROUP_ROWS 단위로 연속 배치
+    //  - 슬롯 s (0~7) → 블록 floor(s/2), 블록 내 (s%2) 번째 SLOT_ROWS
+    // ════════════════════════════════════════════════════════════════
+    const allWeekendCells = computeWeekendCells();
 
-    for (let pi = 0; pi < totalPeriodCount; pi++) {
-        const weekdayCells = pi < weekdayPeriodGroups.length ? computeWeekdayCells(weekdayPeriodGroups[pi]) : [];
-        const weekendCells = (hasWeekend && pi < weekendPeriodGroups.length) ? computeWeekendCells(weekendPeriodGroups[pi]) : [];
-        const allCells = [...weekdayCells, ...weekendCells];
-
-        // 교시 내 max 학생 수
-        const maxActive = allCells.reduce((m, c) => Math.max(m, cellActiveRows(c)), 0);
-        const maxHold = allCells.reduce((m, c) => Math.max(m, cellHoldRows(c)), 0);
-        const maxWithdrawn = allCells.reduce((m, c) => Math.max(m, c.payload?.withdrawnStudents.length || 0), 0);
-        const hasAnyHold = maxHold > 0;
-        const hasAnyWithdrawn = maxWithdrawn > 0;
-        // 교시 내 어느 셀이라도 sub-period 분할 필요한가 (1-1만 또는 1-2만 사용하는 셀 있음)
-        const needsSubRows = allCells.some(c => c.payload && cellNeedsSubSplit(c));
-
-        // 행 인덱스 할당
-        const subTopRow = rowIdx++;
-        const subBotRow = needsSubRows ? rowIdx++ : subTopRow; // 분할 안 하면 동일
-        const roomRow = rowIdx++;
-        const activeHeaderRow = rowIdx++;
-        const activeStartRow = rowIdx;
-        const effectiveMaxActive = Math.max(1, maxActive);
-        rowIdx += effectiveMaxActive;
-        const holdHeaderRow = hasAnyHold ? rowIdx++ : 0;
-        const holdStartRow = rowIdx;
-        if (hasAnyHold) rowIdx += maxHold;
-        const withdrawnHeaderRow = hasAnyWithdrawn ? rowIdx++ : 0;
-        const withdrawnStartRow = rowIdx;
-        if (hasAnyWithdrawn) rowIdx += maxWithdrawn;
-        const countRow = rowIdx++;          // 인원 통계 행 (각 컬럼별 재원 수)
-        const periodEndRow = rowIdx - 1;
-
-        // 행 높이
-        sheet.getRow(subTopRow).height = 22;
-        if (needsSubRows) sheet.getRow(subBotRow).height = 22;
-        sheet.getRow(roomRow).height = 16;
-        sheet.getRow(activeHeaderRow).height = 18;
-        for (let r = 0; r < effectiveMaxActive; r++) sheet.getRow(activeStartRow + r).height = 16;
-        if (hasAnyHold) {
-            sheet.getRow(holdHeaderRow).height = 18;
-            for (let r = 0; r < maxHold; r++) sheet.getRow(holdStartRow + r).height = 16;
+    // 활성 교시 그룹 인덱스 (MATH_GROUPED_PERIODS 의 0~3) — 평일 ∪ 주말
+    const weekdayGroupByIdx = new Map<number, typeof weekdayPeriodGroups[0]>();
+    weekdayPeriodGroups.forEach(pg => {
+        const idx = MATH_GROUPED_PERIODS.indexOf(pg.gid as typeof MATH_GROUPED_PERIODS[number]);
+        if (idx >= 0) weekdayGroupByIdx.set(idx, pg);
+    });
+    const weekendGroupByIdx = new Map<number, typeof weekendPeriodGroups[0]>();
+    weekendPeriodGroups.forEach(pg => {
+        const idx = MATH_GROUPED_PERIODS.indexOf(pg.gid as typeof MATH_GROUPED_PERIODS[number]);
+        if (idx >= 0) weekendGroupByIdx.set(idx, pg);
+    });
+    // 주말 셀이 시작 슬롯 기준으로 어느 교시 그룹에 속하는지도 활성 블록에 반영
+    allWeekendCells.forEach(wc => {
+        const gIdx = Math.floor(wc.slotIndex / 2);
+        if (!weekendGroupByIdx.has(gIdx) && gIdx >= 0 && gIdx < MATH_GROUPED_PERIODS.length) {
+            // 라벨용 그룹 정보가 없으면 빈 그룹으로 등록 (라벨은 생략)
+            weekendGroupByIdx.set(gIdx, null as any);
         }
-        if (hasAnyWithdrawn) {
-            sheet.getRow(withdrawnHeaderRow).height = 18;
-            for (let r = 0; r < maxWithdrawn; r++) sheet.getRow(withdrawnStartRow + r).height = 16;
+    });
+    const activeGroupIndices: number[] = [];
+    for (let g = 0; g < MATH_GROUPED_PERIODS.length; g++) {
+        if (weekdayGroupByIdx.has(g) || weekendGroupByIdx.has(g)) activeGroupIndices.push(g);
+    }
+
+    // 본문 시작 row + 각 활성 블록의 시작 row
+    const bodyStartRow2 = rowIdx;
+    const blockStartRowByGroupIdx = new Map<number, number>();
+    activeGroupIndices.forEach((gIdx, order) => {
+        blockStartRowByGroupIdx.set(gIdx, bodyStartRow2 + order * GROUP_ROWS);
+    });
+    const totalBodyRows = activeGroupIndices.length * GROUP_ROWS;
+    const bodyEndRow = bodyStartRow2 + totalBodyRows - 1;
+    rowIdx = bodyEndRow + 1;
+
+    // 모든 본문 행 높이 지정 (학생 행 16, 헤더/이름 행은 그룹 렌더 시 조정)
+    for (let r = bodyStartRow2; r <= bodyEndRow; r++) {
+        sheet.getRow(r).height = 16;
+    }
+
+    // 슬롯 인덱스(0~7) → 시트 시작 row
+    const slotStartRow = (slotIdx: number): number => {
+        const gIdx = Math.floor(slotIdx / 2);
+        const blockStart = blockStartRowByGroupIdx.get(gIdx);
+        if (blockStart == null) return bodyStartRow2;
+        return blockStart + (slotIdx % 2) * SLOT_ROWS;
+    };
+
+    // ─── 셀 렌더 공통 레이아웃 ───
+    interface CellLayout {
+        nameTopRow: number;       // 수업명 상단 행
+        nameBotRow: number;       // 수업명 하단 행 (분할 시 1-2, 비분할 시 nameTopRow 와 병합)
+        roomRow: number;
+        activeHeaderRow: number;
+        activeStartRow: number;
+        activeRows: number;       // 재원 학생 표시 가능 행 수
+        holdHeaderRow: number;
+        holdStartRow: number;
+        holdRows: number;
+        withdrawnHeaderRow: number;
+        withdrawnStartRow: number;
+        withdrawnRows: number;
+        countRow: number;
+        blockEndRow: number;      // 셀이 차지하는 마지막 행
+    }
+
+    // 평일 교시 블록(2슬롯=GROUP_ROWS) 의 고정 섹션 레이아웃
+    const weekdayLayout = (blockStart: number): CellLayout => {
+        let r = blockStart;
+        const nameTopRow = r; r += WD_NAME_ROWS;
+        const roomRow = r; r += WD_ROOM_ROWS;
+        const activeHeaderRow = r; r += WD_ACTIVE_HEADER_ROWS;
+        const activeStartRow = r; r += WD_ACTIVE_ROWS;
+        const holdHeaderRow = r; r += WD_HOLD_HEADER_ROWS;
+        const holdStartRow = r; r += WD_HOLD_ROWS;
+        const withdrawnHeaderRow = r; r += WD_WITHDRAWN_HEADER_ROWS;
+        const withdrawnStartRow = r; r += WD_WITHDRAWN_ROWS;
+        const countRow = r; r += WD_COUNT_ROWS;
+        return {
+            nameTopRow, nameBotRow: nameTopRow + 1,
+            roomRow, activeHeaderRow, activeStartRow, activeRows: WD_ACTIVE_ROWS,
+            holdHeaderRow, holdStartRow, holdRows: WD_HOLD_ROWS,
+            withdrawnHeaderRow, withdrawnStartRow, withdrawnRows: WD_WITHDRAWN_ROWS,
+            countRow, blockEndRow: r - 1,
+        };
+    };
+
+    // 주말 셀(N슬롯 = N*SLOT_ROWS) 의 적응형 레이아웃
+    //   고정: 이름 2 / 강의실 1 / 재원헤더 1 / 카운트 1 = 5
+    //   대기/퇴원 섹션은 학생이 있을 때만 행 예약 → 재원 영역 최대화
+    const weekendLayout = (cell: WeekendCell): CellLayout => {
+        const blockStart = slotStartRow(cell.slotIndex);
+        const totalRows = cell.slotSpan * SLOT_ROWS;
+        const p = cell.payload;
+        const holdCount = p ? cellHoldRowsFromPayload(p) : 0;
+        const wdCount = p ? p.withdrawnStudents.length : 0;
+        const holdRows = holdCount > 0 ? holdCount : 0;
+        const withdrawnRows = wdCount > 0 ? wdCount : 0;
+        const holdHeader = holdRows > 0 ? 1 : 0;
+        const withdrawnHeader = withdrawnRows > 0 ? 1 : 0;
+        // 고정 행: 이름2 + 강의실1 + 재원헤더1 + 카운트1 = 5
+        const fixed = WD_NAME_ROWS + WD_ROOM_ROWS + WD_ACTIVE_HEADER_ROWS + WD_COUNT_ROWS;
+        const reserved = fixed + holdHeader + holdRows + withdrawnHeader + withdrawnRows;
+        const activeRows = Math.max(1, totalRows - reserved);
+
+        let r = blockStart;
+        const nameTopRow = r; r += WD_NAME_ROWS;
+        const roomRow = r; r += WD_ROOM_ROWS;
+        const activeHeaderRow = r; r += WD_ACTIVE_HEADER_ROWS;
+        const activeStartRow = r; r += activeRows;
+        const holdHeaderRow = r; r += holdHeader;
+        const holdStartRow = r; r += holdRows;
+        const withdrawnHeaderRow = r; r += withdrawnHeader;
+        const withdrawnStartRow = r; r += withdrawnRows;
+        const countRow = blockStart + totalRows - 1;  // 카운트는 항상 맨 마지막 행
+        return {
+            nameTopRow, nameBotRow: nameTopRow + 1,
+            roomRow, activeHeaderRow, activeStartRow, activeRows,
+            holdHeaderRow: holdHeader > 0 ? holdHeaderRow : 0,
+            holdStartRow, holdRows,
+            withdrawnHeaderRow: withdrawnHeader > 0 ? withdrawnHeaderRow : 0,
+            withdrawnStartRow, withdrawnRows,
+            countRow, blockEndRow: blockStart + totalRows - 1,
+        };
+    };
+
+    // payload 기준 hold 행 수 (공통 + max 부분 등원)
+    function cellHoldRowsFromPayload(p: CellPayload): number {
+        const cN = p.hold.common.length;
+        const pMax = Math.max(0, ...Object.values(p.hold.partialByDay).map(arr => arr.length));
+        return cN + pMax;
+    }
+
+    // ─── 통합 셀 렌더 함수 ───
+    // weekday/weekend 공통. layout 의 섹션 행 인덱스에 맞춰 그린다.
+    const renderCell = (opts: {
+        startCol: number;
+        endCol: number;
+        payload: CellPayload | null;
+        isGroupRightEdge: boolean;
+        dayCols: Array<{ day: string; col: number }>;
+        subTopClasses?: TimetableClass[];
+        subBotClasses?: TimetableClass[];
+        layout: CellLayout;
+        forceSubSplit: boolean;     // 평일: 교시 내 다른 셀이 분할되면 이름 2행 분할 정렬 위해
+    }) => {
+        const { startCol, endCol, payload, isGroupRightEdge, dayCols, subTopClasses, subBotClasses, layout, forceSubSplit } = opts;
+        const rightBorder = isGroupRightEdge ? MEDIUM : THICK;
+        const colSpan = endCol - startCol + 1;
+        const L = layout;
+
+        const mergeAndGet = (row: number) => {
+            if (colSpan > 1) sheet.mergeCells(row, startCol, row, endCol);
+            return sheet.getCell(row, startCol);
+        };
+
+        if (!payload) {
+            // 빈 셀: 셀 영역 전체 회색 세로/가로 병합
+            sheet.mergeCells(L.nameTopRow, startCol, L.blockEndRow, endCol);
+            const c = sheet.getCell(L.nameTopRow, startCol);
+            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EMPTY_BG } };
+            c.border = { top: THIN, bottom: THICK, left: THIN, right: rightBorder };
+            return;
         }
-        sheet.getRow(countRow).height = 20;
 
-        // 평일 교시 라벨 (좌측 첫 컬럼) — subTopRow ~ countRow 세로 병합
-        if (pi < weekdayPeriodGroups.length) {
-            const pg = weekdayPeriodGroups[pi];
-            sheet.mergeCells(subTopRow, WEEKDAY_PERIOD_COL, countRow, WEEKDAY_PERIOD_COL);
-            const pl = sheet.getCell(subTopRow, WEEKDAY_PERIOD_COL);
-            pl.value = `${pg.info.label}\n${pg.info.time}`;
-            pl.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9FAFB' } };
-            pl.font = { bold: true, color: { argb: 'FF000000' }, size: 11 };
-            pl.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-            pl.border = { top: THIN, bottom: THICK, left: MEDIUM, right: THICK };
-        } else if (hasWeekend) {
-            sheet.mergeCells(subTopRow, WEEKDAY_PERIOD_COL, countRow, WEEKDAY_PERIOD_COL);
-            const pl = sheet.getCell(subTopRow, WEEKDAY_PERIOD_COL);
-            pl.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFAFAFA' } };
-            pl.border = { top: THIN, bottom: THIN, left: MEDIUM, right: THICK };
-        }
+        const isMergedClass = payload.uniqueClassNames.length > 1;
+        const nameBg = payload.bgColor || 'FFFFFFFF';
+        const nameFg = payload.textColor || 'FF111827';
 
-        // 주말 교시 라벨
-        if (hasWeekend && pi < weekendPeriodGroups.length) {
-            const pg = weekendPeriodGroups[pi];
-            sheet.mergeCells(subTopRow, WEEKEND_PERIOD_COL, countRow, WEEKEND_PERIOD_COL);
-            const pl = sheet.getCell(subTopRow, WEEKEND_PERIOD_COL);
-            pl.value = `${pg.info.label}\n${pg.info.time}`;
-            pl.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GROUP_COLORS['주말'].light } };
-            pl.font = { bold: true, color: { argb: 'FF000000' }, size: 11 };
-            pl.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-            pl.border = { top: THIN, bottom: THICK, left: MEDIUM, right: THICK };
-        } else if (hasWeekend) {
-            sheet.mergeCells(subTopRow, WEEKEND_PERIOD_COL, countRow, WEEKEND_PERIOD_COL);
-            const pl = sheet.getCell(subTopRow, WEEKEND_PERIOD_COL);
-            pl.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFAFAFA' } };
-            pl.border = { top: THIN, bottom: THIN, left: MEDIUM, right: THICK };
-        }
+        const topNames = Array.from(new Set((subTopClasses || []).map(c => c.className).filter(Boolean) as string[]));
+        const botNames = Array.from(new Set((subBotClasses || []).map(c => c.className).filter(Boolean) as string[]));
+        // 이 셀이 sub-period 분할 필요한지 (상/하 수업 세트가 다름)
+        const splits = (() => {
+            if (topNames.length !== botNames.length) return true;
+            const bSet = new Set(botNames);
+            return topNames.some(n => !bSet.has(n));
+        })();
+        const cellSplitsSub = forceSubSplit && splits;
 
-        // 각 셀 렌더
-        allCells.forEach(cell => {
-            const { startCol, endCol, payload, isGroupRightEdge, dayCols, subTopClasses, subBotClasses } = cell;
-            const rightBorder = isGroupRightEdge ? MEDIUM : THICK;
-            const colSpan = endCol - startCol + 1;
+        const primaryClassId = payload.classes[0]?.id || '';
+        const primaryClassName = payload.uniqueClassNames[0] || '';
 
-            const mergeAndGet = (row: number) => {
-                if (colSpan > 1) sheet.mergeCells(row, startCol, row, endCol);
-                return sheet.getCell(row, startCol);
-            };
+        // 1) 수업명 행 (이름 2행 — 비분할 시 병합, 분할 시 위/아래)
+        if (!cellSplitsSub) {
+            sheet.mergeCells(L.nameTopRow, startCol, L.nameBotRow, endCol);
+            const nc = sheet.getCell(L.nameTopRow, startCol);
+            nc.value = payload.headerLines
+                .map((name, i) => isMergedClass ? `[${i + 1}] ${name}` : name)
+                .join('\n');
+            nc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: nameBg } };
+            nc.font = { bold: true, color: { argb: nameFg }, size: 10 };
+            nc.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+            nc.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
 
-            if (!payload) {
-                // 빈 셀: 전체 교시 영역 회색 세로/가로 병합
-                sheet.mergeCells(subTopRow, startCol, periodEndRow, endCol);
-                const c = sheet.getCell(subTopRow, startCol);
-                c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EMPTY_BG } };
-                c.border = { top: THIN, bottom: THICK, left: THIN, right: rightBorder };
-                return;
-            }
-
-            const isMergedClass = payload.uniqueClassNames.length > 1;
-            const nameBg = payload.bgColor || 'FFFFFFFF';
-            const nameFg = payload.textColor || 'FF111827';
-
-            // 1) Sub-period 수업명 행 (위/아래)
-            const topNames = Array.from(new Set((subTopClasses || []).map(c => c.className).filter(Boolean) as string[]));
-            const botNames = Array.from(new Set((subBotClasses || []).map(c => c.className).filter(Boolean) as string[]));
-            const cellSplitsSub = needsSubRows && cellNeedsSubSplit(cell);
-
-            // 합반의 경우 첫 수업 id를 대표값으로 (Phase 2에서 합반 처리 보강 예정)
-            const primaryClassId = payload.classes[0]?.id || '';
-            const primaryClassName = payload.uniqueClassNames[0] || '';
-
-            if (!needsSubRows || !cellSplitsSub) {
-                // 분할 안 함 → subTopRow ~ subBotRow 세로 병합 (둘 다 같은 수업 또는 교시 전체가 분할 불요)
-                if (needsSubRows) {
-                    sheet.mergeCells(subTopRow, startCol, subBotRow, endCol);
-                } else if (colSpan > 1) {
-                    sheet.mergeCells(subTopRow, startCol, subTopRow, endCol);
-                }
-                const nc = sheet.getCell(subTopRow, startCol);
-                nc.value = payload.headerLines
-                    .map((name, i) => isMergedClass ? `[${i + 1}] ${name}` : name)
-                    .join('\n');
-                nc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: nameBg } };
-                nc.font = { bold: true, color: { argb: nameFg }, size: 10 };
-                nc.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-                nc.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
-
-                // 메타: 통합 수업명 셀
-                metaEntries.push({
-                    kind: 'class_name',
-                    row: subTopRow,
-                    startCol,
-                    endCol,
-                    subPeriod: 'both',
-                    classId: primaryClassId,
-                    classNameSnapshot: primaryClassName,
-                    bgColorSnapshot: nameBg,
-                    textColorSnapshot: nameFg,
-                });
-            } else {
-                // Sub-period 분할: 위/아래 각각 표시
-                // 위 (1-1)
-                if (colSpan > 1) sheet.mergeCells(subTopRow, startCol, subTopRow, endCol);
-                const ntc = sheet.getCell(subTopRow, startCol);
-                if (topNames.length > 0) {
-                    const topFirst = (subTopClasses || []).find(c => c.className) || payload.classes[0];
-                    const topBg = topFirst?.bgColor ? hexToARGB(topFirst.bgColor, 'FFFFFFFF') : nameBg;
-                    const topFg = topFirst?.textColor ? hexToARGB(topFirst.textColor, 'FF111827') : nameFg;
-                    ntc.value = topNames.map((name, i) => isMergedClass ? `[${i + 1}] ${name}` : name).join('\n');
-                    ntc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: topBg } };
-                    ntc.font = { bold: true, color: { argb: topFg }, size: 10 };
-
-                    metaEntries.push({
-                        kind: 'class_name',
-                        row: subTopRow,
-                        startCol,
-                        endCol,
-                        subPeriod: 'top',
-                        classId: topFirst?.id || '',
-                        classNameSnapshot: topNames[0] || '',
-                        bgColorSnapshot: topBg,
-                        textColorSnapshot: topFg,
-                    });
-                } else {
-                    ntc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EMPTY_BG } };
-                }
-                ntc.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-                ntc.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
-
-                // 아래 (1-2)
-                if (colSpan > 1) sheet.mergeCells(subBotRow, startCol, subBotRow, endCol);
-                const nbc = sheet.getCell(subBotRow, startCol);
-                if (botNames.length > 0) {
-                    const botFirst = (subBotClasses || []).find(c => c.className) || payload.classes[0];
-                    const botBg = botFirst?.bgColor ? hexToARGB(botFirst.bgColor, 'FFFFFFFF') : nameBg;
-                    const botFg = botFirst?.textColor ? hexToARGB(botFirst.textColor, 'FF111827') : nameFg;
-                    nbc.value = botNames.map((name, i) => isMergedClass ? `[${i + 1}] ${name}` : name).join('\n');
-                    nbc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: botBg } };
-                    nbc.font = { bold: true, color: { argb: botFg }, size: 10 };
-
-                    metaEntries.push({
-                        kind: 'class_name',
-                        row: subBotRow,
-                        startCol,
-                        endCol,
-                        subPeriod: 'bot',
-                        classId: botFirst?.id || '',
-                        classNameSnapshot: botNames[0] || '',
-                        bgColorSnapshot: botBg,
-                        textColorSnapshot: botFg,
-                    });
-                } else {
-                    nbc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EMPTY_BG } };
-                }
-                nbc.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-                nbc.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
-            }
-
-            // 2) 강의실 행
-            const rc = mergeAndGet(roomRow);
-            const roomText = payload.roomLines.filter(r => r).join(' / ');
-            rc.value = roomText;
-            rc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
-            rc.font = { color: { argb: 'FF374151' }, size: 9 };
-            rc.alignment = { horizontal: 'center', vertical: 'middle' };
-            rc.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
-
-            // 메타: 강의실 셀
             metaEntries.push({
-                kind: 'class_room',
-                row: roomRow,
+                kind: 'class_name',
+                row: L.nameTopRow,
                 startCol,
                 endCol,
+                subPeriod: 'both',
                 classId: primaryClassId,
-                roomSnapshot: roomText,
+                classNameSnapshot: primaryClassName,
+                bgColorSnapshot: nameBg,
+                textColorSnapshot: nameFg,
             });
-
-            // 3) 재원 헤더 ("N명 - 재원생")
-            const ah = mergeAndGet(activeHeaderRow);
-            if (payload.activeTotal > 0) {
-                ah.value = `${payload.activeTotal}명 - 재원생`;
-                ah.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEF2FF' } };
-                ah.font = { bold: true, color: { argb: 'FF4F46E5' }, size: 9 };
+        } else {
+            // 위 (1-1)
+            if (colSpan > 1) sheet.mergeCells(L.nameTopRow, startCol, L.nameTopRow, endCol);
+            const ntc = sheet.getCell(L.nameTopRow, startCol);
+            if (topNames.length > 0) {
+                const topFirst = (subTopClasses || []).find(c => c.className) || payload.classes[0];
+                const topBg = topFirst?.bgColor ? hexToARGB(topFirst.bgColor, 'FFFFFFFF') : nameBg;
+                const topFg = topFirst?.textColor ? hexToARGB(topFirst.textColor, 'FF111827') : nameFg;
+                ntc.value = topNames.map((name, i) => isMergedClass ? `[${i + 1}] ${name}` : name).join('\n');
+                ntc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: topBg } };
+                ntc.font = { bold: true, color: { argb: topFg }, size: 10 };
+                metaEntries.push({
+                    kind: 'class_name',
+                    row: L.nameTopRow,
+                    startCol,
+                    endCol,
+                    subPeriod: 'top',
+                    classId: topFirst?.id || '',
+                    classNameSnapshot: topNames[0] || '',
+                    bgColorSnapshot: topBg,
+                    textColorSnapshot: topFg,
+                });
             } else {
-                ah.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+                ntc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EMPTY_BG } };
             }
-            ah.alignment = { horizontal: 'center', vertical: 'middle' };
-            ah.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
+            ntc.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+            ntc.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
 
-            // 4) 재원 학생 행들: 공통(가로병합) + 부분 등원(요일 컬럼)
-            const commonActive = payload.active.common;
-            const partialActive = payload.active.partialByDay;
-            const partialActiveMax = Math.max(0, ...Object.values(partialActive).map(arr => arr.length));
+            // 아래 (1-2)
+            if (colSpan > 1) sheet.mergeCells(L.nameBotRow, startCol, L.nameBotRow, endCol);
+            const nbc = sheet.getCell(L.nameBotRow, startCol);
+            if (botNames.length > 0) {
+                const botFirst = (subBotClasses || []).find(c => c.className) || payload.classes[0];
+                const botBg = botFirst?.bgColor ? hexToARGB(botFirst.bgColor, 'FFFFFFFF') : nameBg;
+                const botFg = botFirst?.textColor ? hexToARGB(botFirst.textColor, 'FF111827') : nameFg;
+                nbc.value = botNames.map((name, i) => isMergedClass ? `[${i + 1}] ${name}` : name).join('\n');
+                nbc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: botBg } };
+                nbc.font = { bold: true, color: { argb: botFg }, size: 10 };
+                metaEntries.push({
+                    kind: 'class_name',
+                    row: L.nameBotRow,
+                    startCol,
+                    endCol,
+                    subPeriod: 'bot',
+                    classId: botFirst?.id || '',
+                    classNameSnapshot: botNames[0] || '',
+                    bgColorSnapshot: botBg,
+                    textColorSnapshot: botFg,
+                });
+            } else {
+                nbc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EMPTY_BG } };
+            }
+            nbc.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+            nbc.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
+        }
+        sheet.getRow(L.nameTopRow).height = 22;
+        sheet.getRow(L.nameBotRow).height = 22;
 
-            for (let i = 0; i < effectiveMaxActive; i++) {
-                const row = activeStartRow + i;
-                if (i < commonActive.length) {
-                    // 공통 학생: 가로 병합
+        // 2) 강의실 행
+        const rc = mergeAndGet(L.roomRow);
+        const roomText = payload.roomLines.filter(r => r).join(' / ');
+        rc.value = roomText;
+        rc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+        rc.font = { color: { argb: 'FF374151' }, size: 9 };
+        rc.alignment = { horizontal: 'center', vertical: 'middle' };
+        rc.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
+        sheet.getRow(L.roomRow).height = 16;
+        metaEntries.push({
+            kind: 'class_room',
+            row: L.roomRow,
+            startCol,
+            endCol,
+            classId: primaryClassId,
+            roomSnapshot: roomText,
+        });
+
+        // 3) 재원 헤더
+        const ah = mergeAndGet(L.activeHeaderRow);
+        if (payload.activeTotal > 0) {
+            ah.value = `${payload.activeTotal}명 - 재원생`;
+            ah.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEF2FF' } };
+            ah.font = { bold: true, color: { argb: 'FF4F46E5' }, size: 9 };
+        } else {
+            ah.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+        }
+        ah.alignment = { horizontal: 'center', vertical: 'middle' };
+        ah.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
+        sheet.getRow(L.activeHeaderRow).height = 18;
+
+        // 4) 재원 학생 행: 공통(가로병합) + 부분 등원(요일 컬럼)
+        const commonActive = payload.active.common;
+        const partialActive = payload.active.partialByDay;
+        const partialActiveMax = Math.max(0, ...Object.values(partialActive).map(arr => arr.length));
+        const usedActive = commonActive.length + partialActiveMax;
+        if (usedActive > L.activeRows) {
+            console.warn(`[excelExport] 재원 학생 ${usedActive}명이 고정 행(${L.activeRows})을 초과 — 일부 잘림 (반: ${primaryClassName})`);
+        }
+
+        for (let i = 0; i < L.activeRows; i++) {
+            const row = L.activeStartRow + i;
+            if (i < commonActive.length) {
+                const c = mergeAndGet(row);
+                const meta = commonActive[i];
+                const style = resolveStudentStyle(meta.student, refDateMs);
+                const textVal = formatStudentRowText(meta, isMergedClass);
+                c.value = textVal;
+                c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.bgARGB } };
+                c.font = { bold: style.bold, color: { argb: style.fgARGB }, size: 9, name: 'Malgun Gothic' };
+                c.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+                c.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
+                metaEntries.push({
+                    kind: 'student',
+                    row,
+                    startCol,
+                    endCol,
+                    section: 'active',
+                    studentId: meta.student.id || '',
+                    studentNameSnapshot: textVal,
+                    sourceClassId: primaryClassId,
+                });
+            } else if (i < commonActive.length + partialActiveMax) {
+                const pIdx = i - commonActive.length;
+                dayCols.forEach(({ day, col }, dci) => {
+                    const dayList = partialActive[day] || [];
+                    const cc = sheet.getCell(row, col);
+                    if (pIdx < dayList.length) {
+                        const meta = dayList[pIdx];
+                        const style = resolveStudentStyle(meta.student, refDateMs);
+                        const textVal = formatStudentRowText(meta, isMergedClass);
+                        cc.value = textVal;
+                        cc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.bgARGB } };
+                        cc.font = { bold: style.bold, color: { argb: style.fgARGB }, size: 9, name: 'Malgun Gothic' };
+                        metaEntries.push({
+                            kind: 'student',
+                            row,
+                            startCol: col,
+                            endCol: col,
+                            section: 'active',
+                            studentId: meta.student.id || '',
+                            studentNameSnapshot: textVal,
+                            sourceClassId: primaryClassId,
+                        });
+                    } else {
+                        cc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+                    }
+                    cc.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+                    cc.border = {
+                        top: THIN,
+                        bottom: THIN,
+                        left: THIN,
+                        right: dci === dayCols.length - 1 ? rightBorder : THIN,
+                    };
+                });
+            } else {
+                // 빈 행 (정렬용)
+                const c = mergeAndGet(row);
+                c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+                c.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
+            }
+        }
+
+        // 5) 대기 섹션
+        if (L.holdHeaderRow > 0 && L.holdRows > 0) {
+            const hh = mergeAndGet(L.holdHeaderRow);
+            if (payload.holdTotal > 0) {
+                hh.value = `${payload.holdTotal}명 - 대기`;
+                hh.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF9C3' } };
+                hh.font = { bold: true, color: { argb: 'FFCA8A04' }, size: 9 };
+            } else {
+                hh.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
+            }
+            hh.alignment = { horizontal: 'center', vertical: 'middle' };
+            hh.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
+            sheet.getRow(L.holdHeaderRow).height = 18;
+
+            const commonHold = payload.hold.common;
+            const partialHold = payload.hold.partialByDay;
+            const partialHoldMax = Math.max(0, ...Object.values(partialHold).map(arr => arr.length));
+
+            for (let i = 0; i < L.holdRows; i++) {
+                const row = L.holdStartRow + i;
+                if (i < commonHold.length) {
                     const c = mergeAndGet(row);
-                    const meta = commonActive[i];
-                    const style = resolveStudentStyle(meta.student, refDateMs);
+                    const meta = commonHold[i];
                     const textVal = formatStudentRowText(meta, isMergedClass);
                     c.value = textVal;
-                    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.bgARGB } };
-                    c.font = { bold: style.bold, color: { argb: style.fgARGB }, size: 9, name: 'Malgun Gothic' };
+                    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+                    c.font = { color: { argb: 'FF92400E' }, size: 9, name: 'Malgun Gothic' };
                     c.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
                     c.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
-
                     metaEntries.push({
                         kind: 'student',
                         row,
                         startCol,
                         endCol,
-                        section: 'active',
+                        section: 'hold',
                         studentId: meta.student.id || '',
                         studentNameSnapshot: textVal,
                         sourceClassId: primaryClassId,
                     });
-                } else if (i < commonActive.length + partialActiveMax) {
-                    // 부분 등원: 요일 컬럼에만 표시
-                    const pIdx = i - commonActive.length;
+                } else if (i < commonHold.length + partialHoldMax) {
+                    const pIdx = i - commonHold.length;
                     dayCols.forEach(({ day, col }, dci) => {
-                        const dayList = partialActive[day] || [];
+                        const dayList = partialHold[day] || [];
                         const cc = sheet.getCell(row, col);
                         if (pIdx < dayList.length) {
                             const meta = dayList[pIdx];
-                            const style = resolveStudentStyle(meta.student, refDateMs);
                             const textVal = formatStudentRowText(meta, isMergedClass);
                             cc.value = textVal;
-                            cc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.bgARGB } };
-                            cc.font = { bold: style.bold, color: { argb: style.fgARGB }, size: 9, name: 'Malgun Gothic' };
-
+                            cc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+                            cc.font = { color: { argb: 'FF92400E' }, size: 9, name: 'Malgun Gothic' };
                             metaEntries.push({
                                 kind: 'student',
                                 row,
                                 startCol: col,
                                 endCol: col,
-                                section: 'active',
+                                section: 'hold',
                                 studentId: meta.student.id || '',
                                 studentNameSnapshot: textVal,
                                 sourceClassId: primaryClassId,
@@ -1106,162 +1326,158 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
                         };
                     });
                 } else {
-                    // 빈 행 (가로 정렬용)
                     const c = mergeAndGet(row);
                     c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
                     c.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
                 }
             }
+        }
 
-            // 5) 대기 섹션
-            if (hasAnyHold) {
-                const hh = mergeAndGet(holdHeaderRow);
-                if (payload.holdTotal > 0) {
-                    hh.value = `${payload.holdTotal}명 - 대기`;
-                    hh.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF9C3' } };
-                    hh.font = { bold: true, color: { argb: 'FFCA8A04' }, size: 9 };
-                } else {
-                    hh.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
-                }
-                hh.alignment = { horizontal: 'center', vertical: 'middle' };
-                hh.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
-
-                const commonHold = payload.hold.common;
-                const partialHold = payload.hold.partialByDay;
-                const partialHoldMax = Math.max(0, ...Object.values(partialHold).map(arr => arr.length));
-
-                for (let i = 0; i < maxHold; i++) {
-                    const row = holdStartRow + i;
-                    if (i < commonHold.length) {
-                        const c = mergeAndGet(row);
-                        const meta = commonHold[i];
-                        const textVal = formatStudentRowText(meta, isMergedClass);
-                        c.value = textVal;
-                        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
-                        c.font = { color: { argb: 'FF92400E' }, size: 9, name: 'Malgun Gothic' };
-                        c.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-                        c.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
-
-                        metaEntries.push({
-                            kind: 'student',
-                            row,
-                            startCol,
-                            endCol,
-                            section: 'hold',
-                            studentId: meta.student.id || '',
-                            studentNameSnapshot: textVal,
-                            sourceClassId: primaryClassId,
-                        });
-                    } else if (i < commonHold.length + partialHoldMax) {
-                        const pIdx = i - commonHold.length;
-                        dayCols.forEach(({ day, col }, dci) => {
-                            const dayList = partialHold[day] || [];
-                            const cc = sheet.getCell(row, col);
-                            if (pIdx < dayList.length) {
-                                const meta = dayList[pIdx];
-                                const textVal = formatStudentRowText(meta, isMergedClass);
-                                cc.value = textVal;
-                                cc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
-                                cc.font = { color: { argb: 'FF92400E' }, size: 9, name: 'Malgun Gothic' };
-
-                                metaEntries.push({
-                                    kind: 'student',
-                                    row,
-                                    startCol: col,
-                                    endCol: col,
-                                    section: 'hold',
-                                    studentId: meta.student.id || '',
-                                    studentNameSnapshot: textVal,
-                                    sourceClassId: primaryClassId,
-                                });
-                            } else {
-                                cc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
-                            }
-                            cc.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-                            cc.border = {
-                                top: THIN,
-                                bottom: THIN,
-                                left: THIN,
-                                right: dci === dayCols.length - 1 ? rightBorder : THIN,
-                            };
-                        });
-                    } else {
-                        const c = mergeAndGet(row);
-                        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } };
-                        c.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
-                    }
-                }
+        // 6) 퇴원 섹션 (검정 배경)
+        if (L.withdrawnHeaderRow > 0 && L.withdrawnRows > 0) {
+            const wh = mergeAndGet(L.withdrawnHeaderRow);
+            if (payload.withdrawnStudents.length > 0) {
+                wh.value = `${payload.withdrawnStudents.length}명 - 퇴원`;
+                wh.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 9 };
             }
+            wh.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: WITHDRAWN_BG } };
+            wh.alignment = { horizontal: 'center', vertical: 'middle' };
+            wh.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
+            sheet.getRow(L.withdrawnHeaderRow).height = 18;
 
-            // 6) 퇴원 섹션 (▼ 제거, 검정 배경)
-            if (hasAnyWithdrawn) {
-                const wh = mergeAndGet(withdrawnHeaderRow);
-                if (payload.withdrawnStudents.length > 0) {
-                    wh.value = `${payload.withdrawnStudents.length}명 - 퇴원`;
-                    wh.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 9 };
+            for (let i = 0; i < L.withdrawnRows; i++) {
+                const row = L.withdrawnStartRow + i;
+                const c = mergeAndGet(row);
+                if (i < payload.withdrawnStudents.length) {
+                    const meta = payload.withdrawnStudents[i];
+                    const textVal = formatStudentRowText(meta, isMergedClass);
+                    c.value = textVal;
+                    c.font = { color: { argb: 'FFD1D5DB' }, size: 9, name: 'Malgun Gothic' };
+                    metaEntries.push({
+                        kind: 'student',
+                        row,
+                        startCol,
+                        endCol,
+                        section: 'withdrawn',
+                        studentId: meta.student.id || '',
+                        studentNameSnapshot: textVal,
+                        sourceClassId: primaryClassId,
+                    });
                 }
-                wh.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: WITHDRAWN_BG } };
-                wh.alignment = { horizontal: 'center', vertical: 'middle' };
-                wh.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
-
-                for (let i = 0; i < maxWithdrawn; i++) {
-                    const row = withdrawnStartRow + i;
-                    const c = mergeAndGet(row);
-                    if (i < payload.withdrawnStudents.length) {
-                        const meta = payload.withdrawnStudents[i];
-                        const textVal = formatStudentRowText(meta, isMergedClass);
-                        c.value = textVal;
-                        c.font = { color: { argb: 'FFD1D5DB' }, size: 9, name: 'Malgun Gothic' };
-
-                        metaEntries.push({
-                            kind: 'student',
-                            row,
-                            startCol,
-                            endCol,
-                            section: 'withdrawn',
-                            studentId: meta.student.id || '',
-                            studentNameSnapshot: textVal,
-                            sourceClassId: primaryClassId,
-                        });
-                    }
-                    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: WITHDRAWN_BG } };
-                    c.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-                    c.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
-                }
+                c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: WITHDRAWN_BG } };
+                c.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+                c.border = { top: THIN, bottom: THIN, left: THIN, right: rightBorder };
             }
+        }
 
-            // 7) 인원 통계 행 (각 컬럼별 재원 인원수)
-            dayCols.forEach(({ day, col }, dci) => {
-                const dayCount = commonActive.length + (partialActive[day]?.length || 0);
-                const cc = sheet.getCell(countRow, col);
-                cc.value = dayCount;
-                cc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
-                cc.font = { bold: true, color: { argb: 'FF111827' }, size: 10 };
-                cc.alignment = { horizontal: 'center', vertical: 'middle' };
-                cc.border = {
-                    top: THICK,
-                    bottom: THICK,
-                    left: THIN,
-                    right: dci === dayCols.length - 1 ? rightBorder : THIN,
-                };
-            });
+        // 7) 인원 통계 행 (각 컬럼별 재원 인원수)
+        sheet.getRow(L.countRow).height = 20;
+        dayCols.forEach(({ day, col }, dci) => {
+            const dayCount = commonActive.length + (partialActive[day]?.length || 0);
+            const cc = sheet.getCell(L.countRow, col);
+            cc.value = dayCount;
+            cc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
+            cc.font = { bold: true, color: { argb: 'FF111827' }, size: 10 };
+            cc.alignment = { horizontal: 'center', vertical: 'middle' };
+            cc.border = {
+                top: THICK,
+                bottom: THICK,
+                left: THIN,
+                right: dci === dayCols.length - 1 ? rightBorder : THIN,
+            };
         });
-    }
+    };
+
+    // ─── 교시 그룹 블록별 렌더 ───
+    activeGroupIndices.forEach(gIdx => {
+        const blockStart = blockStartRowByGroupIdx.get(gIdx)!;
+        const blockEnd = blockStart + GROUP_ROWS - 1;
+        const weekdayPg = weekdayGroupByIdx.get(gIdx);
+        const weekendPg = weekendGroupByIdx.get(gIdx);
+
+        // 평일 교시 라벨 (좌측 첫 컬럼) — 블록 전체 세로 병합
+        sheet.mergeCells(blockStart, WEEKDAY_PERIOD_COL, blockEnd, WEEKDAY_PERIOD_COL);
+        const wpl = sheet.getCell(blockStart, WEEKDAY_PERIOD_COL);
+        if (weekdayPg) {
+            wpl.value = `${weekdayPg.info.label}\n${weekdayPg.info.time}`;
+            wpl.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF9FAFB' } };
+            wpl.font = { bold: true, color: { argb: 'FF000000' }, size: 11 };
+            wpl.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+            wpl.border = { top: THIN, bottom: THICK, left: MEDIUM, right: THICK };
+        } else {
+            wpl.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFAFAFA' } };
+            wpl.border = { top: THIN, bottom: THIN, left: MEDIUM, right: THICK };
+        }
+
+        // 주말 교시 라벨
+        if (hasWeekend) {
+            sheet.mergeCells(blockStart, WEEKEND_PERIOD_COL, blockEnd, WEEKEND_PERIOD_COL);
+            const epl = sheet.getCell(blockStart, WEEKEND_PERIOD_COL);
+            if (weekendPg) {
+                epl.value = `${weekendPg.info.label}\n${weekendPg.info.time}`;
+                epl.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GROUP_COLORS['주말'].light } };
+                epl.font = { bold: true, color: { argb: 'FF000000' }, size: 11 };
+                epl.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+                epl.border = { top: THIN, bottom: THICK, left: MEDIUM, right: THICK };
+            } else {
+                epl.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFAFAFA' } };
+                epl.border = { top: THIN, bottom: THIN, left: MEDIUM, right: THICK };
+            }
+        }
+
+        // 평일 셀 렌더 — 교시 그룹 단위 고정 레이아웃
+        if (weekdayPg) {
+            const wdCells = computeWeekdayCells(weekdayPg);
+            // 교시 내 어느 셀이라도 sub-period 분할 필요하면 모든 셀 이름 2행 정렬
+            const forceSubSplit = wdCells.some(c => c.payload && cellNeedsSubSplit(c));
+            const layout = weekdayLayout(blockStart);
+            wdCells.forEach(cell => {
+                renderCell({
+                    startCol: cell.startCol,
+                    endCol: cell.endCol,
+                    payload: cell.payload,
+                    isGroupRightEdge: cell.isGroupRightEdge,
+                    dayCols: cell.dayCols,
+                    subTopClasses: cell.subTopClasses,
+                    subBotClasses: cell.subBotClasses,
+                    layout,
+                    forceSubSplit,
+                });
+            });
+        }
+    });
+
+    // 주말 셀 렌더 — 슬롯 단위 + N슬롯 세로 병합 (블록 경계 넘을 수 있음)
+    allWeekendCells.forEach(cell => {
+        const layout = weekendLayout(cell);
+        renderCell({
+            startCol: cell.startCol,
+            endCol: cell.endCol,
+            payload: cell.payload,
+            isGroupRightEdge: cell.isGroupRightEdge,
+            dayCols: cell.dayCols,
+            // 주말은 sub-period 분할 없음 (슬롯=1시간 단위, getConsecutiveSpan 이 병합 처리)
+            subTopClasses: cell.payload?.classes || [],
+            subBotClasses: cell.payload?.classes || [],
+            layout,
+            forceSubSplit: false,
+        });
+    });
 
     // ─── 완전 빈 (강사×요일) 컬럼 세로 병합 ───
-    const lastBodyRow = rowIdx - 1;
+    const lastBodyRow = bodyEndRow;
     fullyEmptyWeekdayCols.forEach(col => {
-        if (lastBodyRow >= bodyStartRow) {
-            sheet.mergeCells(bodyStartRow, col, lastBodyRow, col);
-            const c = sheet.getCell(bodyStartRow, col);
+        if (lastBodyRow >= bodyStartRow2) {
+            sheet.mergeCells(bodyStartRow2, col, lastBodyRow, col);
+            const c = sheet.getCell(bodyStartRow2, col);
             c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EMPTY_BG } };
             c.border = { top: THIN, bottom: THICK, left: THIN, right: THICK };
         }
     });
     fullyEmptyWeekendCols.forEach(col => {
-        if (lastBodyRow >= bodyStartRow) {
-            sheet.mergeCells(bodyStartRow, col, lastBodyRow, col);
-            const c = sheet.getCell(bodyStartRow, col);
+        if (lastBodyRow >= bodyStartRow2) {
+            sheet.mergeCells(bodyStartRow2, col, lastBodyRow, col);
+            const c = sheet.getCell(bodyStartRow2, col);
             c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EMPTY_BG } };
             c.border = { top: THIN, bottom: THICK, left: THIN, right: THICK };
         }
