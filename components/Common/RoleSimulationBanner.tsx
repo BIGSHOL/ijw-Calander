@@ -61,7 +61,25 @@ export function RoleSimulationBanner({
   // 로컬 UI 상태: 역할 시뮬레이션 vs 사용자 시뮬레이션
   const [mode, setMode] = useState<SimulationMode>('role');
 
-  // 마스터가 아니면 표시하지 않음
+  // 시뮬레이션 가능한 사용자 (마스터 제외, 승인된 사용자만) - rerender-memo
+  // Hooks 규칙: 모든 훅은 early return 보다 먼저 호출되어야 함
+  const simulatableUsers = useMemo(() =>
+    availableUsers.filter(u => u.role !== 'master' && u.status === 'approved'),
+    [availableUsers]
+  );
+
+  // 역할별로 그룹화 - rerender-memo
+  const usersByRole = useMemo(() =>
+    simulatableUsers.reduce((acc, user) => {
+      const role = user.role || 'user';
+      if (!acc[role]) acc[role] = [];
+      acc[role].push(user);
+      return acc;
+    }, {} as Record<UserRole, UserProfile[]>),
+    [simulatableUsers]
+  );
+
+  // 마스터가 아니면 표시하지 않음 (모든 훅 호출 이후에 early return)
   if (actualRole !== 'master') {
     return null;
   }
@@ -80,23 +98,6 @@ export function RoleSimulationBanner({
       startUserSimulation(selectedUser);
     }
   };
-
-  // 시뮬레이션 가능한 사용자 (마스터 제외, 승인된 사용자만) - rerender-memo
-  const simulatableUsers = useMemo(() =>
-    availableUsers.filter(u => u.role !== 'master' && u.status === 'approved'),
-    [availableUsers]
-  );
-
-  // 역할별로 그룹화 - rerender-memo
-  const usersByRole = useMemo(() =>
-    simulatableUsers.reduce((acc, user) => {
-      const role = user.role || 'user';
-      if (!acc[role]) acc[role] = [];
-      acc[role].push(user);
-      return acc;
-    }, {} as Record<UserRole, UserProfile[]>),
-    [simulatableUsers]
-  );
 
   // 시뮬레이션 중이 아니고 축소 상태일 때: 작은 플로팅 버튼 (외부 트리거 사용 시 숨김)
   if (!isSimulating && !isExpanded) {

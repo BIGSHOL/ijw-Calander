@@ -18,16 +18,8 @@ const TabGroupDropdown: React.FC<TabGroupDropdownProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // 이 그룹에서 접근 가능한 탭 필터링
-  const visibleTabs = group.tabs.filter(tab => accessibleTabs.includes(tab));
-
-  // 접근 가능한 탭이 없으면 그룹 자체를 숨김
-  if (visibleTabs.length === 0) return null;
-
-  // 현재 탭이 이 그룹에 속하는지 확인
-  const isActive = currentTab && visibleTabs.includes(currentTab);
-
   // 외부 클릭 시 드롭다운 닫기
+  // Hooks 규칙: 모든 훅은 early return 보다 먼저 호출되어야 함
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {

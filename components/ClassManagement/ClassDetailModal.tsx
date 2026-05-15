@@ -127,7 +127,9 @@ const ClassDetailModal: React.FC<ClassDetailModalProps> = ({
   );
 
   // ==================== 편집 모드 훅 ====================
-  const simulationContext = isSimulationMode ? useSimulationOptional() : null;
+  // Hooks 규칙: useSimulationOptional 은 항상 호출하고 사용 여부만 분기
+  const simulationCtxValue = useSimulationOptional();
+  const simulationContext = isSimulationMode ? simulationCtxValue : null;
   const updateClassMutation = useUpdateClass();
   const manageStudentsMutation = useManageClassStudents();
   const { staff } = useStaff();

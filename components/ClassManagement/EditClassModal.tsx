@@ -31,7 +31,9 @@ const WEEKDAY_ORDER: Record<string, number> = { '월': 0, '화': 1, '수': 2, '�
 const EditClassModal: React.FC<EditClassModalProps> = ({ classInfo, initialSlotTeachers, onClose, isSimulationMode = false }) => {
   useEscapeClose(() => onClose());
   const { handleMouseDown: handleDragMouseDown, dragStyle } = useDraggable();
-  const simulationContext = isSimulationMode ? useSimulationOptional() : null;
+  // Hooks 규칙: useSimulationOptional 은 항상 호출하고 사용 여부만 분기
+  const simulationCtxValue = useSimulationOptional();
+  const simulationContext = isSimulationMode ? simulationCtxValue : null;
   const [className, setClassName] = useState(classInfo.className);
   const [teacher, setTeacher] = useState(classInfo.teacher);
   const [room, setRoom] = useState(classInfo.room || '');

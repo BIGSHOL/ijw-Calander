@@ -19,19 +19,8 @@ interface DashboardTabProps {
  * - 역할이 불명확해도 기본 대시보드 제공
  */
 const DashboardTab: React.FC<DashboardTabProps> = ({ userProfile, staffMember }) => {
-  // userProfile이 없는 경우 (로딩 중이거나 오류)
-  if (!userProfile) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-sm animate-spin" />
-          <span className="text-sm text-gray-500">로딩 중...</span>
-        </div>
-      </div>
-    );
-  }
-
   // 역할 결정 로직
+  // Hooks 규칙: 모든 훅은 early return 보다 먼저 호출되어야 함
   const dashboardRole: DashboardRole = useMemo(() => {
     const systemRole = userProfile?.role;
     const jobRole = staffMember?.role;
@@ -59,6 +48,18 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ userProfile, staffMember })
     // 기본값: staff (역할이 명확하지 않은 경우)
     return 'staff';
   }, [userProfile?.role, staffMember?.role]);
+
+  // userProfile이 없는 경우 (로딩 중이거나 오류) — 모든 훅 호출 이후 early return
+  if (!userProfile) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-sm animate-spin" />
+          <span className="text-sm text-gray-500">로딩 중...</span>
+        </div>
+      </div>
+    );
+  }
 
   // 에러 바운더리: 렌더링 중 오류 발생 시 대체 UI
   try {
