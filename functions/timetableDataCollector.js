@@ -99,9 +99,10 @@ function computeCurrentWeek(now) {
  * classes 컬렉션에서 수학 수업 조회
  */
 async function fetchMathClasses(db) {
+    // math + highmath 모두 포함 (수학 시간표는 두 과목 같이 표시)
     const snapshot = await db
         .collection("classes")
-        .where("subject", "==", "math")
+        .where("subject", "in", ["math", "highmath"])
         .where("isActive", "==", true)
         .get();
 
@@ -139,14 +140,14 @@ async function fetchMathClasses(db) {
 }
 
 /**
- * 모든 학생의 enrollment 조회 (수학 과목)
- * collectionGroup('enrollments')로 한 번에 조회
+ * 모든 학생의 enrollment 조회
+ * collectionGroup('enrollments')로 한 번에 조회.
+ * subject 필터 제거 — className 매칭으로 자연 필터링되므로, 일부 학생이 highmath/math 등
+ * 다른 과목으로 등록된 경우에도 같은 className의 수업에 잘 매칭됨.
+ * (반이동 학생이 누락되는 문제 해결)
  */
 async function fetchMathEnrollments(db) {
-    const snapshot = await db
-        .collectionGroup("enrollments")
-        .where("subject", "==", "math")
-        .get();
+    const snapshot = await db.collectionGroup("enrollments").get();
 
     const today = getTodayKST();
 
