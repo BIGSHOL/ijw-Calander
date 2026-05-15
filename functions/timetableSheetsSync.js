@@ -348,6 +348,8 @@ async function syncFullSheet(auth, exportParams, _adminEmails, _teacherEmails) {
     const mapping = await loadSheetsMapping();
     const parentFolderId = mapping.parentFolderId || null;
 
+    logger.info(`[SheetsSync] syncFullSheet 시작. parentFolderId=${JSON.stringify(parentFolderId)}, mapping keys=${Object.keys(mapping || {}).join(",")}`);
+
     const xlsxBuffer = await exportMathTimetableToBuffer(exportParams);
 
     let sheetId = mapping.all && mapping.all.sheetId;
