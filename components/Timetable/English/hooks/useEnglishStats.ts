@@ -210,25 +210,6 @@ export const useEnglishStats = (
         });
         newStudents.sort((a, b) => (b.enrollmentDate || '').localeCompare(a.enrollmentDate || ''));
 
-        // [DEBUG-2026-05-15] 영어 시간표 헤더 카운트 불일치 추적용. 확인 후 제거.
-        if (typeof window !== 'undefined') {
-            (window as any).__ENG_STATS_DEBUG__ = {
-                today,
-                classCount: Object.keys(classDataMap || {}).length,
-                bestDataCount: studentBestData.size,
-                activeIds: [...activeStudentIds],
-                activeCount: activeStudentIds.size,
-                waitingCount: waitingStudentIds.size,
-            };
-            console.log('[ENG-STATS]', {
-                today,
-                classCount: Object.keys(classDataMap || {}).length,
-                bestDataCount: studentBestData.size,
-                activeCount: activeStudentIds.size,
-                waitingCount: waitingStudentIds.size,
-            });
-        }
-
         return {
             active: activeStudentIds.size,
             new1: new1StudentIds.size,
