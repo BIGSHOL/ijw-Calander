@@ -44,7 +44,10 @@ function translateError(err) {
 
     // 가장 흔한 케이스부터
     if (lower.includes("storage quota") || code === "storageQuotaExceeded") {
-        return "Google Drive 저장 공간이 부족합니다. 원장님 Drive에 폴더를 만들고 서비스 계정에 편집자 권한을 부여한 뒤, 폴더 ID를 settings/sheetsSync.parentFolderId에 등록해주세요.";
+        return "Google Drive 저장 공간 부족 — 시트는 새로 만들지 말고 원장님이 미리 만든 빈 시트의 ID를 settings/sheetsSync.spreadsheetId에 등록한 뒤 update 방식으로 동기화해주세요.";
+    }
+    if (lower.includes("spreadsheetid가 등록되지 않")) {
+        return raw; // 이미 한글 자세한 안내
     }
     // "File not found: <ID>" → 폴더 접근 권한 부족 (Drive API는 권한 없는 리소스를 not found로 응답)
     if (lower.startsWith("file not found:")) {
@@ -339,39 +342,44 @@ async function setSyncInProgress(value) {
 // ============ 전체 시트 ============
 
 /**
- * 전체 시트 (모든 강사 포함) 동기화
- * - 시트 없으면 생성 + "링크 있는 누구나 편집자" 권한 설정
- * - 있으면 xlsx 덮어쓰기
+ * 전체 시트 동기화
+ *
+ * 동작 방식:
+ * - settings/sheetsSync.spreadsheetId가 있으면 → 그 시트에 xlsx 덮어쓰기 (update만)
+ *   · 시트 owner는 등록자(원장님) → 원장님 Drive quota 사용 → quota 문제 해결
+ *   · 서비스 계정은 편집자 권한으로 update만 수행 (storage 차지 안 함)
+ * - 없으면 → 에러 (이전처럼 자동 생성하면 서비스 계정 owner 되어 quota 0 문제)
+ *
+ * (옵션 A — 사용자가 빈 시트 1개 미리 생성 + ID 등록 + 서비스 계정 편집자 공유)
  */
 async function syncFullSheet(auth, exportParams, _adminEmails, _teacherEmails) {
     const drive = getDriveClient(auth);
     const mapping = await loadSheetsMapping();
-    const parentFolderId = mapping.parentFolderId || null;
+    const spreadsheetId = (mapping.spreadsheetId || "").trim();
 
-    logger.info(`[SheetsSync] syncFullSheet 시작. parentFolderId=${JSON.stringify(parentFolderId)}, mapping keys=${Object.keys(mapping || {}).join(",")}`);
+    logger.info(`[SheetsSync] syncFullSheet 시작. spreadsheetId=${JSON.stringify(spreadsheetId)}, mapping keys=${Object.keys(mapping || {}).join(",")}`);
+
+    if (!spreadsheetId) {
+        throw new Error(
+            "settings/sheetsSync.spreadsheetId가 등록되지 않았습니다. " +
+            "원장님 Drive에 빈 Google Sheets 1개를 만들고, " +
+            "그 시트에 서비스 계정(firebase-adminsdk-fbsvc@ijw-calander.iam.gserviceaccount.com)을 " +
+            "편집자로 공유한 뒤, 시트 ID를 spreadsheetId 필드에 등록해주세요."
+        );
+    }
 
     const xlsxBuffer = await exportMathTimetableToBuffer(exportParams);
 
-    let sheetId = mapping.all && mapping.all.sheetId;
-    let url = mapping.all && mapping.all.url;
+    // 시트 내용 덮어쓰기 (storage quota는 시트 owner인 원장님 Drive 사용)
+    await updateSheetContent(drive, spreadsheetId, xlsxBuffer);
+    logger.info(`[SheetsSync] 전체 시트 갱신: ${spreadsheetId}`);
 
-    if (!sheetId) {
-        const name = `[전체 시간표] ${exportParams.subjectFilter || "수학"}`;
-        const created = await createNewSheet(drive, name, xlsxBuffer, parentFolderId);
-        sheetId = created.sheetId;
-        url = created.url;
-        logger.info(`[SheetsSync] 전체 시트 생성: ${sheetId} (parentFolder: ${parentFolderId || "없음"})`);
-
-        // 링크 있는 누구나 편집자 권한
-        await shareWithAnyoneAsEditor(drive, sheetId);
-    } else {
-        await updateSheetContent(drive, sheetId, xlsxBuffer);
-        logger.info(`[SheetsSync] 전체 시트 갱신: ${sheetId}`);
-    }
+    // 시트 URL 구성 (확장 가능)
+    const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
 
     await saveSheetsMapping({
         all: {
-            sheetId,
+            sheetId: spreadsheetId,
             url,
             lastSyncedAt: FieldValue.serverTimestamp(),
         },
@@ -495,33 +503,12 @@ async function syncAll(opts = {}) {
         const activeTeachers = teachers.filter(t => t.isActive !== false);
         const teacherEmails = activeTeachers.map(t => t.email).filter(Boolean);
 
-        // 1) 전체 시트
+        // 1) 전체 시트 (단일 시트, 사용자 등록 spreadsheetId에 update)
         const fullResult = await syncFullSheet(auth, exportParams, adminEmails, teacherEmails);
 
-        // 2) 활성 강사 시트
+        // 2) 강사별 시트는 Phase 2에서 단일 시트 안의 워크시트(탭)로 통합 예정.
+        //    현재는 전체 시트만 작동. (옵션 A 방식 — 서비스 계정의 Drive quota 0 제약 회피)
         const teacherResults = [];
-        for (const teacher of activeTeachers) {
-            try {
-                const r = await syncTeacherSheet(auth, teacher, exportParams, adminEmails);
-                teacherResults.push({ teacherId: teacher.id, ...r });
-                await sleep(200); // Drive API rate limit 대비
-            } catch (err) {
-                logger.error(`[SheetsSync] 강사 ${teacher.name} 동기화 실패:`, err.message);
-            }
-        }
-
-        // 3) 매핑에 있지만 강사 목록에 없는 시트 → 비활성화 (시트 자체는 보존)
-        const reloadedMapping = await loadSheetsMapping();
-        const activeTeacherIds = new Set(activeTeachers.map(t => t.id));
-        const mappedTeacherIds = Object.keys(reloadedMapping.byTeacherId || {});
-        for (const teacherId of mappedTeacherIds) {
-            if (!activeTeacherIds.has(teacherId)) {
-                const entry = reloadedMapping.byTeacherId[teacherId];
-                if (entry && entry.isActive !== false) {
-                    await deactivateTeacherSheet(teacherId);
-                }
-            }
-        }
 
         // 4) 최종 매핑 업데이트
         await saveSheetsMapping({
