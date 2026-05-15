@@ -258,6 +258,14 @@ async function collectTimetableData() {
         return { exportParams: null, teachers, adminEmails };
     }
 
+    // 디버그: 첫 수업의 schedule 형식 로깅 (매칭 진단용 — 임시)
+    const sample = classes[0];
+    const { logger } = require("firebase-functions");
+    logger.info(
+        `[Collector] classes=${classes.length}, enrollments=${enrollments.length}, students=${studentMap.size}, teachers=${teachers.length}. ` +
+        `샘플 수업: name=${sample.className}, teacher=${sample.teacher}, schedule=${JSON.stringify(sample.schedule)}`
+    );
+
     // 각 수업에 학생 리스트 붙이기 (className 기준 매칭)
     const enrollmentsByClassName = new Map();
     enrollments.forEach(e => {

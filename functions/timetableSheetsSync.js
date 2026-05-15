@@ -385,7 +385,7 @@ async function syncFullSheet(auth, exportParams, _adminEmails, _teacherEmails) {
         },
     });
 
-    return { sheetId, url };
+    return { sheetId: spreadsheetId, url };
 }
 
 // ============ 강사별 시트 ============
