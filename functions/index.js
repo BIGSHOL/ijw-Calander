@@ -8031,6 +8031,7 @@ exports.onTimetableEnrollmentsChange = timetableSyncTriggers.onEnrollmentsChange
 exports.onTimetableStaffChange = timetableSyncTriggers.onStaffChange;
 exports.syncTimetableSheetsScheduled = timetableSyncTriggers.syncTimetableSheetsScheduled;
 exports.syncTimetableSheetsNow = timetableSyncTriggers.syncTimetableSheetsNow;
+exports.diagnoseSheetsFolder = timetableSyncTriggers.diagnoseSheetsFolder;
 
 // ============================================================
 // MakeEdu 상세수납(payUnionDeList.do) 크롤링 → billing_makeedu_pending

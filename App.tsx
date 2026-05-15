@@ -280,7 +280,6 @@ const App: React.FC = () => {
     if (!effectiveProfile || appMode !== 'timetable') return;
 
     const userDepts = effectiveProfile.departments || ['math', 'highmath', 'english', 'science', 'korean'];
-    console.log('[DEBUG App] effectiveProfile.departments:', effectiveProfile.departments, 'userDepts:', userDepts);
     const canViewMath = (hasPermission('timetable.math.view') || hasPermission('timetable.math.edit')) && userDepts.includes('math');
     const canViewHighmath = (hasPermission('timetable.math.view') || hasPermission('timetable.math.edit')) && userDepts.includes('highmath');
     const canViewEnglish = (hasPermission('timetable.english.view') || hasPermission('timetable.english.edit')) && userDepts.includes('english');

@@ -114,8 +114,6 @@ export async function fetchReportsByMonth(yearMonth: string): Promise<EdutrixRep
     const lastDay = new Date(year, month, 0).getDate();
     const endDate = `${yearMonth}-${String(lastDay).padStart(2, '0')}`;
 
-    console.log(`[Supabase] 월별 보고서 조회 시작: ${yearMonth} (${startDate} ~ ${endDate})`);
-
     // Supabase 기본 1000건 제한을 우회하기 위해 페이지네이션 사용
     const PAGE_SIZE = 1000;
     let allData: any[] = [];
@@ -152,7 +150,6 @@ export async function fetchReportsByMonth(yearMonth: string): Promise<EdutrixRep
 
         const fetched = data || [];
         allData = allData.concat(fetched);
-        console.log(`[Supabase] 페이지 ${Math.floor(from / PAGE_SIZE) + 1}: ${fetched.length}건 (누적 ${allData.length}건)`);
 
         if (fetched.length < PAGE_SIZE) {
             hasMore = false;
@@ -160,8 +157,6 @@ export async function fetchReportsByMonth(yearMonth: string): Promise<EdutrixRep
             from += PAGE_SIZE;
         }
     }
-
-    console.log(`[Supabase] 총 조회 결과: ${allData.length}건`);
 
     if (allData.length === 0) {
         console.warn('[Supabase] 0건 반환 — RLS 정책이 anon 접근을 차단하고 있을 수 있습니다.');
@@ -187,13 +182,6 @@ export async function fetchReportsByMonth(yearMonth: string): Promise<EdutrixRep
         };
     });
 
-    if (mapped.length > 0) {
-        const uniqueStudents = [...new Set(mapped.map(r => r.student_name).filter(Boolean))];
-        const uniqueTeachers = [...new Set(mapped.map(r => r.teacher_name).filter(Boolean))];
-        console.log(`[Supabase] 고유 학생 ${uniqueStudents.length}명: ${uniqueStudents.join(', ')}`);
-        console.log(`[Supabase] 고유 선생님 ${uniqueTeachers.length}명: ${uniqueTeachers.join(', ')}`);
-    }
-
     return mapped;
 }
 
@@ -207,8 +195,6 @@ export async function fetchStudentReports(studentName: string, limit: number = 1
         console.warn('[Supabase] 클라이언트가 초기화되지 않았습니다. 빈 결과를 반환합니다.');
         return [];
     }
-
-    console.log(`[Supabase] 학생별 보고서 조회 시작: ${studentName} (최근 ${limit}개)`);
 
     // 먼저 students 테이블에서 학생 ID를 조회
     const { data: studentData, error: studentError } = await supabase
@@ -275,8 +261,6 @@ export async function fetchStudentReports(studentName: string, limit: number = 1
         };
     });
 
-    console.log(`[Supabase] 학생별 보고서 조회 완료: ${mapped.length}건`);
-
     return mapped;
 }
 
@@ -289,8 +273,6 @@ export async function fetchAllLatestReports(): Promise<Map<string, EdutrixReport
         console.warn('[Supabase] 클라이언트가 초기화되지 않았습니다. 빈 결과를 반환합니다.');
         return new Map();
     }
-
-    console.log('[Supabase] 전체 학생 최근 보고서 조회 시작');
 
     // 모든 보고서를 날짜 기준 내림차순으로 조회
     const { data, error } = await supabase
@@ -350,8 +332,6 @@ export async function fetchAllLatestReports(): Promise<Map<string, EdutrixReport
 
         latestReportsMap.set(studentName, report);
     });
-
-    console.log(`[Supabase] 전체 학생 최근 보고서 조회 완료: ${latestReportsMap.size}명`);
 
     return latestReportsMap;
 }

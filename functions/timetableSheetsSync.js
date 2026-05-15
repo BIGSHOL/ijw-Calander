@@ -46,6 +46,12 @@ function translateError(err) {
     if (lower.includes("storage quota") || code === "storageQuotaExceeded") {
         return "Google Drive 저장 공간이 부족합니다. 원장님 Drive에 폴더를 만들고 서비스 계정에 편집자 권한을 부여한 뒤, 폴더 ID를 settings/sheetsSync.parentFolderId에 등록해주세요.";
     }
+    // "File not found: <ID>" → 폴더 접근 권한 부족 (Drive API는 권한 없는 리소스를 not found로 응답)
+    if (lower.startsWith("file not found:")) {
+        const idMatch = raw.match(/File not found:\s*([A-Za-z0-9_-]+)/);
+        const id = idMatch ? idMatch[1] : "";
+        return `폴더 또는 시트에 접근 권한이 없습니다 (${id}). 서비스 계정(firebase-adminsdk-fbsvc@ijw-calander.iam.gserviceaccount.com)이 해당 폴더의 "편집자"로 공유되었는지 확인해주세요.`;
+    }
     if (lower.includes("rate limit") || code === "rateLimitExceeded") {
         return "Google API 호출 제한을 초과했습니다. 잠시 후 자동으로 다시 시도됩니다.";
     }
@@ -129,28 +135,94 @@ async function createNewSheet(drive, name, xlsxBuffer, parentFolderId) {
     const { Readable } = require("stream");
     const stream = Readable.from(xlsxBuffer);
 
+    // parentFolderId의 보이지 않는 공백 / URL 잔여물 제거
+    const cleanFolderId = parentFolderId
+        ? String(parentFolderId).trim().replace(/^.*\/folders\//, "").replace(/[\?&].*$/, "")
+        : null;
+
     const requestBody = {
         name,
         mimeType: "application/vnd.google-apps.spreadsheet",
     };
-    if (parentFolderId) {
-        requestBody.parents = [parentFolderId];
+    if (cleanFolderId) {
+        requestBody.parents = [cleanFolderId];
     }
 
-    const res = await drive.files.create({
-        requestBody,
-        media: {
-            mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            body: stream,
-        },
-        fields: "id, webViewLink",
-        supportsAllDrives: true,  // 공유 드라이브 폴더도 지원
-    });
+    try {
+        const res = await drive.files.create({
+            requestBody,
+            media: {
+                mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                body: stream,
+            },
+            fields: "id, webViewLink",
+            supportsAllDrives: true,
+        });
 
-    return {
-        sheetId: res.data.id,
-        url: res.data.webViewLink,
-    };
+        return {
+            sheetId: res.data.id,
+            url: res.data.webViewLink,
+        };
+    } catch (err) {
+        // 폴더 접근 실패 시 더 자세한 진단 추가
+        const msg = err.message || "";
+        if (cleanFolderId && msg.includes("File not found")) {
+            logger.error(`[SheetsSync] createNewSheet 실패. 폴더 진단 시작: ${cleanFolderId}`);
+            try {
+                const folder = await drive.files.get({
+                    fileId: cleanFolderId,
+                    fields: "id, name, mimeType, capabilities, owners",
+                    supportsAllDrives: true,
+                });
+                logger.error(`[SheetsSync] 폴더는 조회 가능: ${JSON.stringify(folder.data)}`);
+                // 폴더 조회는 되지만 파일 생성 실패 → 권한 부족 (편집자 아닌 뷰어 등)
+                const newErr = new Error(`폴더 ${cleanFolderId} 접근은 가능하나 파일 생성 권한 없음. 서비스 계정을 "편집자"로 공유해주세요. (현재 권한: ${JSON.stringify(folder.data.capabilities)})`);
+                newErr.code = err.code;
+                throw newErr;
+            } catch (diagErr) {
+                if (diagErr.message && diagErr.message.includes("File not found")) {
+                    logger.error(`[SheetsSync] 폴더 자체 조회 실패: ${cleanFolderId} → 서비스 계정에 공유 안 됨`);
+                    const newErr = new Error(`폴더 ${cleanFolderId}에 접근 권한 없음. 폴더 우클릭 → 공유 → firebase-adminsdk-fbsvc@ijw-calander.iam.gserviceaccount.com 에 "편집자" 권한 부여 필요.`);
+                    newErr.code = err.code;
+                    throw newErr;
+                }
+                throw diagErr;
+            }
+        }
+        throw err;
+    }
+}
+
+/**
+ * 폴더 접근 진단 (디버깅용)
+ * @returns {{accessible: boolean, name?: string, error?: string, capabilities?: object}}
+ */
+async function diagnoseFolderAccess(auth, folderId) {
+    const drive = getDriveClient(auth);
+    const cleanId = String(folderId || "").trim().replace(/^.*\/folders\//, "").replace(/[\?&].*$/, "");
+    if (!cleanId) return { accessible: false, error: "폴더 ID가 비어있습니다." };
+    try {
+        const res = await drive.files.get({
+            fileId: cleanId,
+            fields: "id, name, mimeType, capabilities, owners, permissions",
+            supportsAllDrives: true,
+        });
+        return {
+            accessible: true,
+            name: res.data.name,
+            mimeType: res.data.mimeType,
+            capabilities: res.data.capabilities,
+            owners: res.data.owners,
+            cleanId,
+        };
+    } catch (err) {
+        return {
+            accessible: false,
+            cleanId,
+            error: err.message,
+            code: err.code,
+        };
+    }
 }
 
 /**
@@ -493,4 +565,5 @@ module.exports = {
     getAuthClient,
     getDriveClient,
     getSheetsClient,
+    diagnoseFolderAccess,
 };

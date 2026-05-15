@@ -21,7 +21,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { logger } = require("firebase-functions");
 
-const { syncAll, GOOGLE_SERVICE_ACCOUNT_KEY } = require("./timetableSheetsSync");
+const { syncAll, GOOGLE_SERVICE_ACCOUNT_KEY, getAuthClient, diagnoseFolderAccess, loadSheetsMapping } = require("./timetableSheetsSync");
 
 const DATABASE_ID = "restore20260319";
 const REGION = "asia-northeast3";
@@ -179,6 +179,45 @@ const syncTimetableSheetsNow = onCall(
     }
 );
 
+/**
+ * 폴더 접근 진단 HTTPS Callable
+ * 관리자가 "왜 시트 생성이 안 되는지" 진단할 때 사용.
+ * 인자 없이 호출하면 settings/sheetsSync.parentFolderId를 사용.
+ */
+const diagnoseSheetsFolder = onCall(
+    {
+        region: REGION,
+        secrets: [GOOGLE_SERVICE_ACCOUNT_KEY],
+        timeoutSeconds: 60,
+    },
+    async (request) => {
+        if (!request.auth) {
+            throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+        }
+        const uid = request.auth.uid;
+
+        const db = getFirestore(DATABASE_ID);
+        const indexDoc = await db.collection("staffIndex").doc(uid).get();
+        const role = indexDoc.exists ? indexDoc.data().systemRole : null;
+        if (role !== "master" && role !== "admin") {
+            throw new HttpsError("permission-denied", "관리자만 진단할 수 있습니다.");
+        }
+
+        const folderId = (request.data && request.data.folderId)
+            || (await loadSheetsMapping()).parentFolderId
+            || null;
+
+        if (!folderId) {
+            return { ok: false, error: "settings/sheetsSync.parentFolderId가 비어있고, 호출 시 folderId도 전달되지 않았습니다." };
+        }
+
+        const auth = getAuthClient();
+        const result = await diagnoseFolderAccess(auth, folderId);
+        logger.info(`[SheetsSync] 폴더 진단 결과 (${folderId}):`, JSON.stringify(result));
+        return result;
+    }
+);
+
 module.exports = {
     onClassesChange,
     onStudentsChange,
@@ -186,4 +225,5 @@ module.exports = {
     onStaffChange,
     syncTimetableSheetsScheduled,
     syncTimetableSheetsNow,
+    diagnoseSheetsFolder,
 };
