@@ -15,7 +15,7 @@ import { useConsultations, isRegisteredStatus } from '../../../hooks/useConsulta
 import { format, startOfMonth, endOfMonth, subDays } from 'date-fns';
 import { UserPlus, MessageCircle, BookOpen, TrendingUp, TrendingDown } from 'lucide-react';
 import { SUBJECT_COLORS } from '../../../utils/styleUtils';
-import { ResponsiveContainer, LineChart, Line, YAxis, Tooltip } from 'recharts';
+import { ResponsiveContainer, LineChart, Line, YAxis, Tooltip, ReferenceDot, Label } from 'recharts';
 
 const AddStudentModal = lazy(() => import('../../StudentManagement/AddStudentModal'));
 const AddClassModal = lazy(() => import('../../ClassManagement/AddClassModal'));
@@ -185,32 +185,175 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   }, [students]);
 
   // 1단계 디자인: 주식 차트 스타일 카드용 데이터.
-  // 수학 / 영어 / 2과목 수강 3개 카드. sparkline 은 mock (TODO: 2단계에서 실데이터 연결).
+  // 사용자 결정(2026-05-15): 색상 영어=빨강, 수학=초록, 2과목=노랑, 신입=파랑, 퇴원=주황.
+  const COLOR_MAP: Record<string, string> = {
+    '수학': '#22c55e',
+    '영어': '#ef4444',
+    '2과목 수강': '#eab308',
+    '신입': '#3b82f6',
+    '퇴원': '#f97316',
+  };
   const trendCards = useMemo(() => {
     const find = (label: string) => subjectDistribution.find(d => d.subject === label);
     const math = find('수학');
     const english = find('영어');
     const multi2 = find('2과목 수강');
     const cards: { key: string; label: string; count: number; color: string; trend: { day: number; value: number }[] }[] = [];
-    if (math) cards.push({ key: 'math', label: '수학', count: math.count, color: math.color, trend: generateMockTrend(math.count) });
-    if (english) cards.push({ key: 'english', label: '영어', count: english.count, color: english.color, trend: generateMockTrend(english.count) });
-    if (multi2) cards.push({ key: 'multi2', label: '2과목 수강', count: multi2.count, color: multi2.color, trend: generateMockTrend(multi2.count) });
+    if (math) cards.push({ key: 'math', label: '수학', count: math.count, color: COLOR_MAP['수학'], trend: generateMockTrend(math.count) });
+    if (english) cards.push({ key: 'english', label: '영어', count: english.count, color: COLOR_MAP['영어'], trend: generateMockTrend(english.count) });
+    if (multi2) cards.push({ key: 'multi2', label: '2과목 수강', count: multi2.count, color: COLOR_MAP['2과목 수강'], trend: generateMockTrend(multi2.count) });
     return cards;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subjectDistribution.map(d => `${d.subject}:${d.count}`).join('|')]);
 
-  // 3개 라인 겹친 통합 차트용 데이터 — 각 row 는 { day, math, english, multi2 }
-  const combinedTrend = useMemo(() => {
-    if (trendCards.length === 0) return [];
-    const days = trendCards[0].trend.length;
+  // 신입/퇴원 추이 카드 (옆 박스용)
+  const enrollmentCards = useMemo(() => {
+    return [
+      { key: 'new', label: '신입', count: newStudentsThisMonth, color: COLOR_MAP['신입'], trend: generateMockTrend(Math.max(1, newStudentsThisMonth), 30, 0.18) },
+      { key: 'withdrawn', label: '퇴원', count: withdrawalData.count, color: COLOR_MAP['퇴원'], trend: generateMockTrend(Math.max(1, withdrawalData.count), 30, 0.18) },
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newStudentsThisMonth, withdrawalData.count]);
+
+  // 통합 차트 데이터 헬퍼 — cards 배열을 받아 { day, [key1]: v1, [key2]: v2, ... } row 들로
+  const makeCombined = (cards: typeof trendCards) => {
+    if (cards.length === 0) return [];
+    const days = cards[0].trend.length;
     return Array.from({ length: days }, (_, i) => {
       const point: Record<string, number> = { day: i };
-      trendCards.forEach(c => {
-        point[c.key] = c.trend[i]?.value ?? 0;
-      });
+      cards.forEach(c => { point[c.key] = c.trend[i]?.value ?? 0; });
       return point;
     });
-  }, [trendCards]);
+  };
+  const combinedTrend = useMemo(() => makeCombined(trendCards), [trendCards]);
+  const enrollmentCombined = useMemo(() => makeCombined(enrollmentCards), [enrollmentCards]);
+
+  // 통합 추이 차트 카드 렌더러 — 재원생/과목 박스, 신입/퇴원 박스 동일 디자인.
+  // - 꺾은선(linear), 최고/최저/오늘 마커 + 라벨
+  // - 호버 시 최고/최저 텍스트 툴팁
+  // - 범례 하단 중앙정렬
+  const renderTrendCard = (opts: {
+    title: string;
+    totalUnit: string;
+    total: number;
+    totalDelta: number;
+    cards: typeof trendCards;
+    combined: Record<string, number>[];
+  }) => {
+    const { title, totalUnit, total, totalDelta, cards, combined } = opts;
+    const totalIsUp = totalDelta >= 0;
+    return (
+      <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
+        {/* 헤더: 타이틀 + 총 카운트 + 변동 */}
+        <div className="flex items-baseline justify-between mb-2 pb-2 border-b border-gray-100 gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <h3 className="text-xs font-bold text-primary">{title}</h3>
+            <div className="flex items-baseline gap-0.5">
+              <span className="text-xl font-bold text-gray-800">{total}</span>
+              <span className="text-xxs text-gray-400">{totalUnit}</span>
+            </div>
+            <div className={`flex items-center gap-0.5 text-xxs font-bold ${totalIsUp ? 'text-emerald-600' : 'text-red-500'}`}>
+              <TrendingUp size={10} />
+              <span>{totalIsUp ? '+' : ''}{totalDelta}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 차트 (꺾은선 + 마커) */}
+        <div style={{ height: 170 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={combined} margin={{ top: 18, right: 24, left: 4, bottom: 0 }}>
+              <YAxis hide domain={['dataMin - 5', 'dataMax + 5']} />
+              <Tooltip
+                cursor={{ stroke: '#9ca3af', strokeDasharray: '3 3' }}
+                content={({ active, payload, label }: any) => {
+                  if (!active || !payload || payload.length === 0) return null;
+                  return (
+                    <div className="bg-white border border-gray-200 rounded shadow text-xs p-2 space-y-0.5">
+                      <div className="font-bold text-gray-600">D-{combined.length - 1 - (label as number)}</div>
+                      {cards.map(c => {
+                        const series = c.trend.map(p => p.value);
+                        const max = Math.max(...series);
+                        const min = Math.min(...series);
+                        const val = payload.find((p: any) => p.dataKey === c.key)?.value;
+                        return (
+                          <div key={c.key} className="flex items-center gap-1.5 text-xxs">
+                            <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ backgroundColor: c.color }} />
+                            <span className="text-gray-700">{c.label}:</span>
+                            <span className="font-bold">{val}명</span>
+                            <span className="text-gray-400 ml-1">↑{max}(최고) ↓{min}(최저)</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                }}
+              />
+              {cards.map(card => {
+                const series = card.trend.map(p => p.value);
+                const max = Math.max(...series);
+                const min = Math.min(...series);
+                const maxIdx = series.indexOf(max);
+                const minIdx = series.indexOf(min);
+                const todayIdx = series.length - 1;
+                const todayVal = series[todayIdx];
+                return (
+                  <React.Fragment key={card.key}>
+                    <Line
+                      type="linear"
+                      dataKey={card.key}
+                      name={card.label}
+                      stroke={card.color}
+                      strokeWidth={1.8}
+                      dot={(props: any) => {
+                        const i = props.index;
+                        if (i === maxIdx || i === minIdx || i === todayIdx) {
+                          return <circle key={`${card.key}-${i}`} cx={props.cx} cy={props.cy} r={3.5} fill={card.color} stroke="white" strokeWidth={2} />;
+                        }
+                        return <g key={`${card.key}-${i}`} />;
+                      }}
+                      isAnimationActive
+                      animationDuration={700}
+                    />
+                    <ReferenceDot x={maxIdx} y={max} r={0} ifOverflow="extendDomain">
+                      <Label value={`${max}↑`} position="top" fontSize={9} fill={card.color} />
+                    </ReferenceDot>
+                    <ReferenceDot x={minIdx} y={min} r={0} ifOverflow="extendDomain">
+                      <Label value={`${min}↓`} position="bottom" fontSize={9} fill={card.color} />
+                    </ReferenceDot>
+                    {todayIdx !== maxIdx && todayIdx !== minIdx && (
+                      <ReferenceDot x={todayIdx} y={todayVal} r={0} ifOverflow="extendDomain">
+                        <Label value={`${todayVal}`} position="right" fontSize={9} fill={card.color} />
+                      </ReferenceDot>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* 범례 (하단 중앙) — 라벨 + 카운트 + 지난달 최고 대비 변동 */}
+        <div className="flex items-center justify-center gap-3 mt-2 pt-2 border-t border-gray-100 flex-wrap">
+          {cards.map(card => {
+            const series = card.trend.map(p => p.value);
+            const max = Math.max(...series);
+            const delta = card.count - max;
+            const isUp = delta >= 0;
+            return (
+              <div key={card.key} className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: card.color }} />
+                <span className="text-xxs font-bold text-gray-700">{card.label}</span>
+                <span className="text-xxs font-bold" style={{ color: card.color }}>{card.count}</span>
+                <span className={`text-micro font-bold ${isUp ? 'text-emerald-600' : 'text-red-500'}`}>{isUp ? '+' : ''}{delta}</span>
+              </div>
+            );
+          })}
+        </div>
+        <div className="text-micro text-gray-400 text-right mt-0.5">최근 30일 추이 (mock, 지난달 최고 대비)</div>
+      </div>
+    );
+  };
 
   // ── 주간 출석 추이 ──
   const weeklyAttendance = useMemo(() => {
@@ -343,69 +486,24 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               {kpiCards.map(card => <KPICard key={card.id} data={card} />)}
             </div>
 
-            {/* ── 재원생 & 과목별 추이 (통합 카드, 3 라인 겹침, 1/3 너비) ── */}
+            {/* ── 재원생/과목별 + 신입/퇴원 추이 (통합 박스 2개) ── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3">
-              <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
-                {/* 헤더: 재원생 + Legend */}
-                <div className="flex items-start justify-between mb-2 pb-2 border-b border-gray-100 gap-2 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-xs font-bold text-primary">👥 재원생</h3>
-                    <div className="flex items-baseline gap-0.5">
-                      <span className="text-xl font-bold text-gray-800">{activeStudents}</span>
-                      <span className="text-xxs text-gray-400">명</span>
-                    </div>
-                    <div className="flex items-center gap-0.5 text-xxs font-bold text-emerald-600">
-                      <TrendingUp size={10} />
-                      <span>{newStudentsThisMonth - withdrawalData.count >= 0 ? '+' : ''}{newStudentsThisMonth - withdrawalData.count}</span>
-                    </div>
-                  </div>
-                </div>
-                {/* Legend (가로) */}
-                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                  {trendCards.map(card => {
-                    const first = card.trend[0]?.value ?? card.count;
-                    const change = card.count - first;
-                    const isUp = change >= 0;
-                    return (
-                      <div key={card.key} className="flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: card.color }} />
-                        <span className="text-xxs font-bold text-gray-700">{card.label}</span>
-                        <span className="text-xxs font-bold" style={{ color: card.color }}>{card.count}</span>
-                        <span className={`flex items-center text-micro font-bold ${isUp ? 'text-emerald-600' : 'text-red-500'}`}>
-                          {isUp ? '+' : ''}{change}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-                {/* 본문: 3 라인 겹친 통합 차트 (높이 축소) */}
-                <div style={{ height: 130 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={combinedTrend} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                      <YAxis hide domain={['dataMin - 5', 'dataMax + 5']} />
-                      <Tooltip
-                        cursor={{ stroke: '#9ca3af', strokeDasharray: '3 3' }}
-                        contentStyle={{ fontSize: 10, padding: '3px 6px', border: '1px solid #e5e7eb', borderRadius: 4 }}
-                        labelFormatter={(d) => `D-${(combinedTrend.length - 1) - (d as number)}`}
-                      />
-                      {trendCards.map(card => (
-                        <Line
-                          key={card.key}
-                          type="monotone"
-                          dataKey={card.key}
-                          name={card.label}
-                          stroke={card.color}
-                          strokeWidth={1.8}
-                          dot={false}
-                          isAnimationActive
-                          animationDuration={700}
-                        />
-                      ))}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="text-micro text-gray-400 text-right mt-0.5">최근 30일 (mock)</div>
-              </div>
+              {renderTrendCard({
+                title: '👥 재원생',
+                totalUnit: '명',
+                total: activeStudents,
+                totalDelta: newStudentsThisMonth - withdrawalData.count,
+                cards: trendCards,
+                combined: combinedTrend,
+              })}
+              {renderTrendCard({
+                title: '🆕 신입 / 퇴원',
+                totalUnit: '명 (이번달)',
+                total: newStudentsThisMonth + withdrawalData.count,
+                totalDelta: newStudentsThisMonth - withdrawalData.count,
+                cards: enrollmentCards,
+                combined: enrollmentCombined,
+              })}
             </div>
 
             {/* ── Row 2: 주간 출석 + 주의 필요 ── */}
