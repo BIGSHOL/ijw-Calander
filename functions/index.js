@@ -8031,6 +8031,7 @@ exports.onTimetableEnrollmentsChange = timetableSyncTriggers.onEnrollmentsChange
 exports.onTimetableStaffChange = timetableSyncTriggers.onStaffChange;
 exports.syncTimetableSheetsScheduled = timetableSyncTriggers.syncTimetableSheetsScheduled;
 exports.syncTimetableSheetsNow = timetableSyncTriggers.syncTimetableSheetsNow;
+exports.uploadTimetableXlsx = timetableSyncTriggers.uploadTimetableXlsx;
 exports.diagnoseSheetsFolder = timetableSyncTriggers.diagnoseSheetsFolder;
 
 // ============================================================

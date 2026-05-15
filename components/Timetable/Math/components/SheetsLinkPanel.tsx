@@ -16,12 +16,15 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FileSpreadsheet, ExternalLink, RefreshCw, ChevronDown, Users, User as UserIcon, Clock, AlertCircle } from 'lucide-react';
 import { useSheetsSync } from '../../../../hooks/useSheetsSync';
 import { Timestamp } from 'firebase/firestore';
+import type { ExportTimetableParams } from '../utils/excelExport';
 
 interface SheetsLinkPanelProps {
     /** 현재 로그인 사용자의 staffId (강사 시트 매칭용) */
     currentStaffId?: string | null;
     /** 관리자 권한 (master/admin) */
     isAdmin: boolean;
+    /** 현재 시간표 데이터로 xlsx 생성 파라미터 반환 (엑셀 내보내기와 동일) */
+    getSheetsExportParams?: () => ExportTimetableParams;
 }
 
 const formatRelativeTime = (ts?: Timestamp): string => {
@@ -67,7 +70,7 @@ const translateErrorMessage = (msg?: string | null): string => {
     return `동기화 오류: ${msg}`;
 };
 
-const SheetsLinkPanel: React.FC<SheetsLinkPanelProps> = ({ currentStaffId, isAdmin }) => {
+const SheetsLinkPanel: React.FC<SheetsLinkPanelProps> = ({ currentStaffId, isAdmin, getSheetsExportParams }) => {
     const { mapping, loading, error, syncNow, syncing, mySheet } = useSheetsSync(currentStaffId);
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -91,7 +94,9 @@ const SheetsLinkPanel: React.FC<SheetsLinkPanelProps> = ({ currentStaffId, isAdm
 
     const handleSyncNow = async () => {
         try {
-            await syncNow();
+            // 현재 시간표 데이터로 xlsx 생성 → 전송 (엑셀 내보내기와 100% 동일)
+            const params = getSheetsExportParams ? getSheetsExportParams() : undefined;
+            await syncNow(params);
         } catch (err) {
             // 에러는 hook 내부에서 setError로 처리됨
         }

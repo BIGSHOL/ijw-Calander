@@ -22,6 +22,8 @@ export interface ExportTimetableParams {
     showHoldStudents?: boolean;
     showWithdrawnStudents?: boolean;
     referenceDate?: string;  // YYYY-MM-DD (기준일, 퇴원/대기 분류용)
+    /** true면 다운로드 안 하고 xlsx ArrayBuffer 반환 (Google Sheets 업로드용) */
+    returnBufferOnly?: boolean;
 }
 
 const hexToARGB = (hex: string | undefined, fallback: string): string => {
@@ -270,7 +272,7 @@ const formatStudentRowText = (
     return `${prefix}${student.name}/${schoolGrade}`;
 };
 
-export async function exportMathTimetableToExcel(params: ExportTimetableParams): Promise<void> {
+export async function exportMathTimetableToExcel(params: ExportTimetableParams): Promise<void | ArrayBuffer> {
     const ExcelJS = (await import('exceljs')).default;
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'ijw-Calander';
@@ -1231,8 +1233,14 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
         ]);
     });
 
-    // 다운로드
     const buffer = await workbook.xlsx.writeBuffer();
+
+    // Sheets 업로드 모드: ArrayBuffer 반환만 (다운로드 X)
+    if (params.returnBufferOnly) {
+        return buffer;
+    }
+
+    // 다운로드 (기본 모드)
     const blob = new Blob([buffer], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });

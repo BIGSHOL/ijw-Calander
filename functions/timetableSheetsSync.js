@@ -551,6 +551,8 @@ module.exports = {
     syncTeacherSheet,
     deactivateTeacherSheet,
     loadSheetsMapping,
+    saveSheetsMapping,
+    updateSheetContent,
     getAuthClient,
     getDriveClient,
     getSheetsClient,

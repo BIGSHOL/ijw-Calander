@@ -21,7 +21,8 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { logger } = require("firebase-functions");
 
-const { syncAll, GOOGLE_SERVICE_ACCOUNT_KEY, getAuthClient, diagnoseFolderAccess, loadSheetsMapping } = require("./timetableSheetsSync");
+const { syncAll, GOOGLE_SERVICE_ACCOUNT_KEY, getAuthClient, getDriveClient, diagnoseFolderAccess, loadSheetsMapping, saveSheetsMapping, updateSheetContent } = require("./timetableSheetsSync");
+const { FieldValue } = require("firebase-admin/firestore");
 
 const DATABASE_ID = "restore20260319";
 const REGION = "asia-northeast3";
@@ -180,6 +181,83 @@ const syncTimetableSheetsNow = onCall(
 );
 
 /**
+ * 클라이언트에서 ExcelJS로 생성한 xlsx를 받아 그대로 시트에 업로드.
+ *
+ * 방식 A: 클라이언트가 화면에 보이는 데이터로 직접 xlsx 생성 → base64 전송
+ *   → Functions는 단순 update만 → 100% 엑셀 내보내기와 동일한 결과 보장
+ *
+ * 권한: master / admin만
+ */
+const uploadTimetableXlsx = onCall(
+    {
+        region: REGION,
+        secrets: [GOOGLE_SERVICE_ACCOUNT_KEY],
+        timeoutSeconds: 120,
+        memory: "512MiB",
+    },
+    async (request) => {
+        if (!request.auth) {
+            throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+        }
+        const uid = request.auth.uid;
+        const db = getFirestore(DATABASE_ID);
+        const indexDoc = await db.collection("staffIndex").doc(uid).get();
+        const role = indexDoc.exists ? indexDoc.data().systemRole : null;
+        if (role !== "master" && role !== "admin") {
+            throw new HttpsError("permission-denied", "관리자만 시트를 업로드할 수 있습니다.");
+        }
+
+        const xlsxBase64 = request.data && request.data.xlsxBase64;
+        if (!xlsxBase64 || typeof xlsxBase64 !== "string") {
+            throw new HttpsError("invalid-argument", "xlsxBase64가 필요합니다.");
+        }
+
+        const mapping = await loadSheetsMapping();
+        const spreadsheetId = (mapping.spreadsheetId || "").trim();
+        if (!spreadsheetId) {
+            throw new HttpsError(
+                "failed-precondition",
+                "settings/sheetsSync.spreadsheetId가 등록되지 않았습니다. 원장님 Drive에 빈 시트 1개를 만들고 서비스 계정에 편집자로 공유한 뒤, 시트 ID를 등록해주세요."
+            );
+        }
+
+        try {
+            const xlsxBuffer = Buffer.from(xlsxBase64, "base64");
+            logger.info(`[SheetsSync] 클라이언트 xlsx 업로드 시작. spreadsheetId=${spreadsheetId}, size=${xlsxBuffer.length} bytes`);
+
+            const auth = getAuthClient();
+            const drive = getDriveClient(auth);
+            await updateSheetContent(drive, spreadsheetId, xlsxBuffer);
+
+            const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
+            await saveSheetsMapping({
+                all: {
+                    sheetId: spreadsheetId,
+                    url,
+                    lastSyncedAt: FieldValue.serverTimestamp(),
+                },
+                lastFullSyncAt: FieldValue.serverTimestamp(),
+                lastError: null,
+                lastErrorRaw: null,
+                pendingSync: false,
+                syncInProgress: false,
+            });
+
+            logger.info(`[SheetsSync] 클라이언트 xlsx 업로드 완료: ${spreadsheetId}`);
+            return { success: true, sheetId: spreadsheetId, url };
+        } catch (err) {
+            logger.error("[SheetsSync] 클라이언트 xlsx 업로드 실패:", err);
+            await saveSheetsMapping({
+                syncInProgress: false,
+                lastError: err.message || String(err),
+                lastErrorAt: FieldValue.serverTimestamp(),
+            });
+            throw new HttpsError("internal", err.message || "업로드 실패");
+        }
+    }
+);
+
+/**
  * 폴더 접근 진단 HTTPS Callable
  * 관리자가 "왜 시트 생성이 안 되는지" 진단할 때 사용.
  * 인자 없이 호출하면 settings/sheetsSync.parentFolderId를 사용.
@@ -225,5 +303,6 @@ module.exports = {
     onStaffChange,
     syncTimetableSheetsScheduled,
     syncTimetableSheetsNow,
+    uploadTimetableXlsx,
     diagnoseSheetsFolder,
 };

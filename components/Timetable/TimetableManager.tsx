@@ -1109,6 +1109,25 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                             alert('엑셀 저장에 실패했습니다. 콘솔을 확인해주세요.');
                         }
                     } : undefined}
+                    // Google Sheets 동기화용 파라미터 (엑셀 내보내기와 동일한 데이터)
+                    getSheetsExportParams={(viewType === 'excel' || viewType === 'teacher') ? () => {
+                        const mondayDate = weekDates['월']?.date;
+                        const refDate = mondayDate ? getWeekReferenceDate(mondayDate) : undefined;
+                        return {
+                            weekLabel,
+                            filteredClasses,
+                            allResources,
+                            orderedSelectedDays,
+                            weekDates,
+                            teachers,
+                            currentPeriods,
+                            studentMap,
+                            subjectFilter: currentSubjectFilter,
+                            showHoldStudents,
+                            showWithdrawnStudents,
+                            referenceDate: refDate,
+                        };
+                    } : undefined}
                     // 가져오기 이력 / 되돌리기 (Phase 5)
                     onOpenImportHistory={(viewType === 'excel' || viewType === 'teacher') ? () => setIsImportHistoryOpen(true) : undefined}
                     // 엑셀 가져오기 (Phase 3 — 미리보기 모달, 적용은 Phase 4에서)
