@@ -21,7 +21,7 @@ const StudentDetailModal: React.FC<StudentDetailModalProps> = ({ student, onClos
       className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[8vh] z-[100]"
     >
       <div
-        className="bg-white rounded-sm shadow-xl w-full max-w-xl h-[600px] flex flex-col overflow-hidden relative"
+        className="bg-white rounded-sm shadow-xl w-full max-w-4xl h-[600px] flex flex-col overflow-hidden relative"
         style={dragStyle}
       >
         {/* 드래그 핸들 + 닫기 버튼 */}
