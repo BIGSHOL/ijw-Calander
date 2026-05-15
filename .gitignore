@@ -28,6 +28,11 @@ dist-ssr
 .env.*
 functions/.env
 
+# Firebase 서비스 계정 키 (절대 커밋 금지)
+serviceAccountKey.json
+*serviceAccount*.json
+*firebase-adminsdk*.json
+
 # Temporary files
 *.tmp.*
 
