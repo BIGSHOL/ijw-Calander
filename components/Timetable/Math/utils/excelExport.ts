@@ -384,8 +384,10 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
         }
     }
 
-    const PERIOD_COL_W = 13;
-    const DAY_COL_W = 24;
+    // 열 너비 (ExcelJS 문자 단위 — Google Sheets에서 약 width*7 px)
+    // 7.5 → 약 52px (전체 시간표를 한눈에 보기 위한 좁은 너비)
+    const PERIOD_COL_W = 7.5;
+    const DAY_COL_W = 7.5;
 
     sheet.getColumn(WEEKDAY_PERIOD_COL).width = PERIOD_COL_W;
     for (let c = WEEKDAY_FIRST_DAY_COL; c <= WEEKDAY_LAST_DAY_COL; c++) {
