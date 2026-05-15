@@ -40,6 +40,13 @@ export interface Enrollment {
   lastModifiedAt?: string;       // ISO timestamp
   lastAction?: 'enrolled' | 'withdrawn' | 'restored' | 'transferred';
 
+  // ====== Audit: 최초 처리자 (enrollment 생성 시점에 단 한번만 기록 — 절대 덮어쓰지 않음) ======
+  // 누가 이 학생을 이 수업에 처음 추가/이동/배정했는지 추적용. lastModifiedBy 와 달리 평생 불변.
+  enrollCreatedBy?: string;       // uid (영구 키)
+  enrollCreatedByName?: string;   // 당시 표시 이름
+  enrollCreatedByRole?: string;   // 당시 역할 코드
+  enrollCreatedAt?: string;       // ISO timestamp
+
   // Migration metadata
   migrated?: boolean;
   migratedAt?: string;

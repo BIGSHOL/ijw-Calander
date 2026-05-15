@@ -400,7 +400,7 @@ const LogsTab: React.FC = () => {
           <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="수업명, 학생, 변경자..."
+            placeholder="수업명, 학생, 처리자..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-6 pr-2 py-1 text-xs border border-gray-300 rounded w-48 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -441,7 +441,7 @@ const LogsTab: React.FC = () => {
                 <th className="px-3 py-2 text-left font-medium text-gray-500 w-16">과목</th>
                 <th className="px-3 py-2 text-left font-medium text-gray-500 w-28">수업명</th>
                 <th className="px-3 py-2 text-left font-medium text-gray-500 w-24">학생</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-500 w-28">변경자</th>
+                <th className="px-3 py-2 text-left font-medium text-gray-500 w-28">처리자</th>
                 <th className="px-3 py-2 text-left font-medium text-gray-500">상세</th>
               </tr>
             </thead>

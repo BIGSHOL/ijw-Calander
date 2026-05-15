@@ -18,7 +18,7 @@ import { db } from '../firebaseConfig';
 import { SubjectType } from '../types';
 import { getTodayKST, formatDateKST } from '../utils/dateUtils';
 import { logTimetableChange } from './useTimetableLog';
-import { buildAuditFields, getCurrentActor } from '../utils/getCurrentActor';
+import { buildAuditFields, buildEnrollCreatedFields, getCurrentActor } from '../utils/getCurrentActor';
 
 const COL_STUDENTS = 'students';
 const COL_CLASSES = 'classes';
@@ -83,6 +83,7 @@ export const useCreateClass = () => {
       const classId = classRef.id;
 
       // 2. 각 학생의 enrollments 서브컬렉션에 새 enrollment 추가 (doc ID = classId)
+      const enrollCreated = await buildEnrollCreatedFields();
       const promises = studentIds.map(async (studentId) => {
         const enrollmentRef = doc(db, COL_STUDENTS, studentId, 'enrollments', classId);
         await setDoc(enrollmentRef, {
@@ -93,6 +94,7 @@ export const useCreateClass = () => {
           subject,
           schedule,
           createdAt: new Date().toISOString(),
+          ...enrollCreated,
         });
       });
 
@@ -467,6 +469,13 @@ export async function executeTeacherHandover(
       createdAt: now,
       updatedAt: now,
     };
+    // 강사 인수인계는 동일 학생 enrollment 연속선 — 원본 최초 처리자 보존
+    if (data.enrollCreatedBy) {
+      newDoc.enrollCreatedBy = data.enrollCreatedBy;
+      newDoc.enrollCreatedByName = data.enrollCreatedByName;
+      newDoc.enrollCreatedByRole = data.enrollCreatedByRole;
+      newDoc.enrollCreatedAt = data.enrollCreatedAt;
+    }
     if (reason) newDoc.handoverReason = reason;
     await addDoc(enrollmentsCol, newDoc);
   });
@@ -905,6 +914,8 @@ export const useManageClassStudents = () => {
       const auditEnrolled = await buildAuditFields('enrolled');
       const auditRestored = await buildAuditFields('restored');
       const auditWithdrawn = await buildAuditFields('withdrawn');
+      // 최초 처리자 — enrollment 신규 생성 시에만 박는 불변 필드
+      const enrollCreated = await buildEnrollCreatedFields();
 
       // 반이동 학생 처리: 기존 수업 enrollment에 endDate 설정
       const transferStudentIds = Object.keys(transferMode).filter(id => transferMode[id] === 'transfer');
@@ -990,6 +1001,11 @@ export const useManageClassStudents = () => {
             if (!existingEnrollmentDate) {
               updateData.enrollmentDate = startDate;
             }
+            // 최초 처리자 — 이미 있으면 보존, 없으면 (레거시 부활) 현재 시점 actor 로 백필
+            const existingEnrollCreatedBy = (endedDoc.data() as any).enrollCreatedBy;
+            if (!existingEnrollCreatedBy) {
+              Object.assign(updateData, enrollCreated);
+            }
             if (studentAttendanceDays[studentId] && studentAttendanceDays[studentId].length > 0) {
               updateData.attendanceDays = studentAttendanceDays[studentId];
             }
@@ -1019,6 +1035,7 @@ export const useManageClassStudents = () => {
               enrollmentDate: startDate,
               createdAt: new Date().toISOString(),
               ...auditEnrolled,
+              ...enrollCreated,
             };
             if (studentAttendanceDays[studentId] && studentAttendanceDays[studentId].length > 0) {
               enrollmentData.attendanceDays = studentAttendanceDays[studentId];
@@ -1247,6 +1264,14 @@ export const useManageClassStudents = () => {
             // 새 enrollment 생성 (오늘부터, 새 attendanceDays 적용)
             const newDocId = `${classId}_${Date.now()}`;
             const newEnrollmentRef = doc(db, COL_STUDENTS, studentId, 'enrollments', newDocId);
+            // attendanceDays 변경은 동일 학생 enrollment 의 연속선이므로 기존 enrollCreatedBy 가 있으면 보존
+            const inheritedEnrollCreated =
+              (existingData as any).enrollCreatedBy ? {
+                enrollCreatedBy: (existingData as any).enrollCreatedBy,
+                enrollCreatedByName: (existingData as any).enrollCreatedByName,
+                enrollCreatedByRole: (existingData as any).enrollCreatedByRole,
+                enrollCreatedAt: (existingData as any).enrollCreatedAt,
+              } : enrollCreated;
             await setDoc(newEnrollmentRef, {
               className,
               classId,
@@ -1257,6 +1282,7 @@ export const useManageClassStudents = () => {
               startDate: today,
               enrollmentDate: today,
               createdAt: new Date().toISOString(),
+              ...inheritedEnrollCreated,
               // attendanceDays: 특정 요일만 등원하는 경우만 저장
               ...(newDays.length > 0 ? { attendanceDays: newDays } : {}),
               ...(existingData.underline ? { underline: true } : {}),

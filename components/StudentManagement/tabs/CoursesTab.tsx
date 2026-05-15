@@ -216,6 +216,9 @@ interface GroupedEnrollment {
   startDate?: string; // 수강 시작일
   endDate?: string; // 수강 종료일 (undefined = 재원중)
   schedule?: string[]; // 스케줄 정보
+  // 최초 처리자 — 가장 빠른 enrollment 의 enrollCreatedBy 가 진실 (이름)
+  enrollCreatedByName?: string;
+  enrollCreatedAt?: string;
 }
 
 const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readOnly = false, currentUser }) => {
@@ -257,6 +260,17 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
   // 오늘 날짜 (미래 수업 구분용)
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+
+  // 그룹에 enrollment 의 최초 처리자 정보를 합성 — 가장 이른 enrollCreatedAt 의 이름이 진실
+  const mergeEnrollCreated = (existing: GroupedEnrollment, enrollment: any) => {
+    const name = enrollment.enrollCreatedByName;
+    const at = enrollment.enrollCreatedAt;
+    if (!name) return;
+    if (!existing.enrollCreatedByName || (existing.enrollCreatedAt && at && at < existing.enrollCreatedAt)) {
+      existing.enrollCreatedByName = name;
+      existing.enrollCreatedAt = at;
+    }
+  };
 
   // enrollment 시작일 추출 (enrollmentDate 또는 startDate 필드 사용)
   const getStartDate = (enrollment: any): string | undefined =>
@@ -330,9 +344,10 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
               existing.endDate = ed;
             }
           }
+          mergeEnrollCreated(existing, enrollment);
         } else {
           const staffId = enrollment.staffId;
-          groups.set(key, {
+          const newGroup: GroupedEnrollment = {
             className: enrollment.className,
             subject: enrollment.subject,
             teachers: staffId ? [staffId] : [],
@@ -341,7 +356,10 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             enrollmentIds: (enrollment as any).id ? [(enrollment as any).id] : [],
             startDate: getStartDate(enrollment),
             endDate: getEndDate(enrollment), // 종료 예정일 보존
-          });
+            enrollCreatedByName: (enrollment as any).enrollCreatedByName,
+            enrollCreatedAt: (enrollment as any).enrollCreatedAt,
+          };
+          groups.set(key, newGroup);
         }
       });
 
@@ -400,6 +418,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           if (currentStartDate && (!existingStartDate || currentStartDate < existingStartDate)) {
             existing.startDate = sd;
           }
+          mergeEnrollCreated(existing, enrollment);
         } else {
           const staffId = enrollment.staffId;
           groups.set(key, {
@@ -411,6 +430,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             enrollmentIds: (enrollment as any).id ? [(enrollment as any).id] : [],
             startDate: getStartDate(enrollment),
             endDate: undefined,
+            enrollCreatedByName: (enrollment as any).enrollCreatedByName,
+            enrollCreatedAt: (enrollment as any).enrollCreatedAt,
           });
         }
       });
@@ -841,6 +862,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           if ((enrollment as any).schedule && !existing.schedule) {
             existing.schedule = (enrollment as any).schedule;
           }
+          mergeEnrollCreated(existing, enrollment);
         } else {
           const staffId = enrollment.staffId;
           groups.set(key, {
@@ -853,6 +875,8 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             startDate: getStartDate(enrollment),
             endDate: getEndDate(enrollment),
             schedule: (enrollment as any).schedule, // 삭제 당시 저장된 스케줄 정보
+            enrollCreatedByName: (enrollment as any).enrollCreatedByName,
+            enrollCreatedAt: (enrollment as any).enrollCreatedAt,
           });
         }
       });
@@ -932,7 +956,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
       <div
         key={`${group.subject}-${index}`}
         onClick={() => !isDeleting && handleClassClick(group)}
-        className={`flex items-center gap-2 px-2 py-1.5 border-b border-gray-100 hover:bg-accent/5 transition-colors ${isDeleting ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
+        className={`flex items-center gap-2 px-2 py-1.5 border-b border-gray-100 hover:bg-accent/5 transition-colors min-w-max ${isDeleting ? 'opacity-50 cursor-wait' : 'cursor-pointer'}`}
       >
         {/* 과목 뱃지 */}
         <span
@@ -946,20 +970,20 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         </span>
 
         {/* 수업명 */}
-        <span className="flex-1 min-w-0 text-xs text-primary truncate font-medium">
+        <span className="flex-1 min-w-[120px] text-xs text-primary font-medium whitespace-nowrap">
           {group.className}
         </span>
 
         {/* 강사 */}
         <div className="w-14 shrink-0 flex items-center gap-0.5">
           <User className="w-3 h-3 text-gray-400" />
-          <span className="text-xxs text-primary-700 truncate">
+          <span className="text-xxs text-primary-700 whitespace-nowrap">
             {mainTeacher || visibleTeachers[0] || actualClass?.teacher || '-'}
           </span>
         </div>
 
         {/* 스케줄 (요일+교시 배지) - 학생의 등원 요일만 표시 */}
-        <div className="w-40 min-w-0 overflow-hidden">
+        <div className="w-40 shrink-0 min-w-0 overflow-hidden">
           <ScheduleBadge
             schedule={actualClass?.schedule?.filter(s => {
               // attendanceDays가 있으면 학생 등원 요일만, 없으면 전체 표시
@@ -1068,6 +1092,14 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           )}
         </>
 
+        {/* 처리자 (최초 처리자) */}
+        <span
+          className="w-20 shrink-0 text-xxs text-gray-600 whitespace-nowrap"
+          title={group.enrollCreatedAt ? `최초 처리일: ${group.enrollCreatedAt.slice(0, 10)}` : ''}
+        >
+          {group.enrollCreatedByName || <span className="text-gray-300">-</span>}
+        </span>
+
         {/* 삭제 버튼 - readOnly 모드에서는 숨김 */}
         {!readOnly && (
           <button
@@ -1101,7 +1133,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
     return (
       <div
         key={`completed-${group.subject}-${index}`}
-        className="flex items-center gap-2 px-2 py-1.5 border-b border-gray-100 opacity-60"
+        className="flex items-center gap-2 px-2 py-1.5 border-b border-gray-100 opacity-60 min-w-max"
       >
         {/* 과목 뱃지 */}
         <span
@@ -1115,20 +1147,20 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
         </span>
 
         {/* 수업명 */}
-        <span className="flex-1 min-w-0 text-xs text-primary-700 truncate">
+        <span className="flex-1 min-w-[120px] text-xs text-primary-700 whitespace-nowrap">
           {group.className}
         </span>
 
         {/* 강사 */}
         <div className="w-14 shrink-0 flex items-center gap-0.5">
           <User className="w-3 h-3 text-gray-400" />
-          <span className="text-xxs text-primary-700 truncate">
+          <span className="text-xxs text-primary-700 whitespace-nowrap">
             {firstTeacherName || actualClass?.teacher || '-'}
           </span>
         </div>
 
         {/* 스케줄 (삭제 당시 저장된 스케줄 정보) */}
-        <div className="w-40 min-w-0 overflow-hidden">
+        <div className="w-40 shrink-0 min-w-0 overflow-hidden">
           <ScheduleBadge
             schedule={group.schedule || actualClass?.schedule}
             subject={subjectForSchedule}
@@ -1213,6 +1245,14 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           </span>
         )}
 
+        {/* 처리자 (최초 처리자) */}
+        <span
+          className="w-20 shrink-0 text-xxs text-gray-600 whitespace-nowrap"
+          title={group.enrollCreatedAt ? `최초 처리일: ${group.enrollCreatedAt.slice(0, 10)}` : ''}
+        >
+          {group.enrollCreatedByName || <span className="text-gray-300">-</span>}
+        </span>
+
         {/* 이력 삭제 버튼 (권한이 있는 경우만) */}
         {canManageClassHistory && !readOnly && (
           <button
@@ -1271,16 +1311,17 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
       {/* 수업 목록 - 행 스타일 */}
       {showCurrentClasses && (
-      <div className="bg-white border border-gray-200 overflow-hidden">
+      <div className="bg-white border border-gray-200 overflow-x-auto">
         {/* 테이블 헤더 */}
-        <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-primary-700">
+        <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-primary-700 min-w-max">
           <span className="w-8 shrink-0">과목</span>
-          <span className="flex-1 min-w-0">수업명</span>
+          <span className="flex-1 min-w-[120px]">수업명</span>
           <span className="w-14 shrink-0">강사</span>
-          <span className="w-40">스케줄</span>
+          <span className="w-40 shrink-0">스케줄</span>
           <span className="w-10 shrink-0 text-center">인원</span>
           <span className="w-16 shrink-0 text-center">시작</span>
           <span className="w-16 shrink-0 text-center">종료</span>
+          <span className="w-20 shrink-0">처리자</span>
           <span className="w-5 shrink-0"></span>
         </div>
 
@@ -1323,16 +1364,17 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showScheduledClasses ? '' : 'rotate-180'}`} />
         </div>
         {showScheduledClasses && (
-        <div className="bg-white border border-gray-200 overflow-hidden">
+        <div className="bg-white border border-gray-200 overflow-x-auto">
           {/* 테이블 헤더 */}
-          <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-primary-700">
+          <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-primary-700 min-w-max">
             <span className="w-8 shrink-0">과목</span>
-            <span className="flex-1 min-w-0">수업명</span>
+            <span className="flex-1 min-w-[120px]">수업명</span>
             <span className="w-14 shrink-0">강사</span>
-            <span className="w-40">스케줄</span>
+            <span className="w-40 shrink-0">스케줄</span>
             <span className="w-10 shrink-0 text-center">인원</span>
             <span className="w-16 shrink-0 text-center">시작</span>
             <span className="w-16 shrink-0 text-center">종료</span>
+            <span className="w-20 shrink-0">처리자</span>
             <span className="w-5 shrink-0"></span>
           </div>
 
@@ -1354,7 +1396,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
                 return (
                   <div
                     key={`scheduled-${group.subject}-${index}`}
-                    className="flex items-center gap-2 px-2 py-1.5 border-b border-gray-100 hover:bg-accent/5 transition-colors cursor-pointer"
+                    className="flex items-center gap-2 px-2 py-1.5 border-b border-gray-100 hover:bg-accent/5 transition-colors cursor-pointer min-w-max"
                     onClick={() => handleClassClick(group)}
                   >
                     {/* 과목 뱃지 */}
@@ -1369,7 +1411,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
                     </span>
 
                     {/* 수업명 */}
-                    <span className="flex-1 min-w-0 text-xs text-primary-700 font-medium truncate">
+                    <span className="flex-1 min-w-[120px] text-xs text-primary-700 font-medium whitespace-nowrap">
                       {group.className}
                     </span>
 
@@ -1445,6 +1487,14 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
                     {/* 종료 자리 (수강중/지난과 정렬) */}
                     <span className="w-16 shrink-0 text-xxs text-gray-300 text-center">-</span>
 
+                    {/* 처리자 (최초 처리자) */}
+                    <span
+                      className="w-20 shrink-0 text-xxs text-gray-600 whitespace-nowrap"
+                      title={group.enrollCreatedAt ? `최초 처리일: ${group.enrollCreatedAt.slice(0, 10)}` : ''}
+                    >
+                      {group.enrollCreatedByName || <span className="text-gray-300">-</span>}
+                    </span>
+
                     {/* 삭제 버튼 - readOnly 모드에서는 숨김 */}
                     {!readOnly && (
                       <button
@@ -1482,16 +1532,17 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showCompletedClasses ? '' : 'rotate-180'}`} />
         </div>
         {showCompletedClasses && (
-        <div className="bg-white border border-gray-200 overflow-hidden">
+        <div className="bg-white border border-gray-200 overflow-x-auto">
           {/* 테이블 헤더 - 수강중인 수업과 열 위치 동일하게 */}
-          <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-primary-700">
+          <div className="flex items-center gap-2 px-2 py-1 bg-gray-50 border-b border-gray-200 text-xxs font-medium text-primary-700 min-w-max">
             <span className="w-8 shrink-0">과목</span>
-            <span className="flex-1 min-w-0">수업명</span>
+            <span className="flex-1 min-w-[120px]">수업명</span>
             <span className="w-14 shrink-0">강사</span>
-            <span className="w-40">스케줄</span>
+            <span className="w-40 shrink-0">스케줄</span>
             <span className="w-10 shrink-0 text-center">인원</span>
             <span className="w-16 shrink-0 text-center">시작</span>
             <span className="w-16 shrink-0 text-center">종료</span>
+            <span className="w-20 shrink-0">처리자</span>
             <span className="w-5 shrink-0"></span>
           </div>
 

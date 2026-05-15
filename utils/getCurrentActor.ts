@@ -94,6 +94,22 @@ export async function buildAuditFields(
     };
 }
 
+/**
+ * Firestore enrollment 신규 생성용 — 최초 처리자 audit 필드 4종.
+ * 절대 덮어쓰면 안 됨 (생성 시 한 번만 기록).
+ * "이 학생을 이 수업에 처음 추가한 사람"을 평생 보존.
+ */
+export async function buildEnrollCreatedFields(): Promise<Record<string, any>> {
+    const actor = await getCurrentActor();
+    const now = new Date().toISOString();
+    return {
+        enrollCreatedBy: actor?.uid || null,
+        enrollCreatedByName: actor?.name || '알 수 없음',
+        enrollCreatedByRole: actor?.role || 'user',
+        enrollCreatedAt: now,
+    };
+}
+
 /** 표시용 role 라벨 ('이성우 선생님'의 '선생님' 부분) */
 export function roleToLabel(role: string | undefined): string {
     if (!role) return '';
