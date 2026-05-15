@@ -58,6 +58,13 @@ export interface Student {
   homework?: Record<string, boolean>;  // 과제 완료 여부 (날짜별)
   cellColors?: Record<string, string>;  // 셀 배경색 (날짜별, 미리 정의된 색상 키 또는 hex)
   salarySettingOverrides?: Record<string, string>;  // 수업별 급여 설정 override (className -> salarySettingId)
+  examScores?: Record<string, number>;  // (legacy) 10점 환산 시험 점수 (날짜별)
+  // Phase 2: Edutrix 동기화 raw 필드 (UI 4분면 표시용)
+  attitude?: Record<string, string>;          // study_attitude (Q4 태도 ⭕△X)
+  classwork?: Record<string, string>;         // homework_today (Q2 하단 노란 네모 수업 과제)
+  attendanceNotes?: Record<string, string>;   // notes (Q4 호버 특이사항)
+  examInfoRaw?: Record<string, string>;       // exam_info (Q3 분자/분모 그대로, 예: "20/25")
+  assignmentScoreRaw?: Record<string, string>; // assignment_score (Q2 ⭕△X 판정용 0~100)
 
   // Legacy/Optional Compatibility
   isHomeroom?: boolean;

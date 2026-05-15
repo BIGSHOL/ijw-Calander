@@ -8,6 +8,41 @@ import { formatSchoolGrade } from '../../../utils/studentUtils';
 import { LogOut, Check } from 'lucide-react';
 import { PREDEFINED_CELL_COLORS } from './cellColors';
 
+// Phase 2: Edutrix raw 값을 ⭕/△/X 마크로 정규화
+// assignment_score 점수 → 마크 (100+=⭕ / 1~99=△ / 0=X)
+const getAssignmentMark = (rawScore: string | undefined): '⭕' | '△' | 'X' | '' => {
+  if (rawScore === undefined || rawScore === null || rawScore === '') return '';
+  const score = parseInt(String(rawScore), 10);
+  if (isNaN(score)) return '';
+  if (score >= 100) return '⭕';
+  if (score > 0) return '△';
+  return 'X';
+};
+
+// study_attitude raw → 마크 (한국어/영어 텍스트 모두 정규화)
+const getAttitudeMark = (rawAttitude: string | undefined): '⭕' | '△' | 'X' | '' => {
+  if (!rawAttitude) return '';
+  const v = String(rawAttitude).trim();
+  if (v === '⭕' || v === '○' || v === 'O') return '⭕';
+  if (v === '△' || v === '세모') return '△';
+  if (v === 'X' || v === '✕' || v === '×') return 'X';
+  if (v === '좋음' || v === '우수' || v === '훌륭함') return '⭕';
+  if (v === '보통' || v === '평범') return '△';
+  if (v === '나쁨' || v === '미흡' || v === '부족') return 'X';
+  const lower = v.toLowerCase();
+  if (lower.startsWith('good') || lower.startsWith('excellent')) return '⭕';
+  if (lower.startsWith('normal') || lower.startsWith('average') || lower.startsWith('ok')) return '△';
+  if (lower.startsWith('bad') || lower.startsWith('poor')) return 'X';
+  return '';  // 알 수 없는 값은 빈 표시 (호버 툴팁으로 raw 노출)
+};
+
+// 마크 → 색상 (배경, 글자)
+const MARK_COLORS: Record<'⭕' | '△' | 'X', { bg: string; text: string }> = {
+  '⭕': { bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  '△': { bg: 'bg-amber-100', text: 'text-amber-700' },
+  'X':  { bg: 'bg-red-100',     text: 'text-red-700' },
+};
+
 export interface StudentRowProps {
   student: Student;
   idx: number;
@@ -418,6 +453,22 @@ const StudentRow = React.memo(({
         // 과제 완료 여부 (Q2: 1시 방향)
         const homeworkDone = student.homework?.[compositeKey] ?? student.homework?.[dateKey] ?? false;
 
+        // Phase 2: Edutrix 동기화 raw 데이터 (복합키 우선, 날짜키 폴백)
+        const assignmentScoreRaw =
+          student.assignmentScoreRaw?.[compositeKey] ?? student.assignmentScoreRaw?.[dateKey];
+        const attitudeRaw =
+          student.attitude?.[compositeKey] ?? student.attitude?.[dateKey];
+        const classworkRaw =
+          student.classwork?.[compositeKey] ?? student.classwork?.[dateKey];
+        const notesRaw =
+          student.attendanceNotes?.[compositeKey] ?? student.attendanceNotes?.[dateKey];
+        const examInfoRaw =
+          student.examInfoRaw?.[compositeKey] ?? student.examInfoRaw?.[dateKey];
+
+        const assignmentMark = getAssignmentMark(assignmentScoreRaw);
+        const attitudeMark = getAttitudeMark(attitudeRaw);
+        const hasClasswork = !!classworkRaw && String(classworkRaw).trim() !== '';
+
         // 해당 날짜의 시험 목록 조회
         const examsOnDate = examsByDate?.get(dateKey) || [];
 
@@ -522,49 +573,91 @@ const StudentRow = React.memo(({
                 >
                   {q1Content}
                 </div>
-                {/* Q2: 과제 (우상단) - 1시 방향 */}
+                {/* Q2: 과제 (우상단) - 1시 방향
+                    Edutrix assignment_score 있으면 ⭕△X 표시, 없으면 기존 체크 표시.
+                    하단에 작은 노란 네모(수업 과제 = homework_today) 오버레이. */}
                 <div
                   onClick={() => onHomeworkChange?.(student.id, student.group || '', dateKey, !homeworkDone)}
-                  className={`flex items-center justify-center border-b ${highlightWeekends && isWeekend ? 'border-gray-400' : 'border-gray-300/50'} cursor-pointer transition-colors ${
-                    homeworkDone
-                      ? 'bg-emerald-100 hover:bg-emerald-200'
-                      : otherQuadrantProps.className || 'hover:brightness-95'
+                  className={`relative flex items-center justify-center border-b ${highlightWeekends && isWeekend ? 'border-gray-400' : 'border-gray-300/50'} cursor-pointer transition-colors ${
+                    assignmentMark
+                      ? MARK_COLORS[assignmentMark].bg
+                      : homeworkDone
+                        ? 'bg-emerald-100 hover:bg-emerald-200'
+                        : otherQuadrantProps.className || 'hover:brightness-95'
                   }`}
-                  style={!homeworkDone ? otherQuadrantProps.style : undefined}
-                  title={homeworkDone ? '과제 완료' : '과제 미완료'}
+                  style={!assignmentMark && !homeworkDone ? otherQuadrantProps.style : undefined}
+                  title={
+                    assignmentMark
+                      ? `과제 점수: ${assignmentScoreRaw ?? ''} (${assignmentMark})`
+                      : (homeworkDone ? '과제 완료' : '과제 미완료')
+                  }
                 >
-                  {homeworkDone && <Check className="w-2.5 h-2.5 text-emerald-600" />}
-                </div>
-                {/* Q4: 쪽지시험 (좌하단) - 7시 방향 */}
-                <div
-                  className={`flex items-center justify-center border-r ${highlightWeekends && isWeekend ? 'border-gray-400' : 'border-gray-300/50'} ${
-                    dailyExamScore
-                      ? GRADE_COLORS[dailyExamScore.grade || 'F'].bg
-                      : otherQuadrantProps.className || ''
-                  }`}
-                  style={!dailyExamScore ? otherQuadrantProps.style : undefined}
-                  title={dailyExamScore ? `쪽지시험: ${dailyExamScore.score}/${dailyExamScore.maxScore} (${dailyExamScore.grade})` : undefined}
-                >
-                  {dailyExamScore && (
-                    <span className={`text-nano font-bold ${GRADE_COLORS[dailyExamScore.grade || 'F'].text}`}>
-                      {dailyExamScore.grade || Math.round(dailyExamScore.percentage || 0)}
-                    </span>
+                  {assignmentMark ? (
+                    <span className={`text-nano font-black ${MARK_COLORS[assignmentMark].text}`}>{assignmentMark}</span>
+                  ) : (
+                    homeworkDone && <Check className="w-2.5 h-2.5 text-emerald-600" />
+                  )}
+                  {/* 수업 과제 (homework_today) — 우하단 작은 노란 점 */}
+                  {hasClasswork && (
+                    <span
+                      className="absolute bottom-0 right-0 w-1.5 h-1.5 bg-yellow-400 border border-yellow-600 rounded-[1px]"
+                      title={`수업 과제: ${classworkRaw}`}
+                    />
                   )}
                 </div>
-                {/* Q3: 시험 (우하단) - 5시 방향 */}
+                {/* Q4: 태도 (좌하단) - 7시 방향
+                    Edutrix study_attitude 있으면 ⭕△X 표시 + 호버에 특이사항(notes).
+                    없으면 기존 쪽지시험 fallback. */}
+                <div
+                  className={`flex items-center justify-center border-r ${highlightWeekends && isWeekend ? 'border-gray-400' : 'border-gray-300/50'} ${
+                    attitudeMark
+                      ? MARK_COLORS[attitudeMark].bg
+                      : dailyExamScore
+                        ? GRADE_COLORS[dailyExamScore.grade || 'F'].bg
+                        : otherQuadrantProps.className || ''
+                  }`}
+                  style={!attitudeMark && !dailyExamScore ? otherQuadrantProps.style : undefined}
+                  title={
+                    attitudeMark
+                      ? `태도: ${attitudeRaw}${notesRaw ? `\n특이사항: ${notesRaw}` : ''}`
+                      : (dailyExamScore ? `쪽지시험: ${dailyExamScore.score}/${dailyExamScore.maxScore} (${dailyExamScore.grade})` : (notesRaw ? `특이사항: ${notesRaw}` : undefined))
+                  }
+                >
+                  {attitudeMark ? (
+                    <span className={`text-nano font-black ${MARK_COLORS[attitudeMark].text}`}>{attitudeMark}</span>
+                  ) : (
+                    dailyExamScore && (
+                      <span className={`text-nano font-bold ${GRADE_COLORS[dailyExamScore.grade || 'F'].text}`}>
+                        {dailyExamScore.grade || Math.round(dailyExamScore.percentage || 0)}
+                      </span>
+                    )
+                  )}
+                </div>
+                {/* Q3: 시험 점수 (우하단) - 5시 방향
+                    Edutrix exam_info 있으면 분자/분모 표시 (예: "20/25"), 없으면 기존 fallback. */}
                 <div
                   className={`flex items-center justify-center ${
-                    otherExamScore
-                      ? GRADE_COLORS[otherExamScore.grade || 'F'].bg
-                      : otherQuadrantProps.className || ''
+                    examInfoRaw
+                      ? 'bg-blue-50'
+                      : otherExamScore
+                        ? GRADE_COLORS[otherExamScore.grade || 'F'].bg
+                        : otherQuadrantProps.className || ''
                   }`}
-                  style={!otherExamScore ? otherQuadrantProps.style : undefined}
-                  title={otherExamScore ? `시험: ${otherExamScore.score}/${otherExamScore.maxScore} (${otherExamScore.grade})` : undefined}
+                  style={!examInfoRaw && !otherExamScore ? otherQuadrantProps.style : undefined}
+                  title={
+                    examInfoRaw
+                      ? `시험: ${examInfoRaw}`
+                      : (otherExamScore ? `시험: ${otherExamScore.score}/${otherExamScore.maxScore} (${otherExamScore.grade})` : undefined)
+                  }
                 >
-                  {otherExamScore && (
-                    <span className={`text-nano font-bold ${GRADE_COLORS[otherExamScore.grade || 'F'].text}`}>
-                      {otherExamScore.grade || Math.round(otherExamScore.percentage || 0)}
-                    </span>
+                  {examInfoRaw ? (
+                    <span className="text-nano font-bold text-blue-700 leading-none">{examInfoRaw}</span>
+                  ) : (
+                    otherExamScore && (
+                      <span className={`text-nano font-bold ${GRADE_COLORS[otherExamScore.grade || 'F'].text}`}>
+                        {otherExamScore.grade || Math.round(otherExamScore.percentage || 0)}
+                      </span>
+                    )
                   )}
                 </div>
               </div>

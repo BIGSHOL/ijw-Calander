@@ -402,7 +402,19 @@ export const useAttendanceStudents = (options?: {
                     chunks.push(expectedDocIds.slice(i, i + CHUNK_SIZE));
                 }
 
-                const recordsMap = new Map<string, { attendance: Record<string, number>; memos: Record<string, string>; cellColors: Record<string, string>; salarySettingOverrides: Record<string, string> }>();
+                const recordsMap = new Map<string, {
+                    attendance: Record<string, number>;
+                    memos: Record<string, string>;
+                    cellColors: Record<string, string>;
+                    salarySettingOverrides: Record<string, string>;
+                    homework: Record<string, boolean>;
+                    examScores: Record<string, number>;
+                    attitude: Record<string, string>;
+                    classwork: Record<string, string>;
+                    attendanceNotes: Record<string, string>;
+                    examInfoRaw: Record<string, string>;
+                    assignmentScoreRaw: Record<string, string>;
+                }>();
 
                 // Parallel chunk processing
                 const chunkPromises = chunks.map(async (chunkDocIds) => {
@@ -424,7 +436,14 @@ export const useAttendanceStudents = (options?: {
                                 attendance: (data.attendance || {}) as Record<string, number>,
                                 memos: (data.memos || {}) as Record<string, string>,
                                 cellColors: (data.cellColors || {}) as Record<string, string>,
-                                salarySettingOverrides: (data.salarySettingOverrides || {}) as Record<string, string>
+                                salarySettingOverrides: (data.salarySettingOverrides || {}) as Record<string, string>,
+                                homework: (data.homework || {}) as Record<string, boolean>,
+                                examScores: (data.examScores || {}) as Record<string, number>,
+                                attitude: (data.attitude || {}) as Record<string, string>,
+                                classwork: (data.classwork || {}) as Record<string, string>,
+                                attendanceNotes: (data.attendanceNotes || {}) as Record<string, string>,
+                                examInfoRaw: (data.examInfoRaw || {}) as Record<string, string>,
+                                assignmentScoreRaw: (data.assignmentScoreRaw || {}) as Record<string, string>,
                             });
                         });
                     } catch (e) {
@@ -442,7 +461,14 @@ export const useAttendanceStudents = (options?: {
                         attendance: record?.attendance || {},
                         memos: record?.memos || {},
                         cellColors: record?.cellColors || {},
-                        salarySettingOverrides: record?.salarySettingOverrides || {}
+                        salarySettingOverrides: record?.salarySettingOverrides || {},
+                        homework: record?.homework || {},
+                        examScores: record?.examScores || {},
+                        attitude: record?.attitude || {},
+                        classwork: record?.classwork || {},
+                        attendanceNotes: record?.attendanceNotes || {},
+                        examInfoRaw: record?.examInfoRaw || {},
+                        assignmentScoreRaw: record?.assignmentScoreRaw || {},
                     };
                 });
 
