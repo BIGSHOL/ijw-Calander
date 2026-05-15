@@ -530,6 +530,14 @@ const ClassroomToolbar: React.FC<ClassroomToolbarProps> = ({
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-gray-200">{room.name}</span>
                               <span className="text-xxs text-gray-500">{room.capacity}명</span>
+                              {room.createdByName && (
+                                <span
+                                  className="text-xxs text-gray-500"
+                                  title={room.createdAt ? `생성일: ${room.createdAt.slice(0, 10)}` : ''}
+                                >
+                                  처리자: <span className="text-gray-300">{room.createdByName}</span>
+                                </span>
+                              )}
                             </div>
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button

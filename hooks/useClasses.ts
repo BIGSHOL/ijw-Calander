@@ -28,6 +28,10 @@ export interface ClassInfo {
     // 수업 카드 색상 (수업 단위 1:1 색상 시스템)
     bgColor?: string;
     textColor?: string;
+    // 최초 생성자 (audit)
+    createdBy?: string;
+    createdByName?: string;
+    createdAt?: string;
 }
 
 /**
@@ -129,6 +133,9 @@ export const useClasses = (subjectOrEnabled?: SubjectType | boolean, enabled = t
                     pendingTeacherReason: data.pendingTeacherReason,
                     bgColor: data.bgColor,
                     textColor: data.textColor,
+                    createdBy: data.createdBy,
+                    createdByName: data.createdByName,
+                    createdAt: data.createdAt,
                 };
             });
 

@@ -18,6 +18,8 @@ import { db } from '../firebaseConfig';
 import { getApp } from 'firebase/app';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { StaffMember } from '../types';
+import { logTimetableChange } from './useTimetableLog';
+import { getCurrentActor } from '../utils/getCurrentActor';
 
 export const COL_STAFF = 'staff';
 
@@ -171,10 +173,22 @@ export function useStaff() {
       staffData: Omit<StaffMember, 'id' | 'createdAt' | 'updatedAt'>
     ) => {
       const now = new Date().toISOString();
+      const actor = await getCurrentActor();
       const docRef = await addDoc(collection(db, COL_STAFF), {
         ...staffData,
+        createdBy: actor?.uid || null,
+        createdByName: actor?.name || '알 수 없음',
         createdAt: now,
         updatedAt: now,
+      });
+      logTimetableChange({
+        action: 'staff_create',
+        subject: 'staff',
+        className: staffData.name || '',
+        targetType: 'staff',
+        targetName: staffData.name || '',
+        details: `직원 생성: ${staffData.name}${staffData.role ? ` (${staffData.role})` : ''}`,
+        after: { ...staffData },
       });
       return docRef.id;
     },
@@ -199,6 +213,18 @@ export function useStaff() {
       await updateDoc(docRef, {
         ...updates,
         updatedAt: now,
+      });
+
+      const displayName = updates.name || previousData?.name || id;
+      logTimetableChange({
+        action: 'staff_update',
+        subject: 'staff',
+        className: displayName,
+        targetType: 'staff',
+        targetName: displayName,
+        details: `직원 수정: ${previousData?.name || id}${updates.name && updates.name !== previousData?.name ? ` → ${updates.name}` : ''}`,
+        before: previousData ? { ...previousData } : undefined,
+        after: { ...updates },
       });
 
       // 이름 변경 시 관련 데이터 자동 업데이트
@@ -238,12 +264,34 @@ export function useStaff() {
   // Delete staff mutation (Cloud Function으로 Auth 계정까지 완전 삭제)
   const deleteStaffMutation = useMutation({
     mutationFn: async (id: string) => {
+      // 삭제 전 정보 캡처
+      let beforeData: Record<string, any> = {};
+      let displayName = id;
+      try {
+        const beforeSnap = await getDoc(doc(db, COL_STAFF, id));
+        if (beforeSnap.exists()) {
+          beforeData = beforeSnap.data() as Record<string, any>;
+          displayName = beforeData.name || id;
+        }
+      } catch { /* ignore */ }
+
       const fns = getFunctions(getApp(), 'asia-northeast3');
       const deleteStaffAccount = httpsCallable<{ staffId: string }, { success: boolean; message: string }>(fns, 'deleteStaffAccount');
       const result = await deleteStaffAccount({ staffId: id });
       if (!result.data.success) {
         throw new Error(result.data.message);
       }
+
+      logTimetableChange({
+        action: 'staff_delete',
+        subject: 'staff',
+        className: displayName,
+        targetType: 'staff',
+        targetName: displayName,
+        details: `직원 삭제: ${displayName}`,
+        before: beforeData,
+      });
+
       return id;
     },
     onSuccess: () => {

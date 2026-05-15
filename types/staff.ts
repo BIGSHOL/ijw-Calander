@@ -34,6 +34,9 @@ export interface StaffMember {
   memo?: string;
   createdAt: string;
   updatedAt: string;
+  // 최초 생성자 (audit)
+  createdBy?: string;
+  createdByName?: string;
 
   // === 시스템 권한 필드 (UserProfile 통합) ===
   systemRole?: UserRole;           // 시스템 권한 역할 (8단계)

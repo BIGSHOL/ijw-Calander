@@ -19,13 +19,28 @@ export type TimetableLogAction =
   | 'student_withdraw'
   | 'enrollment_update'
   | 'english_move'
-  | 'student_move';
+  | 'student_move'
+  | 'room_create'
+  | 'room_update'
+  | 'room_delete'
+  | 'room_category_create'
+  | 'room_category_update'
+  | 'room_category_delete'
+  | 'staff_create'
+  | 'staff_update'
+  | 'staff_delete';
+
+/** 로그 대상 도메인 — 필터/그룹화용 */
+export type TimetableLogTargetType = 'class' | 'room' | 'staff';
 
 export interface TimetableLogEntry {
   timestamp: string;
   action: TimetableLogAction;
   subject: string;
   className: string;
+  targetType?: TimetableLogTargetType;
+  /** 대상 식별자 — class: className, room: room name, staff: staff name */
+  targetName?: string;
   studentName?: string;
   studentId?: string;
   changedBy: string;
@@ -38,6 +53,8 @@ export interface LogTimetableChangeParams {
   action: TimetableLogAction;
   subject: string;
   className: string;
+  targetType?: TimetableLogTargetType;
+  targetName?: string;
   studentName?: string;
   studentId?: string;
   details: string;
@@ -76,6 +93,8 @@ export function logTimetableChange(params: LogTimetableChangeParams): void {
   // Optional 필드는 값이 있을 때만 추가
   if (params.studentName) entry.studentName = params.studentName;
   if (params.studentId) entry.studentId = params.studentId;
+  if (params.targetType) entry.targetType = params.targetType;
+  if (params.targetName) entry.targetName = params.targetName;
 
   const cleanedBefore = removeUndefined(params.before);
   const cleanedAfter = removeUndefined(params.after);

@@ -18,7 +18,7 @@ import { db } from '../firebaseConfig';
 import { SubjectType } from '../types';
 import { getTodayKST, formatDateKST } from '../utils/dateUtils';
 import { logTimetableChange } from './useTimetableLog';
-import { buildAuditFields } from '../utils/getCurrentActor';
+import { buildAuditFields, getCurrentActor } from '../utils/getCurrentActor';
 
 const COL_STUDENTS = 'students';
 const COL_CLASSES = 'classes';
@@ -59,6 +59,7 @@ export const useCreateClass = () => {
         return { day: parts[0], periodId: parts[1] || '' };
       });
 
+      const actor = await getCurrentActor();
       const classDoc: any = {
         className,
         teacher,
@@ -66,6 +67,8 @@ export const useCreateClass = () => {
         schedule: scheduleSlots,
         legacySchedule: schedule,
         isActive: true,
+        createdBy: actor?.uid || null,
+        createdByName: actor?.name || '알 수 없음',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

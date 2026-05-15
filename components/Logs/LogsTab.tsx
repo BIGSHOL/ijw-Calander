@@ -11,9 +11,11 @@ const SUBJECT_LABELS: Record<string, string> = {
   english: '영어',
   science: '과학',
   korean: '국어',
+  room: '강의실',
+  staff: '직원',
 };
 
-const SUBJECT_FILTER_KEYS = ['math', 'highmath', 'english', 'science', 'korean'] as const;
+const SUBJECT_FILTER_KEYS = ['math', 'highmath', 'english', 'science', 'korean', 'room', 'staff'] as const;
 
 const ACTION_LABELS: Record<TimetableLogAction, string> = {
   class_create: '수업 생성',
@@ -26,6 +28,15 @@ const ACTION_LABELS: Record<TimetableLogAction, string> = {
   enrollment_update: '등록정보 수정',
   english_move: '영어 반이동',
   student_move: '학생 이동',
+  room_create: '강의실 생성',
+  room_update: '강의실 수정',
+  room_delete: '강의실 삭제',
+  room_category_create: '강의실 카테고리 생성',
+  room_category_update: '강의실 카테고리 수정',
+  room_category_delete: '강의실 카테고리 삭제',
+  staff_create: '직원 생성',
+  staff_update: '직원 수정',
+  staff_delete: '직원 삭제',
 };
 
 const ACTION_COLORS: Record<TimetableLogAction, string> = {
@@ -39,6 +50,15 @@ const ACTION_COLORS: Record<TimetableLogAction, string> = {
   enrollment_update: 'bg-yellow-100 text-yellow-800',
   english_move: 'bg-indigo-100 text-indigo-800',
   student_move: 'bg-cyan-100 text-cyan-800',
+  room_create: 'bg-teal-100 text-teal-800',
+  room_update: 'bg-teal-100 text-teal-700',
+  room_delete: 'bg-rose-100 text-rose-800',
+  room_category_create: 'bg-teal-50 text-teal-700',
+  room_category_update: 'bg-teal-50 text-teal-700',
+  room_category_delete: 'bg-rose-50 text-rose-700',
+  staff_create: 'bg-sky-100 text-sky-800',
+  staff_update: 'bg-sky-100 text-sky-700',
+  staff_delete: 'bg-rose-100 text-rose-800',
 };
 
 const PAGE_SIZE = 50;
@@ -47,15 +67,15 @@ interface LogRow extends TimetableLogEntry {
   id: string;
 }
 
-const fetchLogs = async (dateStr: string): Promise<LogRow[]> => {
-  const startOfDay = `${dateStr}T00:00:00.000Z`;
-  const endOfDay = `${dateStr}T23:59:59.999Z`;
+const fetchLogs = async (startDateStr: string, endDateStr: string): Promise<LogRow[]> => {
+  const startOfRange = `${startDateStr}T00:00:00.000Z`;
+  const endOfRange = `${endDateStr}T23:59:59.999Z`;
 
   const constraints: any[] = [
-    where('timestamp', '>=', startOfDay),
-    where('timestamp', '<=', endOfDay),
+    where('timestamp', '>=', startOfRange),
+    where('timestamp', '<=', endOfRange),
     orderBy('timestamp', 'asc'),
-    limit(PAGE_SIZE),
+    limit(PAGE_SIZE * 10),
   ];
 
   const q = query(collection(db, 'timetable_logs'), ...constraints);
@@ -131,7 +151,14 @@ const DiffView: React.FC<{ before?: Record<string, any>; after?: Record<string, 
 
 const LogsTab: React.FC = () => {
   const today = new Date().toISOString().split('T')[0];
-  const [selectedDate, setSelectedDate] = useState(today);
+  // 기본값: 최근 일주일 (오늘 포함 7일)
+  const sevenDaysAgo = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 6);
+    return d.toISOString().split('T')[0];
+  })();
+  const [startDate, setStartDate] = useState(sevenDaysAgo);
+  const [endDate, setEndDate] = useState(today);
   const [actionFilter, setActionFilter] = useState<Set<string>>(new Set(['all']));
   const [subjectFilter, setSubjectFilter] = useState<Set<string>>(new Set(['all']));
   const [searchQuery, setSearchQuery] = useState('');
@@ -143,8 +170,8 @@ const LogsTab: React.FC = () => {
   const subjectDropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: logs = [], isLoading, refetch } = useQuery({
-    queryKey: ['timetableLogs', selectedDate],
-    queryFn: () => fetchLogs(selectedDate),
+    queryKey: ['timetableLogs', startDate, endDate],
+    queryFn: () => fetchLogs(startDate, endDate),
     staleTime: 30_000,
   });
 
@@ -257,13 +284,24 @@ const LogsTab: React.FC = () => {
       <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-3 flex-wrap">
         <h2 className="text-sm font-bold text-gray-800 shrink-0">시간표 변경 로그</h2>
 
-        {/* 날짜 */}
-        <input
-          type="date"
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
+        {/* 날짜 기간 (시작 ~ 끝) — 기본 최근 일주일 */}
+        <div className="flex items-center gap-1">
+          <input
+            type="date"
+            value={startDate}
+            max={endDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          <span className="text-xs text-gray-400">~</span>
+          <input
+            type="date"
+            value={endDate}
+            min={startDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+        </div>
 
         {/* 작업유형 (체크박스 멀티선택) */}
         <div className="relative" ref={dropdownRef}>

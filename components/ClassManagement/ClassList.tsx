@@ -313,13 +313,14 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
     <div className="flex flex-col gap-2">
       <div className="bg-white rounded-sm border border-gray-200 overflow-hidden shadow-sm">
         {/* 테이블 헤더 */}
-        <div className="bg-gray-50 border-b border-gray-200 px-3 py-2 grid grid-cols-[80px_1fr_100px_100px_1fr_1fr_70px_40px] gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+        <div className="bg-gray-50 border-b border-gray-200 px-3 py-2 grid grid-cols-[80px_1fr_100px_100px_1fr_1fr_80px_70px_40px] gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
           <div className="text-center">과목</div>
           <div>수업명</div>
           <div>담임</div>
           <div>부담임</div>
           <div>스케줄</div>
           <div>메모</div>
+          <div>처리자</div>
           <div className="text-center">학생</div>
           <div></div>
         </div>
@@ -338,7 +339,7 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
             <div
               key={classInfo.id}
               onClick={() => onClassClick(classInfo)}
-              className="px-3 py-1 grid grid-cols-[80px_1fr_100px_100px_1fr_1fr_70px_40px] gap-2 items-center hover:bg-gray-50 cursor-pointer transition-colors group"
+              className="px-3 py-1 grid grid-cols-[80px_1fr_100px_100px_1fr_1fr_80px_70px_40px] gap-2 items-center hover:bg-gray-50 cursor-pointer transition-colors group"
             >
               {/* 과목 배지 */}
               <div className="flex justify-center">
@@ -393,6 +394,15 @@ const ClassList: React.FC<ClassListProps> = ({ classes, onClassClick, isLoading,
                     <FileText className="w-3 h-3 text-gray-400 flex-shrink-0" />
                     <span className="truncate">{memo}</span>
                   </>
+                ) : (
+                  <span className="text-gray-300">-</span>
+                )}
+              </div>
+
+              {/* 처리자 (최초 생성자) */}
+              <div className="text-xxs truncate" title={classInfo.createdAt ? `생성일: ${classInfo.createdAt.slice(0, 10)}` : ''}>
+                {classInfo.createdByName ? (
+                  <span className="text-gray-600">{classInfo.createdByName}</span>
                 ) : (
                   <span className="text-gray-300">-</span>
                 )}

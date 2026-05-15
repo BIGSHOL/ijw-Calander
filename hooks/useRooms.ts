@@ -2,6 +2,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { collection, getDocs, getDoc, doc, setDoc, deleteDoc, writeBatch, updateDoc, query, where } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { SubjectType } from '../types';
+import { logTimetableChange } from './useTimetableLog';
+import { getCurrentActor } from '../utils/getCurrentActor';
 
 // ─── 강의실 카테고리 ───
 export type RoomCategory = string;
@@ -51,6 +53,11 @@ export interface RoomData {
   category: RoomCategory; // 카테고리 (본원, 바른, 고등)
   order: number;        // 정렬 순서
   isActive: boolean;    // 활성 여부
+  // 최초 생성자 (audit)
+  createdBy?: string;
+  createdByName?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 const COL_ROOMS = 'rooms';
@@ -123,10 +130,32 @@ export const useRoomCategories = () => {
 
 // ─── 카테고리 CRUD ───
 export async function addCategory(cat: Omit<RoomCategoryData, 'id'>): Promise<void> {
-  await setDoc(doc(db, COL_CATEGORIES, cat.name), cat);
+  const actor = await getCurrentActor();
+  await setDoc(doc(db, COL_CATEGORIES, cat.name), {
+    ...cat,
+    createdBy: actor?.uid || null,
+    createdByName: actor?.name || '알 수 없음',
+    createdAt: new Date().toISOString(),
+  });
+  logTimetableChange({
+    action: 'room_category_create',
+    subject: 'room',
+    className: cat.name,
+    targetType: 'room',
+    targetName: cat.name,
+    details: `강의실 카테고리 생성: ${cat.name}`,
+    after: { name: cat.name, color: cat.color, order: cat.order },
+  });
 }
 
 export async function updateCategory(id: string, updates: Partial<RoomCategoryData>): Promise<void> {
+  // 변경 전 데이터 캡처 (로그용)
+  let beforeData: Record<string, any> = {};
+  try {
+    const beforeSnap = await getDoc(doc(db, COL_CATEGORIES, id));
+    if (beforeSnap.exists()) beforeData = beforeSnap.data();
+  } catch { /* ignore */ }
+
   // 이름이 변경되면 새 문서 생성 후 기존 삭제 + rooms의 category 필드 일괄 업데이트
   if (updates.name && updates.name !== id) {
     const oldDoc = await getDocs(query(collection(db, COL_CATEGORIES), where('name', '==', id)));
@@ -148,6 +177,17 @@ export async function updateCategory(id: string, updates: Partial<RoomCategoryDa
   } else {
     await updateDoc(doc(db, COL_CATEGORIES, id), updates);
   }
+
+  logTimetableChange({
+    action: 'room_category_update',
+    subject: 'room',
+    className: updates.name || id,
+    targetType: 'room',
+    targetName: updates.name || id,
+    details: `강의실 카테고리 수정: ${id}${updates.name && updates.name !== id ? ` → ${updates.name}` : ''}`,
+    before: beforeData,
+    after: { ...beforeData, ...updates },
+  });
 }
 
 export async function deleteCategory(id: string, fallbackCategory: string): Promise<void> {
@@ -155,15 +195,27 @@ export async function deleteCategory(id: string, fallbackCategory: string): Prom
   const roomsSnapshot = await getDocs(collection(db, COL_ROOMS));
   const batch = writeBatch(db);
   let count = 0;
+  let movedRoomCount = 0;
   for (const docSnap of roomsSnapshot.docs) {
     if (docSnap.data().category === id) {
       batch.update(docSnap.ref, { category: fallbackCategory });
       count++;
+      movedRoomCount++;
       if (count >= 490) { await batch.commit(); count = 0; }
     }
   }
   if (count > 0) await batch.commit();
   await deleteDoc(doc(db, COL_CATEGORIES, id));
+
+  logTimetableChange({
+    action: 'room_category_delete',
+    subject: 'room',
+    className: id,
+    targetType: 'room',
+    targetName: id,
+    details: `강의실 카테고리 삭제: ${id}${movedRoomCount > 0 ? ` (소속 강의실 ${movedRoomCount}개 → ${fallbackCategory})` : ''}`,
+    before: { name: id },
+  });
 }
 
 // ─── 카테고리 판별 함수 (이름 기반 자동 분류) ───
@@ -273,30 +325,83 @@ export async function migrateRoomCategories(): Promise<number> {
 
 // ─── 강의실 추가 ───
 export async function addRoom(room: Omit<RoomData, 'id'>): Promise<void> {
+  const actor = await getCurrentActor();
   const docRef = doc(db, COL_ROOMS, room.name);
-  await setDoc(docRef, room);
+  const now = new Date().toISOString();
+  await setDoc(docRef, {
+    ...room,
+    createdBy: actor?.uid || null,
+    createdByName: actor?.name || '알 수 없음',
+    createdAt: now,
+    updatedAt: now,
+  });
+  logTimetableChange({
+    action: 'room_create',
+    subject: 'room',
+    className: room.name,
+    targetType: 'room',
+    targetName: room.name,
+    details: `강의실 생성: ${room.name} (${room.category}, ${room.capacity}명)`,
+    after: { ...room },
+  });
 }
 
 // ─── 강의실 수정 ───
 export async function updateRoom(id: string, updates: Partial<RoomData>): Promise<void> {
+  // 변경 전 데이터 캡처 (로그용)
+  let beforeData: Record<string, any> = {};
+  try {
+    const beforeSnap = await getDoc(doc(db, COL_ROOMS, id));
+    if (beforeSnap.exists()) beforeData = beforeSnap.data();
+  } catch { /* ignore */ }
+
+  const now = new Date().toISOString();
   if (updates.name && updates.name !== id) {
     // 이름이 변경되면 새 문서 생성 후 기존 삭제 (doc ID가 name이므로)
     const oldRef = doc(db, COL_ROOMS, id);
     const oldSnap = await getDoc(oldRef);
     const oldData = oldSnap.exists() ? oldSnap.data() : {};
-    const newData = { ...oldData, ...updates };
+    const newData = { ...oldData, ...updates, updatedAt: now };
     await setDoc(doc(db, COL_ROOMS, updates.name), newData);
     await deleteDoc(oldRef);
   } else {
     const docRef = doc(db, COL_ROOMS, id);
-    await updateDoc(docRef, updates);
+    await updateDoc(docRef, { ...updates, updatedAt: now });
   }
+
+  logTimetableChange({
+    action: 'room_update',
+    subject: 'room',
+    className: updates.name || id,
+    targetType: 'room',
+    targetName: updates.name || id,
+    details: `강의실 수정: ${id}${updates.name && updates.name !== id ? ` → ${updates.name}` : ''}`,
+    before: beforeData,
+    after: { ...beforeData, ...updates },
+  });
 }
 
 // ─── 강의실 삭제 (비활성화) ───
 export async function deactivateRoom(id: string): Promise<void> {
+  let beforeData: Record<string, any> = {};
+  try {
+    const beforeSnap = await getDoc(doc(db, COL_ROOMS, id));
+    if (beforeSnap.exists()) beforeData = beforeSnap.data();
+  } catch { /* ignore */ }
+
   const docRef = doc(db, COL_ROOMS, id);
-  await updateDoc(docRef, { isActive: false });
+  await updateDoc(docRef, { isActive: false, updatedAt: new Date().toISOString() });
+
+  logTimetableChange({
+    action: 'room_delete',
+    subject: 'room',
+    className: id,
+    targetType: 'room',
+    targetName: id,
+    details: `강의실 비활성화: ${id}`,
+    before: beforeData,
+    after: { isActive: false },
+  });
 }
 
 // ─── 강의실명 변경 시 classes의 room/slotRooms 일괄 업데이트 ───

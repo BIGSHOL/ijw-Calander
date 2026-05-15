@@ -143,6 +143,9 @@ const StaffList: React.FC<StaffListProps> = ({
                 <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
                   상태
                 </th>
+                <th className="px-2 py-1.5 text-left text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
+                  처리자
+                </th>
                 <th className="px-2 py-1.5 text-center text-xxs font-medium" style={{ color: 'rgb(51, 78, 104)' /* primary-700 */ }}>
                   시스템 계정
                 </th>
@@ -283,6 +286,15 @@ const StaffList: React.FC<StaffListProps> = ({
                   </td>
                   <td className="px-2 py-1.5 whitespace-nowrap text-xs">
                     {getStatusBadge(member.status)}
+                  </td>
+                  <td className="px-2 py-1.5 whitespace-nowrap text-xs">
+                    {member.createdByName ? (
+                      <span className="text-[11px] text-gray-600" title={member.createdAt ? `생성일: ${member.createdAt.slice(0, 10)}` : ''}>
+                        {member.createdByName}
+                      </span>
+                    ) : (
+                      <span className="text-xxs text-gray-400">-</span>
+                    )}
                   </td>
                   <td className="px-2 py-1.5 whitespace-nowrap text-xs text-center">
                     {member.uid ? (
