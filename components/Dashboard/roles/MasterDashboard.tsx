@@ -10,6 +10,7 @@ import { useBilling } from '../../../hooks/useBilling';
 import { useStaff } from '../../../hooks/useStaff';
 import { useFollowUpConsultations, getFollowUpUrgency, getFollowUpDaysLeft } from '../../../hooks/useStudentConsultations';
 import { useClasses } from '../../../hooks/useClasses';
+import { useSubjectClassStudents } from '../../../hooks/useSubjectClassStudents';
 import { useRecentExams } from '../../../hooks/useExams';
 import { useConsultations, isRegisteredStatus } from '../../../hooks/useConsultations';
 import { format, startOfMonth, endOfMonth, subDays } from 'date-fns';
@@ -89,6 +90,56 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   );
   const stats = consultationStatsResult.stats;
   const consultationLoading = consultationStatsResult.loading;
+
+  // ── studentMap (시간표 hook 호출용) ──
+  const studentMap = useMemo(() => {
+    const map: Record<string, any> = {};
+    students.forEach(s => { map[s.id] = s; });
+    return map;
+  }, [students]);
+
+  // ── 영어/수학 시간표 hook 직접 호출 — 시간표 헤더와 동일 카운트 보장 ──
+  const englishClassNames = useMemo(() =>
+    allClasses.filter((c: any) => c.subject === 'english').map((c: any) => c.className).filter(Boolean),
+    [allClasses]);
+  const mathClassNames = useMemo(() =>
+    allClasses.filter((c: any) => c.subject === 'math').map((c: any) => c.className).filter(Boolean),
+    [allClasses]);
+  const englishClassData = useSubjectClassStudents({ subject: 'english', classNames: englishClassNames, studentMap, referenceDate: today });
+  const mathClassData = useSubjectClassStudents({ subject: 'math', classNames: mathClassNames, studentMap, referenceDate: today });
+
+  // useEnglishStats / TimetableHeader 와 동일 카운트 로직 — studentBestData dedup + active 체크
+  const countActiveBySubject = (classDataMap: Record<string, any>): { active: number; activeIds: Set<string> } => {
+    const studentBestData = new Map<string, any>();
+    Object.values(classDataMap || {}).forEach((cd: any) => {
+      cd.studentList?.forEach((student: any) => {
+        const existing = studentBestData.get(student.id);
+        if (!existing) { studentBestData.set(student.id, student); return; }
+        const isActive = (s: any) => !s.withdrawalDate && !s.onHold;
+        if (isActive(student) && !isActive(existing)) studentBestData.set(student.id, student);
+      });
+    });
+    const activeIds = new Set<string>();
+    studentBestData.forEach((student, studentId) => {
+      if (student.withdrawalDate) return;
+      if (student.onHold) return;
+      const baseStatus = studentMap[studentId]?.status;
+      if (baseStatus !== 'active') return;
+      activeIds.add(studentId);
+    });
+    return { active: activeIds.size, activeIds };
+  };
+
+  const mathCountResult = useMemo(() => countActiveBySubject(mathClassData?.classDataMap || {}), [mathClassData, studentMap]);
+  const englishCountResult = useMemo(() => countActiveBySubject(englishClassData?.classDataMap || {}), [englishClassData, studentMap]);
+  const mathActiveCount = mathCountResult.active;
+  const englishActiveCount = englishCountResult.active;
+  // 2과목 수강 = 수학+영어 둘 다 active
+  const multi2Count = useMemo(() => {
+    let count = 0;
+    mathCountResult.activeIds.forEach(id => { if (englishCountResult.activeIds.has(id)) count++; });
+    return count;
+  }, [mathCountResult, englishCountResult]);
 
   // ── 헬퍼 ──
   // 사용자 결정(2026-05-15): 시간표 헤더 기준과 동일하게 카운트.
@@ -215,17 +266,15 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     '퇴원': '#f97316',
   };
   const trendCards = useMemo(() => {
-    const find = (label: string) => subjectDistribution.find(d => d.subject === label);
-    const math = find('수학');
-    const english = find('영어');
-    const multi2 = find('2과목 수강');
+    // 사용자 결정(2026-05-15): subjectDistribution 대신 시간표 hook 결과로 카운트
+    // (시간표 헤더와 정확히 일치 — 수학 226, 영어 296 등).
     const cards: { key: string; label: string; count: number; color: string; trend: { day: number; value: number }[] }[] = [];
-    if (math) cards.push({ key: 'math', label: '수학', count: math.count, color: COLOR_MAP['수학'], trend: generateMockTrend(math.count) });
-    if (english) cards.push({ key: 'english', label: '영어', count: english.count, color: COLOR_MAP['영어'], trend: generateMockTrend(english.count) });
-    if (multi2) cards.push({ key: 'multi2', label: '2과목 수강', count: multi2.count, color: COLOR_MAP['2과목 수강'], trend: generateMockTrend(multi2.count) });
+    cards.push({ key: 'math', label: '수학', count: mathActiveCount, color: COLOR_MAP['수학'], trend: generateMockTrend(Math.max(1, mathActiveCount)) });
+    cards.push({ key: 'english', label: '영어', count: englishActiveCount, color: COLOR_MAP['영어'], trend: generateMockTrend(Math.max(1, englishActiveCount)) });
+    cards.push({ key: 'multi2', label: '2과목 수강', count: multi2Count, color: COLOR_MAP['2과목 수강'], trend: generateMockTrend(Math.max(1, multi2Count)) });
     return cards;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subjectDistribution.map(d => `${d.subject}:${d.count}`).join('|')]);
+  }, [mathActiveCount, englishActiveCount, multi2Count]);
 
   // 이번 달 신입/퇴원 — 과목별 (수학 math 만 / 영어)
   const enrollmentBySubject = useMemo(() => {
