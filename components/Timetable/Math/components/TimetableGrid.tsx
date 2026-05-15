@@ -391,6 +391,27 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         return allResources.filter(r => weekendResourceDaysMap.has(r));
     }, [allResources, weekendResourceDaysMap]);
 
+    // 날짜 기반 뷰: 요일별로 해당 요일에 수업이 있는 선생님 목록 (slotTeachers 포함)
+    // orderedSelectedDays는 이미 사용자 설정 요일 순서가 반영된 상태
+    // Hooks 규칙: 모든 훅은 early return 보다 먼저 호출되어야 함
+    const dayBasedData = useMemo(() => {
+        const data: { day: string; resources: string[] }[] = [];
+
+        orderedSelectedDays.forEach(day => {
+            const resourcesForDay = allResources.filter(resource =>
+                resourceDayLookup.get(resource?.trim())?.has(day) ?? false
+            );
+            if (resourcesForDay.length > 0) {
+                data.push({ day, resources: resourcesForDay });
+            }
+        });
+
+        return data;
+    }, [orderedSelectedDays, allResources, resourceDayLookup]);
+
+    // periodColRef: renderPeriodColumn 의 table ref (early return 앞에서 호출)
+    const periodColRef = useRef<HTMLTableElement>(null);
+
     if (filteredClasses.length === 0 && allResources.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-gray-400 p-8">
@@ -1063,23 +1084,6 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
         );
     };
 
-    // 날짜 기반 뷰: 요일별로 해당 요일에 수업이 있는 선생님 목록 (slotTeachers 포함)
-    // orderedSelectedDays는 이미 사용자 설정 요일 순서가 반영된 상태
-    const dayBasedData = useMemo(() => {
-        const data: { day: string; resources: string[] }[] = [];
-
-        orderedSelectedDays.forEach(day => {
-            const resourcesForDay = allResources.filter(resource =>
-                resourceDayLookup.get(resource?.trim())?.has(day) ?? false
-            );
-            if (resourcesForDay.length > 0) {
-                data.push({ day, resources: resourcesForDay });
-            }
-        });
-
-        return data;
-    }, [orderedSelectedDays, allResources, resourceDayLookup]);
-
     // 날짜 기반 뷰: 요일별 테이블 렌더링
     const renderDayBasedTable = (day: string, resources: string[], hidePeriodColumn?: boolean) => {
         if (resources.length === 0) return null;
@@ -1636,9 +1640,6 @@ const TimetableGrid: React.FC<TimetableGridProps> = ({
             </div>
         );
     };
-
-    // useRef는 조건부 early return보다 먼저 호출 (Rules of Hooks 준수)
-    const periodColRef = useRef<HTMLTableElement>(null);
 
     // teacher-based 뷰 (그룹 순서 적용) — day-based에서는 사용하지 않지만 hooks 순서 유지를 위해 항상 계산
     const groupConfigs: Record<string, { resources: string[]; daysMap: Map<string, string[]>; isWednesday?: boolean; hasData: boolean }> = {
