@@ -49,6 +49,10 @@ import ScheduledDateModal from './Math/components/ScheduledDateModal';
 import { doc, collection, collectionGroup, query, where, getDoc, getDocs, deleteDoc, updateDoc, deleteField } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
+import { useSheetsSync } from '../../hooks/useSheetsSync';
+
+// 시트 자동 푸시 디바운스 — 시간표 편집이 멈추고 이 시간이 지나면 1회 푸시
+const SHEETS_AUTO_PUSH_DEBOUNCE_MS = 120000; // 2분
 
 // Performance Note (bundle-dynamic-imports): Lazy load Generic Timetable
 const GenericTimetable = lazy(() => import('./Generic/GenericTimetable'));
@@ -384,6 +388,72 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
         if (excelToastTimerRef.current) clearTimeout(excelToastTimerRef.current);
         excelToastTimerRef.current = setTimeout(() => setExcelToast(null), 1800);
     }, []);
+
+    // ─── Google 시트 내보내기 파라미터 (수동 동기화 + 자동 푸시 공용) ───
+    const buildSheetsExportParams = useCallback(() => {
+        const mondayDate = weekDates['월']?.date;
+        const refDate = mondayDate ? getWeekReferenceDate(mondayDate) : undefined;
+        return {
+            weekLabel,
+            filteredClasses,
+            allResources,
+            orderedSelectedDays,
+            weekDates,
+            teachers,
+            currentPeriods,
+            studentMap,
+            subjectFilter: currentSubjectFilter,
+            showHoldStudents,
+            showWithdrawnStudents,
+            referenceDate: refDate,
+        };
+    }, [weekLabel, filteredClasses, allResources, orderedSelectedDays, weekDates, teachers, currentPeriods, studentMap, currentSubjectFilter, showHoldStudents, showWithdrawnStudents]);
+
+    // ─── Google 시트 자동 푸시 ───
+    // 시간표 데이터가 바뀌면 디바운스 후 클라이언트가 직접 방식 A로 시트 갱신.
+    // (서버 스케줄러 대체 — 화면에 보이는 정확한 데이터를 그대로 전송하므로 어긋나지 않음)
+    const { mapping: sheetsMapping, syncNow: sheetsSyncNow } = useSheetsSync();
+    const lastPushedSigRef = useRef<string>('');
+    const autoPushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const buildParamsRef = useRef(buildSheetsExportParams);
+    buildParamsRef.current = buildSheetsExportParams;
+    const syncNowRef = useRef(sheetsSyncNow);
+    syncNowRef.current = sheetsSyncNow;
+
+    // 내보내기 결과에 영향 주는 필드만 추려 변경 서명 계산 (필터 토글 등 무관한 변경은 무시)
+    const sheetsContentSig = useMemo(() => {
+        if (viewType !== 'excel' && viewType !== 'teacher') return '';
+        return JSON.stringify(
+            filteredClasses.map(c => ({
+                i: c.id, n: c.className, r: c.room, t: c.teacher,
+                bg: c.bgColor, tc: c.textColor, s: c.schedule, st: c.slotTeachers,
+                sl: (c.studentList || []).map((s: any) =>
+                    `${s.id}|${s.name}|${s.school}|${s.grade}|${s.isTransferredIn ? 1 : 0}|${s.isTransferred ? 1 : 0}|${s.onHold ? 1 : 0}|${s.withdrawalDate || ''}|${s.enrollmentDate || ''}|${s.firstSubjectEnrollmentDate || ''}|${(s.attendanceDays || []).join('')}`
+                ),
+            }))
+        );
+    }, [viewType, filteredClasses]);
+
+    useEffect(() => {
+        // 시간표(엑셀/강사) 뷰 + 등록된 시트가 있을 때만, 내용이 실제로 바뀌었을 때만
+        if (!sheetsContentSig) return;
+        if (!sheetsMapping?.spreadsheetId) return;
+        if (sheetsContentSig === lastPushedSigRef.current) return;
+
+        if (autoPushTimerRef.current) clearTimeout(autoPushTimerRef.current);
+        autoPushTimerRef.current = setTimeout(() => {
+            const params = buildParamsRef.current();
+            if (!params) return;
+            // 권한 없는 사용자(강사 등)는 조용히 실패 — 관리자 화면이 열려 있을 때 푸시됨
+            syncNowRef.current(params)
+                .then(() => { lastPushedSigRef.current = sheetsContentSig; })
+                .catch(() => { /* 권한/네트워크 오류 — 다음 변경 때 재시도 */ });
+        }, SHEETS_AUTO_PUSH_DEBOUNCE_MS);
+
+        return () => {
+            if (autoPushTimerRef.current) clearTimeout(autoPushTimerRef.current);
+        };
+    }, [sheetsContentSig, sheetsMapping?.spreadsheetId]);
 
     // 엑셀뷰용 셀 선택 + 학생 등록 + 복사/붙여넣기
     const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
@@ -1110,24 +1180,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                         }
                     } : undefined}
                     // Google Sheets 동기화용 파라미터 (엑셀 내보내기와 동일한 데이터)
-                    getSheetsExportParams={(viewType === 'excel' || viewType === 'teacher') ? () => {
-                        const mondayDate = weekDates['월']?.date;
-                        const refDate = mondayDate ? getWeekReferenceDate(mondayDate) : undefined;
-                        return {
-                            weekLabel,
-                            filteredClasses,
-                            allResources,
-                            orderedSelectedDays,
-                            weekDates,
-                            teachers,
-                            currentPeriods,
-                            studentMap,
-                            subjectFilter: currentSubjectFilter,
-                            showHoldStudents,
-                            showWithdrawnStudents,
-                            referenceDate: refDate,
-                        };
-                    } : undefined}
+                    getSheetsExportParams={(viewType === 'excel' || viewType === 'teacher') ? buildSheetsExportParams : undefined}
                     // 가져오기 이력 / 되돌리기 (Phase 5)
                     onOpenImportHistory={(viewType === 'excel' || viewType === 'teacher') ? () => setIsImportHistoryOpen(true) : undefined}
                     // 엑셀 가져오기 (Phase 3 — 미리보기 모달, 적용은 Phase 4에서)

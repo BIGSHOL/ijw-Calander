@@ -8053,16 +8053,11 @@ const googleCalendarSync = require("./googleCalendarSync");
 exports.syncEventToGcal = googleCalendarSync.syncEventToGcal;
 exports.triggerGcalSync = googleCalendarSync.triggerGcalSync;
 
-// ============ 시간표 → Google Sheets 자동 동기화 ============
-// timetableSheetsSync.js: Drive/Sheets API + 시트 라이프사이클
-// timetableDataCollector.js: Firestore 데이터 수집
-// timetableSyncTriggers.js: Firestore onWrite + onSchedule + HTTPS endpoint
+// ============ 시간표 ↔ Google Sheets 동기화 (HTTPS Callable) ============
+// 자동 동기화는 클라이언트 자동 푸시(TimetableManager)가 담당.
+// 서버 스케줄러/Firestore 트리거는 제거됨 — 서버 재계산이 클라이언트와
+// 어긋나 인원 누락이 발생했기 때문 (timetableSyncTriggers.js 참조).
 const timetableSyncTriggers = require("./timetableSyncTriggers");
-exports.onTimetableClassesChange = timetableSyncTriggers.onClassesChange;
-exports.onTimetableStudentsChange = timetableSyncTriggers.onStudentsChange;
-exports.onTimetableEnrollmentsChange = timetableSyncTriggers.onEnrollmentsChange;
-exports.onTimetableStaffChange = timetableSyncTriggers.onStaffChange;
-exports.syncTimetableSheetsScheduled = timetableSyncTriggers.syncTimetableSheetsScheduled;
 exports.syncTimetableSheetsNow = timetableSyncTriggers.syncTimetableSheetsNow;
 exports.uploadTimetableXlsx = timetableSyncTriggers.uploadTimetableXlsx;
 exports.diagnoseSheetsFolder = timetableSyncTriggers.diagnoseSheetsFolder;
