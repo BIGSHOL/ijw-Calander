@@ -19,21 +19,29 @@ const getAssignmentMark = (rawScore: string | undefined): '⭕' | '△' | 'X' | 
   return 'X';
 };
 
-// study_attitude raw → 마크 (한국어/영어 텍스트 모두 정규화)
+// study_attitude raw → 마크 (한국어/영어 텍스트 모두 정규화).
+// 복합 값("최고 책없음", "좋음 책없음" 등) 첫 토큰 기준 매핑.
+// "책없음" 같은 첨가어는 마크에는 반영 안 되지만 호버에 raw 그대로 노출됨.
 const getAttitudeMark = (rawAttitude: string | undefined): '⭕' | '△' | 'X' | '' => {
   if (!rawAttitude) return '';
   const v = String(rawAttitude).trim();
+  if (!v) return '';
+  // 단일 기호
   if (v === '⭕' || v === '○' || v === 'O') return '⭕';
   if (v === '△' || v === '세모') return '△';
   if (v === 'X' || v === '✕' || v === '×') return 'X';
-  if (v === '좋음' || v === '우수' || v === '훌륭함') return '⭕';
-  if (v === '보통' || v === '평범') return '△';
-  if (v === '나쁨' || v === '미흡' || v === '부족') return 'X';
-  const lower = v.toLowerCase();
-  if (lower.startsWith('good') || lower.startsWith('excellent')) return '⭕';
-  if (lower.startsWith('normal') || lower.startsWith('average') || lower.startsWith('ok')) return '△';
-  if (lower.startsWith('bad') || lower.startsWith('poor')) return 'X';
-  return '';  // 알 수 없는 값은 빈 표시 (호버 툴팁으로 raw 노출)
+  // 첫 토큰 기준 (공백/언더스코어 분리)
+  const head = v.split(/[\s_]+/)[0];
+  // 한국어
+  if (head === '최고' || head === '좋음' || head === '우수' || head === '훌륭함') return '⭕';
+  if (head === '보통' || head === '평범') return '△';
+  if (head === '나쁨' || head === '미흡' || head === '부족') return 'X';
+  // 영어
+  const headLower = head.toLowerCase();
+  if (headLower === 'good' || headLower === 'excellent' || headLower === 'best') return '⭕';
+  if (headLower === 'normal' || headLower === 'average' || headLower === 'ok') return '△';
+  if (headLower === 'bad' || headLower === 'poor') return 'X';
+  return '';  // 알 수 없는 값은 마크 없이 raw 텍스트로 표시
 };
 
 // 마크 → 색상 (배경, 글자)
@@ -649,18 +657,21 @@ const StudentRow = React.memo(({
                 </div>
                 {/* Q3: 수업 태도 (우하단) - 5시 방향
                     Edutrix study_attitude 있으면 ⭕△X 표시 + 호버에 raw값 + 특이사항(notes).
+                    매핑 실패 시(알 수 없는 값) raw 텍스트 fallback 표시.
                     호버는 title 속성으로 노출 (notes는 \n 으로 줄바꿈). */}
                 <div
                   className={`flex items-center justify-center ${
                     attitudeMark
                       ? MARK_COLORS[attitudeMark].bg
-                      : otherExamScore
-                        ? GRADE_COLORS[otherExamScore.grade || 'F'].bg
-                        : otherQuadrantProps.className || ''
+                      : attitudeRaw
+                        ? 'bg-slate-50'
+                        : otherExamScore
+                          ? GRADE_COLORS[otherExamScore.grade || 'F'].bg
+                          : otherQuadrantProps.className || ''
                   }`}
-                  style={!attitudeMark && !otherExamScore ? otherQuadrantProps.style : undefined}
+                  style={!attitudeMark && !attitudeRaw && !otherExamScore ? otherQuadrantProps.style : undefined}
                   title={
-                    attitudeMark
+                    attitudeRaw
                       ? `태도: ${attitudeRaw}${notesRaw ? `\n──────\n특이사항: ${notesRaw}` : ''}`
                       : (notesRaw
                           ? `특이사항: ${notesRaw}`
@@ -669,6 +680,10 @@ const StudentRow = React.memo(({
                 >
                   {attitudeMark ? (
                     <span className={`text-nano font-black ${MARK_COLORS[attitudeMark].text}`}>{attitudeMark}</span>
+                  ) : attitudeRaw ? (
+                    <span className="text-nano font-bold text-slate-700 truncate max-w-full px-0.5 leading-tight">
+                      {String(attitudeRaw).split(/[\s_]+/)[0]}
+                    </span>
                   ) : (
                     otherExamScore && (
                       <span className={`text-nano font-bold ${GRADE_COLORS[otherExamScore.grade || 'F'].text}`}>
