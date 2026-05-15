@@ -25,8 +25,12 @@ export interface EdutrixReport {
     assignment_score: string | null;
     /** 진도 정보 */
     progress: string | null;
-    /** 시험 정보 */
+    /** 시험 정보 (분자/분모 형식, 예: "0/100") */
     exam_info: string | null;
+    /** 학습 태도 (예: "좋음" / "보통" / "나쁨" 또는 Edutrix 입력값 raw) */
+    study_attitude: string | null;
+    /** 수업 과제 (오늘 수업 시간 과제) */
+    homework_today: string | null;
     // joined fields
     student_name?: string;
     class_name?: string;
@@ -71,6 +75,11 @@ export async function fetchReportsByDate(date: string): Promise<EdutrixReport[]>
             writer_id,
             lateness,
             notes,
+            assignment_score,
+            progress,
+            exam_info,
+            study_attitude,
+            homework_today,
             created_at,
             students!inner(name),
             classes(name)
@@ -92,6 +101,11 @@ export async function fetchReportsByDate(date: string): Promise<EdutrixReport[]>
             writer_id: row.writer_id,
             lateness: row.lateness,
             notes: row.notes,
+            assignment_score: row.assignment_score || null,
+            progress: row.progress || null,
+            exam_info: row.exam_info || null,
+            study_attitude: row.study_attitude || null,
+            homework_today: row.homework_today || null,
             created_at: row.created_at,
             student_name: row.students?.name || null,
             class_name: className,
@@ -134,6 +148,8 @@ export async function fetchReportsByMonth(yearMonth: string): Promise<EdutrixRep
                 assignment_score,
                 progress,
                 exam_info,
+                study_attitude,
+                homework_today,
                 created_at,
                 students!inner(name),
                 classes(name)
@@ -175,6 +191,8 @@ export async function fetchReportsByMonth(yearMonth: string): Promise<EdutrixRep
             assignment_score: row.assignment_score || null,
             progress: row.progress || null,
             exam_info: row.exam_info || null,
+            study_attitude: row.study_attitude || null,
+            homework_today: row.homework_today || null,
             created_at: row.created_at,
             student_name: row.students?.name || null,
             class_name: className,
@@ -254,6 +272,8 @@ export async function fetchStudentReports(studentName: string, limit: number = 1
             assignment_score: row.assignment_score || null,
             progress: row.progress || null,
             exam_info: row.exam_info || null,
+            study_attitude: row.study_attitude || null,
+            homework_today: row.homework_today || null,
             created_at: row.created_at,
             student_name: row.students?.name || null,
             class_name: className,
@@ -324,6 +344,8 @@ export async function fetchAllLatestReports(): Promise<Map<string, EdutrixReport
             assignment_score: row.assignment_score || null,
             progress: row.progress || null,
             exam_info: row.exam_info || null,
+            study_attitude: row.study_attitude || null,
+            homework_today: row.homework_today || null,
             created_at: row.created_at,
             student_name: studentName,
             class_name: className,

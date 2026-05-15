@@ -222,6 +222,12 @@ export function useEdutrixSync() {
                 attendance: Record<string, number>;
                 homework: Record<string, boolean>;
                 examScores: Record<string, number>;
+                // Phase 1: 새 필드 (UI 미반영, 데이터만 저장)
+                attitude: Record<string, string>;        // study_attitude raw
+                classwork: Record<string, string>;       // homework_today raw (수업 과제)
+                attendanceNotes: Record<string, string>; // notes raw (특이사항, 호버용)
+                examInfoRaw: Record<string, string>;     // exam_info raw (분자/분모 보존)
+                assignmentScoreRaw: Record<string, string>; // assignment_score raw (⭕△X 판정용)
             }>();
 
             for (const report of reports) {
@@ -393,6 +399,11 @@ export function useEdutrixSync() {
                         attendance: {},
                         homework: {},
                         examScores: {},
+                        attitude: {},
+                        classwork: {},
+                        attendanceNotes: {},
+                        examInfoRaw: {},
+                        assignmentScoreRaw: {},
                     });
                 }
                 const batch = attendanceBatch.get(docId)!;
@@ -404,6 +415,15 @@ export function useEdutrixSync() {
                 const examScore = parseExamScoreTo10(report.exam_info);
                 if (examScore !== null) {
                     batch.examScores[compositeKey] = examScore;
+                }
+
+                // Phase 1: Edutrix raw 데이터 저장 (UI는 Phase 2에서 처리)
+                if (report.study_attitude) batch.attitude[compositeKey] = report.study_attitude;
+                if (report.homework_today) batch.classwork[compositeKey] = report.homework_today;
+                if (report.notes) batch.attendanceNotes[compositeKey] = report.notes;
+                if (report.exam_info) batch.examInfoRaw[compositeKey] = report.exam_info;
+                if (report.assignment_score !== null && report.assignment_score !== undefined) {
+                    batch.assignmentScoreRaw[compositeKey] = String(report.assignment_score);
                 }
 
                 result.matched++;
@@ -439,6 +459,22 @@ export function useEdutrixSync() {
                         }
                         if (Object.keys(data.examScores).length > 0) {
                             payload.examScores = data.examScores;
+                        }
+                        // Phase 1: 새 필드 (값 있는 것만 저장)
+                        if (Object.keys(data.attitude).length > 0) {
+                            payload.attitude = data.attitude;
+                        }
+                        if (Object.keys(data.classwork).length > 0) {
+                            payload.classwork = data.classwork;
+                        }
+                        if (Object.keys(data.attendanceNotes).length > 0) {
+                            payload.attendanceNotes = data.attendanceNotes;
+                        }
+                        if (Object.keys(data.examInfoRaw).length > 0) {
+                            payload.examInfoRaw = data.examInfoRaw;
+                        }
+                        if (Object.keys(data.assignmentScoreRaw).length > 0) {
+                            payload.assignmentScoreRaw = data.assignmentScoreRaw;
                         }
                         await setDoc(docRef, payload, { merge: true });
                     } catch (err) {
