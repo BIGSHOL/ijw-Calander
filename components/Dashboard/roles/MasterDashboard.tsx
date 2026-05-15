@@ -13,8 +13,9 @@ import { useClasses } from '../../../hooks/useClasses';
 import { useRecentExams } from '../../../hooks/useExams';
 import { useConsultations, isRegisteredStatus } from '../../../hooks/useConsultations';
 import { format, startOfMonth, endOfMonth, subDays } from 'date-fns';
-import { UserPlus, MessageCircle, BookOpen } from 'lucide-react';
+import { UserPlus, MessageCircle, BookOpen, TrendingUp, TrendingDown } from 'lucide-react';
 import { SUBJECT_COLORS } from '../../../utils/styleUtils';
+import { ResponsiveContainer, LineChart, Line, YAxis, Tooltip } from 'recharts';
 
 const AddStudentModal = lazy(() => import('../../StudentManagement/AddStudentModal'));
 const AddClassModal = lazy(() => import('../../ClassManagement/AddClassModal'));
@@ -26,6 +27,28 @@ interface MasterDashboardProps {
 }
 
 const DAY_NAMES_KO = ['일', '월', '화', '수', '목', '금', '토'];
+
+/**
+ * 1단계 디자인 — sparkline placeholder 용 mock trend.
+ * 현재 카운트에 수렴하는 30일 시계열 가짜 생성.
+ * TODO(2단계): Firebase 일일 스냅샷 컬렉션에서 실데이터로 교체.
+ */
+function generateMockTrend(current: number, days: number = 30, volatility: number = 0.06): { day: number; value: number }[] {
+  if (current <= 0) return Array.from({ length: days }, (_, i) => ({ day: i, value: 0 }));
+  const points: { day: number; value: number }[] = [];
+  // 시작값: 현재의 92% 부근에서 살짝 random
+  let value = current * (0.9 + Math.random() * 0.06);
+  for (let i = 0; i < days; i++) {
+    const remaining = days - i;
+    const trendStep = (current - value) / Math.max(1, remaining);
+    const noise = (Math.random() - 0.5) * current * volatility;
+    value = Math.max(0, value + trendStep + noise);
+    points.push({ day: i, value: Math.round(value) });
+  }
+  // 마지막은 정확히 현재값으로 수렴
+  points[days - 1] = { day: days - 1, value: current };
+  return points;
+}
 
 const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMember }) => {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -161,6 +184,21 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     return result;
   }, [students]);
 
+  // 1단계 디자인: 주식 차트 스타일 카드용 데이터.
+  // 수학 / 영어 / 2과목 수강 3개 카드. sparkline 은 mock (TODO: 2단계에서 실데이터 연결).
+  const trendCards = useMemo(() => {
+    const find = (label: string) => subjectDistribution.find(d => d.subject === label);
+    const math = find('수학');
+    const english = find('영어');
+    const multi2 = find('2과목 수강');
+    const cards: { key: string; label: string; count: number; color: string; trend: { day: number; value: number }[] }[] = [];
+    if (math) cards.push({ key: 'math', label: '수학', count: math.count, color: math.color, trend: generateMockTrend(math.count) });
+    if (english) cards.push({ key: 'english', label: '영어', count: english.count, color: english.color, trend: generateMockTrend(english.count) });
+    if (multi2) cards.push({ key: 'multi2', label: '2과목 수강', count: multi2.count, color: multi2.color, trend: generateMockTrend(multi2.count) });
+    return cards;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subjectDistribution.map(d => `${d.subject}:${d.count}`).join('|')]);
+
   // ── 주간 출석 추이 ──
   const weeklyAttendance = useMemo(() => {
     const now = new Date();
@@ -295,6 +333,56 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
             {/* ── Row 1: KPI 카드 ── */}
             <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-3">
               {kpiCards.map(card => <KPICard key={card.id} data={card} />)}
+            </div>
+
+            {/* ── 과목별 학생 추이 (1단계 디자인 — sparkline mock 데이터) ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+              {trendCards.map(card => {
+                const first = card.trend[0]?.value ?? card.count;
+                const change = card.count - first;
+                const isUp = change >= 0;
+                return (
+                  <div key={card.key} className="bg-white rounded-sm p-3 shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: card.color }} />
+                        <span className="text-xxs font-bold text-gray-700">{card.label}</span>
+                      </div>
+                      <div className={`flex items-center gap-0.5 text-xxs font-bold ${isUp ? 'text-emerald-600' : 'text-red-500'}`}>
+                        {isUp ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                        <span>{isUp ? '+' : ''}{change}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-baseline gap-1 mb-1">
+                      <span className="text-xl font-bold" style={{ color: card.color }}>{card.count}</span>
+                      <span className="text-xxs text-gray-400">명</span>
+                    </div>
+                    <div style={{ height: 48 }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={card.trend} margin={{ top: 4, right: 2, left: 2, bottom: 2 }}>
+                          <YAxis hide domain={['dataMin', 'dataMax']} />
+                          <Tooltip
+                            cursor={{ stroke: '#d1d5db', strokeDasharray: '3 3' }}
+                            contentStyle={{ fontSize: 10, padding: '2px 6px', border: `1px solid ${card.color}`, borderRadius: 4 }}
+                            labelFormatter={(d) => `D-${(card.trend.length - 1) - (d as number)}`}
+                            formatter={(v: any) => [`${v}명`, card.label]}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="value"
+                            stroke={card.color}
+                            strokeWidth={1.8}
+                            dot={false}
+                            isAnimationActive
+                            animationDuration={600}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="text-micro text-gray-400 text-right mt-0.5">최근 30일 추이 (mock)</div>
+                  </div>
+                );
+              })}
             </div>
 
             {/* ── Row 2: 차트 + 알림 ── */}
