@@ -885,6 +885,8 @@ export interface ManageClassStudentsData {
   // 반이동 관련
   transferMode?: Record<string, 'add' | 'transfer'>;  // 학생별 추가/반이동 선택
   transferFromClass?: Record<string, string>;  // 반이동 시 이전 수업명
+  // 로그용 — caller 가 알고 있는 학생ID→학생명 매핑 (학생 컬렉션 fallback fetch 비용 절감)
+  studentNames?: Record<string, string>;
 }
 
 export const useManageClassStudents = () => {
@@ -906,8 +908,25 @@ export const useManageClassStudents = () => {
         studentEndDates = {},
         studentEnrollmentDates = {},
         transferMode = {},
-        transferFromClass = {}
+        transferFromClass = {},
+        studentNames: providedNames = {},
       } = data;
+
+      // 학생 이름 조회 — caller 가 제공 안 한 ID 는 Firestore 에서 단발 조회 후 캐싱
+      // (로그에 학생명을 박기 위한 헬퍼 — N+1 이지만 mutation 한 번당 학생 수가 적어 허용)
+      const nameCache: Record<string, string> = { ...providedNames };
+      const resolveStudentName = async (studentId: string): Promise<string> => {
+        if (nameCache[studentId]) return nameCache[studentId];
+        try {
+          const snap = await getDoc(doc(db, COL_STUDENTS, studentId));
+          const data = snap.data();
+          const name = data?.name || data?.koreanName || data?.displayName || studentId;
+          nameCache[studentId] = name;
+          return name;
+        } catch {
+          return studentId;
+        }
+      };
 
       // Audit 필드 사전 계산 (한 번만 actor 조회)
       const auditTransferred = await buildAuditFields('transferred');
@@ -1293,37 +1312,49 @@ export const useManageClassStudents = () => {
         await Promise.all(updatePromises);
       }
 
-      // 로그 기록
+      // 로그 기록 — 학생 단위로 분리하여 studentName 박기 (검색/필터 가능하게)
       if (transferStudentIds.length > 0) {
-        transferStudentIds.forEach(studentId => {
+        await Promise.all(transferStudentIds.map(async studentId => {
+          const studentName = await resolveStudentName(studentId);
           logTimetableChange({
             action: 'student_transfer',
             subject,
             className,
             studentId,
-            details: `반이동: ${transferFromClass[studentId]} → ${className}`,
+            studentName,
+            details: `반이동: ${studentName} (${transferFromClass[studentId]} → ${className})`,
             before: { className: transferFromClass[studentId] },
             after: { className },
           });
-        });
+        }));
       }
       if (addStudentIds.length > 0) {
-        logTimetableChange({
-          action: 'student_enroll',
-          subject,
-          className,
-          details: `학생 등록: ${addStudentIds.length}명 → ${className}`,
-          after: { className, studentIds: addStudentIds },
-        });
+        await Promise.all(addStudentIds.map(async studentId => {
+          const studentName = await resolveStudentName(studentId);
+          logTimetableChange({
+            action: 'student_enroll',
+            subject,
+            className,
+            studentId,
+            studentName,
+            details: `학생 등록: ${studentName} → ${className}`,
+            after: { className, studentId },
+          });
+        }));
       }
       if (removeStudentIds.length > 0) {
-        logTimetableChange({
-          action: 'student_unenroll',
-          subject,
-          className,
-          details: `학생 제거: ${removeStudentIds.length}명 ← ${className}`,
-          before: { className, studentIds: removeStudentIds },
-        });
+        await Promise.all(removeStudentIds.map(async studentId => {
+          const studentName = await resolveStudentName(studentId);
+          logTimetableChange({
+            action: 'student_unenroll',
+            subject,
+            className,
+            studentId,
+            studentName,
+            details: `학생 제거: ${studentName} ← ${className}`,
+            before: { className, studentId },
+          });
+        }));
       }
       if (endDateStudentIds.length > 0) {
         logTimetableChange({

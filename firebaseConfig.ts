@@ -583,3 +583,117 @@ if (typeof window !== 'undefined') {
     (window as any).diagnoseWithdrawn = diagnoseWithdrawn;
 }
 
+// ======== 시간표 로그 처리자 이메일 → 한글 이름 마이그레이션 (master/admin 전용) ========
+// 사용법:
+//   window.migrateLogActors()                — dry-run (변환 대상만 출력)
+//   window.migrateLogActors({ apply: true }) — 실제 적용
+//
+// 처리 내용:
+//   - timetable_logs 컬렉션 전체 스캔
+//   - changedBy 가 이메일 형식(@ 포함)인 경우 staff.email 매칭으로 한글 이름 조회
+//   - 매칭되면 changedBy 를 staff.name 으로 교체 + changedByUid/changedByRole 백필
+//   - 매칭 실패한 이메일은 그대로 두고 로그로 출력 (수동 검토 가능)
+async function migrateLogActors(opts: { apply?: boolean } = {}): Promise<{
+    scanned: number;
+    eligibleEmails: number;
+    matched: number;
+    applied: number;
+    unmatchedEmails: string[];
+}> {
+    const apply = !!opts.apply;
+    console.log(`🔍 로그 처리자 마이그레이션 ${apply ? '(APPLY MODE)' : '(DRY-RUN)'}`);
+
+    // 1. staff 컬렉션 → email→staff 매핑 구축 (uid 필드도 필요시 staffIndex 조회)
+    const staffSnap = await getDocs(collection(dbInstance, 'staff'));
+    interface StaffInfo { name: string; uid?: string; systemRole?: string; }
+    const emailToStaff = new Map<string, StaffInfo>();
+    staffSnap.docs.forEach(d => {
+        const data = d.data() as any;
+        const email = (data.email || '').trim().toLowerCase();
+        if (!email) return;
+        emailToStaff.set(email, {
+            name: data.name || data.koreanName || email,
+            uid: data.uid,
+            systemRole: data.systemRole,
+        });
+    });
+    console.log(`📋 staff 컬렉션 email 매핑: ${emailToStaff.size}건`);
+
+    // 2. timetable_logs 전체 스캔
+    const logsSnap = await getDocs(collection(dbInstance, 'timetable_logs'));
+    console.log(`📊 timetable_logs 전체: ${logsSnap.size}건`);
+
+    interface UpdateItem { id: string; oldName: string; newName: string; uid?: string; role?: string; }
+    const updates: UpdateItem[] = [];
+    const unmatched = new Set<string>();
+    let eligibleCount = 0;
+
+    logsSnap.docs.forEach(d => {
+        const data: any = d.data();
+        const changedBy: string = (data.changedBy || '').trim();
+        if (!changedBy || !changedBy.includes('@')) return;
+        eligibleCount += 1;
+        const staffInfo = emailToStaff.get(changedBy.toLowerCase());
+        if (!staffInfo) {
+            unmatched.add(changedBy);
+            return;
+        }
+        updates.push({
+            id: d.id,
+            oldName: changedBy,
+            newName: staffInfo.name,
+            uid: staffInfo.uid,
+            role: staffInfo.systemRole,
+        });
+    });
+
+    console.log(`✉️  이메일 형식 changedBy: ${eligibleCount}건`);
+    console.log(`✅ 매칭 가능: ${updates.length}건`);
+    console.log(`❌ 매칭 실패 이메일 (${unmatched.size}종): `, Array.from(unmatched));
+
+    if (updates.length === 0) {
+        console.log('변환할 항목 없음.');
+        return { scanned: logsSnap.size, eligibleEmails: eligibleCount, matched: 0, applied: 0, unmatchedEmails: Array.from(unmatched) };
+    }
+
+    // 매칭 결과 요약 (이메일 → 이름)
+    const summary = new Map<string, { name: string; count: number }>();
+    updates.forEach(u => {
+        const cur = summary.get(u.oldName);
+        if (cur) cur.count += 1;
+        else summary.set(u.oldName, { name: u.newName, count: 1 });
+    });
+    console.table(Array.from(summary.entries()).map(([email, info]) => ({ email, name: info.name, count: info.count })));
+
+    if (!apply) {
+        console.log('💡 실제 적용하려면: window.migrateLogActors({ apply: true })');
+        return { scanned: logsSnap.size, eligibleEmails: eligibleCount, matched: updates.length, applied: 0, unmatchedEmails: Array.from(unmatched) };
+    }
+
+    // 3. writeBatch 로 일괄 업데이트 (500건 제한)
+    let applied = 0;
+    let batch = _writeBatch(dbInstance);
+    let batchCount = 0;
+    for (const u of updates) {
+        const ref = _doc(dbInstance, 'timetable_logs', u.id);
+        const payload: Record<string, any> = { changedBy: u.newName };
+        if (u.uid) payload.changedByUid = u.uid;
+        if (u.role) payload.changedByRole = u.role;
+        batch.update(ref, payload);
+        batchCount += 1;
+        applied += 1;
+        if (batchCount >= 490) {
+            await batch.commit();
+            batch = _writeBatch(dbInstance);
+            batchCount = 0;
+        }
+    }
+    if (batchCount > 0) await batch.commit();
+    console.log(`✅ ${applied}건 적용 완료`);
+    return { scanned: logsSnap.size, eligibleEmails: eligibleCount, matched: updates.length, applied, unmatchedEmails: Array.from(unmatched) };
+}
+
+if (typeof window !== 'undefined') {
+    (window as any).migrateLogActors = migrateLogActors;
+}
+

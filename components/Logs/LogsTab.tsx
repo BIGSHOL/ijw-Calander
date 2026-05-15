@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { collection, query, where, orderBy, limit, getDocs, startAfter, DocumentSnapshot } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { TimetableLogAction, TimetableLogEntry } from '../../hooks/useTimetableLog';
-import { ChevronDown, ChevronRight, Search, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronRight, Search, RefreshCw, ArrowUp, ArrowDown } from 'lucide-react';
 
 const SUBJECT_LABELS: Record<string, string> = {
   math: '수학',
@@ -161,19 +161,61 @@ const LogsTab: React.FC = () => {
   const [endDate, setEndDate] = useState(today);
   const [actionFilter, setActionFilter] = useState<Set<string>>(new Set(['all']));
   const [subjectFilter, setSubjectFilter] = useState<Set<string>>(new Set(['all']));
+  const [actorFilter, setActorFilter] = useState<Set<string>>(new Set(['all']));
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isSubjectDropdownOpen, setIsSubjectDropdownOpen] = useState(false);
+  const [isActorDropdownOpen, setIsActorDropdownOpen] = useState(false);
+  // 정렬 상태 (기본: 시간 오름차순)
+  type SortKey = 'timestamp' | 'action' | 'subject' | 'className' | 'studentName' | 'changedBy' | 'details';
+  const [sortKey, setSortKey] = useState<SortKey>('timestamp');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const subjectDropdownRef = useRef<HTMLDivElement>(null);
+  const actorDropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: logs = [], isLoading, refetch } = useQuery({
     queryKey: ['timetableLogs', startDate, endDate],
     queryFn: () => fetchLogs(startDate, endDate),
     staleTime: 30_000,
   });
+
+  // 처리자 옵션 목록 — 현재 logs 에 등장한 모든 changedBy 의 유니크 셋
+  const actorOptions = useMemo(() => {
+    const set = new Set<string>();
+    logs.forEach(l => { if (l.changedBy) set.add(l.changedBy); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'ko'));
+  }, [logs]);
+
+  // 로그 행을 검색용 전문 텍스트로 평탄화 — before/after 까지 포함해 상세 영역의 내용도 검색에 잡힘
+  const flattenForSearch = (log: LogRow): string => {
+    const parts: string[] = [
+      log.action,
+      ACTION_LABELS[log.action] || '',
+      log.subject || '',
+      SUBJECT_LABELS[log.subject || ''] || '',
+      log.className || '',
+      log.studentName || '',
+      log.changedBy || '',
+      log.details || '',
+    ];
+    const stringifyVal = (v: any): string => {
+      if (v == null) return '';
+      if (typeof v === 'object') {
+        try { return JSON.stringify(v); } catch { return ''; }
+      }
+      return String(v);
+    };
+    if (log.before) {
+      Object.entries(log.before).forEach(([k, v]) => { parts.push(k); parts.push(stringifyVal(v)); });
+    }
+    if (log.after) {
+      Object.entries(log.after).forEach(([k, v]) => { parts.push(k); parts.push(stringifyVal(v)); });
+    }
+    return parts.join(' ').toLowerCase();
+  };
 
   const filteredLogs = useMemo(() => {
     let result = logs;
@@ -188,19 +230,47 @@ const LogsTab: React.FC = () => {
       result = result.filter(l => l.subject && subjectFilter.has(l.subject));
     }
 
-    // 검색
-    if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
-      result = result.filter(l =>
-        l.className?.toLowerCase().includes(q) ||
-        l.studentName?.toLowerCase().includes(q) ||
-        l.changedBy?.toLowerCase().includes(q) ||
-        l.details?.toLowerCase().includes(q)
-      );
+    // 처리자 필터 (멀티선택)
+    if (!actorFilter.has('all') && actorFilter.size > 0) {
+      result = result.filter(l => l.changedBy && actorFilter.has(l.changedBy));
     }
 
+    // 검색 — before/after 까지 포함한 전문 검색
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter(l => flattenForSearch(l).includes(q));
+    }
+
+    // 정렬
+    const dirMul = sortDir === 'asc' ? 1 : -1;
+    result = [...result].sort((a, b) => {
+      const av = (a as any)[sortKey] ?? '';
+      const bv = (b as any)[sortKey] ?? '';
+      // 시간은 ISO 문자열이라 사전순 비교가 곧 시간순
+      if (typeof av === 'string' && typeof bv === 'string') {
+        return av.localeCompare(bv, 'ko') * dirMul;
+      }
+      return (av > bv ? 1 : av < bv ? -1 : 0) * dirMul;
+    });
+
     return result;
-  }, [logs, actionFilter, subjectFilter, searchQuery]);
+  }, [logs, actionFilter, subjectFilter, actorFilter, searchQuery, sortKey, sortDir]);
+
+  // 헤더 클릭 시 정렬 토글
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+  const SortIndicator = ({ k }: { k: SortKey }) => {
+    if (sortKey !== k) return <span className="inline-block w-3" />;
+    return sortDir === 'asc'
+      ? <ArrowUp size={10} className="inline-block ml-0.5 text-blue-500" />
+      : <ArrowDown size={10} className="inline-block ml-0.5 text-blue-500" />;
+  };
 
   // 최신 기록(하단)으로 자동 스크롤
   useEffect(() => {
@@ -236,6 +306,19 @@ const LogsTab: React.FC = () => {
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [isSubjectDropdownOpen]);
+
+  // 처리자 드롭다운 외부 클릭 감지
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (actorDropdownRef.current && !actorDropdownRef.current.contains(event.target as Node)) {
+        setIsActorDropdownOpen(false);
+      }
+    };
+    if (isActorDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isActorDropdownOpen]);
 
   const toggleExpand = (id: string) => {
     setExpandedIds(prev => {
@@ -275,6 +358,18 @@ const LogsTab: React.FC = () => {
         newFilter.add(subject);
       }
       setSubjectFilter(newFilter.size > 0 ? newFilter : new Set(['all']));
+    }
+  };
+
+  const toggleActorFilter = (actor: string) => {
+    const newFilter = new Set(actorFilter);
+    if (actor === 'all') {
+      setActorFilter(new Set(['all']));
+    } else {
+      newFilter.delete('all');
+      if (newFilter.has(actor)) newFilter.delete(actor);
+      else newFilter.add(actor);
+      setActorFilter(newFilter.size > 0 ? newFilter : new Set(['all']));
     }
   };
 
@@ -395,12 +490,60 @@ const LogsTab: React.FC = () => {
           )}
         </div>
 
+        {/* 처리자 필터 (체크박스 멀티선택) */}
+        <div className="relative" ref={actorDropdownRef}>
+          <button
+            onClick={() => setIsActorDropdownOpen(!isActorDropdownOpen)}
+            className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white hover:bg-gray-50 flex items-center gap-1 min-w-[100px]"
+          >
+            <span className="flex-1 text-left truncate">
+              {actorFilter.has('all') ? '전체 처리자' : `처리자 ${actorFilter.size}명`}
+            </span>
+            <ChevronDown size={12} className={`text-gray-400 transition-transform ${isActorDropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {isActorDropdownOpen && (
+            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded shadow-lg z-20 min-w-[180px] max-h-[300px] overflow-y-auto">
+              <label
+                className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer border-b border-gray-200"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <input
+                  type="checkbox"
+                  checked={actorFilter.has('all')}
+                  onChange={() => toggleActorFilter('all')}
+                  className="w-3 h-3 rounded border-gray-300 text-blue-600 focus:ring-1 focus:ring-blue-500"
+                />
+                <span className="font-medium">전체 처리자</span>
+              </label>
+              {actorOptions.map(name => (
+                <label
+                  key={name}
+                  className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 cursor-pointer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <input
+                    type="checkbox"
+                    checked={actorFilter.has(name)}
+                    onChange={() => toggleActorFilter(name)}
+                    className="w-3 h-3 rounded border-gray-300 text-blue-600 focus:ring-1 focus:ring-blue-500"
+                  />
+                  <span className="truncate" title={name}>{name}</span>
+                </label>
+              ))}
+              {actorOptions.length === 0 && (
+                <div className="px-3 py-2 text-xs text-gray-400">처리자 없음</div>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* 검색 */}
         <div className="relative">
           <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="수업명, 학생, 처리자..."
+            placeholder="수업명, 학생, 처리자, 상세..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-6 pr-2 py-1 text-xs border border-gray-300 rounded w-48 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -436,13 +579,34 @@ const LogsTab: React.FC = () => {
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr className="border-b border-gray-200">
                 <th className="px-3 py-2 text-left font-medium text-gray-500 w-8"></th>
-                <th className="px-3 py-2 text-left font-medium text-gray-500 w-36">시간</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-500 w-24">작업</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-500 w-16">과목</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-500 w-28">수업명</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-500 w-24">학생</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-500 w-28">처리자</th>
-                <th className="px-3 py-2 text-left font-medium text-gray-500">상세</th>
+                <th
+                  className="px-3 py-2 text-left font-medium text-gray-500 w-36 cursor-pointer select-none hover:text-gray-700"
+                  onClick={() => handleSort('timestamp')}
+                >시간<SortIndicator k="timestamp" /></th>
+                <th
+                  className="px-3 py-2 text-left font-medium text-gray-500 w-24 cursor-pointer select-none hover:text-gray-700"
+                  onClick={() => handleSort('action')}
+                >작업<SortIndicator k="action" /></th>
+                <th
+                  className="px-3 py-2 text-left font-medium text-gray-500 w-16 cursor-pointer select-none hover:text-gray-700"
+                  onClick={() => handleSort('subject')}
+                >과목<SortIndicator k="subject" /></th>
+                <th
+                  className="px-3 py-2 text-left font-medium text-gray-500 w-28 cursor-pointer select-none hover:text-gray-700"
+                  onClick={() => handleSort('className')}
+                >수업명<SortIndicator k="className" /></th>
+                <th
+                  className="px-3 py-2 text-left font-medium text-gray-500 w-24 cursor-pointer select-none hover:text-gray-700"
+                  onClick={() => handleSort('studentName')}
+                >학생<SortIndicator k="studentName" /></th>
+                <th
+                  className="px-3 py-2 text-left font-medium text-gray-500 w-28 cursor-pointer select-none hover:text-gray-700"
+                  onClick={() => handleSort('changedBy')}
+                >처리자<SortIndicator k="changedBy" /></th>
+                <th
+                  className="px-3 py-2 text-left font-medium text-gray-500 cursor-pointer select-none hover:text-gray-700"
+                  onClick={() => handleSort('details')}
+                >상세<SortIndicator k="details" /></th>
               </tr>
             </thead>
             <tbody>
