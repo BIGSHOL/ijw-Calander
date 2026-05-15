@@ -386,13 +386,25 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
 
     // 열 너비 (ExcelJS 문자 단위 — Google Sheets에서 약 width*7 px)
     // 7.5 → 약 52px (전체 시간표를 한눈에 보기 위한 좁은 너비)
+    // 수요일은 단독 요일(1열)이라 월/목·화/금 병합 셀과 시각 균형을 위해 약 167px
     const PERIOD_COL_W = 7.5;
     const DAY_COL_W = 7.5;
+    const WED_COL_W = 15; // 수요일 단독 요일 — 약 104px (다른 열의 2배)
 
     sheet.getColumn(WEEKDAY_PERIOD_COL).width = PERIOD_COL_W;
     for (let c = WEEKDAY_FIRST_DAY_COL; c <= WEEKDAY_LAST_DAY_COL; c++) {
         sheet.getColumn(c).width = DAY_COL_W;
     }
+    // 수요일 그룹 컬럼은 넓게 (단독 요일)
+    weekdayGroups.forEach((group, gi) => {
+        if (group.title === '수') {
+            const startCol = weekdayGroupStartCols[gi];
+            const colCount = weekdayGroupColCounts[gi];
+            for (let c = startCol; c < startCol + colCount; c++) {
+                sheet.getColumn(c).width = WED_COL_W;
+            }
+        }
+    });
     if (hasWeekend) {
         sheet.getColumn(WEEKEND_PERIOD_COL).width = PERIOD_COL_W;
         for (let c = WEEKEND_FIRST_DAY_COL; c <= WEEKEND_LAST_DAY_COL; c++) {
@@ -410,10 +422,21 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
         return `${y}-${m}-${dd}`;
     })();
     const weekEndMs0 = new Date(weekEndStr0).getTime();
+    // 학생 dedupe: 한 학생이 여러 반에 있으면 "최고 상태(재원>대기>퇴원)"를 대표로 채택
+    // (TimetableHeader studentCounts와 동일 — A반 퇴원 + B반 재원이면 재원으로 집계)
+    const getStatusRank = (s: any): number => {
+        if (!s.withdrawalDate && !s.onHold) return 3; // 재원
+        if (s.onHold && !s.withdrawalDate) return 2;  // 대기
+        return s.isTransferred ? 0 : 1;               // 퇴원 (숨김 0 / 대표 1)
+    };
     const allStudentsAggMap = new Map<string, any>();
     filteredClasses.forEach(c => {
         (c.studentList || []).forEach((s: any) => {
-            if (s.id && !allStudentsAggMap.has(s.id)) allStudentsAggMap.set(s.id, s);
+            if (!s.id) return;
+            const existing = allStudentsAggMap.get(s.id);
+            if (!existing || getStatusRank(s) > getStatusRank(existing)) {
+                allStudentsAggMap.set(s.id, s);
+            }
         });
     });
 
@@ -584,6 +607,31 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
     });
 
     const weekendPeriods = currentPeriods.filter(p => WEEKEND_PERIOD_TIMES[p]);
+
+    // 주말 교시 그룹 (평일과 동일하게 1-1+1-2 = 주말 1교시로 묶음)
+    // 한 수업이 1-1·1-2 연속이면 1개 셀로 병합 — 클라이언트 시간표 그리드와 일치
+    const weekendPeriodGroups = MATH_GROUPED_PERIODS
+        .map(gid => {
+            const periodIds = MATH_GROUP_PERIOD_IDS[gid];
+            const [firstPeriod, secondPeriod] = periodIds;
+            const hasFirst = weekendPeriods.includes(firstPeriod);
+            const hasSecond = weekendPeriods.includes(secondPeriod);
+            if (!hasFirst && !hasSecond) return null;
+            // 주말 그룹 시간: firstPeriod 시작 ~ secondPeriod 끝
+            const firstTime = WEEKEND_PERIOD_TIMES[firstPeriod] || '';
+            const secondTime = WEEKEND_PERIOD_TIMES[secondPeriod] || '';
+            const startT = (firstTime || secondTime).split('~')[0] || '';
+            const endT = (secondTime || firstTime).split('~')[1] || '';
+            return {
+                gid, firstPeriod, secondPeriod, hasFirst, hasSecond,
+                info: { label: `${gid}교시`, time: `${startT}~${endT}` },
+            };
+        })
+        .filter(Boolean) as Array<{
+            gid: string; firstPeriod: string; secondPeriod: string;
+            hasFirst: boolean; hasSecond: boolean; info: { label: string; time: string };
+        }>;
+
     const fullyEmptyWeekendCols = new Set<number>();
     if (hasWeekend) {
         let col = WEEKEND_FIRST_DAY_COL;
@@ -672,7 +720,9 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
         return cells;
     };
 
-    const computeWeekendCells = (period: string): ResolvedCell[] => {
+    // 주말 셀 계산: 평일과 동일하게 1-1+1-2 sub-period 그룹 처리
+    // (한 수업이 두 sub-period 연속이면 1셀, 다르면 위/아래 분할 — cellNeedsSubSplit)
+    const computeWeekendCells = (pg: typeof weekendPeriodGroups[0]): ResolvedCell[] => {
         const cells: ResolvedCell[] = [];
         let col = WEEKEND_FIRST_DAY_COL;
         const groupEndCol = WEEKEND_LAST_DAY_COL;
@@ -682,17 +732,24 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
                     col++;
                     return;
                 }
-                const cls = getClassesForCell(filteredClasses, day, period, resource, 'teacher');
-                const payload = buildCellPayload(cls, [day], refStr);
+                const firstCls = pg.hasFirst ? getClassesForCell(filteredClasses, day, pg.firstPeriod, resource, 'teacher') : [];
+                const secondCls = pg.hasSecond ? getClassesForCell(filteredClasses, day, pg.secondPeriod, resource, 'teacher') : [];
+
+                // 1-1·1-2 수업 병합 (className 기준 중복 제거)
+                const mergedSet = new Map<string, TimetableClass>();
+                firstCls.forEach(c => mergedSet.set(c.className, c));
+                secondCls.forEach(c => { if (!mergedSet.has(c.className)) mergedSet.set(c.className, c); });
+                const cellClasses = Array.from(mergedSet.values());
+
+                const payload = buildCellPayload(cellClasses, [day], refStr);
                 cells.push({
                     startCol: col,
                     endCol: col,
                     payload,
                     isGroupRightEdge: col === groupEndCol,
                     dayCols: [{ day, col }],
-                    // 주말은 sub-period 없음
-                    subTopClasses: cls,
-                    subBotClasses: [],
+                    subTopClasses: firstCls,
+                    subBotClasses: secondCls,
                 });
                 col++;
             });
@@ -748,11 +805,11 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
         return false;
     };
 
-    const totalPeriodCount = Math.max(weekdayPeriodGroups.length, weekendPeriods.length);
+    const totalPeriodCount = Math.max(weekdayPeriodGroups.length, weekendPeriodGroups.length);
 
     for (let pi = 0; pi < totalPeriodCount; pi++) {
         const weekdayCells = pi < weekdayPeriodGroups.length ? computeWeekdayCells(weekdayPeriodGroups[pi]) : [];
-        const weekendCells = (hasWeekend && pi < weekendPeriods.length) ? computeWeekendCells(weekendPeriods[pi]) : [];
+        const weekendCells = (hasWeekend && pi < weekendPeriodGroups.length) ? computeWeekendCells(weekendPeriodGroups[pi]) : [];
         const allCells = [...weekdayCells, ...weekendCells];
 
         // 교시 내 max 학생 수
@@ -815,11 +872,11 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
         }
 
         // 주말 교시 라벨
-        if (hasWeekend && pi < weekendPeriods.length) {
-            const period = weekendPeriods[pi];
+        if (hasWeekend && pi < weekendPeriodGroups.length) {
+            const pg = weekendPeriodGroups[pi];
             sheet.mergeCells(subTopRow, WEEKEND_PERIOD_COL, countRow, WEEKEND_PERIOD_COL);
             const pl = sheet.getCell(subTopRow, WEEKEND_PERIOD_COL);
-            pl.value = `${period}\n${WEEKEND_PERIOD_TIMES[period] || ''}`;
+            pl.value = `${pg.info.label}\n${pg.info.time}`;
             pl.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GROUP_COLORS['주말'].light } };
             pl.font = { bold: true, color: { argb: 'FF000000' }, size: 11 };
             pl.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };

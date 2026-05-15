@@ -21,7 +21,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { logger } = require("firebase-functions");
 
-const { syncAll, GOOGLE_SERVICE_ACCOUNT_KEY, getAuthClient, getDriveClient, diagnoseFolderAccess, loadSheetsMapping, saveSheetsMapping, updateSheetContent } = require("./timetableSheetsSync");
+const { syncAll, GOOGLE_SERVICE_ACCOUNT_KEY, getAuthClient, getDriveClient, getSheetsClient, diagnoseFolderAccess, loadSheetsMapping, saveSheetsMapping, updateSheetContent } = require("./timetableSheetsSync");
 
 const DATABASE_ID = "restore20260319";
 const REGION = "asia-northeast3";
@@ -227,6 +227,33 @@ const uploadTimetableXlsx = onCall(
             const auth = getAuthClient();
             const drive = getDriveClient(auth);
             await updateSheetContent(drive, spreadsheetId, xlsxBuffer);
+
+            // 모든 워크시트에 wrapStrategy: CLIP 적용 (셀 텍스트 넘침 방지 → 자르기)
+            // CLIP은 자동 줄바꿈/넘침만 막고 명시적 \n(요일·교시 라벨)은 유지
+            try {
+                const sheets = getSheetsClient(auth);
+                const meta = await sheets.spreadsheets.get({
+                    spreadsheetId,
+                    fields: "sheets.properties.sheetId",
+                });
+                const requests = (meta.data.sheets || []).map(sh => ({
+                    repeatCell: {
+                        range: { sheetId: sh.properties.sheetId },
+                        cell: { userEnteredFormat: { wrapStrategy: "CLIP" } },
+                        fields: "userEnteredFormat.wrapStrategy",
+                    },
+                }));
+                if (requests.length > 0) {
+                    await sheets.spreadsheets.batchUpdate({
+                        spreadsheetId,
+                        requestBody: { requests },
+                    });
+                    logger.info(`[SheetsSync] wrapStrategy CLIP 적용: ${requests.length}개 워크시트`);
+                }
+            } catch (clipErr) {
+                // CLIP 적용 실패해도 동기화 자체는 성공으로 처리
+                logger.warn("[SheetsSync] wrapStrategy CLIP 적용 실패:", clipErr.message);
+            }
 
             const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
             await saveSheetsMapping({
