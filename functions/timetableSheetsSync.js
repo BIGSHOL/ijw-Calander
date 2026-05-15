@@ -119,22 +119,32 @@ function getSheetsClient(auth) {
 
 /**
  * 새 Google Sheets 파일 생성 (xlsx Buffer 업로드 → 자동 변환)
+ *
+ * parentFolderId 지정 시 해당 폴더 안에 생성됨 → 폴더 소유자의 Drive quota 사용.
+ * 미지정 시 서비스 계정 Drive에 생성 → quota 0이라 storageQuotaExceeded 에러.
+ *
  * @returns {{sheetId: string, url: string}}
  */
-async function createNewSheet(drive, name, xlsxBuffer) {
+async function createNewSheet(drive, name, xlsxBuffer, parentFolderId) {
     const { Readable } = require("stream");
     const stream = Readable.from(xlsxBuffer);
 
+    const requestBody = {
+        name,
+        mimeType: "application/vnd.google-apps.spreadsheet",
+    };
+    if (parentFolderId) {
+        requestBody.parents = [parentFolderId];
+    }
+
     const res = await drive.files.create({
-        requestBody: {
-            name,
-            mimeType: "application/vnd.google-apps.spreadsheet",
-        },
+        requestBody,
         media: {
             mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             body: stream,
         },
         fields: "id, webViewLink",
+        supportsAllDrives: true,  // 공유 드라이브 폴더도 지원
     });
 
     return {
@@ -264,6 +274,7 @@ async function setSyncInProgress(value) {
 async function syncFullSheet(auth, exportParams, _adminEmails, _teacherEmails) {
     const drive = getDriveClient(auth);
     const mapping = await loadSheetsMapping();
+    const parentFolderId = mapping.parentFolderId || null;
 
     const xlsxBuffer = await exportMathTimetableToBuffer(exportParams);
 
@@ -272,10 +283,10 @@ async function syncFullSheet(auth, exportParams, _adminEmails, _teacherEmails) {
 
     if (!sheetId) {
         const name = `[전체 시간표] ${exportParams.subjectFilter || "수학"}`;
-        const created = await createNewSheet(drive, name, xlsxBuffer);
+        const created = await createNewSheet(drive, name, xlsxBuffer, parentFolderId);
         sheetId = created.sheetId;
         url = created.url;
-        logger.info(`[SheetsSync] 전체 시트 생성: ${sheetId}`);
+        logger.info(`[SheetsSync] 전체 시트 생성: ${sheetId} (parentFolder: ${parentFolderId || "없음"})`);
 
         // 링크 있는 누구나 편집자 권한
         await shareWithAnyoneAsEditor(drive, sheetId);
@@ -304,6 +315,7 @@ async function syncTeacherSheet(auth, teacher, exportParams, _adminEmails) {
     const drive = getDriveClient(auth);
     const mapping = await loadSheetsMapping();
     const existing = (mapping.byTeacherId && mapping.byTeacherId[teacher.id]) || null;
+    const parentFolderId = mapping.parentFolderId || null;
 
     // 강사별 필터 적용된 xlsx 생성
     const teacherParams = {
@@ -318,10 +330,10 @@ async function syncTeacherSheet(auth, teacher, exportParams, _adminEmails) {
 
     if (!sheetId) {
         const name = `[${teacher.name} 시간표] ${exportParams.subjectFilter || "수학"}`;
-        const created = await createNewSheet(drive, name, xlsxBuffer);
+        const created = await createNewSheet(drive, name, xlsxBuffer, parentFolderId);
         sheetId = created.sheetId;
         url = created.url;
-        logger.info(`[SheetsSync] 강사 시트 생성 (${teacher.name}): ${sheetId}`);
+        logger.info(`[SheetsSync] 강사 시트 생성 (${teacher.name}): ${sheetId} (parentFolder: ${parentFolderId || "없음"})`);
 
         // 링크 있는 누구나 편집자 권한
         await shareWithAnyoneAsEditor(drive, sheetId);

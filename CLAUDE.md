@@ -252,20 +252,89 @@ VITE_OLD_FIREBASE_* (레거시 마이그레이션)
 - TypeScript strict: false (유연성)
 - Path alias: `@` = 프로젝트 루트
 
-## 커밋·배포 워크플로우 (필수 준수)
+## 🚨 커밋·배포 워크플로우 (절대 준수 — 누락 금지)
 
-작업 후 배포할 때 반드시 다음 순서로 진행한다 — 다른 디바이스에서 푸시된 최신 커밋과 충돌하지 않도록.
+> **이 워크플로우는 어떤 경우에도 단축·생략 금지.**
+> "빌드만", "배포만", "커밋 생략하고 배포만" 같은 요청을 받더라도 — 반드시 **전체 6단계를 순서대로 모두 수행**할 것.
+> 사용자가 "배포까지 진행" 또는 "배포해줘"라고 말하면 = **1~6단계 전부 수행하라는 의미**다.
+> 다른 디바이스/세션에서 푸시된 최신 커밋과 충돌하지 않도록 origin 동기화가 반드시 선행되어야 함.
 
-1. **최신 origin 확인**: `git fetch origin` + `git log --oneline -5 HEAD` vs `git log --oneline -5 origin/main`
-2. **로컬이 뒤처져 있으면 머지**:
-   - 로컬 변경분이 commit 안 됐다면: `git stash` → `git pull origin main` → `git stash pop` (충돌 해결)
-   - 로컬에 이미 commit 했다면: `git pull --rebase origin main` (충돌 해결)
-3. **재커밋** (필요 시): 머지 결과를 반영해서 새 커밋 생성 (amend 금지, 새 커밋)
-4. **푸시**: `git push origin main`
-5. **빌드**: `npm run build`
-6. **배포**: `npx firebase deploy --only hosting`
+### 표준 6단계 (한 단계라도 생략 금지)
 
-빌드/배포는 build → deploy 순서로만 진행. 빌드 실패 시 deploy 금지.
+```
+1. fetch  →  2. merge  →  3. commit  →  4. push  →  5. build  →  6. deploy
+```
+
+#### 1단계: 최신 origin 확인 (필수)
+```bash
+git fetch origin
+git log --oneline -5 HEAD          # 로컬 HEAD
+git log --oneline -5 origin/main   # origin 최신
+```
+→ 로컬이 origin보다 뒤처져 있으면 **반드시** 2단계로.
+
+#### 2단계: 로컬이 뒤처져 있으면 머지 (필수)
+- **로컬 변경분이 commit 안 됐다면**:
+  ```bash
+  git stash push --include-untracked -m "WIP: <설명>"
+  git pull origin main
+  git stash pop   # 충돌 해결
+  ```
+- **로컬에 이미 commit 했다면**:
+  ```bash
+  git pull --rebase origin main   # 충돌 해결
+  ```
+
+#### 3단계: 커밋 (필수)
+- 변경분을 명시적으로 `git add <파일>` (※ `git add -A`/`git add .` 금지 — 캐시 파일 .env 등 실수 방지)
+- 한국어 메시지 + Co-Authored-By 태그
+- **amend 금지** — 항상 새 커밋
+```bash
+git commit -m "$(cat <<'EOF'
+feat(timetable): <한국어 설명>
+
+- 변경 내용 1
+- 변경 내용 2
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+EOF
+)"
+```
+
+#### 4단계: 푸시 (필수)
+```bash
+git push origin main
+```
+
+#### 5단계: 빌드 (필수)
+```bash
+npm run build
+```
+→ 빌드 실패 시 **6단계 진행 금지** — 에러 해결 후 재빌드.
+
+#### 6단계: 배포 (변경 범위에 따라 선택 조합)
+- **Hosting만 변경**: `npx firebase deploy --only hosting`
+- **Functions 변경**: `npx firebase deploy --only "functions:fnName1,functions:fnName2,..."` (이름 명시)
+- **Firestore rules 변경**: `npx firebase deploy --only firestore:rules`
+- **여러 항목 동시 배포**: `npx firebase deploy --only "functions:fnName,hosting,firestore:rules"`
+
+### ❌ 자주 하는 실수 (반드시 피할 것)
+
+| 실수 | 결과 | 올바른 방법 |
+|------|------|-----------|
+| commit/push 생략하고 deploy만 | production에는 반영되지만 GitHub origin이 stale → 다음 작업 시 충돌 | 6단계 모두 수행 |
+| fetch 없이 바로 commit/push | 원격에 새 커밋 있으면 push 거부 | 1단계부터 시작 |
+| `git add -A` 사용 | `.env`, 캐시, lock 파일 실수 commit | 명시적 파일 추가 |
+| 빌드 실패한 상태로 deploy | production 다운/구버전 잔존 | 빌드 성공 후 deploy |
+| `--amend` 또는 `--force` | 원격 히스토리 망가짐, 다른 디바이스 동기화 깨짐 | 새 커밋, force push 금지 |
+| functions 변경 후 functions deploy 누락 | 클라이언트만 새 코드, 서버는 옛 코드 → 부정합 | 변경 범위 따라 deploy 옵션 명시 |
+
+### 검증 체크리스트 (배포 후 필수)
+
+- [ ] `git log origin/main` — 새 커밋이 origin에 반영됨
+- [ ] GitHub 웹에서 commits 페이지 확인 — 최신 커밋 보임
+- [ ] production URL에서 변경사항 확인 (시크릿 모드 권장, Service Worker 캐시 우회)
+- [ ] Functions 변경 시 `npx firebase functions:log` 로 새 함수 실행 로그 확인
 
 ## Skills
 
