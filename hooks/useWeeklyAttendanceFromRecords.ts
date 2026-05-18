@@ -63,15 +63,30 @@ export function useWeeklyAttendanceFromRecords(dates: string[], enabled: boolean
 
             const dateSet = new Set(dates);
 
+            // [진단] 키 형식 샘플 + 매칭/비매칭 통계
+            const keyFormatSamples = new Set<string>();
+            let totalCells = 0;
+            let matchedCells = 0;
+            const unmatchedDateSamples = new Set<string>();
+
             docs.forEach((d) => {
                 const data = d.data();
                 if (data.yearMonth && !yearMonths.includes(data.yearMonth)) return;
                 const att = data.attendance || {};
                 Object.entries(att).forEach(([key, value]) => {
                     const keyStr = String(key);
+                    totalCells++;
                     // 셀 키에서 날짜 추출
                     const dateStr = keyStr.includes('::') ? keyStr.split('::')[1] : keyStr;
-                    if (!dateSet.has(dateStr)) return;
+
+                    // 키 형식 샘플 수집 (앞 10개만)
+                    if (keyFormatSamples.size < 10) keyFormatSamples.add(keyStr);
+
+                    if (!dateSet.has(dateStr)) {
+                        if (unmatchedDateSamples.size < 20) unmatchedDateSamples.add(dateStr);
+                        return;
+                    }
+                    matchedCells++;
 
                     const status = typeof value === 'number' ? value : Number(value);
                     const bucket = counters[dateStr];
@@ -80,6 +95,19 @@ export function useWeeklyAttendanceFromRecords(dates: string[], enabled: boolean
                     else if (status === 2) bucket.late++;
                     else if (status === 1) bucket.present++;
                 });
+            });
+
+            // [진단 로그] 점검 완료 후 제거 예정
+            // eslint-disable-next-line no-console
+            console.log('[주간출석records진단]', {
+                요청날짜: dates,
+                yearMonths,
+                attendance_records_문서수: docs.length,
+                총_셀수: totalCells,
+                매칭된_셀수: matchedCells,
+                매칭_제외된_셀_날짜샘플: Array.from(unmatchedDateSamples).slice(0, 20),
+                키_형식_샘플: Array.from(keyFormatSamples),
+                일자별_카운터: counters,
             });
 
             const result: Record<string, DayAttendanceSummary> = {};

@@ -490,6 +490,13 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   // 옵션 B: daily_attendance 가 있으면 우선, 비어있는 날만 attendance_records 셀 집계로 보충
   const weeklyAttendance = useMemo(() => {
     const now = new Date();
+    // [진단 로그] daily_attendance 7일치 카운트 (점검 후 제거 예정)
+    // eslint-disable-next-line no-console
+    console.log('[주간출석daily진단]', last7Days.map((d, i) => ({
+      date: d,
+      요일: ['일','월','화','수','목','금','토'][new Date(d).getDay()],
+      daily_attendance_건수: weeklyAttendanceData[i]?.length || 0,
+    })));
     return last7Days.map((dateStr, idx) => {
       const date = subDays(now, 6 - idx);
       const dayLabel = DAY_NAMES_KO[date.getDay()];
