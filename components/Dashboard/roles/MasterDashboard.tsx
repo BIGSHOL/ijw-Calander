@@ -27,6 +27,7 @@ const BillingDetailsModal = lazy(() => import('../modals/BillingDetailsModal'));
 const ConsultationDetailsModal = lazy(() => import('../modals/ConsultationDetailsModal'));
 const NewStudentsModal = lazy(() => import('../modals/NewStudentsModal'));
 const NetChangeDetailsModal = lazy(() => import('../modals/NetChangeDetailsModal'));
+const WeeklyAttendanceDetailsModal = lazy(() => import('../modals/WeeklyAttendanceDetailsModal'));
 
 interface MasterDashboardProps {
   userProfile: UserProfile;
@@ -596,6 +597,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
   const [isNewStudentsModalOpen, setIsNewStudentsModalOpen] = useState(false);
   const [isNetChangeModalOpen, setIsNetChangeModalOpen] = useState(false);
+  const [isWeeklyAttendanceModalOpen, setIsWeeklyAttendanceModalOpen] = useState(false);
 
   const quickActions: QuickAction[] = [
     { id: 'add-student', label: '학생 추가', icon: UserPlus, onClick: () => setIsAddStudentOpen(true), color: 'rgb(8, 20, 41)' /* primary */ },
@@ -675,18 +677,44 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
 
             {/* ── Row 2: 주간 출석 + 주의 필요 ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
-              {/* 주간 출석 추이 */}
-              <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
-                <h3 className="text-xs font-bold text-primary mb-2">📈 주간 출석 추이</h3>
+              {/* 주간 출석 추이 (클릭 시 요일별 근거 데이터 모달) */}
+              <div
+                className="bg-white rounded-sm p-3 shadow-sm border border-gray-100 cursor-pointer hover:border-emerald-300 hover:shadow-md transition-all"
+                onClick={() => setIsWeeklyAttendanceModalOpen(true)}
+              >
+                <h3 className="text-xs font-bold text-primary mb-2 flex items-center justify-between">
+                  <span>📈 주간 출석 추이</span>
+                  <span className="text-[10px] text-gray-400 font-normal">클릭 시 요일별 상세 →</span>
+                </h3>
                 <div className="flex items-end justify-between h-20 gap-1">
-                  {weeklyAttendance.map((day, idx) => (
-                    <div key={idx} className="flex-1 flex flex-col items-center gap-0.5">
-                      <div className="w-full bg-gray-100 rounded-t flex items-end" style={{ height: '60px' }}>
-                        <div className="w-full bg-gradient-to-t from-[#10b981] to-[#34d399] rounded-t transition-all duration-500" style={{ height: `${day.rate}%` }} />
+                  {weeklyAttendance.map((day, idx) => {
+                    const noData = day.source === 'empty';
+                    return (
+                      <div key={idx} className="flex-1 flex flex-col items-center gap-0.5">
+                        <div className="w-full bg-gray-100 rounded-t flex items-end relative" style={{ height: '60px' }}>
+                          <div
+                            className={`w-full rounded-t transition-all duration-500 ${
+                              noData ? 'bg-gray-200' : 'bg-gradient-to-t from-[#10b981] to-[#34d399]'
+                            }`}
+                            style={{ height: `${noData ? 0 : day.rate}%` }}
+                          />
+                          {/* 막대 중앙 % 표시 */}
+                          <span
+                            className={`absolute inset-0 flex items-center justify-center text-[10px] font-bold pointer-events-none ${
+                              noData
+                                ? 'text-gray-300'
+                                : day.rate >= 50
+                                ? 'text-white'
+                                : 'text-gray-700'
+                            }`}
+                          >
+                            {noData ? '-' : `${day.rate}%`}
+                          </span>
+                        </div>
+                        <span className="text-micro text-gray-500 font-medium">{day.day}</span>
                       </div>
-                      <span className="text-micro text-gray-500 font-medium">{day.day}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 <div className="text-center mt-1.5 text-micro text-gray-400">
                   {(() => {
@@ -1012,6 +1040,16 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
           yearMonth={currentMonthFormatted}
           monthStart={currentMonthStart}
           monthEnd={currentMonthEnd}
+        />
+        {/* 주간 출석 추이 근거 데이터 모달 (요일별 탭) */}
+        <WeeklyAttendanceDetailsModal
+          isOpen={isWeeklyAttendanceModalOpen}
+          onClose={() => setIsWeeklyAttendanceModalOpen(false)}
+          dates={last7Days}
+          weeklyDaily={weeklyAttendanceData}
+          weeklyFromRecords={weeklyFromRecords}
+          students={students}
+          weeklySummary={weeklyAttendance}
         />
       </Suspense>
     </div>
