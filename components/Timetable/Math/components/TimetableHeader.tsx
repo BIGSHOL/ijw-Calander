@@ -977,7 +977,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                             title="라운드트립 — 내보낸 엑셀을 수정해서 다시 가져오기"
                                         >
                                             <FileSpreadsheet size={12} className="text-gray-500" />
-                                            구글로 가져오기
+                                            구글로 링크 열기
                                         </button>
                                     )}
                                     {onImportFromSheet && (
@@ -997,7 +997,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                             title="가져오기 이력 + 되돌리기 (자동 스냅샷으로 1클릭 복원)"
                                         >
                                             <FileSpreadsheet size={12} className="text-gray-500" />
-                                            구글로 링크 열기
+                                            구글로 가져오기
                                         </button>
                                     )}
 
