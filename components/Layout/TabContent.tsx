@@ -314,6 +314,7 @@ export const TabContent: React.FC<TabContentProps> = ({
       ) : (appMode === 'attendance' || appMode === 'attendance-test') && attendanceProps ? (
         // attendance-test 는 사이드바 외부 팝업 정책(d960330)을 우회해 내부 AttendanceManager를
         // 직접 띄우는 작업용 탭. 동일 컴포넌트·동일 props로 렌더.
+        // isTestMode=true 면 Edutrix 동기화가 dry-run (실제 Firestore 쓰기 없음) + 출석 초기화 버튼 숨김.
         <Suspense fallback={<TabLoadingFallback />}>
           <div className="w-full flex-1 flex flex-col overflow-hidden">
             <AttendanceManager
@@ -326,6 +327,7 @@ export const TabContent: React.FC<TabContentProps> = ({
               onCloseAddStudentModal={() => attendanceProps.setIsAttendanceAddStudentModalOpen(false)}
               viewMode={attendanceProps.attendanceViewMode}
               selectedSession={attendanceProps.selectedSession}
+              isTestMode={appMode === 'attendance-test'}
             />
           </div>
         </Suspense>

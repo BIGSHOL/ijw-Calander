@@ -66,6 +66,8 @@ interface AttendanceManagerProps {
   onCloseAddStudentModal?: () => void;
   viewMode?: AttendanceViewMode;
   selectedSession?: SessionPeriod | null;
+  /** 출석부 테스트 탭 여부 — true 면 Edutrix 동기화가 dry-run (Firestore 쓰기 생략) */
+  isTestMode?: boolean;
 }
 
 // Helper to group updates by student ID
@@ -94,7 +96,8 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   isAddStudentModalOpen,
   onCloseAddStudentModal,
   viewMode = 'monthly',
-  selectedSession = null
+  selectedSession = null,
+  isTestMode = false,
 }) => {
   const { hasPermission } = usePermissions(userProfile);
 
@@ -365,9 +368,9 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const [showSyncLogModal, setShowSyncLogModal] = useState(false);
 
   const handleEdutrixSync = useCallback(async () => {
-    console.log('[AttendanceManager] handleEdutrixSync:', currentYearMonth);
+    console.log('[AttendanceManager] handleEdutrixSync:', currentYearMonth, 'isTestMode:', isTestMode);
     try {
-      const result = await syncFromEdutrix(currentYearMonth, filterStaffId);
+      const result = await syncFromEdutrix(currentYearMonth, filterStaffId, { dryRun: isTestMode });
       console.log('[AttendanceManager] 동기화 결과:', result);
       setShowSyncResult(true);
       setShowSyncLogModal(true);
@@ -375,7 +378,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
       console.error('[AttendanceManager] Edutrix 동기화 실패:', err);
       alert('Edutrix 동기화에 실패했습니다. 콘솔을 확인해주세요.');
     }
-  }, [syncFromEdutrix, currentYearMonth, filterStaffId]);
+  }, [syncFromEdutrix, currentYearMonth, filterStaffId, isTestMode]);
 
   const handleEdutrixReset = useCallback(async () => {
     if (!confirm(`${currentYearMonth} 월의 전체 출석 데이터를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
@@ -809,35 +812,43 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
         {/* Settings Buttons - same row */}
         <div className="flex-1"></div>
 
-        {/* Edutrix 보고서 → 출석 동기화 버튼 */}
+        {/* Edutrix 보고서 → 출석 동기화 버튼 (테스트 모드면 dry-run + 라벨/색상 변경) */}
         <button
           onClick={handleEdutrixSync}
           disabled={isSyncing || isResetting}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm font-bold text-xs transition-colors shadow-sm flex-shrink-0 ${
             isSyncing
               ? 'bg-gray-400 text-white cursor-wait'
-              : 'bg-indigo-600 text-white hover:bg-indigo-700'
+              : isTestMode
+                ? 'bg-amber-500 text-white hover:bg-amber-600'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700'
           }`}
-          title={`${currentYearMonth} 월 Edutrix 보고서를 기반으로 출석을 자동 처리합니다`}
+          title={isTestMode
+            ? `${currentYearMonth} 월 Edutrix 보고서를 dry-run 으로 매칭 검증합니다 (Firestore 쓰기 없음)`
+            : `${currentYearMonth} 월 Edutrix 보고서를 기반으로 출석을 자동 처리합니다`}
         >
           <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
-          {isSyncing ? '동기화 중...' : 'Edutrix 동기화'}
+          {isSyncing
+            ? (isTestMode ? '테스트 중...' : '동기화 중...')
+            : (isTestMode ? 'Edutrix 동기화 (테스트)' : 'Edutrix 동기화')}
         </button>
 
-        {/* 출석 초기화 버튼 */}
-        <button
-          onClick={handleEdutrixReset}
-          disabled={isResetting || isSyncing}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm font-bold text-xs transition-colors shadow-sm flex-shrink-0 ${
-            isResetting
-              ? 'bg-gray-400 text-white cursor-wait'
-              : 'bg-red-500 text-white hover:bg-red-600'
-          }`}
-          title={`${currentYearMonth} 월 전체 출석 데이터를 초기화합니다`}
-        >
-          <CalendarOff size={14} />
-          {isResetting ? '초기화 중...' : '출석 초기화'}
-        </button>
+        {/* 출석 초기화 버튼 — 테스트 모드에선 숨김 (실제 Firestore 데이터를 삭제하므로) */}
+        {!isTestMode && (
+          <button
+            onClick={handleEdutrixReset}
+            disabled={isResetting || isSyncing}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm font-bold text-xs transition-colors shadow-sm flex-shrink-0 ${
+              isResetting
+                ? 'bg-gray-400 text-white cursor-wait'
+                : 'bg-red-500 text-white hover:bg-red-600'
+            }`}
+            title={`${currentYearMonth} 월 전체 출석 데이터를 초기화합니다`}
+          >
+            <CalendarOff size={14} />
+            {isResetting ? '초기화 중...' : '출석 초기화'}
+          </button>
+        )}
 
         {/* 동기화 결과 표시 - 클릭 시 상세 로그 모달 */}
         {showSyncResult && syncResult && (
@@ -1037,12 +1048,13 @@ const SYNC_STATUS_CONFIG: Record<string, { label: string; color: string; bgColor
   synced: { label: '성공', color: 'text-emerald-700', bgColor: 'bg-emerald-50' },
   skipped_no_match: { label: '매칭실패', color: 'text-red-700', bgColor: 'bg-red-50' },
   skipped_not_scheduled: { label: '스킵', color: 'text-amber-700', bgColor: 'bg-amber-50' },
+  skipped_other_subject: { label: '타과목', color: 'text-sky-700', bgColor: 'bg-sky-50' },
   skipped_absent: { label: '결석스킵', color: 'text-gray-600', bgColor: 'bg-gray-50' },
   already_marked: { label: '이미처리', color: 'text-blue-600', bgColor: 'bg-blue-50' },
   error: { label: '오류', color: 'text-red-700', bgColor: 'bg-red-50' },
 };
 
-type LogFilter = 'all' | 'synced' | 'skipped_no_match' | 'skipped_not_scheduled' | 'error';
+type LogFilter = 'all' | 'synced' | 'skipped_no_match' | 'skipped_not_scheduled' | 'skipped_other_subject' | 'error';
 
 const SyncLogModal: React.FC<{ result: SyncResult; onClose: () => void }> = ({ result, onClose }) => {
   const [filter, setFilter] = useState<LogFilter>('all');
@@ -1061,11 +1073,12 @@ const SyncLogModal: React.FC<{ result: SyncResult; onClose: () => void }> = ({ r
 
   // 필터별 카운트
   const counts = useMemo(() => {
-    const c = { synced: 0, skipped_no_match: 0, skipped_not_scheduled: 0, error: 0, other: 0 };
+    const c = { synced: 0, skipped_no_match: 0, skipped_not_scheduled: 0, skipped_other_subject: 0, error: 0, other: 0 };
     for (const d of result.details) {
       if (d.status === 'synced') c.synced++;
       else if (d.status === 'skipped_no_match') c.skipped_no_match++;
       else if (d.status === 'skipped_not_scheduled') c.skipped_not_scheduled++;
+      else if (d.status === 'skipped_other_subject') c.skipped_other_subject++;
       else if (d.status === 'error') c.error++;
       else c.other++;
     }
@@ -1102,6 +1115,7 @@ const SyncLogModal: React.FC<{ result: SyncResult; onClose: () => void }> = ({ r
     { key: 'synced', label: '성공', count: counts.synced, color: 'bg-emerald-100 text-emerald-700' },
     { key: 'skipped_no_match', label: '매칭실패', count: counts.skipped_no_match, color: 'bg-red-100 text-red-700' },
     { key: 'skipped_not_scheduled', label: '스킵', count: counts.skipped_not_scheduled, color: 'bg-amber-100 text-amber-700' },
+    { key: 'skipped_other_subject', label: '타과목', count: counts.skipped_other_subject, color: 'bg-sky-100 text-sky-700' },
     { key: 'error', label: '오류', count: counts.error, color: 'bg-red-100 text-red-700' },
   ];
 
@@ -1114,13 +1128,15 @@ const SyncLogModal: React.FC<{ result: SyncResult; onClose: () => void }> = ({ r
         onClick={e => e.stopPropagation()}
       >
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-5 py-3 border-b bg-indigo-50">
+        <div className={`flex items-center justify-between px-5 py-3 border-b ${result.dryRun ? 'bg-amber-50' : 'bg-indigo-50'}`}>
           <div className="flex items-center gap-2">
-            <FileText size={18} className="text-indigo-600" />
-            <h2 className="font-bold text-sm text-indigo-900">동기화 로그</h2>
-            <span className="text-xs text-indigo-500">{result.yearMonth}</span>
+            <FileText size={18} className={result.dryRun ? 'text-amber-600' : 'text-indigo-600'} />
+            <h2 className={`font-bold text-sm ${result.dryRun ? 'text-amber-900' : 'text-indigo-900'}`}>
+              동기화 로그{result.dryRun ? ' (테스트 / Firestore 미반영)' : ''}
+            </h2>
+            <span className={`text-xs ${result.dryRun ? 'text-amber-500' : 'text-indigo-500'}`}>{result.yearMonth}</span>
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-indigo-100 rounded"><X size={16} /></button>
+          <button onClick={onClose} className={`p-1 rounded ${result.dryRun ? 'hover:bg-amber-100' : 'hover:bg-indigo-100'}`}><X size={16} /></button>
         </div>
 
         {/* 요약 */}
