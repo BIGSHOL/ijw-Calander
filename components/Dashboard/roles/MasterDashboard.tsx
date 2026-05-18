@@ -6,6 +6,7 @@ import QuickActions, { QuickAction } from '../QuickActions';
 import { useStudents } from '../../../hooks/useStudents';
 import { useDailyAttendanceByDate, useDailyAttendanceByRange } from '../../../hooks/useDailyAttendance';
 import { useTodayAttendanceFromRecords } from '../../../hooks/useTodayAttendanceFromRecords';
+import { useWeeklyAttendanceFromRecords } from '../../../hooks/useWeeklyAttendanceFromRecords';
 import { useConsultationStats } from '../../../hooks/useConsultationStats';
 import { useBilling } from '../../../hooks/useBilling';
 import { useStaff } from '../../../hooks/useStaff';
@@ -88,6 +89,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   }, []);
   const { data: weeklyAttendanceRange = {}, isLoading: weeklyAttendanceLoading } = useDailyAttendanceByRange(last7Days[0], last7Days[6]);
   const weeklyAttendanceData = useMemo(() => last7Days.map(d => weeklyAttendanceRange[d] || []), [last7Days, weeklyAttendanceRange]);
+  // daily_attendance fallback: attendance_records 셀 집계 (셀이 있는 날짜만 보충)
+  const { data: weeklyFromRecords = {} } = useWeeklyAttendanceFromRecords(last7Days);
 
   // 상담 통계
   const consultationStatsResult = useConsultationStats(
@@ -482,27 +485,27 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   };
 
   // ── 주간 출석 추이 ──
+  // 옵션 B: daily_attendance 가 있으면 우선, 비어있는 날만 attendance_records 셀 집계로 보충
   const weeklyAttendance = useMemo(() => {
     const now = new Date();
-    // [진단 로그] daily_attendance 7일치 실제 데이터 양 확인용 (점검 후 제거 예정)
-    // eslint-disable-next-line no-console
-    console.log('[주간출석진단] daily_attendance 7일치:',
-      last7Days.map((d, i) => ({
-        date: d,
-        count: weeklyAttendanceData[i]?.length || 0,
-        statuses: weeklyAttendanceData[i]?.reduce((acc: Record<string, number>, a) => {
-          acc[a.status] = (acc[a.status] || 0) + 1;
-          return acc;
-        }, {}) || {},
-      }))
-    );
-    return weeklyAttendanceData.map((dayData, idx) => {
+    return last7Days.map((dateStr, idx) => {
       const date = subDays(now, 6 - idx);
-      const present = dayData.filter(a => a.status === 'present' || a.status === 'late').length;
-      const total = dayData.length;
-      return { day: DAY_NAMES_KO[date.getDay()], rate: total > 0 ? Math.round((present / total) * 100) : 0 };
+      const dayLabel = DAY_NAMES_KO[date.getDay()];
+      const dailyData = weeklyAttendanceData[idx] || [];
+      // 1순위: daily_attendance
+      if (dailyData.length > 0) {
+        const present = dailyData.filter(a => a.status === 'present' || a.status === 'late').length;
+        const total = dailyData.length;
+        return { day: dayLabel, rate: total > 0 ? Math.round((present / total) * 100) : 0, source: 'daily' as const };
+      }
+      // 2순위: attendance_records 셀 집계
+      const recSummary = weeklyFromRecords[dateStr];
+      if (recSummary && recSummary.totalCount > 0) {
+        return { day: dayLabel, rate: recSummary.rate, source: 'records' as const };
+      }
+      return { day: dayLabel, rate: 0, source: 'empty' as const };
     });
-  }, [weeklyAttendanceData, last7Days]);
+  }, [last7Days, weeklyAttendanceData, weeklyFromRecords]);
 
   // ── 오늘의 수업 현황 ──
   const todayClasses = useMemo(() => {
@@ -683,7 +686,12 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   ))}
                 </div>
                 <div className="text-center mt-1.5 text-micro text-gray-400">
-                  평균 출석률: {Math.round(weeklyAttendance.reduce((s, d) => s + d.rate, 0) / weeklyAttendance.length) || 0}%
+                  {(() => {
+                    const validDays = weeklyAttendance.filter(d => d.source !== 'empty');
+                    if (validDays.length === 0) return '평균 출석률: 데이터 없음';
+                    const avg = Math.round(validDays.reduce((s, d) => s + d.rate, 0) / validDays.length);
+                    return `평균 출석률: ${avg}% (${validDays.length}일 기준)`;
+                  })()}
                 </div>
               </div>
 
