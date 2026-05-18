@@ -117,8 +117,18 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
                 <thead className="bg-gray-50">
                   <tr className="text-gray-500">
                     <th className="px-3 py-1.5 text-left font-medium">강사</th>
-                    <th className="px-3 py-1.5 text-right font-medium">상담 건수</th>
-                    <th className="px-3 py-1.5 text-right font-medium">목표 대비</th>
+                    <th
+                      className="px-3 py-1.5 text-right font-medium cursor-help"
+                      title={`이번 달 작성한 학생 상담 기록 수 (Firestore: studentConsultations)\n· 기간: ${yearMonth} 1일 ~ 말일\n· consultantId = 해당 강사 id 인 건수`}
+                    >
+                      상담 건수
+                    </th>
+                    <th
+                      className="px-3 py-1.5 text-right font-medium cursor-help"
+                      title="달성률 = 상담 건수 ÷ 담당 학생 수(가중) × 100&#10;담당 학생 수: 강사가 담임/부담임으로 맡은 (학생×과목) 슬롯 비율 가중 합&#10;예: 학생 A 가 월화목금=김선생, 수=이선생 → 김선생 +0.8 / 이선생 +0.2"
+                    >
+                      달성률
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -128,7 +138,8 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
                       <td className="px-3 py-1.5 text-right font-mono">{s.consultationCount}</td>
                       <td className="px-3 py-1.5 text-right">
                         <span
-                          className={`font-bold ${
+                          title={`이번 달 학생 상담 ${s.consultationCount}건 ÷ 담당 학생 수(가중) ${s.targetCount}명 × 100\n· 분자: ${yearMonth} 기간 내 이 강사가 작성한 학생 상담 기록 수\n· 분모: 강사가 담당하는 (학생×과목) 가중 합 — 월/화/목/금=담임, 수=부담임(slotTeachers) 슬롯 비율 분할`}
+                          className={`font-bold cursor-help ${
                             s.percentage >= 100
                               ? 'text-emerald-600'
                               : s.percentage >= 50
@@ -138,7 +149,6 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
                         >
                           {s.percentage}%
                         </span>
-                        <span className="text-gray-400 ml-1">/ {s.targetCount}</span>
                       </td>
                     </tr>
                   ))}

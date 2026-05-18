@@ -375,19 +375,22 @@ export function useConsultationStats(
         }
       });
 
-      // 4. classes 컬렉션에서 담임/부담임(slotTeachers) 정보 보관
-      // 키: className → { teacher (담임), slotTeachers (요일-교시 → 부담임), subject }
+      // 4. classes 컬렉션에서 담임/부담임(slotTeachers) + 수업 스케줄 정보 보관
+      // 키: className → { teacher (담임), slotTeachers (요일-교시 → 부담임), subject, schedule }
+      // schedule 은 object array [{day, periodId, ...}] — slotKey 매칭에 사용
       type ClassInfo = {
         teacher: string;
         slotTeachers: Record<string, string>;
         subject: 'math' | 'english';
+        schedule: any[];
       };
       const classByName = new Map<string, ClassInfo>();
       const classesSnap = await getDocs(collection(db, 'classes'));
 
       classesSnap.docs.forEach(classDoc => {
         const classData = classDoc.data();
-        const teacherName = classData.teacher as string | undefined;
+        // 영어 수업은 mainTeacher, 수학은 teacher — useClasses.ts 패턴
+        const teacherName = (classData.mainTeacher || classData.teacher) as string | undefined;
         const subject = classData.subject as string | undefined;
         const className = classData.className as string | undefined;
 
@@ -402,6 +405,7 @@ export function useConsultationStats(
           teacher: teacherName,
           slotTeachers: (classData.slotTeachers || {}) as Record<string, string>,
           subject: normalizedSubject,
+          schedule: Array.isArray(classData.schedule) ? classData.schedule : [],
         });
       });
 
@@ -416,7 +420,13 @@ export function useConsultationStats(
         const classInfo = classByName.get(enr.className);
         if (!classInfo) return;
 
-        for (const slot of enr.schedule) {
+        // enrollment.schedule 이 비어있는 경우가 많아 class.schedule 로 fallback
+        // class.schedule 은 object array [{day, periodId, ...}] — slotKey 매칭에 정확함
+        const slotsSource = (enr.schedule && enr.schedule.length > 0)
+          ? enr.schedule
+          : classInfo.schedule;
+
+        for (const slot of slotsSource) {
           let day = '';
           let periodId = '';
           if (typeof slot === 'string') {
@@ -658,9 +668,10 @@ export function useConsultationStats(
         const teacherMap = teacherWeightedStudentsMap.get(perf.id);
         const target = Math.round((teacherMap?.get('math') || 0) + (teacherMap?.get('english') || 0));
         perf.targetCount = target;
+        // 분모가 0이면 100% 폴백하지 않고 0% 표시 (분모 매칭 실패가 진짜 100% 처럼 보이는 것 방지)
         perf.percentage = target > 0
           ? Math.min(100, Math.round((perf.consultationCount / target) * 100))
-          : (perf.consultationCount > 0 ? 100 : 0);
+          : 0;
       });
 
       return {
