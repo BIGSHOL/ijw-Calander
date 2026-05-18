@@ -484,13 +484,25 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   // ── 주간 출석 추이 ──
   const weeklyAttendance = useMemo(() => {
     const now = new Date();
+    // [진단 로그] daily_attendance 7일치 실제 데이터 양 확인용 (점검 후 제거 예정)
+    // eslint-disable-next-line no-console
+    console.log('[주간출석진단] daily_attendance 7일치:',
+      last7Days.map((d, i) => ({
+        date: d,
+        count: weeklyAttendanceData[i]?.length || 0,
+        statuses: weeklyAttendanceData[i]?.reduce((acc: Record<string, number>, a) => {
+          acc[a.status] = (acc[a.status] || 0) + 1;
+          return acc;
+        }, {}) || {},
+      }))
+    );
     return weeklyAttendanceData.map((dayData, idx) => {
       const date = subDays(now, 6 - idx);
       const present = dayData.filter(a => a.status === 'present' || a.status === 'late').length;
       const total = dayData.length;
       return { day: DAY_NAMES_KO[date.getDay()], rate: total > 0 ? Math.round((present / total) * 100) : 0 };
     });
-  }, [weeklyAttendanceData]);
+  }, [weeklyAttendanceData, last7Days]);
 
   // ── 오늘의 수업 현황 ──
   const todayClasses = useMemo(() => {
