@@ -5,6 +5,7 @@ import KPICard from '../KPICard';
 import QuickActions, { QuickAction } from '../QuickActions';
 import { useStudents } from '../../../hooks/useStudents';
 import { useDailyAttendanceByDate, useDailyAttendanceByRange } from '../../../hooks/useDailyAttendance';
+import { useTodayAttendanceFromRecords } from '../../../hooks/useTodayAttendanceFromRecords';
 import { useConsultationStats } from '../../../hooks/useConsultationStats';
 import { useBilling } from '../../../hooks/useBilling';
 import { useStaff } from '../../../hooks/useStaff';
@@ -21,6 +22,8 @@ import { ResponsiveContainer, LineChart, Line, YAxis, Tooltip, ReferenceDot, Lab
 const AddStudentModal = lazy(() => import('../../StudentManagement/AddStudentModal'));
 const AddClassModal = lazy(() => import('../../ClassManagement/AddClassModal'));
 const AddConsultationModal = lazy(() => import('../../StudentConsultation/AddConsultationModal'));
+const BillingDetailsModal = lazy(() => import('../modals/BillingDetailsModal'));
+const ConsultationDetailsModal = lazy(() => import('../modals/ConsultationDetailsModal'));
 
 interface MasterDashboardProps {
   userProfile: UserProfile;
@@ -66,6 +69,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   // ── 데이터 로딩 ──
   const { students = [], loading: studentsLoading } = useStudents(true); // 퇴원생 포함
   const { data: todayAttendance = [], isLoading: attendanceLoading } = useDailyAttendanceByDate(today);
+  // Fallback: daily_attendance 가 비어있으면 출석부(attendance_records) 의 오늘 셀로 KPI 계산
+  const { data: todayAttendanceFallback } = useTodayAttendanceFromRecords(today);
   const { records: billingRecords = [], isLoading: billingLoading } = useBilling(currentMonthFormatted);
   const { staff } = useStaff();
   const { data: allClasses = [] } = useClasses();
@@ -163,12 +168,30 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     students.filter(s => s.status === 'active' && s.enrollments?.some(isActiveEnrollment)).length
   , [students]);
 
-  // ── 출석 통계 ──
-  const { presentCount, totalCount, attendanceRate } = useMemo(() => {
-    const present = todayAttendance.filter(a => a.status === 'present' || a.status === 'late').length;
-    const total = todayAttendance.length;
-    return { presentCount: present, totalCount: total, attendanceRate: total > 0 ? Math.round((present / total) * 100) : 0 };
-  }, [todayAttendance]);
+  // ── 출석 통계 (옵션 B: daily_attendance 우선, 비어있으면 attendance_records fallback) ──
+  const { presentCount, totalCount, attendanceRate, attendanceSource } = useMemo(() => {
+    const dailyPresent = todayAttendance.filter(a => a.status === 'present' || a.status === 'late').length;
+    const dailyTotal = todayAttendance.length;
+    if (dailyTotal > 0) {
+      return {
+        presentCount: dailyPresent,
+        totalCount: dailyTotal,
+        attendanceRate: Math.round((dailyPresent / dailyTotal) * 100),
+        attendanceSource: 'daily_attendance' as const,
+      };
+    }
+    // Fallback: 출석부 attendance_records 의 오늘 셀
+    const fb = todayAttendanceFallback;
+    if (fb && fb.totalCount > 0) {
+      return {
+        presentCount: fb.presentCount,
+        totalCount: fb.totalCount,
+        attendanceRate: fb.rate,
+        attendanceSource: 'attendance_records' as const,
+      };
+    }
+    return { presentCount: 0, totalCount: 0, attendanceRate: 0, attendanceSource: 'none' as const };
+  }, [todayAttendance, todayAttendanceFallback]);
 
   // ── 상담 완료율 ──
   const { totalSubjectEnrollments, consultedSubjectCount, consultationRate } = useMemo(() => {
@@ -550,6 +573,9 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
   const [isAddClassOpen, setIsAddClassOpen] = useState(false);
   const [isAddConsultationOpen, setIsAddConsultationOpen] = useState(false);
+  // KPI 근거 데이터 모달
+  const [isBillingModalOpen, setIsBillingModalOpen] = useState(false);
+  const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
 
   const quickActions: QuickAction[] = [
     { id: 'add-student', label: '학생 추가', icon: UserPlus, onClick: () => setIsAddStudentOpen(true), color: 'rgb(8, 20, 41)' /* primary */ },
@@ -582,9 +608,19 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
           </div>
         ) : (
           <>
-            {/* ── Row 1: KPI 카드 ── */}
+            {/* ── Row 1: KPI 카드 (클릭 시 근거 데이터 모달) ── */}
             <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-3">
-              {kpiCards.map(card => <KPICard key={card.id} data={card} />)}
+              {kpiCards.map(card => (
+                <KPICard
+                  key={card.id}
+                  data={card}
+                  onClick={
+                    card.id === 'billing' ? () => setIsBillingModalOpen(true)
+                    : card.id === 'consultation' ? () => setIsConsultationModalOpen(true)
+                    : undefined
+                  }
+                />
+              ))}
             </div>
 
             {/* ── 재원생 / 신입 / 퇴원 추이 (박스 3개) ── */}
@@ -918,6 +954,20 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
         {isAddConsultationOpen && (
           <AddConsultationModal onClose={() => setIsAddConsultationOpen(false)} onSuccess={() => setIsAddConsultationOpen(false)} userProfile={userProfile} />
         )}
+        {/* 수납률 근거 데이터 모달 */}
+        <BillingDetailsModal
+          isOpen={isBillingModalOpen}
+          onClose={() => setIsBillingModalOpen(false)}
+          records={billingRecords}
+          yearMonth={currentMonthFormatted}
+        />
+        {/* 상담 완료율 근거 데이터 모달 */}
+        <ConsultationDetailsModal
+          isOpen={isConsultationModalOpen}
+          onClose={() => setIsConsultationModalOpen(false)}
+          stats={stats}
+          yearMonth={currentMonthFormatted}
+        />
       </Suspense>
     </div>
   );
