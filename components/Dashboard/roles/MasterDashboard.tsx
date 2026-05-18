@@ -324,17 +324,17 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     return { mathNew, englishNew, mathWithdrawn, englishWithdrawn };
   }, [students, currentMonthStart, currentMonthEnd]);
 
-  // 신입 박스 (수학/영어 2라인)
+  // 신입 박스 (수학/영어 2라인) — 영어는 점선으로 표시 (겹침 방지)
   const newCards = useMemo(() => [
     { key: 'mathNew', label: '수학 신입', count: enrollmentBySubject.mathNew, color: COLOR_MAP['수학'], trend: generateMockTrend(Math.max(1, enrollmentBySubject.mathNew), 30, 0.18) },
-    { key: 'englishNew', label: '영어 신입', count: enrollmentBySubject.englishNew, color: COLOR_MAP['영어'], trend: generateMockTrend(Math.max(1, enrollmentBySubject.englishNew), 30, 0.18) },
+    { key: 'englishNew', label: '영어 신입', count: enrollmentBySubject.englishNew, color: COLOR_MAP['영어'], trend: generateMockTrend(Math.max(1, enrollmentBySubject.englishNew), 30, 0.18), dashed: true },
     // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [enrollmentBySubject.mathNew, enrollmentBySubject.englishNew]);
 
-  // 퇴원 박스 (수학/영어 2라인)
+  // 퇴원 박스 (수학/영어 2라인) — 영어는 점선으로 표시 (겹침 방지)
   const withdrawnCards = useMemo(() => [
     { key: 'mathWithdrawn', label: '수학 퇴원', count: enrollmentBySubject.mathWithdrawn, color: COLOR_MAP['수학'], trend: generateMockTrend(Math.max(1, enrollmentBySubject.mathWithdrawn), 30, 0.18) },
-    { key: 'englishWithdrawn', label: '영어 퇴원', count: enrollmentBySubject.englishWithdrawn, color: COLOR_MAP['영어'], trend: generateMockTrend(Math.max(1, enrollmentBySubject.englishWithdrawn), 30, 0.18) },
+    { key: 'englishWithdrawn', label: '영어 퇴원', count: enrollmentBySubject.englishWithdrawn, color: COLOR_MAP['영어'], trend: generateMockTrend(Math.max(1, enrollmentBySubject.englishWithdrawn), 30, 0.18), dashed: true },
     // eslint-disable-next-line react-hooks/exhaustive-deps
   ], [enrollmentBySubject.mathWithdrawn, enrollmentBySubject.englishWithdrawn]);
 
@@ -429,6 +429,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                       name={card.label}
                       stroke={card.color}
                       strokeWidth={1.8}
+                      strokeDasharray={(card as any).dashed ? '4 4' : undefined}
                       dot={(props: any) => {
                         const i = props.index;
                         if (i === maxIdx || i === minIdx || i === todayIdx) {
