@@ -478,6 +478,33 @@ export const useAttendanceStudents = (options?: {
                     };
                 });
 
+                // [진단 로그] examInfoRaw 값 분포 — 점검 후 제거 예정
+                // 강사 입력 패턴 확인용 (학원 평균 점수 30~100 범위인지)
+                try {
+                    const distribution: Record<string, number> = {};
+                    const samples: Array<{ student: string; key: string; value: string }> = [];
+                    merged.forEach((s: any) => {
+                        const raw = s.examInfoRaw || {};
+                        Object.entries(raw).forEach(([key, value]) => {
+                            const v = String(value);
+                            distribution[v] = (distribution[v] || 0) + 1;
+                            if (samples.length < 20) samples.push({ student: s.name, key, value: v });
+                        });
+                    });
+                    const sortedDist = Object.entries(distribution).sort(([, a], [, b]) => b - a);
+                    // eslint-disable-next-line no-console
+                    console.log('[시험점수진단]', {
+                        총_examInfoRaw_셀수: sortedDist.reduce((s, [, c]) => s + c, 0),
+                        고유값_수: sortedDist.length,
+                        값_분포_상위20: sortedDist.slice(0, 20),
+                        값_분포_전체: sortedDist,
+                        샘플_20개: samples,
+                    });
+                } catch (logErr) {
+                    // ignore
+                    void logErr;
+                }
+
                 return merged;
             } catch (err) {
                 console.error('Error loading attendance records:', err);
