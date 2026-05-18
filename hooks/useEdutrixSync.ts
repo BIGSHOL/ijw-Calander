@@ -108,19 +108,15 @@ export interface SyncResult {
     dryRun?: boolean;
     /** 영어/타과목 보고서로 분류되어 동기화 대상에서 제외된 건수 */
     otherSubject?: number;
-    /** 학생 enrollment 요일에 보고서가 없는 (강사 미기입) 건수 */
-    missingReports?: number;
 }
 
 export interface SyncDetail {
     studentName: string;
     className: string;
     date: string;
-    status: 'synced' | 'skipped_absent' | 'skipped_no_match' | 'skipped_not_scheduled' | 'skipped_other_subject' | 'missing_report' | 'already_marked' | 'error';
+    status: 'synced' | 'skipped_absent' | 'skipped_no_match' | 'skipped_not_scheduled' | 'skipped_other_subject' | 'already_marked' | 'error';
     attendanceValue?: number;
     message?: string;
-    /** 보고서 미기입 시 담당 강사 이름 (모달에서 강사별 그룹 가능) */
-    teacherName?: string;
 }
 
 /** 동기화 옵션 */
@@ -191,7 +187,7 @@ export function useEdutrixSync() {
                 // schedule은 레거시 string / 현행 ScheduleSlot object 혼재 가능 → unknown[]으로 받고
                 // getScheduledDays에서 타입별로 안전 파싱
                 schedule: (data.schedule || []) as unknown[],
-                // 활성 기간 판정용 (미기입 검출 시 사용)
+                // 활성 기간 판정용
                 startDate: tsToDateStr(data.startDate) || tsToDateStr(data.enrollmentDate),
                 endDate: tsToDateStr(data.endDate),
                 withdrawalDate: tsToDateStr(data.withdrawalDate),
@@ -301,8 +297,6 @@ export function useEdutrixSync() {
                 examInfoRaw: Record<string, string>;     // exam_info raw (분자/분모 보존)
                 assignmentScoreRaw: Record<string, string>; // assignment_score raw (⭕△X 판정용)
                 progressRaw: Record<string, string>;     // progress raw (Q2 진도 표시)
-                // 미기입 표시 — 셀 호버 시 툴팁용 (compositeKey → 강사 이름)
-                missingReports: Record<string, string>;
             }>();
 
             for (const report of reports) {
@@ -489,7 +483,6 @@ export function useEdutrixSync() {
                         examInfoRaw: {},
                         assignmentScoreRaw: {},
                         progressRaw: {},
-                        missingReports: {},
                     });
                 }
                 const batch = attendanceBatch.get(docId)!;
@@ -527,63 +520,9 @@ export function useEdutrixSync() {
                 });
             }
 
-            // ── 미기입 검출 ──
-            // 보고서가 1건이라도 들어온 학생 + 매칭된 className 의 enrollment 만 검사
-            // (학생이 여러 enrollment 갖고 있을 때, 보고서 0건인 enrollment 까지 미기입으로 잡히는 버그 방지)
-            // 매칭된 className = attendance.keys 의 "className::date" 에서 className 부분
-            const [y, m] = yearMonth.split('-').map(Number);
-            const lastDayOfMonth = new Date(y, m, 0).getDate();
-            for (const batchData of attendanceBatch.values()) {
-                const studentId = batchData.studentId;
-                const enrollments = enrollmentCache.get(studentId);
-                if (!enrollments) continue;
-                // 이 학생의 attendance 에 등장한 className 집합
-                const matchedClassNames = new Set<string>();
-                for (const k of Object.keys(batchData.attendance)) {
-                    const idx = k.indexOf('::');
-                    if (idx > 0) matchedClassNames.add(k.substring(0, idx));
-                }
-                if (matchedClassNames.size === 0) continue;
-                const targetEnr = enrollments.filter(e =>
-                    TARGET_SUBJECTS.includes(e.subject)
-                    && !e.cancelledAt
-                    && matchedClassNames.has(e.className)
-                );
-                for (const enr of targetEnr) {
-                    if (enr.onHold) continue;
-                    const scheduledDays = getScheduledDays(enr);
-                    if (scheduledDays.size === 0) continue;
-                    const effectiveEnd = enr.withdrawalDate || enr.endDate;
-                    for (let day = 1; day <= lastDayOfMonth; day++) {
-                        const dateStr = `${yearMonth}-${String(day).padStart(2, '0')}`;
-                        const dayName = getKoreanDayName(dateStr);
-                        if (!scheduledDays.has(dayName)) continue;
-                        if (holidaySet.has(dateStr)) continue;
-                        if (enr.startDate && dateStr < enr.startDate) continue;
-                        if (effectiveEnd && dateStr > effectiveEnd) continue;
-                        const compositeKey = `${enr.className}::${dateStr}`;
-                        if (batchData.attendance[compositeKey] === undefined) {
-                            const teacherDisplay = enr.teacher || enr.staffId || '담당미상';
-                            result.missingReports = (result.missingReports || 0) + 1;
-                            result.details.push({
-                                studentName: batchData.studentName,
-                                className: enr.className,
-                                date: dateStr,
-                                status: 'missing_report',
-                                teacherName: teacherDisplay,
-                                message: `보고서 미기입 (강사: ${teacherDisplay})`,
-                            });
-                            // 셀 호버 툴팁 용 — Firestore에 저장
-                            batchData.missingReports[compositeKey] = teacherDisplay;
-                        }
-                    }
-                }
-            }
-            console.log(`[EdutrixSync/${subject}] 미기입 검출: ${result.missingReports || 0}건`);
-
             if (dryRun) {
                 console.log(`[EdutrixSync/${subject}] Step 6: DRY-RUN — Firestore 쓰기 생략 (${attendanceBatch.size}건 매칭됨)`);
-                console.log(`[EdutrixSync/${subject}] ===== DRY-RUN 완료: 총 ${result.totalReports} | 매칭 ${result.matched} | 스킵 ${result.skipped} | 타과목 ${result.otherSubject} | 미기입 ${result.missingReports} | 오류 ${result.errors} =====`);
+                console.log(`[EdutrixSync/${subject}] ===== DRY-RUN 완료: 총 ${result.totalReports} | 매칭 ${result.matched} | 스킵 ${result.skipped} | 타과목 ${result.otherSubject} | 오류 ${result.errors} =====`);
                 setLastResult(result);
                 return result;
             }
@@ -627,8 +566,6 @@ export function useEdutrixSync() {
                         if (Object.keys(data.progressRaw).length > 0) {
                             payload.progressRaw = data.progressRaw;
                         }
-                        // 미기입 표시 (셀 호버 툴팁용) — 항상 저장 (없으면 빈 객체로 덮어써서 옛 데이터 제거)
-                        payload.missingReports = data.missingReports;
                         await setDoc(docRef, payload, { merge: true });
                     } catch (err) {
                         result.errors++;

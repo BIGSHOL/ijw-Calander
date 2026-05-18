@@ -1052,13 +1052,12 @@ const SYNC_STATUS_CONFIG: Record<string, { label: string; color: string; bgColor
   skipped_no_match: { label: '매칭실패', color: 'text-red-700', bgColor: 'bg-red-50' },
   skipped_not_scheduled: { label: '스킵', color: 'text-amber-700', bgColor: 'bg-amber-50' },
   skipped_other_subject: { label: '타과목', color: 'text-sky-700', bgColor: 'bg-sky-50' },
-  missing_report: { label: '미기입 (월간)', color: 'text-fuchsia-700', bgColor: 'bg-fuchsia-50' },
   skipped_absent: { label: '결석스킵', color: 'text-gray-600', bgColor: 'bg-gray-50' },
   already_marked: { label: '이미처리', color: 'text-blue-600', bgColor: 'bg-blue-50' },
   error: { label: '오류', color: 'text-red-700', bgColor: 'bg-red-50' },
 };
 
-type LogFilter = 'all' | 'synced' | 'skipped_no_match' | 'skipped_not_scheduled' | 'skipped_other_subject' | 'missing_report' | 'error';
+type LogFilter = 'all' | 'synced' | 'skipped_no_match' | 'skipped_not_scheduled' | 'skipped_other_subject' | 'error';
 
 const SyncLogModal: React.FC<{ result: SyncResult; onClose: () => void }> = ({ result, onClose }) => {
   const [filter, setFilter] = useState<LogFilter>('all');
@@ -1077,13 +1076,12 @@ const SyncLogModal: React.FC<{ result: SyncResult; onClose: () => void }> = ({ r
 
   // 필터별 카운트
   const counts = useMemo(() => {
-    const c = { synced: 0, skipped_no_match: 0, skipped_not_scheduled: 0, skipped_other_subject: 0, missing_report: 0, error: 0, other: 0 };
+    const c = { synced: 0, skipped_no_match: 0, skipped_not_scheduled: 0, skipped_other_subject: 0, error: 0, other: 0 };
     for (const d of result.details) {
       if (d.status === 'synced') c.synced++;
       else if (d.status === 'skipped_no_match') c.skipped_no_match++;
       else if (d.status === 'skipped_not_scheduled') c.skipped_not_scheduled++;
       else if (d.status === 'skipped_other_subject') c.skipped_other_subject++;
-      else if (d.status === 'missing_report') c.missing_report++;
       else if (d.status === 'error') c.error++;
       else c.other++;
     }
@@ -1121,7 +1119,6 @@ const SyncLogModal: React.FC<{ result: SyncResult; onClose: () => void }> = ({ r
     { key: 'skipped_no_match', label: '매칭실패', count: counts.skipped_no_match, color: 'bg-red-100 text-red-700' },
     { key: 'skipped_not_scheduled', label: '스킵', count: counts.skipped_not_scheduled, color: 'bg-amber-100 text-amber-700' },
     { key: 'skipped_other_subject', label: '타과목', count: counts.skipped_other_subject, color: 'bg-sky-100 text-sky-700' },
-    { key: 'missing_report', label: '미기입 (월간)', count: counts.missing_report, color: 'bg-fuchsia-100 text-fuchsia-700' },
     { key: 'error', label: '오류', count: counts.error, color: 'bg-red-100 text-red-700' },
   ];
 
@@ -1150,9 +1147,6 @@ const SyncLogModal: React.FC<{ result: SyncResult; onClose: () => void }> = ({ r
           <span className="text-gray-500">Edutrix 보고서: <b className="text-gray-800">{result.totalReports}건</b></span>
           <span className="text-emerald-600">출석 반영: <b>{result.matched}</b></span>
           <span className="text-amber-600">스킵: <b>{result.skipped}</b></span>
-          {(result.missingReports || 0) > 0 && (
-            <span className="text-fuchsia-600">미기입 (월간): <b>{result.missingReports}</b></span>
-          )}
           {(result.otherSubject || 0) > 0 && (
             <span className="text-sky-600">타과목: <b>{result.otherSubject}</b></span>
           )}

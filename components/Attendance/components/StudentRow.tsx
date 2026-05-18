@@ -436,10 +436,6 @@ const StudentRow = React.memo(({
         const { day: dayName } = formatDateDisplay(day);
         const status = pendingUpdates?.[compositeKey] ?? student.attendance[compositeKey] ?? student.attendance[dateKey];
         const memo = pendingMemos?.[compositeKey] ?? student.memos?.[compositeKey] ?? student.memos?.[dateKey];
-        // 미기입 보고서 — status 없을 때만 의미 있음. compositeKey/dateKey 둘 다 확인
-        const missingReportTeacher =
-          student.missingReports?.[compositeKey] ?? student.missingReports?.[dateKey];
-        const isMissingReport = status === undefined && !!missingReportTeacher;
         const isSaturday = day.getDay() === 6;
         const isSunday = day.getDay() === 0;
         const isHoliday = holidayDateSet.has(dateKey);
@@ -576,8 +572,6 @@ const StudentRow = React.memo(({
             title={
               holidayName
                 ? `🎉 ${holidayName}${memo ? ` | 메모: ${memo}` : ''}`
-                : isMissingReport
-                ? `📝 보고서 미기입 (강사: ${missingReportTeacher})${memo ? ` | 메모: ${memo}` : ''}`
                 : (memo ? `메모: ${memo}` : undefined)
             }
           >
@@ -593,13 +587,6 @@ const StudentRow = React.memo(({
                   style={q1BgStyle}
                 >
                   {q1Content}
-                  {/* 미기입 마커 — 좌상단 fuchsia 점 (출석 값 없을 때만) */}
-                  {isMissingReport && (
-                    <span
-                      className="absolute top-[1px] left-[1px] w-1.5 h-1.5 rounded-full bg-fuchsia-500 shadow-sm"
-                      aria-label="보고서 미기입"
-                    />
-                  )}
                 </div>
                 {/* Q2: 진도 (우상단) - 1시 방향
                     Edutrix progress 있으면 텍스트 표시 (호버에 전체).
