@@ -1274,6 +1274,9 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                             : [...current, teacher];
                         updateMathIntegrationSettings({ ...mathIntegrationSettings, hiddenTeachers: newHidden });
                     }}
+                    onSetHiddenTeachers={(teachers: string[]) => {
+                        updateMathIntegrationSettings({ ...mathIntegrationSettings, hiddenTeachers: teachers });
+                    }}
                     onResetFilters={onResetFilters}
                 />
 
