@@ -134,7 +134,7 @@ const BillingDetailsModal: React.FC<BillingDetailsModalProps> = ({
                         isPending ? 'bg-red-50/40' : ''
                       }`}
                     >
-                      <td className="px-3 py-1.5 font-medium text-gray-900">
+                      <td className="px-3 py-1.5 text-left font-medium text-gray-900 whitespace-nowrap">
                         {r.studentName}
                       </td>
                       <td className="px-3 py-1.5 text-gray-600">
