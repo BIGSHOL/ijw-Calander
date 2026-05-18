@@ -109,7 +109,7 @@ const BillingDetailsModal: React.FC<BillingDetailsModalProps> = ({
                   <th className="px-3 py-2 text-right font-medium">청구</th>
                   <th className="px-3 py-2 text-right font-medium">입금</th>
                   <th className="px-3 py-2 text-right font-medium">미납</th>
-                  <th className="px-3 py-2 text-center font-medium">상태</th>
+                  <th className="px-3 py-2 text-center font-medium whitespace-nowrap w-14">상태</th>
                   <th className="px-3 py-2 text-left font-medium">담임</th>
                 </tr>
               </thead>
@@ -142,13 +142,13 @@ const BillingDetailsModal: React.FC<BillingDetailsModalProps> = ({
                       >
                         {fmt(r.unpaidAmount || 0)}
                       </td>
-                      <td className="px-3 py-1.5 text-center">
+                      <td className="px-3 py-1.5 text-center whitespace-nowrap">
                         {isPending ? (
-                          <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-bold">
+                          <span className="inline-block px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-bold whitespace-nowrap">
                             미납
                           </span>
                         ) : (
-                          <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[10px] font-bold">
+                          <span className="inline-block px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[10px] font-bold whitespace-nowrap">
                             완납
                           </span>
                         )}
