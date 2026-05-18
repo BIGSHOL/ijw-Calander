@@ -237,6 +237,30 @@ export function useEdutrixSync() {
             result.totalReports = reports.length;
             console.log(`[EdutrixSync] Step 1: Edutrix 보고서 ${reports.length}건 조회됨`);
 
+            // [임시 진단] 5/15 금요일 보고서 raw 데이터 dump — 추적 후 제거 예정
+            const DEBUG_DATE = '2026-05-15';
+            const debugReports = reports.filter(r => r.date === DEBUG_DATE);
+            const debugByTeacher: Record<string, number> = {};
+            debugReports.forEach(r => {
+                const t = r.teacher_name || '(강사없음)';
+                debugByTeacher[t] = (debugByTeacher[t] || 0) + 1;
+            });
+            // eslint-disable-next-line no-console
+            console.log(`[Edutrix${DEBUG_DATE}진단]`, {
+                보고서_총건수: debugReports.length,
+                강사별_건수: debugByTeacher,
+                보고서_샘플_상위20: debugReports.slice(0, 20).map(r => ({
+                    학생: r.student_name,
+                    반: r.class_name,
+                    강사: r.teacher_name,
+                    출결: r.lateness,
+                    진도: r.progress,
+                    과제: r.assignment_score,
+                    태도: r.study_attitude,
+                })),
+                전체_보고서: debugReports,
+            });
+
             if (reports.length === 0) {
                 console.warn('[EdutrixSync] 보고서가 0건입니다. 동기화 종료.');
                 setLastResult(result);
@@ -579,6 +603,18 @@ export function useEdutrixSync() {
             await queryClient.invalidateQueries({ queryKey: ['attendanceStudents'] });
 
             console.log(`[EdutrixSync] ===== 동기화 완료: 총 ${result.totalReports} | 매칭 ${result.matched} | 스킵 ${result.skipped} | 오류 ${result.errors} =====`);
+
+            // [임시 진단] 5/15 보고서 처리 결과 추적 — 사용자 점검 후 제거 예정
+            const DEBUG_DATE_OUT = '2026-05-15';
+            const debugDetails = result.details.filter(d => d.date === DEBUG_DATE_OUT);
+            const statusCounts: Record<string, number> = {};
+            debugDetails.forEach(d => { statusCounts[d.status] = (statusCounts[d.status] || 0) + 1; });
+            // eslint-disable-next-line no-console
+            console.log(`[Edutrix${DEBUG_DATE_OUT}처리결과]`, {
+                전체_처리수: debugDetails.length,
+                상태별_카운트: statusCounts,
+                상세_전체: debugDetails,
+            });
 
             setLastResult(result);
             return result;
