@@ -24,6 +24,7 @@ const AddClassModal = lazy(() => import('../../ClassManagement/AddClassModal'));
 const AddConsultationModal = lazy(() => import('../../StudentConsultation/AddConsultationModal'));
 const BillingDetailsModal = lazy(() => import('../modals/BillingDetailsModal'));
 const ConsultationDetailsModal = lazy(() => import('../modals/ConsultationDetailsModal'));
+const NewStudentsModal = lazy(() => import('../modals/NewStudentsModal'));
 
 interface MasterDashboardProps {
   userProfile: UserProfile;
@@ -577,6 +578,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   // KPI 근거 데이터 모달
   const [isBillingModalOpen, setIsBillingModalOpen] = useState(false);
   const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
+  const [isNewStudentsModalOpen, setIsNewStudentsModalOpen] = useState(false);
 
   const quickActions: QuickAction[] = [
     { id: 'add-student', label: '학생 추가', icon: UserPlus, onClick: () => setIsAddStudentOpen(true), color: 'rgb(8, 20, 41)' /* primary */ },
@@ -618,6 +620,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   onClick={
                     card.id === 'billing' ? () => setIsBillingModalOpen(true)
                     : card.id === 'consultation' ? () => setIsConsultationModalOpen(true)
+                    : card.id === 'new-students' ? () => setIsNewStudentsModalOpen(true)
                     : undefined
                   }
                 />
@@ -968,6 +971,15 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
           onClose={() => setIsConsultationModalOpen(false)}
           stats={stats}
           yearMonth={currentMonthFormatted}
+        />
+        {/* 신규 등록 근거 데이터 모달 */}
+        <NewStudentsModal
+          isOpen={isNewStudentsModalOpen}
+          onClose={() => setIsNewStudentsModalOpen(false)}
+          students={students}
+          yearMonth={currentMonthFormatted}
+          monthStart={currentMonthStart}
+          monthEnd={currentMonthEnd}
         />
       </Suspense>
     </div>
