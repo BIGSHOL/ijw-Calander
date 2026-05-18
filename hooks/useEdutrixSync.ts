@@ -528,16 +528,27 @@ export function useEdutrixSync() {
             }
 
             // ── 미기입 검출 ──
-            // 보고서가 1건이라도 들어온 학생 + enrollment.schedule 요일 + 활성기간 + 휴일 제외
-            // → 예상 수업일 중 attendance에 없는 날짜 = 강사 미기입
-            // (0건 학생은 enrollmentCache에 없어 검출 안 됨 — 별도 진단 필요)
+            // 보고서가 1건이라도 들어온 학생 + 매칭된 className 의 enrollment 만 검사
+            // (학생이 여러 enrollment 갖고 있을 때, 보고서 0건인 enrollment 까지 미기입으로 잡히는 버그 방지)
+            // 매칭된 className = attendance.keys 의 "className::date" 에서 className 부분
             const [y, m] = yearMonth.split('-').map(Number);
             const lastDayOfMonth = new Date(y, m, 0).getDate();
             for (const batchData of attendanceBatch.values()) {
                 const studentId = batchData.studentId;
                 const enrollments = enrollmentCache.get(studentId);
                 if (!enrollments) continue;
-                const targetEnr = enrollments.filter(e => TARGET_SUBJECTS.includes(e.subject) && !e.cancelledAt);
+                // 이 학생의 attendance 에 등장한 className 집합
+                const matchedClassNames = new Set<string>();
+                for (const k of Object.keys(batchData.attendance)) {
+                    const idx = k.indexOf('::');
+                    if (idx > 0) matchedClassNames.add(k.substring(0, idx));
+                }
+                if (matchedClassNames.size === 0) continue;
+                const targetEnr = enrollments.filter(e =>
+                    TARGET_SUBJECTS.includes(e.subject)
+                    && !e.cancelledAt
+                    && matchedClassNames.has(e.className)
+                );
                 for (const enr of targetEnr) {
                     if (enr.onHold) continue;
                     const scheduledDays = getScheduledDays(enr);
