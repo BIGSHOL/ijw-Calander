@@ -945,7 +945,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                 내보내기
                             </button>
                             {isMoreDropdownOpen && (
-                                <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-sm shadow-lg z-50 min-w-[180px] py-1">
+                                <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-sm shadow-lg z-50 min-w-[210px] py-1 whitespace-nowrap">
                                     {/* 그룹 1: 내보내기 */}
                                     {onExportImage && (
                                         <button
@@ -977,7 +977,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                             title="라운드트립 — 내보낸 엑셀을 수정해서 다시 가져오기"
                                         >
                                             <FileSpreadsheet size={12} className="text-gray-500" />
-                                            구글에서 가져오기
+                                            구글로 가져오기
                                         </button>
                                     )}
                                     {onImportFromSheet && (
@@ -997,7 +997,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                             title="가져오기 이력 + 되돌리기 (자동 스냅샷으로 1클릭 복원)"
                                         >
                                             <FileSpreadsheet size={12} className="text-gray-500" />
-                                            구글에 링크 열기
+                                            구글로 링크 열기
                                         </button>
                                     )}
 
