@@ -66,6 +66,7 @@ export interface Student {
   examInfoRaw?: Record<string, string>;       // exam_info (Q4 분자/분모 그대로, 예: "20/25")
   assignmentScoreRaw?: Record<string, string>; // assignment_score (과제 ⭕△X 판정용 0~100)
   progressRaw?: Record<string, string>;        // progress (Q2 우상단 진도 표시)
+  missingReports?: Record<string, string>;     // Edutrix 미기입 (compositeKey → 강사명, 셀 호버 툴팁용)
 
   // Legacy/Optional Compatibility
   isHomeroom?: boolean;

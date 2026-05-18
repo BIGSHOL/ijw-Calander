@@ -436,6 +436,10 @@ const StudentRow = React.memo(({
         const { day: dayName } = formatDateDisplay(day);
         const status = pendingUpdates?.[compositeKey] ?? student.attendance[compositeKey] ?? student.attendance[dateKey];
         const memo = pendingMemos?.[compositeKey] ?? student.memos?.[compositeKey] ?? student.memos?.[dateKey];
+        // 미기입 보고서 — status 없을 때만 의미 있음. compositeKey/dateKey 둘 다 확인
+        const missingReportTeacher =
+          student.missingReports?.[compositeKey] ?? student.missingReports?.[dateKey];
+        const isMissingReport = status === undefined && !!missingReportTeacher;
         const isSaturday = day.getDay() === 6;
         const isSunday = day.getDay() === 0;
         const isHoliday = holidayDateSet.has(dateKey);
@@ -569,7 +573,13 @@ const StudentRow = React.memo(({
             className={`p-0 border-r border-b border-gray-200 text-center text-xxs font-medium relative overflow-hidden ${cellBaseClass} align-middle ${
               highlightWeekends && isWeekend && isValid ? 'bg-gray-300' : ''
             }`}
-            title={holidayName ? `🎉 ${holidayName}${memo ? ` | 메모: ${memo}` : ''}` : (memo ? `메모: ${memo}` : undefined)}
+            title={
+              holidayName
+                ? `🎉 ${holidayName}${memo ? ` | 메모: ${memo}` : ''}`
+                : isMissingReport
+                ? `📝 보고서 미기입 (강사: ${missingReportTeacher})${memo ? ` | 메모: ${memo}` : ''}`
+                : (memo ? `메모: ${memo}` : undefined)
+            }
           >
             {isValid ? (
               // 4등분 레이아웃 - 주말/공휴일 회색 처리 시 배경색 조정
@@ -579,10 +589,17 @@ const StudentRow = React.memo(({
                 {/* Q1: 출석 (좌상단) - 11시 방향 */}
                 <div
                   onClick={() => onCellClick(student.id, student.group || '', dateKey, status, isValid)}
-                  className={`flex items-center justify-center border-r border-b ${highlightWeekends && isWeekend ? 'border-gray-400' : 'border-gray-300/50'} cursor-pointer transition-colors ${q1BgClass}`}
+                  className={`relative flex items-center justify-center border-r border-b ${highlightWeekends && isWeekend ? 'border-gray-400' : 'border-gray-300/50'} cursor-pointer transition-colors ${q1BgClass}`}
                   style={q1BgStyle}
                 >
                   {q1Content}
+                  {/* 미기입 마커 — 좌상단 fuchsia 점 (출석 값 없을 때만) */}
+                  {isMissingReport && (
+                    <span
+                      className="absolute top-[1px] left-[1px] w-1.5 h-1.5 rounded-full bg-fuchsia-500 shadow-sm"
+                      aria-label="보고서 미기입"
+                    />
+                  )}
                 </div>
                 {/* Q2: 진도 (우상단) - 1시 방향
                     Edutrix progress 있으면 텍스트 표시 (호버에 전체).

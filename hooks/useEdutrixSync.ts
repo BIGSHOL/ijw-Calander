@@ -301,6 +301,8 @@ export function useEdutrixSync() {
                 examInfoRaw: Record<string, string>;     // exam_info raw (분자/분모 보존)
                 assignmentScoreRaw: Record<string, string>; // assignment_score raw (⭕△X 판정용)
                 progressRaw: Record<string, string>;     // progress raw (Q2 진도 표시)
+                // 미기입 표시 — 셀 호버 시 툴팁용 (compositeKey → 강사 이름)
+                missingReports: Record<string, string>;
             }>();
 
             for (const report of reports) {
@@ -487,6 +489,7 @@ export function useEdutrixSync() {
                         examInfoRaw: {},
                         assignmentScoreRaw: {},
                         progressRaw: {},
+                        missingReports: {},
                     });
                 }
                 const batch = attendanceBatch.get(docId)!;
@@ -559,6 +562,8 @@ export function useEdutrixSync() {
                                 teacherName: teacherDisplay,
                                 message: `보고서 미기입 (강사: ${teacherDisplay})`,
                             });
+                            // 셀 호버 툴팁 용 — Firestore에 저장
+                            batchData.missingReports[compositeKey] = teacherDisplay;
                         }
                     }
                 }
@@ -611,6 +616,8 @@ export function useEdutrixSync() {
                         if (Object.keys(data.progressRaw).length > 0) {
                             payload.progressRaw = data.progressRaw;
                         }
+                        // 미기입 표시 (셀 호버 툴팁용) — 항상 저장 (없으면 빈 객체로 덮어써서 옛 데이터 제거)
+                        payload.missingReports = data.missingReports;
                         await setDoc(docRef, payload, { merge: true });
                     } catch (err) {
                         result.errors++;
