@@ -109,12 +109,15 @@ export interface SyncDetail {
 export interface SyncOptions {
     /** true 면 매칭/스킵 집계만 수행하고 Firestore 쓰기 생략 (출석부 테스트 탭용) */
     dryRun?: boolean;
+    /** 동기화 과목 — 출석부 헤더의 selectedSubject 따라 결정. 기본 'math' */
+    subject?: 'math' | 'english';
 }
 
 /** 수학 동기화 대상으로 인식할 enrollment subject */
 const MATH_SUBJECTS = ['math', 'highmath'] as const;
+const ENGLISH_SUBJECTS = ['english'] as const;
 
-/** Edutrix 클래스명의 첫 토큰이 실제 강사명이 아닌 카테고리 prefix 인 경우 */
+/** Edutrix 클래스명의 첫 토큰이 실제 강사명이 아닌 카테고리 prefix 인 경우 (수학 보고서) */
 const NON_TEACHER_PREFIXES = new Set([
     '중등M', '초등M', '고등M', '중등', '초등', '고등',
     '중등H', '초등H', '고등H',
@@ -190,6 +193,8 @@ export function useEdutrixSync() {
         options?: SyncOptions,
     ): Promise<SyncResult> => {
         const dryRun = options?.dryRun === true;
+        const subject: 'math' | 'english' = options?.subject || 'math';
+        const TARGET_SUBJECTS: readonly string[] = subject === 'english' ? ENGLISH_SUBJECTS : MATH_SUBJECTS;
         setIsSyncing(true);
         setError(null);
 
@@ -241,11 +246,11 @@ export function useEdutrixSync() {
                 teacherNameToSubjects.set(normalizedName, staff.subjects);
             }
 
-            // 강사가 수학 강사인지 판정 — subjects 배열에 'math'/'highmath' 가 있으면 수학
-            const isMathTeacherByName = (teacherName: string): boolean | null => {
+            // 강사가 동기화 대상 과목 강사인지 판정 — subjects 배열로 확인
+            const isTargetTeacherByName = (teacherName: string): boolean | null => {
                 const subjects = teacherNameToSubjects.get(teacherName);
-                if (!subjects || subjects.length === 0) return null; // 정보 없음 (판정 불가)
-                return subjects.some(s => MATH_SUBJECTS.includes(s as any));
+                if (!subjects || subjects.length === 0) return null;
+                return subjects.some(s => TARGET_SUBJECTS.includes(s));
             };
 
             const holidaySet = await fetchHolidays();
@@ -310,26 +315,25 @@ export function useEdutrixSync() {
                     continue;
                 }
 
-                // ── 수업 매칭: 과목(math/highmath) + 강사 + 요일 ──
+                // ── 수업 매칭: 과목(TARGET_SUBJECTS) + 강사 + 요일 ──
                 let className = '';
                 const rawTeacherName = report.teacher_name?.trim().replace(/\s+/g, '') || '';
-                // "중등M"/"초등M"/"고등M" 등 카테고리 prefix → 강사 매칭에 사용 안 함
-                const edutrixTeacherName = (rawTeacherName && !NON_TEACHER_PREFIXES.has(rawTeacherName))
+                // 수학 동기화일 때만 "중등M"/"초등M"/"고등M" 등 카테고리 prefix 제외 (영어는 항상 강사명)
+                const edutrixTeacherName = (rawTeacherName && (subject === 'english' || !NON_TEACHER_PREFIXES.has(rawTeacherName)))
                     ? rawTeacherName
                     : '';
                 const matchedStaffId = edutrixTeacherName
                     ? teacherNameToStaffId.get(edutrixTeacherName)
                     : undefined;
 
-                // 강사 과목 정보로 수학 보고서 여부 판정 (subjects 배열 활용)
-                const teacherIsMath = edutrixTeacherName ? isMathTeacherByName(edutrixTeacherName) : null;
+                // 강사 과목 정보로 동기화 대상 보고서 여부 판정
+                const teacherIsTarget = edutrixTeacherName ? isTargetTeacherByName(edutrixTeacherName) : null;
 
-                // 수학 + 고등수학 enrollment 대상
-                const mathEnrollments = enrollments.filter(e => MATH_SUBJECTS.includes(e.subject as any));
+                // 대상 enrollment (math/highmath 또는 english)
+                const targetEnrollments = enrollments.filter(e => TARGET_SUBJECTS.includes(e.subject));
 
-                // ① 영어/타과목 강사로 명확히 판정되면 → 동기화 대상 아님 (skip silently)
-                //    학생의 수학 enrollment 도 없으면 더더욱 확실하므로 무조건 분류
-                if (teacherIsMath === false) {
+                // ① 강사가 타과목으로 명확히 판정되면 → 동기화 대상 아님
+                if (teacherIsTarget === false) {
                     result.otherSubject = (result.otherSubject || 0) + 1;
                     result.details.push({
                         studentName: report.student_name || '',
@@ -359,53 +363,54 @@ export function useEdutrixSync() {
                     return days.size === 0 || days.has(reportDayName);
                 };
 
-                const teacherMathEnrollments = mathEnrollments.filter(isTeacherMatch);
+                const teacherTargetEnrollments = targetEnrollments.filter(isTeacherMatch);
 
                 // 1차: 강사+요일 일치
-                const bestMatch = teacherMathEnrollments.find(enrollmentMatchesDay);
+                const bestMatch = teacherTargetEnrollments.find(enrollmentMatchesDay);
                 if (bestMatch) className = bestMatch.className;
 
                 // 2차: 강사만 일치 (수업 1개면 요일 무시)
-                if (!className && teacherMathEnrollments.length === 1) {
-                    className = teacherMathEnrollments[0].className;
+                if (!className && teacherTargetEnrollments.length === 1) {
+                    className = teacherTargetEnrollments[0].className;
                 }
 
-                // 3차: 강사 매칭 안 됨/실패 → 학생의 수학 enrollment 중 요일 일치 (보강 등)
-                if (!className && mathEnrollments.length > 0) {
-                    const subjectDayMatch = mathEnrollments.find(enrollmentMatchesDay);
+                // 3차: 강사 매칭 실패 → 같은 과목 enrollment 중 요일 일치 (보강 등)
+                if (!className && targetEnrollments.length > 0) {
+                    const subjectDayMatch = targetEnrollments.find(enrollmentMatchesDay);
                     if (subjectDayMatch) className = subjectDayMatch.className;
                 }
 
-                // 4차: 수학 enrollment 1개면 무조건 매칭
-                if (!className && mathEnrollments.length === 1) {
-                    className = mathEnrollments[0].className;
+                // 4차: 같은 과목 enrollment 1개면 무조건 매칭
+                if (!className && targetEnrollments.length === 1) {
+                    className = targetEnrollments[0].className;
                 }
 
                 // ② 그래도 못 찾으면 → 매칭 실패 OR 타과목
                 if (!className) {
-                    // 수학 enrollment 0개 + 영어 enrollment 1개+ → 타과목으로 분류
-                    const englishEnrollments = enrollments.filter(e => e.subject === 'english');
-                    if (mathEnrollments.length === 0 && englishEnrollments.length > 0) {
+                    // 대상 과목 enrollment 0개 + 다른 과목 1개+ → 타과목으로 분류
+                    const otherEnrollments = enrollments.filter(e => e.subject && !TARGET_SUBJECTS.includes(e.subject));
+                    if (targetEnrollments.length === 0 && otherEnrollments.length > 0) {
                         result.otherSubject = (result.otherSubject || 0) + 1;
+                        const otherSubjList = [...new Set(otherEnrollments.map(e => e.subject))].join(',');
                         result.details.push({
                             studentName: report.student_name || '',
                             className: report.class_name || '',
                             date: dateKey,
                             status: 'skipped_other_subject',
-                            message: `타과목 보고서 (학생 수학 enrollment 0개, 영어 ${englishEnrollments.length}개)`,
+                            message: `타과목 보고서 (학생 ${subject} enrollment 0개, ${otherSubjList} 만 있음)`,
                         });
                         continue;
                     }
 
-                    const teacherEnrollSummary = teacherMathEnrollments
+                    const teacherEnrollSummary = teacherTargetEnrollments
                         .map(e => `${e.className}[${[...getScheduledDays(e)].join('') || '요일미지정'}]`)
                         .join(', ');
-                    const otherMathSummary = mathEnrollments
-                        .filter(e => !teacherMathEnrollments.includes(e))
+                    const otherTargetSummary = targetEnrollments
+                        .filter(e => !teacherTargetEnrollments.includes(e))
                         .map(e => `${e.className}[${[...getScheduledDays(e)].join('') || '요일미지정'}/${e.teacher || e.staffId || '담당미상'}]`)
                         .join(', ');
                     let allSubjectsSummary = '';
-                    if (mathEnrollments.length === 0 && enrollments.length > 0) {
+                    if (targetEnrollments.length === 0 && enrollments.length > 0) {
                         const counts: Record<string, number> = {};
                         for (const e of enrollments) {
                             const key = e.subject || '(subject 없음)';
@@ -416,11 +421,11 @@ export function useEdutrixSync() {
                     const parts: string[] = [
                         `edutrix강사: ${rawTeacherName || '없음'}${edutrixTeacherName !== rawTeacherName ? '(prefix-무시)' : ''}`,
                         `요일: ${reportDayName}`,
-                        `math/highmath ${mathEnrollments.length}개`,
-                        `teacher매칭 ${teacherMathEnrollments.length}개`,
+                        `${TARGET_SUBJECTS.join('/')} enrollment ${targetEnrollments.length}개`,
+                        `teacher매칭 ${teacherTargetEnrollments.length}개`,
                     ];
                     if (teacherEnrollSummary) parts.push(`강사매칭: ${teacherEnrollSummary}`);
-                    if (otherMathSummary) parts.push(`다른 수학: ${otherMathSummary}`);
+                    if (otherTargetSummary) parts.push(`다른 ${subject}: ${otherTargetSummary}`);
                     if (allSubjectsSummary) parts.push(`전체 subject: ${allSubjectsSummary}`);
                     result.skipped++;
                     result.details.push({
@@ -490,8 +495,8 @@ export function useEdutrixSync() {
             }
 
             if (dryRun) {
-                console.log(`[EdutrixSync] Step 6: DRY-RUN — Firestore 쓰기 생략 (${attendanceBatch.size}건 매칭됨)`);
-                console.log(`[EdutrixSync] ===== DRY-RUN 완료: 총 ${result.totalReports} | 매칭 ${result.matched} | 스킵 ${result.skipped} | 타과목 ${result.otherSubject} | 오류 ${result.errors} =====`);
+                console.log(`[EdutrixSync/${subject}] Step 6: DRY-RUN — Firestore 쓰기 생략 (${attendanceBatch.size}건 매칭됨)`);
+                console.log(`[EdutrixSync/${subject}] ===== DRY-RUN 완료: 총 ${result.totalReports} | 매칭 ${result.matched} | 스킵 ${result.skipped} | 타과목 ${result.otherSubject} | 오류 ${result.errors} =====`);
                 setLastResult(result);
                 return result;
             }

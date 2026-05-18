@@ -368,9 +368,12 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
   const [showSyncLogModal, setShowSyncLogModal] = useState(false);
 
   const handleEdutrixSync = useCallback(async () => {
-    console.log('[AttendanceManager] handleEdutrixSync:', currentYearMonth, 'isTestMode:', isTestMode);
+    console.log('[AttendanceManager] handleEdutrixSync:', currentYearMonth, 'subject:', selectedSubject, 'isTestMode:', isTestMode);
     try {
-      const result = await syncFromEdutrix(currentYearMonth, filterStaffId, { dryRun: isTestMode });
+      const result = await syncFromEdutrix(currentYearMonth, filterStaffId, {
+        dryRun: isTestMode,
+        subject: selectedSubject,
+      });
       console.log('[AttendanceManager] 동기화 결과:', result);
       setShowSyncResult(true);
       setShowSyncLogModal(true);
@@ -378,7 +381,7 @@ const AttendanceManager: React.FC<AttendanceManagerProps> = ({
       console.error('[AttendanceManager] Edutrix 동기화 실패:', err);
       alert('Edutrix 동기화에 실패했습니다. 콘솔을 확인해주세요.');
     }
-  }, [syncFromEdutrix, currentYearMonth, filterStaffId, isTestMode]);
+  }, [syncFromEdutrix, currentYearMonth, filterStaffId, isTestMode, selectedSubject]);
 
   const handleEdutrixReset = useCallback(async () => {
     if (!confirm(`${currentYearMonth} 월의 전체 출석 데이터를 초기화하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
