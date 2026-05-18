@@ -736,46 +736,6 @@ export function useConsultationStats(
           : 0;
       });
 
-      // === [임시 진단 로그] 강사별 targetCount 분모 0 원인 추적용 ===
-      // 사용자 확인 후 제거 예정
-      try {
-        const teacherKeysSample = Array.from(teacherNameToIdMap.keys()).slice(0, 20);
-        const classByNameSample = Array.from(classByName.entries()).slice(0, 8).map(([name, info]) => ({
-          className: name,
-          teacher: info.teacher,
-          matched: teacherNameToIdMap.has(info.teacher),
-          scheduleLen: info.schedule?.length || 0,
-          scheduleFirstSlot: info.schedule?.[0] || null,
-        }));
-        const weightedSummary = Array.from(teacherWeightedStudentsMap.entries()).map(([id, m]) => ({
-          staffId: id,
-          math: Number((m.get('math') || 0).toFixed(2)),
-          english: Number((m.get('english') || 0).toFixed(2)),
-        })).filter(x => x.math > 0 || x.english > 0);
-        const enrSample = studentEnrollments.slice(0, 3).map(e => ({
-          studentId: e.studentId,
-          className: e.className,
-          subject: e.subject,
-          scheduleLen: e.schedule.length,
-          scheduleFirst: e.schedule[0] || null,
-          classByNameHit: classByName.has(e.className),
-        }));
-        console.log('[ConsultationStats DEBUG]', {
-          teacherNameToIdMap_size: teacherNameToIdMap.size,
-          teacherNameToIdMap_keys_sample: teacherKeysSample,
-          classByName_size: classByName.size,
-          classByName_sample: classByNameSample,
-          studentEnrollments_count: studentEnrollments.length,
-          studentEnrollments_sample: enrSample,
-          teacherWeightedStudentsMap_nonzero: weightedSummary,
-          staffPerformances_result: staffPerformances.map(p => ({
-            name: p.name, id: p.id, count: p.consultationCount, target: p.targetCount, pct: p.percentage,
-          })),
-        });
-      } catch (e) {
-        console.warn('[ConsultationStats DEBUG] log failed', e);
-      }
-      // === [임시 진단 로그 끝] ===
 
       // 완료 / 의미있는 분모 계산
       // - completedCount: 이번 달 상담 완료된 (학생×과목) 건수 = 원래 분모 - 원래 미완료(필터링 전)

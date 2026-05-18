@@ -133,18 +133,6 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
                     >
                       상담 건수
                     </th>
-                    <th
-                      className="px-3 py-1.5 text-right font-medium cursor-help"
-                      title="강사가 담임/부담임으로 맡은 (학생×과목) 가중 합&#10;월/화/목/금=담임, 수=부담임(slotTeachers 매핑, 없으면 담임)&#10;학생당 총 슬롯 수로 비율 분할 — 학생당 합 = 1"
-                    >
-                      담당 학생
-                    </th>
-                    <th
-                      className="px-3 py-1.5 text-right font-medium cursor-help"
-                      title="달성률 = 상담 건수 ÷ 담당 학생 수 × 100"
-                    >
-                      달성률
-                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -152,27 +140,6 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
                     <tr key={s.id} className="border-b border-gray-100">
                       <td className="px-3 py-1.5 font-medium text-gray-900">{s.name}</td>
                       <td className="px-3 py-1.5 text-right font-mono">{s.consultationCount}</td>
-                      <td className="px-3 py-1.5 text-right font-mono text-gray-600">
-                        {s.targetCount > 0 ? `${s.targetCount}명` : <span className="text-gray-300">—</span>}
-                      </td>
-                      <td className="px-3 py-1.5 text-right">
-                        {s.targetCount > 0 ? (
-                          <span
-                            title={`이번 달 학생 상담 ${s.consultationCount}건 ÷ 담당 학생 수 ${s.targetCount}명 × 100 = ${s.percentage}%`}
-                            className={`font-bold cursor-help ${
-                              s.percentage >= 100
-                                ? 'text-emerald-600'
-                                : s.percentage >= 50
-                                  ? 'text-amber-600'
-                                  : 'text-red-500'
-                            }`}
-                          >
-                            {s.percentage}%
-                          </span>
-                        ) : (
-                          <span className="text-gray-300" title="담당 학생 매칭 데이터 없음">—</span>
-                        )}
-                      </td>
                     </tr>
                   ))}
                 </tbody>
