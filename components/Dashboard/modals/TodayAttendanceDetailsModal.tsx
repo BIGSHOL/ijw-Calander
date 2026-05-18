@@ -197,8 +197,8 @@ const TodayAttendanceDetailsModal: React.FC<TodayAttendanceDetailsModalProps> = 
         {/* 본문: 좌(추이 리스트) | 우(학생 명단) */}
         <div className="flex-1 overflow-hidden flex">
           {/* 좌: 30일 추이 */}
-          <div className="w-[340px] border-r overflow-auto">
-            <div className="sticky top-0 bg-white border-b px-3 py-2">
+          <div className="w-[360px] border-r overflow-auto">
+            <div className="sticky top-0 bg-white border-b px-3 py-2 z-10 shadow-sm">
               <h3 className="font-bold text-xs text-gray-700">최근 30일 추이</h3>
             </div>
             {isLoading ? (
@@ -206,34 +206,38 @@ const TodayAttendanceDetailsModal: React.FC<TodayAttendanceDetailsModalProps> = 
             ) : (
               <div className="divide-y divide-gray-100">
                 {[...dailySummaries].reverse().map(s => {
-                  const dayKo = DAY_NAMES_KO[new Date(s.date).getDay()];
+                  const dt = new Date(s.date);
+                  const dayKo = DAY_NAMES_KO[dt.getDay()];
+                  const isWeekend = dt.getDay() === 0 || dt.getDay() === 6;
                   const isSelected = s.date === selectedDate;
                   const isEmpty = s.source === 'empty';
+                  // 짧은 날짜 (MM-DD) — 모달 헤더에 연도 이미 표기됨
+                  const shortDate = s.date.slice(5);
                   return (
                     <button
                       key={s.date}
                       onClick={() => setSelectedDate(s.date)}
                       className={`w-full px-3 py-1.5 flex items-center gap-2 text-xs hover:bg-emerald-50 transition-colors ${
-                        isSelected ? 'bg-emerald-50 border-l-2 border-emerald-500' : ''
+                        isSelected ? 'bg-emerald-100 border-l-4 border-emerald-500' : 'border-l-4 border-transparent'
                       }`}
                     >
-                      <span className="font-mono text-gray-600 w-[88px] text-left">{s.date}</span>
-                      <span className="text-gray-500 w-3">{dayKo}</span>
+                      <span className="font-mono text-gray-700 w-[44px] text-left flex-shrink-0">{shortDate}</span>
+                      <span className={`w-5 text-center flex-shrink-0 ${isWeekend ? 'text-red-400' : 'text-gray-500'}`}>{dayKo}</span>
                       {/* 막대 */}
-                      <div className="flex-1 h-3 bg-gray-100 rounded overflow-hidden relative">
+                      <div className="flex-1 h-4 bg-gray-100 rounded overflow-hidden relative min-w-[80px]">
                         {!isEmpty && (
                           <div
                             className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all"
                             style={{ width: `${s.rate}%` }}
                           />
                         )}
-                        <span className={`absolute inset-0 flex items-center justify-center text-[9px] font-bold ${
+                        <span className={`absolute inset-0 flex items-center justify-center text-[10px] font-bold ${
                           isEmpty ? 'text-gray-300' : s.rate >= 50 ? 'text-white' : 'text-gray-700'
                         }`}>
-                          {isEmpty ? '-' : `${s.rate}%`}
+                          {isEmpty ? '데이터 없음' : `${s.rate}%`}
                         </span>
                       </div>
-                      <span className={`text-[10px] font-mono w-10 text-right ${isEmpty ? 'text-gray-300' : 'text-gray-600'}`}>
+                      <span className={`text-[10px] font-mono w-12 text-right flex-shrink-0 ${isEmpty ? 'text-gray-300' : 'text-gray-600'}`}>
                         {isEmpty ? '' : `${s.present + s.late}/${s.total}`}
                       </span>
                     </button>
@@ -243,28 +247,77 @@ const TodayAttendanceDetailsModal: React.FC<TodayAttendanceDetailsModalProps> = 
             )}
           </div>
 
-          {/* 우: 선택일 학생 명단 */}
+          {/* 우: 선택일 학생 명단 또는 카운트 시각화 */}
           <div className="flex-1 overflow-auto">
-            <div className="sticky top-0 bg-white border-b px-3 py-2 flex items-center justify-between">
+            <div className="sticky top-0 bg-white border-b px-3 py-2 z-10 shadow-sm flex items-center justify-between">
               <h3 className="font-bold text-xs text-gray-700">
-                {selectedDate} 학생 명단
+                {selectedDate} 상세
               </h3>
-              {selectedEntries.length > 0 && (
-                <span className="text-[10px] text-gray-400">{selectedEntries.length}명</span>
+              {selectedSummary && selectedSummary.source !== 'empty' && (
+                <span className="text-[10px] text-gray-400">{selectedSummary.total}건</span>
               )}
             </div>
             {selectedSummary?.source === 'empty' ? (
-              <div className="text-center py-12 text-gray-400 text-xs">이 날짜에는 출석 기록이 없습니다.</div>
+              <div className="text-center py-16 text-gray-400 text-xs">
+                <div className="text-2xl mb-2">📭</div>
+                이 날짜에는 출석 기록이 없습니다.
+              </div>
             ) : selectedSummary?.source === 'records' ? (
-              <div className="px-5 py-8 text-center text-xs text-gray-500">
-                출석부 셀 집계 결과만 제공됩니다 (총 {selectedSummary.total}건).<br />
-                <span className="text-[10px] text-gray-400">학생별 상세는 출석부 탭에서 확인하세요.</span>
+              <div className="px-5 py-6">
+                {/* 카운트 시각화 (records 폴백 — 학생 명단 불가) */}
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  <div className="bg-emerald-50 border border-emerald-200 rounded p-3 text-center">
+                    <div className="text-[10px] text-emerald-700 font-medium">출석</div>
+                    <div className="text-2xl font-bold text-emerald-700 mt-1">{selectedSummary.present}</div>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-200 rounded p-3 text-center">
+                    <div className="text-[10px] text-amber-700 font-medium">지각</div>
+                    <div className="text-2xl font-bold text-amber-700 mt-1">{selectedSummary.late}</div>
+                  </div>
+                  <div className="bg-red-50 border border-red-200 rounded p-3 text-center">
+                    <div className="text-[10px] text-red-700 font-medium">결석</div>
+                    <div className="text-2xl font-bold text-red-700 mt-1">{selectedSummary.absent}</div>
+                  </div>
+                </div>
+                {/* 비율 막대 (가로 누적) */}
+                <div className="mb-3">
+                  <div className="text-[10px] text-gray-500 mb-1 flex justify-between">
+                    <span>비율 분포</span>
+                    <span>총 {selectedSummary.total}건</span>
+                  </div>
+                  <div className="h-4 bg-gray-100 rounded overflow-hidden flex">
+                    {selectedSummary.present > 0 && (
+                      <div
+                        className="h-full bg-emerald-500"
+                        style={{ width: `${(selectedSummary.present / selectedSummary.total) * 100}%` }}
+                        title={`출석 ${selectedSummary.present}`}
+                      />
+                    )}
+                    {selectedSummary.late > 0 && (
+                      <div
+                        className="h-full bg-amber-500"
+                        style={{ width: `${(selectedSummary.late / selectedSummary.total) * 100}%` }}
+                        title={`지각 ${selectedSummary.late}`}
+                      />
+                    )}
+                    {selectedSummary.absent > 0 && (
+                      <div
+                        className="h-full bg-red-500"
+                        style={{ width: `${(selectedSummary.absent / selectedSummary.total) * 100}%` }}
+                        title={`결석 ${selectedSummary.absent}`}
+                      />
+                    )}
+                  </div>
+                </div>
+                <div className="text-[10px] text-gray-400 text-center mt-4">
+                  출석부 셀 집계 결과 · 학생별 상세는 출석부 탭에서 확인
+                </div>
               </div>
             ) : selectedEntries.length === 0 ? (
               <div className="text-center py-12 text-gray-400 text-xs">로딩 중이거나 데이터가 없습니다.</div>
             ) : (
               <table className="w-full text-xs">
-                <thead className="sticky top-9 bg-white border-b border-gray-200 z-10">
+                <thead className="sticky top-9 bg-white border-b border-gray-200 z-[5]">
                   <tr className="text-gray-500">
                     <th className="px-3 py-1.5 text-left font-medium w-14">상태</th>
                     <th className="px-3 py-1.5 text-left font-medium">학생</th>
