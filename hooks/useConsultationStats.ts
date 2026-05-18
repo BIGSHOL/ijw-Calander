@@ -185,15 +185,19 @@ export function useConsultationStats(
       );
 
       // 상담자별 통계 집계 (강사만)
-      const staffMap = new Map<string, { name: string; count: number }>();
+      // - count: 상담 기록 건수 (한 학생 여러 번 만나면 여러 번 카운트, 활동량)
+      // - uniqueStudents: 이번 달 만난 unique 학생 ID Set (커버리지)
+      const staffMap = new Map<string, { name: string; count: number; uniqueStudents: Set<string> }>();
       consultations.forEach((c) => {
         // 강사 목록이 있으면 강사만, 없으면 모든 상담자 표시
         if (c.consultantId && (teacherIds.size === 0 || teacherIds.has(c.consultantId))) {
           const existing = staffMap.get(c.consultantId) || {
             name: c.consultantName || '알 수 없음',
             count: 0,
+            uniqueStudents: new Set<string>(),
           };
           existing.count++;
+          if (c.studentId) existing.uniqueStudents.add(c.studentId);
           staffMap.set(c.consultantId, existing);
         }
       });
@@ -206,6 +210,7 @@ export function useConsultationStats(
           id,
           name: data.name,
           consultationCount: data.count,
+          uniqueStudentCount: data.uniqueStudents.size,
           targetCount: Math.ceil(DEFAULT_MONTHLY_TARGET / teacherCount),
           percentage: Math.min(
             100,

@@ -129,9 +129,15 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
                     <th className="px-3 py-1.5 text-left font-medium">강사</th>
                     <th
                       className="px-3 py-1.5 text-right font-medium cursor-help"
-                      title={`이번 달 작성한 학생 상담 기록 수 (Firestore: studentConsultations)\n· 기간: ${yearMonth} 1일 ~ 말일\n· consultantId = 해당 강사 id 인 건수`}
+                      title={`이번 달 작성한 학생 상담 기록 수 (활동량)\n· 한 학생 여러 번 상담 → 여러 번 카운트\n· Firestore: studentConsultations, ${yearMonth} 기간`}
                     >
                       상담 건수
+                    </th>
+                    <th
+                      className="px-3 py-1.5 text-right font-medium cursor-help"
+                      title={`이번 달 만난 학생 수 (중복 제외, 커버리지)\n· 한 학생 여러 번 상담 → 1명으로 카운트\n· studentId 기준 dedupe`}
+                    >
+                      만난 학생
                     </th>
                   </tr>
                 </thead>
@@ -140,6 +146,9 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
                     <tr key={s.id} className="border-b border-gray-100">
                       <td className="px-3 py-1.5 font-medium text-gray-900">{s.name}</td>
                       <td className="px-3 py-1.5 text-right font-mono">{s.consultationCount}</td>
+                      <td className="px-3 py-1.5 text-right font-mono text-gray-700">
+                        {s.uniqueStudentCount}<span className="text-gray-400 text-[10px]">명</span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

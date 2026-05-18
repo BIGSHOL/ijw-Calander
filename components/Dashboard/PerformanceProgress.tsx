@@ -5,7 +5,8 @@ import RadialProgress from './RadialProgress';
 export interface StaffPerformance {
   id: string;
   name: string;
-  consultationCount: number;
+  consultationCount: number;       // 이번 달 작성한 상담 기록 수 (활동량)
+  uniqueStudentCount: number;      // 이번 달 만난 unique 학생 수 (중복 제외)
   targetCount: number;
   percentage: number;
 }
