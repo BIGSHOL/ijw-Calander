@@ -39,6 +39,15 @@ export interface StaffSubjectStat {
 }
 
 /**
+ * 상담 미완료 사유
+ */
+export type ConsultationMissingReason =
+  | 'new_student'     // 신입생 (등록 30일 이내) — 아직 상담 일정 잡힐 시간 부족
+  | 'recent_consult'  // 최근 상담 (30일 이내) — 굳이 이번 달 또 안 해도 됨
+  | 'no_response'     // 연락 미응답 — 학부모 연락 시도했으나 응답 없음
+  | 'pending';        // 진행 대기중 — 진짜 액션 필요
+
+/**
  * 상담 미완료 학생 정보 (과목별)
  * - 수학/영어를 동시 수강 중인 학생은 과목별로 2개 항목 생성
  */
@@ -47,6 +56,8 @@ export interface StudentNeedingConsultation {
   studentName: string;
   subject: 'math' | 'english';  // 해당 과목
   lastConsultationDate?: string;  // 해당 과목의 가장 최근 상담일 (전체 기간)
+  reason: ConsultationMissingReason;  // 미완료 사유
+  reasonDetail?: string;  // 사유 상세 (예: "5일 전 상담", "이번 달 등록")
 }
 
 /**
@@ -268,10 +279,23 @@ export function useConsultationStats(
       );
       const studentsSnapshot = await getDocs(studentsQuery);
 
-      // 학생 ID -> 이름 매핑
+      // 학생 ID -> 이름 매핑 + 등록일(startDate or createdAt) 매핑
       const studentMap = new Map<string, string>();
+      const studentStartDateMap = new Map<string, string>();  // YYYY-MM-DD
       studentsSnapshot.docs.forEach(doc => {
-        studentMap.set(doc.id, doc.data().name || '(이름없음)');
+        const data = doc.data();
+        studentMap.set(doc.id, data.name || '(이름없음)');
+        // startDate 우선, 없으면 createdAt 의 날짜 부분
+        let startDate: string | undefined = data.startDate || data.enrollmentDate;
+        if (!startDate && data.createdAt) {
+          const raw = data.createdAt;
+          if (typeof raw === 'string' && raw.length >= 10) startDate = raw.substring(0, 10);
+          else if (raw?.toDate) {
+            const d: Date = raw.toDate();
+            startDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+          }
+        }
+        if (startDate) studentStartDateMap.set(doc.id, startDate);
       });
 
       // 2. 선생님 이름 -> ID 매핑 생성
@@ -490,11 +514,13 @@ export function useConsultationStats(
         });
       });
 
-      // 5. 상담 필요 학생들의 과목별 마지막 상담일 조회 (전체 기간에서)
+      // 5. 상담 필요 학생들의 과목별 마지막 상담일 + 미응답 시도 여부 조회
       const studentSubjectLastConsultationMap = new Map<string, string>();
+      // 학생별 이번 달 학부모 상담에 "미응답" 키워드가 있는지
+      const NO_RESPONSE_KEYWORDS = ['미응답', '부재중', '응답 없', '응답없', '안받', '안 받', '연락 안', '연락안', '통화 안', '통화안'];
+      const studentNoResponseSet = new Set<string>();  // studentId
 
       if (needingConsultationItems.length > 0) {
-        // 전체 상담 기록에서 해당 학생+과목의 마지막 상담일 조회
         const allConsultationsQuery = query(
           collection(db, COL_STUDENT_CONSULTATIONS),
           orderBy('date', 'desc')
@@ -509,7 +535,6 @@ export function useConsultationStats(
           if (normalizedSubject === '수학') normalizedSubject = 'math';
           if (normalizedSubject === '영어') normalizedSubject = 'english';
 
-          // 'all' 또는 미지정 상담: 두 과목 모두 마지막 상담일로 기록
           const dateValue = data.date as string;
           if (normalizedSubject === 'all' || !normalizedSubject) {
             for (const sub of ['math', 'english'] as const) {
@@ -524,15 +549,69 @@ export function useConsultationStats(
               studentSubjectLastConsultationMap.set(key, dateValue);
             }
           }
+
+          // 미응답 키워드 검사 (이번 달 학부모 상담)
+          if (
+            (data.type === 'parent' || data.parentName)
+            && dateValue >= dateRange.start && dateValue <= dateRange.end
+          ) {
+            const text = `${data.title || ''} ${data.content || ''} ${data.followUpNotes || ''}`;
+            if (NO_RESPONSE_KEYWORDS.some(k => text.includes(k))) {
+              studentNoResponseSet.add(studentId);
+            }
+          }
         });
       }
 
-      const studentsNeedingConsultation: StudentNeedingConsultation[] = needingConsultationItems.map(item => ({
-        studentId: item.studentId,
-        studentName: item.name,
-        subject: item.subject,
-        lastConsultationDate: studentSubjectLastConsultationMap.get(`${item.studentId}-${item.subject}`),
-      }));
+      // 사유 판정 헬퍼
+      const today = new Date();
+      const todayMs = today.getTime();
+      const DAY_MS = 24 * 60 * 60 * 1000;
+      const determineMissingReason = (
+        studentId: string,
+        lastDate: string | undefined,
+      ): { reason: ConsultationMissingReason; detail?: string } => {
+        // 1) 신입생 — 등록 30일 이내
+        const startDate = studentStartDateMap.get(studentId);
+        if (startDate) {
+          const startMs = new Date(startDate).getTime();
+          if (!isNaN(startMs)) {
+            const daysSinceStart = Math.floor((todayMs - startMs) / DAY_MS);
+            if (daysSinceStart <= 30 && daysSinceStart >= 0) {
+              return { reason: 'new_student', detail: `등록 ${daysSinceStart}일차` };
+            }
+          }
+        }
+        // 2) 최근 상담 — 마지막 상담일 30일 이내
+        if (lastDate) {
+          const lastMs = new Date(lastDate).getTime();
+          if (!isNaN(lastMs)) {
+            const daysSince = Math.floor((todayMs - lastMs) / DAY_MS);
+            if (daysSince <= 30 && daysSince >= 0) {
+              return { reason: 'recent_consult', detail: `${daysSince}일 전 상담` };
+            }
+          }
+        }
+        // 3) 연락 미응답 — 이번 달 학부모 상담에 키워드 포함
+        if (studentNoResponseSet.has(studentId)) {
+          return { reason: 'no_response', detail: '이번 달 학부모 연락 미응답' };
+        }
+        // 4) 그 외 진행 대기중
+        return { reason: 'pending' };
+      };
+
+      const studentsNeedingConsultation: StudentNeedingConsultation[] = needingConsultationItems.map(item => {
+        const lastDate = studentSubjectLastConsultationMap.get(`${item.studentId}-${item.subject}`);
+        const { reason, detail } = determineMissingReason(item.studentId, lastDate);
+        return {
+          studentId: item.studentId,
+          studentName: item.name,
+          subject: item.subject,
+          lastConsultationDate: lastDate,
+          reason,
+          reasonDetail: detail,
+        };
+      });
 
       // 마지막 상담일 기준 오름차순 정렬 (오래된 순, 없는 경우 맨 위)
       studentsNeedingConsultation.sort((a, b) => {

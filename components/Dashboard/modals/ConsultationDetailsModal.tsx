@@ -6,8 +6,15 @@
  */
 import React from 'react';
 import { X } from 'lucide-react';
-import type { ConsultationStatsResult, StudentNeedingConsultation } from '../../../hooks/useConsultationStats';
+import type { ConsultationStatsResult, StudentNeedingConsultation, ConsultationMissingReason } from '../../../hooks/useConsultationStats';
 import type { StaffPerformance } from '../PerformanceProgress';
+
+const REASON_CONFIG: Record<ConsultationMissingReason, { label: string; bg: string; text: string; icon: string }> = {
+  new_student:    { label: '신입생',     bg: 'bg-sky-100',     text: 'text-sky-700',     icon: '🆕' },
+  recent_consult: { label: '최근 상담',  bg: 'bg-emerald-100', text: 'text-emerald-700', icon: '🕐' },
+  no_response:    { label: '연락 미응답', bg: 'bg-amber-100',   text: 'text-amber-700',   icon: '📵' },
+  pending:        { label: '진행 대기중', bg: 'bg-red-100',     text: 'text-red-700',     icon: '⚠️' },
+};
 
 interface ConsultationDetailsModalProps {
   isOpen: boolean;
@@ -31,6 +38,12 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
   const completed = Math.max(0, total - needing.length);
   const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
   const staffPerformances: StaffPerformance[] = stats?.staffPerformances || [];
+
+  // 미완료 사유별 카운트
+  const reasonCounts = needing.reduce<Record<ConsultationMissingReason, number>>(
+    (acc, n) => { acc[n.reason] = (acc[n.reason] || 0) + 1; return acc; },
+    { new_student: 0, recent_consult: 0, no_response: 0, pending: 0 }
+  );
 
   return (
     <div
@@ -73,6 +86,23 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
             기준: 이번 달 1건 이상 학생 상담 기록 있는 (학생 × 과목) 조합 = 완료.
             등록 상담은 별도 집계 (이 KPI 미포함).
           </div>
+          {/* 미완료 사유 분포 */}
+          {needing.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {(['new_student', 'recent_consult', 'no_response', 'pending'] as ConsultationMissingReason[]).map(r => {
+                const cnt = reasonCounts[r];
+                if (cnt === 0) return null;
+                const cfg = REASON_CONFIG[r];
+                return (
+                  <span key={r} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${cfg.bg} ${cfg.text}`}>
+                    <span>{cfg.icon}</span>
+                    <span>{cfg.label}</span>
+                    <b>{cnt}</b>
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* 본문 */}
@@ -132,31 +162,44 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
                   <tr className="text-gray-500">
                     <th className="px-3 py-1.5 text-left font-medium">학생</th>
                     <th className="px-3 py-1.5 text-left font-medium">과목</th>
+                    <th className="px-3 py-1.5 text-left font-medium">사유</th>
                     <th className="px-3 py-1.5 text-left font-medium">마지막 상담일</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {needing.slice(0, 100).map((n, idx) => (
-                    <tr key={`${n.studentId}-${n.subject}-${idx}`} className="border-b border-gray-100">
-                      <td className="px-3 py-1.5 font-medium text-gray-900">{n.studentName}</td>
-                      <td className="px-3 py-1.5">
-                        <span
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                            n.subject === 'math'
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-purple-100 text-purple-700'
-                          }`}
-                        >
-                          {SUBJECT_KO(n.subject)}
-                        </span>
-                      </td>
-                      <td className="px-3 py-1.5 text-gray-600 font-mono">
-                        {n.lastConsultationDate || (
-                          <span className="text-red-500">(상담 기록 없음)</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                  {needing.slice(0, 100).map((n, idx) => {
+                    const cfg = REASON_CONFIG[n.reason];
+                    return (
+                      <tr key={`${n.studentId}-${n.subject}-${idx}`} className="border-b border-gray-100">
+                        <td className="px-3 py-1.5 font-medium text-gray-900 whitespace-nowrap">{n.studentName}</td>
+                        <td className="px-3 py-1.5">
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                              n.subject === 'math'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-purple-100 text-purple-700'
+                            }`}
+                          >
+                            {SUBJECT_KO(n.subject)}
+                          </span>
+                        </td>
+                        <td className="px-3 py-1.5 whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${cfg.bg} ${cfg.text}`} title={n.reasonDetail || cfg.label}>
+                            <span>{cfg.icon}</span>
+                            <span>{cfg.label}</span>
+                          </span>
+                          {n.reasonDetail && (
+                            <span className="ml-1.5 text-[10px] text-gray-400">{n.reasonDetail}</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-1.5 text-gray-600 font-mono">
+                          {n.lastConsultationDate || (
+                            <span className="text-red-500">(상담 기록 없음)</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
