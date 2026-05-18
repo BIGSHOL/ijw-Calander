@@ -287,16 +287,17 @@ export function useConsultationStats(
         }
       });
 
-      // 담임 선생님별 학생 수 집계 맵 초기화 (숫자로 카운트)
-      const teacherMainClassStudentsMap = new Map<string, Map<'math' | 'english', number>>();
+      // 담임/부담임 가중치를 합산하는 맵 (소수점 가능 — 학생을 요일별로 분할)
+      // 예: 학생 A 가 월/화/목/금=담임, 수=부담임 → 담임 +4/5, 부담임 +1/5
+      const teacherWeightedStudentsMap = new Map<string, Map<'math' | 'english', number>>();
       teacherNameToIdMap.forEach((staffId) => {
-        teacherMainClassStudentsMap.set(staffId, new Map([
+        teacherWeightedStudentsMap.set(staffId, new Map([
           ['math', 0],
           ['english', 0]
         ]));
       });
 
-      // 3. 전체 enrollments 조회하여 수업별 학생 수 집계
+      // 3. 전체 enrollments 조회하여 수업별 학생 수 집계 + 학생별 enrollment 보관 (가중 계산용)
       const allEnrollmentsSnap = await getDocs(collectionGroup(db, 'enrollments'));
 
       // 수업명별 학생 수 집계 (중복 학생 제거)
@@ -304,6 +305,10 @@ export function useConsultationStats(
 
       // 학생별 수강과목 집계 (상담 필요 학생 목록용)
       const studentEnrollmentMap = new Map<string, Set<'math' | 'english'>>();
+
+      // 학생별 enrollment 보관 (담임/부담임 가중 계산용) — { studentId, className, subject, schedule }
+      type EnrFlat = { studentId: string; className: string; subject: 'math' | 'english'; schedule: any[] };
+      const studentEnrollments: EnrFlat[] = [];
 
       allEnrollmentsSnap.docs.forEach(enrollDoc => {
         // 문서 경로: students/{studentId}/enrollments/{enrollmentId}
@@ -332,14 +337,28 @@ export function useConsultationStats(
         if (!studentEnrollmentMap.has(studentId)) {
           studentEnrollmentMap.set(studentId, new Set());
         }
-        if (subject === 'math' || subject === '수학') {
-          studentEnrollmentMap.get(studentId)!.add('math');
-        } else if (subject === 'english' || subject === '영어') {
-          studentEnrollmentMap.get(studentId)!.add('english');
+        let normalizedSubject: 'math' | 'english' | null = null;
+        if (subject === 'math' || subject === '수학') normalizedSubject = 'math';
+        else if (subject === 'english' || subject === '영어') normalizedSubject = 'english';
+        if (normalizedSubject) {
+          studentEnrollmentMap.get(studentId)!.add(normalizedSubject);
+          studentEnrollments.push({
+            studentId,
+            className,
+            subject: normalizedSubject,
+            schedule: Array.isArray(enrollData.schedule) ? enrollData.schedule : [],
+          });
         }
       });
 
-      // 4. classes 컬렉션에서 담임별 학생 수 집계
+      // 4. classes 컬렉션에서 담임/부담임(slotTeachers) 정보 보관
+      // 키: className → { teacher (담임), slotTeachers (요일-교시 → 부담임), subject }
+      type ClassInfo = {
+        teacher: string;
+        slotTeachers: Record<string, string>;
+        subject: 'math' | 'english';
+      };
+      const classByName = new Map<string, ClassInfo>();
       const classesSnap = await getDocs(collection(db, 'classes'));
 
       classesSnap.docs.forEach(classDoc => {
@@ -350,24 +369,77 @@ export function useConsultationStats(
 
         if (!teacherName || !subject || !className || classData.isActive === false) return;
 
-        // 과목 정규화
         let normalizedSubject: 'math' | 'english' | null = null;
         if (subject === 'math' || subject === '수학') normalizedSubject = 'math';
         else if (subject === 'english' || subject === '영어') normalizedSubject = 'english';
-
         if (!normalizedSubject) return;
 
-        // 담임 이름 -> staff ID 변환
-        const staffId = teacherNameToIdMap.get(teacherName);
-        if (!staffId) return;
+        classByName.set(className, {
+          teacher: teacherName,
+          slotTeachers: (classData.slotTeachers || {}) as Record<string, string>,
+          subject: normalizedSubject,
+        });
+      });
 
-        // 이 수업의 학생 수를 담임 선생님에게 합산
-        const studentCount = classStudentCount.get(className)?.size || 0;
-        const teacherMap = teacherMainClassStudentsMap.get(staffId);
-        if (teacherMap) {
-          const currentCount = teacherMap.get(normalizedSubject) || 0;
-          teacherMap.set(normalizedSubject, currentCount + studentCount);
+      // 5. 학생별 enrollment 의 schedule 요일을 따라 강사별 가중치 합산
+      // - 수요일 슬롯 → slotTeachers[`수-${periodId}`] (부담임), 없으면 담임 fallback
+      // - 그 외 요일 → 담임
+      // - 한 학생의 총 슬롯 수로 나눠서 가중치 분할 (월화목금=담임 / 수=부담임 → 담임 4/5, 부담임 1/5)
+      const studentTeacherSlots = new Map<string, Map<'math' | 'english', Map<string, number>>>();
+      // 학생 → 과목 → staffId → 슬롯 수
+
+      studentEnrollments.forEach(enr => {
+        const classInfo = classByName.get(enr.className);
+        if (!classInfo) return;
+
+        for (const slot of enr.schedule) {
+          let day = '';
+          let periodId = '';
+          if (typeof slot === 'string') {
+            const parts = slot.split(/[\s_]+/);
+            day = parts[0] || '';
+            periodId = parts.slice(1).join('-') || '';
+          } else if (slot && typeof slot === 'object') {
+            day = (slot.day || '') as string;
+            periodId = (slot.periodId || '') as string;
+          }
+          if (!day) continue;
+
+          // 요일별 담당 강사 결정
+          let teacherName = classInfo.teacher;
+          if (day === '수') {
+            // 수요일 = 부담임 (slotTeachers 우선, 없으면 담임 fallback)
+            const slotKey = `${day}-${periodId}`;
+            teacherName = classInfo.slotTeachers[slotKey] || classInfo.teacher;
+          }
+
+          const staffId = teacherNameToIdMap.get(teacherName);
+          if (!staffId) continue;
+
+          if (!studentTeacherSlots.has(enr.studentId)) {
+            studentTeacherSlots.set(enr.studentId, new Map());
+          }
+          const subjectMap = studentTeacherSlots.get(enr.studentId)!;
+          if (!subjectMap.has(enr.subject)) subjectMap.set(enr.subject, new Map());
+          const teacherSlotMap = subjectMap.get(enr.subject)!;
+          teacherSlotMap.set(staffId, (teacherSlotMap.get(staffId) || 0) + 1);
         }
+      });
+
+      // 슬롯 수를 가중 학생 수로 변환 (학생 단위 합 = 1, 강사별 분할)
+      studentTeacherSlots.forEach((subjectMap) => {
+        subjectMap.forEach((teacherSlotMap, subject) => {
+          const totalSlots = Array.from(teacherSlotMap.values()).reduce((s, v) => s + v, 0);
+          if (totalSlots === 0) return;
+          teacherSlotMap.forEach((slots, staffId) => {
+            const weight = slots / totalSlots;
+            const tMap = teacherWeightedStudentsMap.get(staffId);
+            if (tMap) {
+              const cur = tMap.get(subject) || 0;
+              tMap.set(subject, cur + weight);
+            }
+          });
+        });
       });
 
       // 수강과목이 있는 재원생만 필터링
@@ -490,15 +562,26 @@ export function useConsultationStats(
         }
       });
 
-      // 선생님별 통계에 전체 필요 상담 건수 업데이트 (담임으로 있는 반의 학생 수 기준)
+      // 선생님별 통계에 가중 학생 수 적용 (월화목금=담임 / 수=부담임 분할)
       staffSubjectStats.forEach(stat => {
-        const teacherMap = teacherMainClassStudentsMap.get(stat.id);
-        const mathStudents = teacherMap?.get('math') || 0;
-        const englishStudents = teacherMap?.get('english') || 0;
+        const teacherMap = teacherWeightedStudentsMap.get(stat.id);
+        const mathStudents = Math.round(teacherMap?.get('math') || 0);
+        const englishStudents = Math.round(teacherMap?.get('english') || 0);
 
         stat.mathTotal = mathStudents;
         stat.englishTotal = englishStudents;
         stat.totalNeeded = mathStudents + englishStudents;
+      });
+
+      // staffPerformances 의 targetCount 를 가중 담당 학생 수로 교체 + percentage 재계산
+      // (기존: DEFAULT_MONTHLY_TARGET / teacherCount 균등 분배 → 강사별 실제 담당 기준)
+      staffPerformances.forEach(perf => {
+        const teacherMap = teacherWeightedStudentsMap.get(perf.id);
+        const target = Math.round((teacherMap?.get('math') || 0) + (teacherMap?.get('english') || 0));
+        perf.targetCount = target;
+        perf.percentage = target > 0
+          ? Math.min(100, Math.round((perf.consultationCount / target) * 100))
+          : (perf.consultationCount > 0 ? 100 : 0);
       });
 
       return {
