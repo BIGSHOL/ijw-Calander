@@ -3025,6 +3025,9 @@ const TimetableManagerInner = ({
                 updateMathIntegrationSettings={updateOuterMathSettings}
                 userDepartments={userDepartments}
                 onMakeEduSyncOpen={() => setIsMakeEduSyncOpen(true)}
+                onSetHiddenTeachers={(teachers) => {
+                    updateOuterMathSettings({ ...outerMathSettings, hiddenTeachers: teachers });
+                }}
                 onResetFilters={() => {
                     // 강의실: 모두 보이기 (필터 미적용)
                     setRoomFilter({ main: true, barun: true, godeung: true });

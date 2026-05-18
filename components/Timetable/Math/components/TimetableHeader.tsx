@@ -192,6 +192,8 @@ interface TimetableHeaderProps {
     // 강사 숨김 필터
     hiddenTeachers?: string[];
     onToggleTeacherHidden?: (teacher: string) => void;
+    /** 강사 일괄 숨김 설정 — 전체 보기/전체 숨기기 토글용 */
+    onSetHiddenTeachers?: (teachers: string[]) => void;
     // 필터 초기화 (강의실/셔틀/학년/학교/강사 숨김 모두 default 로) — 그룹/강사 순서는 보존
     onResetFilters?: () => void;
     // 퇴원 리스트 전역 토글
@@ -281,6 +283,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     weeklyAbsent,
     hiddenTeachers = [],
     onToggleTeacherHidden,
+    onSetHiddenTeachers,
     onResetFilters,
     withdrawnAllExpanded = false,
     onToggleAllWithdrawn,
@@ -1397,11 +1400,27 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                                     ...[...actualTeachers].filter(t => !mathConfig.teacherOrder.includes(t)).sort((a, b) => a.localeCompare(b, 'ko')),
                                                 ];
                                                 if (mergedOrder.length === 0) return null;
+                                                const allHidden = mergedOrder.length > 0 && mergedOrder.every(t => hiddenTeachers.includes(t));
                                                 return (
                                                 <div className="px-3 py-2 border-b border-gray-100 bg-gray-50">
-                                                    <div className="text-xxs font-bold text-gray-600 mb-2 flex items-center gap-1">
-                                                        <Users size={12} />
-                                                        강사 순서
+                                                    <div className="text-xxs font-bold text-gray-600 mb-2 flex items-center justify-between gap-1">
+                                                        <span className="flex items-center gap-1">
+                                                            <Users size={12} />
+                                                            강사 순서
+                                                        </span>
+                                                        {onSetHiddenTeachers && (
+                                                            <button
+                                                                onClick={() => onSetHiddenTeachers(allHidden ? [] : mergedOrder)}
+                                                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition-colors ${
+                                                                    allHidden
+                                                                        ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                                                                        : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-100'
+                                                                }`}
+                                                                title={allHidden ? '모든 강사 보이기' : '모든 강사 숨기기'}
+                                                            >
+                                                                {allHidden ? '👁 전체 보기' : '🚫 전체 숨기기'}
+                                                            </button>
+                                                        )}
                                                     </div>
                                                     <div className="space-y-0.5 max-h-[200px] overflow-y-auto">
                                                         <DndContext
