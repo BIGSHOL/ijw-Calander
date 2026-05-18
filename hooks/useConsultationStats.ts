@@ -386,11 +386,20 @@ export function useConsultationStats(
       // 선택 기간 내 상담 기록을 학생ID+과목 키로 매핑
       const consultedStudentSubjectSet = new Set<string>();
       consultations.forEach(c => {
+        if (!c.studentId) return;
         // subject 정규화: 'math'/'수학' -> 'math', 'english'/'영어' -> 'english'
-        let normalizedSubject = c.subject;
+        let normalizedSubject: string | undefined = c.subject;
         if (c.subject === '수학') normalizedSubject = 'math';
         if (c.subject === '영어') normalizedSubject = 'english';
-        consultedStudentSubjectSet.add(`${c.studentId}-${normalizedSubject}`);
+
+        // 'all' 또는 미지정 상담: 학생의 모든 수강 과목에 대해 완료 처리
+        // (한 번의 상담이 두 과목을 동시에 다룬 경우)
+        if (normalizedSubject === 'all' || !normalizedSubject) {
+          consultedStudentSubjectSet.add(`${c.studentId}-math`);
+          consultedStudentSubjectSet.add(`${c.studentId}-english`);
+        } else {
+          consultedStudentSubjectSet.add(`${c.studentId}-${normalizedSubject}`);
+        }
       });
 
       // 4. 과목별로 상담 필요 학생 항목 생성
@@ -423,14 +432,25 @@ export function useConsultationStats(
         allConsultationsSnap.docs.forEach(doc => {
           const data = doc.data();
           const studentId = data.studentId as string;
-          let normalizedSubject = data.subject as string;
+          if (!studentId) return;
+          let normalizedSubject: string | undefined = data.subject as string | undefined;
           if (normalizedSubject === '수학') normalizedSubject = 'math';
           if (normalizedSubject === '영어') normalizedSubject = 'english';
 
-          const key = `${studentId}-${normalizedSubject}`;
-          // 이미 기록이 있으면 스킵 (desc 정렬이라 첫 번째가 최신)
-          if (!studentSubjectLastConsultationMap.has(key)) {
-            studentSubjectLastConsultationMap.set(key, data.date as string);
+          // 'all' 또는 미지정 상담: 두 과목 모두 마지막 상담일로 기록
+          const dateValue = data.date as string;
+          if (normalizedSubject === 'all' || !normalizedSubject) {
+            for (const sub of ['math', 'english'] as const) {
+              const key = `${studentId}-${sub}`;
+              if (!studentSubjectLastConsultationMap.has(key)) {
+                studentSubjectLastConsultationMap.set(key, dateValue);
+              }
+            }
+          } else {
+            const key = `${studentId}-${normalizedSubject}`;
+            if (!studentSubjectLastConsultationMap.has(key)) {
+              studentSubjectLastConsultationMap.set(key, dateValue);
+            }
           }
         });
       }
