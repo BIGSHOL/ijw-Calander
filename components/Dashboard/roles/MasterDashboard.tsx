@@ -28,6 +28,7 @@ const ConsultationDetailsModal = lazy(() => import('../modals/ConsultationDetail
 const NewStudentsModal = lazy(() => import('../modals/NewStudentsModal'));
 const NetChangeDetailsModal = lazy(() => import('../modals/NetChangeDetailsModal'));
 const WeeklyAttendanceDetailsModal = lazy(() => import('../modals/WeeklyAttendanceDetailsModal'));
+const TodayAttendanceDetailsModal = lazy(() => import('../modals/TodayAttendanceDetailsModal'));
 
 interface MasterDashboardProps {
   userProfile: UserProfile;
@@ -605,6 +606,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   const [isNewStudentsModalOpen, setIsNewStudentsModalOpen] = useState(false);
   const [isNetChangeModalOpen, setIsNetChangeModalOpen] = useState(false);
   const [isWeeklyAttendanceModalOpen, setIsWeeklyAttendanceModalOpen] = useState(false);
+  const [isTodayAttendanceModalOpen, setIsTodayAttendanceModalOpen] = useState(false);
 
   const quickActions: QuickAction[] = [
     { id: 'add-student', label: '학생 추가', icon: UserPlus, onClick: () => setIsAddStudentOpen(true), color: 'rgb(8, 20, 41)' /* primary */ },
@@ -648,6 +650,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                     : card.id === 'consultation' ? () => setIsConsultationModalOpen(true)
                     : card.id === 'new-students' ? () => setIsNewStudentsModalOpen(true)
                     : card.id === 'net-change' ? () => setIsNetChangeModalOpen(true)
+                    : card.id === 'attendance' ? () => setIsTodayAttendanceModalOpen(true)
                     : undefined
                   }
                 />
@@ -1057,6 +1060,12 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
           weeklyFromRecords={weeklyFromRecords}
           students={students}
           weeklySummary={weeklyAttendance}
+        />
+        {/* 오늘 출석률 근거 데이터 모달 (날짜 선택 + 30일 추이) */}
+        <TodayAttendanceDetailsModal
+          isOpen={isTodayAttendanceModalOpen}
+          onClose={() => setIsTodayAttendanceModalOpen(false)}
+          defaultDate={today}
         />
       </Suspense>
     </div>

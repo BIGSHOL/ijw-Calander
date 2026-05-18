@@ -1,0 +1,306 @@
+/**
+ * 오늘 출석률 KPI 근거 데이터 모달
+ * - 임의 날짜 선택 (input date) 으로 과거 출석률 검증 가능
+ * - 최근 30일 출석률 추이 리스트
+ * - 데이터 소스: daily_attendance (1순위) → attendance_records 셀 집계 (2순위)
+ * - 선택된 날짜의 학생 명단 (daily_attendance 사용 가능 시)
+ */
+import React, { useMemo, useState, useEffect } from 'react';
+import { X } from 'lucide-react';
+import { useDailyAttendanceByRange } from '../../../hooks/useDailyAttendance';
+import { useWeeklyAttendanceFromRecords } from '../../../hooks/useWeeklyAttendanceFromRecords';
+import { format, subDays } from 'date-fns';
+
+interface TodayAttendanceDetailsModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  /** 기본 선택 날짜 (보통 '오늘') */
+  defaultDate: string;
+}
+
+const DAY_NAMES_KO = ['일', '월', '화', '수', '목', '금', '토'];
+const RANGE_DAYS = 30;
+
+const statusToKo: Record<string, string> = {
+  present: '출석',
+  late: '지각',
+  absent: '결석',
+};
+const statusBadge: Record<string, string> = {
+  present: 'bg-emerald-100 text-emerald-700',
+  late: 'bg-amber-100 text-amber-700',
+  absent: 'bg-red-100 text-red-700',
+};
+
+const TodayAttendanceDetailsModal: React.FC<TodayAttendanceDetailsModalProps> = ({
+  isOpen,
+  onClose,
+  defaultDate,
+}) => {
+  const [selectedDate, setSelectedDate] = useState(defaultDate);
+  useEffect(() => {
+    if (isOpen) setSelectedDate(defaultDate);
+  }, [isOpen, defaultDate]);
+
+  // 30일치 날짜 (오래된 → 최신)
+  const range = useMemo(() => {
+    const now = new Date(defaultDate);
+    const dates: string[] = [];
+    for (let i = RANGE_DAYS - 1; i >= 0; i--) {
+      dates.push(format(subDays(now, i), 'yyyy-MM-dd'));
+    }
+    return dates;
+  }, [defaultDate]);
+
+  // 30일치 daily_attendance 일괄 fetch (모달 열렸을 때만)
+  const { data: dailyRange = {}, isLoading: dailyLoading } = useDailyAttendanceByRange(
+    range[0],
+    range[range.length - 1],
+    isOpen
+  );
+
+  // attendance_records fallback (30일치, 1~2 쿼리)
+  const { data: recordsRange = {}, isLoading: recordsLoading } = useWeeklyAttendanceFromRecords(
+    range,
+    isOpen
+  );
+
+  // 일자별 요약 (rate, source, 카운트)
+  const dailySummaries = useMemo(() => {
+    return range.map(d => {
+      const daily = dailyRange[d] || [];
+      if (daily.length > 0) {
+        const present = daily.filter(a => a.status === 'present' || a.status === 'late').length;
+        const late = daily.filter(a => a.status === 'late').length;
+        const absent = daily.filter(a => a.status === 'absent').length;
+        return {
+          date: d,
+          rate: daily.length > 0 ? Math.round((present / daily.length) * 100) : 0,
+          present: present - late,
+          late,
+          absent,
+          total: daily.length,
+          source: 'daily' as const,
+        };
+      }
+      const rec = recordsRange[d];
+      if (rec && rec.totalCount > 0) {
+        return {
+          date: d,
+          rate: rec.rate,
+          present: rec.presentCount - rec.lateCount,
+          late: rec.lateCount,
+          absent: rec.absentCount,
+          total: rec.totalCount,
+          source: 'records' as const,
+        };
+      }
+      return { date: d, rate: 0, present: 0, late: 0, absent: 0, total: 0, source: 'empty' as const };
+    });
+  }, [range, dailyRange, recordsRange]);
+
+  // 선택일 요약 + 학생 명단
+  const selectedSummary = dailySummaries.find(s => s.date === selectedDate);
+  const selectedDailyRecords = dailyRange[selectedDate] || [];
+
+  const selectedEntries = useMemo(() => {
+    if (!selectedSummary || selectedSummary.source !== 'daily') return [];
+    return selectedDailyRecords
+      .map(r => ({
+        studentId: r.studentId || '',
+        studentName: r.studentName || r.studentId || '(이름없음)',
+        className: r.className || '',
+        status: (r.status === 'late' ? 'late' : r.status === 'absent' ? 'absent' : 'present') as
+          | 'present' | 'late' | 'absent',
+      }))
+      .sort((a, b) => {
+        const order: Record<string, number> = { absent: 0, late: 1, present: 2 };
+        const o = order[a.status] - order[b.status];
+        if (o !== 0) return o;
+        return a.studentName.localeCompare(b.studentName);
+      });
+  }, [selectedSummary, selectedDailyRecords]);
+
+  // 추이 평균 (데이터 있는 날만)
+  const trendAverage = useMemo(() => {
+    const valid = dailySummaries.filter(s => s.source !== 'empty');
+    if (valid.length === 0) return null;
+    const avg = Math.round(valid.reduce((s, d) => s + d.rate, 0) / valid.length);
+    return { avg, count: valid.length };
+  }, [dailySummaries]);
+
+  const isLoading = dailyLoading || recordsLoading;
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex items-start justify-center pt-[8vh] bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-lg shadow-xl w-[920px] max-w-full max-h-[85vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 헤더 */}
+        <div className="flex items-center justify-between px-5 py-3 border-b bg-emerald-50">
+          <div className="flex items-center gap-2">
+            <span className="text-emerald-700 text-lg">✅</span>
+            <h2 className="font-bold text-sm text-emerald-900">출석률 — 근거 데이터 (날짜별 검증)</h2>
+            <span className="text-xs text-emerald-600">{range[0]} ~ {range[range.length - 1]}</span>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-emerald-100 rounded">
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* 날짜 선택 + 선택일 요약 */}
+        <div className="px-5 py-3 border-b bg-gray-50">
+          <div className="flex items-center gap-3 flex-wrap">
+            <label className="text-xs text-gray-600 font-medium">날짜 선택</label>
+            <input
+              type="date"
+              value={selectedDate}
+              min={range[0]}
+              max={range[range.length - 1]}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="px-2 py-1 border border-gray-300 rounded text-xs"
+            />
+            {selectedSummary && (
+              <>
+                <span className="text-gray-400 text-xs">|</span>
+                <span className="text-gray-500 text-xs">
+                  {selectedSummary.date} ({DAY_NAMES_KO[new Date(selectedSummary.date).getDay()]})
+                </span>
+                <span className="text-2xl font-bold text-emerald-700">{selectedSummary.rate}%</span>
+                <span className="text-xs text-emerald-600">출석 <b>{selectedSummary.present}</b></span>
+                <span className="text-xs text-amber-600">지각 <b>{selectedSummary.late}</b></span>
+                <span className="text-xs text-red-600">결석 <b>{selectedSummary.absent}</b></span>
+                <span className="text-xs text-gray-500">총 <b>{selectedSummary.total}</b>건</span>
+                <span className="text-xs text-gray-400 ml-auto">
+                  {selectedSummary.source === 'daily'
+                    ? 'daily_attendance'
+                    : selectedSummary.source === 'records'
+                    ? 'attendance_records'
+                    : '데이터 없음'}
+                </span>
+              </>
+            )}
+          </div>
+          {trendAverage && (
+            <div className="text-[10px] text-gray-400 mt-1.5">
+              최근 30일 평균: <b className="text-emerald-700">{trendAverage.avg}%</b> ({trendAverage.count}일 기준)
+            </div>
+          )}
+        </div>
+
+        {/* 본문: 좌(추이 리스트) | 우(학생 명단) */}
+        <div className="flex-1 overflow-hidden flex">
+          {/* 좌: 30일 추이 */}
+          <div className="w-[340px] border-r overflow-auto">
+            <div className="sticky top-0 bg-white border-b px-3 py-2">
+              <h3 className="font-bold text-xs text-gray-700">최근 30일 추이</h3>
+            </div>
+            {isLoading ? (
+              <div className="text-center py-12 text-xs text-gray-400">로딩 중...</div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {[...dailySummaries].reverse().map(s => {
+                  const dayKo = DAY_NAMES_KO[new Date(s.date).getDay()];
+                  const isSelected = s.date === selectedDate;
+                  const isEmpty = s.source === 'empty';
+                  return (
+                    <button
+                      key={s.date}
+                      onClick={() => setSelectedDate(s.date)}
+                      className={`w-full px-3 py-1.5 flex items-center gap-2 text-xs hover:bg-emerald-50 transition-colors ${
+                        isSelected ? 'bg-emerald-50 border-l-2 border-emerald-500' : ''
+                      }`}
+                    >
+                      <span className="font-mono text-gray-600 w-[88px] text-left">{s.date}</span>
+                      <span className="text-gray-500 w-3">{dayKo}</span>
+                      {/* 막대 */}
+                      <div className="flex-1 h-3 bg-gray-100 rounded overflow-hidden relative">
+                        {!isEmpty && (
+                          <div
+                            className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all"
+                            style={{ width: `${s.rate}%` }}
+                          />
+                        )}
+                        <span className={`absolute inset-0 flex items-center justify-center text-[9px] font-bold ${
+                          isEmpty ? 'text-gray-300' : s.rate >= 50 ? 'text-white' : 'text-gray-700'
+                        }`}>
+                          {isEmpty ? '-' : `${s.rate}%`}
+                        </span>
+                      </div>
+                      <span className={`text-[10px] font-mono w-10 text-right ${isEmpty ? 'text-gray-300' : 'text-gray-600'}`}>
+                        {isEmpty ? '' : `${s.present + s.late}/${s.total}`}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* 우: 선택일 학생 명단 */}
+          <div className="flex-1 overflow-auto">
+            <div className="sticky top-0 bg-white border-b px-3 py-2 flex items-center justify-between">
+              <h3 className="font-bold text-xs text-gray-700">
+                {selectedDate} 학생 명단
+              </h3>
+              {selectedEntries.length > 0 && (
+                <span className="text-[10px] text-gray-400">{selectedEntries.length}명</span>
+              )}
+            </div>
+            {selectedSummary?.source === 'empty' ? (
+              <div className="text-center py-12 text-gray-400 text-xs">이 날짜에는 출석 기록이 없습니다.</div>
+            ) : selectedSummary?.source === 'records' ? (
+              <div className="px-5 py-8 text-center text-xs text-gray-500">
+                출석부 셀 집계 결과만 제공됩니다 (총 {selectedSummary.total}건).<br />
+                <span className="text-[10px] text-gray-400">학생별 상세는 출석부 탭에서 확인하세요.</span>
+              </div>
+            ) : selectedEntries.length === 0 ? (
+              <div className="text-center py-12 text-gray-400 text-xs">로딩 중이거나 데이터가 없습니다.</div>
+            ) : (
+              <table className="w-full text-xs">
+                <thead className="sticky top-9 bg-white border-b border-gray-200 z-10">
+                  <tr className="text-gray-500">
+                    <th className="px-3 py-1.5 text-left font-medium w-14">상태</th>
+                    <th className="px-3 py-1.5 text-left font-medium">학생</th>
+                    <th className="px-3 py-1.5 text-left font-medium">반</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedEntries.map((e, i) => (
+                    <tr key={`${e.studentId}-${i}`} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="px-3 py-1">
+                        <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${statusBadge[e.status]}`}>
+                          {statusToKo[e.status]}
+                        </span>
+                      </td>
+                      <td className="px-3 py-1 font-medium text-gray-900">{e.studentName}</td>
+                      <td className="px-3 py-1 text-gray-600">{e.className || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
+        {/* 푸터 */}
+        <div className="px-5 py-2 border-t bg-gray-50 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-1.5 bg-emerald-600 text-white rounded text-xs font-bold hover:bg-emerald-700"
+          >
+            닫기
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TodayAttendanceDetailsModal;
