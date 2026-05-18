@@ -17,6 +17,16 @@ interface BillingDetailsModalProps {
 
 const fmt = (n: number) => n.toLocaleString();
 
+/** 수납일 → "M/D" 짧은 표기. 비어있거나 파싱 실패 시 null */
+const fmtPaidDate = (raw: string | undefined | null): string | null => {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (!s) return null;
+  const m = s.match(/(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
+  if (m) return `${Number(m[2])}/${Number(m[3])}`;
+  return s;
+};
+
 const BillingDetailsModal: React.FC<BillingDetailsModalProps> = ({
   isOpen,
   onClose,
@@ -110,6 +120,7 @@ const BillingDetailsModal: React.FC<BillingDetailsModalProps> = ({
                   <th className="px-3 py-2 text-right font-medium">입금</th>
                   <th className="px-3 py-2 text-right font-medium">미납</th>
                   <th className="px-3 py-2 text-center font-medium whitespace-nowrap w-14">상태</th>
+                  <th className="px-3 py-2 text-center font-medium whitespace-nowrap w-16">납부일</th>
                   <th className="px-3 py-2 text-left font-medium">담임</th>
                 </tr>
               </thead>
@@ -152,6 +163,9 @@ const BillingDetailsModal: React.FC<BillingDetailsModalProps> = ({
                             완납
                           </span>
                         )}
+                      </td>
+                      <td className="px-3 py-1.5 text-center whitespace-nowrap text-gray-600 font-mono">
+                        {!isPending && fmtPaidDate(r.paidDate) ? fmtPaidDate(r.paidDate) : '-'}
                       </td>
                       <td className="px-3 py-1.5 text-gray-600">{r.teacher || '-'}</td>
                     </tr>
