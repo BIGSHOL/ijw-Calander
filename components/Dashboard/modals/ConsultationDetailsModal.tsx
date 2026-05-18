@@ -135,7 +135,13 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
                     </th>
                     <th
                       className="px-3 py-1.5 text-right font-medium cursor-help"
-                      title="달성률 = 상담 건수 ÷ 담당 학생 수(가중) × 100&#10;담당 학생 수: 강사가 담임/부담임으로 맡은 (학생×과목) 슬롯 비율 가중 합&#10;예: 학생 A 가 월화목금=김선생, 수=이선생 → 김선생 +0.8 / 이선생 +0.2"
+                      title="강사가 담임/부담임으로 맡은 (학생×과목) 가중 합&#10;월/화/목/금=담임, 수=부담임(slotTeachers 매핑, 없으면 담임)&#10;학생당 총 슬롯 수로 비율 분할 — 학생당 합 = 1"
+                    >
+                      담당 학생
+                    </th>
+                    <th
+                      className="px-3 py-1.5 text-right font-medium cursor-help"
+                      title="달성률 = 상담 건수 ÷ 담당 학생 수 × 100"
                     >
                       달성률
                     </th>
@@ -146,19 +152,26 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
                     <tr key={s.id} className="border-b border-gray-100">
                       <td className="px-3 py-1.5 font-medium text-gray-900">{s.name}</td>
                       <td className="px-3 py-1.5 text-right font-mono">{s.consultationCount}</td>
+                      <td className="px-3 py-1.5 text-right font-mono text-gray-600">
+                        {s.targetCount > 0 ? `${s.targetCount}명` : <span className="text-gray-300">—</span>}
+                      </td>
                       <td className="px-3 py-1.5 text-right">
-                        <span
-                          title={`이번 달 학생 상담 ${s.consultationCount}건 ÷ 담당 학생 수(가중) ${s.targetCount}명 × 100\n· 분자: ${yearMonth} 기간 내 이 강사가 작성한 학생 상담 기록 수\n· 분모: 강사가 담당하는 (학생×과목) 가중 합 — 월/화/목/금=담임, 수=부담임(slotTeachers) 슬롯 비율 분할`}
-                          className={`font-bold cursor-help ${
-                            s.percentage >= 100
-                              ? 'text-emerald-600'
-                              : s.percentage >= 50
-                                ? 'text-amber-600'
-                                : 'text-red-500'
-                          }`}
-                        >
-                          {s.percentage}%
-                        </span>
+                        {s.targetCount > 0 ? (
+                          <span
+                            title={`이번 달 학생 상담 ${s.consultationCount}건 ÷ 담당 학생 수 ${s.targetCount}명 × 100 = ${s.percentage}%`}
+                            className={`font-bold cursor-help ${
+                              s.percentage >= 100
+                                ? 'text-emerald-600'
+                                : s.percentage >= 50
+                                  ? 'text-amber-600'
+                                  : 'text-red-500'
+                            }`}
+                          >
+                            {s.percentage}%
+                          </span>
+                        ) : (
+                          <span className="text-gray-300" title="담당 학생 매칭 데이터 없음">—</span>
+                        )}
                       </td>
                     </tr>
                   ))}

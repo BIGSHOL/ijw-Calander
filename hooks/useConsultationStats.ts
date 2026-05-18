@@ -340,8 +340,15 @@ export function useConsultationStats(
       // 학생별 수강과목 집계 (상담 필요 학생 목록용)
       const studentEnrollmentMap = new Map<string, Set<'math' | 'english'>>();
 
-      // 학생별 enrollment 보관 (담임/부담임 가중 계산용) — { studentId, className, subject, schedule }
-      type EnrFlat = { studentId: string; className: string; subject: 'math' | 'english'; schedule: any[] };
+      // 학생별 enrollment 보관 (담임/부담임 가중 계산용)
+      // staffId 추가 — schedule 정보 없는 경우 fallback 으로 직접 담임 매칭
+      type EnrFlat = {
+        studentId: string;
+        className: string;
+        subject: 'math' | 'english';
+        schedule: any[];
+        staffId: string;
+      };
       const studentEnrollments: EnrFlat[] = [];
 
       allEnrollmentsSnap.docs.forEach(enrollDoc => {
@@ -367,12 +374,12 @@ export function useConsultationStats(
         }
         classStudentCount.get(className)!.add(studentId);
 
-        // 학생별 수강 과목 집계
+        // 학생별 수강 과목 집계 — highmath 도 math 로 묶음
         if (!studentEnrollmentMap.has(studentId)) {
           studentEnrollmentMap.set(studentId, new Set());
         }
         let normalizedSubject: 'math' | 'english' | null = null;
-        if (subject === 'math' || subject === '수학') normalizedSubject = 'math';
+        if (subject === 'math' || subject === '수학' || subject === 'highmath') normalizedSubject = 'math';
         else if (subject === 'english' || subject === '영어') normalizedSubject = 'english';
         if (normalizedSubject) {
           studentEnrollmentMap.get(studentId)!.add(normalizedSubject);
@@ -381,6 +388,7 @@ export function useConsultationStats(
             className,
             subject: normalizedSubject,
             schedule: Array.isArray(enrollData.schedule) ? enrollData.schedule : [],
+            staffId: (enrollData.staffId || '') as string,
           });
         }
       });
@@ -407,7 +415,7 @@ export function useConsultationStats(
         if (!teacherName || !subject || !className || classData.isActive === false) return;
 
         let normalizedSubject: 'math' | 'english' | null = null;
-        if (subject === 'math' || subject === '수학') normalizedSubject = 'math';
+        if (subject === 'math' || subject === '수학' || subject === 'highmath') normalizedSubject = 'math';
         else if (subject === 'english' || subject === '영어') normalizedSubject = 'english';
         if (!normalizedSubject) return;
 
@@ -426,15 +434,50 @@ export function useConsultationStats(
       const studentTeacherSlots = new Map<string, Map<'math' | 'english', Map<string, number>>>();
       // 학생 → 과목 → staffId → 슬롯 수
 
+      // staffId 직접 매칭 헬퍼 — 슬롯 1개 추가
+      const addSlot = (studentId: string, subject: 'math' | 'english', staffId: string) => {
+        if (!staffId) return;
+        if (!studentTeacherSlots.has(studentId)) {
+          studentTeacherSlots.set(studentId, new Map());
+        }
+        const subjectMap = studentTeacherSlots.get(studentId)!;
+        if (!subjectMap.has(subject)) subjectMap.set(subject, new Map());
+        const teacherSlotMap = subjectMap.get(subject)!;
+        teacherSlotMap.set(staffId, (teacherSlotMap.get(staffId) || 0) + 1);
+      };
+
       studentEnrollments.forEach(enr => {
         const classInfo = classByName.get(enr.className);
-        if (!classInfo) return;
 
-        // enrollment.schedule 이 비어있는 경우가 많아 class.schedule 로 fallback
-        // class.schedule 은 object array [{day, periodId, ...}] — slotKey 매칭에 정확함
+        // 슬롯 소스 선택 우선순위: enrollment.schedule > class.schedule
         const slotsSource = (enr.schedule && enr.schedule.length > 0)
           ? enr.schedule
-          : classInfo.schedule;
+          : (classInfo?.schedule || []);
+
+        // 슬롯 정보 전무 → enrollment.staffId 또는 class.teacher 로 fallback (학생당 1슬롯, 담임만)
+        if (slotsSource.length === 0) {
+          let fallbackStaffId = enr.staffId
+            ? (teacherNameToIdMap.get(enr.staffId) || enr.staffId)
+            : '';
+          if (!fallbackStaffId && classInfo?.teacher) {
+            fallbackStaffId = teacherNameToIdMap.get(classInfo.teacher) || '';
+          }
+          if (fallbackStaffId && teacherWeightedStudentsMap.has(fallbackStaffId)) {
+            addSlot(enr.studentId, enr.subject, fallbackStaffId);
+          }
+          return;
+        }
+
+        // classInfo 가 없으면 슬롯 정보 있어도 담임/부담임 결정 불가 → enr.staffId fallback
+        if (!classInfo) {
+          const fallbackStaffId = enr.staffId
+            ? (teacherNameToIdMap.get(enr.staffId) || enr.staffId)
+            : '';
+          if (fallbackStaffId && teacherWeightedStudentsMap.has(fallbackStaffId)) {
+            addSlot(enr.studentId, enr.subject, fallbackStaffId);
+          }
+          return;
+        }
 
         for (const slot of slotsSource) {
           let day = '';
@@ -452,21 +495,18 @@ export function useConsultationStats(
           // 요일별 담당 강사 결정
           let teacherName = classInfo.teacher;
           if (day === '수') {
-            // 수요일 = 부담임 (slotTeachers 우선, 없으면 담임 fallback)
             const slotKey = `${day}-${periodId}`;
             teacherName = classInfo.slotTeachers[slotKey] || classInfo.teacher;
           }
 
-          const staffId = teacherNameToIdMap.get(teacherName);
-          if (!staffId) continue;
-
-          if (!studentTeacherSlots.has(enr.studentId)) {
-            studentTeacherSlots.set(enr.studentId, new Map());
+          // 이름 매칭 실패 → enr.staffId fallback
+          let staffId = teacherNameToIdMap.get(teacherName) || '';
+          if (!staffId && enr.staffId) {
+            staffId = teacherNameToIdMap.get(enr.staffId) || enr.staffId;
           }
-          const subjectMap = studentTeacherSlots.get(enr.studentId)!;
-          if (!subjectMap.has(enr.subject)) subjectMap.set(enr.subject, new Map());
-          const teacherSlotMap = subjectMap.get(enr.subject)!;
-          teacherSlotMap.set(staffId, (teacherSlotMap.get(staffId) || 0) + 1);
+          if (!staffId || !teacherWeightedStudentsMap.has(staffId)) continue;
+
+          addSlot(enr.studentId, enr.subject, staffId);
         }
       });
 
