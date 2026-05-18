@@ -40,6 +40,20 @@ function getScheduledDays(enrollment: { days?: string[]; schedule?: unknown[] })
     return days;
 }
 
+/** Firestore Timestamp 또는 string → "YYYY-MM-DD" */
+function tsToDateStr(v: any): string | null {
+    if (!v) return null;
+    if (typeof v === 'string') return v.length >= 10 ? v.substring(0, 10) : v;
+    if (v?.toDate && typeof v.toDate === 'function') {
+        const d: Date = v.toDate();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    if (v instanceof Date) {
+        return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}`;
+    }
+    return null;
+}
+
 /** Edutrix 클래스명에서 요일 추출 (예: "김윤하_월_3교시" → "월") */
 function extractDayFromEdutrixClassName(className: string | null): string | null {
     if (!className) return null;
@@ -94,15 +108,19 @@ export interface SyncResult {
     dryRun?: boolean;
     /** 영어/타과목 보고서로 분류되어 동기화 대상에서 제외된 건수 */
     otherSubject?: number;
+    /** 학생 enrollment 요일에 보고서가 없는 (강사 미기입) 건수 */
+    missingReports?: number;
 }
 
 export interface SyncDetail {
     studentName: string;
     className: string;
     date: string;
-    status: 'synced' | 'skipped_absent' | 'skipped_no_match' | 'skipped_not_scheduled' | 'skipped_other_subject' | 'already_marked' | 'error';
+    status: 'synced' | 'skipped_absent' | 'skipped_no_match' | 'skipped_not_scheduled' | 'skipped_other_subject' | 'missing_report' | 'already_marked' | 'error';
     attendanceValue?: number;
     message?: string;
+    /** 보고서 미기입 시 담당 강사 이름 (모달에서 강사별 그룹 가능) */
+    teacherName?: string;
 }
 
 /** 동기화 옵션 */
@@ -173,6 +191,12 @@ export function useEdutrixSync() {
                 // schedule은 레거시 string / 현행 ScheduleSlot object 혼재 가능 → unknown[]으로 받고
                 // getScheduledDays에서 타입별로 안전 파싱
                 schedule: (data.schedule || []) as unknown[],
+                // 활성 기간 판정용 (미기입 검출 시 사용)
+                startDate: tsToDateStr(data.startDate) || tsToDateStr(data.enrollmentDate),
+                endDate: tsToDateStr(data.endDate),
+                withdrawalDate: tsToDateStr(data.withdrawalDate),
+                onHold: data.onHold === true,
+                cancelledAt: tsToDateStr(data.cancelledAt),
             };
         });
     }, []);
@@ -255,7 +279,13 @@ export function useEdutrixSync() {
 
             const holidaySet = await fetchHolidays();
 
-            const enrollmentCache = new Map<string, { className: string; classId: string; staffId: string; teacher: string; subject: string; days: string[]; schedule: unknown[] }[]>();
+            type EnrollmentInfo = {
+                className: string; classId: string; staffId: string; teacher: string;
+                subject: string; days: string[]; schedule: unknown[];
+                startDate: string | null; endDate: string | null;
+                withdrawalDate: string | null; onHold: boolean; cancelledAt: string | null;
+            };
+            const enrollmentCache = new Map<string, EnrollmentInfo[]>();
 
             const attendanceBatch = new Map<string, {
                 studentId: string;
@@ -494,9 +524,50 @@ export function useEdutrixSync() {
                 });
             }
 
+            // ── 미기입 검출 ──
+            // 보고서가 1건이라도 들어온 학생 + enrollment.schedule 요일 + 활성기간 + 휴일 제외
+            // → 예상 수업일 중 attendance에 없는 날짜 = 강사 미기입
+            // (0건 학생은 enrollmentCache에 없어 검출 안 됨 — 별도 진단 필요)
+            const [y, m] = yearMonth.split('-').map(Number);
+            const lastDayOfMonth = new Date(y, m, 0).getDate();
+            for (const batchData of attendanceBatch.values()) {
+                const studentId = batchData.studentId;
+                const enrollments = enrollmentCache.get(studentId);
+                if (!enrollments) continue;
+                const targetEnr = enrollments.filter(e => TARGET_SUBJECTS.includes(e.subject) && !e.cancelledAt);
+                for (const enr of targetEnr) {
+                    if (enr.onHold) continue;
+                    const scheduledDays = getScheduledDays(enr);
+                    if (scheduledDays.size === 0) continue;
+                    const effectiveEnd = enr.withdrawalDate || enr.endDate;
+                    for (let day = 1; day <= lastDayOfMonth; day++) {
+                        const dateStr = `${yearMonth}-${String(day).padStart(2, '0')}`;
+                        const dayName = getKoreanDayName(dateStr);
+                        if (!scheduledDays.has(dayName)) continue;
+                        if (holidaySet.has(dateStr)) continue;
+                        if (enr.startDate && dateStr < enr.startDate) continue;
+                        if (effectiveEnd && dateStr > effectiveEnd) continue;
+                        const compositeKey = `${enr.className}::${dateStr}`;
+                        if (batchData.attendance[compositeKey] === undefined) {
+                            const teacherDisplay = enr.teacher || enr.staffId || '담당미상';
+                            result.missingReports = (result.missingReports || 0) + 1;
+                            result.details.push({
+                                studentName: batchData.studentName,
+                                className: enr.className,
+                                date: dateStr,
+                                status: 'missing_report',
+                                teacherName: teacherDisplay,
+                                message: `보고서 미기입 (강사: ${teacherDisplay})`,
+                            });
+                        }
+                    }
+                }
+            }
+            console.log(`[EdutrixSync/${subject}] 미기입 검출: ${result.missingReports || 0}건`);
+
             if (dryRun) {
                 console.log(`[EdutrixSync/${subject}] Step 6: DRY-RUN — Firestore 쓰기 생략 (${attendanceBatch.size}건 매칭됨)`);
-                console.log(`[EdutrixSync/${subject}] ===== DRY-RUN 완료: 총 ${result.totalReports} | 매칭 ${result.matched} | 스킵 ${result.skipped} | 타과목 ${result.otherSubject} | 오류 ${result.errors} =====`);
+                console.log(`[EdutrixSync/${subject}] ===== DRY-RUN 완료: 총 ${result.totalReports} | 매칭 ${result.matched} | 스킵 ${result.skipped} | 타과목 ${result.otherSubject} | 미기입 ${result.missingReports} | 오류 ${result.errors} =====`);
                 setLastResult(result);
                 return result;
             }
