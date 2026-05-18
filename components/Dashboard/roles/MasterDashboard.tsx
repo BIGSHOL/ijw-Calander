@@ -26,6 +26,7 @@ const AddConsultationModal = lazy(() => import('../../StudentConsultation/AddCon
 const BillingDetailsModal = lazy(() => import('../modals/BillingDetailsModal'));
 const ConsultationDetailsModal = lazy(() => import('../modals/ConsultationDetailsModal'));
 const NewStudentsModal = lazy(() => import('../modals/NewStudentsModal'));
+const NetChangeDetailsModal = lazy(() => import('../modals/NetChangeDetailsModal'));
 
 interface MasterDashboardProps {
   userProfile: UserProfile;
@@ -594,6 +595,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   const [isBillingModalOpen, setIsBillingModalOpen] = useState(false);
   const [isConsultationModalOpen, setIsConsultationModalOpen] = useState(false);
   const [isNewStudentsModalOpen, setIsNewStudentsModalOpen] = useState(false);
+  const [isNetChangeModalOpen, setIsNetChangeModalOpen] = useState(false);
 
   const quickActions: QuickAction[] = [
     { id: 'add-student', label: '학생 추가', icon: UserPlus, onClick: () => setIsAddStudentOpen(true), color: 'rgb(8, 20, 41)' /* primary */ },
@@ -636,6 +638,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                     card.id === 'billing' ? () => setIsBillingModalOpen(true)
                     : card.id === 'consultation' ? () => setIsConsultationModalOpen(true)
                     : card.id === 'new-students' ? () => setIsNewStudentsModalOpen(true)
+                    : card.id === 'net-change' ? () => setIsNetChangeModalOpen(true)
                     : undefined
                   }
                 />
@@ -996,6 +999,15 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
         <NewStudentsModal
           isOpen={isNewStudentsModalOpen}
           onClose={() => setIsNewStudentsModalOpen(false)}
+          students={students}
+          yearMonth={currentMonthFormatted}
+          monthStart={currentMonthStart}
+          monthEnd={currentMonthEnd}
+        />
+        {/* 순증감 근거 데이터 모달 (신규+퇴원 통합) */}
+        <NetChangeDetailsModal
+          isOpen={isNetChangeModalOpen}
+          onClose={() => setIsNetChangeModalOpen(false)}
           students={students}
           yearMonth={currentMonthFormatted}
           monthStart={currentMonthStart}
