@@ -123,7 +123,7 @@ export const ImportHistoryModal: React.FC<ImportHistoryModalProps> = ({ isOpen, 
                 <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
                     <h2 className="text-sm font-bold text-primary flex items-center gap-2">
                         <History size={18} className="text-amber-600" />
-                        엑셀 가져오기 이력
+                        구글에서 가져오기 이력
                     </h2>
                     <button onClick={onClose} className="p-1 rounded-sm hover:bg-gray-100 text-gray-500">
                         <X size={18} />

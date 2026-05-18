@@ -205,8 +205,10 @@ const SheetsLinkPanel: React.FC<SheetsLinkPanelProps> = ({ currentStaffId, isAdm
                             >
                                 <RefreshCw size={14} className={`text-blue-500 shrink-0 ${syncing ? 'animate-spin' : ''}`} />
                                 <span className="flex-1 text-left font-medium">
-                                    {syncing ? '동기화 중...' : '지금 동기화'}
+                                    {syncing ? '동기화 중...' : '구글스프레드시트 가져오기'}
                                 </span>
+                                {/* 다른 항목(전체/내 시트 열기)과 우측 정렬 맞추기 위한 12px spacer */}
+                                <span className="inline-block w-3 shrink-0" />
                             </button>
                         </>
                     )}
