@@ -33,10 +33,13 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const total = stats?.totalSubjectEnrollments || 0;
+  const totalEnrollments = stats?.totalSubjectEnrollments || 0;  // 사실 수강 건수
   const needing: StudentNeedingConsultation[] = stats?.studentsNeedingConsultation || [];
-  const completed = Math.max(0, total - needing.length);
-  const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+  // 의미 있는 분자/분모: 이력 0건 진행 대기중 학생은 제외
+  const completed = stats?.completedCount ?? 0;
+  const meaningfulTotal = stats?.meaningfulTargetCount ?? (completed + needing.length);
+  const rate = meaningfulTotal > 0 ? Math.round((completed / meaningfulTotal) * 100) : 0;
+  const excluded = Math.max(0, totalEnrollments - meaningfulTotal);  // 이력 없어 제외된 건수
   const staffPerformances: StaffPerformance[] = stats?.staffPerformances || [];
 
   // 미완료 사유별 카운트
@@ -78,12 +81,19 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
             <span className="text-red-600">
               미완료 <b>{needing.length}</b>건
             </span>
-            <span className="text-gray-500">
-              총 수강 건수 <b>{total}</b>건 (수학+영어 동시 수강 → 2건 카운트)
+            <span
+              className="text-gray-500 cursor-help"
+              title={`전체 수강 ${totalEnrollments}건 중 상담 대상 ${meaningfulTotal}건\n· 제외: 상담 기록·예정 0건인 진행 대기중 학생 ${excluded}건\n· 수학+영어 동시 수강 → 2건 카운트`}
+            >
+              상담 대상 <b>{meaningfulTotal}</b>건
+              {excluded > 0 && (
+                <span className="text-gray-400"> (전체 수강 {totalEnrollments}건 중 이력 0건 {excluded}건 제외)</span>
+              )}
             </span>
           </div>
           <div className="text-[10px] text-gray-400 mt-1.5">
             기준: 이번 달 1건 이상 학생 상담 기록 있는 (학생 × 과목) 조합 = 완료.
+            상담 기록·예정이 0건인 학생은 분모에서 제외 (의미 없는 미완료 노이즈 차단).
             등록 상담은 별도 집계 (이 KPI 미포함).
           </div>
           {/* 미완료 사유 분포 */}

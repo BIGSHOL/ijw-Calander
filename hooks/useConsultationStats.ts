@@ -77,6 +77,8 @@ export interface ConsultationStatsResult {
   studentsNeedingConsultation: StudentNeedingConsultation[];
   totalActiveStudents: number;  // 전체 재원생 수 (status === 'active')
   totalSubjectEnrollments: number;  // 전체 과목 수강 건수 (수학+영어 동시 수강 → 2건)
+  completedCount: number;  // 이번 달 상담 완료된 (학생×과목) 건수
+  meaningfulTargetCount: number;  // 상담 대상 (학생×과목) — 이력/예정 0 건인 진행 대기중 제외
 }
 
 /**
@@ -537,6 +539,9 @@ export function useConsultationStats(
       // 학생별 이번 달 학부모 상담에 "미응답" 키워드가 있는지
       const NO_RESPONSE_KEYWORDS = ['미응답', '부재중', '응답 없', '응답없', '안받', '안 받', '연락 안', '연락안', '통화 안', '통화안'];
       const studentNoResponseSet = new Set<string>();  // studentId
+      // 학생별 상담 기록(과거 완료 + 미래 예정) 보유 여부
+      // — 이력 0건 학생은 '진행 대기중'으로 잡혀도 실제 액션 대상 아니므로 미완료에서 제외
+      const studentHasAnyConsultation = new Set<string>();
 
       if (needingConsultationItems.length > 0) {
         const allConsultationsQuery = query(
@@ -549,6 +554,8 @@ export function useConsultationStats(
           const data = doc.data();
           const studentId = data.studentId as string;
           if (!studentId) return;
+          // 한 건이라도 상담 기록(예정/완료/취소 등 status 무관) 있으면 의미 있는 대상
+          studentHasAnyConsultation.add(studentId);
           let normalizedSubject: string | undefined = data.subject as string | undefined;
           if (normalizedSubject === '수학') normalizedSubject = 'math';
           if (normalizedSubject === '영어') normalizedSubject = 'english';
@@ -618,18 +625,25 @@ export function useConsultationStats(
         return { reason: 'pending' };
       };
 
-      const studentsNeedingConsultation: StudentNeedingConsultation[] = needingConsultationItems.map(item => {
-        const lastDate = studentSubjectLastConsultationMap.get(`${item.studentId}-${item.subject}`);
-        const { reason, detail } = determineMissingReason(item.studentId, lastDate);
-        return {
-          studentId: item.studentId,
-          studentName: item.name,
-          subject: item.subject,
-          lastConsultationDate: lastDate,
-          reason,
-          reasonDetail: detail,
-        };
-      });
+      const studentsNeedingConsultation: StudentNeedingConsultation[] = needingConsultationItems
+        .map(item => {
+          const lastDate = studentSubjectLastConsultationMap.get(`${item.studentId}-${item.subject}`);
+          const { reason, detail } = determineMissingReason(item.studentId, lastDate);
+          return {
+            studentId: item.studentId,
+            studentName: item.name,
+            subject: item.subject,
+            lastConsultationDate: lastDate,
+            reason,
+            reasonDetail: detail,
+          };
+        })
+        // 의미 있는 미완료만 표시: 신입생/최근상담/연락미응답 OR 상담 이력 보유
+        // — '진행 대기중' + 상담 기록 0건 학생은 실제 액션 대상 아니므로 제외
+        .filter(item => {
+          if (item.reason !== 'pending') return true;
+          return studentHasAnyConsultation.has(item.studentId);
+        });
 
       // 마지막 상담일 기준 오름차순 정렬 (오래된 순, 없는 경우 맨 위)
       studentsNeedingConsultation.sort((a, b) => {
@@ -723,6 +737,12 @@ export function useConsultationStats(
       }
       // === [임시 진단 로그 끝] ===
 
+      // 완료 / 의미있는 분모 계산
+      // - completedCount: 이번 달 상담 완료된 (학생×과목) 건수 = 원래 분모 - 원래 미완료(필터링 전)
+      // - meaningfulTargetCount: 완료 + 의미있는 미완료 (이력 0 진행 대기중 제외)
+      const completedCount = Math.max(0, totalSubjectEnrollments - needingConsultationItems.length);
+      const meaningfulTargetCount = completedCount + studentsNeedingConsultation.length;
+
       return {
         dailyStats,
         categoryStats,
@@ -738,7 +758,9 @@ export function useConsultationStats(
         followUpDone,
         studentsNeedingConsultation,
         totalActiveStudents: studentsSnapshot.docs.length,  // 전체 재원생 수
-        totalSubjectEnrollments,  // 전체 과목 수강 건수
+        totalSubjectEnrollments,  // 전체 과목 수강 건수 (사실 데이터, 변하지 않음)
+        completedCount,
+        meaningfulTargetCount,
       };
     },
     staleTime: 1000 * 60 * 5, // 5분 캐싱
@@ -763,6 +785,8 @@ export function useConsultationStats(
       studentsNeedingConsultation: [],
       totalActiveStudents: 0,
       totalSubjectEnrollments: 0,
+      completedCount: 0,
+      meaningfulTargetCount: 0,
     },
     loading: isLoading,
     error,
