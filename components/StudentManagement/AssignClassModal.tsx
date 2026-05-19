@@ -36,17 +36,20 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
 
     // 과목별 수업 목록 조회 (모든 과목)
     const { data: mathClasses, isLoading: loadingMath } = useClasses('math');
+    const { data: highmathClasses, isLoading: loadingHighmath } = useClasses('highmath');
     const { data: englishClasses, isLoading: loadingEnglish } = useClasses('english');
     const { data: scienceClasses, isLoading: loadingScience } = useClasses('science');
     const { data: koreanClasses, isLoading: loadingKorean } = useClasses('korean');
 
     // 현재 선택된 과목의 수업 목록
     const currentClasses = selectedSubject === 'math' ? mathClasses
+        : selectedSubject === 'highmath' ? highmathClasses
         : selectedSubject === 'english' ? englishClasses
         : selectedSubject === 'science' ? scienceClasses
         : koreanClasses;
 
     const isLoading = selectedSubject === 'math' ? loadingMath
+        : selectedSubject === 'highmath' ? loadingHighmath
         : selectedSubject === 'english' ? loadingEnglish
         : selectedSubject === 'science' ? loadingScience
         : loadingKorean;
@@ -200,7 +203,7 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                                 <label className="block text-xs font-bold text-gray-700 mb-1.5">
                                     과목 <span className="text-red-500">*</span>
                                 </label>
-                                <div className="grid grid-cols-4 gap-1.5">
+                                <div className="grid grid-cols-5 gap-1.5">
                                     {AVAILABLE_SUBJECTS.map(subject => {
                                         const colors = SUBJECT_COLORS[subject];
                                         return (
@@ -260,7 +263,11 @@ const AssignClassModal: React.FC<AssignClassModalProps> = ({ isOpen, onClose, st
                                 ) : (
                                     <div className="max-h-[220px] overflow-y-auto border border-gray-300 rounded-sm">
                                         {availableClasses.map((cls) => {
-                                            const subjectForSchedule: SubjectForSchedule = selectedSubject === 'english' ? 'english' : 'math';
+                                            const subjectForSchedule: SubjectForSchedule = selectedSubject === 'english'
+                                                ? 'english'
+                                                : selectedSubject === 'highmath'
+                                                    ? 'highmath'
+                                                    : 'math';
                                             const scheduleText = formatScheduleCompact(cls.schedule || [], subjectForSchedule, false);
 
                                             return (
