@@ -379,25 +379,30 @@ export function useEdutrixSync() {
                     return true;
                 };
 
-                // ── 학생 수업 요일 사전 필터 ──
-                // 학생의 활성 target enrollment 중 schedule 정보가 1개라도 있으면,
-                // 보고서 요일이 학생 수업 요일에 포함될 때만 매칭 시도.
-                // (잘못된 요일 보고서가 강사/enrollment fallback 으로 강제 매칭되는 버그 차단)
-                // 예: 김채원이 화/목만 수업 → 금요일 보고서는 여기서 스킵
+                // ── 학생 수업 요일 사전 필터 (보수적 적용) ──
+                // 학생의 활성 target enrollment 가 1개 이상이고, "모든" enrollment 에 schedule 정보가
+                // 있을 때만 사전 필터 작동. 일부라도 schedule 비어있는 enrollment 가 있으면
+                // 그 enrollment 의 진짜 요일을 알 수 없으므로 사전 필터 적용 안 함 (fallback 으로 진행).
+                //
+                // 결함이 있던 이전 로직: schedule 있는 enrollment 만 합집합 → 정규반 enrollment 의
+                // schedule 비어있고 특강 enrollment 만 schedule 있을 때 정규 요일 보고서가 잘못 스킵됨.
+                // 예: 권영준 = 정규반(금, schedule 비어있음) + 토요특강 + 일요특강 → 합집합 [토,일] → 금요일 스킵 (오류)
                 {
                     const targetEnrollmentsForDayCheck = enrollments.filter(e =>
                         TARGET_SUBJECTS.includes(e.subject) && isEnrollmentActiveOn(e)
                     );
                     const studentScheduledDays = new Set<string>();
-                    let studentHasScheduleInfo = false;
+                    let allEnrollmentsHaveSchedule = targetEnrollmentsForDayCheck.length > 0;
                     for (const e of targetEnrollmentsForDayCheck) {
                         const days = getScheduledDays(e);
-                        if (days.size > 0) {
-                            studentHasScheduleInfo = true;
-                            days.forEach(d => studentScheduledDays.add(d));
+                        if (days.size === 0) {
+                            // schedule 정보 없는 enrollment 있음 → 사전 필터 적용 안 함 (안전 fallback)
+                            allEnrollmentsHaveSchedule = false;
+                            break;
                         }
+                        days.forEach(d => studentScheduledDays.add(d));
                     }
-                    if (studentHasScheduleInfo && !studentScheduledDays.has(reportDayName)) {
+                    if (allEnrollmentsHaveSchedule && !studentScheduledDays.has(reportDayName)) {
                         result.skipped++;
                         result.details.push({
                             studentName: report.student_name || '',
