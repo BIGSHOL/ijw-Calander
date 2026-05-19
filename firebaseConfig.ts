@@ -587,58 +587,72 @@ if (typeof window !== 'undefined') {
 // 사용법:
 //   window.migrateLogActors()                — dry-run (변환 대상만 출력)
 //   window.migrateLogActors({ apply: true }) — 실제 적용
+//   window.migrateLogActors({ apply: true, nameRemap: { '이희영': '박소선' } })
+//     — 특정 이름을 강제 교체 (퇴사자 staff doc 이 삭제됐거나 changedByUid 가 비어
+//        자동 매칭이 불가능한 케이스를 수동 보정)
 //
 // 처리 내용:
 //   - timetable_logs 컬렉션 전체 스캔
 //   - **재직자(status='active')** staff 만 email→name 매핑 대상으로 사용
-//     (퇴사자/비활성 staff 가 같은 이메일을 갖더라도 매핑에서 제외)
-//   - 두 가지 케이스 모두 처리:
-//     1) changedBy 가 이메일 형식인 신규 로그 → 재직자 한글 이름으로 변환
-//     2) 이전 마이그레이션에서 퇴사자 이름으로 잘못 매핑된 로그 (예: "이희영")
-//        → changedByUid 로 staff 조회 → status='resigned'/'inactive' 이면
-//        해당 staff 의 email 로 재직자 재조회 후 교체 (예: "이희영" → "박소선")
-//   - 매칭 실패는 그대로 두고 로그로 출력
-async function migrateLogActors(opts: { apply?: boolean } = {}): Promise<{
+//   - 케이스 1: changedBy 가 이메일 형식인 신규 로그 → 재직자 한글 이름으로 변환
+//   - 케이스 2: 이름 기반 자동 재매핑
+//     - changedBy 한글 이름이 active staff 와 일치하지 않으면 → 퇴사자 staff 매칭 시도
+//     - 매칭된 퇴사자 staff 의 email 로 active staff 재조회 → 그 이름으로 교체
+//   - 케이스 3: nameRemap 옵션으로 강제 매핑 (퇴사자 doc 삭제 / changedByUid 비어
+//     자동 매칭이 불가능한 경우 대응)
+async function migrateLogActors(opts: { apply?: boolean; nameRemap?: Record<string, string> } = {}): Promise<{
     scanned: number;
     eligibleEmails: number;
     resignedReassignable: number;
+    forcedRemap: number;
     matched: number;
     applied: number;
     unmatchedEmails: string[];
 }> {
     const apply = !!opts.apply;
+    const nameRemap = opts.nameRemap || {};
     console.log(`🔍 로그 처리자 마이그레이션 ${apply ? '(APPLY MODE)' : '(DRY-RUN)'} — 재직자 기준`);
+    if (Object.keys(nameRemap).length > 0) {
+        console.log('🔧 강제 이름 매핑:', nameRemap);
+    }
 
     // 1. staff 컬렉션 → 매핑 구축
     //    emailToActiveStaff: 이메일 → 재직자 (퇴사자 제외)
-    //    uidToStaff: uid → staff (퇴사/이전 staff 도 포함 — 이전 마이그레이션 결과 복구용)
+    //    uidToStaff: uid → staff (퇴사/이전 staff 도 포함)
+    //    nameToActiveStaff: 이름 → 재직자
+    //    nameToAnyStaff: 이름 → staff (퇴사자 포함 — 재매핑 단서)
     const staffSnap = await getDocs(collection(dbInstance, 'staff'));
     interface StaffInfo { name: string; uid?: string; systemRole?: string; status?: string; email?: string; }
     const emailToActiveStaff = new Map<string, StaffInfo>();
     const uidToStaff = new Map<string, StaffInfo>();
+    const nameToActiveStaff = new Map<string, StaffInfo>();
+    const nameToAnyStaff = new Map<string, StaffInfo[]>();
 
     staffSnap.docs.forEach(d => {
         const data = d.data() as any;
         const email = (data.email || '').trim().toLowerCase();
         const status = data.status || 'active';
+        const name = (data.name || data.koreanName || email || '').trim();
         const info: StaffInfo = {
-            name: data.name || data.koreanName || email,
+            name: name || email,
             uid: data.uid,
             systemRole: data.systemRole,
             status,
             email,
         };
-        // 재직자만 email 매핑 대상
         if (email && status === 'active') {
-            // 같은 이메일을 가진 재직자가 둘 이상이면 첫 번째 보존 (희박 케이스 — 경고만)
-            if (emailToActiveStaff.has(email)) {
-                console.warn(`[migrate] 같은 이메일 재직자 중복: ${email}`);
-            } else {
-                emailToActiveStaff.set(email, info);
-            }
+            if (!emailToActiveStaff.has(email)) emailToActiveStaff.set(email, info);
         }
         if (data.uid) {
             uidToStaff.set(data.uid, info);
+        }
+        if (name) {
+            if (status === 'active' && !nameToActiveStaff.has(name)) {
+                nameToActiveStaff.set(name, info);
+            }
+            const arr = nameToAnyStaff.get(name) || [];
+            arr.push(info);
+            nameToAnyStaff.set(name, arr);
         }
     });
     console.log(`📋 재직자 email 매핑: ${emailToActiveStaff.size}건 / 전체 staff: ${staffSnap.size}명`);
@@ -649,7 +663,7 @@ async function migrateLogActors(opts: { apply?: boolean } = {}): Promise<{
 
     interface UpdateItem {
         id: string;
-        kind: 'email-to-name' | 'resigned-to-active';
+        kind: 'email-to-name' | 'resigned-to-active' | 'name-to-active' | 'forced-remap';
         oldName: string;
         newName: string;
         uid?: string;
@@ -659,11 +673,29 @@ async function migrateLogActors(opts: { apply?: boolean } = {}): Promise<{
     const unmatched = new Set<string>();
     let eligibleEmails = 0;
     let resignedReassignable = 0;
+    let forcedRemap = 0;
 
     logsSnap.docs.forEach(d => {
         const data: any = d.data();
         const changedBy: string = (data.changedBy || '').trim();
         if (!changedBy) return;
+
+        // 케이스 3 (우선): nameRemap 강제 매핑
+        if (nameRemap[changedBy]) {
+            const targetName = nameRemap[changedBy];
+            if (targetName === changedBy) return;
+            const targetStaff = nameToActiveStaff.get(targetName);
+            forcedRemap += 1;
+            updates.push({
+                id: d.id,
+                kind: 'forced-remap',
+                oldName: changedBy,
+                newName: targetName,
+                uid: targetStaff?.uid,
+                role: targetStaff?.systemRole,
+            });
+            return;
+        }
 
         // 케이스 1: changedBy 가 이메일 형식 → 재직자로 변환
         if (changedBy.includes('@')) {
@@ -684,36 +716,62 @@ async function migrateLogActors(opts: { apply?: boolean } = {}): Promise<{
             return;
         }
 
-        // 케이스 2: 이미 한글 이름이지만 changedByUid 가 퇴사자 staff 를 가리키는 경우
+        // 케이스 2-a: changedByUid 가 있고 퇴사자 staff 를 가리키면 → 동일 이메일 재직자로 교체
         const uid = (data.changedByUid || '').trim();
-        if (!uid) return;
-        const staffByUid = uidToStaff.get(uid);
-        if (!staffByUid) return;
-        if (staffByUid.status === 'active') return; // 재직자면 그대로 OK
-        // 퇴사자/비활성 — 동일 이메일의 재직자 찾기
-        if (!staffByUid.email) return;
-        const replacement = emailToActiveStaff.get(staffByUid.email);
-        if (!replacement) return;
-        if (replacement.name === changedBy) return; // 이미 올바름
-        resignedReassignable += 1;
-        updates.push({
-            id: d.id,
-            kind: 'resigned-to-active',
-            oldName: changedBy,
-            newName: replacement.name,
-            uid: replacement.uid,
-            role: replacement.systemRole,
-        });
+        if (uid) {
+            const staffByUid = uidToStaff.get(uid);
+            if (staffByUid && staffByUid.status !== 'active' && staffByUid.email) {
+                const replacement = emailToActiveStaff.get(staffByUid.email);
+                if (replacement && replacement.name !== changedBy) {
+                    resignedReassignable += 1;
+                    updates.push({
+                        id: d.id,
+                        kind: 'resigned-to-active',
+                        oldName: changedBy,
+                        newName: replacement.name,
+                        uid: replacement.uid,
+                        role: replacement.systemRole,
+                    });
+                    return;
+                }
+            }
+        }
+
+        // 케이스 2-b: 이름만으로 재매핑 시도
+        //   - 현재 changedBy 이름이 active staff 와 일치하지 않으면
+        //   - 같은 이름의 퇴사자 staff 들 중 email 이 있는 것 찾기
+        //   - 그 email 의 active staff 가 있으면 → 그 이름으로 교체
+        if (!nameToActiveStaff.has(changedBy)) {
+            const allWithName = nameToAnyStaff.get(changedBy) || [];
+            for (const oldStaff of allWithName) {
+                if (oldStaff.status === 'active') continue;
+                if (!oldStaff.email) continue;
+                const replacement = emailToActiveStaff.get(oldStaff.email);
+                if (replacement && replacement.name !== changedBy) {
+                    resignedReassignable += 1;
+                    updates.push({
+                        id: d.id,
+                        kind: 'name-to-active',
+                        oldName: changedBy,
+                        newName: replacement.name,
+                        uid: replacement.uid,
+                        role: replacement.systemRole,
+                    });
+                    return;
+                }
+            }
+        }
     });
 
     console.log(`✉️  이메일 형식 changedBy: ${eligibleEmails}건`);
     console.log(`🔄 퇴사자→재직자 재매핑 대상: ${resignedReassignable}건`);
+    console.log(`🔧 강제 매핑 대상: ${forcedRemap}건`);
     console.log(`✅ 총 변환 가능: ${updates.length}건`);
     console.log(`❌ 매칭 실패 이메일 (${unmatched.size}종):`, Array.from(unmatched));
 
     if (updates.length === 0) {
         console.log('변환할 항목 없음.');
-        return { scanned: logsSnap.size, eligibleEmails, resignedReassignable, matched: 0, applied: 0, unmatchedEmails: Array.from(unmatched) };
+        return { scanned: logsSnap.size, eligibleEmails, resignedReassignable, forcedRemap, matched: 0, applied: 0, unmatchedEmails: Array.from(unmatched) };
     }
 
     // 변환 요약 출력 (oldName → newName / count)
@@ -731,7 +789,7 @@ async function migrateLogActors(opts: { apply?: boolean } = {}): Promise<{
 
     if (!apply) {
         console.log('💡 실제 적용하려면: window.migrateLogActors({ apply: true })');
-        return { scanned: logsSnap.size, eligibleEmails, resignedReassignable, matched: updates.length, applied: 0, unmatchedEmails: Array.from(unmatched) };
+        return { scanned: logsSnap.size, eligibleEmails, resignedReassignable, forcedRemap, matched: updates.length, applied: 0, unmatchedEmails: Array.from(unmatched) };
     }
 
     // 3. writeBatch 로 일괄 업데이트 (500건 제한)
@@ -754,7 +812,7 @@ async function migrateLogActors(opts: { apply?: boolean } = {}): Promise<{
     }
     if (batchCount > 0) await batch.commit();
     console.log(`✅ ${applied}건 적용 완료`);
-    return { scanned: logsSnap.size, eligibleEmails, resignedReassignable, matched: updates.length, applied, unmatchedEmails: Array.from(unmatched) };
+    return { scanned: logsSnap.size, eligibleEmails, resignedReassignable, forcedRemap, matched: updates.length, applied, unmatchedEmails: Array.from(unmatched) };
 }
 
 if (typeof window !== 'undefined') {
