@@ -365,6 +365,35 @@ export function useEdutrixSync() {
                     continue;
                 }
 
+                // ── 학생 수업 요일 사전 필터 ──
+                // 학생의 target enrollment 중 schedule 정보가 1개라도 있으면,
+                // 보고서 요일이 학생 수업 요일에 포함될 때만 매칭 시도.
+                // (잘못된 요일 보고서가 강사/enrollment fallback 으로 강제 매칭되는 버그 차단)
+                // 예: 김채원이 화/목만 수업 → 금요일 보고서는 여기서 스킵
+                {
+                    const targetEnrollmentsForDayCheck = enrollments.filter(e => TARGET_SUBJECTS.includes(e.subject));
+                    const studentScheduledDays = new Set<string>();
+                    let studentHasScheduleInfo = false;
+                    for (const e of targetEnrollmentsForDayCheck) {
+                        const days = getScheduledDays(e);
+                        if (days.size > 0) {
+                            studentHasScheduleInfo = true;
+                            days.forEach(d => studentScheduledDays.add(d));
+                        }
+                    }
+                    if (studentHasScheduleInfo && !studentScheduledDays.has(reportDayName)) {
+                        result.skipped++;
+                        result.details.push({
+                            studentName: report.student_name || '',
+                            className: report.class_name || '',
+                            date: dateKey,
+                            status: 'skipped_not_scheduled',
+                            message: `학생 수업 요일 불일치 (학생 수업요일: [${[...studentScheduledDays].join(',')}], 보고서 요일: ${reportDayName})`,
+                        });
+                        continue;
+                    }
+                }
+
                 // ── 수업 매칭: 과목(TARGET_SUBJECTS) + 강사 + 요일 ──
                 let className = '';
                 const rawTeacherName = report.teacher_name?.trim().replace(/\s+/g, '') || '';
