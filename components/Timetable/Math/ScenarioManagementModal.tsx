@@ -459,8 +459,10 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                         scenarios.map((scenario, index) => {
                                             const validation = validateScenarioData(scenario);
                                             const isLatest = index === 0;
-                                            const isBackup = scenario.id.startsWith('backup_');
+                                            const isBackup = scenario.id.startsWith('backup_') || (scenario as any).kind === 'backup';
+                                            const isRestore = scenario.id.startsWith('restore_') || (scenario as any).kind === 'restore' || (scenario.name && scenario.name.startsWith('[복구]'));
                                             const isSelected = selectedScenarioId === scenario.id;
+                                            const restorePointAt = (scenario as any).restorePointAt;
 
                                             return (
                                                 <div
@@ -471,19 +473,27 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                                             ? 'bg-red-50 border-red-200'
                                                             : isSelected
                                                                 ? 'bg-purple-50 border-purple-300 shadow-sm'
-                                                                : isLatest
-                                                                    ? 'bg-blue-50 border-blue-200 hover:border-blue-300'
-                                                                    : 'bg-white border-gray-200 hover:border-gray-300'
+                                                                : isRestore
+                                                                    ? 'bg-emerald-50 border-emerald-300 hover:border-emerald-400'
+                                                                    : isLatest
+                                                                        ? 'bg-blue-50 border-blue-200 hover:border-blue-300'
+                                                                        : 'bg-white border-gray-200 hover:border-gray-300'
                                                     }`}
                                                 >
                                                     <div className="flex items-center gap-2">
-                                                        <span className="font-bold text-sm text-gray-800 flex-1">{scenario.name}</span>
-                                                        {isLatest && <span className="text-xxs bg-blue-500 text-white px-1.5 py-0.5 rounded-sm font-bold">최신</span>}
+                                                        <span className={`font-bold text-sm flex-1 ${isRestore ? 'text-emerald-700' : 'text-gray-800'}`}>{scenario.name}</span>
+                                                        {isRestore && <span className="text-xxs bg-emerald-500 text-white px-1.5 py-0.5 rounded-sm font-bold">복구</span>}
+                                                        {isLatest && !isRestore && <span className="text-xxs bg-blue-500 text-white px-1.5 py-0.5 rounded-sm font-bold">최신</span>}
                                                         {isBackup && <span className="text-xxs bg-gray-500 text-white px-1.5 py-0.5 rounded-sm font-bold">백업</span>}
                                                         {!validation.isValid && <span className="text-xxs bg-red-500 text-white px-1.5 py-0.5 rounded-sm font-bold">손상됨</span>}
                                                     </div>
                                                     {scenario.description && (
                                                         <p className="text-xs text-gray-500 mt-1">{scenario.description}</p>
+                                                    )}
+                                                    {isRestore && restorePointAt && (
+                                                        <p className="text-xxs text-emerald-700 mt-0.5 font-medium">
+                                                            복구 시점: {formatDate(restorePointAt)}
+                                                        </p>
                                                     )}
                                                     <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xxs text-gray-400 mt-1">
                                                         <span className="flex items-center gap-1">

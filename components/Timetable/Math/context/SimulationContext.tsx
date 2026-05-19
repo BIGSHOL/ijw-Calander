@@ -16,7 +16,7 @@
  * 5. 실제 반영: 시나리오 상태를 live classes + enrollments에 적용
  */
 
-import React, { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { collection, collectionGroup, query, where, getDocs, getDoc, writeBatch, doc, setDoc } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
 import { TimetableStudent } from '../../../../types';
@@ -176,8 +176,14 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
   });
 
   // 시뮬 진입 시점 스냅샷 — 시각 diff(추가/삭제/이동 표시) 계산용
+  // initialEnrollments + initialClasses: 시뮬레이션 시작 시점의 "원시간표"
+  // 시나리오 저장 시 함께 저장하여, 불러올 때 변경 스택(diff)을 복원하고
+  // 실제 반영 시 [복구] 시나리오의 원자료로 사용
   const [initialEnrollments, setInitialEnrollments] = useState<
     Record<string, Record<string, ScenarioEnrollment>>
+  >({});
+  const [initialClasses, setInitialClasses] = useState<
+    Record<string, ScenarioClass>
   >({});
 
   // Ref for stable access in callbacks
@@ -185,6 +191,24 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
   stateRef.current = state;
   const initialEnrollmentsRef = useRef(initialEnrollments);
   initialEnrollmentsRef.current = initialEnrollments;
+  const initialClassesRef = useRef(initialClasses);
+  initialClassesRef.current = initialClasses;
+  // 현재 로드된 시나리오의 메타데이터 (복구 시나리오 생성용)
+  const currentScenarioMetaRef = useRef<{ id: string | null; name: string | null; createdAt: string | null }>({
+    id: null, name: null, createdAt: null,
+  });
+
+  // 시뮬레이션 작업 중 + isDirty 상태를 window 전역에 노출 — VersionUpdateToast 등에서
+  // 자동 새로고침 차단 / 사용자 경고 표시에 사용. App 종료 시 false 로 리셋.
+  useEffect(() => {
+    const dirty = state.isScenarioMode && state.isDirty;
+    (window as any).__simulationDirty = dirty;
+    window.dispatchEvent(new CustomEvent('app:simulation-dirty-change'));
+    return () => {
+      (window as any).__simulationDirty = false;
+      window.dispatchEvent(new CustomEvent('app:simulation-dirty-change'));
+    };
+  }, [state.isScenarioMode, state.isDirty]);
 
   // ============ UNDO HISTORY ============
   // 편집 작업 직전의 (scenarioClasses, scenarioEnrollments) 스냅샷 스택
@@ -326,6 +350,8 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     // Load current live data into draft
     const result = await loadFromLiveInternal();
     setInitialEnrollments(result.scenarioEnrollments); // 시각 diff 기준선
+    setInitialClasses(result.scenarioClasses); // 복구 시나리오용 원수업 스냅샷
+    currentScenarioMetaRef.current = { id: null, name: null, createdAt: null };
     setHistory([]);
     setState(prev => ({
       ...prev,
@@ -343,6 +369,8 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     }
     setHistory([]);
     setInitialEnrollments({});
+    setInitialClasses({});
+    currentScenarioMetaRef.current = { id: null, name: null, createdAt: null };
     setState({
       isScenarioMode: false,
       scenarioClasses: {},
@@ -561,6 +589,8 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     }
     const result = await loadFromLiveInternal();
     setInitialEnrollments(result.scenarioEnrollments);
+    setInitialClasses(result.scenarioClasses);
+    currentScenarioMetaRef.current = { id: null, name: null, createdAt: null };
     setHistory([]);
     setState(prev => ({
       ...prev,
@@ -578,6 +608,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     const { scenarioClasses, scenarioEnrollments } = stateRef.current;
 
     const scenarioId = `scenario_${Date.now()}`;
+    const createdAt = new Date().toISOString();
 
     // Calculate stats
     const classCount = Object.keys(scenarioClasses).length;
@@ -586,6 +617,9 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
 
     const sanitizedClasses = sanitizeForFirestore(scenarioClasses);
     const sanitizedEnrollments = sanitizeForFirestore(scenarioEnrollments);
+    // 원자료(diff 기준선) — 시나리오 진입 시 라이브 스냅샷
+    const sanitizedOriginalClasses = sanitizeForFirestore(initialClassesRef.current || {});
+    const sanitizedOriginalEnrollments = sanitizeForFirestore(initialEnrollmentsRef.current || {});
 
     const scenarioData = {
       id: scenarioId,
@@ -593,7 +627,10 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
       description,
       classes: sanitizedClasses,
       enrollments: sanitizedEnrollments,
-      createdAt: new Date().toISOString(),
+      // 원자료(diff 기준선) — 불러올 때 변경 스택 복원에 사용
+      originalClasses: sanitizedOriginalClasses,
+      originalEnrollments: sanitizedOriginalEnrollments,
+      createdAt,
       createdBy: userName,
       createdByUid: userId,
       stats: {
@@ -601,11 +638,12 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
         studentCount,
         timetableDocCount: classCount,
       },
-      version: 2,
+      version: 3,  // v3 = originalClasses/originalEnrollments 포함
     };
 
     await setDoc(doc(db, SCENARIO_COLLECTION, scenarioId), scenarioData);
 
+    currentScenarioMetaRef.current = { id: scenarioId, name, createdAt };
     setState(prev => ({
       ...prev,
       isDirty: false,
@@ -672,10 +710,22 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
 
     const scenario = docSnap.data();
 
-    if (scenario.version === 2) {
+    if (scenario.version === 2 || scenario.version === 3) {
       setHistory([]);
-      // 시나리오 로드 시점을 새 기준선으로 (이후 편집이 diff로 표시되도록)
-      setInitialEnrollments(scenario.enrollments || {});
+      // v3: 저장 시점의 원자료를 diff 기준선으로 복원 (변경 스택이 시각적으로 보임)
+      // v2: 원자료 없음 → 시나리오의 현재 상태를 기준선으로 (구버전 호환)
+      if (scenario.version === 3 && scenario.originalEnrollments) {
+        setInitialEnrollments(scenario.originalEnrollments || {});
+        setInitialClasses(scenario.originalClasses || {});
+      } else {
+        setInitialEnrollments(scenario.enrollments || {});
+        setInitialClasses(scenario.classes || {});
+      }
+      currentScenarioMetaRef.current = {
+        id: scenarioId,
+        name: scenario.name || null,
+        createdAt: scenario.createdAt || null,
+      };
       setState(prev => ({
         ...prev,
         scenarioClasses: scenario.classes || {},
@@ -690,6 +740,9 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
 
   const publishToLive = useCallback(async (userId: string, userName: string) => {
     const { scenarioClasses, scenarioEnrollments } = stateRef.current;
+    const sourceInitialClasses = initialClassesRef.current;
+    const sourceInitialEnrollments = initialEnrollmentsRef.current;
+    const sourceScenarioMeta = currentScenarioMetaRef.current;
 
     if (!confirm('⚠️ 정말로 실제 시간표에 반영하시겠습니까?\n이 작업은 모든 사용자에게 즉시 반영됩니다.')) {
       return;
@@ -698,7 +751,7 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
     let backupId = '';
 
     try {
-      // 1. 백업 생성
+      // 1. 백업 생성 (자동백업: 실제 반영 직전의 라이브 상태)
       backupId = `backup_${Date.now()}`;
       const { scenarioClasses: liveClasses, scenarioEnrollments: liveEnrollments } = await loadFromLiveInternal();
 
@@ -712,7 +765,36 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
         createdBy: `${userName} (자동)`,
         createdByUid: userId,
         version: 2,
+        kind: 'backup',
       });
+
+      // 1-b. [복구] 시나리오 생성 — 시나리오 생성 시점의 원시간표
+      //      (사용자가 "시나리오 생성 시점으로 되돌리고 싶을 때" 사용)
+      if (sourceInitialEnrollments && Object.keys(sourceInitialEnrollments).length > 0) {
+        const restoreId = `restore_${Date.now()}`;
+        const baseName = sourceScenarioMeta.name || '시뮬레이션';
+        const restoreAt = sourceScenarioMeta.createdAt
+          ? new Date(sourceScenarioMeta.createdAt).toLocaleString('ko-KR')
+          : new Date().toLocaleString('ko-KR');
+        await setDoc(doc(db, SCENARIO_COLLECTION, restoreId), {
+          id: restoreId,
+          name: `[복구] ${baseName}`,
+          description: `시나리오 생성 시점(${restoreAt})의 시간표 — 실제 반영 전으로 되돌릴 때 사용`,
+          classes: sanitizeForFirestore(sourceInitialClasses || {}),
+          enrollments: sanitizeForFirestore(sourceInitialEnrollments || {}),
+          originalClasses: sanitizeForFirestore(sourceInitialClasses || {}),
+          originalEnrollments: sanitizeForFirestore(sourceInitialEnrollments || {}),
+          createdAt: new Date().toISOString(),
+          createdBy: `${userName} (자동)`,
+          createdByUid: userId,
+          version: 3,
+          kind: 'restore',
+          // 복구 대상 시점 (시나리오 생성 시점 == 시뮬레이션 시작 시점)
+          restorePointAt: sourceScenarioMeta.createdAt || new Date().toISOString(),
+          restoreSourceScenarioId: sourceScenarioMeta.id || null,
+          restoreSourceScenarioName: sourceScenarioMeta.name || null,
+        });
+      }
 
       // 2. classes 업데이트 — _raw(라이브 원본)와 편집 필드 머지하여 미관리 필드 보존
       const classBatch = writeBatch(db);
