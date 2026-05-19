@@ -299,6 +299,22 @@ export function useEdutrixSync() {
 
             const holidaySet = await fetchHolidays();
 
+            // classes 일괄 로드 — enrollment.schedule 비어있을 때 className 기준 fallback 으로 사용
+            // (학생 시간표 상의 진짜 수업 요일을 시스템에서 가져오기 위한 권위 있는 소스)
+            console.log('[EdutrixSync] Step 2.5: classes 일괄 로드 (schedule fallback 용)');
+            const classScheduleMap = new Map<string, unknown[]>();
+            {
+                const classesSnap = await getDocs(collection(db, 'classes'));
+                classesSnap.docs.forEach(c => {
+                    const d = c.data();
+                    const name = d.className as string;
+                    if (!name) return;
+                    const sched = Array.isArray(d.schedule) ? d.schedule : [];
+                    if (sched.length > 0) classScheduleMap.set(name, sched);
+                });
+                console.log(`[EdutrixSync] classes schedule 로드: ${classScheduleMap.size}건`);
+            }
+
             type EnrollmentInfo = {
                 className: string; classId: string; staffId: string; teacher: string;
                 subject: string; days: string[]; schedule: unknown[];
@@ -306,6 +322,18 @@ export function useEdutrixSync() {
                 withdrawalDate: string | null; onHold: boolean; cancelledAt: string | null;
             };
             const enrollmentCache = new Map<string, EnrollmentInfo[]>();
+
+            // enrollment 의 effective 수업 요일 — enrollment.schedule 우선, 비어있으면 classes 의 schedule fallback
+            // 예: 권영준 정규반 enrollment.schedule = [] 인데 classes 에서 className 으로 schedule [금] 찾음 → [금] 반환
+            const getEffectiveDays = (e: EnrollmentInfo): Set<string> => {
+                const days = getScheduledDays(e);
+                if (days.size > 0) return days;
+                const classSched = classScheduleMap.get(e.className);
+                if (classSched && classSched.length > 0) {
+                    return getScheduledDays({ schedule: classSched });
+                }
+                return days;
+            };
 
             const attendanceBatch = new Map<string, {
                 studentId: string;
@@ -379,25 +407,30 @@ export function useEdutrixSync() {
                     return true;
                 };
 
-                // ── 학생 수업 요일 사전 필터 ──
-                // 학생의 활성 target enrollment 중 schedule 정보가 1개라도 있으면,
-                // 보고서 요일이 학생 수업 요일에 포함될 때만 매칭 시도.
-                // (잘못된 요일 보고서가 강사/enrollment fallback 으로 강제 매칭되는 버그 차단)
-                // 예: 김채원이 화/목만 수업 → 금요일 보고서는 여기서 스킵
+                // ── 학생 수업 요일 사전 필터 (보수적 + classes.schedule fallback) ──
+                // 학생의 활성 target enrollment 모두에 대해 effective schedule (enrollment.schedule
+                // 또는 classes.schedule fallback) 가 채워질 때만 사전 필터 작동. 일부라도 schedule 정보
+                // 도무지 못 잡으면 사전 필터 적용 안 함 (매칭 단계 fallback 으로 진행 — 안전).
+                //
+                // 예 1) 김채원: 모든 enrollment 가 화/목 schedule 있음 → 사전 필터 작동 → 금요일 스킵 정상
+                // 예 2) 권영준: 정규반 enrollment.schedule 비어있음 → classes.schedule 로 [금] 확보
+                //              + 토/일특강 → 합집합 [금,토,일] → 금요일 보고서 정상 통과
                 {
                     const targetEnrollmentsForDayCheck = enrollments.filter(e =>
                         TARGET_SUBJECTS.includes(e.subject) && isEnrollmentActiveOn(e)
                     );
                     const studentScheduledDays = new Set<string>();
-                    let studentHasScheduleInfo = false;
+                    let allEnrollmentsHaveSchedule = targetEnrollmentsForDayCheck.length > 0;
                     for (const e of targetEnrollmentsForDayCheck) {
-                        const days = getScheduledDays(e);
-                        if (days.size > 0) {
-                            studentHasScheduleInfo = true;
-                            days.forEach(d => studentScheduledDays.add(d));
+                        const days = getEffectiveDays(e);
+                        if (days.size === 0) {
+                            // classes.schedule fallback 으로도 못 잡음 → 사전 필터 적용 안 함
+                            allEnrollmentsHaveSchedule = false;
+                            break;
                         }
+                        days.forEach(d => studentScheduledDays.add(d));
                     }
-                    if (studentHasScheduleInfo && !studentScheduledDays.has(reportDayName)) {
+                    if (allEnrollmentsHaveSchedule && !studentScheduledDays.has(reportDayName)) {
                         result.skipped++;
                         result.details.push({
                             studentName: report.student_name || '',
@@ -454,9 +487,10 @@ export function useEdutrixSync() {
                     return false;
                 };
 
-                // 요일 매칭 (schedule 비어있으면 모든 요일 OK)
+                // 요일 매칭 — getEffectiveDays 사용 (enrollment.schedule 비어있어도 classes.schedule fallback)
+                // effective schedule 도 못 잡으면 모든 요일 통과 (안전 fallback)
                 const enrollmentMatchesDay = (e: typeof enrollments[0]): boolean => {
-                    const days = getScheduledDays(e);
+                    const days = getEffectiveDays(e);
                     return days.size === 0 || days.has(reportDayName);
                 };
 
