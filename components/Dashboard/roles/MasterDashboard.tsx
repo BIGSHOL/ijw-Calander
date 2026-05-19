@@ -221,12 +221,15 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     return { totalBilled: billed, totalPaid: paid, pendingCount: pending, billingRate: billed > 0 ? Math.round((paid / billed) * 100) : 0, unpaidRecords: unpaid };
   }, [billingRecords]);
 
-  // ── 신규 등록 ──
+  // ── 신입생 (이번 달 등록 + 수강과목 1개 이상) ──
   const newStudentsThisMonth = useMemo(() =>
     students.filter(s => {
-      if (s.status !== 'active') return false;
+      if (!s.startDate) return false;
       const d = new Date(s.startDate);
-      return d >= currentMonthStart && d <= currentMonthEnd;
+      if (d < currentMonthStart || d > currentMonthEnd) return false;
+      // 수강과목 유무: active enrollment 가 1개 이상 있어야 신입생으로 카운트
+      const activeEnrolls = (s.enrollments || []).filter((e: any) => isActiveEnrollmentShared(e));
+      return activeEnrolls.length > 0;
     }).length
   , [students, currentMonthStart, currentMonthEnd]);
 
@@ -306,20 +309,24 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mathActiveCount, englishActiveCount, multi2Count]);
 
-  // 이번 달 신입/퇴원 — 과목별 (수학 math 만 / 영어)
+  // 이번 달 신입생/퇴원 — 과목별 (수학 math 만 / 영어)
+  // 신입생 = 이번 달 학원 등록 + active 수강과목 1개 이상 (status 무관)
   const enrollmentBySubject = useMemo(() => {
     let mathNew = 0, englishNew = 0, mathWithdrawn = 0, englishWithdrawn = 0;
     students.forEach(s => {
-      const hasSubject = (sub: string) => s.enrollments?.some((e: any) => e.subject === sub) ?? false;
-      // 신입 = status='active' + 이번 달 학원 등록 시작
-      if (s.status === 'active') {
-        const sd = typeof s.startDate === 'string' ? new Date(s.startDate) : null;
-        if (sd && sd >= currentMonthStart && sd <= currentMonthEnd) {
-          if (hasSubject('math')) mathNew++;
-          if (hasSubject('english')) englishNew++;
+      const activeEnrolls = (s.enrollments || []).filter((e: any) => isActiveEnrollmentShared(e));
+      const hasActiveSubject = (sub: string) => activeEnrolls.some((e: any) => e.subject === sub);
+      const hasAnyActive = activeEnrolls.length > 0;
+      // 신입생: 이번 달 startDate + active 수강과목 1개 이상
+      if (hasAnyActive && s.startDate) {
+        const sd = new Date(s.startDate);
+        if (sd >= currentMonthStart && sd <= currentMonthEnd) {
+          if (hasActiveSubject('math')) mathNew++;
+          if (hasActiveSubject('english')) englishNew++;
         }
       }
-      // 퇴원 = status='withdrawn' + 이번 달 퇴원
+      // 퇴원 = status='withdrawn' + 이번 달 퇴원 (기존 그대로)
+      const hasSubject = (sub: string) => s.enrollments?.some((e: any) => e.subject === sub) ?? false;
       if (s.status === 'withdrawn' && s.withdrawalDate) {
         const wd = new Date(s.withdrawalDate);
         if (wd >= currentMonthStart && wd <= currentMonthEnd) {
@@ -576,14 +583,14 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
       icon: '💰', color: '#f59e0b',
     },
     {
-      id: 'new-students', label: '신규 등록', value: newStudentsThisMonth,
+      id: 'new-students', label: '신입생', value: newStudentsThisMonth,
       subValue: '이번 달', trend: newStudentsThisMonth > 0 ? 'up' : 'stable',
       icon: '🆕', color: '#ec4899',
     },
     {
       id: 'net-change', label: '순증감',
       value: `${withdrawalData.netChange >= 0 ? '+' : ''}${withdrawalData.netChange}`,
-      subValue: `신규 ${newStudentsThisMonth} / 퇴원 ${withdrawalData.count}`,
+      subValue: `신입생 ${newStudentsThisMonth} / 퇴원 ${withdrawalData.count}`,
       trend: withdrawalData.netChange > 0 ? 'up' : withdrawalData.netChange < 0 ? 'down' : 'stable',
       icon: '📊', color: '#6b7280',
     },
@@ -661,7 +668,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 combined: combinedTrend,
               })}
               {renderTrendCard({
-                title: '🆕 신입 (이번달)',
+                title: '🆕 신입생 (이번달)',
                 totalUnit: '명',
                 total: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
                 totalDelta: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,

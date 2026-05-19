@@ -1,7 +1,7 @@
 /**
  * 순증감 KPI 근거 데이터 모달
- * - 이번 달 신규 등록 + 퇴원 학생을 한 화면에 표시
- * - 상단 요약: 신규 N - 퇴원 M = 순증감 ±K
+ * - 이번 달 신입생 + 퇴원 학생을 한 화면에 표시
+ * - 상단 요약: 신입생 N - 퇴원 M = 순증감 ±K
  * - read-only
  */
 import React, { useMemo } from 'react';
@@ -48,10 +48,12 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
   const newStudents = useMemo(() => {
     return students
       .filter(s => {
-        if (s.status !== 'active') return false;
         if (!s.startDate) return false;
         const d = new Date(s.startDate);
-        return d >= monthStart && d <= monthEnd;
+        if (d < monthStart || d > monthEnd) return false;
+        // 수강과목 유무: active enrollment 1개 이상
+        const activeEnrolls = (s.enrollments || []).filter((e: any) => isActiveEnrollment(e));
+        return activeEnrolls.length > 0;
       })
       .sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''));
   }, [students, monthStart, monthEnd]);
@@ -97,7 +99,7 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
         <div className="px-5 py-3 border-b bg-gray-50">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
             <span className="text-emerald-600">
-              신규 <b className="text-sm">{newStudents.length}명</b>
+              신입생 <b className="text-sm">{newStudents.length}명</b>
             </span>
             <span className="text-gray-400">-</span>
             <span className="text-red-600">
@@ -109,19 +111,19 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
             </span>
           </div>
           <div className="text-[10px] text-gray-400 mt-1.5">
-            이번 달 학원 재원생 수의 순수 증감폭 = 신규 등록 - 퇴원
+            이번 달 학원 재원생 수의 순수 증감폭 = 신입생 - 퇴원
           </div>
         </div>
 
-        {/* 본문: 신규 + 퇴원 */}
+        {/* 본문: 신입생 + 퇴원 */}
         <div className="flex-1 overflow-auto">
-          {/* 신규 섹션 */}
+          {/* 신입생 섹션 */}
           <div className="px-5 py-2 bg-emerald-50/50 border-b border-emerald-100 flex items-center gap-2">
             <span className="text-emerald-700">🆕</span>
-            <h3 className="font-bold text-xs text-emerald-900">신규 등록 ({newStudents.length}명)</h3>
+            <h3 className="font-bold text-xs text-emerald-900">신입생 ({newStudents.length}명)</h3>
           </div>
           {newStudents.length === 0 ? (
-            <div className="text-center py-6 text-gray-400 text-xs">이번 달 신규 등록 학생이 없습니다.</div>
+            <div className="text-center py-6 text-gray-400 text-xs">이번 달 신입생이 없습니다.</div>
           ) : (
             <table className="w-full text-xs">
               <thead className="bg-white border-b border-gray-200">
@@ -136,7 +138,7 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
               </thead>
               <tbody>
                 {newStudents.map((s) => {
-                  const active = (s.enrollments || []).filter(isActiveEnrollment);
+                  const active = (s.enrollments || []).filter((e: any) => isActiveEnrollment(e));
                   const subjectSet = new Set(active.map(e => SUBJECT_LABEL[e.subject] || e.subject));
                   const teacherSet = new Set(
                     active.map(e => e.teacher).filter((t): t is string => !!t && t.length > 0)
