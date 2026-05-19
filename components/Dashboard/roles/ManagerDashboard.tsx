@@ -1,186 +1,159 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { UserProfile, StaffMember } from '../../../types';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../../firebaseConfig';
 import DashboardHeader from '../DashboardHeader';
-import { Users, BookOpen, TrendingUp, Calendar, DollarSign, UserCheck, Clock } from 'lucide-react';
+import { Users, BookOpen, TrendingUp, Calendar, UserCheck } from 'lucide-react';
 import { isTeacherMatch, isTeacherInSlotTeachers, isSlotTeacherMatch } from '../../../utils/teacherUtils';
 import { SUBJECT_COLORS, SUBJECT_LABELS, SubjectType } from '../../../utils/styleUtils';
+import { useStudents } from '../../../hooks/useStudents';
+import { useClasses } from '../../../hooks/useClasses';
+import { isActiveStudent } from '../../../utils/dashboardUtils';
+import { getTodayKST } from '../../../utils/dateUtils';
 
 interface ManagerDashboardProps {
   userProfile: UserProfile;
   staffMember?: StaffMember;
 }
 
-interface ClassInfo {
+interface ScheduleSlot {
+  day: string;
+  periodId: string;
+}
+
+interface NormalizedClass {
   id: string;
   className: string;
-  subject: 'math' | 'english' | 'science' | 'korean';
+  subject: SubjectType;
   teacher?: string;
   mainTeacher?: string;
-  studentCount?: number;
-  schedule?: { day: string; periodId: string; }[];
+  studentCount: number;
+  schedule: ScheduleSlot[];
   slotTeachers?: Record<string, string>;
 }
 
 interface TeacherStats {
   name: string;
-  englishName?: string;
   classCount: number;
   studentCount: number;
 }
 
 /**
  * 매니저 대시보드
- * - 전체 학원 운영 통계
- * - 강사별 성과
- * - 반 관리 현황
+ * - 데이터 출처: useStudents(true) + useClasses() — MasterDashboard와 동일 캐시 공유 (정합성)
+ * - 학생 수 카운트: 공통 isActiveStudent (status='active' + 활성 enrollment 1개 이상)
+ * - 수업별 학생 수: useClasses() 내부에서 KST 기준 활성 학생만 카운트 (퇴원/미래배정 제외)
  */
 const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffMember }) => {
-  const [totalStudents, setTotalStudents] = useState(0);
-  const [totalClasses, setTotalClasses] = useState(0);
-  const [activeStudents, setActiveStudents] = useState(0);
-  const [classes, setClasses] = useState<ClassInfo[]>([]);
-  const [teacherStats, setTeacherStats] = useState<TeacherStats[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedTeacher, setSelectedTeacher] = useState<string>('all');
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
+  // ── 캐시 기반 데이터 로딩 (MasterDashboard와 동일) ──
+  const { students = [], loading: studentsLoading } = useStudents(true);
+  const { data: allClasses = [], isLoading: classesLoading } = useClasses();
+  const loading = studentsLoading || classesLoading;
 
-  const loadDashboardData = async () => {
-    setLoading(true);
-    try {
-      // 1. 전체 학생 수 로드
-      const studentsSnapshot = await getDocs(collection(db, 'students'));
-      const allStudents = studentsSnapshot.docs.map(doc => doc.data());
-      const activeStudentsList = allStudents.filter((s: any) => s.status === 'active');
+  // ── 학생 카운트 ──
+  const today = useMemo(() => getTodayKST(), []);
+  const totalStudents = students.length;
+  const activeStudents = useMemo(
+    () => students.filter(s => isActiveStudent(s, today)).length,
+    [students, today]
+  );
 
-      setTotalStudents(allStudents.length);
-      setActiveStudents(activeStudentsList.length);
+  // ── 수업 정규화 (schedule은 string | object 혼재 가능 → ScheduleSlot[]로 통일) ──
+  const classes: NormalizedClass[] = useMemo(() => {
+    return allClasses.map((c: any) => {
+      const rawSchedule = Array.isArray(c.schedule) ? c.schedule : [];
+      const schedule: ScheduleSlot[] = rawSchedule
+        .map((slot: any): ScheduleSlot | null => {
+          if (slot && typeof slot === 'object' && 'day' in slot) {
+            return { day: String(slot.day || ''), periodId: String(slot.periodId || '') };
+          }
+          if (typeof slot === 'string') {
+            // "월-1" / "월 1" / "월1" 등의 패턴 파싱
+            const match = slot.match(/^([월화수목금토일])\s*[-_]?\s*(.+)$/);
+            if (match) return { day: match[1], periodId: match[2].trim() };
+            // 첫 글자가 요일인 단순 케이스
+            const first = slot.charAt(0);
+            if ('월화수목금토일'.includes(first)) {
+              return { day: first, periodId: slot.slice(1).trim() };
+            }
+          }
+          return null;
+        })
+        .filter((s): s is ScheduleSlot => s !== null);
 
-      // 2. 전체 수업 로드
-      const classesSnapshot = await getDocs(collection(db, 'classes'));
-      const allClasses: ClassInfo[] = [];
+      return {
+        id: c.id,
+        className: c.className,
+        subject: c.subject as SubjectType,
+        teacher: c.teacher,
+        mainTeacher: (c as any).mainTeacher,
+        studentCount: c.studentCount || 0,
+        schedule,
+        slotTeachers: c.slotTeachers,
+      };
+    });
+  }, [allClasses]);
 
-      for (const doc of classesSnapshot.docs) {
-        const data = doc.data();
-
-        // 각 수업의 학생 수 계산
-        const enrollmentsSnapshot = await getDocs(
-          query(
-            collection(db, 'students'),
-            where('enrollments', 'array-contains', { className: data.className, subject: data.subject })
-          )
-        );
-
-        allClasses.push({
-          id: doc.id,
-          className: data.className,
-          subject: data.subject,
-          teacher: data.teacher,
-          mainTeacher: data.mainTeacher,
-          studentCount: enrollmentsSnapshot.size,
-          schedule: data.schedule || [],
-          slotTeachers: data.slotTeachers,
-        });
+  // ── 강사별 통계 ──
+  const teacherStats: TeacherStats[] = useMemo(() => {
+    const teacherMap = new Map<string, TeacherStats>();
+    classes.forEach(cls => {
+      const teacherName = cls.teacher || cls.mainTeacher;
+      if (!teacherName) return;
+      if (!teacherMap.has(teacherName)) {
+        teacherMap.set(teacherName, { name: teacherName, classCount: 0, studentCount: 0 });
       }
+      const stats = teacherMap.get(teacherName)!;
+      stats.classCount += 1;
+      stats.studentCount += cls.studentCount;
+    });
+    return Array.from(teacherMap.values()).sort((a, b) => b.studentCount - a.studentCount);
+  }, [classes]);
 
-      setTotalClasses(allClasses.length);
-      setClasses(allClasses);
-
-      // 3. 강사별 통계 계산
-      const teacherMap = new Map<string, TeacherStats>();
-
-      allClasses.forEach(cls => {
-        const teacherName = cls.teacher || cls.mainTeacher;
-        if (!teacherName) return;
-
-        if (!teacherMap.has(teacherName)) {
-          teacherMap.set(teacherName, {
-            name: teacherName,
-            classCount: 0,
-            studentCount: 0,
-          });
-        }
-
-        const stats = teacherMap.get(teacherName)!;
-        stats.classCount += 1;
-        stats.studentCount += cls.studentCount || 0;
-      });
-
-      const sortedTeachers = Array.from(teacherMap.values())
-        .sort((a, b) => b.studentCount - a.studentCount);
-
-      setTeacherStats(sortedTeachers);
-    } catch (error) {
-      console.error('대시보드 데이터 로드 실패:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 오늘 요일
-  const today = new Date();
-  const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][today.getDay()];
-
-  // 선생님 필터링 함수
-  const isTeacherInClass = (cls: ClassInfo, teacherFilter: string): boolean => {
+  // ── 강사 필터링 ──
+  const isTeacherInClass = (cls: NormalizedClass, teacherFilter: string): boolean => {
     if (teacherFilter === 'all') return true;
-
-    // 담임 체크 (유틸 함수 사용)
     if (isTeacherMatch(cls.teacher || '', teacherFilter) ||
-        isTeacherMatch(cls.mainTeacher || '', teacherFilter)) {
-      return true;
-    }
-
-    // 부담임 체크 (유틸 함수 사용)
-    if (isTeacherInSlotTeachers(cls.slotTeachers, teacherFilter)) {
-      return true;
-    }
-
+        isTeacherMatch(cls.mainTeacher || '', teacherFilter)) return true;
+    if (isTeacherInSlotTeachers(cls.slotTeachers, teacherFilter)) return true;
     return false;
   };
 
-  // 스케줄 필터링 함수 (선생님이 담당하는 교시만)
   const filterScheduleByTeacher = (
-    schedule: { day: string; periodId: string; }[] | undefined,
+    schedule: ScheduleSlot[],
     teacher: string | undefined,
     mainTeacher: string | undefined,
     slotTeachers: Record<string, string> | undefined,
     teacherFilter: string
-  ): { day: string; periodId: string; }[] | undefined => {
-    if (!schedule || teacherFilter === 'all') return schedule;
-
-    // slotTeachers가 있으면 교시별로 필터링
+  ): ScheduleSlot[] => {
+    if (teacherFilter === 'all') return schedule;
     if (slotTeachers && Object.keys(slotTeachers).length > 0) {
       return schedule.filter(slot => {
         const slotKey = `${slot.day}-${slot.periodId}`;
-
-        // slotTeacher가 지정되어 있으면 그것과 비교 (유틸 함수 사용)
-        if (isSlotTeacherMatch(slotTeachers, slotKey, teacherFilter)) {
-          return true;
-        }
-
-        // slotTeacher가 없는 교시는 담임이 담당 (유틸 함수 사용)
+        if (isSlotTeacherMatch(slotTeachers, slotKey, teacherFilter)) return true;
         return !slotTeachers[slotKey] && (
           isTeacherMatch(teacher || '', teacherFilter) ||
           isTeacherMatch(mainTeacher || '', teacherFilter)
         );
       });
     }
-
-    // slotTeachers가 없으면 전체 스케줄 반환 (담임이면)
     return schedule;
   };
 
-  // 필터링된 수업 목록
-  const filteredClasses = classes.filter(cls => isTeacherInClass(cls, selectedTeacher));
+  const filteredClasses = useMemo(
+    () => classes.filter(cls => isTeacherInClass(cls, selectedTeacher)),
+    [classes, selectedTeacher]
+  );
 
-  // 오늘 수업
-  const todayClasses = filteredClasses.filter(cls =>
-    cls.schedule?.some(s => s.day === dayOfWeek)
+  // ── 오늘 요일 (KST) ──
+  const dayOfWeek = useMemo(() => {
+    const baseDate = new Date(`${today}T00:00:00+09:00`);
+    return ['일', '월', '화', '수', '목', '금', '토'][baseDate.getDay()];
+  }, [today]);
+
+  const todayClasses = useMemo(
+    () => filteredClasses.filter(cls => cls.schedule.some(s => s.day === dayOfWeek)),
+    [filteredClasses, dayOfWeek]
   );
 
   if (loading) {
@@ -217,7 +190,7 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
               <h3 className="text-xs font-medium text-gray-500">전체 수업</h3>
               <BookOpen className="w-4 h-4 text-green-500" />
             </div>
-            <p className="text-2xl font-bold text-primary">{totalClasses}</p>
+            <p className="text-2xl font-bold text-primary">{classes.length}</p>
             <p className="text-xxs text-gray-400 mt-0.5">운영 중인 수업</p>
           </div>
 
@@ -296,7 +269,6 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
               <h2 className="text-sm font-bold text-primary">수업 현황</h2>
             </div>
 
-            {/* 선생님 필터 */}
             <select
               value={selectedTeacher}
               onChange={(e) => setSelectedTeacher(e.target.value)}
@@ -319,7 +291,6 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-2">
               {filteredClasses.slice(0, 12).map(cls => {
-                // 선택된 선생님이 담당하는 스케줄만 필터링
                 const filteredSchedule = filterScheduleByTeacher(
                   cls.schedule,
                   cls.teacher,
@@ -329,36 +300,36 @@ const ManagerDashboard: React.FC<ManagerDashboardProps> = ({ userProfile, staffM
                 );
 
                 return (
-                <div
-                  key={cls.id}
-                  className="border border-gray-200 rounded-sm p-2 hover:border-accent hover:shadow-md transition-all"
-                >
-                  <div className="flex items-start justify-between mb-1">
-                    <h3 className="text-sm font-bold text-primary">{cls.className}</h3>
-                    <span className={`text-xxs px-1.5 py-0.5 rounded-sm font-medium ${SUBJECT_COLORS[cls.subject as SubjectType]?.badge || SUBJECT_COLORS.other.badge}`}>
-                      {SUBJECT_LABELS[cls.subject as SubjectType] || cls.subject}
-                    </span>
-                  </div>
-
-                  <div className="space-y-0.5 text-xs text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <UserCheck className="w-3 h-3" />
-                      <span>{cls.teacher || cls.mainTeacher || '미지정'}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="w-3 h-3" />
-                      <span>{cls.studentCount || 0}명</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      <span className="text-xxs">
-                        {filteredSchedule && filteredSchedule.length > 0
-                          ? filteredSchedule.map(s => s.day).join(', ')
-                          : '시간표 미지정'}
+                  <div
+                    key={cls.id}
+                    className="border border-gray-200 rounded-sm p-2 hover:border-accent hover:shadow-md transition-all"
+                  >
+                    <div className="flex items-start justify-between mb-1">
+                      <h3 className="text-sm font-bold text-primary">{cls.className}</h3>
+                      <span className={`text-xxs px-1.5 py-0.5 rounded-sm font-medium ${SUBJECT_COLORS[cls.subject]?.badge || SUBJECT_COLORS.other.badge}`}>
+                        {SUBJECT_LABELS[cls.subject] || cls.subject}
                       </span>
                     </div>
+
+                    <div className="space-y-0.5 text-xs text-gray-600">
+                      <div className="flex items-center gap-1">
+                        <UserCheck className="w-3 h-3" />
+                        <span>{cls.teacher || cls.mainTeacher || '미지정'}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Users className="w-3 h-3" />
+                        <span>{cls.studentCount}명</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        <span className="text-xxs">
+                          {filteredSchedule.length > 0
+                            ? Array.from(new Set(filteredSchedule.map(s => s.day))).join(', ')
+                            : '시간표 미지정'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
                 );
               })}
             </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { UserProfile, StaffMember } from '../../../types';
 import { collection, query, where, getDocs, collectionGroup } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
@@ -11,6 +11,8 @@ import {
 } from '../../Timetable/constants';
 import { isTeacherMatch, isTeacherMatchWithStaffId, isTeacherInSlotTeachers, isSlotTeacherMatch, isEnglishAssistantTeacher } from '../../../utils/teacherUtils';
 import { SUBJECT_COLORS, SUBJECT_LABELS, SubjectType } from '../../../utils/styleUtils';
+import { isActiveEnrollment } from '../../../utils/dashboardUtils';
+import { useFollowUpConsultations } from '../../../hooks/useStudentConsultations';
 
 interface TeacherDashboardProps {
   userProfile: UserProfile;
@@ -203,6 +205,14 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
   const [studentSortOrder, setStudentSortOrder] = useState<'asc' | 'desc'>('asc');
   const [classFilter, setClassFilter] = useState<'all' | 'main' | 'sub'>('all');
 
+  // 후속조치 필요 상담 (마스터와 동일 훅) — 본인 학생만 카운트
+  const { consultations: followUpAll = [] } = useFollowUpConsultations();
+  const followUpCount = useMemo(() => {
+    if (myStudents.length === 0) return 0;
+    const myStudentIds = new Set(myStudents.map(s => s.id));
+    return followUpAll.filter((c: any) => c.studentId && myStudentIds.has(c.studentId)).length;
+  }, [followUpAll, myStudents]);
+
   // 강사 이름 (영어 이름 우선, 없으면 한글 이름)
   const teacherName = staffMember?.englishName || staffMember?.name || userProfile.name;
   const teacherKoreanName = staffMember?.name || userProfile.koreanName;
@@ -281,6 +291,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
       const classes = Array.from(classesMap.values());
 
       // 2. 각 수업의 학생 수 계산 (enrollments 서브컬렉션 사용)
+      // 활성 enrollment 만 카운트 (퇴원/취소/미래배정/보류 제외) — 시간표 헤더와 일치
       const enrollmentsSnapshot = await getDocs(collectionGroup(db, 'enrollments'));
 
       // 수업명별 학생 수 집계 (중복 학생 제거)
@@ -288,6 +299,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
 
       enrollmentsSnapshot.docs.forEach(doc => {
         const data = doc.data();
+        if (!isActiveEnrollment(data)) return; // 활성 enrollment 만
         const className = data.className as string;
         const studentId = doc.ref.parent.parent?.id;
 
@@ -317,6 +329,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
 
       enrollmentsSnapshot.docs.forEach(doc => {
         const data = doc.data();
+        if (!isActiveEnrollment(data)) return; // 활성 enrollment 만
         const className = data.className as string;
         const studentId = doc.ref.parent.parent?.id;
 
@@ -332,10 +345,11 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
         }
       });
 
-      // 학생별 수강 과목 매핑 (모든 enrollment에서 추출)
+      // 학생별 수강 과목 매핑 (활성 enrollment 기준)
       const studentSubjectsMap = new Map<string, Set<string>>();
       enrollmentsSnapshot.docs.forEach(doc => {
         const data = doc.data();
+        if (!isActiveEnrollment(data)) return;
         const studentId = doc.ref.parent.parent?.id;
         if (studentId && studentsSet.has(studentId)) {
           const subject = (data.subject as string) || 'other';
@@ -561,11 +575,11 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ userProfile, staffM
 
           <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
             <div className="flex items-center justify-between mb-1">
-              <h3 className="text-xs font-medium text-gray-500">상담 예정</h3>
+              <h3 className="text-xs font-medium text-gray-500">후속조치 필요</h3>
               <Clock className="w-4 h-4 text-orange-500" />
             </div>
-            <p className="text-2xl font-bold text-primary">0</p>
-            <p className="text-xxs text-gray-400 mt-0.5">예정된 상담</p>
+            <p className="text-2xl font-bold text-primary">{followUpCount}</p>
+            <p className="text-xxs text-gray-400 mt-0.5">내 학생 상담 follow-up</p>
           </div>
         </div>
 

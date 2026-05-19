@@ -7,6 +7,7 @@
 import React, { useMemo } from 'react';
 import { X } from 'lucide-react';
 import type { UnifiedStudent } from '../../../types/student';
+import { isActiveEnrollment } from '../../../utils/dashboardUtils';
 
 interface NewStudentsModalProps {
   isOpen: boolean;
@@ -24,13 +25,6 @@ const SUBJECT_LABEL: Record<string, string> = {
   korean: '국어',
   science: '과학',
   other: '기타',
-};
-
-const isActiveEnrollment = (e: any) => {
-  if (e.cancelledAt) return false;
-  if (e.endDate || e.withdrawalDate) return false;
-  if (e.isScheduled) return false;
-  return true;
 };
 
 const NewStudentsModal: React.FC<NewStudentsModalProps> = ({

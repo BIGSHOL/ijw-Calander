@@ -15,9 +15,11 @@ import { useClasses } from '../../../hooks/useClasses';
 import { useSubjectClassStudents } from '../../../hooks/useSubjectClassStudents';
 import { useRecentExams } from '../../../hooks/useExams';
 import { useConsultations, isRegisteredStatus } from '../../../hooks/useConsultations';
-import { format, startOfMonth, endOfMonth, subDays } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { UserPlus, MessageCircle, BookOpen, TrendingUp, TrendingDown } from 'lucide-react';
 import { SUBJECT_COLORS } from '../../../utils/styleUtils';
+import { getTodayKST } from '../../../utils/dateUtils';
+import { isActiveEnrollment as isActiveEnrollmentShared } from '../../../utils/dashboardUtils';
 import { ResponsiveContainer, LineChart, Line, YAxis, Tooltip, ReferenceDot, Label } from 'recharts';
 
 const AddStudentModal = lazy(() => import('../../StudentManagement/AddStudentModal'));
@@ -66,7 +68,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   const currentMonth = useMemo(() => new Date(), []);
   const currentMonthStart = useMemo(() => startOfMonth(currentMonth), [currentMonth]);
   const currentMonthEnd = useMemo(() => endOfMonth(currentMonth), [currentMonth]);
-  const today = format(new Date(), 'yyyy-MM-dd');
+  const today = getTodayKST();
   const currentMonthFormatted = format(currentMonthStart, 'yyyy-MM');
   const currentYear = currentMonth.getFullYear();
   const currentMonthNum = String(currentMonth.getMonth() + 1);
@@ -83,11 +85,21 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   const { data: recentExams = [] } = useRecentExams(5);
   const { data: regConsultations = [] } = useConsultations({ month: currentMonthNum, year: currentYear });
 
-  // 주간 출석
+  // 주간 출석 — KST 기준 오늘부터 역산
   const last7Days = useMemo(() => {
-    const days = [];
-    const now = new Date();
-    for (let i = 6; i >= 0; i--) days.push(format(subDays(now, i), 'yyyy-MM-dd'));
+    const days: string[] = [];
+    const todayKst = getTodayKST();
+    // YYYY-MM-DD → Date(UTC midnight) 안전 변환 후 일자 역산
+    const baseDate = new Date(`${todayKst}T00:00:00+09:00`);
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(baseDate);
+      d.setDate(d.getDate() - i);
+      // KST 자정 기준이므로 ISO 날짜 직접 추출 (toISOString은 UTC 변환 위험)
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      days.push(`${y}-${m}-${day}`);
+    }
     return days;
   }, []);
   const { data: weeklyAttendanceRange = {}, isLoading: weeklyAttendanceLoading } = useDailyAttendanceByRange(last7Days[0], last7Days[6]);
@@ -155,20 +167,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
 
   // ── 헬퍼 ──
   // 사용자 결정(2026-05-15): 시간표 헤더 기준과 동일하게 카운트.
-  //  - cancelledAt / onHold / withdrawalDate(과거) 인 enrollment 제외
-  //  - 미래 startDate(=배정 예정) 인 enrollment 제외 — 오늘 기준 활성만
-  const isActiveEnrollment = (e: any) => {
-    if (e.cancelledAt) return false;
-    if (e.onHold) return false;
-    const startStr = (typeof e.enrollmentDate === 'string' && e.enrollmentDate) ||
-                     (typeof e.startDate === 'string' && e.startDate) || null;
-    if (!startStr) return false;
-    if (startStr > today) return false; // 미래 시작 (배정 예정)
-    const endStr = (typeof e.withdrawalDate === 'string' && e.withdrawalDate) ||
-                   (typeof e.endDate === 'string' && e.endDate) || null;
-    if (endStr && endStr <= today) return false;
-    return true;
-  };
+  // 공통 유틸로 추출 (utils/dashboardUtils.ts) — 모달과 기준 통일.
+  const isActiveEnrollment = (e: any) => isActiveEnrollmentShared(e, today);
 
   // ── 재원생 ──
   const activeStudents = useMemo(() =>
@@ -490,16 +490,9 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   // ── 주간 출석 추이 ──
   // 옵션 B: daily_attendance 가 있으면 우선, 비어있는 날만 attendance_records 셀 집계로 보충
   const weeklyAttendance = useMemo(() => {
-    const now = new Date();
-    // [진단 로그] daily_attendance 7일치 카운트 (점검 후 제거 예정)
-    // eslint-disable-next-line no-console
-    console.log('[주간출석daily진단]', last7Days.map((d, i) => ({
-      date: d,
-      요일: ['일','월','화','수','목','금','토'][new Date(d).getDay()],
-      daily_attendance_건수: weeklyAttendanceData[i]?.length || 0,
-    })));
     return last7Days.map((dateStr, idx) => {
-      const date = subDays(now, 6 - idx);
+      // KST 날짜 문자열을 KST 자정 Date로 변환 (요일 라벨 추출용)
+      const date = new Date(`${dateStr}T00:00:00+09:00`);
       const dayLabel = DAY_NAMES_KO[date.getDay()];
       const dailyData = weeklyAttendanceData[idx] || [];
       // 1순위: daily_attendance

@@ -7,6 +7,7 @@
 import React, { useMemo } from 'react';
 import { X } from 'lucide-react';
 import type { UnifiedStudent } from '../../../types/student';
+import { isActiveEnrollment } from '../../../utils/dashboardUtils';
 
 interface NetChangeDetailsModalProps {
   isOpen: boolean;
@@ -34,13 +35,6 @@ const WITHDRAWAL_REASON_LABELS: Record<string, string> = {
   schedule: '시간 조절 어려움',
   dissatisfied: '불만족',
   other: '기타',
-};
-
-const isActiveEnrollment = (e: any) => {
-  if (e.cancelledAt) return false;
-  if (e.endDate || e.withdrawalDate) return false;
-  if (e.isScheduled) return false;
-  return true;
 };
 
 const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
