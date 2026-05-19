@@ -407,41 +407,11 @@ export function useEdutrixSync() {
                     return true;
                 };
 
-                // ── 학생 수업 요일 사전 필터 (보수적 + classes.schedule fallback) ──
-                // 학생의 활성 target enrollment 모두에 대해 effective schedule (enrollment.schedule
-                // 또는 classes.schedule fallback) 가 채워질 때만 사전 필터 작동. 일부라도 schedule 정보
-                // 도무지 못 잡으면 사전 필터 적용 안 함 (매칭 단계 fallback 으로 진행 — 안전).
-                //
-                // 예 1) 김채원: 모든 enrollment 가 화/목 schedule 있음 → 사전 필터 작동 → 금요일 스킵 정상
-                // 예 2) 권영준: 정규반 enrollment.schedule 비어있음 → classes.schedule 로 [금] 확보
-                //              + 토/일특강 → 합집합 [금,토,일] → 금요일 보고서 정상 통과
-                {
-                    const targetEnrollmentsForDayCheck = enrollments.filter(e =>
-                        TARGET_SUBJECTS.includes(e.subject) && isEnrollmentActiveOn(e)
-                    );
-                    const studentScheduledDays = new Set<string>();
-                    let allEnrollmentsHaveSchedule = targetEnrollmentsForDayCheck.length > 0;
-                    for (const e of targetEnrollmentsForDayCheck) {
-                        const days = getEffectiveDays(e);
-                        if (days.size === 0) {
-                            // classes.schedule fallback 으로도 못 잡음 → 사전 필터 적용 안 함
-                            allEnrollmentsHaveSchedule = false;
-                            break;
-                        }
-                        days.forEach(d => studentScheduledDays.add(d));
-                    }
-                    if (allEnrollmentsHaveSchedule && !studentScheduledDays.has(reportDayName)) {
-                        result.skipped++;
-                        result.details.push({
-                            studentName: report.student_name || '',
-                            className: report.class_name || '',
-                            date: dateKey,
-                            status: 'skipped_not_scheduled',
-                            message: `학생 수업 요일 불일치 (학생 수업요일: [${[...studentScheduledDays].join(',')}], 보고서 요일: ${reportDayName})`,
-                        });
-                        continue;
-                    }
-                }
+                // ── 학생 수업 요일 사전 필터 (비활성) ──
+                // 사용자 결정: enrollment.schedule 데이터가 단편적/누락된 케이스가 많아
+                // 사전 차단 시 정상 보고서까지 잘못 스킵됨. 사전 필터 끄고 매칭 단계의
+                // 강사+요일 1차 매칭과 후속 fallback 으로 진행.
+                // (잘못된 enrollment 에 강제 매칭될 위험은 존재 — 운영자 검토 필요)
 
                 // ── 수업 매칭: 과목(TARGET_SUBJECTS) + 강사 + 요일 ──
                 let className = '';
