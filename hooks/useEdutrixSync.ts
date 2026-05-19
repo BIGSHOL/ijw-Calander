@@ -365,13 +365,29 @@ export function useEdutrixSync() {
                     continue;
                 }
 
+                // ── 보고서 날짜 기준 enrollment 활성 여부 판정 ──
+                // 반이동/퇴원/종료된 enrollment 는 매칭 후보에서 제외 — 보고서 날짜에 실제 수강 중이던 반만 매칭.
+                // (옛 enrollment 가 강사/요일이 같다는 이유로 잘못 매칭되거나 매칭 실패하는 버그 차단)
+                const isEnrollmentActiveOn = (e: typeof enrollments[0]): boolean => {
+                    // 미래 시작 — 보고서 날짜 < 시작일 → 비활성
+                    if (e.startDate && e.startDate > dateKey) return false;
+                    // 종료/퇴원일 이후 보고서 → 비활성
+                    if (e.endDate && dateKey > e.endDate) return false;
+                    if (e.withdrawalDate && dateKey > e.withdrawalDate) return false;
+                    // 취소된 enrollment — 비활성
+                    if (e.cancelledAt) return false;
+                    return true;
+                };
+
                 // ── 학생 수업 요일 사전 필터 ──
-                // 학생의 target enrollment 중 schedule 정보가 1개라도 있으면,
+                // 학생의 활성 target enrollment 중 schedule 정보가 1개라도 있으면,
                 // 보고서 요일이 학생 수업 요일에 포함될 때만 매칭 시도.
                 // (잘못된 요일 보고서가 강사/enrollment fallback 으로 강제 매칭되는 버그 차단)
                 // 예: 김채원이 화/목만 수업 → 금요일 보고서는 여기서 스킵
                 {
-                    const targetEnrollmentsForDayCheck = enrollments.filter(e => TARGET_SUBJECTS.includes(e.subject));
+                    const targetEnrollmentsForDayCheck = enrollments.filter(e =>
+                        TARGET_SUBJECTS.includes(e.subject) && isEnrollmentActiveOn(e)
+                    );
                     const studentScheduledDays = new Set<string>();
                     let studentHasScheduleInfo = false;
                     for (const e of targetEnrollmentsForDayCheck) {
@@ -408,8 +424,10 @@ export function useEdutrixSync() {
                 // 강사 과목 정보로 동기화 대상 보고서 여부 판정
                 const teacherIsTarget = edutrixTeacherName ? isTargetTeacherByName(edutrixTeacherName) : null;
 
-                // 대상 enrollment (math/highmath 또는 english)
-                const targetEnrollments = enrollments.filter(e => TARGET_SUBJECTS.includes(e.subject));
+                // 대상 enrollment (math/highmath 또는 english) — 보고서 날짜 기준 활성만
+                const targetEnrollments = enrollments.filter(e =>
+                    TARGET_SUBJECTS.includes(e.subject) && isEnrollmentActiveOn(e)
+                );
 
                 // ① 강사가 타과목으로 명확히 판정되면 → 동기화 대상 아님
                 if (teacherIsTarget === false) {
@@ -466,8 +484,10 @@ export function useEdutrixSync() {
 
                 // ② 그래도 못 찾으면 → 매칭 실패 OR 타과목
                 if (!className) {
-                    // 대상 과목 enrollment 0개 + 다른 과목 1개+ → 타과목으로 분류
-                    const otherEnrollments = enrollments.filter(e => e.subject && !TARGET_SUBJECTS.includes(e.subject));
+                    // 대상 과목 enrollment 0개 + 다른 과목 1개+ → 타과목으로 분류 (보고서 날짜 기준 활성만)
+                    const otherEnrollments = enrollments.filter(e =>
+                        e.subject && !TARGET_SUBJECTS.includes(e.subject) && isEnrollmentActiveOn(e)
+                    );
                     if (targetEnrollments.length === 0 && otherEnrollments.length > 0) {
                         result.otherSubject = (result.otherSubject || 0) + 1;
                         const otherSubjList = [...new Set(otherEnrollments.map(e => e.subject))].join(',');
