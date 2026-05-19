@@ -1,30 +1,43 @@
 /**
- * SheetsLinkPanel - Google 스프레드시트 동기화 드롭다운
+ * SheetsLinkPanel - 시간표 "내보내기/가져오기" 통합 메뉴
  *
- * 사용 위치: TimetableHeader 우측 (엑셀 내보내기 옆)
+ * 하나의 드롭다운으로 통합 (구 SheetsLinkPanel + TimetableHeader '내보내기' 메뉴 병합):
+ *   1) 저장     — 이미지로 저장 / 엑셀로 저장
+ *   2) 구글 시트 — 시트 열기(전체) / 시트에 지금 반영(수동 동기화) / 마지막 동기화 시각
+ *   3) 가져오기  — 엑셀 파일에서 / 구글 시트에서 / 가져오기 이력·되돌리기
+ *   4) 공유     — 공유 링크 관리
  *
- * 권한별 동작:
- * - master/admin: 전체 시트 열기 + 내 시트(있을 경우) + 강사 시트 선택 + "지금 동기화"
- * - 일반 강사: 내 시트 열기만
+ * 권한:
+ *   - 시트 열기·동기화: 관리자(isAdmin)
+ *   - 공유 링크 관리: master(isMaster)
+ *   - 저장/가져오기: 해당 핸들러가 전달될 때만 노출
  *
- * 상태:
- * - loading: 매핑 구독 중
- * - syncing: 수동 동기화 진행 중
+ * 구글 시트 동기화는 평소 클라이언트 자동 푸시가 담당하며,
+ * '시트에 지금 반영'은 수동 즉시 반영용이다.
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { FileSpreadsheet, ExternalLink, RefreshCw, ChevronDown, Users, User as UserIcon, Clock, AlertCircle } from 'lucide-react';
+import { FileSpreadsheet, ExternalLink, RefreshCw, ChevronDown, Clock, AlertCircle, Image as ImageIcon, Upload, Link2, RotateCcw } from 'lucide-react';
 import { useSheetsSync } from '../../../../hooks/useSheetsSync';
 import { Timestamp } from 'firebase/firestore';
 import type { ExportTimetableParams } from '../utils/excelExport';
 
 interface SheetsLinkPanelProps {
-    /** 현재 로그인 사용자의 staffId (강사 시트 매칭용) */
-    currentStaffId?: string | null;
-    /** 관리자 권한 (master/admin) */
+    /** 관리자 권한 (master/admin) — 시트 열기·동기화 노출 */
     isAdmin: boolean;
-    /** 현재 시간표 데이터로 xlsx 생성 파라미터 반환 (엑셀 내보내기와 동일) */
+    /** master 권한 — 공유 링크 관리 노출 */
+    isMaster?: boolean;
+    /** 현재 시간표 데이터로 xlsx 생성 파라미터 반환 (시트 동기화용) */
     getSheetsExportParams?: () => ExportTimetableParams;
+    // 저장
+    onExportImage?: () => void;
+    onExportExcel?: () => void;
+    // 가져오기
+    onImportExcel?: () => void;
+    onImportFromSheet?: () => void;
+    onOpenImportHistory?: () => void;
+    // 공유
+    onOpenEmbedManager?: () => void;
 }
 
 const formatRelativeTime = (ts?: Timestamp): string => {
@@ -43,7 +56,6 @@ const formatRelativeTime = (ts?: Timestamp): string => {
 
 /**
  * 영어 에러 메시지를 한글로 변환 (이미 한글이면 그대로).
- * Functions에서 translateError가 적용되지 않은 옛 메시지 + 클라이언트 발생 에러용.
  */
 const translateErrorMessage = (msg?: string | null): string => {
     if (!msg) return '';
@@ -70,8 +82,18 @@ const translateErrorMessage = (msg?: string | null): string => {
     return `동기화 오류: ${msg}`;
 };
 
-const SheetsLinkPanel: React.FC<SheetsLinkPanelProps> = ({ currentStaffId, isAdmin, getSheetsExportParams }) => {
-    const { mapping, loading, error, syncNow, syncing, mySheet } = useSheetsSync(currentStaffId);
+const SheetsLinkPanel: React.FC<SheetsLinkPanelProps> = ({
+    isAdmin,
+    isMaster,
+    getSheetsExportParams,
+    onExportImage,
+    onExportExcel,
+    onImportExcel,
+    onImportFromSheet,
+    onOpenImportHistory,
+    onOpenEmbedManager,
+}) => {
+    const { mapping, loading, error, syncNow, syncing } = useSheetsSync();
     const [isOpen, setIsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -102,123 +124,133 @@ const SheetsLinkPanel: React.FC<SheetsLinkPanelProps> = ({ currentStaffId, isAdm
         }
     };
 
-    const fullSheet = mapping?.all || null;
-    const teacherEntries = mapping?.byTeacherId
-        ? Object.entries(mapping.byTeacherId)
-              .filter(([, entry]) => entry.isActive !== false)
-              .sort(([, a], [, b]) => (a.teacherName || '').localeCompare(b.teacherName || '', 'ko'))
-        : [];
+    const runAndClose = (fn?: () => void) => {
+        if (fn) {
+            fn();
+            setIsOpen(false);
+        }
+    };
 
-    const hasAnySheet = fullSheet || mySheet || teacherEntries.length > 0;
+    const fullSheet = mapping?.all || null;
+
+    // 그룹별 노출 여부
+    const hasSave = !!(onExportImage || onExportExcel);
+    const hasSheetGroup = isAdmin;
+    const hasImport = !!(onImportExcel || onImportFromSheet || onOpenImportHistory);
+    const hasShare = !!(isMaster && onOpenEmbedManager);
+
+    // 보여줄 게 아무것도 없으면 버튼 자체를 숨김
+    if (!hasSave && !hasSheetGroup && !hasImport && !hasShare) return null;
+
+    const itemCls = 'w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors';
+    const labelCls = 'px-3 pt-1.5 pb-0.5 text-[10px] font-semibold text-gray-400 tracking-wide';
 
     return (
         <div ref={dropdownRef} className="relative">
             <button
                 onClick={() => setIsOpen(prev => !prev)}
-                disabled={loading}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 rounded transition-colors disabled:opacity-50"
-                title="Google 스프레드시트로 시간표 보기"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 rounded transition-colors"
+                title="내보내기 · 가져오기 · 구글 시트"
             >
                 <FileSpreadsheet size={14} />
-                <span>스프레드시트</span>
+                <span>내보내기/가져오기</span>
                 <ChevronDown size={12} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 top-full mt-1 w-72 bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
-                    {loading && (
-                        <div className="px-3 py-2 text-xs text-gray-500">로딩 중...</div>
+                <div className="absolute right-0 top-full mt-1 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-50 py-1">
+                    {/* 그룹 1: 저장 */}
+                    {hasSave && <div className={labelCls}>저장</div>}
+                    {onExportImage && (
+                        <button onClick={() => runAndClose(onExportImage)} className={itemCls}>
+                            <ImageIcon size={14} className="text-gray-500 shrink-0" />
+                            <span className="flex-1 text-left">이미지로 저장</span>
+                        </button>
+                    )}
+                    {onExportExcel && (
+                        <button onClick={() => runAndClose(onExportExcel)} className={itemCls}>
+                            <FileSpreadsheet size={14} className="text-gray-500 shrink-0" />
+                            <span className="flex-1 text-left">엑셀로 저장</span>
+                        </button>
                     )}
 
-                    {!loading && !hasAnySheet && (
-                        <div className="px-3 py-3 text-xs text-gray-500">
-                            <div className="flex items-center gap-1.5 mb-1">
-                                <AlertCircle size={12} className="text-amber-500" />
-                                <span className="font-medium text-gray-700">아직 시트가 생성되지 않았습니다</span>
-                            </div>
-                            <div className="text-gray-500 leading-snug">
-                                {isAdmin
-                                    ? "아래 '지금 동기화'를 눌러 시트를 생성하세요."
-                                    : "관리자에게 동기화 실행을 요청해주세요."}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 전체 시트 (관리자만) */}
-                    {!loading && isAdmin && fullSheet && (
+                    {/* 그룹 2: 구글 시트 (관리자) */}
+                    {hasSheetGroup && hasSave && <div className="my-1 border-t border-gray-100" />}
+                    {hasSheetGroup && <div className={labelCls}>구글 시트</div>}
+                    {hasSheetGroup && fullSheet && (
                         <button
                             onClick={() => handleOpenSheet(fullSheet.url)}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
-                            title="모든 강사의 시간표가 포함된 전체 시트"
+                            className={itemCls}
+                            title="동기화된 전체 시간표 시트 열기"
                         >
-                            <Users size={14} className="text-indigo-500 shrink-0" />
-                            <span className="flex-1 text-left font-medium">전체 시트 열기</span>
-                            <ExternalLink size={12} className="text-gray-400" />
+                            <ExternalLink size={14} className="text-indigo-500 shrink-0" />
+                            <span className="flex-1 text-left">시트 열기</span>
                         </button>
                     )}
-
-                    {/* 내 시트 (강사 본인) */}
-                    {!loading && mySheet && (
+                    {hasSheetGroup && (
                         <button
-                            onClick={() => handleOpenSheet(mySheet.url)}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
-                            title={mySheet.teacherName ? `${mySheet.teacherName} 선생님 시트` : '내 시트'}
+                            onClick={handleSyncNow}
+                            disabled={syncing}
+                            className={`${itemCls} disabled:opacity-50`}
+                            title="현재 시간표를 시트에 즉시 반영합니다 (평소엔 자동 반영)"
                         >
-                            <UserIcon size={14} className="text-green-500 shrink-0" />
-                            <span className="flex-1 text-left font-medium">내 시트 열기</span>
-                            <ExternalLink size={12} className="text-gray-400" />
+                            <RefreshCw size={14} className={`text-blue-500 shrink-0 ${syncing ? 'animate-spin' : ''}`} />
+                            <span className="flex-1 text-left">{syncing ? '반영 중...' : '시트에 지금 반영'}</span>
                         </button>
                     )}
-
-                    {/* 관리자: 다른 강사 시트 선택 */}
-                    {!loading && isAdmin && teacherEntries.length > 0 && (
-                        <>
-                            <div className="my-1 border-t border-gray-100" />
-                            <div className="px-3 py-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
-                                강사별 시트
-                            </div>
-                            <div className="max-h-48 overflow-y-auto">
-                                {teacherEntries.map(([teacherId, entry]) => (
-                                    <button
-                                        key={teacherId}
-                                        onClick={() => handleOpenSheet(entry.url)}
-                                        className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
-                                    >
-                                        <UserIcon size={12} className="text-gray-400 shrink-0" />
-                                        <span className="flex-1 text-left truncate">{entry.teacherName || teacherId}</span>
-                                        <ExternalLink size={10} className="text-gray-400" />
-                                    </button>
-                                ))}
-                            </div>
-                        </>
-                    )}
-
-                    {/* 동기화 액션 (관리자만) */}
-                    {!loading && isAdmin && (
-                        <>
-                            <div className="my-1 border-t border-gray-100" />
-                            <button
-                                onClick={handleSyncNow}
-                                disabled={syncing}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-700 hover:bg-blue-50 transition-colors disabled:opacity-50"
-                                title="Firestore의 최신 시간표 데이터를 시트에 즉시 반영합니다."
-                            >
-                                <RefreshCw size={14} className={`text-blue-500 shrink-0 ${syncing ? 'animate-spin' : ''}`} />
-                                <span className="flex-1 text-left font-medium">
-                                    {syncing ? '동기화 중...' : '구글스프레드시트 가져오기'}
-                                </span>
-                                {/* 다른 항목(전체/내 시트 열기)과 우측 정렬 맞추기 위한 12px spacer */}
-                                <span className="inline-block w-3 shrink-0" />
-                            </button>
-                        </>
-                    )}
-
-                    {/* 마지막 동기화 시각 */}
-                    {!loading && mapping?.lastFullSyncAt && (
-                        <div className="px-3 py-1.5 mt-1 border-t border-gray-100 flex items-center gap-1.5 text-[10px] text-gray-500">
+                    {hasSheetGroup && mapping?.lastFullSyncAt && (
+                        <div className="px-3 py-1 flex items-center gap-1.5 text-[10px] text-gray-400">
                             <Clock size={10} />
                             <span>마지막 동기화: {formatRelativeTime(mapping.lastFullSyncAt)}</span>
                         </div>
+                    )}
+                    {hasSheetGroup && !loading && !fullSheet && (
+                        <div className="px-3 py-1.5 text-[10px] text-gray-400 leading-snug">
+                            아직 시트가 없습니다. '시트에 지금 반영'을 눌러 생성하세요.
+                        </div>
+                    )}
+
+                    {/* 그룹 3: 가져오기 */}
+                    {hasImport && (hasSave || hasSheetGroup) && <div className="my-1 border-t border-gray-100" />}
+                    {hasImport && <div className={labelCls}>가져오기</div>}
+                    {onImportExcel && (
+                        <button
+                            onClick={() => runAndClose(onImportExcel)}
+                            className={itemCls}
+                            title="내보낸 엑셀 파일을 수정해서 다시 가져오기 (라운드트립)"
+                        >
+                            <Upload size={14} className="text-gray-500 shrink-0" />
+                            <span className="flex-1 text-left">엑셀 파일에서 가져오기</span>
+                        </button>
+                    )}
+                    {onImportFromSheet && (
+                        <button
+                            onClick={() => runAndClose(onImportFromSheet)}
+                            className={itemCls}
+                            title="Google 스프레드시트 URL을 입력해 그 시트의 변경을 가져오기"
+                        >
+                            <Upload size={14} className="text-green-600 shrink-0" />
+                            <span className="flex-1 text-left">구글 시트에서 가져오기</span>
+                        </button>
+                    )}
+                    {onOpenImportHistory && (
+                        <button
+                            onClick={() => runAndClose(onOpenImportHistory)}
+                            className={itemCls}
+                            title="가져오기 이력 + 되돌리기 (자동 스냅샷으로 1클릭 복원)"
+                        >
+                            <RotateCcw size={14} className="text-gray-500 shrink-0" />
+                            <span className="flex-1 text-left">가져오기 이력 / 되돌리기</span>
+                        </button>
+                    )}
+
+                    {/* 그룹 4: 공유 */}
+                    {hasShare && (hasSave || hasSheetGroup || hasImport) && <div className="my-1 border-t border-gray-100" />}
+                    {hasShare && (
+                        <button onClick={() => runAndClose(onOpenEmbedManager)} className={itemCls}>
+                            <Link2 size={14} className="text-gray-500 shrink-0" />
+                            <span className="flex-1 text-left">공유 링크 관리</span>
+                        </button>
                     )}
 
                     {/* 에러 표시 */}
@@ -228,7 +260,6 @@ const SheetsLinkPanel: React.FC<SheetsLinkPanelProps> = ({ currentStaffId, isAdm
                             <span className="flex-1 leading-snug">{translateErrorMessage(error)}</span>
                         </div>
                     )}
-
                     {mapping?.lastError && !error && (
                         <div className="px-3 py-1.5 mt-1 border-t border-amber-100 bg-amber-50 text-[10px] text-amber-700 flex items-start gap-1.5">
                             <AlertCircle size={10} className="shrink-0 mt-0.5" />

@@ -2,8 +2,8 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { addDays } from 'date-fns';
 import {
     ChevronLeft, ChevronRight, Search, X, Settings, Eye, EyeOff, Edit, SlidersHorizontal,
-    ArrowRightLeft, Copy, Upload, Save, Link2, Users, ChevronUp, ChevronDown, GripVertical, Download, Calendar as CalendarIcon,
-    Share, FileSpreadsheet, Image as ImageIcon, RotateCcw
+    ArrowRightLeft, Copy, Upload, Save, Users, ChevronUp, ChevronDown, GripVertical, Download, Calendar as CalendarIcon,
+    RotateCcw
 } from 'lucide-react';
 import {
     DndContext,
@@ -292,8 +292,6 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     const [isViewDropdownOpen, setIsViewDropdownOpen] = useState(false);
     const [showDevMenu, setShowDevMenu] = useState(false);
     const viewDropdownRef = useRef<HTMLDivElement>(null);
-    const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false);
-    const moreDropdownRef = useRef<HTMLDivElement>(null);
 
     // 퇴원생 드롭다운 상태 (클릭 기반)
     const [isWithdrawnDropdownOpen, setIsWithdrawnDropdownOpen] = useState(false);
@@ -474,14 +472,11 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
 
     // 드롭다운 외부 클릭 시 닫기
     useEffect(() => {
-        if (!isViewDropdownOpen && !isMoreDropdownOpen && !isWithdrawnDropdownOpen && !isPendingDropdownOpen
+        if (!isViewDropdownOpen && !isWithdrawnDropdownOpen && !isPendingDropdownOpen
             && !isActiveDropdownOpen && !isNewDropdownOpen) return;
         const handleClickOutside = (event: MouseEvent) => {
             if (viewDropdownRef.current && !viewDropdownRef.current.contains(event.target as Node)) {
                 setIsViewDropdownOpen(false);
-            }
-            if (moreDropdownRef.current && !moreDropdownRef.current.contains(event.target as Node)) {
-                setIsMoreDropdownOpen(false);
             }
             if (withdrawnDropdownRef.current && !withdrawnDropdownRef.current.contains(event.target as Node)) {
                 setIsWithdrawnDropdownOpen(false);
@@ -498,7 +493,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isViewDropdownOpen, isMoreDropdownOpen, isWithdrawnDropdownOpen, isPendingDropdownOpen, isActiveDropdownOpen, isNewDropdownOpen]);
+    }, [isViewDropdownOpen, isWithdrawnDropdownOpen, isPendingDropdownOpen, isActiveDropdownOpen, isNewDropdownOpen]);
 
     // 학생 수 카운트 계산 (현재 시간표에 등록된 학생만, 중복 제거)
     // useSubjectClassStudents가 이미 기준일 기반으로 withdrawalDate/onHold를 설정
@@ -929,98 +924,18 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                     {/* Separator */}
                     <div className="w-px h-4 bg-white/20 mx-1"></div>
 
-                    {/* Google 스프레드시트 동기화 (강사: 내 시트 / 관리자: 전체+동기화) */}
+                    {/* 내보내기/가져오기 통합 메뉴 (저장·구글시트·가져오기·공유) */}
                     <SheetsLinkPanel
-                        currentStaffId={currentStaffId}
                         isAdmin={isAdmin}
+                        isMaster={isMaster}
                         getSheetsExportParams={getSheetsExportParams}
+                        onExportImage={onExportImage}
+                        onExportExcel={onExportExcel}
+                        onImportExcel={onImportExcel}
+                        onImportFromSheet={onImportFromSheet}
+                        onOpenImportHistory={onOpenImportHistory}
+                        onOpenEmbedManager={onOpenEmbedManager}
                     />
-
-                    {/* 더보기 드롭다운 (공유 + 저장 통합) */}
-                    {(onExportImage || onExportExcel || onImportExcel || onOpenImportHistory || (isMaster && onOpenEmbedManager)) && (
-                        <div className="relative" ref={moreDropdownRef}>
-                            <button
-                                onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
-                                className="px-2 py-1 border border-white/20 rounded-sm text-xs font-medium text-gray-300 hover:bg-white/10 transition-colors flex items-center gap-1"
-                                title="더보기"
-                            >
-                                <Share size={12} />
-                                내보내기
-                            </button>
-                            {isMoreDropdownOpen && (
-                                <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded-sm shadow-lg z-50 min-w-[210px] py-1 whitespace-nowrap">
-                                    {/* 그룹 1: 내보내기 */}
-                                    {onExportImage && (
-                                        <button
-                                            onClick={() => { onExportImage(); setIsMoreDropdownOpen(false); }}
-                                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
-                                        >
-                                            <ImageIcon size={12} className="text-gray-500" />
-                                            이미지 저장
-                                        </button>
-                                    )}
-                                    {onExportExcel && (
-                                        <button
-                                            onClick={() => { onExportExcel(); setIsMoreDropdownOpen(false); }}
-                                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
-                                        >
-                                            <FileSpreadsheet size={12} className="text-gray-500" />
-                                            엑셀 저장
-                                        </button>
-                                    )}
-
-                                    {/* 그룹 2: 가져오기 (구분선) */}
-                                    {(onImportExcel || onOpenImportHistory) && (onExportImage || onExportExcel) && (
-                                        <div className="my-1 border-t border-gray-100" />
-                                    )}
-                                    {onImportExcel && (
-                                        <button
-                                            onClick={() => { onImportExcel(); setIsMoreDropdownOpen(false); }}
-                                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
-                                            title="라운드트립 — 내보낸 엑셀을 수정해서 다시 가져오기"
-                                        >
-                                            <FileSpreadsheet size={12} className="text-gray-500" />
-                                            구글로 링크 열기
-                                        </button>
-                                    )}
-                                    {onImportFromSheet && (
-                                        <button
-                                            onClick={() => { onImportFromSheet(); setIsMoreDropdownOpen(false); }}
-                                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
-                                            title="Google 스프레드시트 URL을 입력해 그 시트의 변경을 가져오기"
-                                        >
-                                            <FileSpreadsheet size={12} className="text-green-600" />
-                                            구글로 내보내기 (업데이트)
-                                        </button>
-                                    )}
-                                    {onOpenImportHistory && (
-                                        <button
-                                            onClick={() => { onOpenImportHistory(); setIsMoreDropdownOpen(false); }}
-                                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
-                                            title="가져오기 이력 + 되돌리기 (자동 스냅샷으로 1클릭 복원)"
-                                        >
-                                            <FileSpreadsheet size={12} className="text-gray-500" />
-                                            구글로 가져오기
-                                        </button>
-                                    )}
-
-                                    {/* 그룹 3: 공유 (구분선) */}
-                                    {isMaster && onOpenEmbedManager && (onExportImage || onExportExcel || onImportExcel || onOpenImportHistory) && (
-                                        <div className="my-1 border-t border-gray-100" />
-                                    )}
-                                    {isMaster && onOpenEmbedManager && (
-                                        <button
-                                            onClick={() => { onOpenEmbedManager(); setIsMoreDropdownOpen(false); }}
-                                            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-50 transition-colors"
-                                        >
-                                            <Link2 size={12} className="text-gray-500" />
-                                            공유 링크 관리
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    )}
 
                     {/* 통합뷰 전용 버튼들 (보기) */}
                     {viewType === 'class' && (
