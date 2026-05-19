@@ -149,10 +149,10 @@ const SheetsLinkPanel: React.FC<SheetsLinkPanelProps> = ({
         <div ref={dropdownRef} className="relative">
             <button
                 onClick={() => setIsOpen(prev => !prev)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 border border-green-200 rounded transition-colors"
+                className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-300 hover:text-white border border-white/20 rounded-sm hover:bg-white/10 transition-colors"
                 title="내보내기 · 가져오기 · 구글 시트"
             >
-                <FileSpreadsheet size={14} />
+                <FileSpreadsheet size={12} />
                 <span>내보내기/가져오기</span>
                 <ChevronDown size={12} className={`transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
