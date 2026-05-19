@@ -1394,23 +1394,37 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         />
                                     );
                                 })}
-                                {/* 보류 등록 학생 (저장 전 가상 표시) */}
-                                {pendingEnrollmentStudents.map(s => (
-                                    <li
-                                        key={`pending-enroll-${s.id}`}
-                                        className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap bg-green-100 text-green-700 border border-dashed border-green-400 flex items-center justify-between group/pending`}
-                                        title="저장 대기 중 (X 또는 Del로 취소)"
-                                    >
-                                        {onCancelPendingEnroll && (
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); onCancelPendingEnroll(s.id, cls.className); }}
-                                                className="mr-0.5 text-green-500 hover:text-red-500 shrink-0 text-[11px] leading-none"
-                                                title="등록 취소"
-                                            >×</button>
-                                        )}
-                                        <span className="truncate">+ {s.name}{showSchool || showGrade ? `/${formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null)}` : ''}</span>
-                                    </li>
-                                ))}
+                                {/* 보류 등록 학생 (저장 전 가상 표시) — 클릭 선택 + Del 키로 취소 */}
+                                {pendingEnrollmentStudents.map(s => {
+                                    const isSelected = isExcelMode && !!selectedStudentIds?.has(s.id) && selectedStudentClassName === cls.className;
+                                    return (
+                                        <li
+                                            key={`pending-enroll-${s.id}`}
+                                            className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap border border-dashed flex items-center cursor-pointer transition-colors ${
+                                                isSelected
+                                                    ? 'bg-blue-200 text-blue-900 border-blue-500 ring-2 ring-blue-400'
+                                                    : 'bg-green-100 text-green-700 border-green-400 hover:bg-green-200'
+                                            }`}
+                                            title="클릭하여 선택, Del 키로 취소"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (e.ctrlKey || e.metaKey) {
+                                                    // Ctrl/Cmd + 클릭 → 기존 선택에 토글 추가
+                                                    if (onStudentMultiSelect) {
+                                                        const next = new Set(selectedStudentIds || []);
+                                                        if (next.has(s.id)) next.delete(s.id);
+                                                        else next.add(s.id);
+                                                        onStudentMultiSelect(next, cls.className);
+                                                    }
+                                                } else if (onStudentSelect) {
+                                                    onStudentSelect(s.id, cls.className);
+                                                }
+                                            }}
+                                        >
+                                            <span className="truncate">+ {s.name}{showSchool || showGrade ? `/${formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null)}` : ''}</span>
+                                        </li>
+                                    );
+                                })}
                             </ul>
 
                         {/* 부분 등원 학생 (행 단위 좌우 분할: 학생 쪽만 표시, 반대쪽 회색) - 재원생 바로 밑 */}
@@ -1704,23 +1718,37 @@ const ClassCard: React.FC<ClassCardProps> = ({
                                         />
                                     );
                                 })}
-                                {/* 보류 등록 학생 (저장 전 가상 표시) */}
-                                {pendingEnrollmentStudents.map(s => (
-                                    <li
-                                        key={`pending-enroll-${s.id}`}
-                                        className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap bg-green-100 text-green-700 border border-dashed border-green-400 flex items-center justify-between group/pending`}
-                                        title="저장 대기 중 (X 또는 Del로 취소)"
-                                    >
-                                        {onCancelPendingEnroll && (
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); onCancelPendingEnroll(s.id, cls.className); }}
-                                                className="mr-0.5 text-green-500 hover:text-red-500 shrink-0 text-[11px] leading-none"
-                                                title="등록 취소"
-                                            >×</button>
-                                        )}
-                                        <span className="truncate">+ {s.name}{showSchool || showGrade ? `/${formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null)}` : ''}</span>
-                                    </li>
-                                ))}
+                                {/* 보류 등록 학생 (저장 전 가상 표시) — 클릭 선택 + Del 키로 취소 */}
+                                {pendingEnrollmentStudents.map(s => {
+                                    const isSelected = isExcelMode && !!selectedStudentIds?.has(s.id) && selectedStudentClassName === cls.className;
+                                    return (
+                                        <li
+                                            key={`pending-enroll-${s.id}`}
+                                            className={`py-0 px-0.5 ${fontSizeClass} leading-[1.3] overflow-hidden whitespace-nowrap border border-dashed flex items-center cursor-pointer transition-colors ${
+                                                isSelected
+                                                    ? 'bg-blue-200 text-blue-900 border-blue-500 ring-2 ring-blue-400'
+                                                    : 'bg-green-100 text-green-700 border-green-400 hover:bg-green-200'
+                                            }`}
+                                            title="클릭하여 선택, Del 키로 취소"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (e.ctrlKey || e.metaKey) {
+                                                    // Ctrl/Cmd + 클릭 → 기존 선택에 토글 추가
+                                                    if (onStudentMultiSelect) {
+                                                        const next = new Set(selectedStudentIds || []);
+                                                        if (next.has(s.id)) next.delete(s.id);
+                                                        else next.add(s.id);
+                                                        onStudentMultiSelect(next, cls.className);
+                                                    }
+                                                } else if (onStudentSelect) {
+                                                    onStudentSelect(s.id, cls.className);
+                                                }
+                                            }}
+                                        >
+                                            <span className="truncate">+ {s.name}{showSchool || showGrade ? `/${formatSchoolGrade(showSchool ? s.school : null, showGrade ? s.grade : null)}` : ''}</span>
+                                        </li>
+                                    );
+                                })}
                             </ul>
 
                         </div>

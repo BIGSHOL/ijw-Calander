@@ -57,6 +57,7 @@ interface ScenarioManagementModalProps {
     currentUser: any;
     isSimulationMode: boolean;
     onLoadScenario?: (name: string) => void;
+    onPublishDraftToLive?: () => void;  // 실제 반영 핸들러 (TimetableManager 의 handlePublishDraftToLive)
 }
 
 
@@ -66,7 +67,8 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
     onClose,
     currentUser,
     isSimulationMode,
-    onLoadScenario
+    onLoadScenario,
+    onPublishDraftToLive
 }) => {
     const [scenarios, setScenarios] = useState<ScenarioEntry[]>([]);
     const [loading, setLoading] = useState(true);
@@ -610,12 +612,12 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                 </div>
                             )}
 
-                            {/* Section 3: 새 시나리오 저장 */}
+                            {/* Section 3: 현재 상태 저장 */}
                             {isSimulationMode && canEdit && (
                                 <div className="bg-white border border-gray-200 overflow-hidden">
                                     <div className="flex items-center gap-1 px-2 py-1.5 bg-gray-50 border-b border-gray-200">
                                         <Save className="w-3 h-3 text-primary" />
-                                        <h3 className="text-primary font-bold text-xs">새 시나리오 저장</h3>
+                                        <h3 className="text-primary font-bold text-xs">현재 상태 저장</h3>
                                     </div>
                                     <div className="p-3">
                                         <p className="text-xs text-gray-500 mb-2">현재 시뮬레이션 상태를 새 시나리오로 저장합니다.</p>
@@ -652,7 +654,7 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                                     ) : (
                                                         <Download size={12} />
                                                     )}
-                                                    불러오기
+                                                    불러오기 (미리보기)
                                                 </button>
                                             )}
 
@@ -700,6 +702,19 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                                 >
                                                     <Trash2 size={12} />
                                                     삭제
+                                                </button>
+                                            )}
+
+                                            {/* 실제 반영 — 현재 시뮬레이션 상태를 실제 시간표에 반영 */}
+                                            {isSimulationMode && canEdit && onPublishDraftToLive && (
+                                                <button
+                                                    onClick={() => { onPublishDraftToLive(); }}
+                                                    disabled={activeOperation !== null}
+                                                    className="flex items-center justify-center gap-1 px-3 py-2 bg-orange-600 text-white rounded-sm text-xs font-bold hover:bg-orange-700 disabled:opacity-50 transition-colors col-span-2"
+                                                    title="현재 시뮬레이션 내용을 실제 시간표에 적용 (주의: 되돌릴 수 없음)"
+                                                >
+                                                    <Upload size={12} />
+                                                    실제 반영
                                                 </button>
                                             )}
                                         </div>

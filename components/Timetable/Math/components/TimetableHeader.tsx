@@ -1596,10 +1596,10 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                     <button
                         onClick={onCopyLiveToDraft}
                         className="flex items-center gap-1 px-2.5 py-1.5 bg-white border border-orange-300 text-orange-700 rounded-sm text-xs font-bold hover:bg-orange-50 shadow-sm transition-colors"
-                        title="현재 실시간 시간표를 복사해옵니다 (기존 시뮬레이션 데이터 덮어쓰기)"
+                        title="시뮬레이션 데이터를 실시간 시간표 상태로 초기화합니다"
                     >
                         <Copy size={12} />
-                        현재 상태 가져오기
+                        초기화
                     </button>
                     <button
                         onClick={onPublishDraftToLive}

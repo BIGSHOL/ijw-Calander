@@ -1787,6 +1787,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                             currentUser={currentUser}
                             isSimulationMode={isScenarioMode}
                             onLoadScenario={() => {}}
+                            onPublishDraftToLive={() => { setIsScenarioModalOpen(false); handlePublishDraftToLive(); }}
                         />
                     </Suspense>
                 )}
