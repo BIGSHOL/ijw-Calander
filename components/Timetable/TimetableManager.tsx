@@ -50,6 +50,9 @@ import { doc, collection, collectionGroup, query, where, getDoc, getDocs, delete
 import { db } from '../../firebaseConfig';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSheetsSync } from '../../hooks/useSheetsSync';
+import { useClassTextbookMap } from '../../hooks/useClassTextbookMap';
+import { useAllLatestReports } from '../../hooks/useAllLatestReports';
+import { buildStudentMemoText } from './Math/utils/excelExport';
 
 // 시트 자동 푸시 디바운스 — 시간표 편집이 멈추고 이 시간이 지나면 1회 푸시
 const SHEETS_AUTO_PUSH_DEBOUNCE_MS = 120000; // 2분
@@ -389,6 +392,21 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
         excelToastTimerRef.current = setTimeout(() => setExcelToast(null), 1800);
     }, []);
 
+    // ─── 학생 셀 메모(진도+교재) — 시트/엑셀 내보내기 시 마우스오버 메모로 부착 ───
+    const { byStudentName: textbookByName } = useClassTextbookMap();
+    const { data: latestReports } = useAllLatestReports();
+    const studentMemoMap = useMemo<Record<string, string>>(() => {
+        const map: Record<string, string> = {};
+        filteredClasses.forEach(cls => {
+            (cls.studentList || []).forEach((s: any) => {
+                if (!s?.name || map[s.name] !== undefined) return;
+                const memo = buildStudentMemoText(textbookByName.get(s.name), latestReports?.get(s.name));
+                if (memo) map[s.name] = memo;
+            });
+        });
+        return map;
+    }, [filteredClasses, textbookByName, latestReports]);
+
     // ─── Google 시트 내보내기 파라미터 (수동 동기화 + 자동 푸시 공용) ───
     const buildSheetsExportParams = useCallback(() => {
         const mondayDate = weekDates['월']?.date;
@@ -406,8 +424,9 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
             showHoldStudents,
             showWithdrawnStudents,
             referenceDate: refDate,
+            studentMemoMap,
         };
-    }, [weekLabel, filteredClasses, allResources, orderedSelectedDays, weekDates, teachers, currentPeriods, studentMap, currentSubjectFilter, showHoldStudents, showWithdrawnStudents]);
+    }, [weekLabel, filteredClasses, allResources, orderedSelectedDays, weekDates, teachers, currentPeriods, studentMap, currentSubjectFilter, showHoldStudents, showWithdrawnStudents, studentMemoMap]);
 
     // ─── Google 시트 자동 푸시 ───
     // 시간표 데이터가 바뀌면 디바운스 후 클라이언트가 직접 방식 A로 시트 갱신.
@@ -1173,6 +1192,7 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
                                 showHoldStudents,
                                 showWithdrawnStudents,
                                 referenceDate: refDate,
+                                studentMemoMap,
                             });
                         } catch (err) {
                             console.error('엑셀 저장 실패:', err);

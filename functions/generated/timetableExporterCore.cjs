@@ -29,6 +29,7 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // components/Timetable/Math/utils/excelExport.ts
 var excelExport_exports = {};
 __export(excelExport_exports, {
+  buildStudentMemoText: () => buildStudentMemoText,
   exportMathTimetableToExcel: () => exportMathTimetableToExcel
 });
 module.exports = __toCommonJS(excelExport_exports);
@@ -352,11 +353,37 @@ var formatStudentRowText = (meta, isMerged) => {
   const schoolGrade = formatSchoolGrade(student.school, student.grade);
   return `${prefix}${student.name}/${schoolGrade}`;
 };
+function buildStudentMemoText(textbook, report) {
+  const parts = [];
+  if (textbook?.textbookName) {
+    parts.push(`\uAD50\uC7AC: ${textbook.month ? `${textbook.month} ` : ""}${textbook.textbookName}`);
+  }
+  const progress = report?.progress?.trim();
+  if (progress) {
+    let dateLabel = "";
+    if (report?.date) {
+      const d = new Date(report.date);
+      if (!isNaN(d.getTime())) {
+        const yy = String(d.getFullYear()).slice(2);
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        dateLabel = ` ${yy}.${mm}.${dd}`;
+      }
+    }
+    parts.push(`[\uC9C4\uB3C4]${dateLabel}
+${progress}`);
+  }
+  return parts.join("\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n");
+}
 async function exportMathTimetableToExcel(params) {
   const ExcelJS = (await import("exceljs")).default;
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "ijw-Calander";
   workbook.created = /* @__PURE__ */ new Date();
+  const applyMemo = (cell, studentName) => {
+    const memo = studentName ? params.studentMemoMap?.[studentName] : void 0;
+    if (memo) cell.note = { texts: [{ text: memo }] };
+  };
   const {
     weekLabel,
     filteredClasses,
@@ -1105,6 +1132,7 @@ ${dateInfo.formatted}` : day;
         const style = resolveStudentStyle(meta.student, refDateMs);
         const textVal = formatStudentRowText(meta, isMergedClass);
         c.value = textVal;
+        applyMemo(c, meta.student.name);
         c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: style.bgARGB } };
         c.font = { bold: style.bold, color: { argb: style.fgARGB }, size: 9, name: "Malgun Gothic" };
         c.alignment = { horizontal: "left", vertical: "middle", indent: 1 };
@@ -1129,6 +1157,7 @@ ${dateInfo.formatted}` : day;
             const style = resolveStudentStyle(meta.student, refDateMs);
             const textVal = formatStudentRowText(meta, isMergedClass);
             cc.value = textVal;
+            applyMemo(cc, meta.student.name);
             cc.fill = { type: "pattern", pattern: "solid", fgColor: { argb: style.bgARGB } };
             cc.font = { bold: style.bold, color: { argb: style.fgARGB }, size: 9, name: "Malgun Gothic" };
             metaEntries.push({
@@ -1180,6 +1209,7 @@ ${dateInfo.formatted}` : day;
           const meta = commonHold[i];
           const textVal = formatStudentRowText(meta, isMergedClass);
           c.value = textVal;
+          applyMemo(c, meta.student.name);
           c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFEF3C7" } };
           c.font = { color: { argb: "FF92400E" }, size: 9, name: "Malgun Gothic" };
           c.alignment = { horizontal: "left", vertical: "middle", indent: 1 };
@@ -1203,6 +1233,7 @@ ${dateInfo.formatted}` : day;
               const meta = dayList[pIdx];
               const textVal = formatStudentRowText(meta, isMergedClass);
               cc.value = textVal;
+              applyMemo(cc, meta.student.name);
               cc.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFEF3C7" } };
               cc.font = { color: { argb: "FF92400E" }, size: 9, name: "Malgun Gothic" };
               metaEntries.push({
@@ -1250,6 +1281,7 @@ ${dateInfo.formatted}` : day;
           const meta = payload.withdrawnStudents[i];
           const textVal = formatStudentRowText(meta, isMergedClass);
           c.value = textVal;
+          applyMemo(c, meta.student.name);
           c.font = { color: { argb: "FFD1D5DB" }, size: 9, name: "Malgun Gothic" };
           metaEntries.push({
             kind: "student",
@@ -1425,5 +1457,6 @@ ${weekendPg.info.time}`;
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  buildStudentMemoText,
   exportMathTimetableToExcel
 });

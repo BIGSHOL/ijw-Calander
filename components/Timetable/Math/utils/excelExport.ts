@@ -22,6 +22,8 @@ export interface ExportTimetableParams {
     showHoldStudents?: boolean;
     showWithdrawnStudents?: boolean;
     referenceDate?: string;  // YYYY-MM-DD (기준일, 퇴원/대기 분류용)
+    /** 학생이름 → 셀 메모(마우스오버) 텍스트 — 진도+교재. plain object (Functions 직렬화 호환) */
+    studentMemoMap?: Record<string, string>;
     /** true면 다운로드 안 하고 xlsx ArrayBuffer 반환 (Google Sheets 업로드용) */
     returnBufferOnly?: boolean;
 }
@@ -283,11 +285,43 @@ const formatStudentRowText = (
     return `${prefix}${student.name}/${schoolGrade}`;
 };
 
+// 학생 셀 메모(마우스오버) 텍스트 — 진도 + 교재 (ClassCard 툴팁과 동일 형식)
+export function buildStudentMemoText(
+    textbook?: { month?: string; textbookName?: string } | null,
+    report?: { progress?: string; date?: string } | null,
+): string {
+    const parts: string[] = [];
+    if (textbook?.textbookName) {
+        parts.push(`교재: ${textbook.month ? `${textbook.month} ` : ''}${textbook.textbookName}`);
+    }
+    const progress = report?.progress?.trim();
+    if (progress) {
+        let dateLabel = '';
+        if (report?.date) {
+            const d = new Date(report.date);
+            if (!isNaN(d.getTime())) {
+                const yy = String(d.getFullYear()).slice(2);
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                dateLabel = ` ${yy}.${mm}.${dd}`;
+            }
+        }
+        parts.push(`[진도]${dateLabel}\n${progress}`);
+    }
+    return parts.join('\n────────\n');
+}
+
 export async function exportMathTimetableToExcel(params: ExportTimetableParams): Promise<void | ArrayBuffer> {
     const ExcelJS = (await import('exceljs')).default;
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'ijw-Calander';
     workbook.created = new Date();
+
+    // 학생 셀에 진도+교재 메모(마우스오버) 부착 — studentMemoMap 없으면 no-op
+    const applyMemo = (cell: any, studentName?: string) => {
+        const memo = studentName ? params.studentMemoMap?.[studentName] : undefined;
+        if (memo) cell.note = { texts: [{ text: memo }] };
+    };
 
     const {
         weekLabel,
@@ -1202,6 +1236,7 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
                 const style = resolveStudentStyle(meta.student, refDateMs);
                 const textVal = formatStudentRowText(meta, isMergedClass);
                 c.value = textVal;
+                applyMemo(c, meta.student.name);
                 c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.bgARGB } };
                 c.font = { bold: style.bold, color: { argb: style.fgARGB }, size: 9, name: 'Malgun Gothic' };
                 c.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
@@ -1226,6 +1261,7 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
                         const style = resolveStudentStyle(meta.student, refDateMs);
                         const textVal = formatStudentRowText(meta, isMergedClass);
                         cc.value = textVal;
+                        applyMemo(cc, meta.student.name);
                         cc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: style.bgARGB } };
                         cc.font = { bold: style.bold, color: { argb: style.fgARGB }, size: 9, name: 'Malgun Gothic' };
                         metaEntries.push({
@@ -1282,6 +1318,7 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
                     const meta = commonHold[i];
                     const textVal = formatStudentRowText(meta, isMergedClass);
                     c.value = textVal;
+                    applyMemo(c, meta.student.name);
                     c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
                     c.font = { color: { argb: 'FF92400E' }, size: 9, name: 'Malgun Gothic' };
                     c.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
@@ -1305,6 +1342,7 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
                             const meta = dayList[pIdx];
                             const textVal = formatStudentRowText(meta, isMergedClass);
                             cc.value = textVal;
+                            applyMemo(cc, meta.student.name);
                             cc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
                             cc.font = { color: { argb: 'FF92400E' }, size: 9, name: 'Malgun Gothic' };
                             metaEntries.push({
@@ -1355,6 +1393,7 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
                     const meta = payload.withdrawnStudents[i];
                     const textVal = formatStudentRowText(meta, isMergedClass);
                     c.value = textVal;
+                    applyMemo(c, meta.student.name);
                     c.font = { color: { argb: 'FFD1D5DB' }, size: 9, name: 'Malgun Gothic' };
                     metaEntries.push({
                         kind: 'student',
