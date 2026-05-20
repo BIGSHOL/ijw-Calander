@@ -11,6 +11,17 @@ export interface StaffPerformance {
   percentage: number;
   /** 강사가 가르치는 과목 ['math', 'highmath', 'english'] */
   subjects?: string[];
+  /** 상담 subject 가 math/수학/all 인 건수 (subjects 부재 시 과목 추론) */
+  mathCount?: number;
+  /** 상담 subject 가 english/영어/all 인 건수 */
+  englishCount?: number;
+}
+
+/** 전화상담 0건인 강사 (별도 분류용) */
+export interface InactiveTeacher {
+  id: string;
+  name: string;
+  subjects?: string[];
 }
 
 interface PerformanceProgressProps {

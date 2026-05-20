@@ -1165,13 +1165,20 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
         {/* 처리자 (최초 처리자) */}
         <span
-          className="w-28 shrink-0 text-xxs text-gray-600 whitespace-nowrap truncate"
+          className="w-20 shrink-0 text-xxs text-gray-600 whitespace-nowrap truncate"
           title={(() => { const at = resolveHandlerAt(group); return at ? `최초 처리일: ${at.slice(0, 10)}` : ''; })()}
         >
           {resolveHandler(group) || <span className="text-gray-300">-</span>}
-          {group.teachers && group.teachers.length > 0 && (
-            <span className="text-gray-400"> ({group.teachers.join(', ')})</span>
-          )}
+        </span>
+
+        {/* 담당 선생님 */}
+        <span
+          className="w-20 shrink-0 text-xxs text-gray-700 whitespace-nowrap truncate"
+          title={group.teachers && group.teachers.length > 0 ? group.teachers.join(', ') : ''}
+        >
+          {group.teachers && group.teachers.length > 0
+            ? group.teachers.join(', ')
+            : <span className="text-gray-300">-</span>}
         </span>
 
         {/* 삭제 버튼 - readOnly 모드에서는 숨김 */}
@@ -1321,13 +1328,20 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
         {/* 처리자 (최초 처리자) */}
         <span
-          className="w-28 shrink-0 text-xxs text-gray-600 whitespace-nowrap truncate"
+          className="w-20 shrink-0 text-xxs text-gray-600 whitespace-nowrap truncate"
           title={(() => { const at = resolveHandlerAt(group); return at ? `최초 처리일: ${at.slice(0, 10)}` : ''; })()}
         >
           {resolveHandler(group) || <span className="text-gray-300">-</span>}
-          {group.teachers && group.teachers.length > 0 && (
-            <span className="text-gray-400"> ({group.teachers.join(', ')})</span>
-          )}
+        </span>
+
+        {/* 담당 선생님 */}
+        <span
+          className="w-20 shrink-0 text-xxs text-gray-700 whitespace-nowrap truncate"
+          title={group.teachers && group.teachers.length > 0 ? group.teachers.join(', ') : ''}
+        >
+          {group.teachers && group.teachers.length > 0
+            ? group.teachers.join(', ')
+            : <span className="text-gray-300">-</span>}
         </span>
 
         {/* 이력 삭제 버튼 (권한이 있는 경우만) */}
@@ -1398,7 +1412,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
           <span className="w-10 shrink-0 text-center">인원</span>
           <span className="w-16 shrink-0 text-center">시작</span>
           <span className="w-16 shrink-0 text-center">종료</span>
-          <span className="w-28 shrink-0">처리자 (강사)</span>
+          <span className="w-20 shrink-0">처리자</span><span className="w-20 shrink-0">담당 선생님</span>
           <span className="w-5 shrink-0"></span>
         </div>
 
@@ -1451,7 +1465,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             <span className="w-10 shrink-0 text-center">인원</span>
             <span className="w-16 shrink-0 text-center">시작</span>
             <span className="w-16 shrink-0 text-center">종료</span>
-            <span className="w-28 shrink-0">처리자 (강사)</span>
+            <span className="w-20 shrink-0">처리자</span><span className="w-20 shrink-0">담당 선생님</span>
             <span className="w-5 shrink-0"></span>
           </div>
 
@@ -1566,10 +1580,20 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
 
                     {/* 처리자 (최초 처리자) */}
                     <span
-                      className="w-28 shrink-0 text-xxs text-gray-600 whitespace-nowrap truncate"
+                      className="w-20 shrink-0 text-xxs text-gray-600 whitespace-nowrap truncate"
                       title={(() => { const at = resolveHandlerAt(group); return at ? `최초 처리일: ${at.slice(0, 10)}` : ''; })()}
                     >
                       {resolveHandler(group) || <span className="text-gray-300">-</span>}
+                    </span>
+
+                    {/* 담당 선생님 */}
+                    <span
+                      className="w-20 shrink-0 text-xxs text-gray-700 whitespace-nowrap truncate"
+                      title={group.teachers && group.teachers.length > 0 ? group.teachers.join(', ') : ''}
+                    >
+                      {group.teachers && group.teachers.length > 0
+                        ? group.teachers.join(', ')
+                        : <span className="text-gray-300">-</span>}
                     </span>
 
                     {/* 삭제 버튼 - readOnly 모드에서는 숨김 */}
@@ -1619,7 +1643,7 @@ const CoursesTab: React.FC<CoursesTabProps> = ({ student, compact = false, readO
             <span className="w-10 shrink-0 text-center">인원</span>
             <span className="w-16 shrink-0 text-center">시작</span>
             <span className="w-16 shrink-0 text-center">종료</span>
-            <span className="w-28 shrink-0">처리자 (강사)</span>
+            <span className="w-20 shrink-0">처리자</span><span className="w-20 shrink-0">담당 선생님</span>
             <span className="w-5 shrink-0"></span>
           </div>
 

@@ -25,25 +25,46 @@ interface ConsultationDetailsModalProps {
 
 const SUBJECT_KO = (s: 'math' | 'english') => (s === 'math' ? '수학' : '영어');
 
-/** 강사 subjects → '수학' / '영어' / '수학·영어' 라벨 */
-const formatSubjectsLabel = (subjects?: string[]): string => {
-  if (!subjects || subjects.length === 0) return '';
-  const hasMath = subjects.some(s => s === 'math' || s === 'highmath');
-  const hasEng = subjects.includes('english');
-  if (hasMath && hasEng) return '수학·영어';
-  if (hasMath) return '수학';
-  if (hasEng) return '영어';
+/** 강사 subjects + 상담 카운트 → '수학' / '영어' / '수학·영어' 라벨 */
+const formatSubjectsLabel = (
+  subjects?: string[],
+  mathCount: number = 0,
+  englishCount: number = 0
+): string => {
+  // 1) staff.subjects 우선
+  if (subjects && subjects.length > 0) {
+    const hasMath = subjects.some(s => s === 'math' || s === 'highmath');
+    const hasEng = subjects.includes('english');
+    if (hasMath && hasEng) return '수학·영어';
+    if (hasMath) return '수학';
+    if (hasEng) return '영어';
+  }
+  // 2) 상담 subject 카운트 fallback (강사 데이터 부재 시)
+  if (mathCount > 0 && englishCount === 0) return '수학';
+  if (englishCount > 0 && mathCount === 0) return '영어';
+  if (mathCount > 0 && englishCount > 0) return mathCount >= englishCount ? '수학*' : '영어*';
   return '';
 };
 
-/** 카테고리 합산용 분류 */
-const teacherCategory = (subjects?: string[]): 'math' | 'english' | 'other' => {
-  if (!subjects || subjects.length === 0) return 'other';
-  const hasMath = subjects.some(s => s === 'math' || s === 'highmath');
-  const hasEng = subjects.includes('english');
-  if (hasMath && !hasEng) return 'math';
-  if (hasEng && !hasMath) return 'english';
-  return 'other';
+/** 카테고리 합산용 분류 — staff.subjects 우선, 상담 다수결 fallback */
+const teacherCategory = (
+  subjects?: string[],
+  mathCount: number = 0,
+  englishCount: number = 0
+): 'math' | 'english' | 'both' | 'other' => {
+  // 1) staff.subjects 우선
+  if (subjects && subjects.length > 0) {
+    const hasMath = subjects.some(s => s === 'math' || s === 'highmath');
+    const hasEng = subjects.includes('english');
+    if (hasMath && hasEng) return 'both';
+    if (hasMath) return 'math';
+    if (hasEng) return 'english';
+  }
+  // 2) 상담 다수결 fallback
+  if (mathCount === 0 && englishCount === 0) return 'other';
+  if (mathCount > 0 && englishCount === 0) return 'math';
+  if (englishCount > 0 && mathCount === 0) return 'english';
+  return mathCount >= englishCount ? 'math' : 'english';
 };
 
 const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
@@ -62,6 +83,7 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
   const rate = meaningfulTotal > 0 ? Math.round((completed / meaningfulTotal) * 100) : 0;
   const excluded = Math.max(0, totalEnrollments - meaningfulTotal);  // 이력 없어 제외된 건수
   const staffPerformances: StaffPerformance[] = stats?.staffPerformances || [];
+  const inactiveTeachers = stats?.inactiveTeachers || [];
 
   // 미완료 사유별 카운트
   const reasonCounts = needing.reduce<Record<ConsultationMissingReason, number>>(
@@ -145,32 +167,29 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
               <div className="text-xs text-gray-400 py-2">이번 달 상담 기록 없음.</div>
             ) : (
               <>
-                {/* 카테고리(수학/영어) 합계 — 강사 과목 기준 */}
+                {/* 카테고리(수학/영어) 합계 — staff.subjects 우선 + 상담 다수결 fallback */}
                 {(() => {
-                  const mathTotal = staffPerformances
-                    .filter(s => teacherCategory(s.subjects) === 'math')
-                    .reduce((a, s) => a + s.consultationCount, 0);
-                  const englishTotal = staffPerformances
-                    .filter(s => teacherCategory(s.subjects) === 'english')
-                    .reduce((a, s) => a + s.consultationCount, 0);
-                  const otherTotal = staffPerformances
-                    .filter(s => teacherCategory(s.subjects) === 'other')
-                    .reduce((a, s) => a + s.consultationCount, 0);
-                  const mathStaffN = staffPerformances.filter(s => teacherCategory(s.subjects) === 'math').length;
-                  const engStaffN = staffPerformances.filter(s => teacherCategory(s.subjects) === 'english').length;
+                  const catOf = (s: StaffPerformance) => teacherCategory(s.subjects, s.mathCount, s.englishCount);
+                  // both 는 수학·영어 각각 +1, 합계는 양쪽에 카운트
+                  const mathPerf = staffPerformances.filter(s => catOf(s) === 'math' || catOf(s) === 'both');
+                  const engPerf  = staffPerformances.filter(s => catOf(s) === 'english' || catOf(s) === 'both');
+                  const otherPerf = staffPerformances.filter(s => catOf(s) === 'other');
+                  const mathTotal = mathPerf.reduce((a, s) => a + s.consultationCount, 0);
+                  const englishTotal = engPerf.reduce((a, s) => a + s.consultationCount, 0);
+                  const otherTotal = otherPerf.reduce((a, s) => a + s.consultationCount, 0);
                   return (
                     <div className="flex flex-wrap items-center gap-3 mb-2 px-2 py-1.5 bg-gray-50 rounded text-[11px]">
                       <span className="text-gray-500">카테고리 합계:</span>
                       <span className="text-emerald-700">
                         수학 <b>{mathTotal}건</b>
-                        <span className="text-gray-400"> · 강사 {mathStaffN}명</span>
+                        <span className="text-gray-400"> · 강사 {mathPerf.length}명</span>
                       </span>
                       <span className="text-red-700">
                         영어 <b>{englishTotal}건</b>
-                        <span className="text-gray-400"> · 강사 {engStaffN}명</span>
+                        <span className="text-gray-400"> · 강사 {engPerf.length}명</span>
                       </span>
                       {otherTotal > 0 && (
-                        <span className="text-gray-600">기타 <b>{otherTotal}건</b></span>
+                        <span className="text-gray-600">기타 <b>{otherTotal}건</b> · 강사 {otherPerf.length}명</span>
                       )}
                     </div>
                   );
@@ -195,11 +214,12 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
                   </thead>
                   <tbody>
                     {staffPerformances.map((s) => {
-                      const subjectLabel = formatSubjectsLabel(s.subjects);
-                      const cat = teacherCategory(s.subjects);
+                      const subjectLabel = formatSubjectsLabel(s.subjects, s.mathCount, s.englishCount);
+                      const cat = teacherCategory(s.subjects, s.mathCount, s.englishCount);
                       const subjectColor =
                         cat === 'math' ? 'text-emerald-600' :
                         cat === 'english' ? 'text-red-600' :
+                        cat === 'both' ? 'text-amber-600' :
                         'text-gray-400';
                       return (
                         <tr key={s.id} className="border-b border-gray-100">
@@ -223,6 +243,45 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
               </>
             )}
           </section>
+
+          {/* 전화상담 0건 강사 — 별도 분류 */}
+          {inactiveTeachers.length > 0 && (
+            <section>
+              <h3 className="text-xs font-bold text-amber-700 mb-2 flex items-center gap-1">
+                <span>⚠️</span>
+                <span>이번 달 전화상담 0건 강사 ({inactiveTeachers.length}명)</span>
+              </h3>
+              <div className="border border-amber-200 bg-amber-50/40 rounded">
+                <table className="w-full text-xs">
+                  <thead className="bg-amber-50">
+                    <tr className="text-amber-700">
+                      <th className="px-3 py-1.5 text-left font-medium">강사</th>
+                      <th className="px-3 py-1.5 text-left font-medium">과목</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inactiveTeachers.map((t) => {
+                      const label = formatSubjectsLabel(t.subjects, 0, 0);
+                      const cat = teacherCategory(t.subjects, 0, 0);
+                      const color =
+                        cat === 'math' ? 'text-emerald-600' :
+                        cat === 'english' ? 'text-red-600' :
+                        cat === 'both' ? 'text-amber-600' :
+                        'text-gray-400';
+                      return (
+                        <tr key={t.id} className="border-b border-amber-100 last:border-b-0">
+                          <td className="px-3 py-1.5 font-medium text-gray-900">{t.name}</td>
+                          <td className={`px-3 py-1.5 text-[11px] ${color}`}>
+                            {label || '-'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
 
           {/* 미완료 학생 목록 */}
           <section>

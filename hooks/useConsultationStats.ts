@@ -67,6 +67,8 @@ export interface ConsultationStatsResult {
   dailyStats: DailyConsultationStat[];
   categoryStats: CategoryStat[];
   staffPerformances: StaffPerformance[];
+  /** 전화상담 0건인 강사 (별도 분류 표시) */
+  inactiveTeachers: { id: string; name: string; subjects: string[] }[];
   staffSubjectStats: StaffSubjectStat[];
   topPerformer: StaffPerformance | null;
   totalConsultations: number;
@@ -187,7 +189,13 @@ export function useConsultationStats(
       // 상담자별 통계 집계 (강사만)
       // - count: 상담 기록 건수 (한 학생 여러 번 만나면 여러 번 카운트, 활동량)
       // - uniqueStudents: 이번 달 만난 unique 학생 ID Set (커버리지)
-      const staffMap = new Map<string, { name: string; count: number; uniqueStudents: Set<string> }>();
+      const staffMap = new Map<string, {
+        name: string;
+        count: number;
+        uniqueStudents: Set<string>;
+        mathCount: number;     // 상담 subject 가 math/수학/all 인 건수 (강사 과목 추론용)
+        englishCount: number;  // 상담 subject 가 english/영어/all 인 건수
+      }>();
       consultations.forEach((c) => {
         // 강사 목록이 있으면 강사만, 없으면 모든 상담자 표시
         if (c.consultantId && (teacherIds.size === 0 || teacherIds.has(c.consultantId))) {
@@ -195,9 +203,16 @@ export function useConsultationStats(
             name: c.consultantName || '알 수 없음',
             count: 0,
             uniqueStudents: new Set<string>(),
+            mathCount: 0,
+            englishCount: 0,
           };
           existing.count++;
           if (c.studentId) existing.uniqueStudents.add(c.studentId);
+          // 상담 subject 카운트 — 강사 과목 fallback 추론용
+          const subj = (c as any).subject;
+          if (subj === 'math' || subj === '수학') existing.mathCount++;
+          else if (subj === 'english' || subj === '영어') existing.englishCount++;
+          else if (subj === 'all') { existing.mathCount++; existing.englishCount++; }
           staffMap.set(c.consultantId, existing);
         }
       });
@@ -224,8 +239,19 @@ export function useConsultationStats(
             )
           ),
           subjects: staffSubjectsById.get(id) || [],
+          mathCount: data.mathCount,
+          englishCount: data.englishCount,
         }))
         .sort((a, b) => b.consultationCount - a.consultationCount);
+
+      // 전화상담 0건인 강사 (별도 표시)
+      const inactiveTeachers = (staff || [])
+        .filter(s => (s.role === 'teacher' || s.role === '강사') && !staffMap.has(s.id))
+        .map(s => ({
+          id: s.id,
+          name: s.name,
+          subjects: Array.isArray(s.subjects) ? s.subjects : [],
+        }));
 
       // 선생님별 과목별 통계 집계 (강사만)
       const staffSubjectMap = new Map<string, { name: string; math: number; english: number }>();
@@ -758,6 +784,7 @@ export function useConsultationStats(
         dailyStats,
         categoryStats,
         staffPerformances,
+        inactiveTeachers,
         staffSubjectStats,
         topPerformer: staffPerformances[0] || null,
         totalConsultations,
@@ -786,6 +813,7 @@ export function useConsultationStats(
       dailyStats: [],
       categoryStats: [],
       staffPerformances: [],
+      inactiveTeachers: [],
       staffSubjectStats: [],
       topPerformer: null,
       totalConsultations: 0,
