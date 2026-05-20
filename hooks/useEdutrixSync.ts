@@ -349,7 +349,53 @@ export function useEdutrixSync() {
                 examInfoRaw: Record<string, string>;     // exam_info raw (분자/분모 보존)
                 assignmentScoreRaw: Record<string, string>; // assignment_score raw (⭕△X 판정용)
                 progressRaw: Record<string, string>;     // progress raw (Q2 진도 표시)
+                // 동기화 진단 정보 — 셀별로 보고서 처리 결과 기록
+                // status: synced | skipped_not_scheduled | skipped_other_subject | error
+                syncDiagnostics: Record<string, {
+                    status: string;
+                    message?: string;
+                    reportClassName?: string;
+                    reportTeacher?: string;
+                }>;
             }>();
+
+            // diagnostic 기록 헬퍼 — 매칭 성공/스킵 모두 셀별로 사유 저장
+            // (attendance_records 의 doc 에 syncDiagnostics 로 merge 저장 → 출석부 UI 가 셀 hover 시 표시)
+            const recordDiagnostic = (
+                studentId: string,
+                studentName: string,
+                dateKey: string,
+                status: string,
+                message: string | undefined,
+                reportClassName: string,
+                reportTeacher: string,
+            ) => {
+                const docId = `${studentId}_${yearMonth}`;
+                if (!attendanceBatch.has(docId)) {
+                    attendanceBatch.set(docId, {
+                        studentId,
+                        studentName,
+                        className: '',
+                        attendance: {},
+                        homework: {},
+                        examScores: {},
+                        attitude: {},
+                        classwork: {},
+                        attendanceNotes: {},
+                        examInfoRaw: {},
+                        assignmentScoreRaw: {},
+                        progressRaw: {},
+                        syncDiagnostics: {},
+                    });
+                }
+                const entry = attendanceBatch.get(docId)!;
+                entry.syncDiagnostics[dateKey] = {
+                    status,
+                    message,
+                    reportClassName,
+                    reportTeacher,
+                };
+            };
 
             for (const report of reports) {
                 const studentName = report.student_name?.trim().replace(/\s+/g, '') || '';
@@ -390,6 +436,8 @@ export function useEdutrixSync() {
                         status: 'skipped_not_scheduled',
                         message: `휴일 (${dateKey})`,
                     });
+                    recordDiagnostic(ijwStudent.id, ijwStudent.name, dateKey, 'skipped_holiday',
+                        `휴일 (${dateKey})`, report.class_name || '', report.teacher_name || '');
                     continue;
                 }
 
@@ -435,13 +483,16 @@ export function useEdutrixSync() {
                 // ① 강사가 타과목으로 명확히 판정되면 → 동기화 대상 아님
                 if (teacherIsTarget === false) {
                     result.otherSubject = (result.otherSubject || 0) + 1;
+                    const msg = `타과목 보고서 (강사 ${edutrixTeacherName} 과목: ${(teacherNameToSubjects.get(edutrixTeacherName) || []).join(',') || '미설정'})`;
                     result.details.push({
                         studentName: report.student_name || '',
                         className: report.class_name || '',
                         date: dateKey,
                         status: 'skipped_other_subject',
-                        message: `타과목 보고서 (강사 ${edutrixTeacherName} 과목: ${(teacherNameToSubjects.get(edutrixTeacherName) || []).join(',') || '미설정'})`,
+                        message: msg,
                     });
+                    recordDiagnostic(ijwStudent.id, ijwStudent.name, dateKey, 'skipped_other_subject',
+                        msg, report.class_name || '', report.teacher_name || '');
                     continue;
                 }
 
@@ -495,6 +546,9 @@ export function useEdutrixSync() {
                     if (targetEnrollments.length === 0 && otherEnrollments.length > 0) {
                         result.otherSubject = (result.otherSubject || 0) + 1;
                         const otherSubjList = [...new Set(otherEnrollments.map(e => e.subject))].join(',');
+                        const msg2 = `타과목 보고서 (학생 ${subject} enrollment 0개, ${otherSubjList} 만 있음)`;
+                        recordDiagnostic(ijwStudent.id, ijwStudent.name, dateKey, 'skipped_other_subject',
+                            msg2, report.class_name || '', report.teacher_name || '');
                         result.details.push({
                             studentName: report.student_name || '',
                             className: report.class_name || '',
@@ -531,13 +585,16 @@ export function useEdutrixSync() {
                     if (otherTargetSummary) parts.push(`다른 ${subject}: ${otherTargetSummary}`);
                     if (allSubjectsSummary) parts.push(`전체 subject: ${allSubjectsSummary}`);
                     result.skipped++;
+                    const matchFailMsg = `매칭 실패 (${parts.join(' | ')})`;
                     result.details.push({
                         studentName: report.student_name || '',
                         className: report.class_name || '',
                         date: dateKey,
                         status: 'skipped_no_match',
-                        message: `매칭 실패 (${parts.join(' | ')})`,
+                        message: matchFailMsg,
                     });
+                    recordDiagnostic(ijwStudent.id, ijwStudent.name, dateKey, 'skipped_no_match',
+                        matchFailMsg, report.class_name || '', report.teacher_name || '');
                     continue;
                 }
 
@@ -560,10 +617,17 @@ export function useEdutrixSync() {
                         examInfoRaw: {},
                         assignmentScoreRaw: {},
                         progressRaw: {},
+                        syncDiagnostics: {},
                     });
                 }
                 const batch = attendanceBatch.get(docId)!;
                 batch.attendance[compositeKey] = finalValue;
+                // 매칭 성공 진단 — Edutrix 클래스명/강사 기록 (셀 hover 시 표시용)
+                batch.syncDiagnostics[dateKey] = {
+                    status: 'synced',
+                    reportClassName: report.class_name || '',
+                    reportTeacher: report.teacher_name || '',
+                };
 
                 const homeworkDone = isHomeworkSubmitted(report.assignment_score);
                 batch.homework[compositeKey] = homeworkDone;
@@ -642,6 +706,10 @@ export function useEdutrixSync() {
                         }
                         if (Object.keys(data.progressRaw).length > 0) {
                             payload.progressRaw = data.progressRaw;
+                        }
+                        // 진단 데이터 — 셀별 동기화 상태/사유 (출석부 hover 표시용)
+                        if (Object.keys(data.syncDiagnostics).length > 0) {
+                            payload.syncDiagnostics = data.syncDiagnostics;
                         }
                         await setDoc(docRef, payload, { merge: true });
                     } catch (err) {

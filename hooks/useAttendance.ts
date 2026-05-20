@@ -415,6 +415,7 @@ export const useAttendanceStudents = (options?: {
                     examInfoRaw: Record<string, string>;
                     assignmentScoreRaw: Record<string, string>;
                     progressRaw: Record<string, string>;
+                    syncDiagnostics: Record<string, { status: string; message?: string; reportClassName?: string; reportTeacher?: string }>;
                 }>();
 
                 // Parallel chunk processing
@@ -446,6 +447,7 @@ export const useAttendanceStudents = (options?: {
                                 examInfoRaw: (data.examInfoRaw || {}) as Record<string, string>,
                                 assignmentScoreRaw: (data.assignmentScoreRaw || {}) as Record<string, string>,
                                 progressRaw: (data.progressRaw || {}) as Record<string, string>,
+                                syncDiagnostics: (data.syncDiagnostics || {}) as Record<string, { status: string; message?: string; reportClassName?: string; reportTeacher?: string }>,
                             });
                         });
                     } catch (e) {
@@ -472,6 +474,7 @@ export const useAttendanceStudents = (options?: {
                         examInfoRaw: record?.examInfoRaw || {},
                         assignmentScoreRaw: record?.assignmentScoreRaw || {},
                         progressRaw: record?.progressRaw || {},
+                        syncDiagnostics: record?.syncDiagnostics || {},
                     };
                 });
 

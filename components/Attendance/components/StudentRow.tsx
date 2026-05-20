@@ -480,6 +480,22 @@ const StudentRow = React.memo(({
         const hasClasswork = !!classworkRaw && String(classworkRaw).trim() !== '';
         const hasProgress = !!progressRaw && String(progressRaw).trim() !== '';
 
+        // Edutrix 동기화 진단 (셀별 상태/사유) — 출석값 없거나 비정상 매칭일 때 표시
+        const syncDiag = (student as any).syncDiagnostics?.[dateKey];
+        const isSyncFailed = syncDiag && syncDiag.status !== 'synced';
+        const hasAttendanceValue = status !== undefined && status !== null;
+        // 매칭 실패: 보고서는 있는데 attendance 값 없음
+        const showFailDot = !!syncDiag && syncDiag.status === 'skipped_no_match';
+        // 정보성: 휴일/타과목 등
+        const showInfoDot = !!syncDiag && (syncDiag.status === 'skipped_holiday' || syncDiag.status === 'skipped_other_subject');
+        // 동기화는 됐지만 출석값 비어있음 (강사가 출석 표시 안 함 또는 추후 수정)
+        const showSyncedButEmpty = !!syncDiag && syncDiag.status === 'synced' && !hasAttendanceValue;
+        const syncDiagTitle = syncDiag
+          ? `\n──────\n📋 Edutrix: ${syncDiag.reportClassName || '(클래스명 없음)'}` +
+            (syncDiag.reportTeacher ? ` / ${syncDiag.reportTeacher}` : '') +
+            (syncDiag.status !== 'synced' ? `\n⚠️ ${syncDiag.status}: ${syncDiag.message || ''}` : '\n✅ 동기화 완료')
+          : '';
+
         // 해당 날짜의 시험 목록 조회
         const examsOnDate = examsByDate?.get(dateKey) || [];
 
@@ -570,9 +586,9 @@ const StudentRow = React.memo(({
               highlightWeekends && isWeekend && isValid ? 'bg-gray-300' : ''
             }`}
             title={
-              holidayName
+              (holidayName
                 ? `🎉 ${holidayName}${memo ? ` | 메모: ${memo}` : ''}`
-                : (memo ? `메모: ${memo}` : undefined)
+                : (memo ? `메모: ${memo}` : '')) + syncDiagTitle || undefined
             }
           >
             {isValid ? (
@@ -587,6 +603,25 @@ const StudentRow = React.memo(({
                   style={q1BgStyle}
                 >
                   {q1Content}
+                  {/* Edutrix 동기화 진단 표시 — 셀 좌상단 작은 점 */}
+                  {showFailDot && (
+                    <span
+                      className="absolute top-0 left-0 w-2 h-2 bg-red-500 border border-red-700 rounded-full"
+                      title={`매칭 실패: 보고서 있으나 enrollment 매칭 안 됨\n${syncDiag?.reportClassName || ''} / ${syncDiag?.reportTeacher || ''}`}
+                    />
+                  )}
+                  {showInfoDot && (
+                    <span
+                      className="absolute top-0 left-0 w-1.5 h-1.5 bg-amber-400 border border-amber-600 rounded-full"
+                      title={syncDiag?.status === 'skipped_holiday' ? '휴일 보고서' : '타과목 보고서'}
+                    />
+                  )}
+                  {showSyncedButEmpty && (
+                    <span
+                      className="absolute top-0 left-0 w-1.5 h-1.5 bg-slate-300 border border-slate-500 rounded-full"
+                      title={`동기화는 됐으나 출석값 없음 (${syncDiag?.reportClassName || ''})`}
+                    />
+                  )}
                 </div>
                 {/* Q2: 진도 (우상단) - 1시 방향
                     Edutrix progress 있으면 텍스트 표시 (호버에 전체).
