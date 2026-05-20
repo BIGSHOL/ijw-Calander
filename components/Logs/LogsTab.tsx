@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { collection, query, where, orderBy, limit, getDocs, startAfter, DocumentSnapshot } from 'firebase/firestore';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { collection, query, where, orderBy, limit, getDocs, startAfter, DocumentSnapshot, QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { TimetableLogAction, TimetableLogEntry } from '../../hooks/useTimetableLog';
 import { ChevronDown, Search, RefreshCw, ArrowUp, ArrowDown } from 'lucide-react';
@@ -67,24 +67,43 @@ interface LogRow extends TimetableLogEntry {
   id: string;
 }
 
-const fetchLogs = async (startDateStr: string, endDateStr: string): Promise<LogRow[]> => {
+interface LogPage {
+  logs: LogRow[];
+  lastDoc: QueryDocumentSnapshot | null;
+  hasMore: boolean;
+}
+
+// 페이지 단위 fetch — startAfter 로 다음 페이지 이어받기
+// 한 번에 PAGE_SIZE(50)건만 가져와 클라이언트 부담 + Firestore read 비용 최소화
+const fetchLogsPage = async (
+  startDateStr: string,
+  endDateStr: string,
+  pageParam?: QueryDocumentSnapshot,
+): Promise<LogPage> => {
   const startOfRange = `${startDateStr}T00:00:00.000Z`;
   const endOfRange = `${endDateStr}T23:59:59.999Z`;
 
   const constraints: any[] = [
     where('timestamp', '>=', startOfRange),
     where('timestamp', '<=', endOfRange),
-    orderBy('timestamp', 'asc'),
-    limit(PAGE_SIZE * 10),
+    orderBy('timestamp', 'desc'),  // 최신부터 — 사용자 관심 데이터 우선 도달
   ];
+  if (pageParam) constraints.push(startAfter(pageParam));
+  constraints.push(limit(PAGE_SIZE));
 
   const q = query(collection(db, 'timetable_logs'), ...constraints);
   const snapshot = await getDocs(q);
 
-  return snapshot.docs.map(doc => ({
+  const logs = snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data(),
   })) as LogRow[];
+
+  return {
+    logs,
+    lastDoc: snapshot.docs.length === PAGE_SIZE ? snapshot.docs[snapshot.docs.length - 1] : null,
+    hasMore: snapshot.docs.length === PAGE_SIZE,
+  };
 };
 
 const formatTime = (timestamp: string) => {
@@ -176,11 +195,25 @@ const LogsTab: React.FC = () => {
   const subjectDropdownRef = useRef<HTMLDivElement>(null);
   const actorDropdownRef = useRef<HTMLDivElement>(null);
 
-  const { data: logs = [], isLoading, refetch } = useQuery({
+  const {
+    data,
+    isLoading,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     queryKey: ['timetableLogs', startDate, endDate],
-    queryFn: () => fetchLogs(startDate, endDate),
+    queryFn: ({ pageParam }) => fetchLogsPage(startDate, endDate, pageParam as QueryDocumentSnapshot | undefined),
+    initialPageParam: undefined as QueryDocumentSnapshot | undefined,
+    getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.lastDoc ?? undefined : undefined,
     staleTime: 30_000,
   });
+
+  // 모든 페이지의 로그를 평탄화 (filteredLogs / actorOptions 계산용)
+  const logs = useMemo<LogRow[]>(() => {
+    return data?.pages.flatMap(p => p.logs) ?? [];
+  }, [data]);
 
   // 처리자 옵션 목록 — 현재 logs 에 등장한 모든 changedBy 의 유니크 셋
   const actorOptions = useMemo(() => {
@@ -272,12 +305,32 @@ const LogsTab: React.FC = () => {
       : <ArrowDown size={10} className="inline-block ml-0.5 text-blue-500" />;
   };
 
-  // 최신 기록(하단)으로 자동 스크롤
+  // 자동 스크롤 — asc 일 때만 최신 기록(하단)으로 이동 + 초기 로드 시 한 번만
+  // desc 정렬에서는 최신이 맨 위에 있으므로 강제 스크롤 안 함 (사용자 view 어색해지는 문제 차단)
+  const didInitialScrollRef = useRef(false);
   useEffect(() => {
-    if (scrollContainerRef.current && filteredLogs.length > 0) {
+    if (didInitialScrollRef.current) return;
+    if (scrollContainerRef.current && filteredLogs.length > 0 && sortDir === 'asc') {
       scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+      didInitialScrollRef.current = true;
     }
-  }, [filteredLogs]);
+  }, [filteredLogs, sortDir]);
+
+  // 페이징: 스크롤 끝 근처 도달 시 다음 페이지 자동 로드
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const onScroll = () => {
+      if (isFetchingNextPage || !hasNextPage) return;
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      // 스크롤이 끝에서 200px 이내면 다음 페이지 fetch
+      if (scrollHeight - (scrollTop + clientHeight) < 200) {
+        fetchNextPage();
+      }
+    };
+    container.addEventListener('scroll', onScroll, { passive: true });
+    return () => container.removeEventListener('scroll', onScroll);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // 드롭다운 외부 클릭 감지
   useEffect(() => {
@@ -634,6 +687,23 @@ const LogsTab: React.FC = () => {
               ))}
             </tbody>
           </table>
+        )}
+        {/* 페이지 끝 인디케이터 — 추가 로드/완료 상태 표시 */}
+        {!isLoading && filteredLogs.length > 0 && (
+          <div className="px-4 py-3 text-center text-xs text-gray-400 border-t border-gray-100">
+            {isFetchingNextPage ? (
+              <span>다음 페이지 불러오는 중…</span>
+            ) : hasNextPage ? (
+              <button
+                onClick={() => fetchNextPage()}
+                className="px-3 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded border border-blue-200"
+              >
+                더 보기 (현재 {logs.length}건 로드됨)
+              </button>
+            ) : (
+              <span>모든 기록을 불러왔습니다 (총 {logs.length}건)</span>
+            )}
+          </div>
         )}
       </div>
     </div>
