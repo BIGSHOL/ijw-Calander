@@ -568,12 +568,14 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
       subValue: `${presentCount}/${totalCount}`,
       trend: attendanceRate >= 90 ? 'up' : attendanceRate >= 80 ? 'stable' : 'down',
       icon: '✅', color: '#10b981',
+      description: '오늘 (출석+지각) / 오늘 전체 출결 기록 — daily_attendance 우선, 비어있으면 attendance_records 셀로 fallback. 클릭 시 날짜별 검증 가능.',
     },
     {
       id: 'consultation', label: '상담 완료율', value: `${consultationRate}%`,
       subValue: `${consultedSubjectCount}건 완료 / 총 ${totalSubjectEnrollments}건`,
       trend: consultationRate >= 85 ? 'up' : 'stable',
       icon: '💬', color: '#6366f1',
+      description: '이번 달 상담 완료 (학생×과목 단위) / 이번 달 활성 수강과목 전체. 클릭 시 강사별 상세 + 상담 필요 학생 명단.',
     },
     {
       id: 'billing', label: '수납률', value: `${billingRate}%`,
@@ -581,11 +583,13 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
       trend: billingRate >= 90 ? 'up' : billingRate >= 80 ? 'stable' : 'down',
       trendValue: pendingCount > 0 ? `미납 ${pendingCount}건` : undefined,
       icon: '💰', color: '#f59e0b',
+      description: '이번 달 실제 수납액 / 청구액. 클릭 시 청구·미납 명단.',
     },
     {
       id: 'new-students', label: '신입생', value: newStudentsThisMonth,
       subValue: '이번 달', trend: newStudentsThisMonth > 0 ? 'up' : 'stable',
       icon: '🆕', color: '#ec4899',
+      description: '이번 달 학원 등록(startDate) + 활성 수강과목 1개 이상인 학생. 클릭 시 주간/월간 페이지 + 학생 명단.',
     },
     {
       id: 'net-change', label: '순증감',
@@ -593,6 +597,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
       subValue: `신입생 ${newStudentsThisMonth} / 퇴원 ${withdrawalData.count}`,
       trend: withdrawalData.netChange > 0 ? 'up' : withdrawalData.netChange < 0 ? 'down' : 'stable',
       icon: '📊', color: '#6b7280',
+      description: '학원 재원생 수의 순수 증감폭 = 신입생 - 퇴원.\n+면 학원이 커지는 중, -면 줄어드는 중, 0이면 변화 없음.\n클릭 시 주간/월간 페이지 + 신입생·퇴원 명단 한 화면에 표시.',
     },
   ];
 

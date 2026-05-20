@@ -4,10 +4,11 @@
  * - 상단 요약: 신입생 N - 퇴원 M = 순증감 ±K
  * - read-only
  */
-import React, { useMemo } from 'react';
-import { X } from 'lucide-react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { UnifiedStudent } from '../../../types/student';
 import { isActiveEnrollment } from '../../../utils/dashboardUtils';
+import { getWeekRange, getMonthRange } from '../../../utils/datePeriod';
 
 interface NetChangeDetailsModalProps {
   isOpen: boolean;
@@ -41,32 +42,47 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
   isOpen,
   onClose,
   students,
-  yearMonth,
-  monthStart,
-  monthEnd,
+  yearMonth: _yearMonth,
+  monthStart: _monthStart,
+  monthEnd: _monthEnd,
 }) => {
+  // 기간 선택 — 기본: 이번 주차
+  const [period, setPeriod] = useState<'week' | 'month'>('week');
+  const [offset, setOffset] = useState(0);
+
+  useEffect(() => {
+    if (isOpen) {
+      setPeriod('week');
+      setOffset(0);
+    }
+  }, [isOpen]);
+
+  const range = useMemo(() => {
+    return period === 'week' ? getWeekRange(offset) : getMonthRange(offset);
+  }, [period, offset]);
+
   const newStudents = useMemo(() => {
     return students
       .filter(s => {
         if (!s.startDate) return false;
         const d = new Date(s.startDate);
-        if (d < monthStart || d > monthEnd) return false;
+        if (d < range.start || d > range.end) return false;
         // 수강과목 유무: active enrollment 1개 이상
         const activeEnrolls = (s.enrollments || []).filter((e: any) => isActiveEnrollment(e));
         return activeEnrolls.length > 0;
       })
       .sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''));
-  }, [students, monthStart, monthEnd]);
+  }, [students, range]);
 
   const withdrawnStudents = useMemo(() => {
     return students
       .filter(s => {
         if (s.status !== 'withdrawn' || !s.withdrawalDate) return false;
         const d = new Date(s.withdrawalDate);
-        return d >= monthStart && d <= monthEnd;
+        return d >= range.start && d <= range.end;
       })
       .sort((a, b) => (b.withdrawalDate || '').localeCompare(a.withdrawalDate || ''));
-  }, [students, monthStart, monthEnd]);
+  }, [students, range]);
 
   const netChange = newStudents.length - withdrawnStudents.length;
   const netSign = netChange > 0 ? '+' : '';
@@ -88,11 +104,64 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-slate-700 text-lg">📊</span>
             <h2 className="font-bold text-sm text-slate-900">순증감 — 근거 데이터</h2>
-            <span className="text-xs text-slate-600">{yearMonth}</span>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded">
             <X size={16} />
           </button>
+        </div>
+
+        {/* 기간 네비게이션 */}
+        <div className="flex items-center justify-between px-5 py-2 border-b bg-white">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setOffset(o => o - 1)}
+              className="p-1 hover:bg-gray-100 rounded text-gray-600"
+              title={period === 'week' ? '지난 주' : '지난 달'}
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="text-sm font-bold text-gray-800 mx-2 min-w-[120px] text-center">
+              {range.label}
+            </span>
+            <button
+              onClick={() => setOffset(o => o + 1)}
+              disabled={offset >= 0}
+              className="p-1 hover:bg-gray-100 rounded text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+              title={period === 'week' ? '다음 주' : '다음 달'}
+            >
+              <ChevronRight size={16} />
+            </button>
+            {offset !== 0 && (
+              <button
+                onClick={() => setOffset(0)}
+                className="ml-2 px-2 py-0.5 text-[10px] font-bold border border-slate-300 text-slate-700 rounded hover:bg-slate-50"
+              >
+                이번 {period === 'week' ? '주' : '달'}로
+              </button>
+            )}
+          </div>
+          <div className="flex items-center gap-0">
+            <button
+              onClick={() => { setPeriod('week'); setOffset(0); }}
+              className={`px-3 py-1 text-xs font-bold rounded-l border ${
+                period === 'week'
+                  ? 'bg-slate-600 text-white border-slate-600'
+                  : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              주간
+            </button>
+            <button
+              onClick={() => { setPeriod('month'); setOffset(0); }}
+              className={`px-3 py-1 text-xs font-bold rounded-r border-y border-r ${
+                period === 'month'
+                  ? 'bg-slate-600 text-white border-slate-600'
+                  : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              월간
+            </button>
+          </div>
         </div>
 
         {/* 요약 */}
@@ -111,7 +180,7 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
             </span>
           </div>
           <div className="text-[10px] text-gray-400 mt-1.5">
-            이번 달 학원 재원생 수의 순수 증감폭 = 신입생 - 퇴원
+            선택 기간 학원 재원생 수의 순수 증감폭 = 신입생 - 퇴원
           </div>
         </div>
 

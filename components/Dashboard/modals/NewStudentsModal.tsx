@@ -8,7 +8,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { UnifiedStudent } from '../../../types/student';
 import { isActiveEnrollment } from '../../../utils/dashboardUtils';
-import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { getWeekRange, getMonthRange } from '../../../utils/datePeriod';
 
 interface NewStudentsModalProps {
   isOpen: boolean;
@@ -17,28 +17,6 @@ interface NewStudentsModalProps {
   yearMonth: string;
   monthStart: Date;
   monthEnd: Date;
-}
-
-/** 시간표 기준 주차 (월요일~일요일). offset: 0=이번 주, -1=지난 주 ... */
-function getWeekRange(offset: number): { start: Date; end: Date; label: string } {
-  const now = new Date();
-  const day = now.getDay(); // 0=일, 1=월, ...
-  const mondayDelta = day === 0 ? -6 : 1 - day;
-  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + mondayDelta + offset * 7);
-  const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
-  // end of day 처리
-  sunday.setHours(23, 59, 59, 999);
-  const label = `${format(monday, 'M/d')} ~ ${format(sunday, 'M/d')}`;
-  return { start: monday, end: sunday, label };
-}
-
-function getMonthRange(offset: number): { start: Date; end: Date; label: string } {
-  const now = new Date();
-  const base = new Date(now.getFullYear(), now.getMonth() + offset, 1);
-  const start = startOfMonth(base);
-  const end = endOfMonth(base);
-  const label = format(start, 'yyyy년 M월');
-  return { start, end, label };
 }
 
 const SUBJECT_LABEL: Record<string, string> = {

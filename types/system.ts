@@ -345,6 +345,8 @@ export interface KPICardData {
   trendValue?: string;
   icon?: string;
   color?: string;
+  /** 호버 시 표시되는 설명 (지표 의미·계산식 등) */
+  description?: string;
 }
 
 /**

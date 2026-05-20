@@ -4,15 +4,30 @@
  * - 합계 요약 (총 청구액 / 입금액 / 미납액 / 미납 건수)
  * - read-only (이 모달 자체는 데이터 변경 없음)
  */
-import React, { useMemo } from 'react';
-import { X } from 'lucide-react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { BillingRecord } from '../../../types/billing';
+import { useBilling } from '../../../hooks/useBilling';
 
 interface BillingDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** 초기 표시 month (YYYY-MM). 모달 내부에서 변경 가능 */
   records: BillingRecord[];
   yearMonth: string;
+}
+
+/** YYYY-MM ± offset → YYYY-MM */
+function shiftMonth(ym: string, offset: number): string {
+  const [y, m] = ym.split('-').map(Number);
+  const d = new Date(y, m - 1 + offset, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** YYYY-MM → 'YYYY년 M월' 한글 라벨 */
+function ymLabel(ym: string): string {
+  const [y, m] = ym.split('-').map(Number);
+  return `${y}년 ${m}월`;
 }
 
 const fmt = (n: number) => n.toLocaleString();
@@ -30,9 +45,28 @@ const fmtPaidDate = (raw: string | undefined | null): string | null => {
 const BillingDetailsModal: React.FC<BillingDetailsModalProps> = ({
   isOpen,
   onClose,
-  records,
+  records: initialRecords,
   yearMonth,
 }) => {
+  // 선택 month — 기본은 props.yearMonth (보통 이번 달)
+  const [selectedMonth, setSelectedMonth] = useState(yearMonth);
+
+  useEffect(() => {
+    if (isOpen) setSelectedMonth(yearMonth);
+  }, [isOpen, yearMonth]);
+
+  // selectedMonth 변경 시 fetch — 첫 렌더는 props.records 사용 (fetch 절약)
+  const isInitialMonth = selectedMonth === yearMonth;
+  const { records: fetchedRecords = [] } = useBilling(selectedMonth, isOpen && !isInitialMonth);
+  const records = isInitialMonth ? initialRecords : fetchedRecords;
+
+  // 오늘 기준 미래 month 차단용
+  const currentYM = useMemo(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }, []);
+  const isFuture = selectedMonth > currentYM;
+
   const summary = useMemo(() => {
     let billed = 0, paid = 0, unpaid = 0, pendingCount = 0;
     for (const r of records) {
@@ -74,11 +108,43 @@ const BillingDetailsModal: React.FC<BillingDetailsModalProps> = ({
           <div className="flex items-center gap-2">
             <span className="text-amber-700 text-lg">💰</span>
             <h2 className="font-bold text-sm text-amber-900">수납률 — 근거 데이터</h2>
-            <span className="text-xs text-amber-600">{yearMonth}</span>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-amber-100 rounded">
             <X size={16} />
           </button>
+        </div>
+
+        {/* 월 페이지 네비 (수납은 월 단위 데이터라 월 페이지만) */}
+        <div className="flex items-center justify-between px-5 py-2 border-b bg-white">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setSelectedMonth(m => shiftMonth(m, -1))}
+              className="p-1 hover:bg-gray-100 rounded text-gray-600"
+              title="지난 달"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <span className="text-sm font-bold text-gray-800 mx-2 min-w-[100px] text-center">
+              {ymLabel(selectedMonth)}
+            </span>
+            <button
+              onClick={() => setSelectedMonth(m => shiftMonth(m, 1))}
+              disabled={isFuture || selectedMonth >= currentYM}
+              className="p-1 hover:bg-gray-100 rounded text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+              title="다음 달"
+            >
+              <ChevronRight size={16} />
+            </button>
+            {selectedMonth !== yearMonth && (
+              <button
+                onClick={() => setSelectedMonth(yearMonth)}
+                className="ml-2 px-2 py-0.5 text-[10px] font-bold border border-amber-300 text-amber-700 rounded hover:bg-amber-50"
+              >
+                이번 달로
+              </button>
+            )}
+          </div>
+          <span className="text-[10px] text-gray-400">청구월 기준</span>
         </div>
 
         {/* 요약 */}

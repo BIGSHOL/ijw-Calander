@@ -13,7 +13,7 @@ interface KPICardProps {
  * Performance: rerender-memo - 부모 리렌더 시 불필요한 재렌더 방지
  */
 const KPICard: React.FC<KPICardProps> = ({ data, onClick }) => {
-  const { label, value, subValue, trend, trendValue, icon, color = '#081429' } = data;
+  const { label, value, subValue, trend, trendValue, icon, color = '#081429', description } = data;
 
   // 트렌드 아이콘 및 색상
   const getTrendIcon = (trend?: KPITrend) => {
@@ -52,6 +52,7 @@ const KPICard: React.FC<KPICardProps> = ({ data, onClick }) => {
         onClick ? 'cursor-pointer hover:border-gray-300' : ''
       }`}
       onClick={onClick}
+      title={description}
     >
       {/* 아이콘과 라벨 */}
       <div className="flex items-center justify-between mb-1.5">
