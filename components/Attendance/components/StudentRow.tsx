@@ -604,23 +604,23 @@ const StudentRow = React.memo(({
                   style={q1BgStyle}
                 >
                   {q1Content}
-                  {/* Edutrix 동기화 진단 표시 — 셀 좌상단 작은 점 */}
+                  {/* Edutrix 동기화 진단 표시 — 셀 좌상단 큰 점 (hover 쉽게 + 빨강 강조) */}
                   {showFailDot && (
                     <span
-                      className="absolute top-0 left-0 w-2 h-2 bg-red-500 border border-red-700 rounded-full"
+                      className="absolute top-0 left-0 w-3 h-3 bg-red-500 border border-red-700 rounded-full shadow-sm"
                       title={`매칭 실패: 보고서 있으나 enrollment 매칭 안 됨\n${syncDiag?.reportClassName || ''} / ${syncDiag?.reportTeacher || ''}`}
                     />
                   )}
                   {showInfoDot && (
                     <span
-                      className="absolute top-0 left-0 w-1.5 h-1.5 bg-amber-400 border border-amber-600 rounded-full"
+                      className="absolute top-0 left-0 w-2 h-2 bg-amber-400 border border-amber-600 rounded-full"
                       title={syncDiag?.status === 'skipped_holiday' ? '휴일 보고서' : '타과목 보고서'}
                     />
                   )}
                   {showSyncedButEmpty && (
                     <span
-                      className="absolute top-0 left-0 w-1.5 h-1.5 bg-slate-300 border border-slate-500 rounded-full"
-                      title={`동기화는 됐으나 출석값 없음 (${syncDiag?.reportClassName || ''})`}
+                      className="absolute top-0 left-0 w-3 h-3 bg-red-400 border border-red-600 rounded-full shadow-sm"
+                      title={`보고서 미기입: 동기화는 됐으나 출석값 없음 (${syncDiag?.reportClassName || ''})`}
                     />
                   )}
                 </div>

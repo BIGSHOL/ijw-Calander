@@ -430,17 +430,30 @@ export function useEdutrixSync() {
                     continue;
                 }
 
-                // ── 보고서 날짜 기준 enrollment 활성 여부 판정 ──
-                // 반이동/퇴원/종료된 enrollment 는 매칭 후보에서 제외 — 보고서 날짜에 실제 수강 중이던 반만 매칭.
-                // (옛 enrollment 가 강사/요일이 같다는 이유로 잘못 매칭되거나 매칭 실패하는 버그 차단)
+                // ── 보고서 날짜 기준 enrollment 활성 여부 판정 (Grace Period ±7일) ──
+                // 반 이동 처리 지연(반영 며칠 늦은 경우) + 시작 전 보강/조기 수업 케이스 대응:
+                // - startDate 기준 7일 일찍부터 매칭 가능
+                // - endDate/withdrawalDate 기준 7일 늦게까지 매칭 가능
+                // cancelledAt 은 명시적 취소이므로 grace 없음.
+                const GRACE_DAYS = 7;
+                const shiftDateStr = (ymd: string, deltaDays: number): string => {
+                    const [y, m, d] = ymd.split('-').map(Number);
+                    const dt = new Date(y, m - 1, d + deltaDays);
+                    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+                };
                 const isEnrollmentActiveOn = (e: typeof enrollments[0]): boolean => {
-                    // 미래 시작 — 보고서 날짜 < 시작일 → 비활성
-                    if (e.startDate && e.startDate > dateKey) return false;
-                    // 종료/퇴원일 이후 보고서 → 비활성
-                    if (e.endDate && dateKey > e.endDate) return false;
-                    if (e.withdrawalDate && dateKey > e.withdrawalDate) return false;
-                    // 취소된 enrollment — 비활성
                     if (e.cancelledAt) return false;
+                    // 미래 시작 — 보고서 날짜 < (startDate - 7일) → 비활성
+                    if (e.startDate) {
+                        const graceStart = shiftDateStr(e.startDate, -GRACE_DAYS);
+                        if (graceStart > dateKey) return false;
+                    }
+                    // 종료/퇴원일 + 7일 이후 보고서 → 비활성
+                    const effectiveEnd = e.withdrawalDate || e.endDate;
+                    if (effectiveEnd) {
+                        const graceEnd = shiftDateStr(effectiveEnd, GRACE_DAYS);
+                        if (dateKey > graceEnd) return false;
+                    }
                     return true;
                 };
 
@@ -530,6 +543,13 @@ export function useEdutrixSync() {
                 // 4차: 같은 과목 enrollment 1개면 무조건 매칭
                 if (!className && targetEnrollments.length === 1) {
                     className = targetEnrollments[0].className;
+                }
+
+                // 5차 (보강 추정): 강사 매칭 N개 (2개 이상) + 요일 모두 불일치 → 첫 번째 사용.
+                // 학생이 그 강사의 다른 요일 수업만 갖고 있는데 평일 보강을 받은 케이스.
+                // 잘못된 enrollment 에 들어갈 위험은 있으나 셀이 비는 것보다는 운영자가 마커로 확인하는 게 낫다고 판단.
+                if (!className && teacherTargetEnrollments.length > 1) {
+                    className = teacherTargetEnrollments[0].className;
                 }
 
                 // ② 그래도 못 찾으면 → 매칭 실패 OR 타과목
