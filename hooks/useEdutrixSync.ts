@@ -299,24 +299,31 @@ export function useEdutrixSync() {
 
             const holidaySet = await fetchHolidays();
 
-            // classes 일괄 로드 — enrollment.schedule + teacher 의 권위 있는 최신 정보 (시간표 기준)
-            // 반이동/강사 변경 후 enrollment 가 옛 정보로 남아있어도 classes 기준으로 매칭 가능
-            console.log('[EdutrixSync] Step 2.5: classes 일괄 로드 (schedule + teacher fallback 용)');
+            // classes 일괄 로드 — 매칭 fallback + 자동 enrollment 보강용
+            console.log('[EdutrixSync] Step 2.5: classes 일괄 로드 (schedule + teacher + 자동보강 용)');
             const classScheduleMap = new Map<string, unknown[]>();
             const classTeacherMap = new Map<string, string>();  // className → 현재 teacher (이름)
+            const classSubjectMap = new Map<string, string>();  // className → subject
+            const classIdMap = new Map<string, string>();        // className → classId (doc id)
+            const classStaffIdMap = new Map<string, string>();   // className → 강사 staffId (찾을 수 있는 경우)
             {
                 const classesSnap = await getDocs(collection(db, 'classes'));
                 classesSnap.docs.forEach(c => {
                     const d = c.data();
                     const name = d.className as string;
                     if (!name) return;
+                    if (d.isActive === false) return;  // 비활성 반 제외
                     const sched = Array.isArray(d.schedule) ? d.schedule : [];
                     if (sched.length > 0) classScheduleMap.set(name, sched);
-                    // 영어 수업은 mainTeacher, 수학은 teacher
                     const t = (d.mainTeacher || d.teacher || '') as string;
                     if (t) classTeacherMap.set(name, t.trim().replace(/\s+/g, ''));
+                    if (d.subject) classSubjectMap.set(name, d.subject as string);
+                    classIdMap.set(name, c.id);
+                    if (d.mainTeacherId || d.teacherId || d.staffId) {
+                        classStaffIdMap.set(name, (d.mainTeacherId || d.teacherId || d.staffId) as string);
+                    }
                 });
-                console.log(`[EdutrixSync] classes 로드: schedule ${classScheduleMap.size}건 / teacher ${classTeacherMap.size}건`);
+                console.log(`[EdutrixSync] classes 로드: ${classScheduleMap.size}건`);
             }
 
             type EnrollmentInfo = {
@@ -363,42 +370,20 @@ export function useEdutrixSync() {
                 }>;
             }>();
 
-            // diagnostic 기록 헬퍼 — 매칭 성공/스킵 모두 셀별로 사유 저장
-            // (attendance_records 의 doc 에 syncDiagnostics 로 merge 저장 → 출석부 UI 가 셀 hover 시 표시)
+            // diagnostic 기록 헬퍼 — 매칭 실패/스킵은 className 모르므로 학생 doc 에 저장 안 함
+            // (저장 시 dateKey 만 키로 쓰면 학생의 다른 반 셀에도 침해됨 → 무력화)
+            // 매칭 성공 케이스만 compositeKey 로 매칭 성공 분기에서 직접 저장.
+            // 스킵/실패 정보는 result.details 로 동기화 로그 모달에서만 확인.
             const recordDiagnostic = (
-                studentId: string,
-                studentName: string,
-                dateKey: string,
-                status: string,
-                message: string | undefined,
-                reportClassName: string,
-                reportTeacher: string,
+                _studentId: string,
+                _studentName: string,
+                _dateKey: string,
+                _status: string,
+                _message: string | undefined,
+                _reportClassName: string,
+                _reportTeacher: string,
             ) => {
-                const docId = `${studentId}_${yearMonth}`;
-                if (!attendanceBatch.has(docId)) {
-                    attendanceBatch.set(docId, {
-                        studentId,
-                        studentName,
-                        className: '',
-                        attendance: {},
-                        homework: {},
-                        examScores: {},
-                        attitude: {},
-                        classwork: {},
-                        attendanceNotes: {},
-                        examInfoRaw: {},
-                        assignmentScoreRaw: {},
-                        progressRaw: {},
-                        syncDiagnostics: {},
-                    });
-                }
-                const entry = attendanceBatch.get(docId)!;
-                entry.syncDiagnostics[dateKey] = {
-                    status,
-                    message,
-                    reportClassName,
-                    reportTeacher,
-                };
+                // no-op — 매칭 실패는 동기화 로그 모달에서만 확인
             };
 
             for (const report of reports) {
@@ -632,8 +617,9 @@ export function useEdutrixSync() {
                 }
                 const batch = attendanceBatch.get(docId)!;
                 batch.attendance[compositeKey] = finalValue;
-                // 매칭 성공 진단 — Edutrix 클래스명/강사 기록 (셀 hover 시 표시용)
-                batch.syncDiagnostics[dateKey] = {
+                // 매칭 성공 진단 — compositeKey (className::dateKey) 로 저장하여 학생의
+                // 여러 반 동기화 결과가 다른 반 셀에 침해되지 않도록 분리
+                batch.syncDiagnostics[compositeKey] = {
                     status: 'synced',
                     reportClassName: report.class_name || '',
                     reportTeacher: report.teacher_name || '',

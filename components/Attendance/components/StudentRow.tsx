@@ -480,8 +480,9 @@ const StudentRow = React.memo(({
         const hasClasswork = !!classworkRaw && String(classworkRaw).trim() !== '';
         const hasProgress = !!progressRaw && String(progressRaw).trim() !== '';
 
-        // Edutrix 동기화 진단 (셀별 상태/사유) — 출석값 없거나 비정상 매칭일 때 표시
-        const syncDiag = (student as any).syncDiagnostics?.[dateKey];
+        // Edutrix 동기화 진단 (셀별 상태/사유) — compositeKey (className::dateKey) 로 분리
+        // 학생의 여러 반 동기화 결과가 다른 반 셀에 침해되지 않도록 className 별로 격리
+        const syncDiag = (student as any).syncDiagnostics?.[compositeKey];
         const isSyncFailed = syncDiag && syncDiag.status !== 'synced';
         const hasAttendanceValue = status !== undefined && status !== null;
         // 매칭 실패: 보고서는 있는데 attendance 값 없음
