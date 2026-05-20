@@ -3,6 +3,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { collection, query, where, orderBy, limit, getDocs, startAfter, DocumentSnapshot, QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { TimetableLogAction, TimetableLogEntry } from '../../hooks/useTimetableLog';
+import { useClasses } from '../../hooks/useClasses';
 import { ChevronDown, Search, RefreshCw, ArrowUp, ArrowDown } from 'lucide-react';
 
 const SUBJECT_LABELS: Record<string, string> = {
@@ -170,6 +171,27 @@ const InlineDiff: React.FC<{ before?: Record<string, any>; after?: Record<string
 };
 
 const LogsTab: React.FC = () => {
+  // 담당 강사 매핑용 — classes 컬렉션의 className → teacher
+  const { data: allClasses = [] } = useClasses();
+  const classTeacherMap = useMemo(() => {
+    const m = new Map<string, string>();
+    (allClasses || []).forEach((c: any) => {
+      if (c.className && c.teacher) m.set(c.className, c.teacher);
+    });
+    return m;
+  }, [allClasses]);
+  /** 로그 행의 담당 강사 결정: classes 매핑 > before.teacher > after.teacher > '-' */
+  const resolveTeacher = (log: TimetableLogEntry): string => {
+    if (log.className && classTeacherMap.has(log.className)) {
+      return classTeacherMap.get(log.className)!;
+    }
+    const before = (log.before as any)?.teacher;
+    const after = (log.after as any)?.teacher;
+    if (typeof after === 'string' && after) return after;
+    if (typeof before === 'string' && before) return before;
+    return '';
+  };
+
   const today = new Date().toISOString().split('T')[0];
   // 기본값: 최근 일주일 (오늘 포함 7일)
   const sevenDaysAgo = (() => {
@@ -650,6 +672,7 @@ const LogsTab: React.FC = () => {
                   className="px-3 py-2 text-left font-medium text-gray-500 w-64 cursor-pointer select-none hover:text-gray-700 whitespace-nowrap"
                   onClick={() => handleSort('details')}
                 >상세<SortIndicator k="details" /></th>
+                <th className="px-3 py-2 text-left font-medium text-gray-500 w-24 whitespace-nowrap">담당 선생님</th>
                 <th className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap">변경 필드</th>
               </tr>
             </thead>
@@ -679,6 +702,9 @@ const LogsTab: React.FC = () => {
                   </td>
                   <td className="px-3 py-2 text-gray-500 whitespace-nowrap" title={log.details}>
                     {log.details}
+                  </td>
+                  <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
+                    {resolveTeacher(log) || <span className="text-gray-300">-</span>}
                   </td>
                   <td className="px-3 py-2 text-gray-600">
                     <InlineDiff before={log.before} after={log.after} />
