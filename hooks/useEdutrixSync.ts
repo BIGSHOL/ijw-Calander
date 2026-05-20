@@ -299,10 +299,11 @@ export function useEdutrixSync() {
 
             const holidaySet = await fetchHolidays();
 
-            // classes 일괄 로드 — enrollment.schedule 비어있을 때 className 기준 fallback 으로 사용
-            // (학생 시간표 상의 진짜 수업 요일을 시스템에서 가져오기 위한 권위 있는 소스)
-            console.log('[EdutrixSync] Step 2.5: classes 일괄 로드 (schedule fallback 용)');
+            // classes 일괄 로드 — enrollment.schedule + teacher 의 권위 있는 최신 정보 (시간표 기준)
+            // 반이동/강사 변경 후 enrollment 가 옛 정보로 남아있어도 classes 기준으로 매칭 가능
+            console.log('[EdutrixSync] Step 2.5: classes 일괄 로드 (schedule + teacher fallback 용)');
             const classScheduleMap = new Map<string, unknown[]>();
+            const classTeacherMap = new Map<string, string>();  // className → 현재 teacher (이름)
             {
                 const classesSnap = await getDocs(collection(db, 'classes'));
                 classesSnap.docs.forEach(c => {
@@ -311,8 +312,11 @@ export function useEdutrixSync() {
                     if (!name) return;
                     const sched = Array.isArray(d.schedule) ? d.schedule : [];
                     if (sched.length > 0) classScheduleMap.set(name, sched);
+                    // 영어 수업은 mainTeacher, 수학은 teacher
+                    const t = (d.mainTeacher || d.teacher || '') as string;
+                    if (t) classTeacherMap.set(name, t.trim().replace(/\s+/g, ''));
                 });
-                console.log(`[EdutrixSync] classes schedule 로드: ${classScheduleMap.size}건`);
+                console.log(`[EdutrixSync] classes 로드: schedule ${classScheduleMap.size}건 / teacher ${classTeacherMap.size}건`);
             }
 
             type EnrollmentInfo = {
@@ -496,15 +500,21 @@ export function useEdutrixSync() {
                     continue;
                 }
 
-                // 강사 매칭: staffId 또는 teacher 필드
+                // 강사 매칭: enrollment.staffId / enrollment.teacher / classes.teacher (시간표 기준)
+                // 반이동/강사 교체 후 enrollment 가 옛 정보로 남아있어도 classes 의 최신 teacher 로 매칭 가능
                 const isTeacherMatch = (e: typeof enrollments[0]): boolean => {
                     if (!edutrixTeacherName) return false;
+                    // ① enrollment.staffId
                     if (matchedStaffId && e.staffId === matchedStaffId) return true;
+                    // ② enrollment.teacher
                     if (e.teacher) {
                         const normalized = e.teacher.trim().replace(/\s+/g, '');
                         if (normalized === edutrixTeacherName) return true;
                         if (matchedStaffId && normalized === matchedStaffId) return true;
                     }
+                    // ③ classes.teacher (시간표 최신 정보) — 반이동 후 enrollment 미갱신 케이스 대응
+                    const classTeacher = classTeacherMap.get(e.className);
+                    if (classTeacher && classTeacher === edutrixTeacherName) return true;
                     return false;
                 };
 
