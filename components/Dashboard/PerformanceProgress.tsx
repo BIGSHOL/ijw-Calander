@@ -9,6 +9,8 @@ export interface StaffPerformance {
   uniqueStudentCount: number;      // 이번 달 만난 unique 학생 수 (중복 제외)
   targetCount: number;
   percentage: number;
+  /** 강사가 가르치는 과목 ['math', 'highmath', 'english'] */
+  subjects?: string[];
 }
 
 interface PerformanceProgressProps {

@@ -203,6 +203,11 @@ export function useConsultationStats(
       });
 
       const teacherCount = teacherIds.size || 5;
+      // staff id → subjects 매핑 (강사 과목 표시용)
+      const staffSubjectsById = new Map<string, string[]>();
+      (staff || []).forEach(s => {
+        if (Array.isArray(s.subjects)) staffSubjectsById.set(s.id, s.subjects);
+      });
       const staffPerformances: StaffPerformance[] = Array.from(
         staffMap.entries()
       )
@@ -218,6 +223,7 @@ export function useConsultationStats(
               (data.count / Math.ceil(DEFAULT_MONTHLY_TARGET / teacherCount)) * 100
             )
           ),
+          subjects: staffSubjectsById.get(id) || [],
         }))
         .sort((a, b) => b.consultationCount - a.consultationCount);
 

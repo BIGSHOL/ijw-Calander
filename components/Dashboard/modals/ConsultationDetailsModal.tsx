@@ -25,6 +25,27 @@ interface ConsultationDetailsModalProps {
 
 const SUBJECT_KO = (s: 'math' | 'english') => (s === 'math' ? '수학' : '영어');
 
+/** 강사 subjects → '수학' / '영어' / '수학·영어' 라벨 */
+const formatSubjectsLabel = (subjects?: string[]): string => {
+  if (!subjects || subjects.length === 0) return '';
+  const hasMath = subjects.some(s => s === 'math' || s === 'highmath');
+  const hasEng = subjects.includes('english');
+  if (hasMath && hasEng) return '수학·영어';
+  if (hasMath) return '수학';
+  if (hasEng) return '영어';
+  return '';
+};
+
+/** 카테고리 합산용 분류 */
+const teacherCategory = (subjects?: string[]): 'math' | 'english' | 'other' => {
+  if (!subjects || subjects.length === 0) return 'other';
+  const hasMath = subjects.some(s => s === 'math' || s === 'highmath');
+  const hasEng = subjects.includes('english');
+  if (hasMath && !hasEng) return 'math';
+  if (hasEng && !hasMath) return 'english';
+  return 'other';
+};
+
 const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
   isOpen,
   onClose,
@@ -123,36 +144,83 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
             {staffPerformances.length === 0 ? (
               <div className="text-xs text-gray-400 py-2">이번 달 상담 기록 없음.</div>
             ) : (
-              <table className="w-full text-xs">
-                <thead className="bg-gray-50">
-                  <tr className="text-gray-500">
-                    <th className="px-3 py-1.5 text-left font-medium">강사</th>
-                    <th
-                      className="px-3 py-1.5 text-right font-medium cursor-help"
-                      title={`이번 달 작성한 학생 상담 기록 수 (활동량)\n· 한 학생 여러 번 상담 → 여러 번 카운트\n· Firestore: studentConsultations, ${yearMonth} 기간`}
-                    >
-                      상담 건수
-                    </th>
-                    <th
-                      className="px-3 py-1.5 text-right font-medium cursor-help"
-                      title={`이번 달 만난 학생 수 (중복 제외, 커버리지)\n· 한 학생 여러 번 상담 → 1명으로 카운트\n· studentId 기준 dedupe`}
-                    >
-                      만난 학생
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {staffPerformances.map((s) => (
-                    <tr key={s.id} className="border-b border-gray-100">
-                      <td className="px-3 py-1.5 font-medium text-gray-900">{s.name}</td>
-                      <td className="px-3 py-1.5 text-right font-mono">{s.consultationCount}</td>
-                      <td className="px-3 py-1.5 text-right font-mono text-gray-700">
-                        {s.uniqueStudentCount}<span className="text-gray-400 text-[10px]">명</span>
-                      </td>
+              <>
+                {/* 카테고리(수학/영어) 합계 — 강사 과목 기준 */}
+                {(() => {
+                  const mathTotal = staffPerformances
+                    .filter(s => teacherCategory(s.subjects) === 'math')
+                    .reduce((a, s) => a + s.consultationCount, 0);
+                  const englishTotal = staffPerformances
+                    .filter(s => teacherCategory(s.subjects) === 'english')
+                    .reduce((a, s) => a + s.consultationCount, 0);
+                  const otherTotal = staffPerformances
+                    .filter(s => teacherCategory(s.subjects) === 'other')
+                    .reduce((a, s) => a + s.consultationCount, 0);
+                  const mathStaffN = staffPerformances.filter(s => teacherCategory(s.subjects) === 'math').length;
+                  const engStaffN = staffPerformances.filter(s => teacherCategory(s.subjects) === 'english').length;
+                  return (
+                    <div className="flex flex-wrap items-center gap-3 mb-2 px-2 py-1.5 bg-gray-50 rounded text-[11px]">
+                      <span className="text-gray-500">카테고리 합계:</span>
+                      <span className="text-emerald-700">
+                        수학 <b>{mathTotal}건</b>
+                        <span className="text-gray-400"> · 강사 {mathStaffN}명</span>
+                      </span>
+                      <span className="text-red-700">
+                        영어 <b>{englishTotal}건</b>
+                        <span className="text-gray-400"> · 강사 {engStaffN}명</span>
+                      </span>
+                      {otherTotal > 0 && (
+                        <span className="text-gray-600">기타 <b>{otherTotal}건</b></span>
+                      )}
+                    </div>
+                  );
+                })()}
+                <table className="w-full text-xs">
+                  <thead className="bg-gray-50">
+                    <tr className="text-gray-500">
+                      <th className="px-3 py-1.5 text-left font-medium">강사</th>
+                      <th
+                        className="px-3 py-1.5 text-right font-medium cursor-help"
+                        title={`이번 달 작성한 학생 상담 기록 수 (활동량)\n· 한 학생 여러 번 상담 → 여러 번 카운트\n· Firestore: studentConsultations, ${yearMonth} 기간`}
+                      >
+                        상담 건수
+                      </th>
+                      <th
+                        className="px-3 py-1.5 text-right font-medium cursor-help"
+                        title={`이번 달 만난 학생 수 (중복 제외, 커버리지)\n· 한 학생 여러 번 상담 → 1명으로 카운트\n· studentId 기준 dedupe`}
+                      >
+                        만난 학생
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {staffPerformances.map((s) => {
+                      const subjectLabel = formatSubjectsLabel(s.subjects);
+                      const cat = teacherCategory(s.subjects);
+                      const subjectColor =
+                        cat === 'math' ? 'text-emerald-600' :
+                        cat === 'english' ? 'text-red-600' :
+                        'text-gray-400';
+                      return (
+                        <tr key={s.id} className="border-b border-gray-100">
+                          <td className="px-3 py-1.5 font-medium text-gray-900">
+                            {s.name}
+                            {subjectLabel && (
+                              <span className={`ml-1.5 text-[10px] font-normal ${subjectColor}`}>
+                                ({subjectLabel})
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-1.5 text-right font-mono">{s.consultationCount}<span className="text-gray-400 text-[10px]">건</span></td>
+                          <td className="px-3 py-1.5 text-right font-mono text-gray-700">
+                            {s.uniqueStudentCount}<span className="text-gray-400 text-[10px]">명</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </>
             )}
           </section>
 

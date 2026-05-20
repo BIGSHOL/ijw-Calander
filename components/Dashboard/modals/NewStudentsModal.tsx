@@ -8,7 +8,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { UnifiedStudent } from '../../../types/student';
 import { isActiveEnrollment } from '../../../utils/dashboardUtils';
-import { getWeekRange, getMonthRange } from '../../../utils/datePeriod';
+import { getMonthRange } from '../../../utils/datePeriod';
 
 interface NewStudentsModalProps {
   isOpen: boolean;
@@ -36,21 +36,15 @@ const NewStudentsModal: React.FC<NewStudentsModalProps> = ({
   monthStart: _monthStart,
   monthEnd: _monthEnd,
 }) => {
-  // 기간 선택 — 기본: 이번 주차 (offset 0)
-  const [period, setPeriod] = useState<'week' | 'month'>('week');
+  // 월간 페이지 — offset: 0=이번 달, -1=지난 달 ...
   const [offset, setOffset] = useState(0);
 
-  // 모달 열릴 때마다 이번 주차로 초기화
+  // 모달 열릴 때마다 이번 달로 초기화
   useEffect(() => {
-    if (isOpen) {
-      setPeriod('week');
-      setOffset(0);
-    }
+    if (isOpen) setOffset(0);
   }, [isOpen]);
 
-  const range = useMemo(() => {
-    return period === 'week' ? getWeekRange(offset) : getMonthRange(offset);
-  }, [period, offset]);
+  const range = useMemo(() => getMonthRange(offset), [offset]);
 
   const newStudents = useMemo(() => {
     return students
@@ -101,13 +95,13 @@ const NewStudentsModal: React.FC<NewStudentsModalProps> = ({
           </button>
         </div>
 
-        {/* 기간 네비게이션 — 주간/월간 토글 + 좌우 화살표 */}
+        {/* 월 페이지 네비 */}
         <div className="flex items-center justify-between px-5 py-2 border-b bg-white">
           <div className="flex items-center gap-1">
             <button
               onClick={() => setOffset(o => o - 1)}
               className="p-1 hover:bg-gray-100 rounded text-gray-600"
-              title={period === 'week' ? '지난 주' : '지난 달'}
+              title="지난 달"
             >
               <ChevronLeft size={16} />
             </button>
@@ -118,7 +112,7 @@ const NewStudentsModal: React.FC<NewStudentsModalProps> = ({
               onClick={() => setOffset(o => o + 1)}
               disabled={offset >= 0}
               className="p-1 hover:bg-gray-100 rounded text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
-              title={period === 'week' ? '다음 주' : '다음 달'}
+              title="다음 달"
             >
               <ChevronRight size={16} />
             </button>
@@ -127,32 +121,11 @@ const NewStudentsModal: React.FC<NewStudentsModalProps> = ({
                 onClick={() => setOffset(0)}
                 className="ml-2 px-2 py-0.5 text-[10px] font-bold border border-pink-300 text-pink-700 rounded hover:bg-pink-50"
               >
-                이번 {period === 'week' ? '주' : '달'}로
+                이번 달로
               </button>
             )}
           </div>
-          <div className="flex items-center gap-0">
-            <button
-              onClick={() => { setPeriod('week'); setOffset(0); }}
-              className={`px-3 py-1 text-xs font-bold rounded-l border ${
-                period === 'week'
-                  ? 'bg-pink-600 text-white border-pink-600'
-                  : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              주간
-            </button>
-            <button
-              onClick={() => { setPeriod('month'); setOffset(0); }}
-              className={`px-3 py-1 text-xs font-bold rounded-r border-y border-r ${
-                period === 'month'
-                  ? 'bg-pink-600 text-white border-pink-600'
-                  : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              월간
-            </button>
-          </div>
+          <span className="text-[10px] text-gray-400">월간 기준</span>
         </div>
 
         {/* 요약 */}
@@ -172,7 +145,7 @@ const NewStudentsModal: React.FC<NewStudentsModalProps> = ({
             </span>
           </div>
           <div className="text-[10px] text-gray-400 mt-1.5">
-            정렬: 등록일 최신순 · 조건: {period === 'week' ? '선택 주차' : '선택 월'} startDate + 수강과목 1개 이상
+            정렬: 등록일 최신순 · 조건: 선택 월 startDate + 수강과목 1개 이상
           </div>
         </div>
 
