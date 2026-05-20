@@ -491,6 +491,16 @@ const StudentRow = React.memo(({
         const showInfoDot = !!syncDiag && (syncDiag.status === 'skipped_holiday' || syncDiag.status === 'skipped_other_subject');
         // 동기화는 됐지만 출석값 비어있음 (강사가 출석 표시 안 함 또는 추후 수정)
         const showSyncedButEmpty = !!syncDiag && syncDiag.status === 'synced' && !hasAttendanceValue;
+        // 보고서 자체가 안 들어옴 — 수업 요일인데 syncDiag 없음 + 출석값 없음 + 과거/오늘
+        // (미래 날짜는 아직 보고서 작성 전이므로 미기입 아님)
+        const todayKey = formatDateKey(new Date());
+        const showMissingReport =
+          isValid &&
+          isScheduled &&
+          !isHoliday &&
+          !hasAttendanceValue &&
+          !syncDiag &&
+          dateKey <= todayKey;
         const syncDiagTitle = syncDiag
           ? `\n──────\n📋 Edutrix: ${syncDiag.reportClassName || '(클래스명 없음)'}` +
             (syncDiag.reportTeacher ? ` / ${syncDiag.reportTeacher}` : '') +
@@ -621,6 +631,12 @@ const StudentRow = React.memo(({
                     <span
                       className="absolute top-0 left-0 w-3 h-3 bg-red-400 border border-red-600 rounded-full shadow-sm"
                       title={`보고서 미기입: 동기화는 됐으나 출석값 없음 (${syncDiag?.reportClassName || ''})`}
+                    />
+                  )}
+                  {showMissingReport && (
+                    <span
+                      className="absolute top-0 left-0 w-3 h-3 bg-red-500 border border-red-700 rounded-full shadow-sm"
+                      title={`보고서 미기입: ${dateKey} 보고서가 동기화되지 않았습니다 (강사가 보고서를 작성하지 않았거나 동기화 미실행)`}
                     />
                   )}
                 </div>
