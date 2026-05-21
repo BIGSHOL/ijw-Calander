@@ -8142,39 +8142,14 @@ async function scrapeMakeEduBillingsInternal(fromYm, toYm) {
         await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 15000 }).catch(() => {});
         await new Promise(r => setTimeout(r, 3000));
 
-        // 진단: 검색 전 모든 select 옵션 덤프 (재원/퇴원 필터 드랍다운 식별용)
-        // ※ 한 번 확인 후 제거 또는 stuStat 등 명시적 설정으로 교체 예정
+        // 3-1. studStatus="" (전체학생) — 기본값은 "1"(재원생만)이라 퇴원/휴원생 누락 방지
+        // 옵션: ""=전체, "1"=재원, "2"·"3"=휴원/대기, "4"=퇴학
         try {
-            const selectsBeforeSearch = await page.evaluate(() => {
-                const sels = document.querySelectorAll('select');
-                return Array.from(sels).map(sel => ({
-                    name: sel.name || '',
-                    id: sel.id || '',
-                    currentValue: sel.value || '',
-                    options: Array.from(sel.options).map(o => ({
-                        v: o.value,
-                        t: (o.text || '').trim(),
-                        sel: o.selected,
-                    })),
-                }));
-            });
-            logger.info('[scrapeMakeEduBillings] DIAG select BEFORE search:', JSON.stringify(selectsBeforeSearch));
-
-            // hidden input 중 stat/stu/status 관련 필드도 덤프 (드랍다운이 hidden일 가능성)
-            const hiddenStatusFields = await page.evaluate(() => {
-                const hidden = document.querySelectorAll('input[type="hidden"]');
-                const result = [];
-                hidden.forEach(h => {
-                    const n = (h.name || '').toLowerCase();
-                    if (n.includes('stat') || n.includes('stu') || n.includes('type') || n.includes('class')) {
-                        result.push({ name: h.name, value: h.value });
-                    }
-                });
-                return result;
-            });
-            logger.info('[scrapeMakeEduBillings] DIAG hidden status-like fields:', JSON.stringify(hiddenStatusFields));
-        } catch (diagErr) {
-            logger.warn('[scrapeMakeEduBillings] DIAG dump failed:', diagErr.message);
+            await page.waitForSelector('#studStatus', { timeout: 5000 });
+            await page.select('#studStatus', '');
+            logger.info('[scrapeMakeEduBillings] studStatus set to "" (전체학생)');
+        } catch (e) {
+            logger.warn('[scrapeMakeEduBillings] studStatus select failed:', e.message);
         }
 
         // 4. fromYm + toYm 설정 (양쪽 모두 설정 필수)
@@ -8233,45 +8208,6 @@ async function scrapeMakeEduBillingsInternal(fromYm, toYm) {
             logger.warn("[scrapeMakeEduBillings] No result rows:", e.message);
         }
         await new Promise(r => setTimeout(r, 2000));
-
-        // 진단: 검색 후 select 상태 + 결과 행 클래스 샘플 덤프
-        // ※ 검색 후 어떤 값이 실제로 적용됐는지, 퇴원생 행의 클래스가 무엇인지 식별용
-        try {
-            const selectsAfterSearch = await page.evaluate(() => {
-                const sels = document.querySelectorAll('select');
-                return Array.from(sels).map(sel => ({
-                    name: sel.name || '',
-                    id: sel.id || '',
-                    currentValue: sel.value || '',
-                    selectedText: (sel.options[sel.selectedIndex]?.text || '').trim(),
-                }));
-            });
-            logger.info('[scrapeMakeEduBillings] DIAG select AFTER search:', JSON.stringify(selectsAfterSearch));
-
-            // 결과 행 샘플 — 학생명 링크의 className 분포 확인 (st_ vs st_red 등)
-            const rowSamples = await page.evaluate(() => {
-                const rows = document.querySelectorAll('tr.list_tr, tr[id^="tr_"]');
-                const classCount = {};
-                const samples = [];
-                rows.forEach((row, idx) => {
-                    const nameLink = row.querySelector('a.dl_pop') || row.querySelector("a[onclick*='stuInfo']");
-                    if (!nameLink) return;
-                    const cls = nameLink.className || '(none)';
-                    classCount[cls] = (classCount[cls] || 0) + 1;
-                    if (idx < 5) {
-                        samples.push({
-                            name: (nameLink.innerText || '').trim(),
-                            className: cls,
-                            rowClass: row.className || '',
-                        });
-                    }
-                });
-                return { totalRows: rows.length, classDistribution: classCount, samples };
-            });
-            logger.info('[scrapeMakeEduBillings] DIAG result-row analysis:', JSON.stringify(rowSamples));
-        } catch (diagErr) {
-            logger.warn('[scrapeMakeEduBillings] DIAG after-search dump failed:', diagErr.message);
-        }
 
         // 6. 모든 페이지 크롤링 (상세 필드 추출)
         const allRows = [];
