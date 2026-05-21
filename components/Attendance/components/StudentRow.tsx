@@ -5,7 +5,7 @@ import { Exam, StudentScore, GRADE_COLORS } from '../../../types';
 import { StudentTermSummary } from '../../../types/enrollmentTerm';
 import { formatDateDisplay, formatDateKey, getBadgeStyle, getStudentStatus, isDateValidForStudent, getSchoolLevelSalarySetting, getLocalYearMonth, getDaysInMonth, getEffectiveUnitPrice, calculateClassRate } from '../utils';
 import { formatSchoolGrade } from '../../../utils/studentUtils';
-import { LogOut, Check } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { PREDEFINED_CELL_COLORS } from './cellColors';
 
 // Phase 2: Edutrix raw 값을 ⭕/△/X 마크로 정규화
@@ -637,9 +637,10 @@ const StudentRow = React.memo(({
                   title={
                     [
                       assignmentScoreRaw && `과제점수: ${assignmentScoreRaw}점`,
+                      !assignmentScoreRaw && homeworkDone ? '점수 미기입 (강사가 점수를 입력하지 않음)' : null,
+                      !assignmentScoreRaw && !homeworkDone ? '과제 미완료' : null,
                       progressRaw && `진도: ${progressRaw}`,
                       classworkRaw && `수업과제: ${classworkRaw}`,
-                      homeworkDone ? '과제 완료' : (assignmentScoreRaw ? null : '과제 미완료'),
                     ].filter(Boolean).join('\n──────\n') || undefined
                   }
                 >
@@ -653,7 +654,10 @@ const StudentRow = React.memo(({
                       </span>
                     );
                   })() : (
-                    homeworkDone && <Check className="w-2.5 h-2.5 text-black" />
+                    // 점수 미기입 (강사가 점수 입력 안 함) — X 로 표시
+                    homeworkDone && (
+                      <span className="text-nano font-black text-black">X</span>
+                    )
                   )}
                 </div>
                 {/* Q4: 시험 점수 (좌하단) - 7시 방향
