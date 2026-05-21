@@ -10,11 +10,11 @@ import { PREDEFINED_CELL_COLORS } from './cellColors';
 
 // Phase 2: Edutrix raw 값을 ⭕/△/X 마크로 정규화
 // assignment_score 점수 → 마크 (100+=⭕ / 1~99=△ / 0=X)
-const getAssignmentMark = (rawScore: string | undefined): '⭕' | '△' | 'X' | '' => {
+const getAssignmentMark = (rawScore: string | undefined): '○' | '△' | 'X' | '' => {
   if (rawScore === undefined || rawScore === null || rawScore === '') return '';
   const score = parseInt(String(rawScore), 10);
   if (isNaN(score)) return '';
-  if (score >= 100) return '⭕';
+  if (score >= 100) return '○';
   if (score > 0) return '△';
   return 'X';
 };
@@ -22,31 +22,31 @@ const getAssignmentMark = (rawScore: string | undefined): '⭕' | '△' | 'X' | 
 // study_attitude raw → 마크 (한국어/영어 텍스트 모두 정규화).
 // 복합 값("최고 책없음", "좋음 책없음" 등) 첫 토큰 기준 매핑.
 // "책없음" 같은 첨가어는 마크에는 반영 안 되지만 호버에 raw 그대로 노출됨.
-const getAttitudeMark = (rawAttitude: string | undefined): '⭕' | '△' | 'X' | '' => {
+const getAttitudeMark = (rawAttitude: string | undefined): '○' | '△' | 'X' | '' => {
   if (!rawAttitude) return '';
   const v = String(rawAttitude).trim();
   if (!v) return '';
   // 단일 기호
-  if (v === '⭕' || v === '○' || v === 'O') return '⭕';
+  if (v === '○' || v === '○' || v === 'O') return '○';
   if (v === '△' || v === '세모') return '△';
   if (v === 'X' || v === '✕' || v === '×') return 'X';
   // 첫 토큰 기준 (공백/언더스코어 분리)
   const head = v.split(/[\s_]+/)[0];
   // 한국어
-  if (head === '최고' || head === '좋음' || head === '우수' || head === '훌륭함') return '⭕';
+  if (head === '최고' || head === '좋음' || head === '우수' || head === '훌륭함') return '○';
   if (head === '보통' || head === '평범') return '△';
   if (head === '나쁨' || head === '미흡' || head === '부족') return 'X';
   // 영어
   const headLower = head.toLowerCase();
-  if (headLower === 'good' || headLower === 'excellent' || headLower === 'best') return '⭕';
+  if (headLower === 'good' || headLower === 'excellent' || headLower === 'best') return '○';
   if (headLower === 'normal' || headLower === 'average' || headLower === 'ok') return '△';
   if (headLower === 'bad' || headLower === 'poor') return 'X';
   return '';  // 알 수 없는 값은 마크 없이 raw 텍스트로 표시
 };
 
 // 마크 → 색상 (배경, 글자)
-const MARK_COLORS: Record<'⭕' | '△' | 'X', { bg: string; text: string }> = {
-  '⭕': { bg: 'bg-emerald-100', text: 'text-emerald-700' },
+const MARK_COLORS: Record<'○' | '△' | 'X', { bg: string; text: string }> = {
+  '○': { bg: 'bg-emerald-100', text: 'text-emerald-700' },
   '△': { bg: 'bg-amber-100', text: 'text-amber-700' },
   'X':  { bg: 'bg-red-100',     text: 'text-red-700' },
 };
@@ -643,11 +643,16 @@ const StudentRow = React.memo(({
                     ].filter(Boolean).join('\n──────\n') || undefined
                   }
                 >
-                  {assignmentScoreRaw ? (
-                    <span className="text-nano font-bold text-black leading-none">
-                      {assignmentScoreRaw}
-                    </span>
-                  ) : (
+                  {assignmentScoreRaw ? (() => {
+                    // 백분율 표시 — 0점은 "0" (% 없이), 그 외 "N%"
+                    const n = parseInt(String(assignmentScoreRaw), 10);
+                    const display = isNaN(n) ? String(assignmentScoreRaw) : (n === 0 ? '0' : `${n}%`);
+                    return (
+                      <span className="text-[8px] font-bold text-black leading-none px-0.5">
+                        {display}
+                      </span>
+                    );
+                  })() : (
                     homeworkDone && <Check className="w-2.5 h-2.5 text-black" />
                   )}
                 </div>
@@ -663,10 +668,10 @@ const StudentRow = React.memo(({
                   }
                 >
                   {examInfoRaw ? (
-                    <span className="text-nano font-bold text-black leading-none">{examInfoRaw}</span>
+                    <span className="text-[8px] font-bold text-black leading-none truncate max-w-full px-0.5">{examInfoRaw}</span>
                   ) : (
                     dailyExamScore && (
-                      <span className="text-nano font-bold text-black">
+                      <span className="text-[8px] font-bold text-black leading-none truncate max-w-full px-0.5">
                         {dailyExamScore.grade || Math.round(dailyExamScore.percentage || 0)}
                       </span>
                     )
