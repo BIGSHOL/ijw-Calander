@@ -481,13 +481,21 @@ export function useEdutrixSync() {
                 // 강사 과목 정보로 동기화 대상 보고서 여부 판정
                 const teacherIsTarget = edutrixTeacherName ? isTargetTeacherByName(edutrixTeacherName) : null;
 
-                // 대상 enrollment subject 판정 — enrollment.subject 우선, 비정상이면 classes.subject fallback
-                // enrollment.subject 가 '' / '초등M' / '수학' 등 비정상 케이스 (운영자가 enrollment 등록 시 누락/오입력)
-                // 시간표 화면은 className 기반이라 정상으로 보이지만 동기화 매칭은 subject 필드를 봄
+                // 대상 enrollment subject 판정 — 3단계 fallback
+                // 1순위: enrollment.subject (정상값)
+                // 2순위: classes.subject (시간표 권위 정보)
+                // 3순위: className 패턴 추론 ("초등M"/"중등M"/"고등M" prefix → math, "H" → highmath)
+                //   → classes 컬렉션에 등록 안 됐거나 isActive=false 인 반도 fallback 가능
                 const getEffectiveSubject = (e: typeof enrollments[0]): string => {
                     if (TARGET_SUBJECTS.includes(e.subject)) return e.subject;
                     const cls = classSubjectMap.get(e.className);
-                    return cls || e.subject;
+                    if (cls && TARGET_SUBJECTS.includes(cls)) return cls;
+                    // className 패턴: "초등M 초5 BS2C", "중등M 개별 JJ2M" 등 한국어 학년 + M/H prefix
+                    if (e.className) {
+                        if (/^(초등|중등|고등)M[\s_]/.test(e.className)) return 'math';
+                        if (/^(초등|중등|고등)H[\s_]/.test(e.className)) return 'highmath';
+                    }
+                    return e.subject;
                 };
                 // 대상 enrollment (math/highmath 또는 english) — 보고서 날짜 기준 활성만
                 const targetEnrollments = enrollments.filter(e =>
