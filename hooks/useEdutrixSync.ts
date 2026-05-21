@@ -481,9 +481,17 @@ export function useEdutrixSync() {
                 // 강사 과목 정보로 동기화 대상 보고서 여부 판정
                 const teacherIsTarget = edutrixTeacherName ? isTargetTeacherByName(edutrixTeacherName) : null;
 
+                // 대상 enrollment subject 판정 — enrollment.subject 우선, 비정상이면 classes.subject fallback
+                // enrollment.subject 가 '' / '초등M' / '수학' 등 비정상 케이스 (운영자가 enrollment 등록 시 누락/오입력)
+                // 시간표 화면은 className 기반이라 정상으로 보이지만 동기화 매칭은 subject 필드를 봄
+                const getEffectiveSubject = (e: typeof enrollments[0]): string => {
+                    if (TARGET_SUBJECTS.includes(e.subject)) return e.subject;
+                    const cls = classSubjectMap.get(e.className);
+                    return cls || e.subject;
+                };
                 // 대상 enrollment (math/highmath 또는 english) — 보고서 날짜 기준 활성만
                 const targetEnrollments = enrollments.filter(e =>
-                    TARGET_SUBJECTS.includes(e.subject) && isEnrollmentActiveOn(e)
+                    TARGET_SUBJECTS.includes(getEffectiveSubject(e)) && isEnrollmentActiveOn(e)
                 );
 
                 // ① 강사가 타과목으로 명확히 판정되면 → 동기화 대상 아님
