@@ -672,10 +672,10 @@ const StudentRow = React.memo(({
                   }
                 >
                   {examInfoRaw ? (
-                    <span className="text-[8px] font-bold text-black leading-none truncate max-w-full px-0.5">{examInfoRaw}</span>
+                    <span className="text-[7px] font-bold text-black leading-[1.05] break-all max-w-full px-0 text-center">{examInfoRaw}</span>
                   ) : (
                     dailyExamScore && (
-                      <span className="text-[8px] font-bold text-black leading-none truncate max-w-full px-0.5">
+                      <span className="text-[7px] font-bold text-black leading-[1.05] break-all max-w-full px-0 text-center">
                         {dailyExamScore.grade || Math.round(dailyExamScore.percentage || 0)}
                       </span>
                     )
