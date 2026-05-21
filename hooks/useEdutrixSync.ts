@@ -442,7 +442,9 @@ export function useEdutrixSync() {
                     return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
                 };
                 const isEnrollmentActiveOn = (e: typeof enrollments[0]): boolean => {
-                    if (e.cancelledAt) return false;
+                    // 취소된 enrollment — 취소 시점 이후 보고서만 비활성 (취소 이전 정상 보고서는 매칭 허용)
+                    // 예: 김도윤 5/4 마지막 수업 + cancelledAt=5/4 → 5/4 보고서는 활성으로 매칭
+                    if (e.cancelledAt && dateKey > e.cancelledAt) return false;
                     // 미래 시작 — 보고서 날짜 < (startDate - 7일) → 비활성
                     if (e.startDate) {
                         const graceStart = shiftDateStr(e.startDate, -GRACE_DAYS);
