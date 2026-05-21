@@ -570,6 +570,11 @@ const StudentRow = React.memo(({
               q1BgClass = "bg-red-500 hover:bg-red-600";
               q1BgStyle = undefined;
               q1Content = <span className="text-white font-black text-xs drop-shadow-sm">0</span>;
+            } else if (status === 1) {
+              // 출석: 배경 시안색 #00FFFE
+              q1BgClass = "hover:brightness-95";
+              q1BgStyle = { backgroundColor: '#00FFFE' };
+              q1Content = <span className="text-gray-800 font-bold text-xs">1</span>;
             } else {
               q1Content = <span className="text-gray-800 font-bold text-xs">{status}</span>;
             }
@@ -614,87 +619,43 @@ const StudentRow = React.memo(({
                   style={q1BgStyle}
                 >
                   {q1Content}
-                  {/* Edutrix 동기화 진단 표시 — 셀 좌상단 큰 점 (hover 쉽게 + 빨강 강조) */}
-                  {showFailDot && (
-                    <span
-                      className="absolute top-0 left-0 w-3 h-3 bg-red-500 border border-red-700 rounded-full shadow-sm"
-                      title={`매칭 실패: 보고서 있으나 enrollment 매칭 안 됨\n${syncDiag?.reportClassName || ''} / ${syncDiag?.reportTeacher || ''}`}
-                    />
-                  )}
+                  {/* Edutrix 동기화 진단 — 정보성 (휴일/타과목) 만 작은 노랑 점 유지, 빨간 점 (미기입) 모두 제거 */}
                   {showInfoDot && (
                     <span
                       className="absolute top-0 left-0 w-2 h-2 bg-amber-400 border border-amber-600 rounded-full"
                       title={syncDiag?.status === 'skipped_holiday' ? '휴일 보고서' : '타과목 보고서'}
                     />
                   )}
-                  {showSyncedButEmpty && (
-                    <span
-                      className="absolute top-0 left-0 w-3 h-3 bg-red-400 border border-red-600 rounded-full shadow-sm"
-                      title={`보고서 미기입: 동기화는 됐으나 출석값 없음 (${syncDiag?.reportClassName || ''})`}
-                    />
-                  )}
-                  {showMissingReport && (
-                    <span
-                      className="absolute top-0 left-0 w-3 h-3 bg-red-500 border border-red-700 rounded-full shadow-sm"
-                      title={`보고서 미기입: ${dateKey} 보고서가 동기화되지 않았습니다 (강사가 보고서를 작성하지 않았거나 동기화 미실행)`}
-                    />
-                  )}
                 </div>
-                {/* Q2: 진도 (우상단) - 1시 방향
-                    Edutrix progress 있으면 텍스트 표시 (호버에 전체).
-                    수업 과제(homework_today) 있으면 우하단 작은 노란 점.
-                    과제 ⭕△X(assignment_score)는 좌상단 작은 마크로 동거. */}
+                {/* Q2: 과제점수 (우상단) - 1시 방향
+                    assignment_score 가 100점 만점 백분율로 표시. 다른 마크/점 표시 제거하여 한 칸에 깔끔히.
+                    진도/수업과제/과제완료 정보는 호버 툴팁에만 노출. */}
                 <div
                   onClick={() => onHomeworkChange?.(student.id, student.group || '', dateKey, !homeworkDone)}
-                  className={`relative flex items-center justify-center border-b ${highlightWeekends && isWeekend ? 'border-gray-400' : 'border-gray-300/50'} cursor-pointer transition-colors ${
-                    hasProgress
-                      ? 'bg-indigo-50 hover:bg-indigo-100'
-                      : homeworkDone
-                        ? 'bg-emerald-100 hover:bg-emerald-200'
-                        : otherQuadrantProps.className || 'hover:brightness-95'
-                  }`}
-                  style={!hasProgress && !homeworkDone ? otherQuadrantProps.style : undefined}
+                  className={`relative flex items-center justify-center border-b ${highlightWeekends && isWeekend ? 'border-gray-400' : 'border-gray-300/50'} cursor-pointer transition-colors ${otherQuadrantProps.className || 'hover:brightness-95'}`}
+                  style={otherQuadrantProps.style}
                   title={
-                    hasProgress
-                      ? `진도: ${progressRaw}`
-                      : (homeworkDone ? '과제 완료' : '과제 미완료')
+                    [
+                      assignmentScoreRaw && `과제점수: ${assignmentScoreRaw}점`,
+                      progressRaw && `진도: ${progressRaw}`,
+                      classworkRaw && `수업과제: ${classworkRaw}`,
+                      homeworkDone ? '과제 완료' : (assignmentScoreRaw ? null : '과제 미완료'),
+                    ].filter(Boolean).join('\n──────\n') || undefined
                   }
                 >
-                  {hasProgress ? (
-                    <span className="text-nano font-bold text-indigo-700 leading-tight px-0.5 truncate max-w-full">
-                      {progressRaw}
+                  {assignmentScoreRaw ? (
+                    <span className="text-nano font-bold text-black leading-none">
+                      {assignmentScoreRaw}
                     </span>
                   ) : (
-                    homeworkDone && <Check className="w-2.5 h-2.5 text-emerald-600" />
-                  )}
-                  {/* 과제 ⭕△X (assignment_score) — 좌상단 작은 마크 */}
-                  {assignmentMark && (
-                    <span
-                      className={`absolute top-0 left-0 text-[7px] font-black leading-none px-0.5 ${MARK_COLORS[assignmentMark].text}`}
-                      title={`과제 점수: ${assignmentScoreRaw ?? ''} (${assignmentMark})`}
-                    >
-                      {assignmentMark}
-                    </span>
-                  )}
-                  {/* 수업 과제 (homework_today) — 우하단 작은 노란 점 */}
-                  {hasClasswork && (
-                    <span
-                      className="absolute bottom-0 right-0 w-1.5 h-1.5 bg-yellow-400 border border-yellow-600 rounded-[1px]"
-                      title={`수업 과제: ${classworkRaw}`}
-                    />
+                    homeworkDone && <Check className="w-2.5 h-2.5 text-black" />
                   )}
                 </div>
                 {/* Q4: 시험 점수 (좌하단) - 7시 방향
-                    Edutrix exam_info 있으면 분자/분모 표시 (예: "20/25"), 없으면 기존 쪽지시험 fallback. */}
+                    Edutrix exam_info 있으면 분자/분모 표시. 단색 배경, 검은색 텍스트. */}
                 <div
-                  className={`flex items-center justify-center border-r ${highlightWeekends && isWeekend ? 'border-gray-400' : 'border-gray-300/50'} ${
-                    examInfoRaw
-                      ? 'bg-blue-50'
-                      : dailyExamScore
-                        ? GRADE_COLORS[dailyExamScore.grade || 'F'].bg
-                        : otherQuadrantProps.className || ''
-                  }`}
-                  style={!examInfoRaw && !dailyExamScore ? otherQuadrantProps.style : undefined}
+                  className={`flex items-center justify-center border-r ${highlightWeekends && isWeekend ? 'border-gray-400' : 'border-gray-300/50'} ${otherQuadrantProps.className || ''}`}
+                  style={otherQuadrantProps.style}
                   title={
                     examInfoRaw
                       ? `시험: ${examInfoRaw}`
@@ -702,30 +663,22 @@ const StudentRow = React.memo(({
                   }
                 >
                   {examInfoRaw ? (
-                    <span className="text-nano font-bold text-blue-700 leading-none">{examInfoRaw}</span>
+                    <span className="text-nano font-bold text-black leading-none">{examInfoRaw}</span>
                   ) : (
                     dailyExamScore && (
-                      <span className={`text-nano font-bold ${GRADE_COLORS[dailyExamScore.grade || 'F'].text}`}>
+                      <span className="text-nano font-bold text-black">
                         {dailyExamScore.grade || Math.round(dailyExamScore.percentage || 0)}
                       </span>
                     )
                   )}
                 </div>
                 {/* Q3: 수업 태도 (우하단) - 5시 방향
-                    Edutrix study_attitude 있으면 ⭕△X 표시 + 호버에 raw값 + 특이사항(notes).
-                    매핑 실패 시(알 수 없는 값) raw 텍스트 fallback 표시.
-                    호버는 title 속성으로 노출 (notes는 \n 으로 줄바꿈). */}
+                    Edutrix study_attitude → ⭕△X 단색 검은색.
+                    "책없음" 등 부가 텍스트가 있으면 마크 + 부가 텍스트 한 칸에 (작은 글씨, 줄바꿈 허용).
+                    배경 단색 (otherQuadrantProps), 글자색 검은색 통일. */}
                 <div
-                  className={`flex items-center justify-center ${
-                    attitudeMark
-                      ? MARK_COLORS[attitudeMark].bg
-                      : attitudeRaw
-                        ? 'bg-slate-50'
-                        : otherExamScore
-                          ? GRADE_COLORS[otherExamScore.grade || 'F'].bg
-                          : otherQuadrantProps.className || ''
-                  }`}
-                  style={!attitudeMark && !attitudeRaw && !otherExamScore ? otherQuadrantProps.style : undefined}
+                  className={`flex items-center justify-center ${otherQuadrantProps.className || ''}`}
+                  style={otherQuadrantProps.style}
                   title={
                     attitudeRaw
                       ? `태도: ${attitudeRaw}${notesRaw ? `\n──────\n특이사항: ${notesRaw}` : ''}`
@@ -734,15 +687,31 @@ const StudentRow = React.memo(({
                           : (otherExamScore ? `시험: ${otherExamScore.score}/${otherExamScore.maxScore} (${otherExamScore.grade})` : undefined))
                   }
                 >
-                  {attitudeMark ? (
-                    <span className={`text-nano font-black ${MARK_COLORS[attitudeMark].text}`}>{attitudeMark}</span>
-                  ) : attitudeRaw ? (
-                    <span className="text-nano font-bold text-slate-700 truncate max-w-full px-0.5 leading-tight">
-                      {String(attitudeRaw).split(/[\s_]+/)[0]}
-                    </span>
+                  {attitudeRaw ? (
+                    (() => {
+                      // 마크가 있으면 마크 + 부가 텍스트 (책없음 등) 같이 한 칸에
+                      // 마크 없으면 raw 전체를 작은 글씨로 표시 (줄바꿈 허용)
+                      const raw = String(attitudeRaw);
+                      const tokens = raw.split(/[\s_]+/);
+                      const extra = attitudeMark && tokens.length > 1 ? tokens.slice(1).join(' ') : '';
+                      return attitudeMark ? (
+                        <div className="flex flex-col items-center justify-center leading-none px-0.5 w-full">
+                          <span className="text-nano font-black text-black">{attitudeMark}</span>
+                          {extra && (
+                            <span className="text-[6px] font-medium text-black leading-tight break-all max-w-full">
+                              {extra}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-[7px] font-bold text-black leading-tight break-all max-w-full px-0.5">
+                          {raw}
+                        </span>
+                      );
+                    })()
                   ) : (
                     otherExamScore && (
-                      <span className={`text-nano font-bold ${GRADE_COLORS[otherExamScore.grade || 'F'].text}`}>
+                      <span className="text-nano font-bold text-black">
                         {otherExamScore.grade || Math.round(otherExamScore.percentage || 0)}
                       </span>
                     )
