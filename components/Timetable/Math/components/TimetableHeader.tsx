@@ -77,7 +77,7 @@ const SortableTeacherItem = ({ id, isHidden, onToggleHidden }: { id: string; isH
                 <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 shrink-0">
                     <GripVertical size={12} />
                 </div>
-                <span className={`text-xs truncate ${isHidden ? 'text-gray-300 line-through' : 'text-gray-700'}`}>{id}</span>
+                <span className={`text-xs truncate ${isHidden ? 'text-gray-800 line-through' : 'text-gray-900 font-bold'}`}>{id}</span>
             </div>
             <button
                 onClick={(e) => { e.stopPropagation(); onToggleHidden(); }}
