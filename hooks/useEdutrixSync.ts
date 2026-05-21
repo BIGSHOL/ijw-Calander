@@ -108,6 +108,8 @@ export interface SyncResult {
     dryRun?: boolean;
     /** 영어/타과목 보고서로 분류되어 동기화 대상에서 제외된 건수 */
     otherSubject?: number;
+    /** 퇴원 학생 매칭 실패 — 모달 노이즈 차단용 (스킵·매칭실패 카운트에서 제외) */
+    silentlySkipped?: number;
 }
 
 export interface SyncDetail {
@@ -601,6 +603,18 @@ export function useEdutrixSync() {
                     if (teacherEnrollSummary) parts.push(`강사매칭: ${teacherEnrollSummary}`);
                     if (otherTargetSummary) parts.push(`다른 ${subject}: ${otherTargetSummary}`);
                     if (allSubjectsSummary) parts.push(`전체 subject: ${allSubjectsSummary}`);
+
+                    // 퇴원 학생의 매칭 실패는 모달 노이즈 → 조용히 스킵 (카운트·details 모두 안 추가)
+                    // 판정: 학생 status 가 비활성 OR 모든 enrollment 가 종료/취소
+                    const isStudentWithdrawn = ijwStudent.status !== 'active' ||
+                        (enrollments.length > 0 && enrollments.every(e =>
+                            e.endDate || e.withdrawalDate || e.cancelledAt
+                        ));
+                    if (isStudentWithdrawn) {
+                        result.silentlySkipped = (result.silentlySkipped || 0) + 1;
+                        continue;
+                    }
+
                     result.skipped++;
                     const matchFailMsg = `매칭 실패 (${parts.join(' | ')})`;
                     result.details.push({
