@@ -138,8 +138,9 @@ export const useEnglishStats = (
                 const enrollDate = student.firstSubjectEnrollmentDate || student.enrollmentDate || student.startDate;
                 if (enrollDate) {
                     const daysSince = Math.floor((refDate.getTime() - new Date(enrollDate).getTime()) / (1000 * 60 * 60 * 24));
-                    if (daysSince <= 30) new1StudentIds.add(studentId);
-                    else if (daysSince <= 60) new2StudentIds.add(studentId);
+                    // 미래 입학일(daysSince < 0) 제외 — 선택 주차 기준 과거 30/60일 이내만 신입
+                    if (daysSince >= 0 && daysSince <= 30) new1StudentIds.add(studentId);
+                    else if (daysSince > 30 && daysSince <= 60) new2StudentIds.add(studentId);
                 }
             }
         });
