@@ -560,9 +560,10 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
             if (!student.isTransferredIn && !student.hasPastInSubject) {
                 const enrollDate = student.firstSubjectEnrollmentDate || student.enrollmentDate || student.startDate;
                 if (enrollDate) {
-                    const daysSince = Math.floor((refDate.getTime() - new Date(enrollDate).getTime()) / (1000 * 60 * 60 * 24));
-                    // 사용자 결정(2026-05-22): 미래 입학일(daysSince < 0) 제외 — 선택 주차 기준 과거 30일 이내만 신입.
-                    // 이전 결정(미래 startDate 도 신입 인정)이 주차 이동 시 누적되는 부작용 발생.
+                    // 신입 판정 기준일 = 주의 종료일(일요일) — 그 주에 입학하는 학생도 포함
+                    // (refDate=월요일 기준이면 그 주 중·후반 입학자가 미래로 잡혀 누락)
+                    const daysSince = Math.floor((weekEndDate.getTime() - new Date(enrollDate).getTime()) / (1000 * 60 * 60 * 24));
+                    // 음수(주의 종료일보다 미래) 제외 + 30일 이내만 신입
                     if (daysSince >= 0 && daysSince <= 30) newStudentIds.add(student.id);
                 }
             }

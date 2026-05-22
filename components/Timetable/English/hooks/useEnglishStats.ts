@@ -78,6 +78,9 @@ export const useEnglishStats = (
     const studentStats = useMemo<StudentStats>(() => {
         const today = referenceDate || formatDateKey(new Date());
         const refDate = new Date(today);
+        // 신입 판정 기준일 = 주의 종료일(refDate + 6일) — 그 주에 입학하는 학생도 포함
+        const weekEndDate = new Date(refDate);
+        weekEndDate.setDate(weekEndDate.getDate() + 6);
 
         const activeStudentIds = new Set<string>();
         const new1StudentIds = new Set<string>();
@@ -137,8 +140,9 @@ export const useEnglishStats = (
             if (!student.isTransferredIn && !student.hasPastInSubject) {
                 const enrollDate = student.firstSubjectEnrollmentDate || student.enrollmentDate || student.startDate;
                 if (enrollDate) {
-                    const daysSince = Math.floor((refDate.getTime() - new Date(enrollDate).getTime()) / (1000 * 60 * 60 * 24));
-                    // 미래 입학일(daysSince < 0) 제외 — 선택 주차 기준 과거 30/60일 이내만 신입
+                    // 주의 종료일 기준 — 그 주에 입학한 학생도 신입으로 포함
+                    const daysSince = Math.floor((weekEndDate.getTime() - new Date(enrollDate).getTime()) / (1000 * 60 * 60 * 24));
+                    // 음수(주의 종료일보다 미래) 제외 + 과거 30/60일 이내만 신입
                     if (daysSince >= 0 && daysSince <= 30) new1StudentIds.add(studentId);
                     else if (daysSince > 30 && daysSince <= 60) new2StudentIds.add(studentId);
                 }
