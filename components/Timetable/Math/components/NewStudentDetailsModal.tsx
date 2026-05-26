@@ -74,7 +74,7 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
 
   const latestConsultation = sortedConsultations[0];
 
-  // 과목별 enrollment 그룹화 (수학+고등수학 합산)
+  // 과목별 enrollment 그룹화 (수학+고등수학 합산) — 신입인 과목만 표시
   const subjectsInfo = useMemo(() => {
     if (!student?.enrollments) return [];
     const refMs = new Date(referenceDate).getTime();
@@ -88,21 +88,24 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
       grp.classes.push(e);
       if (e.startDate) grp.startDates.push(e.startDate);
     });
-    return Array.from(groupMap.entries()).map(([g, info]) => {
-      const firstStart = info.startDates.sort()[0]; // 가장 빠른 시작일
-      const daysSince = firstStart
-        ? Math.floor((refMs - new Date(firstStart).getTime()) / (1000 * 60 * 60 * 24))
-        : -1;
-      const isNew = firstStart ? daysSince >= 0 && daysSince <= 30 : false;
-      return {
-        subject: g,
-        label: SUBJECT_LABEL[g] || g,
-        firstStart,
-        daysSince,
-        isNew,
-        classes: info.classes,
-      };
-    });
+    return Array.from(groupMap.entries())
+      .map(([g, info]) => {
+        const firstStart = info.startDates.sort()[0]; // 가장 빠른 시작일
+        const daysSince = firstStart
+          ? Math.floor((refMs - new Date(firstStart).getTime()) / (1000 * 60 * 60 * 24))
+          : -1;
+        const isNew = firstStart ? daysSince >= 0 && daysSince <= 30 : false;
+        return {
+          subject: g,
+          label: SUBJECT_LABEL[g] || g,
+          firstStart,
+          daysSince,
+          isNew,
+          classes: info.classes,
+        };
+      })
+      // 신입인 과목만 표시 (영어 1년차 같은 기존 수강 과목은 제외)
+      .filter(info => info.isNew);
   }, [student?.enrollments, referenceDate]);
 
   if (!isOpen || !student) return null;
@@ -137,10 +140,10 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
           {/* [1] 예정된 수강 목록 */}
           <section className="border-b border-gray-200">
             <div className="px-5 py-2 bg-pink-50/50 border-b border-pink-100">
-              <h3 className="font-bold text-xs text-pink-900">📚 예정된 수강 ({subjectsInfo.length}과목)</h3>
+              <h3 className="font-bold text-xs text-pink-900">📚 신입 수강 ({subjectsInfo.length}과목)</h3>
             </div>
             {subjectsInfo.length === 0 ? (
-              <div className="px-5 py-4 text-center text-xs text-gray-400">활성 수강 정보 없음</div>
+              <div className="px-5 py-4 text-center text-xs text-gray-400">신입(30일 이내) 수강 과목 없음</div>
             ) : (
               <div className="divide-y divide-gray-100">
                 {subjectsInfo.map(info => (
