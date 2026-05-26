@@ -2,8 +2,8 @@
  * 신입생 정보 모달 (시간표 헤더 신입 명단의 학생 클릭 시 표시)
  * 구조:
  *  1) 예정된 수강 목록 — 과목별 신입 여부 구분
- *  2) 상담 내역 목록 — 제목만
- *  3) 상담 내역 본문 — 가장 최신 1건 풀 표시
+ *  2) 수강내역 — 제목만
+ *  3) 수강 세부 내역 — 가장 최신 1건 풀 표시
  *
  * "최신" 판별 기준: 재원으로 등록된 입학상담(consultations 컬렉션, source='입학') 중 가장 최근.
  *  입학상담이 없으면 전체 통합 목록의 최신으로 폴백.
@@ -68,14 +68,13 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
   referenceDate,
 }) => {
   // 학생 상담 (재원생 상담일지)
-  const { consultations: studentConsults = [], loading: studentLoading } = useStudentConsultations(
+  const { consultations: studentConsults = [] } = useStudentConsultations(
     student?.id ? { studentId: student.id } : undefined
   );
   // 입학 상담 (예비원생 → 등록 전환 기록)
-  const { data: regConsults = [], isLoading: regLoading } = useConsultations(
+  const { data: regConsults = [] } = useConsultations(
     student?.id ? { studentId: student.id } : {}
   );
-  const consultLoading = studentLoading || regLoading;
 
   // 두 컬렉션 통합 정렬 (date desc)
   const sortedConsultations = useMemo(() => {
@@ -143,6 +142,18 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
       // 신입인 과목만 표시 (영어 1년차 같은 기존 수강 과목은 제외)
       .filter(info => info.isNew);
   }, [student?.enrollments, referenceDate]);
+
+  // [2] 수강내역 — 학생이 등록한 모든 활성 수업(개별 enrollment row 단위)
+  const enrollmentRows = useMemo(() => {
+    if (!student?.enrollments) return [];
+    return student.enrollments
+      .filter(isActive)
+      .map(e => ({
+        ...e,
+        groupLabel: SUBJECT_LABEL[subjectGroup(e.subject)] || e.subject,
+      }))
+      .sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''));
+  }, [student?.enrollments]);
 
   if (!isOpen || !student) return null;
 
@@ -213,49 +224,32 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
             )}
           </section>
 
-          {/* [2] 상담 내역 목록 (제목만) */}
+          {/* [2] 수강내역 — 학생이 등록한 활성 수업 목록 */}
           <section className="border-b border-gray-200">
             <div className="px-5 py-2 bg-indigo-50/50 border-b border-indigo-100">
               <h3 className="font-bold text-xs text-indigo-900">
-                💬 상담 내역 ({sortedConsultations.length}건)
+                📋 수강내역 ({enrollmentRows.length}건)
               </h3>
             </div>
-            {consultLoading ? (
-              <div className="px-5 py-4 text-center text-xs text-gray-400">로딩 중...</div>
-            ) : sortedConsultations.length === 0 ? (
-              <div className="px-5 py-4 text-center text-xs text-gray-400">상담 기록 없음</div>
+            {enrollmentRows.length === 0 ? (
+              <div className="px-5 py-4 text-center text-xs text-gray-400">등록된 수강 없음</div>
             ) : (
               <div className="divide-y divide-gray-100 max-h-[200px] overflow-y-auto">
-                {sortedConsultations.map((c) => {
-                  const k = `${c.source}-${c.id}`;
-                  const isLatest = k === latestKey;
-                  return (
-                    <div
-                      key={k}
-                      className={`px-5 py-1.5 flex items-center gap-2 text-xs ${
-                        isLatest ? 'bg-indigo-50/30' : ''
-                      }`}
-                    >
-                      <span className="font-mono text-gray-500 w-20 shrink-0">{c.date || '-'}</span>
-                      <span
-                        className={`text-[9px] font-bold px-1 py-0.5 rounded shrink-0 ${
-                          c.source === '입학'
-                            ? 'bg-sky-100 text-sky-700'
-                            : 'bg-emerald-100 text-emerald-700'
-                        }`}
-                      >
-                        {c.source}
-                      </span>
-                      <span className="text-gray-700 truncate flex-1">{c.title || '(제목 없음)'}</span>
-                      {c.consultantName && (
-                        <span className="text-[10px] text-gray-400 shrink-0">{c.consultantName}</span>
-                      )}
-                      {isLatest && (
-                        <span className="text-[9px] text-indigo-600 font-bold shrink-0">최신</span>
-                      )}
-                    </div>
-                  );
-                })}
+                {enrollmentRows.map((e, idx) => (
+                  <div
+                    key={`${e.subject}-${e.className}-${e.startDate || idx}`}
+                    className="px-5 py-1.5 flex items-center gap-2 text-xs"
+                  >
+                    <span className="font-mono text-gray-500 w-20 shrink-0">{e.startDate || '-'}</span>
+                    <span className="text-[9px] font-bold px-1 py-0.5 rounded shrink-0 bg-amber-100 text-amber-700">
+                      {e.groupLabel}
+                    </span>
+                    <span className="text-gray-700 truncate flex-1">{e.className}</span>
+                    {e.teacher && (
+                      <span className="text-[10px] text-gray-400 shrink-0">{e.teacher}</span>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </section>
