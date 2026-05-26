@@ -4,6 +4,9 @@
  *  1) 예정된 수강 목록 — 과목별 신입 여부 구분
  *  2) 상담 내역 목록 — 제목만
  *  3) 상담 내역 본문 — 가장 최신 1건 풀 표시
+ *
+ * "최신" 판별 기준: 재원으로 등록된 입학상담(consultations 컬렉션, source='입학') 중 가장 최근.
+ *  입학상담이 없으면 전체 통합 목록의 최신으로 폴백.
  */
 import React, { useMemo } from 'react';
 import { X } from 'lucide-react';
@@ -97,7 +100,15 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
     return merged.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   }, [studentConsults, regConsults]);
 
-  const latestConsultation = sortedConsultations[0];
+  // "최신" 기준 = 재원으로 등록된 입학상담(consultations, source='입학') 중 가장 최근.
+  //  입학상담이 없으면 전체 통합 목록의 최신으로 폴백.
+  const latestConsultation = useMemo(() => {
+    const admission = sortedConsultations.find(c => c.source === '입학');
+    return admission || sortedConsultations[0];
+  }, [sortedConsultations]);
+  const latestKey = latestConsultation
+    ? `${latestConsultation.source}-${latestConsultation.id}`
+    : null;
 
   // 과목별 enrollment 그룹화 (수학+고등수학 합산) — 신입인 과목만 표시
   const subjectsInfo = useMemo(() => {
@@ -215,32 +226,36 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
               <div className="px-5 py-4 text-center text-xs text-gray-400">상담 기록 없음</div>
             ) : (
               <div className="divide-y divide-gray-100 max-h-[200px] overflow-y-auto">
-                {sortedConsultations.map((c, idx) => (
-                  <div
-                    key={`${c.source}-${c.id}`}
-                    className={`px-5 py-1.5 flex items-center gap-2 text-xs ${
-                      idx === 0 ? 'bg-indigo-50/30' : ''
-                    }`}
-                  >
-                    <span className="font-mono text-gray-500 w-20 shrink-0">{c.date || '-'}</span>
-                    <span
-                      className={`text-[9px] font-bold px-1 py-0.5 rounded shrink-0 ${
-                        c.source === '입학'
-                          ? 'bg-sky-100 text-sky-700'
-                          : 'bg-emerald-100 text-emerald-700'
+                {sortedConsultations.map((c) => {
+                  const k = `${c.source}-${c.id}`;
+                  const isLatest = k === latestKey;
+                  return (
+                    <div
+                      key={k}
+                      className={`px-5 py-1.5 flex items-center gap-2 text-xs ${
+                        isLatest ? 'bg-indigo-50/30' : ''
                       }`}
                     >
-                      {c.source}
-                    </span>
-                    <span className="text-gray-700 truncate flex-1">{c.title || '(제목 없음)'}</span>
-                    {c.consultantName && (
-                      <span className="text-[10px] text-gray-400 shrink-0">{c.consultantName}</span>
-                    )}
-                    {idx === 0 && (
-                      <span className="text-[9px] text-indigo-600 font-bold shrink-0">최신</span>
-                    )}
-                  </div>
-                ))}
+                      <span className="font-mono text-gray-500 w-20 shrink-0">{c.date || '-'}</span>
+                      <span
+                        className={`text-[9px] font-bold px-1 py-0.5 rounded shrink-0 ${
+                          c.source === '입학'
+                            ? 'bg-sky-100 text-sky-700'
+                            : 'bg-emerald-100 text-emerald-700'
+                        }`}
+                      >
+                        {c.source}
+                      </span>
+                      <span className="text-gray-700 truncate flex-1">{c.title || '(제목 없음)'}</span>
+                      {c.consultantName && (
+                        <span className="text-[10px] text-gray-400 shrink-0">{c.consultantName}</span>
+                      )}
+                      {isLatest && (
+                        <span className="text-[9px] text-indigo-600 font-bold shrink-0">최신</span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </section>
@@ -271,10 +286,12 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
                   </div>
                 </div>
               )}
-              {/* 나머지 상담 — 제목만 */}
+              {/* 나머지 상담 — 제목만 (latest 제외) */}
               {sortedConsultations.length > 1 && (
                 <div className="divide-y divide-gray-100 max-h-[180px] overflow-y-auto">
-                  {sortedConsultations.slice(1).map((c) => (
+                  {sortedConsultations
+                    .filter(c => `${c.source}-${c.id}` !== latestKey)
+                    .map((c) => (
                     <div
                       key={`detail-${c.source}-${c.id}`}
                       className="px-5 py-1.5 flex items-center gap-2 text-xs"
