@@ -240,7 +240,6 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
                     key={`${e.subject}-${e.className}-${e.startDate || idx}`}
                     className="px-5 py-1.5 flex items-center gap-2 text-xs"
                   >
-                    <span className="font-mono text-gray-500 w-20 shrink-0">{e.startDate || '-'}</span>
                     <span className="text-[9px] font-bold px-1 py-0.5 rounded shrink-0 bg-amber-100 text-amber-700">
                       {e.groupLabel}
                     </span>
