@@ -26,6 +26,7 @@ import { formatDateKey } from '../../../../utils/dateUtils';
 import { getEndedSubjects } from '../../../../utils/enrollment';
 import { useMathConfig, DEFAULT_WEEKDAY_GROUP_ORDER } from '../hooks/useMathConfig';
 import WithdrawalStudentDetail from '../../../WithdrawalManagement/WithdrawalStudentDetail';
+import NewStudentDetailsModal from './NewStudentDetailsModal';
 import { WithdrawalEntry } from '../../../../hooks/useWithdrawalFilters';
 import SubjectControls from '../../shared/SubjectControls';
 import type { TimetableSubjectType } from '../../../../types';
@@ -304,6 +305,9 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
     const activeDropdownRef = useRef<HTMLDivElement>(null);
     const [isNewDropdownOpen, setIsNewDropdownOpen] = useState(false);
     const newDropdownRef = useRef<HTMLDivElement>(null);
+
+    // 신입생 상세 모달
+    const [selectedNewStudent, setSelectedNewStudent] = useState<any | null>(null);
 
     // 퇴원생 상세 모달 상태
     const [selectedWithdrawalEntry, setSelectedWithdrawalEntry] = useState<WithdrawalEntry | null>(null);
@@ -636,6 +640,11 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                 school: base?.school || '',
                 grade: base?.grade || '',
                 enrollmentDate: dateForDisplay,
+                // 모달용 추가 정보
+                parentName: (base as any)?.parentName,
+                parentPhone: (base as any)?.parentPhone,
+                studentPhone: (base as any)?.studentPhone,
+                enrollments: (base as any)?.enrollments || [],
             };
         };
         const activeStudents: Array<{ id: string; name: string; school: string; grade: string; enrollmentDate?: string }> = [];
@@ -645,7 +654,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
         });
         activeStudents.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
 
-        const newStudents: Array<{ id: string; name: string; school: string; grade: string; enrollmentDate?: string }> = [];
+        const newStudents: Array<{ id: string; name: string; school: string; grade: string; enrollmentDate?: string; parentName?: string; parentPhone?: string; studentPhone?: string; enrollments?: any[] }> = [];
         newStudentIds.forEach(id => {
             const info = buildStudentInfo(id, true);
             if (info) newStudents.push(info);
@@ -653,6 +662,7 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
         newStudents.sort((a, b) => (b.enrollmentDate || '').localeCompare(a.enrollmentDate || ''));
 
         return {
+            weekEnd,                                     // 주의 종료일 (신입 모달 referenceDate 용)
             activeCount: activeStudentIds.size,          // 재원생 (중복 제거됨)
             newCount: newStudentIds.size,                // 신입 (30일 이내)
             onHoldCount: onHoldStudentIds.size,          // 대기 (중복 제거됨)
@@ -755,7 +765,12 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                                         {studentCounts.newStudents.map(s => {
                                             const schoolGrade = formatSchoolGrade(s.school, s.grade);
                                             return (
-                                                <div key={s.id} className="whitespace-nowrap py-0.5">
+                                                <div
+                                                    key={s.id}
+                                                    className="whitespace-nowrap py-0.5 cursor-pointer hover:bg-pink-800/50 px-1 rounded"
+                                                    onClick={() => { setSelectedNewStudent(s); setIsNewDropdownOpen(false); }}
+                                                    title="클릭하면 신입생 상세 정보"
+                                                >
                                                     {s.name}/{schoolGrade !== '-' ? schoolGrade : '미입력'}
                                                     {s.enrollmentDate && ` (입학: ${s.enrollmentDate})`}
                                                 </div>
@@ -1570,6 +1585,14 @@ const TimetableHeader: React.FC<TimetableHeaderProps> = ({
                     </div>
                 </div>
             )}
+
+            {/* 신입생 상세 모달 — 신입 명단의 학생 클릭 시 표시 */}
+            <NewStudentDetailsModal
+                isOpen={!!selectedNewStudent}
+                onClose={() => setSelectedNewStudent(null)}
+                student={selectedNewStudent}
+                referenceDate={studentCounts.weekEnd || formatDateKey(new Date())}
+            />
         </div>
     );
 };
