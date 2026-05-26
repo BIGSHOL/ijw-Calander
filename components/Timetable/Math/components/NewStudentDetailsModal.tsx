@@ -8,6 +8,7 @@
 import React, { useMemo } from 'react';
 import { X } from 'lucide-react';
 import { useStudentConsultations } from '../../../../hooks/useStudentConsultations';
+import { useConsultations } from '../../../../hooks/useConsultations';
 
 interface SubjectEnrollment {
   subject: string;          // 'math' | 'highmath' | 'english' | ...
@@ -63,14 +64,38 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
   student,
   referenceDate,
 }) => {
-  const { data: consultations = [], isLoading: consultLoading } = useStudentConsultations(
+  // 학생 상담 (재원생 상담일지)
+  const { consultations: studentConsults = [], loading: studentLoading } = useStudentConsultations(
     student?.id ? { studentId: student.id } : undefined
   );
+  // 입학 상담 (예비원생 → 등록 전환 기록)
+  const { data: regConsults = [], isLoading: regLoading } = useConsultations(
+    student?.id ? { studentId: student.id } : {}
+  );
+  const consultLoading = studentLoading || regLoading;
 
-  // 상담 정렬 (date desc)
+  // 두 컬렉션 통합 정렬 (date desc)
   const sortedConsultations = useMemo(() => {
-    return [...consultations].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  }, [consultations]);
+    const merged = [
+      ...studentConsults.map((c: any) => ({
+        id: c.id,
+        date: c.date,
+        title: c.title,
+        content: c.content,
+        consultantName: c.consultantName,
+        source: '학생' as const,
+      })),
+      ...regConsults.map((c: any) => ({
+        id: c.id,
+        date: c.consultationDate,
+        title: c.status ? `[${c.status}] 입학 상담` : '입학 상담',
+        content: c.notes,
+        consultantName: c.counselor,
+        source: '입학' as const,
+      })),
+    ];
+    return merged.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  }, [studentConsults, regConsults]);
 
   const latestConsultation = sortedConsultations[0];
 
@@ -192,12 +217,21 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
               <div className="divide-y divide-gray-100 max-h-[200px] overflow-y-auto">
                 {sortedConsultations.map((c, idx) => (
                   <div
-                    key={c.id}
+                    key={`${c.source}-${c.id}`}
                     className={`px-5 py-1.5 flex items-center gap-2 text-xs ${
                       idx === 0 ? 'bg-indigo-50/30' : ''
                     }`}
                   >
                     <span className="font-mono text-gray-500 w-20 shrink-0">{c.date || '-'}</span>
+                    <span
+                      className={`text-[9px] font-bold px-1 py-0.5 rounded shrink-0 ${
+                        c.source === '입학'
+                          ? 'bg-sky-100 text-sky-700'
+                          : 'bg-emerald-100 text-emerald-700'
+                      }`}
+                    >
+                      {c.source}
+                    </span>
                     <span className="text-gray-700 truncate flex-1">{c.title || '(제목 없음)'}</span>
                     {c.consultantName && (
                       <span className="text-[10px] text-gray-400 shrink-0">{c.consultantName}</span>
@@ -211,11 +245,11 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
             )}
           </section>
 
-          {/* [3] 최신 상담 본문 */}
+          {/* [3] 최신 상담 세부 내역 */}
           {latestConsultation && (
             <section>
               <div className="px-5 py-2 bg-indigo-50/50 border-b border-indigo-100">
-                <h3 className="font-bold text-xs text-indigo-900">📖 최신 상담 본문</h3>
+                <h3 className="font-bold text-xs text-indigo-900">📖 상담 세부 내역 (최신 1건)</h3>
               </div>
               <div className="px-5 py-3 space-y-1.5">
                 <div className="flex items-center gap-2 text-xs">
