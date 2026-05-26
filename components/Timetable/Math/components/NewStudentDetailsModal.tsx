@@ -83,7 +83,7 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
         title: c.title,
         content: c.content,
         consultantName: c.consultantName,
-        source: '학생' as const,
+        source: '재원' as const,
       })),
       ...regConsults.map((c: any) => ({
         id: c.id,
