@@ -245,24 +245,62 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
             )}
           </section>
 
-          {/* [3] 최신 상담 세부 내역 */}
-          {latestConsultation && (
+          {/* [3] 상담 세부 내역 — 최신 1건 본문 + 나머지 제목만 */}
+          {sortedConsultations.length > 0 && (
             <section>
               <div className="px-5 py-2 bg-indigo-50/50 border-b border-indigo-100">
-                <h3 className="font-bold text-xs text-indigo-900">📖 상담 세부 내역 (최신 1건)</h3>
+                <h3 className="font-bold text-xs text-indigo-900">
+                  📖 상담 세부 내역 ({sortedConsultations.length}건)
+                </h3>
               </div>
-              <div className="px-5 py-3 space-y-1.5">
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="font-mono text-gray-500">{latestConsultation.date}</span>
-                  {latestConsultation.consultantName && (
-                    <span className="text-gray-500">— {latestConsultation.consultantName}</span>
-                  )}
+              {/* 최신 1건 — 본문 풀 표시 */}
+              {latestConsultation && (
+                <div className="px-5 py-3 space-y-1.5 border-b border-gray-100 bg-indigo-50/20">
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="font-mono text-gray-500">{latestConsultation.date}</span>
+                    {latestConsultation.consultantName && (
+                      <span className="text-gray-500">— {latestConsultation.consultantName}</span>
+                    )}
+                    <span className="text-[9px] text-indigo-600 font-bold ml-auto">최신</span>
+                  </div>
+                  <div className="text-xs font-bold text-gray-800">
+                    {latestConsultation.title || '(제목 없음)'}
+                  </div>
+                  <div className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">
+                    {latestConsultation.content || <span className="text-gray-400">(본문 없음)</span>}
+                  </div>
                 </div>
-                <div className="text-xs font-bold text-gray-800">{latestConsultation.title || '(제목 없음)'}</div>
-                <div className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">
-                  {latestConsultation.content || <span className="text-gray-400">(본문 없음)</span>}
+              )}
+              {/* 나머지 상담 — 제목만 */}
+              {sortedConsultations.length > 1 && (
+                <div className="divide-y divide-gray-100 max-h-[180px] overflow-y-auto">
+                  {sortedConsultations.slice(1).map((c) => (
+                    <div
+                      key={`detail-${c.source}-${c.id}`}
+                      className="px-5 py-1.5 flex items-center gap-2 text-xs"
+                    >
+                      <span className="font-mono text-gray-500 w-20 shrink-0">{c.date || '-'}</span>
+                      <span
+                        className={`text-[9px] font-bold px-1 py-0.5 rounded shrink-0 ${
+                          c.source === '입학'
+                            ? 'bg-sky-100 text-sky-700'
+                            : 'bg-emerald-100 text-emerald-700'
+                        }`}
+                      >
+                        {c.source}
+                      </span>
+                      <span className="text-gray-700 truncate flex-1">
+                        {c.title || '(제목 없음)'}
+                      </span>
+                      {c.consultantName && (
+                        <span className="text-[10px] text-gray-400 shrink-0">
+                          {c.consultantName}
+                        </span>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              </div>
+              )}
             </section>
           )}
         </div>
