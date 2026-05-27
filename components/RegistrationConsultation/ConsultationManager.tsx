@@ -781,17 +781,23 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                         </button>
                     )}
 
-                    {/* QR 접수 확인: 접수 건이 있을 때 표시 */}
-                    {canCreate && pendingCount > 0 && (
+                    {/* QR 접수 확인 — 항상 표시 (0건일 때는 회색 비활성 스타일) */}
+                    {canCreate && (
                         <button
                             onClick={() => setShowDraftPanel(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-sm text-xs font-bold transition-colors relative"
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-bold transition-colors relative ${
+                                pendingCount > 0
+                                    ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-600'
+                            }`}
                         >
                             <Inbox size={14} />
                             QR 접수
-                            <span className="ml-1 bg-white text-amber-600 rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none">
-                                {pendingCount}
-                            </span>
+                            {pendingCount > 0 && (
+                                <span className="ml-1 bg-white text-amber-600 rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none">
+                                    {pendingCount}
+                                </span>
+                            )}
                         </button>
                     )}
 
