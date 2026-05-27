@@ -46,11 +46,14 @@ const calculateSessions = (
   return count;
 };
 
-// 과목 카테고리 → 세션 카테고리 매핑
+// 과목 카테고리 → 세션 카테고리 매핑 (세션 적용 버튼 노출 여부 결정용)
+// B4: TuitionInvoicePreview의 매핑과 통일. 매핑된 모든 카테고리에서 버튼 노출.
 const mapCategoryToSessionCategory = (category: string): string | null => {
-  if (category === '수학') return '수학';
-  if (category === '영어') return '영어';
-  if (category === 'EIE') return 'EiE';
+  if (category === '수학') return 'math';
+  if (category === '영어') return 'english';
+  if (category === 'EIE') return 'eie';
+  if (category === '국어') return 'korean';
+  if (category === '기타') return 'etc';
   return null;
 };
 
@@ -340,18 +343,39 @@ export const TuitionInputSection: React.FC<TuitionInputSectionProps> = ({
               <label className="block text-xs text-slate-400 mb-1">시작일</label>
               <input
                 type="date"
+                max={studentInfo.endDate || undefined}
                 className="w-full p-2 border border-slate-300 rounded outline-none focus:ring-2 focus:ring-[#fdb813]"
                 value={studentInfo.startDate}
-                onChange={(e) => setStudentInfo(prev => ({ ...prev, startDate: e.target.value }))}
+                onChange={(e) => {
+                  // B2: 시작일이 종료일보다 늦으면 종료일도 시작일로 자동 보정
+                  const newStart = e.target.value;
+                  setStudentInfo(prev => {
+                    if (prev.endDate && newStart && newStart > prev.endDate) {
+                      return { ...prev, startDate: newStart, endDate: newStart };
+                    }
+                    return { ...prev, startDate: newStart };
+                  });
+                }}
               />
             </div>
             <div>
               <label className="block text-xs text-slate-400 mb-1">종료일</label>
               <input
                 type="date"
+                min={studentInfo.startDate || undefined}
                 className="w-full p-2 border border-slate-300 rounded outline-none focus:ring-2 focus:ring-[#fdb813]"
                 value={studentInfo.endDate}
-                onChange={(e) => setStudentInfo(prev => ({ ...prev, endDate: e.target.value }))}
+                onChange={(e) => {
+                  // B2: 종료일이 시작일보다 빠르면 거부 (alert + 보정)
+                  const newEnd = e.target.value;
+                  setStudentInfo(prev => {
+                    if (prev.startDate && newEnd && newEnd < prev.startDate) {
+                      window.setTimeout(() => alert('종료일은 시작일보다 빠를 수 없습니다.'), 0);
+                      return { ...prev, endDate: prev.startDate };
+                    }
+                    return { ...prev, endDate: newEnd };
+                  });
+                }}
               />
             </div>
           </div>
@@ -403,16 +427,26 @@ export const TuitionInputSection: React.FC<TuitionInputSectionProps> = ({
                   }}
                 />
                 <input
-                  type="text"
+                  type="number"
+                  min={0}
+                  max={999}
                   value={course.sessions}
-                  onChange={(e) => updateCourse(course.uid, 'sessions', Number(e.target.value))}
+                  onChange={(e) => {
+                    // B6: 음수/NaN 방지
+                    const n = Math.max(0, Math.min(999, Number(e.target.value) || 0));
+                    updateCourse(course.uid, 'sessions', n);
+                  }}
                   placeholder="횟수"
                   className="p-1 border rounded text-sm text-right bg-white"
                 />
                 <input
                   type="number"
+                  min={0}
                   value={course.price}
-                  onChange={(e) => updateCourse(course.uid, 'price', Number(e.target.value))}
+                  onChange={(e) => {
+                    const n = Math.max(0, Number(e.target.value) || 0);
+                    updateCourse(course.uid, 'price', n);
+                  }}
                   placeholder="금액"
                   className="p-1 border rounded text-sm text-right"
                 />
@@ -487,6 +521,14 @@ export const TuitionInputSection: React.FC<TuitionInputSectionProps> = ({
                     const newFixedMonthly = !course.fixedMonthly;
                     const N = course.fixedSessionsCount ?? 12;
                     updateCourse(course.uid, 'fixedMonthly', newFixedMonthly);
+                    // 자동 price 재계산 헬퍼 (defaultPrice 기반)
+                    const original = availableCourses.find(oc => oc.id === course.id);
+                    const recalcPrice = (sessions: number): number | null => {
+                      if (original && original.defaultPrice < 100000) {
+                        return original.defaultPrice * sessions;
+                      }
+                      return null;
+                    };
                     if (newFixedMonthly) {
                       // 12회 고정 ON: 세션 적용과 배타, sessions = N
                       if (course.useSessionPeriod) {
@@ -496,6 +538,9 @@ export const TuitionInputSection: React.FC<TuitionInputSectionProps> = ({
                         updateCourse(course.uid, 'fixedSessionsCount', N);
                       }
                       updateCourse(course.uid, 'sessions', N);
+                      // A1 수정: ON 시 price도 N에 맞춰 재계산 (단가 < 10만원인 경우만)
+                      const newPrice = recalcPrice(N);
+                      if (newPrice !== null) updateCourse(course.uid, 'price', newPrice);
                     } else if (studentInfo.startDate && studentInfo.endDate && course.days) {
                       // OFF: 요일/공휴일 기반 재계산
                       const sessions = calculateSessions(
@@ -503,6 +548,9 @@ export const TuitionInputSection: React.FC<TuitionInputSectionProps> = ({
                         course.days, course.excludeHolidays, holidayDateSet,
                       );
                       updateCourse(course.uid, 'sessions', sessions);
+                      // C1 수정: OFF 시 price도 새 sessions에 맞춰 재계산
+                      const newPrice = recalcPrice(sessions);
+                      if (newPrice !== null) updateCourse(course.uid, 'price', newPrice);
                     }
                   }}
                   className={`flex items-center gap-1 text-xs px-2 py-1 rounded border transition-colors ${

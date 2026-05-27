@@ -187,7 +187,7 @@ export const TuitionSessionManager: React.FC = () => {
   // 편집 중인 세션 데이터
   const [editData, setEditData] = useState<Record<string, TuitionDateRange[]>>({});
 
-  const { sessions, isLoading, isSaving, saveSession } = useTuitionSessions();
+  const { sessions, isLoading, isSaving, saveSession, deleteSession } = useTuitionSessions();
 
   // Firebase 세션 데이터로 편집 데이터 초기화 (DB 영어 카테고리 → UI 한글 카테고리 매핑)
   useEffect(() => {
@@ -256,16 +256,17 @@ export const TuitionSessionManager: React.FC = () => {
   }, [handleMouseUp]);
 
   // 저장 (UI 한글 카테고리 → DB 영어 카테고리 변환)
+  // C4: ranges가 비어있으면 deleteDoc — 옛 데이터 잔존 방지
   const handleSave = async () => {
     try {
       for (const [key, ranges] of Object.entries(editData)) {
+        const parts = key.split('-');
+        const year = parseInt(parts[0]);
+        const month = parseInt(parts[parts.length - 1]);
+        const uiCategory = parts.slice(1, parts.length - 1).join('-');
+        const dbCategory = CATEGORY_TO_DB[uiCategory] || uiCategory;
+        const dbId = `${year}-${dbCategory}-${month}`;
         if (ranges.length > 0) {
-          const parts = key.split('-');
-          const year = parseInt(parts[0]);
-          const month = parseInt(parts[parts.length - 1]);
-          const uiCategory = parts.slice(1, parts.length - 1).join('-');
-          const dbCategory = CATEGORY_TO_DB[uiCategory] || uiCategory;
-          const dbId = `${year}-${dbCategory}-${month}`;
           const sessionData: TuitionSessionPeriod = {
             id: dbId,
             year,
@@ -275,6 +276,13 @@ export const TuitionSessionManager: React.FC = () => {
             sessions: 12,
           };
           await saveSession(sessionData);
+        } else {
+          // 빈 ranges = 사용자가 모두 제거 → DB에서 명시적 삭제 (이전엔 건너뛰어서 옛 데이터 남음)
+          // 이미 DB에 있는 doc만 삭제 시도 (없으면 무시)
+          const existsInDb = sessions.some(s => s.id === dbId);
+          if (existsInDb) {
+            try { await deleteSession(dbId); } catch { /* 이미 삭제됐을 수 있음 */ }
+          }
         }
       }
       alert('저장되었습니다.');

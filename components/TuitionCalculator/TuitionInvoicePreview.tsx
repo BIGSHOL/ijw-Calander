@@ -59,10 +59,13 @@ const countSessionsInRange = (
 };
 
 // 과목 카테고리 → 세션 카테고리 매핑 (Firestore 세션은 영문 키 사용)
+// B4: 국어/기타도 매핑 추가 (세션 설정 페이지에서 동일 영문 키로 저장)
 const mapCategoryToSessionCategory = (category: string): string | null => {
   if (category === '수학') return 'math';
   if (category === '영어') return 'english';
   if (category === 'EIE') return 'eie';
+  if (category === '국어') return 'korean';
+  if (category === '기타') return 'etc';
   return null;
 };
 
@@ -90,6 +93,23 @@ const splitCoursesByMonth = (
   const result: MonthlyCourseLine[] = [];
 
   for (const course of courses) {
+    // 월 N회 고정 모드: 사용자가 명시한 sessions/price를 그대로 표시 (자동 분할/카운팅 우회)
+    // 토 보강처럼 요일 자동 카운트가 의도와 다른 케이스 대응
+    if (course.fixedMonthly && course.fixedSessionsCount && course.fixedSessionsCount > 0) {
+      const firstMonth = enrollStart.getMonth() + 1;
+      result.push({
+        month: `${firstMonth}월`,
+        category: course.category,
+        name: course.name,
+        days: course.days,
+        sessions: course.fixedSessionsCount,
+        price: course.price,
+        note: course.note || '',
+        originalUid: course.uid,
+      });
+      continue;
+    }
+
     const dayIndexes = course.days ? parseDays(course.days) : [];
     const courseLines: MonthlyCourseLine[] = [];
     let courseSubtotal = 0;
@@ -98,7 +118,22 @@ const splitCoursesByMonth = (
     if (course.useSessionPeriod) {
       // 세션 적용 과목: 세션 기간 기반으로 월별 분리
       const sessionCategory = mapCategoryToSessionCategory(course.category);
-      if (sessionCategory) {
+      // 폴백 1: 카테고리 매핑 안 됨 → 사용자 입력값으로 단일 라인 (조용한 누락 방지)
+      if (!sessionCategory) {
+        const firstMonth = enrollStart.getMonth() + 1;
+        result.push({
+          month: `${firstMonth}월`,
+          category: course.category,
+          name: `${course.name} (세션 미매핑)`,
+          days: course.days,
+          sessions: course.sessions || 0,
+          price: course.price,
+          note: course.note || '',
+          originalUid: course.uid,
+        });
+        continue;
+      }
+      {
         const relevantSessions = sessionPeriods.filter(
           s => s.category === sessionCategory && s.ranges && s.ranges.length > 0
         );
@@ -193,6 +228,23 @@ const splitCoursesByMonth = (
       }
     }
 
+    // 폴백 3: 세션/요일 자동 계산이 0회로 나와 courseLines가 비어있으면
+    //   → 사용자 입력값(sessions/price) 그대로 단일 라인 표시 (안내문에서 과목 누락 방지)
+    if (courseLines.length === 0) {
+      const firstMonth = enrollStart.getMonth() + 1;
+      result.push({
+        month: `${firstMonth}월`,
+        category: course.category,
+        name: course.name,
+        days: course.days,
+        sessions: course.sessions || 0,
+        price: course.price,
+        note: course.note || '',
+        originalUid: course.uid,
+      });
+      continue;
+    }
+
     result.push(...courseLines);
 
     // 2개월 이상에 걸치면 소계 행 추가
@@ -234,10 +286,17 @@ export const TuitionInvoicePreview: React.FC<TuitionInvoicePreviewProps> = ({
 
   const displayLines = isSingleMonth() ? null : monthlyLines;
 
-  const courseTotal = selectedCourses.reduce((acc, curr) => acc + curr.price, 0);
+  // C3: courseTotal을 화면 표시와 일관되게 계산
+  //   - 다중 월 모드: monthlyLines(소계 제외) 합산 → sessionPeriods 변경 시에도 자동 일치
+  //   - 단일 월 모드: selectedCourses 직접 합산
+  const courseTotal = displayLines
+    ? displayLines.filter(l => !l.isSubtotal).reduce((acc, l) => acc + l.price, 0)
+    : selectedCourses.reduce((acc, curr) => acc + curr.price, 0);
   const extraTotal = selectedExtras.reduce((acc, curr) => acc + curr.price, 0);
-  const discountTotal = selectedDiscounts.reduce((acc, curr) => acc + curr.amount, 0);
-  const finalTotal = courseTotal + extraTotal - discountTotal;
+  // 할인 amount는 음수 입력 시 가산 효과 → 안전을 위해 Math.max(0, ...)으로 정규화
+  const discountTotal = selectedDiscounts.reduce((acc, curr) => acc + Math.max(0, curr.amount), 0);
+  // 최종 금액은 음수가 될 수 없음 (할인이 코스+기타 합계를 초과해도 0으로 클램프)
+  const finalTotal = Math.max(0, courseTotal + extraTotal - discountTotal);
 
   return (
     <div className="w-full h-full bg-white flex flex-col overflow-hidden break-keep">

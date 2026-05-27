@@ -85,8 +85,13 @@ export const TuitionDiscountViewer: React.FC<TuitionDiscountViewerProps> = ({
           </div>
           <div className="w-32">
             <label className="text-xs text-gray-500 block mb-1">금액</label>
-            <input type="number" value={newItem.amount} onChange={e => setNewItem(p => ({ ...p, amount: Number(e.target.value) }))}
-              className="w-full px-2 py-1.5 border rounded text-sm text-right" />
+            <input
+              type="number"
+              min={0}
+              value={newItem.amount}
+              onChange={e => setNewItem(p => ({ ...p, amount: Math.max(0, Number(e.target.value) || 0) }))}
+              className="w-full px-2 py-1.5 border rounded text-sm text-right"
+            />
           </div>
           <button onClick={handleAdd} className="px-3 py-1.5 bg-[#081429] text-white text-xs rounded-lg hover:bg-[#0c1e3d]">추가</button>
           <button onClick={() => setShowAdd(false)} className="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs rounded-lg hover:bg-gray-300">취소</button>
@@ -113,9 +118,14 @@ export const TuitionDiscountViewer: React.FC<TuitionDiscountViewerProps> = ({
                 </td>
                 <td className="p-3 text-right font-medium text-[#081429]">
                   {editingId === item.id ? (
-                    <input type="number" value={editData.amount} onChange={e => setEditData(p => ({ ...p, amount: Number(e.target.value) }))}
+                    <input
+                      type="number"
+                      min={0}
+                      value={editData.amount}
+                      onChange={e => setEditData(p => ({ ...p, amount: Math.max(0, Number(e.target.value) || 0) }))}
                       className="w-full px-2 py-1 border border-[#fdb813] rounded text-right text-sm"
-                      onKeyDown={e => e.key === 'Enter' && handleSave(item)} />
+                      onKeyDown={e => e.key === 'Enter' && handleSave(item)}
+                    />
                   ) : (
                     <>-{item.amount.toLocaleString()}원</>
                   )}

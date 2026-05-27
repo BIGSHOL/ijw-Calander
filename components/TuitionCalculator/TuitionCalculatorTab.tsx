@@ -107,7 +107,7 @@ const TuitionCalculatorTab: React.FC<TuitionCalculatorTabProps> = ({ userProfile
   const availableExtras = buildAllExtras(textbookCatalog);
 
   // 훅
-  const { saveInvoice, updateInvoice } = useTuitionInvoices();
+  const { saveInvoice, updateInvoice, invoices: savedInvoices } = useTuitionInvoices();
   const { sessions: sessionPeriods } = useTuitionSessions();
   const { holidayDateSet } = useTuitionHolidays();
   const {
@@ -157,6 +157,10 @@ const TuitionCalculatorTab: React.FC<TuitionCalculatorTabProps> = ({ userProfile
     setSelectedCourses(prev => prev.map(c => {
       if (c.uid !== uid) return c;
       const updated = { ...c, [field]: value };
+      // C2 주의: 'sessions' 필드 변경 시에만 price 자동 재계산.
+      // days/excludeHolidays/useSessionPeriod/fixedMonthly 변경 시 sessions 재계산은
+      // 호출자(TuitionInputSection)가 별도 updateCourse('sessions', ...) 호출로 트리거해야 함.
+      // (UI에서는 모든 핸들러가 명시적으로 sessions를 재계산해서 호출하므로 안전)
       if (field === 'sessions') {
         const original = availableCourses.find(oc => oc.id === c.id);
         if (original && original.defaultPrice < 100000) {
@@ -272,11 +276,35 @@ const TuitionCalculatorTab: React.FC<TuitionCalculatorTabProps> = ({ userProfile
     }
   };
 
-  // 청구서 불러오기
+  // 청구서 불러오기 (B1: 작성 중 데이터 있으면 확인, B5: 신규 필드 기본값 보강)
   const handleSelectInvoice = (invoice: TuitionSavedInvoice) => {
+    // B1: 작성 중인 폼이 있으면 사용자 확인 (currentInvoiceId가 다른 경우만 — 동일 청구서 다시 누르는 건 허용)
+    const hasInflightData = (
+      studentInfo.name?.trim() ||
+      selectedCourses.length > 0 ||
+      selectedExtras.length > 0 ||
+      selectedDiscounts.length > 0
+    );
+    if (
+      hasInflightData &&
+      currentInvoiceId !== invoice.id &&
+      !window.confirm('작성 중인 데이터가 있습니다. 선택한 청구서로 덮어쓸까요?\n현재 작성 내용은 사라집니다.')
+    ) {
+      return;
+    }
+
+    // B5: 구 청구서 호환 — 신규 필드(fixedMonthly/fixedSessionsCount) 누락 시 기본값
+    const normalizedCourses = invoice.courses.map(c => ({
+      ...c,
+      fixedMonthly: c.fixedMonthly ?? false,
+      fixedSessionsCount: c.fixedSessionsCount ?? (c.sessions || 12),
+      excludeHolidays: c.excludeHolidays ?? false,
+      useSessionPeriod: c.useSessionPeriod ?? false,
+    }));
+
     setCurrentInvoiceId(invoice.id);
     setStudentInfo(invoice.studentInfo);
-    setSelectedCourses(invoice.courses);
+    setSelectedCourses(normalizedCourses);
     setSelectedExtras(invoice.extras);
     setSelectedDiscounts(invoice.discounts || []);
     setAppMode('calculator');
@@ -433,7 +461,23 @@ const TuitionCalculatorTab: React.FC<TuitionCalculatorTabProps> = ({ userProfile
                   isEmpty={isDiscountsEmpty}
                   onUpdateDiscount={updateDiscountItem}
                   onAddDiscount={addNewDiscount}
-                  onDeleteDiscount={deleteExistingDiscount}
+                  // B3: 삭제 전 청구서 참조 체크 — 사용 중이면 경고 후 차단
+                  onDeleteDiscount={async (id: string) => {
+                    const referencingInvoices = (savedInvoices || []).filter(inv =>
+                      (inv.discounts || []).some(d => d.id === id)
+                    );
+                    if (referencingInvoices.length > 0) {
+                      const sampleNames = referencingInvoices.slice(0, 3).map(inv => inv.studentInfo.name).join(', ');
+                      const more = referencingInvoices.length > 3 ? ` 외 ${referencingInvoices.length - 3}건` : '';
+                      const ok = window.confirm(
+                        `이 할인이 ${referencingInvoices.length}건의 저장된 청구서에서 사용 중입니다.\n` +
+                        `(${sampleNames}${more})\n\n` +
+                        `삭제 시 해당 청구서 재로딩 때 할인 정보가 사라집니다. 계속할까요?`
+                      );
+                      if (!ok) return;
+                    }
+                    await deleteExistingDiscount(id);
+                  }}
                   onSeed={seedDiscounts}
                   isUpdating={isDiscountUpdating}
                   isSeeding={isDiscountSeeding}
