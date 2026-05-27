@@ -253,14 +253,17 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
             )}
           </section>
 
-          {/* [3] 상담 세부 내역 — 최신 1건 본문 + 나머지 제목만 */}
-          {sortedConsultations.length > 0 && (
-            <section>
-              <div className="px-5 py-2 bg-indigo-50/50 border-b border-indigo-100">
-                <h3 className="font-bold text-xs text-indigo-900">
-                  📖 상담 세부 내역 ({sortedConsultations.length}건)
-                </h3>
-              </div>
+          {/* [3] 상담 세부 내역 — 최신 1건 본문 + 나머지 제목만 (없으면 empty state) */}
+          <section>
+            <div className="px-5 py-2 bg-indigo-50/50 border-b border-indigo-100">
+              <h3 className="font-bold text-xs text-indigo-900">
+                📖 상담 세부 내역 ({sortedConsultations.length}건)
+              </h3>
+            </div>
+            {sortedConsultations.length === 0 ? (
+              <div className="px-5 py-4 text-center text-xs text-gray-400">상담 내역 없음</div>
+            ) : (
+              <>
               {/* 최신 1건 — 본문 풀 표시 */}
               {latestConsultation && (
                 <div className="px-5 py-3 space-y-1.5 border-b border-gray-100 bg-indigo-50/20">
@@ -311,8 +314,9 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
                   ))}
                 </div>
               )}
-            </section>
-          )}
+              </>
+            )}
+          </section>
         </div>
 
         {/* 푸터 */}
