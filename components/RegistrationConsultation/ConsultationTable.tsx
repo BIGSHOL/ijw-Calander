@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { ConsultationRecord, CONSULTATION_STATUS_COLORS } from '../../types';
+import { ConsultationRecord, CONSULTATION_STATUS_COLORS, getStatusDisplayLabel } from '../../types';
 import { Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, X, ClipboardList, UserPlus, UserCheck, ExternalLink, Filter, Users, Mic } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -919,7 +919,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                     </span>
                                 </div>
                                 <span className={`px-2.5 py-1 text-xs font-bold rounded-sm border ${CONSULTATION_STATUS_COLORS[String(record.status)] || 'bg-gray-100 text-gray-800 border-gray-200'}`}>
-                                    {String(record.status) === 'registered' ? '등록완료' : record.status}
+                                    {String(record.status) === 'registered' ? '등록완료' : getStatusDisplayLabel(record.status)}
                                 </span>
                             </div>
 

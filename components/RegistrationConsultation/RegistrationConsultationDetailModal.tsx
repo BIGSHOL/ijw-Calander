@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, User, Phone, School, Calendar, MapPin, BookOpen, MessageSquare, Banknote, FileText } from 'lucide-react';
-import { ConsultationRecord, CONSULTATION_STATUS_COLORS } from '../../types';
+import { ConsultationRecord, CONSULTATION_STATUS_COLORS, getStatusDisplayLabel } from '../../types';
 import { useDraggable } from '../../hooks/useDraggable';
 
 interface RegistrationConsultationDetailModalProps {
@@ -24,7 +24,7 @@ const RegistrationConsultationDetailModal: React.FC<RegistrationConsultationDeta
                         <MessageSquare className="w-5 h-5 text-primary" />
                         <h2 className="text-sm font-bold text-primary">등록 상담 상세</h2>
                         <span className={`px-2 py-0.5 rounded-sm text-xs font-medium ${statusColorClass}`}>
-                            {record.status}
+                            {getStatusDisplayLabel(record.status)}
                         </span>
                     </div>
                     <button

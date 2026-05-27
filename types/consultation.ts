@@ -206,8 +206,9 @@ export const CONSULTATION_STATUS_COLORS: Record<string, string> = {
   [ConsultationStatus.EngRegistered]: 'bg-cyan-100 text-cyan-800 border-cyan-200',
   [ConsultationStatus.KoreanRegistered]: 'bg-orange-100 text-orange-800 border-orange-200',
   [ConsultationStatus.ScienceRegistered]: 'bg-pink-100 text-pink-800 border-pink-200',
-  [ConsultationStatus.PendingThisMonth]: 'bg-amber-100 text-amber-800 border-amber-200',
-  [ConsultationStatus.PendingFuture]: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  // '이번달 등록예정' / '추후 등록예정' 도 '상담전' 으로 통합 표시 — 회색 톤
+  [ConsultationStatus.PendingThisMonth]: 'bg-gray-100 text-gray-700 border-gray-300',
+  [ConsultationStatus.PendingFuture]: 'bg-gray-100 text-gray-700 border-gray-300',
   [ConsultationStatus.NotRegistered]: 'bg-slate-100 text-slate-800 border-slate-200',
   [ConsultationStatus.Registered]: 'bg-blue-100 text-blue-800 border-blue-200',
   [ConsultationStatus.BeforeConsultation]: 'bg-gray-100 text-gray-700 border-gray-300',
@@ -216,6 +217,22 @@ export const CONSULTATION_STATUS_COLORS: Record<string, string> = {
 };
 
 export const CONSULTATION_CHART_COLORS = ['#059669', '#0d9488', '#0891b2', '#f59e0b', '#fbbf24', '#94a3b8'];
+
+/**
+ * 상담 status 표시용 라벨 — '이번달 등록예정' / '추후 등록예정' 은 '상담전' 으로 통합 표시.
+ * 데이터는 그대로 유지하되 운영 화면에서만 통합 라벨로 보임.
+ * 정식 등록(영수등록 등) / 미등록 / 등록완료는 원래 라벨 유지.
+ */
+export const getStatusDisplayLabel = (status: string | undefined | null): string => {
+  if (!status) return '';
+  if (
+    status === ConsultationStatus.PendingThisMonth ||
+    status === ConsultationStatus.PendingFuture
+  ) {
+    return ConsultationStatus.BeforeConsultation;
+  }
+  return status;
+};
 
 // ============ CONSULTATION MANAGEMENT TYPES (Phase 1) ============
 
