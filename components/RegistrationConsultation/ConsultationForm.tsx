@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { ConsultationRecord, ConsultationStatus, SchoolGrade, ConsultationSubject, SubjectConsultationDetail } from '../../types';
 import {
     X, ChevronDown, ChevronRight, User, Phone, Calendar, MapPin, School, BookOpen,
@@ -829,49 +829,6 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
         return date.toISOString();
     };
 
-    // ── 임시저장 (localStorage) — 모달 닫혀도 작성 중 데이터 보존 ──
-    // 신규 등록(initialData?.id 없음) 모드에서만 활성. draftId(QR 접수) 별로 별도 키.
-    // 등록 완료 시 자동 삭제, 모달 새로 열 때 자동 복원.
-    const DRAFT_KEY = !initialData?.id ? `consultDraft_${draftId || 'new'}` : null;
-    const draftRestoredRef = useRef(false);
-
-    // 마운트 시 한 번 복원
-    useEffect(() => {
-        if (!DRAFT_KEY || draftRestoredRef.current) return;
-        draftRestoredRef.current = true;
-        try {
-            const raw = localStorage.getItem(DRAFT_KEY);
-            if (!raw) return;
-            const draft = JSON.parse(raw);
-            if (draft.formData) setFormData(prev => ({ ...prev, ...draft.formData }));
-            if (draft.mathConsult) setMathConsult(draft.mathConsult);
-            if (draft.englishConsult) setEnglishConsult(draft.englishConsult);
-            if (draft.koreanConsult) setKoreanConsult(draft.koreanConsult);
-            if (draft.scienceConsult) setScienceConsult(draft.scienceConsult);
-            if (draft.etcConsult) setEtcConsult(draft.etcConsult);
-        } catch (err) {
-            console.warn('[ConsultationForm] draft 복원 실패:', err);
-        }
-    }, [DRAFT_KEY]);
-
-    // 폼 변경 시 자동 저장 (localStorage write 는 빠르므로 debounce 불필요)
-    useEffect(() => {
-        if (!DRAFT_KEY || !draftRestoredRef.current) return;
-        try {
-            localStorage.setItem(DRAFT_KEY, JSON.stringify({
-                formData,
-                mathConsult,
-                englishConsult,
-                koreanConsult,
-                scienceConsult,
-                etcConsult,
-                savedAt: new Date().toISOString(),
-            }));
-        } catch (err) {
-            // localStorage 용량 초과 등 무시
-        }
-    }, [DRAFT_KEY, formData, mathConsult, englishConsult, koreanConsult, scienceConsult, etcConsult]);
-
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -903,10 +860,6 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
             ) as Omit<ConsultationRecord, 'id'>;
 
             onSubmit(cleanedData);
-            // 등록 성공 — 임시저장 삭제
-            if (DRAFT_KEY) {
-                try { localStorage.removeItem(DRAFT_KEY); } catch {}
-            }
             // onClose()를 여기서 호출하지 않음 - 부모가 모달 상태를 관리
         } catch (error) {
             console.error('❌ Form submit error:', error);
@@ -932,10 +885,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
     ];
 
     return (
-        // backdrop 클릭/드래그로 모달이 닫히지 않도록 onClick 제거.
-        // 닫기는 헤더 X 버튼 또는 명시적 취소/등록 버튼으로만.
-        // (인풋 드래그 선택 시 mouseup 이 backdrop 에서 끝나며 발생하던 의도치 않은 닫힘 차단)
-        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[3vh] z-[100]">
+        <div className="fixed inset-0 bg-black/50 flex items-start justify-center pt-[3vh] z-[100]" onClick={onClose}>
             <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-sm shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[94vh]">
                 {/* 헤더 */}
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
