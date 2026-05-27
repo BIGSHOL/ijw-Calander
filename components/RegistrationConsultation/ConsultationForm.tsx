@@ -914,6 +914,60 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
         }
     };
 
+    // 모달 닫기 인터셉트 — 신규 등록 모드 + 유의미한 입력 있으면 '상담전' 으로 자동 저장
+    // (사용자가 등록 버튼 안 눌러도 입력한 내용이 목록에 '상담전' 상태로 보이게)
+    const handleCloseWithAutoSave = () => {
+        if (initialData?.id) {
+            // 기존 기록 수정/조회 모드 — 자동 저장 안 함
+            onClose();
+            return;
+        }
+        // 유의미한 입력 판정 — 핵심 필드 1개 이상
+        const hasContent = !!(
+            formData.studentName?.trim() ||
+            (formData as any).school?.trim() ||
+            formData.consultationContent?.trim() ||
+            (formData as any).parentName?.trim()
+        );
+        if (!hasContent) {
+            onClose();
+            return;
+        }
+        try {
+            const consultationDateISO = validateAndConvertDate(formData.consultationDate, '상담일', true);
+            const paymentDateISO = validateAndConvertDate(formData.paymentDate, '결제일', false);
+            const followUpDateISO = validateAndConvertDate(formData.followUpDate, '후속조치일', false);
+            const createdAtISO = validateAndConvertDate(formData.createdAt, '접수일', true);
+
+            const submitData = {
+                ...formData,
+                consultationDate: consultationDateISO,
+                paymentDate: paymentDateISO,
+                followUpDate: followUpDateISO,
+                createdAt: createdAtISO,
+                mathConsultation: mathConsult,
+                englishConsultation: englishConsult,
+                koreanConsultation: koreanConsult,
+                scienceConsultation: scienceConsult,
+                etcConsultation: etcConsult,
+                status: ConsultationStatus.BeforeConsultation,
+                recordingReportId: recording.reportId || undefined,
+            };
+            const cleanedData = Object.fromEntries(
+                Object.entries(submitData).filter(([_, value]) => value !== undefined)
+            ) as Omit<ConsultationRecord, 'id'>;
+
+            onSubmit(cleanedData);
+            if (DRAFT_KEY) {
+                try { localStorage.removeItem(DRAFT_KEY); } catch {}
+            }
+            // 부모가 모달 닫음
+        } catch (error) {
+            console.warn('[ConsultationForm] 자동 저장 검증 실패 — 그냥 닫음:', error);
+            onClose();
+        }
+    };
+
     const inputClass = `w-full px-2.5 py-1.5 text-sm border border-slate-300 rounded-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-default' : ''}`;
     const labelClass = "block text-xs font-medium text-slate-600 mb-0.5";
     const viewProps = isViewMode ? { readOnly: true, tabIndex: -1 } : {};
@@ -958,7 +1012,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                         )}
                     </div>
                     <button
-                        onClick={onClose}
+                        onClick={handleCloseWithAutoSave}
                         type="button"
                         className="p-1 rounded-sm hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                     >
@@ -2007,7 +2061,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                         <div className="flex gap-2">
                             <button
                                 type="button"
-                                onClick={onClose}
+                                onClick={handleCloseWithAutoSave}
                                 className="px-4 py-2 text-sm rounded-sm border border-slate-300 text-slate-600 font-medium hover:bg-slate-50 transition-colors"
                             >
                                 {isViewMode ? '닫기' : '취소'}

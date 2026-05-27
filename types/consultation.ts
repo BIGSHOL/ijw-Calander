@@ -10,6 +10,7 @@ export enum ConsultationStatus {
   PendingFuture = '추후 등록예정',
   NotRegistered = '미등록',
   Registered = '등록완료',
+  BeforeConsultation = '상담전',
 }
 
 export enum ConsultationSubject {
@@ -199,6 +200,7 @@ export const CONSULTATION_STATUS_COLORS: Record<string, string> = {
   [ConsultationStatus.PendingFuture]: 'bg-yellow-100 text-yellow-800 border-yellow-200',
   [ConsultationStatus.NotRegistered]: 'bg-slate-100 text-slate-800 border-slate-200',
   [ConsultationStatus.Registered]: 'bg-blue-100 text-blue-800 border-blue-200',
+  [ConsultationStatus.BeforeConsultation]: 'bg-gray-100 text-gray-700 border-gray-300',
   // 레거시 값 호환
   'registered': 'bg-blue-100 text-blue-800 border-blue-200',
 };
