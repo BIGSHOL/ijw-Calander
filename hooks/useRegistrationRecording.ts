@@ -21,6 +21,11 @@ const processRegistrationRecording = httpsCallable<
   { reportId: string; status: string; extractedData?: Record<string, unknown> }
 >(functions, 'processRegistrationRecording', { timeout: 600_000 }); // 10분 (120MB+ 파일 대응)
 
+const regenerateMergedRegistrationReport = httpsCallable<
+  { reportIds: string[] },
+  { reportId: string; status: string }
+>(functions, 'regenerateMergedRegistrationReport', { timeout: 540_000 }); // 9분
+
 export interface RegistrationExtractedData {
   studentName?: string;
   schoolName?: string;
@@ -70,6 +75,30 @@ interface UploadProgress {
 type ProcessStatus = 'idle' | 'uploading' | 'transcribing' | 'analyzing' | 'completed' | 'error' | 'failed';
 
 /**
+ * 단일 보고서의 전체 데이터 (Firestore doc 스냅샷 + 메타).
+ * 다중 보고서 모델에서 보고서별로 인덱싱되어 보관됨.
+ */
+export interface ReportFullData {
+  id: string;
+  status: ProcessStatus;
+  statusMessage?: string;
+  report?: ConsultationReportSection;
+  speakerRoles?: Record<string, string>;
+  transcription?: string;
+  speakerLabels?: SpeakerUtterance[];
+  durationSeconds?: number;
+  studentName?: string;
+  consultationDate?: string;
+  consultantName?: string;
+  isMerged?: boolean;
+  mergedFrom?: string[];
+  mergedAt?: number;
+  createdAt?: number;
+  fileName?: string;
+  storagePath?: string;
+}
+
+/**
  * 등록 상담 녹음 업로드 → AI 분석 → 폼 자동 채우기 데이터 추출
  */
 export function useRegistrationRecording() {
@@ -77,36 +106,35 @@ export function useRegistrationRecording() {
   const [status, setStatus] = useState<ProcessStatus>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const [extractedData, setExtractedData] = useState<RegistrationExtractedData | null>(null);
-  const [reportId, setReportId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // 분석 보고서 전체 데이터
-  const [reportData, setReportData] = useState<{
-    report?: ConsultationReportSection;
-    speakerRoles?: Record<string, string>;
-    transcription?: string;
-    speakerLabels?: SpeakerUtterance[];
-    durationSeconds?: number;
-    studentName?: string;
-    consultationDate?: string;
-    consultantName?: string;
-  } | null>(null);
+  // === 다중 보고서 상태 (v2) ===
+  // reportIds: 시간순 정렬된 보고서 ID 배열 (마지막 = 가장 최근)
+  // reportsData: ID로 인덱싱된 전체 데이터 맵 (onSnapshot 실시간 갱신)
+  // activeReportId: 현재 분석 결과 패널에서 표시 중인 보고서 ID
+  // newlyAnalyzedReportId: 가장 최근 신규 분석된 보고서 ID (extractedData 머지 트리거용)
+  const [reportIds, setReportIds] = useState<string[]>([]);
+  const [reportsData, setReportsData] = useState<Record<string, ReportFullData>>({});
+  const [activeReportId, setActiveReportId] = useState<string | null>(null);
+  const [newlyAnalyzedReportId, setNewlyAnalyzedReportId] = useState<string | null>(null);
 
-  // Firestore 실시간 상태 감시
+  // 활성 보고서 데이터 (호환용 derived state — 기존 코드의 recording.reportData 사용처 유지)
+  const reportData = activeReportId ? (reportsData[activeReportId] ?? null) : null;
+
+  // Firestore 실시간 상태 감시 — N개 보고서 동시 구독
+  // 의존성: reportIds 배열 변경 시 재구독. join(',')로 배열 ID 안정화.
   useEffect(() => {
-    if (!reportId) return;
-    const unsubscribe = onSnapshot(
-      doc(db, 'registration_recording_reports', reportId),
-      (snapshot) => {
-        if (!snapshot.exists()) return;
-        const data = snapshot.data();
-        setStatus(data.status || 'idle');
-        setStatusMessage(data.statusMessage || '');
-        if (data.status === 'completed') {
-          if (data.extractedData) {
-            setExtractedData(data.extractedData as RegistrationExtractedData);
-          }
-          setReportData({
+    if (reportIds.length === 0) return;
+    const unsubs = reportIds.map(id =>
+      onSnapshot(
+        doc(db, 'registration_recording_reports', id),
+        (snapshot) => {
+          if (!snapshot.exists()) return;
+          const data = snapshot.data();
+          const next: ReportFullData = {
+            id,
+            status: (data.status as ProcessStatus) || 'idle',
+            statusMessage: data.statusMessage || '',
             report: data.report || undefined,
             speakerRoles: data.speakerRoles || undefined,
             transcription: data.transcription || undefined,
@@ -115,15 +143,33 @@ export function useRegistrationRecording() {
             studentName: data.studentName || undefined,
             consultationDate: data.consultationDate || undefined,
             consultantName: data.counselorName || undefined,
-          });
+            isMerged: !!data.isMerged,
+            mergedFrom: data.mergedFrom || undefined,
+            mergedAt: data.mergedAt || undefined,
+            createdAt: data.createdAt,
+            fileName: data.fileName || undefined,
+            storagePath: data.storagePath || undefined,
+          };
+          setReportsData(prev => ({ ...prev, [id]: next }));
+
+          // 신규 분석된 보고서(newlyAnalyzedReportId)의 완료/에러 상태를 훅 레벨 status로 노출 (호환)
+          // 기존 분석된 보고서가 다시 업데이트되더라도 status를 흔들지 않음
+          if (id === newlyAnalyzedReportId) {
+            setStatus(next.status);
+            setStatusMessage(next.statusMessage || '');
+            if (next.status === 'completed' && data.extractedData) {
+              setExtractedData(data.extractedData as RegistrationExtractedData);
+            }
+            if (next.status === 'error') {
+              setError(data.errorMessage || '처리 중 오류가 발생했습니다.');
+            }
+          }
         }
-        if (data.status === 'error') {
-          setError(data.errorMessage || '처리 중 오류가 발생했습니다.');
-        }
-      }
+      )
     );
-    return () => unsubscribe();
-  }, [reportId]);
+    return () => unsubs.forEach(u => u());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportIds.join(','), newlyAnalyzedReportId]);
 
   const uploadAndProcess = useCallback(async (params: {
     file: File;
@@ -178,7 +224,11 @@ export function useRegistrationRecording() {
         ...(studentContext ? { studentContext } : {}),
       });
 
-      setReportId(result.data.reportId);
+      // v2: 새 보고서 ID를 배열에 push (기존 보고서는 유지)
+      const newId = result.data.reportId;
+      setReportIds(prev => prev.includes(newId) ? prev : [...prev, newId]);
+      setActiveReportId(newId);
+      setNewlyAnalyzedReportId(newId); // 폼 자동채우기 트리거 대상
 
       if (result.data.extractedData) {
         setExtractedData(result.data.extractedData as RegistrationExtractedData);
@@ -320,18 +370,85 @@ export function useRegistrationRecording() {
     setStatus('idle');
     setStatusMessage('');
     setExtractedData(null);
-    setReportId(null);
-    setReportData(null);
+    setReportIds([]);
+    setReportsData({});
+    setActiveReportId(null);
+    setNewlyAnalyzedReportId(null);
     setError(null);
     setUploadProgress(null);
     setRecordingDuration(0);
   }, []);
 
-  // 기존 보고서 ID로 분석 결과 로드 (모달 재오픈 시 AI 분석 탭 복원용)
-  // setReportId만 호출하면 위의 onSnapshot useEffect가 자동으로 registration_recording_reports 문서를 구독함
+  // 추가 녹음 분석 시작 직전에 호출 — 현재 분석 사이클만 초기화하고 기존 보고서는 유지
+  // reset()과의 차이: reportIds/reportsData/activeReportId는 그대로 둠
+  const startNewAnalysis = useCallback(() => {
+    setStatus('idle');
+    setStatusMessage('');
+    setExtractedData(null);
+    setNewlyAnalyzedReportId(null);
+    setError(null);
+    setUploadProgress(null);
+    setRecordingDuration(0);
+  }, []);
+
+  // 다중 보고서 ID 일괄 로드 (모달 재오픈 시 v2 복원용)
+  // recordingReportIds 배열을 받아 N개 onSnapshot 구독
+  const loadExistingReports = useCallback((ids: string[]) => {
+    if (!ids || ids.length === 0) return;
+    setReportIds(prev => {
+      // 이미 동일 배열이면 재설정 안 함 (불필요한 재구독 방지)
+      if (prev.length === ids.length && prev.every((x, i) => x === ids[i])) return prev;
+      return ids;
+    });
+    // 활성 보고서가 미설정이면 가장 최근(마지막) 보고서를 활성화
+    setActiveReportId(prev => prev ?? ids[ids.length - 1]);
+  }, []);
+
+  // 기존 보고서 ID로 분석 결과 로드 (호환 유지 — v1 단일 ID API)
+  // 내부적으로 loadExistingReports([id]) 호출
   const loadExistingReport = useCallback((existingReportId: string | null | undefined) => {
     if (!existingReportId) return;
-    setReportId(existingReportId);
+    loadExistingReports([existingReportId]);
+  }, [loadExistingReports]);
+
+  // 보고서를 UI에서 제거 (Firestore doc은 보존 — Storage 파일도 보존)
+  const removeReport = useCallback((id: string) => {
+    setReportIds(prev => prev.filter(x => x !== id));
+    setReportsData(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    setActiveReportId(prev => {
+      if (prev !== id) return prev;
+      // 활성 보고서가 제거되면 다른 보고서로 자동 전환
+      const remaining = reportIds.filter(x => x !== id);
+      return remaining[remaining.length - 1] ?? null;
+    });
+  }, [reportIds]);
+
+  // 다중 보고서 통합 재생성 (Cloud Function 호출)
+  // 선택된 보고서들의 전사본을 시간순 합쳐 통합 전용 프롬프트로 Claude 재분석
+  const regenerateMergedReport = useCallback(async (idsToMerge: string[]) => {
+    if (!idsToMerge || idsToMerge.length < 2) {
+      throw new Error('통합하려면 최소 2개 보고서가 필요합니다.');
+    }
+    setStatus('analyzing');
+    setStatusMessage(`${idsToMerge.length}개 보고서 통합 분석 중...`);
+    setError(null);
+    try {
+      const result = await regenerateMergedRegistrationReport({ reportIds: idsToMerge });
+      const newId = result.data.reportId;
+      setReportIds(prev => prev.includes(newId) ? prev : [...prev, newId]);
+      setActiveReportId(newId);
+      setNewlyAnalyzedReportId(newId);
+      return result.data;
+    } catch (err: unknown) {
+      setStatus('error');
+      const msg = err instanceof Error ? err.message : '알 수 없는 오류';
+      setError(msg);
+      throw err;
+    }
   }, []);
 
   // 학생이름 + 상담일자 매칭으로 분석 보고서 찾아 reportData에 직접 주입
@@ -384,20 +501,26 @@ export function useRegistrationRecording() {
 
         if (matches[0]) {
           const match = matches[0];
-          // reportData에 직접 주입 (onSnapshot 우회 — 두 컬렉션 schema 동일)
-          setReportData({
-            report: match.report as ConsultationReportSection | undefined,
-            speakerRoles: match.speakerRoles,
-            transcription: match.transcription,
-            speakerLabels: match.speakerLabels as SpeakerUtterance[] | undefined,
-            durationSeconds: match.durationSeconds,
-            studentName: studentNameToMatch,
-            consultationDate: match.consultationDate,
-            consultantName: match.consultantName || match.counselorName,
-          });
-          // registration_recording_reports에서 찾은 경우만 reportId 설정(편집/onSnapshot용)
           if (collectionName === 'registration_recording_reports') {
-            setReportId(match.id);
+            // 같은 컬렉션 — onSnapshot 구독으로 정상 로드 (v2 다중 모델 사용)
+            loadExistingReports([match.id]);
+          } else {
+            // consultation_reports — 다른 컬렉션이라 onSnapshot 못함. reportsData에 직접 주입.
+            // ID는 활성 ID로 설정하되 reportIds에는 넣지 않음 (구독 안 됨)
+            const injectedData: ReportFullData = {
+              id: match.id,
+              status: 'completed',
+              report: match.report as ConsultationReportSection | undefined,
+              speakerRoles: match.speakerRoles,
+              transcription: match.transcription,
+              speakerLabels: match.speakerLabels as SpeakerUtterance[] | undefined,
+              durationSeconds: match.durationSeconds,
+              studentName: studentNameToMatch,
+              consultationDate: match.consultationDate,
+              consultantName: match.consultantName || match.counselorName,
+            };
+            setReportsData(prev => ({ ...prev, [match.id]: injectedData }));
+            setActiveReportId(match.id);
           }
           if (match.extractedData) {
             setExtractedData(match.extractedData as RegistrationExtractedData);
@@ -437,7 +560,11 @@ export function useRegistrationRecording() {
         ...(studentContext ? { studentContext } : {}),
       });
 
-      setReportId(result.data.reportId);
+      // v2: 새 보고서 ID를 배열에 push
+      const newId = result.data.reportId;
+      setReportIds(prev => prev.includes(newId) ? prev : [...prev, newId]);
+      setActiveReportId(newId);
+      setNewlyAnalyzedReportId(newId);
 
       if (result.data.extractedData) {
         setExtractedData(result.data.extractedData as RegistrationExtractedData);
@@ -457,15 +584,24 @@ export function useRegistrationRecording() {
     uploadAndProcess,
     processFromPath,
     loadExistingReport,
+    loadExistingReports,
     loadAnalysisReportByMatch,
+    removeReport,
+    regenerateMergedReport,
     uploadProgress,
     status,
     statusMessage,
     extractedData,
-    reportData,
-    reportId,
+    reportData,                                          // 활성 보고서 데이터 (호환)
+    reportId: activeReportId,                            // 활성 보고서 ID (호환)
+    reportIds,                                           // v2: 전체 보고서 ID 배열
+    reportsData,                                         // v2: 보고서별 데이터 맵
+    activeReportId,                                      // v2: 명시 활성 ID
+    setActiveReportId,                                   // v2: 탭 전환 setter
+    newlyAnalyzedReportId,                               // v2: 가장 최근 신규 분석 ID
     error,
     reset,
+    startNewAnalysis,                                    // v2: 추가 분석 시 부분 reset (기존 보고서 유지)
     // 브라우저 녹음 (팝업 우선, 인라인 fallback)
     isRecording: isRecording || isPopupRecording,
     isPopupRecording,

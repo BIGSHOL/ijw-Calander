@@ -104,7 +104,17 @@ export interface ConsultationRecord {
 
   // AI 녹음 분석 보고서 연동 (registration_recording_reports 컬렉션 문서 ID)
   // 모달 재오픈 시 AI 분석 탭 복원용
+  /** @deprecated v1 — 단일 보고서 (호환 유지). 신규 코드는 recordingReportIds 사용. */
   recordingReportId?: string;
+  /**
+   * 다중 녹음 분석 보고서 ID 배열 (v2). 생성일 오름차순.
+   * 1상담 = N녹음 = N보고서 모델 지원.
+   * 통합 보고서(isMerged=true)도 이 배열에 포함됨.
+   *
+   * 로드 폴백: recordingReportIds || (recordingReportId ? [recordingReportId] : [])
+   * 저장: 항상 recordingReportIds 사용 (자동 v2 마이그레이션).
+   */
+  recordingReportIds?: string[];
 
   // === 과목별 상담 정보 ===
   mainSubject?: 'math' | 'english' | 'korean' | 'science' | 'etc';  // 메인 상담 과목

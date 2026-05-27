@@ -23,6 +23,12 @@ export interface ConsultationReportSection {
   actionItems: string;          // 후속 조치 항목
   riskFlags: string;            // 주의 신호 (자존감, 가정 갈등, 퇴원 가능성 등)
   conversationFlow?: ConversationFlowNode[]; // 상담 흐름 수형도
+
+  // === 통합 보고서 전용 섹션 (isMerged === true 일 때만 채워짐) ===
+  /** 각 세그먼트가 무엇인지 1줄씩 요약 (예: "1. 수학 진단 결과 설명 (15분)") */
+  consultationSequence?: string;
+  /** 세그먼트 간 학부모 의도·관심사·태도 변화 추이 */
+  progressNotes?: string;
 }
 
 export interface ConversationFlowNode {
@@ -75,6 +81,16 @@ export interface ConsultationReport {
 
   // 교차 분석
   crossAnalysis?: boolean;
+
+  // === 다중 녹음 통합 보고서 (v2) ===
+  /** 이 보고서가 다른 보고서들의 통합 결과인 경우 true */
+  isMerged?: boolean;
+  /** 통합된 원본 보고서 ID 배열 (시간순) */
+  mergedFrom?: string[];
+  /** 통합 생성 시각 (timestamp ms) */
+  mergedAt?: number;
+  /** 통합 실행자 uid */
+  mergedBy?: string;
 
   // 파일 만료 (120일 경과 자동 삭제)
   fileExpired?: boolean;

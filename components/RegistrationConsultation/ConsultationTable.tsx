@@ -159,16 +159,18 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
     const [filters, setFilters] = useState<FilterState>(loadSavedFilters);
     const [candidatePopover, setCandidatePopover] = useState<{ consultationId: string; candidates: { id: string; name: string }[] } | null>(null);
 
-    // 녹음 보고서 존재 여부 (studentName+consultationDate 매칭)
+    // 녹음 보고서 존재 여부 + 카운트 (studentName+consultationDate 매칭)
+    // v2 다중 보고서 지원: 같은 키에 N개 보고서가 있을 수 있음
     const { data: recordingReports } = useRegistrationRecordingReports();
-    const recordingSet = useMemo(() => {
-        const set = new Set<string>();
+    const recordingCountMap = useMemo(() => {
+        const map = new Map<string, number>();
         (recordingReports || []).forEach(r => {
             if (r.studentName && r.consultationDate) {
-                set.add(`${r.studentName}|${r.consultationDate}`);
+                const key = `${r.studentName}|${r.consultationDate}`;
+                map.set(key, (map.get(key) ?? 0) + 1);
             }
         });
-        return set;
+        return map;
     }, [recordingReports]);
 
     // 검색어/필터 변경 시 페이지 초기화
@@ -826,13 +828,23 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                                 return <span className="text-gray-300">-</span>;
                                             })()}
                                         </td>
-                                        {/* 녹음 열 */}
+                                        {/* 녹음 열 — v2: 다중 보고서 카운트 표시 */}
                                         <td className="px-1 py-1.5 whitespace-nowrap text-center" style={{ minWidth: '36px', width: '36px' }}>
-                                            {recordingSet.has(`${record.studentName}|${record.consultationDate}`) ? (
-                                                <span title="녹음 분석 있음"><Mic size={13} className="inline text-purple-500" /></span>
-                                            ) : (
-                                                <span className="text-gray-200">-</span>
-                                            )}
+                                            {(() => {
+                                                const cnt = recordingCountMap.get(`${record.studentName}|${record.consultationDate}`) ?? 0;
+                                                if (cnt === 0) return <span className="text-gray-200">-</span>;
+                                                return (
+                                                    <span
+                                                        title={cnt > 1 ? `녹음 분석 ${cnt}개` : '녹음 분석 있음'}
+                                                        className="inline-flex items-center"
+                                                    >
+                                                        <Mic size={13} className="text-purple-500" />
+                                                        {cnt > 1 && (
+                                                            <sup className="text-[8px] text-purple-700 font-bold ml-0.5">{cnt}</sup>
+                                                        )}
+                                                    </span>
+                                                );
+                                            })()}
                                         </td>
                                         {visibleColumnsList.map(col => (
                                             <td key={col.key} className="px-2 py-1.5 whitespace-nowrap text-xs" style={{ minWidth: col.minWidth }}>

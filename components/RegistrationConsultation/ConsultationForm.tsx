@@ -6,7 +6,7 @@ import {
     XCircle, CheckCircle, Banknote, Shield, UserCheck, GraduationCap, MessageSquare, ClipboardList, Droplet, Inbox,
     Pencil, Eye, FlaskConical, Mic, MicOff, Upload, Loader2, Square, ArrowDownToLine
 } from 'lucide-react';
-import { useRegistrationRecording, RegistrationExtractedData } from '../../hooks/useRegistrationRecording';
+import { useRegistrationRecording, RegistrationExtractedData, ReportFullData } from '../../hooks/useRegistrationRecording';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
 import { getKoreanErrorMessage } from '../../utils/errorMessages';
 import { savePending, getPendingByFileName, removePending } from '../../utils/pendingRecordings';
@@ -59,9 +59,11 @@ const getLocalDate = () => {
     return new Date(now.getTime() - offset).toISOString().slice(0, 10);
 };
 
-// 분석 보고서 섹션 정의
+// 분석 보고서 섹션 정의 (통합본 전용 섹션은 값이 있을 때만 자동 표시됨)
 const REPORT_SECTIONS = [
     { key: 'consultationType' as const, label: '상담 성격', emoji: '🏷️' },
+    { key: 'consultationSequence' as const, label: '상담 시퀀스 (통합)', emoji: '📋' },
+    { key: 'progressNotes' as const, label: '진행 변화 노트 (통합)', emoji: '🔀' },
     { key: 'summary' as const, label: '상담 요약', emoji: '📋' },
     { key: 'familyContext' as const, label: '가정 배경/개인 맥락', emoji: '👨‍👩‍👧' },
     { key: 'parentConcerns' as const, label: '학부모 걱정/불안 사항', emoji: '😟' },
@@ -389,6 +391,227 @@ function AnalysisTabContent({ reportData, studentName, consultationDate, counsel
     );
 }
 
+/**
+ * 다중 보고서 탭 wrapper.
+ * 보고서가 0개면 안내 메시지, 1개면 단일 보고서, 2개 이상이면 탭 바 + 활성 보고서 렌더링.
+ * 통합 보고서(isMerged=true)는 보라색 배지로 구분.
+ */
+function AnalysisTabsWrapper({
+    reportIds,
+    reportsData,
+    activeReportId,
+    onActiveReportChange,
+    onRegenerateMerged,
+    studentName,
+    consultationDate,
+    counselorName,
+    canEdit,
+    currentUser,
+}: {
+    reportIds: string[];
+    reportsData: Record<string, ReportFullData>;
+    activeReportId: string | null;
+    onActiveReportChange: (id: string) => void;
+    onRegenerateMerged: (ids: string[]) => Promise<{ reportId: string; status: string }>;
+    studentName: string;
+    consultationDate: string;
+    counselorName: string;
+    canEdit?: boolean;
+    currentUser?: UserProfile | null;
+}) {
+    // 통합 재생성 UI 상태
+    const [showMergeUI, setShowMergeUI] = useState(false);
+    const [selectedForMerge, setSelectedForMerge] = useState<Set<string>>(new Set());
+    const [isRegenerating, setIsRegenerating] = useState(false);
+
+    const handleRegenerate = async () => {
+        const ids = Array.from(selectedForMerge);
+        if (ids.length < 2) return;
+        setIsRegenerating(true);
+        try {
+            await onRegenerateMerged(ids);
+            setSelectedForMerge(new Set());
+            setShowMergeUI(false);
+        } catch (e) {
+            alert((e as Error)?.message || '통합 재생성 실패');
+        } finally {
+            setIsRegenerating(false);
+        }
+    };
+
+    // 보고서 없음 — 안내 메시지 (AnalysisTabContent 내부 빈 상태와 동일)
+    if (reportIds.length === 0) {
+        return (
+            <AnalysisTabContent
+                reportData={null}
+                studentName={studentName}
+                consultationDate={consultationDate}
+                counselorName={counselorName}
+                canEdit={canEdit}
+                currentUser={currentUser}
+            />
+        );
+    }
+
+    const activeData = activeReportId ? reportsData[activeReportId] : null;
+    const showTabs = reportIds.length >= 2;
+
+    return (
+        <div className="space-y-2">
+            {/* 탭 바 — 보고서 2개 이상일 때만 표시 */}
+            {showTabs && (
+                <div className="flex items-center gap-2 px-1.5 py-1.5 bg-gray-50 border rounded-sm overflow-x-auto">
+                    <div className="flex gap-1 flex-1">
+                        {reportIds.map((id, idx) => {
+                            const r = reportsData[id];
+                            const isActive = id === activeReportId;
+                            const isMerged = !!r?.isMerged;
+                            const label = isMerged
+                                ? `★ 통합 (${r?.mergedFrom?.length || 0}개)`
+                                : `${idx + 1}차`;
+                            const subLabel = r?.createdAt
+                                ? format(new Date(r.createdAt), 'MM/dd HH:mm')
+                                : '';
+                            const statusBadge = r?.status === 'analyzing' || r?.status === 'transcribing' || r?.status === 'uploading'
+                                ? '⏳'
+                                : r?.status === 'error' || r?.status === 'failed'
+                                    ? '⚠️'
+                                    : '';
+                            return (
+                                <button
+                                    type="button"
+                                    key={id}
+                                    onClick={() => onActiveReportChange(id)}
+                                    className={`px-2.5 py-1 text-[11px] rounded-sm border whitespace-nowrap transition-colors leading-tight ${
+                                        isActive
+                                            ? isMerged
+                                                ? 'bg-purple-100 border-purple-400 text-purple-800 font-bold'
+                                                : 'bg-blue-100 border-blue-400 text-blue-800 font-bold'
+                                            : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+                                    }`}
+                                    title={r?.fileName || ''}
+                                >
+                                    <div className="flex items-center gap-1">
+                                        {statusBadge && <span>{statusBadge}</span>}
+                                        <span>{label}</span>
+                                    </div>
+                                    {subLabel && <div className="text-[9px] opacity-70">{subLabel}</div>}
+                                </button>
+                            );
+                        })}
+                    </div>
+                    {/* 통합 재생성 진입 버튼 — 2개 이상일 때만 */}
+                    {!showMergeUI && (
+                        <button
+                            type="button"
+                            onClick={() => setShowMergeUI(true)}
+                            className="px-2 py-1 text-[10px] font-medium text-purple-700 bg-white border border-purple-300 rounded-sm hover:bg-purple-50 whitespace-nowrap"
+                            title="여러 보고서를 AI로 통합 분석"
+                        >
+                            🔀 AI 통합
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {/* 통합 재생성 UI — 보고서 선택 + 재생성 버튼 */}
+            {showMergeUI && (
+                <div className="bg-purple-50 border border-purple-300 rounded-sm p-2 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-purple-800">
+                            AI 통합 재생성 — 합칠 보고서 선택 (최소 2개)
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => { setShowMergeUI(false); setSelectedForMerge(new Set()); }}
+                            className="text-[10px] text-gray-500 hover:text-gray-700"
+                            disabled={isRegenerating}
+                        >
+                            취소
+                        </button>
+                    </div>
+                    <div className="space-y-0.5 max-h-40 overflow-y-auto">
+                        {reportIds.map((id, idx) => {
+                            const r = reportsData[id];
+                            const isMergedReport = !!r?.isMerged;
+                            const isAnalyzing = r?.status === 'analyzing' || r?.status === 'transcribing' || r?.status === 'uploading';
+                            const isDisabled = isMergedReport || isAnalyzing || r?.status === 'error' || r?.status === 'failed';
+                            const label = isMergedReport
+                                ? `★ 통합 (${r?.mergedFrom?.length || 0}개)`
+                                : `${idx + 1}차`;
+                            return (
+                                <label
+                                    key={id}
+                                    className={`flex items-center gap-1.5 text-[11px] px-1 py-0.5 rounded ${
+                                        isDisabled
+                                            ? 'opacity-40 cursor-not-allowed'
+                                            : 'cursor-pointer hover:bg-purple-100'
+                                    }`}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        disabled={isDisabled || isRegenerating}
+                                        checked={selectedForMerge.has(id)}
+                                        onChange={(e) => {
+                                            const next = new Set(selectedForMerge);
+                                            if (e.target.checked) next.add(id); else next.delete(id);
+                                            setSelectedForMerge(next);
+                                        }}
+                                        className="w-3 h-3"
+                                    />
+                                    <span className="font-medium">{label}</span>
+                                    {r?.createdAt && (
+                                        <span className="text-gray-500 text-[9px]">
+                                            · {format(new Date(r.createdAt), 'MM/dd HH:mm')}
+                                        </span>
+                                    )}
+                                    {isMergedReport && (
+                                        <span className="text-[9px] text-purple-500 italic">(통합본은 재통합 불가)</span>
+                                    )}
+                                    {isAnalyzing && (
+                                        <span className="text-[9px] text-amber-600">(분석 중)</span>
+                                    )}
+                                </label>
+                            );
+                        })}
+                    </div>
+                    <div className="flex items-center justify-between pt-1 border-t border-purple-200">
+                        <span
+                            className="text-[10px] text-gray-500"
+                            title="AI 호출 비용은 선택한 보고서 수에 비례합니다 (Claude 토큰)"
+                        >
+                            ⓘ 비용은 선택 보고서 수에 비례
+                        </span>
+                        <button
+                            type="button"
+                            onClick={handleRegenerate}
+                            disabled={selectedForMerge.size < 2 || isRegenerating}
+                            className="px-2.5 py-1 text-[11px] font-bold bg-purple-600 text-white rounded-sm hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+                        >
+                            {isRegenerating ? (
+                                <><Loader2 size={11} className="animate-spin" /> 통합 분석 중...</>
+                            ) : (
+                                `선택 ${selectedForMerge.size}개 → 통합 재생성`
+                            )}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* 활성 보고서 렌더링 (기존 AnalysisTabContent 그대로 재사용) */}
+            <AnalysisTabContent
+                reportData={activeData}
+                studentName={studentName}
+                consultationDate={consultationDate}
+                counselorName={counselorName}
+                reportId={activeReportId}
+                canEdit={canEdit}
+                currentUser={currentUser}
+            />
+        </div>
+    );
+}
+
 export const ConsultationForm: React.FC<ConsultationFormProps> = ({
     isOpen,
     onClose,
@@ -566,15 +789,18 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
     const [isDragOver, setIsDragOver] = useState(false);
     const [showConsultationPicker, setShowConsultationPicker] = useState(false);
 
-    // 기존 등록상담에 저장된 AI 분석 보고서 복원
-    // 1순위: initialData.recordingReportId (정상 저장된 케이스 - registration_recording_reports)
-    // 2순위: studentName + consultationDate로 두 컬렉션 매칭
-    //        (registration_recording_reports → consultation_reports 순)
+    // 기존 등록상담에 저장된 AI 분석 보고서 복원 (v2 다중 보고서 지원)
+    // 1순위: initialData.recordingReportIds (v2 배열)
+    // 2순위: initialData.recordingReportId (v1 단일) → [id]로 래핑
+    // 3순위: studentName + consultationDate 매칭 (레거시 — registration_recording_reports → consultation_reports 순)
     useEffect(() => {
         let cancelled = false;
         (async () => {
-            if (initialData?.recordingReportId) {
-                recording.loadExistingReport(initialData.recordingReportId);
+            // v2/v1 폴백: 배열 우선, 없으면 단일을 배열로 래핑
+            const reportIds = initialData?.recordingReportIds
+                ?? (initialData?.recordingReportId ? [initialData.recordingReportId] : []);
+            if (reportIds.length > 0) {
+                recording.loadExistingReports(reportIds);
                 return;
             }
             if (initialData?.studentName && initialData?.consultationDate && !cancelled) {
@@ -585,7 +811,16 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
             }
         })();
         return () => { cancelled = true; };
-    }, [initialData?.recordingReportId, initialData?.studentName, initialData?.consultationDate, recording.loadExistingReport, recording.loadAnalysisReportByMatch]);
+    // recordingReportIds는 배열이라 참조 비교 안정성 위해 join으로 안정화
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+        initialData?.recordingReportId,
+        (initialData?.recordingReportIds ?? []).join(','),
+        initialData?.studentName,
+        initialData?.consultationDate,
+        recording.loadExistingReports,
+        recording.loadAnalysisReportByMatch,
+    ]);
 
     // 오디오 파일 드래그 앤 드롭 핸들러
     const handleRecordingDrop = useCallback((e: React.DragEvent) => {
@@ -667,7 +902,9 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
     };
 
     // 녹음 분석 결과 → 폼 자동 채우기
-    const applyExtractedData = useCallback((data: RegistrationExtractedData) => {
+    // isAdditive=false (첫 분석): 새 값 우선 (data.X || prev.X) — 기존 동작
+    // isAdditive=true (추가 분석): 기존 값 우선 (prev.X || data.X) — 빈 필드만 채움 (사용자 결정 정책)
+    const applyExtractedData = useCallback((data: RegistrationExtractedData, isAdditive: boolean = false) => {
         const gradeMap: Record<string, SchoolGrade> = {
             '초1': SchoolGrade.Elementary1, '초2': SchoolGrade.Elementary2, '초3': SchoolGrade.Elementary3,
             '초4': SchoolGrade.Elementary4, '초5': SchoolGrade.Elementary5, '초6': SchoolGrade.Elementary6,
@@ -686,42 +923,72 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
             '등록완료': ConsultationStatus.Registered,
         };
 
+        // 헬퍼: 추가 분석 모드에서 "값 있을 때만 채움" — A 우선, B 폴백
+        const pick = (a: string | undefined, b: string | undefined): string | undefined => {
+            return isAdditive ? (a || b || '') : (b || a || '');
+        };
+
         setFormData(prev => ({
             ...prev,
-            studentName: data.studentName || prev.studentName,
-            schoolName: data.schoolName || prev.schoolName,
-            grade: gradeMap[data.grade || ''] || prev.grade,
-            parentPhone: data.parentPhone || prev.parentPhone,
-            parentName: data.parentName || prev.parentName,
-            parentRelation: data.parentRelation || prev.parentRelation,
-            address: data.address || prev.address,
-            birthDate: data.birthDate || prev.birthDate,
-            consultationPath: data.consultationPath || prev.consultationPath,
-            enrollmentReason: data.enrollmentReason || prev.enrollmentReason,
-            siblings: data.siblings || prev.siblings,
+            studentName: isAdditive ? (prev.studentName || data.studentName || '') : (data.studentName || prev.studentName),
+            schoolName: isAdditive ? (prev.schoolName || data.schoolName || '') : (data.schoolName || prev.schoolName),
+            // grade: 추가 분석 모드에선 기존 값 유지 (사용자가 명시 선택했을 수 있음). 단, 기본값 Middle1이라 사실상 항상 prev 우선됨 — 의도적 동작
+            grade: isAdditive ? prev.grade : (gradeMap[data.grade || ''] || prev.grade),
+            parentPhone: isAdditive ? (prev.parentPhone || data.parentPhone || '') : (data.parentPhone || prev.parentPhone),
+            parentName: isAdditive ? (prev.parentName || data.parentName || '') : (data.parentName || prev.parentName),
+            parentRelation: isAdditive ? (prev.parentRelation || data.parentRelation || '') : (data.parentRelation || prev.parentRelation),
+            address: isAdditive ? (prev.address || data.address || '') : (data.address || prev.address),
+            birthDate: isAdditive ? (prev.birthDate || data.birthDate || '') : (data.birthDate || prev.birthDate),
+            consultationPath: isAdditive ? (prev.consultationPath || data.consultationPath || '') : (data.consultationPath || prev.consultationPath),
+            enrollmentReason: isAdditive ? (prev.enrollmentReason || data.enrollmentReason || '') : (data.enrollmentReason || prev.enrollmentReason),
+            siblings: isAdditive ? (prev.siblings || data.siblings || '') : (data.siblings || prev.siblings),
+            // shuttleBusRequest: 추가 분석에서도 true가 한 번이라도 나오면 true로 (안전한 방향)
             shuttleBusRequest: data.shuttleBusRequest === true || data.shuttleBusRequest === 'true' || prev.shuttleBusRequest,
-            safetyNotes: data.safetyNotes || prev.safetyNotes,
-            careerGoal: data.careerGoal || prev.careerGoal,
-            subject: subjectMap[data.subject || ''] || prev.subject,
-            status: statusMap[data.status || ''] || prev.status,
-            notes: data.notes || prev.notes,
-            nonRegistrationReason: data.nonRegistrationReason || prev.nonRegistrationReason,
-            followUpDate: data.followUpDate || prev.followUpDate,
-            followUpContent: data.followUpContent || prev.followUpContent,
+            safetyNotes: isAdditive ? (prev.safetyNotes || data.safetyNotes || '') : (data.safetyNotes || prev.safetyNotes),
+            careerGoal: isAdditive ? (prev.careerGoal || data.careerGoal || '') : (data.careerGoal || prev.careerGoal),
+            subject: isAdditive ? prev.subject : (subjectMap[data.subject || ''] || prev.subject),
+            status: isAdditive ? prev.status : (statusMap[data.status || ''] || prev.status),
+            // notes: 추가 분석 모드에선 줄바꿈으로 누적 (사용자 입력 + 신규 메모 모두 유지)
+            notes: isAdditive
+                ? (prev.notes && data.notes && !prev.notes.includes(data.notes)
+                    ? `${prev.notes}\n\n${data.notes}`
+                    : (prev.notes || data.notes || ''))
+                : (data.notes || prev.notes),
+            nonRegistrationReason: isAdditive ? (prev.nonRegistrationReason || data.nonRegistrationReason || '') : (data.nonRegistrationReason || prev.nonRegistrationReason),
+            followUpDate: isAdditive ? (prev.followUpDate || data.followUpDate || '') : (data.followUpDate || prev.followUpDate),
+            followUpContent: isAdditive ? (prev.followUpContent || data.followUpContent || '') : (data.followUpContent || prev.followUpContent),
         }));
-        if (data.mathConsultation) setMathConsult(data.mathConsultation as unknown as SubjectConsultationDetail);
-        if (data.englishConsultation) setEnglishConsult(data.englishConsultation as unknown as SubjectConsultationDetail);
-        if (data.koreanConsultation) setKoreanConsult(data.koreanConsultation as unknown as SubjectConsultationDetail);
-        if (data.scienceConsultation) setScienceConsult(data.scienceConsultation as unknown as SubjectConsultationDetail);
+
+        // 과목 객체 머지 헬퍼: isAdditive=true면 객체 내부 필드별로 "빈 필드만 채움"
+        const mergeSubject = (
+            prevSub: SubjectConsultationDetail | undefined,
+            incoming: unknown,
+        ): SubjectConsultationDetail => {
+            const inc = (incoming || {}) as Record<string, unknown>;
+            if (!isAdditive || !prevSub) return inc as SubjectConsultationDetail;
+            const result = { ...prevSub } as Record<string, unknown>;
+            Object.entries(inc).forEach(([k, v]) => {
+                if (!result[k] && v) result[k] = v;
+            });
+            return result as SubjectConsultationDetail;
+        };
+
+        if (data.mathConsultation) setMathConsult(prev => mergeSubject(prev, data.mathConsultation));
+        if (data.englishConsultation) setEnglishConsult(prev => mergeSubject(prev, data.englishConsultation));
+        if (data.koreanConsultation) setKoreanConsult(prev => mergeSubject(prev, data.koreanConsultation));
+        if (data.scienceConsultation) setScienceConsult(prev => mergeSubject(prev, data.scienceConsultation));
     }, []);
 
     // extractedData가 변경되면 자동 채우기
+    // 머지 정책 분기: 보고서 2개 이상이면 추가 분석 모드 (빈 필드만 채움)
     useEffect(() => {
         if (recording.extractedData) {
-            applyExtractedData(recording.extractedData);
+            const isAdditive = recording.reportIds.length >= 2;
+            applyExtractedData(recording.extractedData, isAdditive);
             setShowRecordingPanel(false);
         }
-    }, [recording.extractedData, applyExtractedData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [recording.extractedData, recording.reportIds.length, applyExtractedData]);
 
     const handleStartAnalysis = useCallback(async (file: File) => {
         try {
@@ -882,6 +1149,13 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
             const followUpDateISO = validateAndConvertDate(formData.followUpDate, '후속조치일', false);
             const createdAtISO = validateAndConvertDate(formData.createdAt, '접수일', true);
 
+            // AI 녹음 분석 보고서 연동 (v2 다중 보고서)
+            // 기존 ID(v2 우선, v1 폴백) + 새 분석 ID들을 합쳐 dedupe
+            const legacyIds = initialData?.recordingReportIds
+                ?? (initialData?.recordingReportId ? [initialData.recordingReportId] : []);
+            const sessionIds = recording.reportIds ?? [];
+            const mergedReportIds = Array.from(new Set([...legacyIds, ...sessionIds]));
+
             const submitData = {
                 ...formData,
                 consultationDate: consultationDateISO,
@@ -893,8 +1167,10 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                 koreanConsultation: koreanConsult,
                 scienceConsultation: scienceConsult,
                 etcConsultation: etcConsult,
-                // AI 녹음 분석 보고서 연동: 새 분석이 있으면 그 ID, 없으면 기존 값 유지
-                recordingReportId: recording.reportId || initialData?.recordingReportId || undefined,
+                // v2: 다중 보고서 배열로 저장
+                recordingReportIds: mergedReportIds.length > 0 ? mergedReportIds : undefined,
+                // v1 호환: 가장 최신 1개를 단일 필드에도 유지 (점진 마이그레이션)
+                recordingReportId: mergedReportIds[mergedReportIds.length - 1] || initialData?.recordingReportId || undefined,
             };
 
             // Firestore는 undefined 값을 지원하지 않으므로 제거
@@ -926,7 +1202,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
         const hasContent = !!(
             formData.studentName?.trim() ||
             (formData as any).school?.trim() ||
-            formData.consultationContent?.trim() ||
+            (formData as any).consultationContent?.trim() ||
             (formData as any).parentName?.trim()
         );
         if (!hasContent) {
@@ -1033,7 +1309,8 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                 {/* 녹음/분석 패널 */}
                 {!isViewMode && (
                     <div className="mx-3 mt-2 shrink-0">
-                        {!showRecordingPanel && recording.status === 'idle' && (
+                        {/* 분석 시작 버튼 — idle 또는 completed 상태에서 항상 표시 (보고서 있어도 추가 녹음 가능) */}
+                        {!showRecordingPanel && (recording.status === 'idle' || recording.status === 'completed') && (
                             <div
                                 onDrop={handleRecordingDrop}
                                 onDragOver={handleRecordingDragOver}
@@ -1041,13 +1318,24 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                 className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-sm text-xs font-medium transition-colors cursor-pointer border ${
                                     isDragOver
                                         ? 'bg-purple-100 border-purple-400 border-dashed ring-2 ring-purple-300'
-                                        : 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100'
+                                        : recording.reportIds.length > 0
+                                            ? 'bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100'
+                                            : 'bg-purple-50 border-purple-200 text-purple-700 hover:bg-purple-100'
                                 }`}
-                                onClick={() => setShowRecordingPanel(true)}
+                                onClick={() => {
+                                    // 추가 녹음 시작 시 status 만 리셋 (기존 보고서 유지)
+                                    if (recording.reportIds.length > 0) recording.startNewAnalysis();
+                                    setRecordingFile(null);
+                                    setShowRecordingPanel(true);
+                                }}
                             >
                                 <Mic size={14} />
-                                {isDragOver ? '여기에 녹음 파일을 놓으세요' : '녹음으로 AI 자동입력'}
-                                <span className="text-[10px] text-purple-400 ml-1">(파일 드래그 가능)</span>
+                                {isDragOver
+                                    ? '여기에 녹음 파일을 놓으세요'
+                                    : recording.reportIds.length > 0
+                                        ? `+ 추가 녹음 분석 (현재 ${recording.reportIds.length}개 보고서 누적)`
+                                        : '녹음으로 AI 자동입력'}
+                                <span className="text-[10px] opacity-70 ml-1">(파일 드래그 가능)</span>
                             </div>
                         )}
                         {showRecordingPanel && (
@@ -1149,7 +1437,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                     </div>
                                 )}
 
-                                {recordingFile && recording.status === 'idle' && (
+                                {recordingFile && (recording.status === 'idle' || recording.status === 'completed') && (
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2 p-2 bg-white border border-purple-200 rounded-sm">
                                             <Mic className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
@@ -1161,11 +1449,17 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                         </div>
                                         <button
                                             type="button"
-                                            onClick={() => handleStartAnalysis(recordingFile)}
+                                            onClick={() => {
+                                                // 추가 분석인 경우 status 만 리셋
+                                                if (recording.reportIds.length > 0 && recording.status === 'completed') {
+                                                    recording.startNewAnalysis();
+                                                }
+                                                handleStartAnalysis(recordingFile);
+                                            }}
                                             className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-sm text-xs font-bold transition-colors"
                                         >
                                             <Mic size={14} />
-                                            AI 분석 시작
+                                            {recording.reportIds.length > 0 ? '추가 AI 분석 시작' : 'AI 분석 시작'}
                                         </button>
                                     </div>
                                 )}
@@ -1982,9 +2276,20 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                         );
                     })}
 
-                    {/* AI 분석 탭 */}
+                    {/* AI 분석 탭 — 다중 보고서 지원 (탭 바 + 활성 보고서 + AI 통합 재생성) */}
                     {activeTab === 'analysis' && (
-                        <AnalysisTabContent reportData={recording.reportData} studentName={formData.studentName} consultationDate={formData.consultationDate || ''} counselorName={formData.counselor} reportId={recording.reportId} canEdit={canEditReport} currentUser={userProfile} />
+                        <AnalysisTabsWrapper
+                            reportIds={recording.reportIds}
+                            reportsData={recording.reportsData}
+                            activeReportId={recording.activeReportId}
+                            onActiveReportChange={recording.setActiveReportId}
+                            onRegenerateMerged={recording.regenerateMergedReport}
+                            studentName={formData.studentName}
+                            consultationDate={formData.consultationDate || ''}
+                            counselorName={formData.counselor}
+                            canEdit={canEditReport}
+                            currentUser={userProfile}
+                        />
                     )}
 
                     {/* 버튼 */}
