@@ -6,12 +6,41 @@
  * 인증: googleCalendarSync / timetableSheetsSync와 동일한 GOOGLE_SERVICE_ACCOUNT_KEY 재사용
  *
  * 시트 컬럼 매핑 (A~W):
- *   A 학생이름        B 학생 연락처       C 성별         D 학교
- *   E 학교 구분       F 학년             G 희망진로     H 부/모
- *   I 부모님 성함     J 부모님 연락처     K 주소         L 상담경로
- *   M 인터넷(경로)    N 지인소개(경로)    O 기타(경로)   P 상담완료 과목
- *   Q 상담기록        R 셔틀버스 신청     S 셔틀버스#    T 정류장
- *   U 상태            V 예외             W 사유
+ *   A 학생이름   B 학생 연락처  C 성별   D 학교    E 학교 구분
+ *   F 학년       G 희망진로     H 부/모  I 부모님 성함  J 부모님 연락처
+ *   K 주소       L 상담경로     M 인터넷(경로)  N 지인소개(경로)  O 기타(경로)
+ *   P 상담완료 과목  Q 상담기록  R 셔틀버스 신청  S 셔틀버스#  T 정류장
+ *   U 상태       V 예외        W 사유
+ *
+ * Q열(상담기록) 포맷:
+ *   [기타 인적사항]
+ *   - 상담일: ...
+ *   - 상담자: ...
+ *   - 남매: ...
+ *   - 메모:
+ *   {multi-line content}
+ *
+ *   MATH
+ *
+ *   [수학 상담]
+ *   - 레테 수기입력 ✏️:
+ *   {score line}
+ *   - 학원 히스토리:
+ *   {content}
+ *   - 학습 진도:
+ *   {content}
+ *   - 시험 성적:
+ *   {content}
+ *   - 상담 내역:
+ *   {content}
+ *   - 추천반: ...
+ *   - 담임: ...
+ *   - 첫 수업일: ...
+ *
+ *   ENGLISH
+ *
+ *   [영어 상담]
+ *   ...
  */
 
 const { defineSecret } = require("firebase-functions/params");
@@ -72,157 +101,179 @@ function joinAddress(a, b) {
     return [a, b].filter(nonEmpty).join(" ");
 }
 
-function pushIf(arr, cond, line) {
-    if (cond) arr.push(line);
+// 라벨 + 다음 줄 내용 (multi-line 텍스트용)
+function blockLine(label, content) {
+    return `- ${label}:\n${content}`;
 }
 
-// ============ Subject Block Builders ============
-
-function buildMathBlock(detail) {
-    if (!isDetailFilled(detail)) return "";
-    const lines = [];
-    const lt = [];
-    if (nonEmpty(detail.calculationScore)) lt.push("계산력 " + detail.calculationScore);
-    if (nonEmpty(detail.comprehensionScore)) lt.push("이해력 " + detail.comprehensionScore);
-    if (nonEmpty(detail.reasoningScore)) lt.push("추론력 " + detail.reasoningScore);
-    if (nonEmpty(detail.problemSolvingScore)) lt.push("문제해결력 " + detail.problemSolvingScore);
-    if (nonEmpty(detail.myTotalScore)) lt.push("내 점수 " + detail.myTotalScore);
-    if (nonEmpty(detail.averageScore)) lt.push("평균 " + detail.averageScore);
-    if (nonEmpty(detail.scoreGrade)) lt.push("등급 " + detail.scoreGrade);
-    if (lt.length) lines.push("- 레벨테스트: " + lt.join(", "));
-    pushIf(lines, nonEmpty(detail.academyHistory), "- 학원 히스토리: " + detail.academyHistory);
-    pushIf(lines, nonEmpty(detail.learningProgress), "- 학습 진도: " + detail.learningProgress);
-    pushIf(lines, nonEmpty(detail.examResults), "- 학생 시험 성적: " + detail.examResults);
-    pushIf(lines, nonEmpty(detail.consultationHistory), "- 학생 상담 내역: " + detail.consultationHistory);
-    pushIf(lines, nonEmpty(detail.recommendedClass), "- 추천반: " + detail.recommendedClass);
-    pushIf(lines, nonEmpty(detail.homeRoomTeacher), "- 담임: " + detail.homeRoomTeacher);
-    pushIf(lines, nonEmpty(detail.firstClassDate), "- 첫 수업일: " + detail.firstClassDate);
-    if (lines.length === 0) return "";
-    return "[수학 상담]\n" + lines.join("\n");
+// 라벨 + 같은 줄 값 (single-value용)
+function inlineLine(label, value) {
+    return `- ${label}: ${value}`;
 }
 
-function buildEnglishBlock(detail) {
-    if (!isDetailFilled(detail)) return "";
-    const lines = [];
+// ============ Level Test Compact Format ============
 
-    // 시험 종류별 점수 라인
+function buildMathLevelTest(detail) {
+    const head = [];
+    if (nonEmpty(detail.myTotalScore)) head.push(detail.myTotalScore + "점");
+    if (nonEmpty(detail.scoreGrade)) head.push(detail.scoreGrade + "등급");
+    if (nonEmpty(detail.averageScore)) head.push("평균 " + detail.averageScore);
+    const sub = [];
+    if (nonEmpty(detail.calculationScore)) sub.push("계" + detail.calculationScore);
+    if (nonEmpty(detail.comprehensionScore)) sub.push("이" + detail.comprehensionScore);
+    if (nonEmpty(detail.reasoningScore)) sub.push("추" + detail.reasoningScore);
+    if (nonEmpty(detail.problemSolvingScore)) sub.push("문제" + detail.problemSolvingScore);
+    if (head.length === 0 && sub.length === 0) {
+        // 별도 levelTestScore 텍스트 필드 폴백
+        return nonEmpty(detail.levelTestScore) ? detail.levelTestScore : "";
+    }
+    let s = head.join(", ");
+    if (sub.length) s += (s ? "  " : "") + sub.join(", ");
+    return s;
+}
+
+function buildEnglishLevelTest(detail) {
+    const lines = [];
     if (detail.englishTestType === "ai") {
-        const sub = [];
-        if (nonEmpty(detail.engLevel)) sub.push("Lv " + detail.engLevel);
-        if (nonEmpty(detail.engAiGradeLevel)) sub.push("학년수준 " + detail.engAiGradeLevel);
-        if (nonEmpty(detail.engAiArIndex)) sub.push("AR " + detail.engAiArIndex);
-        if (nonEmpty(detail.engAiTopPercent)) sub.push("상위% " + detail.engAiTopPercent);
-        if (sub.length) lines.push("- AI 종합: " + sub.join(", "));
+        const head = [];
+        if (nonEmpty(detail.engLevel)) head.push("Lv " + detail.engLevel);
+        if (nonEmpty(detail.engAiGradeLevel)) head.push("학년수준 " + detail.engAiGradeLevel);
+        if (nonEmpty(detail.engAiArIndex)) head.push("AR " + detail.engAiArIndex);
+        if (nonEmpty(detail.engAiTopPercent)) head.push("상위% " + detail.engAiTopPercent);
+        if (head.length) lines.push("AI 종합: " + head.join(", "));
         const skills = [];
         if (nonEmpty(detail.engAiWordMy) || nonEmpty(detail.engAiWordAvg)) skills.push(`Word ${detail.engAiWordMy || "-"}/${detail.engAiWordAvg || "-"}`);
         if (nonEmpty(detail.engAiListenMy) || nonEmpty(detail.engAiListenAvg)) skills.push(`Listen ${detail.engAiListenMy || "-"}/${detail.engAiListenAvg || "-"}`);
         if (nonEmpty(detail.engAiReadMy) || nonEmpty(detail.engAiReadAvg)) skills.push(`Read ${detail.engAiReadMy || "-"}/${detail.engAiReadAvg || "-"}`);
         if (nonEmpty(detail.engAiWriteMy) || nonEmpty(detail.engAiWriteAvg)) skills.push(`Write ${detail.engAiWriteMy || "-"}/${detail.engAiWriteAvg || "-"}`);
-        if (skills.length) lines.push("- AI 세부 (나/평균): " + skills.join(", "));
+        if (skills.length) lines.push("AI 세부(나/평균): " + skills.join(", "));
     } else if (detail.englishTestType === "nelt") {
-        const sub = [];
-        if (nonEmpty(detail.engLevel)) sub.push("Lv " + detail.engLevel);
-        if (nonEmpty(detail.engNeltOverallLevel)) sub.push("종합 " + detail.engNeltOverallLevel);
-        if (nonEmpty(detail.engNeltRank)) sub.push("석차 " + detail.engNeltRank);
-        if (sub.length) lines.push("- NELT 종합: " + sub.join(", "));
+        const head = [];
+        if (nonEmpty(detail.engLevel)) head.push("Lv " + detail.engLevel);
+        if (nonEmpty(detail.engNeltOverallLevel)) head.push("종합 " + detail.engNeltOverallLevel);
+        if (nonEmpty(detail.engNeltRank)) head.push("석차 " + detail.engNeltRank);
+        if (head.length) lines.push("NELT 종합: " + head.join(", "));
         const skills = [];
         if (nonEmpty(detail.engNeltVocab)) skills.push("어휘 " + detail.engNeltVocab);
         if (nonEmpty(detail.engNeltGrammar)) skills.push("문법 " + detail.engNeltGrammar);
         if (nonEmpty(detail.engNeltListening)) skills.push("듣기 " + detail.engNeltListening);
         if (nonEmpty(detail.engNeltReading)) skills.push("독해 " + detail.engNeltReading);
-        if (skills.length) lines.push("- NELT 세부: " + skills.join(", "));
+        if (skills.length) lines.push("NELT 세부: " + skills.join(", "));
     } else if (detail.englishTestType === "eie") {
-        const sub = [];
-        if (nonEmpty(detail.engLevel)) sub.push("Lv " + detail.engLevel);
-        if (nonEmpty(detail.engEieGradeLevel)) sub.push("학년수준 " + detail.engEieGradeLevel);
-        if (nonEmpty(detail.engEieVocabLevel)) sub.push("어휘수준 " + detail.engEieVocabLevel);
-        if (nonEmpty(detail.engEieRank)) sub.push("동학년순위 " + detail.engEieRank);
-        if (sub.length) lines.push("- EiE 종합: " + sub.join(", "));
+        const head = [];
+        if (nonEmpty(detail.engLevel)) head.push("Lv " + detail.engLevel);
+        if (nonEmpty(detail.engEieGradeLevel)) head.push("학년수준 " + detail.engEieGradeLevel);
+        if (nonEmpty(detail.engEieVocabLevel)) head.push("어휘수준 " + detail.engEieVocabLevel);
+        if (nonEmpty(detail.engEieRank)) head.push("동학년순위 " + detail.engEieRank);
+        if (head.length) lines.push("EiE 종합: " + head.join(", "));
         const chart = [];
         if (nonEmpty(detail.engEieCourse)) chart.push("과정 " + detail.engEieCourse);
         if (nonEmpty(detail.engEieChartLevel)) chart.push("레벨 " + detail.engEieChartLevel);
         if (nonEmpty(detail.engEieTextbook)) chart.push("교재 " + detail.engEieTextbook);
-        if (chart.length) lines.push("- EiE 차트: " + chart.join(", "));
+        if (chart.length) lines.push("EiE 차트: " + chart.join(", "));
         const skills = [];
         if (nonEmpty(detail.engEieVocabMy) || nonEmpty(detail.engEieVocabAvg)) skills.push(`Vocab ${detail.engEieVocabMy || "-"}/${detail.engEieVocabAvg || "-"}`);
         if (nonEmpty(detail.engEieListenMy) || nonEmpty(detail.engEieListenAvg)) skills.push(`Listen ${detail.engEieListenMy || "-"}/${detail.engEieListenAvg || "-"}`);
         if (nonEmpty(detail.engEieReadMy) || nonEmpty(detail.engEieReadAvg)) skills.push(`Read ${detail.engEieReadMy || "-"}/${detail.engEieReadAvg || "-"}`);
         if (nonEmpty(detail.engEieGrammarMy) || nonEmpty(detail.engEieGrammarAvg)) skills.push(`Grammar ${detail.engEieGrammarMy || "-"}/${detail.engEieGrammarAvg || "-"}`);
-        if (skills.length) lines.push("- EiE 세부 (나/평균): " + skills.join(", "));
+        if (skills.length) lines.push("EiE 세부(나/평균): " + skills.join(", "));
     } else if (nonEmpty(detail.levelTestScore)) {
-        lines.push("- 레벨테스트: " + detail.levelTestScore);
+        return detail.levelTestScore;
+    }
+    return lines.join("\n");
+}
+
+function buildGenericLevelTest(detail) {
+    return nonEmpty(detail.levelTestScore) ? detail.levelTestScore : "";
+}
+
+// ============ Subject Block ============
+
+const SUBJECT_META = {
+    math:    { header: "MATH",    label: "수학", lt: buildMathLevelTest    },
+    english: { header: "ENGLISH", label: "영어", lt: buildEnglishLevelTest },
+    korean:  { header: "KOREAN",  label: "국어", lt: buildGenericLevelTest },
+    science: { header: "SCIENCE", label: "과학", lt: buildGenericLevelTest },
+    etc:     { header: "ETC",     label: "기타", lt: buildGenericLevelTest },
+};
+
+function buildSubjectBlock(subjectKey, detail) {
+    if (!isDetailFilled(detail)) return "";
+    const meta = SUBJECT_META[subjectKey];
+    const lines = [];
+
+    // 레벨테스트
+    const ltText = meta.lt(detail);
+    if (nonEmpty(ltText)) {
+        lines.push("- 레테 수기입력 ✏️:");
+        lines.push(ltText);
     }
 
-    pushIf(lines, nonEmpty(detail.academyHistory), "- 학원 히스토리: " + detail.academyHistory);
-    pushIf(lines, nonEmpty(detail.learningProgress), "- 학습 진도: " + detail.learningProgress);
-    pushIf(lines, nonEmpty(detail.examResults), "- 학생 시험 성적: " + detail.examResults);
-    pushIf(lines, nonEmpty(detail.consultationHistory), "- 학생 상담 내역: " + detail.consultationHistory);
-    pushIf(lines, nonEmpty(detail.recommendedClass), "- 추천반: " + detail.recommendedClass);
-    pushIf(lines, nonEmpty(detail.homeRoomTeacher), "- 담임: " + detail.homeRoomTeacher);
-    pushIf(lines, nonEmpty(detail.firstClassDate), "- 첫 수업일: " + detail.firstClassDate);
+    // 다중행 텍스트 필드 (라벨 다음 줄에 내용)
+    if (nonEmpty(detail.academyHistory))       { lines.push("- 학원 히스토리:");  lines.push(detail.academyHistory); }
+    if (nonEmpty(detail.learningProgress))     { lines.push("- 학습 진도:");      lines.push(detail.learningProgress); }
+    if (nonEmpty(detail.examResults))          { lines.push("- 시험 성적:");      lines.push(detail.examResults); }
+    if (nonEmpty(detail.consultationHistory))  { lines.push("- 상담 내역:");      lines.push(detail.consultationHistory); }
+
+    // 단일값 필드 (라벨 같은 줄)
+    if (nonEmpty(detail.recommendedClass)) lines.push(inlineLine("추천반", detail.recommendedClass));
+    if (nonEmpty(detail.homeRoomTeacher))  lines.push(inlineLine("담임",   detail.homeRoomTeacher));
+    if (nonEmpty(detail.firstClassDate))   lines.push(inlineLine("첫 수업일", detail.firstClassDate));
+
     if (lines.length === 0) return "";
-    return "[영어 상담]\n" + lines.join("\n");
+
+    return `${meta.header}\n\n[${meta.label} 상담]\n${lines.join("\n")}`;
 }
 
-function buildGenericSubjectBlock(label, detail) {
-    if (!isDetailFilled(detail)) return "";
-    const lines = [];
-    if (nonEmpty(detail.levelTestScore)) lines.push("- 레벨테스트: " + detail.levelTestScore);
-    pushIf(lines, nonEmpty(detail.academyHistory), "- 학원 히스토리: " + detail.academyHistory);
-    pushIf(lines, nonEmpty(detail.learningProgress), "- 학습 진도: " + detail.learningProgress);
-    pushIf(lines, nonEmpty(detail.examResults), "- 학생 시험 성적: " + detail.examResults);
-    pushIf(lines, nonEmpty(detail.consultationHistory), "- 학생 상담 내역: " + detail.consultationHistory);
-    pushIf(lines, nonEmpty(detail.recommendedClass), "- 추천반: " + detail.recommendedClass);
-    pushIf(lines, nonEmpty(detail.homeRoomTeacher), "- 담임: " + detail.homeRoomTeacher);
-    pushIf(lines, nonEmpty(detail.firstClassDate), "- 첫 수업일: " + detail.firstClassDate);
-    if (lines.length === 0) return "";
-    return "[" + label + " 상담]\n" + lines.join("\n");
-}
-
-// ============ Row Builders ============
+// ============ 기타 인적사항 Block ============
 
 function buildPersonalBlock(c) {
     const lines = [];
-    pushIf(lines, nonEmpty(c.consultationDate), "- 상담일: " + c.consultationDate);
-    pushIf(lines, nonEmpty(c.counselor), "- 상담자: " + c.counselor);
-    pushIf(lines, nonEmpty(c.receiver), "- 수신자: " + c.receiver);
-    pushIf(lines, nonEmpty(c.siblings), "- 남매: " + c.siblings + (nonEmpty(c.siblingsDetails) ? " / " + c.siblingsDetails : ""));
-    pushIf(lines, nonEmpty(c.safetyNotes), "- 안전사항: " + c.safetyNotes);
-    pushIf(lines, nonEmpty(c.enrollmentReason), "- 입학 동기: " + c.enrollmentReason);
-    pushIf(lines, nonEmpty(c.notes), "- 메모: " + c.notes);
-    pushIf(lines, nonEmpty(c.nonRegistrationReason), "- 미등록 사유: " + c.nonRegistrationReason);
-    pushIf(lines, nonEmpty(c.followUpDate), "- 후속 조치일: " + c.followUpDate);
-    pushIf(lines, nonEmpty(c.followUpContent), "- 후속 조치: " + c.followUpContent);
-    if (lines.length === 0) return "";
+    if (nonEmpty(c.consultationDate)) lines.push(inlineLine("상담일", c.consultationDate));
+    if (nonEmpty(c.counselor))        lines.push(inlineLine("상담자", c.counselor));
+    if (nonEmpty(c.receiver))         lines.push(inlineLine("수신자", c.receiver));
+
+    // 남매: 라벨은 항상 표시 (값 없어도)
+    const sibVal = [c.siblings, c.siblingsDetails].filter(nonEmpty).join(" ");
+    lines.push(inlineLine("남매", sibVal));
+
+    if (nonEmpty(c.notes))                 { lines.push("- 메모:");        lines.push(c.notes); }
+    if (nonEmpty(c.safetyNotes))           { lines.push("- 안전사항:");    lines.push(c.safetyNotes); }
+    if (nonEmpty(c.enrollmentReason))      { lines.push("- 입학 동기:");   lines.push(c.enrollmentReason); }
+    if (nonEmpty(c.nonRegistrationReason)) { lines.push("- 미등록 사유:"); lines.push(c.nonRegistrationReason); }
+    if (nonEmpty(c.followUpDate))          lines.push(inlineLine("후속 조치일", c.followUpDate));
+    if (nonEmpty(c.followUpContent))       { lines.push("- 후속 조치:");   lines.push(c.followUpContent); }
+
     return "[기타 인적사항]\n" + lines.join("\n");
 }
 
 function buildConsultationRecord(c) {
     const blocks = [];
-    const personal = buildPersonalBlock(c);
-    if (personal) blocks.push(personal);
-    const m = buildMathBlock(c.mathConsultation); if (m) blocks.push(m);
-    const e = buildEnglishBlock(c.englishConsultation); if (e) blocks.push(e);
-    const k = buildGenericSubjectBlock("국어", c.koreanConsultation); if (k) blocks.push(k);
-    const s = buildGenericSubjectBlock("과학", c.scienceConsultation); if (s) blocks.push(s);
-    const etc = buildGenericSubjectBlock("기타", c.etcConsultation); if (etc) blocks.push(etc);
+    blocks.push(buildPersonalBlock(c));
+    for (const key of ["math", "english", "korean", "science", "etc"]) {
+        const detailKey = key === "etc" ? "etcConsultation" : `${key}Consultation`;
+        const block = buildSubjectBlock(key, c[detailKey]);
+        if (block) blocks.push(block);
+    }
     return blocks.join("\n\n");
 }
 
 function buildCompletedSubjects(c) {
     const arr = [];
-    if (isDetailFilled(c.mathConsultation)) arr.push("수학");
+    if (isDetailFilled(c.mathConsultation))    arr.push("수학");
     if (isDetailFilled(c.englishConsultation)) arr.push("영어");
-    if (isDetailFilled(c.koreanConsultation)) arr.push("국어");
+    if (isDetailFilled(c.koreanConsultation))  arr.push("국어");
     if (isDetailFilled(c.scienceConsultation)) arr.push("과학");
-    if (isDetailFilled(c.etcConsultation)) arr.push("기타");
+    if (isDetailFilled(c.etcConsultation))     arr.push("기타");
     return arr.join(" ");
 }
+
+// ============ Row Builder ============
 
 function buildRow(c) {
     return [
         c.studentName || "",                                          // A
-        c.studentPhone || c.parentPhone || "",                        // B (학생연락처 우선)
+        c.studentPhone || c.parentPhone || "",                        // B
         genderKr(c.gender),                                           // C
         c.schoolName || "",                                           // D
         schoolTypeFromGrade(c.grade),                                 // E
@@ -233,7 +284,7 @@ function buildRow(c) {
         c.parentPhone || "",                                          // J
         joinAddress(c.address, c.addressDetail),                      // K
         c.consultationPath || "",                                     // L
-        "",                                                           // M 인터넷(경로) — 폼에 별도 필드 없음
+        "",                                                           // M 인터넷(경로)
         "",                                                           // N 지인소개(경로)
         "",                                                           // O 기타(경로)
         buildCompletedSubjects(c),                                    // P
@@ -247,7 +298,7 @@ function buildRow(c) {
     ];
 }
 
-// ============ Sheets API call ============
+// ============ Sheets API ============
 
 async function appendConsultationRow(consultation) {
     const auth = getAuthClient();
@@ -268,7 +319,7 @@ async function appendConsultationRow(consultation) {
 module.exports = {
     GOOGLE_SERVICE_ACCOUNT_KEY,
     appendConsultationRow,
-    buildRow,            // test용 export
+    buildRow,
     buildConsultationRecord,
     buildCompletedSubjects,
 };
