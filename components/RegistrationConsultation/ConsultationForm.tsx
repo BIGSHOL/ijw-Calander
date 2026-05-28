@@ -1190,11 +1190,11 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
         }
     };
 
-    // 모달 닫기 인터셉트 — 신규 등록 모드 + 유의미한 입력 있으면 '상담전' 으로 자동 저장
-    // (사용자가 등록 버튼 안 눌러도 입력한 내용이 목록에 '상담전' 상태로 보이게)
+    // 모달 닫기 — 신규 등록 모드 + 유의미한 입력이 있으면 사용자에게 확인.
+    // (자동 저장은 사용자 동의 없는 등록을 유발하므로 confirm 필수)
     const handleCloseWithAutoSave = () => {
         if (initialData?.id) {
-            // 기존 기록 수정/조회 모드 — 자동 저장 안 함
+            // 기존 기록 수정/조회 모드 — 그냥 닫음
             onClose();
             return;
         }
@@ -1206,6 +1206,18 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
             (formData as any).parentName?.trim()
         );
         if (!hasContent) {
+            onClose();
+            return;
+        }
+        // 사용자 확인 — 명시적 동의가 있어야만 '상담전' 으로 저장
+        const ok = window.confirm(
+            '입력한 내용이 있습니다.\n\n[확인] 상담전 상태로 저장하고 닫기\n[취소] 저장하지 않고 닫기'
+        );
+        if (!ok) {
+            // 입력 내용 폐기하고 그냥 닫음
+            if (DRAFT_KEY) {
+                try { localStorage.removeItem(DRAFT_KEY); } catch {}
+            }
             onClose();
             return;
         }
