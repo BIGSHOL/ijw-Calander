@@ -13,8 +13,8 @@ import { useHeaderNotifications, HeaderNotificationItem } from '../../hooks/useH
 
 interface NotificationBellProps {
     currentUid: string | null | undefined;
-    /** 알림 클릭 시 상담 탭으로 이동시키는 콜백 (선택) */
-    onNavigateConsultation?: (consultationId: string) => void;
+    /** 알림 클릭 시 상담 탭으로 이동시키는 콜백 (선택, consultationId 전달) */
+    onNavigateConsultation?: (consultationId?: string) => void;
 }
 
 function timeAgo(ts: HeaderNotificationItem['createdAt']): string {

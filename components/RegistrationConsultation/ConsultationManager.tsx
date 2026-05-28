@@ -49,7 +49,19 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
     const canManage = hasPermission('consultation.manage');
     const canConvert = hasPermission('consultation.convert');
 
-    const [view, setView] = useState<'dashboard' | 'table' | 'yearly'>('dashboard'); // 기본값: 통계(dashboard)
+    const [view, setView] = useState<'dashboard' | 'table' | 'yearly'>(() => {
+        // 알림 클릭으로 진입한 경우 sessionStorage 의 view 우선 적용
+        try {
+            const raw = sessionStorage.getItem('consultationNavTarget');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (parsed?.view === 'table' || parsed?.view === 'yearly' || parsed?.view === 'dashboard') {
+                    return parsed.view;
+                }
+            }
+        } catch (_) { /* 무시 */ }
+        return 'dashboard'; // 기본값: 통계(dashboard)
+    });
     const [viewColumns, setViewColumns] = useState<1 | 2>(1); // 1단/2단 보기 상태
     const [selectedMonth, setSelectedMonth] = useState<string>('all');
     const [selectedYear, setSelectedYear] = useState<string>(String(new Date().getFullYear()));
@@ -81,6 +93,29 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
             setShowFilters(false);
         }
     }, [view]);
+
+    // 알림 클릭 시 view='table' 강제 + sessionStorage 클린업
+    // 1차: mount 직후 (state 초기값에서 이미 읽음, 여기서 1회 클린업)
+    // 2차: 이미 #consultation 에 있는 상태로 알림 클릭 시 custom event 수신
+    useEffect(() => {
+        const consume = () => {
+            try {
+                const raw = sessionStorage.getItem('consultationNavTarget');
+                if (!raw) return;
+                const parsed = JSON.parse(raw);
+                if (parsed?.view === 'table' || parsed?.view === 'yearly' || parsed?.view === 'dashboard') {
+                    setView(parsed.view);
+                }
+                sessionStorage.removeItem('consultationNavTarget');
+            } catch (_) { /* 무시 */ }
+        };
+        // 마운트 직후 1회
+        consume();
+        // 이미 탭에 있는 상태에서 알림 클릭 시
+        const handler = () => consume();
+        window.addEventListener('consultationNavTargetChanged', handler);
+        return () => window.removeEventListener('consultationNavTargetChanged', handler);
+    }, []);
 
     // Modal State
     const [isFormOpen, setIsFormOpen] = useState(false);

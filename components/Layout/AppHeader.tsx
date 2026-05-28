@@ -219,10 +219,23 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           {!isHeaderCollapsed && currentUser && (
             <NotificationBell
               currentUid={userProfile?.uid}
-              onNavigateConsultation={() => {
-                // 등록 상담 탭으로 이동 — useTabHistory 가 hash 변경을 감지해서 appMode 업데이트
+              onNavigateConsultation={(consultationId?: string) => {
+                // 알림 클릭 시 등록 상담 → 목록 뷰로 이동.
+                // ConsultationManager 가 mount 시 sessionStorage 를 읽어 view 'table' 강제.
+                try {
+                  sessionStorage.setItem('consultationNavTarget', JSON.stringify({
+                    view: 'table',
+                    consultationId: consultationId || null,
+                    ts: Date.now(),
+                  }));
+                } catch (_) {
+                  // 무시
+                }
                 if (window.location.hash !== '#consultation') {
                   window.location.hash = '#consultation';
+                } else {
+                  // 이미 #consultation 이면 hashchange 이벤트가 발생 안 함 — custom event 발사
+                  window.dispatchEvent(new Event('consultationNavTargetChanged'));
                 }
               }}
             />
