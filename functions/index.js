@@ -9045,15 +9045,37 @@ exports.syncConsultationToSheet = onDocumentCreated(
             const grade = consultation.grade || "";
             const schoolName = consultation.schoolName || "";
             const subject = consultation.subject || "";
+            const consultDate = consultation.consultationDate || "";  // YYYY-MM-DD
             const ctx = [grade, schoolName].filter(Boolean).join(" ");
             const subjectSuffix = subject ? ` · ${subject}` : "";
-            const body = `${counselorName}님이 ${studentName}${ctx ? ` (${ctx})` : ""} 학생을 등록했습니다${subjectSuffix}`;
+
+            // 상담일 포맷: YYYY-MM-DD → YY.MM.DD(요일)
+            let dateSuffix = "";
+            if (consultDate) {
+                try {
+                    const d = new Date(consultDate);
+                    if (!isNaN(d.getTime())) {
+                        const yy = String(d.getFullYear()).slice(2);
+                        const mm = String(d.getMonth() + 1).padStart(2, "0");
+                        const dd = String(d.getDate()).padStart(2, "0");
+                        const dayOfWeek = ["일","월","화","수","목","금","토"][d.getDay()];
+                        dateSuffix = ` · 상담일 ${yy}.${mm}.${dd}(${dayOfWeek})`;
+                    } else {
+                        dateSuffix = ` · 상담일 ${consultDate}`;
+                    }
+                } catch (_) {
+                    dateSuffix = ` · 상담일 ${consultDate}`;
+                }
+            }
+
+            const body = `${counselorName}님이 ${studentName}${ctx ? ` (${ctx})` : ""} 학생을 등록했습니다${subjectSuffix}${dateSuffix}`;
 
             await db.collection("notifications").add({
                 type: "consultation_created",
                 title: "새 상담 등록",
                 body,
                 consultationId,
+                consultationDate: consultDate || null,
                 createdBy: consultation.authorId || null,
                 createdByName: counselorName,
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
