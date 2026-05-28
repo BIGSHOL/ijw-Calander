@@ -193,5 +193,41 @@
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "math_scenarios",
+      "fieldPath": "classes",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "math_scenarios",
+      "fieldPath": "enrollments",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "math_scenarios",
+      "fieldPath": "originalClasses",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "math_scenarios",
+      "fieldPath": "originalEnrollments",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "english_simulation_scenarios",
+      "fieldPath": "classes",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "english_simulation_scenarios",
+      "fieldPath": "enrollments",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "english_simulation_scenarios",
+      "fieldPath": "viewSettings",
+      "indexes": []
+    }
+  ]
 }
