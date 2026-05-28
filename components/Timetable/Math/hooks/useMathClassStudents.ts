@@ -25,8 +25,8 @@ export const useMathClassStudents = (
     // 시나리오 모드: Context의 scenarioEnrollments 기반 학생 데이터 파생
     const simulationData = useMemo(() => {
         if (!isSimulationMode || !simulation) return null;
-        return simulation.getClassStudents(classNames, studentMap);
-    }, [isSimulationMode, simulation, simulation?.scenarioEnrollments, classNames, studentMap]);
+        return simulation.getClassStudents(classNames, studentMap, referenceDate);
+    }, [isSimulationMode, simulation, simulation?.scenarioEnrollments, classNames, studentMap, referenceDate]);
 
     // 실 데이터 — 시뮬레이션 모드에서는 빈 classNames로 호출하여 라이브 조회 비활성화
     const real = useSubjectClassStudents({

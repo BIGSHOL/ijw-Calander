@@ -632,7 +632,13 @@ const ScenarioManagementModal: React.FC<ScenarioManagementModalProps> = ({
                                     <div className="p-3">
                                         <p className="text-xs text-gray-500 mb-2">현재 시뮬레이션 상태를 새 시나리오로 저장합니다.</p>
                                         <button
-                                            onClick={() => setIsSaveDialogOpen(true)}
+                                            onClick={() => {
+                                                // 시나리오 이름 기본값: "YYYY-MM-DD 시간표" (현재 날짜)
+                                                const d = new Date();
+                                                const ymd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                                setNewScenarioName(`${ymd} 시간표`);
+                                                setIsSaveDialogOpen(true);
+                                            }}
                                             disabled={activeOperation !== null}
                                             className="w-full flex items-center justify-center gap-1 px-3 py-2 bg-purple-600 text-white rounded-sm text-sm font-bold hover:bg-purple-700 disabled:opacity-50 transition-colors"
                                         >

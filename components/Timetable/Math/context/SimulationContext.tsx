@@ -21,6 +21,7 @@ import { collection, collectionGroup, query, where, getDocs, getDoc, writeBatch,
 import { db } from '../../../../firebaseConfig';
 import { TimetableStudent } from '../../../../types';
 import { convertTimestampToDate } from '../../../../utils/firestoreConverters';
+import { formatDateKey } from '../../../../utils/dateUtils';
 
 const SCENARIO_COLLECTION = 'math_scenarios';
 
@@ -103,7 +104,7 @@ export interface MathSimulationContextValue extends ScenarioState {
   exitScenarioMode: () => void;
 
   // Data access (for hooks)
-  getClassStudents: (classNames: string[], studentMap: Record<string, any>) => Record<string, {
+  getClassStudents: (classNames: string[], studentMap: Record<string, any>, referenceDate?: string) => Record<string, {
     studentList: ScenarioStudent[];
     studentIds: string[];
   }>;
@@ -384,11 +385,59 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
 
   const getClassStudents = useCallback((
     classNames: string[],
-    studentMap: Record<string, any>
+    studentMap: Record<string, any>,
+    referenceDate?: string
   ) => {
     const { isScenarioMode, scenarioEnrollments } = stateRef.current;
     const initial = initialEnrollmentsRef.current;
     const result: Record<string, { studentList: ScenarioStudent[]; studentIds: string[] }> = {};
+
+    // 신입(빨강)/반이동(초록) 색상 판정 필드 — 실시간 useSubjectClassStudents 와 동일 로직.
+    // 시뮬 enrollment(활성만 보관)가 아니라 학생 원본 enrollments(종료/퇴원 포함)로 계산해야
+    // hasPastInSubject/isTransferredIn 이 실시간과 일치한다.
+    const MATH_SUBJECTS = ['math', 'highmath'];
+    const today = referenceDate || formatDateKey(new Date());
+    const weekEnd = (() => {
+      const d = new Date(today);
+      d.setDate(d.getDate() + 6);
+      return formatDateKey(d);
+    })();
+    const computeEnrollmentFlags = (baseStudent: any, className: string) => {
+      let firstStart: string | undefined;
+      const activeClasses = new Set<string>();
+      const endedClasses = new Set<string>();
+      const enrollments = baseStudent?.enrollments;
+      if (Array.isArray(enrollments)) {
+        enrollments.forEach((e: any) => {
+          if (!MATH_SUBJECTS.includes(e.subject)) return;
+          if (e.cancelledAt) return;
+          const cn = e.className as string;
+          if (!cn) return;
+          const _en = convertTimestampToDate(e.enrollmentDate);
+          const _st = convertTimestampToDate(e.startDate);
+          const _wd = convertTimestampToDate(e.withdrawalDate);
+          const _ed = convertTimestampToDate(e.endDate);
+          // 모순 record 가드 — startDate > endDate 인 깨진 record 무시
+          const _s = _en || _st;
+          const _e = _wd || _ed;
+          if (_s && _e && _s > _e) return;
+          // firstSubjectEnrollmentDate = enrollmentDate/startDate 중 더 이른 날짜
+          const sFirst = (_en && _st) ? (_en < _st ? _en : _st) : (_en || _st);
+          if (sFirst && (!firstStart || sFirst < firstStart)) firstStart = sFirst;
+          // weekEnd 기준 종료 분류 (실시간 훅과 동일)
+          const effEnd = _wd || _ed;
+          const hasEnd = effEnd ? effEnd <= weekEnd : false;
+          if (hasEnd) endedClasses.add(cn);
+          else activeClasses.add(cn);
+        });
+      }
+      return {
+        firstSubjectEnrollmentDate: firstStart,
+        hasPastInSubject: endedClasses.size > 0,
+        isTransferredIn: activeClasses.has(className) &&
+          Array.from(endedClasses).some(c => c !== className),
+      };
+    };
 
     classNames.forEach(className => {
       if (!isScenarioMode) {
@@ -416,6 +465,8 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
           const studentEnrollmentDate = enrollment?.enrollmentDate || baseStudent.startDate;
           const isScenarioRemoved = !enrollments[id] && !!initialEnrollmentsForClass[id];
           const isScenarioAdded = !!enrollments[id] && !initialEnrollmentsForClass[id];
+          // 신입/반이동 색상 판정 필드 — 실시간 모드와 동일하게 채움
+          const flags = computeEnrollmentFlags(baseStudent, className);
 
           return {
             id,
@@ -425,6 +476,9 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
             grade: baseStudent.grade || '',
             underline: enrollment?.underline ?? baseStudent.underline ?? false,
             enrollmentDate: studentEnrollmentDate,
+            firstSubjectEnrollmentDate: flags.firstSubjectEnrollmentDate,
+            hasPastInSubject: flags.hasPastInSubject,
+            isTransferredIn: flags.isTransferredIn,
             withdrawalDate: enrollment?.withdrawalDate,
             onHold: enrollment?.onHold,
             isMoved: false,
