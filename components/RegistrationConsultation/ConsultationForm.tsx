@@ -1190,70 +1190,11 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
         }
     };
 
-    // 모달 닫기 — 신규 등록 모드 + 유의미한 입력이 있으면 사용자에게 확인.
-    // (자동 저장은 사용자 동의 없는 등록을 유발하므로 confirm 필수)
+    // 모달 닫기 — 절대 목록(Firestore consultations) 에 등록하지 않음.
+    // 입력 내용은 localStorage DRAFT_KEY 에 자동 저장되어 다음에 모달 열면 복원됨.
+    // (등록은 '등록' 버튼을 명시적으로 눌렀을 때만 수행)
     const handleCloseWithAutoSave = () => {
-        if (initialData?.id) {
-            // 기존 기록 수정/조회 모드 — 그냥 닫음
-            onClose();
-            return;
-        }
-        // 유의미한 입력 판정 — 핵심 필드 1개 이상
-        const hasContent = !!(
-            formData.studentName?.trim() ||
-            (formData as any).school?.trim() ||
-            (formData as any).consultationContent?.trim() ||
-            (formData as any).parentName?.trim()
-        );
-        if (!hasContent) {
-            onClose();
-            return;
-        }
-        // 사용자 확인 — 명시적 동의가 있어야만 '상담전' 으로 저장
-        const ok = window.confirm(
-            '입력한 내용이 있습니다.\n\n[확인] 상담전 상태로 저장하고 닫기\n[취소] 저장하지 않고 닫기'
-        );
-        if (!ok) {
-            // 입력 내용 폐기하고 그냥 닫음
-            if (DRAFT_KEY) {
-                try { localStorage.removeItem(DRAFT_KEY); } catch {}
-            }
-            onClose();
-            return;
-        }
-        try {
-            const consultationDateISO = validateAndConvertDate(formData.consultationDate, '상담일', true);
-            const paymentDateISO = validateAndConvertDate(formData.paymentDate, '결제일', false);
-            const followUpDateISO = validateAndConvertDate(formData.followUpDate, '후속조치일', false);
-            const createdAtISO = validateAndConvertDate(formData.createdAt, '접수일', true);
-
-            const submitData = {
-                ...formData,
-                consultationDate: consultationDateISO,
-                paymentDate: paymentDateISO,
-                followUpDate: followUpDateISO,
-                createdAt: createdAtISO,
-                mathConsultation: mathConsult,
-                englishConsultation: englishConsult,
-                koreanConsultation: koreanConsult,
-                scienceConsultation: scienceConsult,
-                etcConsultation: etcConsult,
-                status: ConsultationStatus.BeforeConsultation,
-                recordingReportId: recording.reportId || undefined,
-            };
-            const cleanedData = Object.fromEntries(
-                Object.entries(submitData).filter(([_, value]) => value !== undefined)
-            ) as Omit<ConsultationRecord, 'id'>;
-
-            onSubmit(cleanedData);
-            if (DRAFT_KEY) {
-                try { localStorage.removeItem(DRAFT_KEY); } catch {}
-            }
-            // 부모가 모달 닫음
-        } catch (error) {
-            console.warn('[ConsultationForm] 자동 저장 검증 실패 — 그냥 닫음:', error);
-            onClose();
-        }
+        onClose();
     };
 
     const inputClass = `w-full px-2.5 py-1.5 text-sm border border-slate-300 rounded-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 ${isViewMode ? 'bg-gray-50 text-gray-700 cursor-default' : ''}`;
