@@ -65,6 +65,22 @@ export const useTabHistory = (
     return () => window.removeEventListener('popstate', handlePopstate);
   }, [setAppMode]);
 
+  // hashchange 리스너 — 외부에서 window.location.hash 변경 시 appMode 동기화
+  // (예: 헤더 알림 클릭 시 hash 변경 → 해당 탭으로 이동)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const tab = getTabFromHash();
+      if (tab) {
+        // popstate 와 동일하게 처리: appMode → hash 동기화 useEffect 가 다시
+        // 히스토리 조작하지 않도록 플래그 세팅
+        isPopstateRef.current = true;
+        setAppMode(tab);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [setAppMode, getTabFromHash]);
+
   // 백스페이스 키 → 입력 필드 외에서는 페이지 이탈 방지
   useEffect(() => {
     const handleKeydown = (e: KeyboardEvent) => {

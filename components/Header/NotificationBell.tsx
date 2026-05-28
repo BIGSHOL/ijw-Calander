@@ -50,7 +50,8 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
 
     const handleClickItem = async (n: HeaderNotificationItem) => {
         await markAsRead(n.id);
-        if (n.consultationId && onNavigateConsultation) {
+        // consultationId 없어도 등록 상담 목록으로 이동 (등록 상담 알림 기본 동작)
+        if (onNavigateConsultation) {
             onNavigateConsultation(n.consultationId);
         }
         setIsOpen(false);
