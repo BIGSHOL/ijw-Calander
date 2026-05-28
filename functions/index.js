@@ -9016,6 +9016,8 @@ exports.syncConsultationToSheet = onDocumentCreated(
         const consultation = event.data?.data();
         if (!consultation) return null;
         const consultationId = event.params.id;
+
+        // 1) Google Sheets append
         try {
             await appendConsultationRow(consultation);
             await db.collection("consultations").doc(consultationId).update({
@@ -9035,6 +9037,33 @@ exports.syncConsultationToSheet = onDocumentCreated(
                 // ignore
             }
         }
+
+        // 2) 알림 생성 — 등록자 본인 제외하고 모두에게
+        try {
+            const counselorName = consultation.counselor || consultation.registrar || "상담자";
+            const studentName = consultation.studentName || "";
+            const grade = consultation.grade || "";
+            const schoolName = consultation.schoolName || "";
+            const subject = consultation.subject || "";
+            const ctx = [grade, schoolName].filter(Boolean).join(" ");
+            const subjectSuffix = subject ? ` · ${subject}` : "";
+            const body = `${counselorName}님이 ${studentName}${ctx ? ` (${ctx})` : ""} 학생을 등록했습니다${subjectSuffix}`;
+
+            await db.collection("notifications").add({
+                type: "consultation_created",
+                title: "새 상담 등록",
+                body,
+                consultationId,
+                createdBy: consultation.authorId || null,
+                createdByName: counselorName,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                readBy: {},
+            });
+            logger.info(`[syncConsultationToSheet] notification created for ${consultationId}`);
+        } catch (nerr) {
+            logger.error(`[syncConsultationToSheet] notification FAIL ${consultationId}: ${nerr?.message || nerr}`);
+        }
+
         return null;
     }
 );

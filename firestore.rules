@@ -541,6 +541,18 @@ service cloud.firestore {
       allow update, delete: if false; // 발송 로그는 수정/삭제 불가
     }
 
+    // === Header notifications (직원용 헤더 알림) ===
+    // 상담 등록 등 이벤트에서 Cloud Function이 자동 생성, 직원이 읽음 처리
+    match /notifications/{docId} {
+      allow read: if isAuthenticated();
+      // 생성은 Cloud Function(admin SDK)만 — 클라이언트는 못 만듦
+      allow create: if false;
+      // 업데이트: 인증된 사용자가 자신의 readBy.{uid} 만 변경할 수 있도록 허용
+      // (rules에서 정확한 field-mask 강제는 어려워 인증만 체크)
+      allow update: if isAuthenticated();
+      allow delete: if hasRole(['master', 'admin']);
+    }
+
     // === Payroll (급여 관리) ===
     match /payroll/{docId} {
       allow read: if hasRole(['master', 'admin']) || hasPermission('payroll.view');

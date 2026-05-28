@@ -9,6 +9,7 @@ import { CalendarFilterPopover } from '../Header/CalendarFilterPopover';
 import { AttendanceNavBar } from '../Header/AttendanceNavBar';
 import { StudentsNavBar } from '../Header/StudentsNavBar';
 import { MemoDropdown } from '../Header/MemoDropdown';
+import { NotificationBell } from '../Header/NotificationBell';
 import { ROLE_LABELS } from '../../types';
 import { getJobTitleStyle } from '../../utils/styleUtils';
 
@@ -213,6 +214,11 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
           >
             {isHeaderCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={20} />}
           </button>
+
+          {/* Notification Bell */}
+          {!isHeaderCollapsed && currentUser && (
+            <NotificationBell currentUid={userProfile?.uid} />
+          )}
 
           {!isHeaderCollapsed && hasPermission('settings.access') && (
             <button
