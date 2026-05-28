@@ -403,7 +403,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                 return <span className="text-slate-600">{record.counselor || '-'}</span>;
             case 'status': {
                 const statusStr = String(record.status);
-                const statusLabel = statusStr === 'registered' ? '등록완료' : statusStr;
+                const statusLabel = statusStr === 'registered' ? '등록완료' : getStatusDisplayLabel(statusStr);
                 const statusColor = CONSULTATION_STATUS_COLORS[statusStr] || 'bg-gray-100 text-gray-800 border-gray-200';
                 return (
                     <span className={`px-2 py-0.5 text-xs font-semibold rounded-sm border ${statusColor}`}>
@@ -530,7 +530,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                 <span className="text-xs font-semibold text-gray-500 mb-1.5 block">등록여부</span>
                                 <div className="flex flex-wrap gap-1.5">
                                     {filterOptions.status.map(s => {
-                                        const label = s === 'registered' ? '등록완료' : s;
+                                        const label = s === 'registered' ? '등록완료' : getStatusDisplayLabel(s);
                                         const active = filters.status.includes(s);
                                         const statusColor = active ? (CONSULTATION_STATUS_COLORS[s] || 'bg-gray-200 text-gray-700') : '';
                                         return (
@@ -674,7 +674,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                     <span className="text-xs text-gray-400 shrink-0">필터:</span>
                     {filters.status.map(s => (
                         <span key={`s-${s}`} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
-                            {s === 'registered' ? '등록완료' : s}
+                            {s === 'registered' ? '등록완료' : getStatusDisplayLabel(s)}
                             <button onClick={() => toggleFilter('status', s)} className="hover:text-blue-900"><X size={10} /></button>
                         </span>
                     ))}

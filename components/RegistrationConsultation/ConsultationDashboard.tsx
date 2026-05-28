@@ -118,7 +118,9 @@ const DonutChartSection = ({ title, data, totalValue, totalLabel = "Total", onIt
 export const ConsultationDashboard: React.FC<DashboardProps> = ({ data, month, year = new Date().getFullYear(), onStatusClick, onSubjectClick }) => {
     const pendingStatuses = useMemo(() => [
         ConsultationStatus.PendingThisMonth,
-        ConsultationStatus.PendingFuture
+        ConsultationStatus.PendingFuture,
+        ConsultationStatus.NotRegistered,
+        ConsultationStatus.BeforeConsultation,
     ], []);
 
     // Filter data based on selected month

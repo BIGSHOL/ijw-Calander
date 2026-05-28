@@ -677,7 +677,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
         // 상담 정보
         consultationDate: getLocalDate(),
         subject: ConsultationSubject.English,
-        status: ConsultationStatus.PendingThisMonth,
+        status: ConsultationStatus.BeforeConsultation,
         counselor: '',
         receiver: '',
         registrar: '',
@@ -757,7 +757,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                 // 상담 정보
                 consultationDate: getLocalDate(),
                 subject: ConsultationSubject.English,
-                status: ConsultationStatus.PendingThisMonth,
+                status: ConsultationStatus.BeforeConsultation,
                 counselor: '',
                 receiver: '',
                 registrar: '',

@@ -219,15 +219,16 @@ export const CONSULTATION_STATUS_COLORS: Record<string, string> = {
 export const CONSULTATION_CHART_COLORS = ['#059669', '#0d9488', '#0891b2', '#f59e0b', '#fbbf24', '#94a3b8'];
 
 /**
- * 상담 status 표시용 라벨 — '이번달 등록예정' / '추후 등록예정' 은 '상담전' 으로 통합 표시.
+ * 상담 status 표시용 라벨 — '이번달 등록예정' / '추후 등록예정' / '미등록' 은 '상담전' 으로 통합 표시.
  * 데이터는 그대로 유지하되 운영 화면에서만 통합 라벨로 보임.
- * 정식 등록(영수등록 등) / 미등록 / 등록완료는 원래 라벨 유지.
+ * 정식 등록(영수등록 등) / 등록완료 는 원래 라벨 유지.
  */
 export const getStatusDisplayLabel = (status: string | undefined | null): string => {
   if (!status) return '';
   if (
     status === ConsultationStatus.PendingThisMonth ||
-    status === ConsultationStatus.PendingFuture
+    status === ConsultationStatus.PendingFuture ||
+    status === ConsultationStatus.NotRegistered
   ) {
     return ConsultationStatus.BeforeConsultation;
   }
