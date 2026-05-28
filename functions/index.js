@@ -8999,3 +8999,43 @@ exports.scheduledMakeEduBillingSync = functions
         }
     });
 
+// ============ 상담 등록 → Google Sheets 동기화 ============
+const {
+    GOOGLE_SERVICE_ACCOUNT_KEY: CONSULT_SHEETS_KEY,
+    appendConsultationRow,
+} = require("./consultationSheetsSync");
+
+exports.syncConsultationToSheet = onDocumentCreated(
+    {
+        document: "consultations/{id}",
+        database: "restore20260319",
+        region: "asia-northeast3",
+        secrets: [CONSULT_SHEETS_KEY],
+    },
+    async (event) => {
+        const consultation = event.data?.data();
+        if (!consultation) return null;
+        const consultationId = event.params.id;
+        try {
+            await appendConsultationRow(consultation);
+            await db.collection("consultations").doc(consultationId).update({
+                sheetSyncedAt: admin.firestore.FieldValue.serverTimestamp(),
+                sheetSyncError: admin.firestore.FieldValue.delete(),
+            });
+            logger.info(`[syncConsultationToSheet] OK consultationId=${consultationId}`);
+        } catch (err) {
+            const msg = err?.message || String(err);
+            logger.error(`[syncConsultationToSheet] FAIL ${consultationId}: ${msg}`);
+            try {
+                await db.collection("consultations").doc(consultationId).update({
+                    sheetSyncError: msg,
+                    sheetSyncFailedAt: admin.firestore.FieldValue.serverTimestamp(),
+                });
+            } catch (_) {
+                // ignore
+            }
+        }
+        return null;
+    }
+);
+
