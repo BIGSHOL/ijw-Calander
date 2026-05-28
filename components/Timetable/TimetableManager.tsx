@@ -504,22 +504,16 @@ const MathTimetableContent: React.FC<MathTimetableContentProps> = ({
             : undefined;
     }, [isScenarioMode, simulation.scenarioDiff, simulation.scenarioClasses, pendingExcelDeletes]);
 
-    // 시뮬용 신규 추가 학생 마커 — 비-시뮬의 pendingExcelEnrollments 자리에 전달
+    // 시뮬용 신규 추가 학생 마커
+    // 시뮬 모드에서 추가된 학생(addedIds)은 이미 scenarioEnrollments → studentList에 포함되어
+    // 보라색(scenarioDiff.moveToMap 경유)으로 표시되므로, 가상 행(pendingExcelEnrollments)은 불필요.
+    // (이전엔 첫 번째 매칭 반만 잡아 복사/붙여넣기 시 원본 반에 중복 가상 행이 생기는 버그가 있었음)
     const effectivePendingExcelEnrollments = useMemo<
         Array<{ studentId: string; className: string; enrollmentDate?: string }>
     >(() => {
         if (!isScenarioMode) return pendingExcelEnrollments;
-        const list: Array<{ studentId: string; className: string; enrollmentDate?: string }> = [];
-        simulation.scenarioDiff.addedIds.forEach(id => {
-            for (const [className, students] of Object.entries(simulation.scenarioEnrollments)) {
-                if ((students as any)[id]) {
-                    list.push({ studentId: id, className });
-                    return;
-                }
-            }
-        });
-        return list;
-    }, [isScenarioMode, simulation.scenarioDiff, simulation.scenarioEnrollments, pendingExcelEnrollments]);
+        return [];
+    }, [isScenarioMode, pendingExcelEnrollments]);
     // 붙여넣기 등록일 선택 모달 상태
     const [pasteModalInfo, setPasteModalInfo] = useState<{
         studentIds: string[];

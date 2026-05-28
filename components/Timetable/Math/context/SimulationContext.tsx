@@ -1022,8 +1022,17 @@ export const MathSimulationProvider: React.FC<MathSimulationProviderProps> = ({ 
           }
         });
       } else if (addedClasses.length > 0) {
-        // 순수 추가
+        // 순수 추가 (복사/붙여넣기 또는 신규 등록) — 원본 반은 유지되고 새 반에만 추가된 경우.
+        // 추가된 반을 도착지(보라색)로도 기록해 이동과 동일하게 변경 표시가 남도록 한다.
+        // (이렇게 안 하면 Ctrl+C/V 추가 학생에 보라색 잔상이 안 남음)
         addedIds.add(id);
+        addedClasses.forEach(c => {
+          const toId = classNameToId[c];
+          if (toId) {
+            if (!moveToMap.has(toId)) moveToMap.set(toId, new Set());
+            moveToMap.get(toId)!.add(id);
+          }
+        });
       }
     });
 
