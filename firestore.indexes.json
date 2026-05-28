@@ -1,128 +1,16 @@
 {
   "indexes": [
     {
-      "collectionGroup": "gantt_templates",
+      "collectionGroup": "bucketItems",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "createdBy",
+          "fieldPath": "authorId",
           "order": "ASCENDING"
         },
         {
           "fieldPath": "createdAt",
           "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "gantt_templates",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "isShared",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "gantt_templates",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "visibility",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "gantt_templates",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "assignees",
-          "arrayConfig": "CONTAINS"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "gantt_templates",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "isArchived",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "gantt_templates",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "memberIds",
-          "arrayConfig": "CONTAINS"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "gantt_templates",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "visibility",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "departmentIds",
-          "arrayConfig": "CONTAINS"
-        },
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "english_simulation_scenarios",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "billing",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "month",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "studentName",
-          "order": "ASCENDING"
         }
       ]
     },
@@ -131,69 +19,103 @@
       "queryScope": "COLLECTION_GROUP",
       "fields": [
         {
+          "fieldPath": "className",
+          "order": "ASCENDING"
+        },
+        {
           "fieldPath": "subject",
           "order": "ASCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "consultations",
+      "collectionGroup": "student_consultations",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "registeredStudentId",
-          "order": "ASCENDING"
+          "fieldPath": "date",
+          "order": "DESCENDING"
         },
         {
-          "fieldPath": "consultationDate",
+          "fieldPath": "createdAt",
           "order": "DESCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "classes",
+      "collectionGroup": "students",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "subject",
+          "fieldPath": "status",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "isActive",
+          "fieldPath": "name",
           "order": "ASCENDING"
         }
       ]
     },
     {
-      "collectionGroup": "enrollment_terms",
+      "collectionGroup": "students",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "month",
+          "fieldPath": "status",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "studentId",
+          "fieldPath": "withdrawalDate",
           "order": "ASCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "enrollment_terms",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "studentId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "month",
-          "order": "DESCENDING"
         }
       ]
     }
   ],
   "fieldOverrides": [
+    {
+      "collectionGroup": "enrollments",
+      "fieldPath": "subject",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "DESCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "arrayConfig": "CONTAINS",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "enrollments",
+      "fieldPath": "teacher",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "DESCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "arrayConfig": "CONTAINS",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
+    },
     {
       "collectionGroup": "math_scenarios",
       "fieldPath": "classes",
