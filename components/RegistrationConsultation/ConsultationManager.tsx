@@ -89,6 +89,13 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
     const [showDraftPanel, setShowDraftPanel] = useState(false);
     const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
     const [showEmbedManager, setShowEmbedManager] = useState(false);
+    // 등록/수정/삭제 성공 토스트 (자동 dismiss)
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    useEffect(() => {
+        if (!successMessage) return;
+        const t = setTimeout(() => setSuccessMessage(null), 2500);
+        return () => clearTimeout(t);
+    }, [successMessage]);
 
     // Firestore hooks - pass year as number or undefined for 'all'
     // 대시보드(통계 비교), 연간뷰(전체 흐름)에서는 전체 데이터를 불러와야 함
@@ -132,7 +139,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                 } else {
                     setIsFormOpen(false);
                 }
-                alert('상담이 등록되었습니다.');
+                setSuccessMessage('상담이 등록되었습니다.');
             },
             onError: (error) => {
                 console.error('상담 등록 오류:', error);
@@ -1058,6 +1065,16 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                                 ))
                             )}
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 성공 토스트 — 등록/수정 시 자동 표시 후 2.5초 dismiss */}
+            {successMessage && (
+                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[200] pointer-events-none">
+                    <div className="bg-emerald-500 text-white px-5 py-3 rounded-lg shadow-2xl flex items-center gap-2 font-bold text-sm animate-in fade-in slide-in-from-top-4">
+                        <span className="text-lg">✓</span>
+                        <span>{successMessage}</span>
                     </div>
                 </div>
             )}

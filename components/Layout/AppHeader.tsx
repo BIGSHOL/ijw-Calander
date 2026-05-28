@@ -217,7 +217,15 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 
           {/* Notification Bell */}
           {!isHeaderCollapsed && currentUser && (
-            <NotificationBell currentUid={userProfile?.uid} />
+            <NotificationBell
+              currentUid={userProfile?.uid}
+              onNavigateConsultation={() => {
+                // 등록 상담 탭으로 이동 — useTabHistory 가 hash 변경을 감지해서 appMode 업데이트
+                if (window.location.hash !== '#consultation') {
+                  window.location.hash = '#consultation';
+                }
+              }}
+            />
           )}
 
           {!isHeaderCollapsed && hasPermission('settings.access') && (
