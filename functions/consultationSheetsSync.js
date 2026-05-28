@@ -247,6 +247,90 @@ function buildPersonalBlock(c) {
     return "[기타 인적사항]\n" + lines.join("\n");
 }
 
+// 컬럼·과목·인적 블록에 들어가지 않는 모든 비어있지 않은 필드를 라벨과 함께 덤프
+// "어떤 인풋필드의 어떤 값" 인지 잃지 않도록 매칭 누락 케이스 보호망
+function buildExtraInfoBlock(c) {
+    const lines = [];
+
+    // 학생 추가 인적
+    if (nonEmpty(c.englishName))    lines.push(inlineLine("영어 이름", c.englishName));
+    if (nonEmpty(c.nickname))       lines.push(inlineLine("닉네임", c.nickname));
+    if (nonEmpty(c.bloodType))      lines.push(inlineLine("혈액형", c.bloodType));
+    if (nonEmpty(c.birthDate))      lines.push(inlineLine("생년월일", c.birthDate));
+    if (nonEmpty(c.graduationYear)) lines.push(inlineLine("졸업 연도", c.graduationYear));
+    if (nonEmpty(c.studentType))    lines.push(inlineLine("학생 구분", c.studentType));
+
+    // 연락처/주소 추가
+    if (nonEmpty(c.homePhone))      lines.push(inlineLine("집 전화", c.homePhone));
+    if (nonEmpty(c.zipCode))        lines.push(inlineLine("우편번호", c.zipCode));
+
+    // 상담 메타 (등록자가 상담자와 다를 때만)
+    if (nonEmpty(c.registrar) && c.registrar !== c.counselor) {
+        lines.push(inlineLine("등록자", c.registrar));
+    }
+    if (nonEmpty(c.subject))     lines.push(inlineLine("상담 과목(주)", c.subject));
+    if (nonEmpty(c.mainSubject) && c.mainSubject !== c.subject) {
+        lines.push(inlineLine("메인 상담 과목", c.mainSubject));
+    }
+    if (nonEmpty(c.status))      lines.push(inlineLine("상담 상태", c.status));
+
+    // 결제
+    if (nonEmpty(c.paymentAmount)) lines.push(inlineLine("결제 금액", c.paymentAmount));
+    if (nonEmpty(c.paymentDate))   lines.push(inlineLine("결제일", c.paymentDate));
+
+    // 동의서
+    if (c.installmentAgreement === true)       lines.push(inlineLine("할부 규정 동의", "동의"));
+    else if (c.installmentAgreement === false) lines.push(inlineLine("할부 규정 동의", "미동의"));
+    if (c.privacyAgreement === true)           lines.push(inlineLine("개인정보 동의", "동의"));
+    else if (c.privacyAgreement === false)     lines.push(inlineLine("개인정보 동의", "미동의"));
+
+    // 안전 가드: 위 KNOWN 필드 외에 ConsultationRecord에 있을 수 있는 임의 필드도 catch-all
+    //   — system field / 컬럼 매핑된 field 제외 후 남은 것을 덤프
+    const HANDLED = new Set([
+        // A~K 컬럼 매핑됨
+        "studentName", "studentPhone", "gender", "schoolName", "grade", "careerGoal",
+        "parentRelation", "parentName", "parentPhone", "address", "addressDetail",
+        // L 매핑
+        "consultationPath",
+        // R 매핑
+        "shuttleBusRequest",
+        // Q personal block 에 들어가는 것들
+        "consultationDate", "counselor", "receiver",
+        "siblings", "siblingsDetails",
+        "notes", "safetyNotes", "enrollmentReason",
+        "nonRegistrationReason", "followUpDate", "followUpContent",
+        // Q extra block 에 위에서 다룬 것들
+        "englishName", "nickname", "bloodType", "birthDate", "graduationYear", "studentType",
+        "homePhone", "zipCode",
+        "registrar", "subject", "mainSubject", "status",
+        "paymentAmount", "paymentDate",
+        "installmentAgreement", "privacyAgreement",
+        // 과목 detail은 별도 블록
+        "mathConsultation", "englishConsultation", "koreanConsultation",
+        "scienceConsultation", "etcConsultation",
+        // 시스템 필드 (무시)
+        "id", "createdAt", "updatedAt", "authorId", "registeredStudentId",
+        "recordingReportId",
+        "sheetSyncedAt", "sheetSyncError", "sheetSyncFailedAt",
+    ]);
+    for (const key of Object.keys(c)) {
+        if (HANDLED.has(key)) continue;
+        const v = c[key];
+        if (!nonEmpty(v)) continue;
+        // 객체/배열은 JSON으로 (혹시 모를 미래 필드 보호)
+        let printable;
+        if (typeof v === "object") {
+            try { printable = JSON.stringify(v); } catch (_) { printable = String(v); }
+        } else {
+            printable = String(v);
+        }
+        lines.push(inlineLine(`(미매핑) ${key}`, printable));
+    }
+
+    if (lines.length === 0) return "";
+    return "[추가 정보]\n" + lines.join("\n");
+}
+
 function buildConsultationRecord(c) {
     const blocks = [];
     blocks.push(buildPersonalBlock(c));
@@ -255,6 +339,8 @@ function buildConsultationRecord(c) {
         const block = buildSubjectBlock(key, c[detailKey]);
         if (block) blocks.push(block);
     }
+    const extra = buildExtraInfoBlock(c);
+    if (extra) blocks.push(extra);
     return blocks.join("\n\n");
 }
 
