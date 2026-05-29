@@ -247,8 +247,11 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
                     key={`${e.subject}-${e.className}-${e.startDate || idx}`}
                     className="px-5 py-1.5 flex items-center gap-2 text-xs"
                   >
-                    {/* 수강 시작일 (YY-MM-DD) — 과목 라벨 앞 */}
-                    <span className="text-[10px] text-gray-500 font-mono shrink-0 w-[58px]">
+                    {/* 수강 시작일 (YY-MM-DD) — 과목 라벨 앞. 데이터 없으면 회색 '-' */}
+                    <span
+                      className={`text-xs font-mono shrink-0 w-[68px] ${e.startDate ? 'text-black font-bold' : 'text-gray-300'}`}
+                      title={e.startDate ? '수강 시작일' : '시작일 데이터 없음 (enrollment 에 startDate 미저장)'}
+                    >
                       {e.startDate ? e.startDate.slice(2, 10) : '-'}
                     </span>
                     <span className="text-[9px] font-bold px-1 py-0.5 rounded shrink-0 bg-amber-100 text-amber-700">
