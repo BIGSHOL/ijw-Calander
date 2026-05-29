@@ -146,14 +146,21 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
   // [2] 수강내역 — 학생이 등록한 모든 활성 수업(개별 enrollment row 단위)
   const enrollmentRows = useMemo(() => {
     if (!student?.enrollments) return [];
+    const refMs = new Date(referenceDate).getTime();
     return student.enrollments
       .filter(isActive)
-      .map(e => ({
-        ...e,
-        groupLabel: SUBJECT_LABEL[subjectGroup(e.subject)] || e.subject,
-      }))
+      .map(e => {
+        const daysSince = e.startDate
+          ? Math.floor((refMs - new Date(e.startDate).getTime()) / (1000 * 60 * 60 * 24))
+          : -1;
+        return {
+          ...e,
+          groupLabel: SUBJECT_LABEL[subjectGroup(e.subject)] || e.subject,
+          daysSince,
+        };
+      })
       .sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''));
-  }, [student?.enrollments]);
+  }, [student?.enrollments, referenceDate]);
 
   if (!isOpen || !student) return null;
 
@@ -246,6 +253,15 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
                     <span className="text-gray-700 truncate flex-1">{e.className}</span>
                     {e.teacher && (
                       <span className="text-[10px] text-gray-400 shrink-0">{e.teacher}</span>
+                    )}
+                    {e.daysSince >= 0 && (
+                      <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[10px] font-bold whitespace-nowrap shrink-0">
+                        {e.daysSince > 365
+                          ? `${Math.floor(e.daysSince / 365)}년차`
+                          : e.daysSince > 30
+                            ? `${Math.floor(e.daysSince / 30)}개월차`
+                            : `${e.daysSince}일차`}
+                      </span>
                     )}
                   </div>
                 ))}
