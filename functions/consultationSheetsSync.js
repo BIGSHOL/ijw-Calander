@@ -378,7 +378,7 @@ function buildRow(c) {
         c.shuttleBusRequest ? "신청" : "미신청",                       // R
         "",                                                           // S
         "",                                                           // T
-        "성공",                                                       // U
+        "",                                                           // U 상태 — 등록 시점엔 비워둠 (외부 매크로가 처리)
         "",                                                           // V
         "",                                                           // W
     ];
