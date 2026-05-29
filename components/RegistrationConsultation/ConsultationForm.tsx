@@ -922,9 +922,11 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
     };
 
     // 녹음 분석 결과 → 폼 자동 채우기
-    // isAdditive=false (첫 분석): 새 값 우선 (data.X || prev.X) — 기존 동작
-    // isAdditive=true (추가 분석): 기존 값 우선 (prev.X || data.X) — 빈 필드만 채움 (사용자 결정 정책)
-    const applyExtractedData = useCallback((data: RegistrationExtractedData, isAdditive: boolean = false) => {
+    // 정책 (2026-05-29 변경):
+    //   - 수기 입력 절대 덮어쓰지 않음 (단일값 필드는 빈 칸일 때만 채움)
+    //   - 긴 텍스트 필드는 [N차 분석 — YYYY.MM.DD] 라벨 붙여 append (누적)
+    //   - roundNumber: 1, 2, 3, ... = 이번이 몇 차 분석인지
+    const applyExtractedData = useCallback((data: RegistrationExtractedData, roundNumber: number) => {
         const gradeMap: Record<string, SchoolGrade> = {
             '초1': SchoolGrade.Elementary1, '초2': SchoolGrade.Elementary2, '초3': SchoolGrade.Elementary3,
             '초4': SchoolGrade.Elementary4, '초5': SchoolGrade.Elementary5, '초6': SchoolGrade.Elementary6,
@@ -943,52 +945,73 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
             '등록완료': ConsultationStatus.Registered,
         };
 
-        // 헬퍼: 추가 분석 모드에서 "값 있을 때만 채움" — A 우선, B 폴백
-        const pick = (a: string | undefined, b: string | undefined): string | undefined => {
-            return isAdditive ? (a || b || '') : (b || a || '');
+        // [N차 분석 — YYYY.MM.DD] 라벨 붙여 텍스트 누적 append
+        const todayLabel = (() => {
+            const d = new Date();
+            return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
+        })();
+        const sectionLabel = `[${roundNumber}차 분석 — ${todayLabel}]`;
+        const appendLabeled = (existing: string | undefined, incoming: string | undefined): string => {
+            const inc = (incoming || '').trim();
+            if (!inc) return existing || '';
+            const prev = existing || '';
+            // 같은 본문 이미 있으면 중복 방지
+            if (prev.includes(inc)) return prev;
+            const prefix = prev.trim() ? prev + '\n\n' : '';
+            return `${prefix}${sectionLabel}\n${inc}`;
         };
 
         setFormData(prev => ({
             ...prev,
-            studentName: isAdditive ? (prev.studentName || data.studentName || '') : (data.studentName || prev.studentName),
-            schoolName: isAdditive ? (prev.schoolName || data.schoolName || '') : (data.schoolName || prev.schoolName),
-            // grade: 추가 분석 모드에선 기존 값 유지 (사용자가 명시 선택했을 수 있음). 단, 기본값 Middle1이라 사실상 항상 prev 우선됨 — 의도적 동작
-            grade: isAdditive ? prev.grade : (gradeMap[data.grade || ''] || prev.grade),
-            parentPhone: isAdditive ? (prev.parentPhone || data.parentPhone || '') : (data.parentPhone || prev.parentPhone),
-            parentName: isAdditive ? (prev.parentName || data.parentName || '') : (data.parentName || prev.parentName),
-            parentRelation: isAdditive ? (prev.parentRelation || data.parentRelation || '') : (data.parentRelation || prev.parentRelation),
-            address: isAdditive ? (prev.address || data.address || '') : (data.address || prev.address),
-            birthDate: isAdditive ? (prev.birthDate || data.birthDate || '') : (data.birthDate || prev.birthDate),
-            consultationPath: isAdditive ? (prev.consultationPath || data.consultationPath || '') : (data.consultationPath || prev.consultationPath),
-            enrollmentReason: isAdditive ? (prev.enrollmentReason || data.enrollmentReason || '') : (data.enrollmentReason || prev.enrollmentReason),
-            siblings: isAdditive ? (prev.siblings || data.siblings || '') : (data.siblings || prev.siblings),
-            // shuttleBusRequest: 추가 분석에서도 true가 한 번이라도 나오면 true로 (안전한 방향)
+            // 단일값/선택 필드 — 수기 입력 항상 우선, 빈 칸일 때만 분석으로 채움
+            studentName: prev.studentName || data.studentName || '',
+            schoolName: prev.schoolName || data.schoolName || '',
+            grade: prev.grade || (gradeMap[data.grade || ''] || prev.grade),
+            parentPhone: prev.parentPhone || data.parentPhone || '',
+            parentName: prev.parentName || data.parentName || '',
+            parentRelation: prev.parentRelation || data.parentRelation || '',
+            address: prev.address || data.address || '',
+            birthDate: prev.birthDate || data.birthDate || '',
+            consultationPath: prev.consultationPath || data.consultationPath || '',
+            enrollmentReason: prev.enrollmentReason || data.enrollmentReason || '',
+            siblings: prev.siblings || data.siblings || '',
+            // shuttleBusRequest: true 한 번이라도 나오면 true (안전한 방향)
             shuttleBusRequest: data.shuttleBusRequest === true || data.shuttleBusRequest === 'true' || prev.shuttleBusRequest,
-            safetyNotes: isAdditive ? (prev.safetyNotes || data.safetyNotes || '') : (data.safetyNotes || prev.safetyNotes),
-            careerGoal: isAdditive ? (prev.careerGoal || data.careerGoal || '') : (data.careerGoal || prev.careerGoal),
-            subject: isAdditive ? prev.subject : (subjectMap[data.subject || ''] || prev.subject),
-            status: isAdditive ? prev.status : (statusMap[data.status || ''] || prev.status),
-            // notes: 추가 분석 모드에선 줄바꿈으로 누적 (사용자 입력 + 신규 메모 모두 유지)
-            notes: isAdditive
-                ? (prev.notes && data.notes && !prev.notes.includes(data.notes)
-                    ? `${prev.notes}\n\n${data.notes}`
-                    : (prev.notes || data.notes || ''))
-                : (data.notes || prev.notes),
-            nonRegistrationReason: isAdditive ? (prev.nonRegistrationReason || data.nonRegistrationReason || '') : (data.nonRegistrationReason || prev.nonRegistrationReason),
-            followUpDate: isAdditive ? (prev.followUpDate || data.followUpDate || '') : (data.followUpDate || prev.followUpDate),
-            followUpContent: isAdditive ? (prev.followUpContent || data.followUpContent || '') : (data.followUpContent || prev.followUpContent),
+            safetyNotes: prev.safetyNotes || data.safetyNotes || '',
+            careerGoal: prev.careerGoal || data.careerGoal || '',
+            subject: prev.subject || (subjectMap[data.subject || ''] || prev.subject),
+            status: prev.status || (statusMap[data.status || ''] || prev.status),
+            // 누적 텍스트 — [N차 분석] 라벨 붙여 append
+            notes: appendLabeled(prev.notes, data.notes),
+            nonRegistrationReason: prev.nonRegistrationReason || data.nonRegistrationReason || '',
+            followUpDate: prev.followUpDate || data.followUpDate || '',
+            followUpContent: appendLabeled(prev.followUpContent, data.followUpContent),
         }));
 
-        // 과목 객체 머지 헬퍼: isAdditive=true면 객체 내부 필드별로 "빈 필드만 채움"
+        // 과목 detail 머지:
+        //   - 긴 텍스트(학원 히스토리·학습 진도·시험 성적·상담 내역) → [N차 분석] append
+        //   - 그 외 단일값/짧은 값 → 수기 우선, 빈 칸일 때만 채움
+        const APPEND_TEXT_KEYS = new Set([
+            'academyHistory', 'learningProgress', 'examResults', 'consultationHistory',
+        ]);
         const mergeSubject = (
             prevSub: SubjectConsultationDetail | undefined,
             incoming: unknown,
         ): SubjectConsultationDetail => {
             const inc = (incoming || {}) as Record<string, unknown>;
-            if (!isAdditive || !prevSub) return inc as SubjectConsultationDetail;
-            const result = { ...prevSub } as Record<string, unknown>;
+            const base = (prevSub || {}) as Record<string, unknown>;
+            const result: Record<string, unknown> = { ...base };
             Object.entries(inc).forEach(([k, v]) => {
-                if (!result[k] && v) result[k] = v;
+                if (v === undefined || v === null || v === '') return;
+                if (APPEND_TEXT_KEYS.has(k)) {
+                    result[k] = appendLabeled(
+                        typeof base[k] === 'string' ? base[k] as string : '',
+                        typeof v === 'string' ? v : String(v),
+                    );
+                } else if (!result[k]) {
+                    // 빈 칸일 때만 채움
+                    result[k] = v;
+                }
             });
             return result as SubjectConsultationDetail;
         };
@@ -999,12 +1022,11 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
         if (data.scienceConsultation) setScienceConsult(prev => mergeSubject(prev, data.scienceConsultation));
     }, []);
 
-    // extractedData가 변경되면 자동 채우기
-    // 머지 정책 분기: 보고서 2개 이상이면 추가 분석 모드 (빈 필드만 채움)
+    // extractedData가 변경되면 자동 채우기 — 현재 보고서 개수가 곧 N차
     useEffect(() => {
         if (recording.extractedData) {
-            const isAdditive = recording.reportIds.length >= 2;
-            applyExtractedData(recording.extractedData, isAdditive);
+            const roundNumber = Math.max(1, recording.reportIds.length);
+            applyExtractedData(recording.extractedData, roundNumber);
             setShowRecordingPanel(false);
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
