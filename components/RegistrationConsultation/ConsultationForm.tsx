@@ -780,7 +780,9 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
             setEtcConsult({});
             setIsViewMode(false);
         }
-    }, [initialData, isOpen, draftId]);
+        // isOpen 은 deps 에서 제외 — 모달 닫고 다시 열어도 state 보존되도록.
+        // (이전엔 isOpen 변경 시 빈 값으로 초기화되어 localStorage 복원 효과가 사라졌음)
+    }, [initialData, draftId]);
 
     // ===== 녹음/분석 기능 =====
     const recording = useRegistrationRecording();
