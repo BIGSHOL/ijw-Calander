@@ -247,21 +247,16 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
                     key={`${e.subject}-${e.className}-${e.startDate || idx}`}
                     className="px-5 py-1.5 flex items-center gap-2 text-xs"
                   >
+                    {/* 수강 시작일 (YY-MM-DD) — 과목 라벨 앞 */}
+                    <span className="text-[10px] text-gray-500 font-mono shrink-0 w-[58px]">
+                      {e.startDate ? e.startDate.slice(2, 10) : '-'}
+                    </span>
                     <span className="text-[9px] font-bold px-1 py-0.5 rounded shrink-0 bg-amber-100 text-amber-700">
                       {e.groupLabel}
                     </span>
                     <span className="text-gray-700 truncate flex-1">{e.className}</span>
                     {e.teacher && (
                       <span className="text-[10px] text-gray-400 shrink-0">{e.teacher}</span>
-                    )}
-                    {e.daysSince >= 0 && (
-                      <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[10px] font-bold whitespace-nowrap shrink-0">
-                        {e.daysSince > 365
-                          ? `${Math.floor(e.daysSince / 365)}년차`
-                          : e.daysSince > 30
-                            ? `${Math.floor(e.daysSince / 30)}개월차`
-                            : `${e.daysSince}일차`}
-                      </span>
                     )}
                   </div>
                 ))}
