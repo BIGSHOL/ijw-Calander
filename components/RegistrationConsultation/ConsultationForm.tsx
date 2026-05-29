@@ -780,8 +780,26 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
             setEtcConsult({});
             setIsViewMode(false);
         }
+        // localStorage 우선 적용 — initialData/draft 데이터 위에 사용자가 작업 중이던
+        // 추가 입력값을 덮어씌워 복원. QR 접수 모달 닫고 다시 열어도 입력 보존.
+        const key = !initialData?.id ? `consultDraft_${draftId || 'new'}` : null;
+        if (key) {
+            try {
+                const raw = localStorage.getItem(key);
+                if (raw) {
+                    const saved = JSON.parse(raw);
+                    if (saved.formData) setFormData(prev => ({ ...prev, ...saved.formData }));
+                    if (saved.mathConsult) setMathConsult(saved.mathConsult);
+                    if (saved.englishConsult) setEnglishConsult(saved.englishConsult);
+                    if (saved.koreanConsult) setKoreanConsult(saved.koreanConsult);
+                    if (saved.scienceConsult) setScienceConsult(saved.scienceConsult);
+                    if (saved.etcConsult) setEtcConsult(saved.etcConsult);
+                }
+            } catch (err) {
+                console.warn('[ConsultationForm] localStorage 복원 실패:', err);
+            }
+        }
         // isOpen 은 deps 에서 제외 — 모달 닫고 다시 열어도 state 보존되도록.
-        // (이전엔 isOpen 변경 시 빈 값으로 초기화되어 localStorage 복원 효과가 사라졌음)
     }, [initialData, draftId]);
 
     // ===== 녹음/분석 기능 =====
