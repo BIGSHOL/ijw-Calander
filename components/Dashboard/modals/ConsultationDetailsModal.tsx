@@ -8,6 +8,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import type { ConsultationStatsResult, StudentNeedingConsultation, ConsultationMissingReason } from '../../../hooks/useConsultationStats';
 import type { StaffPerformance } from '../PerformanceProgress';
+import { RemarksPopover } from '../../Common/RemarksPopover';
 
 const REASON_CONFIG: Record<ConsultationMissingReason, { label: string; bg: string; text: string; icon: string }> = {
   new_student:    { label: '신입생',     bg: 'bg-sky-100',     text: 'text-sky-700',     icon: '🆕' },
@@ -107,9 +108,14 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
             <h2 className="font-bold text-sm text-indigo-900">상담 완료율 — 근거 데이터</h2>
             <span className="text-xs text-indigo-500">{yearMonth}</span>
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-indigo-100 rounded">
-            <X size={16} />
-          </button>
+          <div className="flex items-center gap-2">
+            <RemarksPopover notes={[
+              '고등부 학생은 상담 대상에서 제외됩니다.',
+            ]} />
+            <button onClick={onClose} className="p-1 hover:bg-indigo-100 rounded">
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         {/* 요약 */}

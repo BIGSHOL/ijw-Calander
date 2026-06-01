@@ -9,6 +9,7 @@ import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { UnifiedStudent } from '../../../types/student';
 import { isActiveEnrollment } from '../../../utils/dashboardUtils';
 import { getWeekRange, getMonthRange } from '../../../utils/datePeriod';
+import { RemarksPopover } from '../../Common/RemarksPopover';
 
 interface NetChangeDetailsModalProps {
   isOpen: boolean;
@@ -105,9 +106,14 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
             <span className="text-slate-700 text-lg">📊</span>
             <h2 className="font-bold text-sm text-slate-900">순증감 — 근거 데이터</h2>
           </div>
-          <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded">
-            <X size={16} />
-          </button>
+          <div className="flex items-center gap-2">
+            <RemarksPopover notes={[
+              '고등부 학생은 상담 대상에서 제외됩니다.',
+            ]} />
+            <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded">
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         {/* 기간 네비게이션 */}
