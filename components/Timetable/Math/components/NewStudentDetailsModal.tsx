@@ -8,10 +8,11 @@
  * "최신" 판별 기준: 재원으로 등록된 입학상담(consultations 컬렉션, source='입학') 중 가장 최근.
  *  입학상담이 없으면 전체 통합 목록의 최신으로 폴백.
  */
-import React, { useMemo } from 'react';
-import { X } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { X, Printer } from 'lucide-react';
 import { useStudentConsultations } from '../../../../hooks/useStudentConsultations';
 import { useConsultations } from '../../../../hooks/useConsultations';
+import { exportNewStudentPrint } from '../utils/newStudentPrintExport';
 
 interface SubjectEnrollment {
   subject: string;          // 'math' | 'highmath' | 'english' | ...
@@ -161,6 +162,47 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
       })
       .sort((a, b) => (b.startDate || '').localeCompare(a.startDate || ''));
   }, [student?.enrollments, referenceDate]);
+
+  const [isPrinting, setIsPrinting] = useState(false);
+
+  const handlePrint = async () => {
+    if (!student || isPrinting) return;
+    setIsPrinting(true);
+    try {
+      await exportNewStudentPrint({
+        student: {
+          id: student.id,
+          name: student.name,
+          school: student.school,
+          grade: student.grade,
+          parentName: student.parentName,
+          parentPhone: student.parentPhone,
+          studentPhone: student.studentPhone,
+        },
+        consultations: sortedConsultations.map(c => ({
+          date: c.date,
+          title: c.title,
+          content: c.content,
+          consultantName: c.consultantName,
+          source: c.source,
+        })),
+        enrollments: enrollmentRows.map(e => ({
+          subject: e.subject,
+          className: e.className,
+          teacher: e.teacher,
+          startDate: e.startDate,
+          endDate: e.endDate,
+          groupLabel: e.groupLabel,
+        })),
+        todayDate: new Date().toISOString().slice(0, 10),
+      });
+    } catch (err) {
+      console.error('[NewStudentPrint] export failed', err);
+      alert('프린트 파일 생성 중 오류가 발생했습니다.\n' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setIsPrinting(false);
+    }
+  };
 
   if (!isOpen || !student) return null;
 
@@ -334,7 +376,16 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
         </div>
 
         {/* 푸터 */}
-        <div className="px-5 py-2 border-t bg-gray-50 flex justify-end">
+        <div className="px-5 py-2 border-t bg-gray-50 flex justify-between items-center">
+          <button
+            onClick={handlePrint}
+            disabled={isPrinting}
+            className="px-3 py-1.5 bg-emerald-600 text-white rounded text-xs font-bold hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1.5"
+            title="상담기록 + 수강내역 + 출석기록을 엑셀(K프린트 양식)로 다운로드"
+          >
+            <Printer size={14} />
+            {isPrinting ? '생성중...' : 'K프린트 다운로드'}
+          </button>
           <button
             onClick={onClose}
             className="px-4 py-1.5 bg-pink-600 text-white rounded text-xs font-bold hover:bg-pink-700"
