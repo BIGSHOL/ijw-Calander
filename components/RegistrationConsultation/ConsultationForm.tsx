@@ -1303,7 +1303,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                 )}
 
                 {/* 녹음/분석 패널 */}
-                {!isViewMode && (
+                {true && (
                     <div className="mx-3 mt-2 shrink-0">
                         {/* 분석 시작 버튼 — idle 또는 completed 상태에서 항상 표시 (보고서 있어도 추가 녹음 가능) */}
                         {!showRecordingPanel && (recording.status === 'idle' || recording.status === 'completed') && (
