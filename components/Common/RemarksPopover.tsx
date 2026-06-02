@@ -44,7 +44,7 @@ export const RemarksPopover: React.FC<RemarksPopoverProps> = ({ notes, details, 
             <button
                 type="button"
                 onClick={() => setIsOpen(o => !o)}
-                className={`flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold rounded-sm border transition-colors ${
+                className={`flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-sm border transition-colors ${
                     isOpen
                         ? 'bg-amber-200 text-amber-800 border-amber-300'
                         : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
@@ -62,7 +62,7 @@ export const RemarksPopover: React.FC<RemarksPopoverProps> = ({ notes, details, 
                         onClick={() => setIsOpen(false)}
                     />
                     <div className="absolute right-0 top-full mt-1 w-80 bg-white rounded-sm shadow-2xl border border-amber-200 z-[126] overflow-hidden">
-                        <div className="px-3 py-2 bg-amber-50 border-b border-amber-200 text-[11px] font-bold text-amber-800 flex items-center gap-1">
+                        <div className="px-3 py-2 bg-amber-50 border-b border-amber-200 text-xs font-bold text-amber-800 flex items-center gap-1">
                             <Info size={12} /> 비고
                         </div>
                         <ul className="p-3 space-y-2 max-h-[60vh] overflow-y-auto">
@@ -71,7 +71,7 @@ export const RemarksPopover: React.FC<RemarksPopoverProps> = ({ notes, details, 
                                 const hasDetails = !!section && section.items.length > 0;
                                 const isExpanded = expandedIdx === i;
                                 return (
-                                    <li key={i} className="text-xs text-gray-700">
+                                    <li key={i} className="text-xs text-black">
                                         <div className="flex gap-1.5 items-start">
                                             <span className="text-amber-600 shrink-0">•</span>
                                             <div className="flex-1 min-w-0">
@@ -81,7 +81,7 @@ export const RemarksPopover: React.FC<RemarksPopoverProps> = ({ notes, details, 
                                                         <button
                                                             type="button"
                                                             onClick={() => setExpandedIdx(isExpanded ? null : i)}
-                                                            className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-200"
+                                                            className="shrink-0 text-xs font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 hover:bg-amber-200 border border-amber-200"
                                                         >
                                                             {isExpanded ? '접기' : `목록 (${section!.items.length})`}
                                                         </button>
@@ -89,13 +89,13 @@ export const RemarksPopover: React.FC<RemarksPopoverProps> = ({ notes, details, 
                                                 </div>
                                                 {hasDetails && isExpanded && (
                                                     <div className="mt-1.5 ml-0 border-l-2 border-amber-200 pl-2">
-                                                        <div className="text-[10px] font-bold text-amber-700 mb-1">{section!.heading}</div>
+                                                        <div className="text-xs font-bold text-amber-700 mb-1">{section!.heading}</div>
                                                         <ul className="space-y-0.5">
                                                             {section!.items.map((it, j) => (
-                                                                <li key={j} className="text-[11px] text-gray-700 flex items-baseline justify-between gap-2">
-                                                                    <span className="font-medium text-gray-900 truncate">{it.label}</span>
+                                                                <li key={j} className="text-xs text-black flex items-baseline justify-between gap-2">
+                                                                    <span className="font-medium text-black truncate">{it.label}</span>
                                                                     {it.sublabel && (
-                                                                        <span className="text-[10px] text-gray-400 shrink-0">{it.sublabel}</span>
+                                                                        <span className="text-xs text-black shrink-0">{it.sublabel}</span>
                                                                     )}
                                                                 </li>
                                                             ))}

@@ -5,7 +5,7 @@
  * - read-only
  */
 import React, { useMemo, useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 import type { UnifiedStudent } from '../../../types/student';
 import { isActiveEnrollment } from '../../../utils/dashboardUtils';
 import { getWeekRange, getMonthRange } from '../../../utils/datePeriod';
@@ -49,11 +49,16 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
   // 기간 선택 — 기본: 이번 주차
   const [period, setPeriod] = useState<'week' | 'month'>('week');
   const [offset, setOffset] = useState(0);
+  const [newExpanded, setNewExpanded] = useState(false);
+  const [withdrawnExpanded, setWithdrawnExpanded] = useState(false);
+  const TABLE_PREVIEW = 5;
 
   useEffect(() => {
     if (isOpen) {
       setPeriod('week');
       setOffset(0);
+      setNewExpanded(false);
+      setWithdrawnExpanded(false);
     }
   }, [isOpen]);
 
@@ -86,7 +91,7 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
 
   const netChange = newStudents.length - withdrawnStudents.length;
   const netSign = netChange > 0 ? '+' : '';
-  const netColor = netChange > 0 ? 'text-emerald-700' : netChange < 0 ? 'text-red-700' : 'text-gray-700';
+  const netColor = netChange > 0 ? 'text-emerald-700' : netChange < 0 ? 'text-red-700' : 'text-black';
 
   if (!isOpen) return null;
 
@@ -102,8 +107,8 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
         {/* 헤더 */}
         <div className="flex items-center justify-between px-5 py-3 border-b bg-slate-50">
           <div className="flex items-center gap-2">
-            <span className="text-slate-700 text-lg">📊</span>
-            <h2 className="font-bold text-sm text-slate-900">순증감 — 근거 데이터</h2>
+            <span className="text-black text-lg">📊</span>
+            <h2 className="font-bold text-sm text-black">순증감 — 근거 데이터</h2>
           </div>
           <button onClick={onClose} className="p-1 hover:bg-slate-100 rounded">
             <X size={16} />
@@ -115,18 +120,18 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
           <div className="flex items-center gap-1">
             <button
               onClick={() => setOffset(o => o - 1)}
-              className="p-1 hover:bg-gray-100 rounded text-gray-600"
+              className="p-1 hover:bg-gray-100 rounded text-black"
               title={period === 'week' ? '지난 주' : '지난 달'}
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="text-sm font-bold text-gray-800 mx-2 min-w-[120px] text-center">
+            <span className="text-sm font-bold text-black mx-2 min-w-[120px] text-center">
               {range.label}
             </span>
             <button
               onClick={() => setOffset(o => o + 1)}
               disabled={offset >= 0}
-              className="p-1 hover:bg-gray-100 rounded text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-1 hover:bg-gray-100 rounded text-black disabled:opacity-30 disabled:cursor-not-allowed"
               title={period === 'week' ? '다음 주' : '다음 달'}
             >
               <ChevronRight size={16} />
@@ -134,7 +139,7 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
             {offset !== 0 && (
               <button
                 onClick={() => setOffset(0)}
-                className="ml-2 px-2 py-0.5 text-[10px] font-bold border border-slate-300 text-slate-700 rounded hover:bg-slate-50"
+                className="ml-2 px-2 py-0.5 text-xs font-bold border border-slate-300 text-black rounded hover:bg-slate-50"
               >
                 이번 {period === 'week' ? '주' : '달'}로
               </button>
@@ -146,7 +151,7 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
               className={`px-3 py-1 text-xs font-bold rounded-l border ${
                 period === 'week'
                   ? 'bg-slate-600 text-white border-slate-600'
-                  : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                  : 'bg-white text-black border-gray-300 hover:bg-gray-50'
               }`}
             >
               주간
@@ -156,7 +161,7 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
               className={`px-3 py-1 text-xs font-bold rounded-r border-y border-r ${
                 period === 'month'
                   ? 'bg-slate-600 text-white border-slate-600'
-                  : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
+                  : 'bg-white text-black border-gray-300 hover:bg-gray-50'
               }`}
             >
               월간
@@ -170,16 +175,16 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
             <span className="text-emerald-600">
               신입생 <b className="text-sm">{newStudents.length}명</b>
             </span>
-            <span className="text-gray-400">-</span>
+            <span className="text-black">-</span>
             <span className="text-red-600">
               퇴원 <b className="text-sm">{withdrawnStudents.length}명</b>
             </span>
-            <span className="text-gray-400">=</span>
+            <span className="text-black">=</span>
             <span className={netColor}>
               순증감 <b className="text-sm">{netSign}{netChange}명</b>
             </span>
           </div>
-          <div className="text-[10px] text-gray-400 mt-1.5">
+          <div className="text-xs text-black mt-1.5">
             선택 기간 학원 재원생 수의 순수 증감폭 = 신입생 - 퇴원
           </div>
         </div>
@@ -192,11 +197,11 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
             <h3 className="font-bold text-xs text-emerald-900">신입생 ({newStudents.length}명)</h3>
           </div>
           {newStudents.length === 0 ? (
-            <div className="text-center py-6 text-gray-400 text-xs">이번 달 신입생이 없습니다.</div>
+            <div className="text-center py-6 text-black text-xs">이번 달 신입생이 없습니다.</div>
           ) : (
             <table className="w-full text-xs">
               <thead className="bg-white border-b border-gray-200">
-                <tr className="text-gray-500">
+                <tr className="text-black">
                   <th className="px-3 py-2 text-left font-medium whitespace-nowrap">등록일</th>
                   <th className="px-3 py-2 text-left font-medium">학생</th>
                   <th className="px-3 py-2 text-left font-medium">학교/학년</th>
@@ -206,7 +211,7 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {newStudents.map((s) => {
+                {(newExpanded ? newStudents : newStudents.slice(0, TABLE_PREVIEW)).map((s) => {
                   const active = (s.enrollments || []).filter((e: any) => isActiveEnrollment(e));
                   const subjectSet = new Set(active.map(e => SUBJECT_LABEL[e.subject] || e.subject));
                   const teacherSet = new Set(
@@ -214,18 +219,18 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
                   );
                   return (
                     <tr key={s.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="px-3 py-1.5 font-mono text-gray-700 whitespace-nowrap">{s.startDate || '-'}</td>
-                      <td className="px-3 py-1.5 font-medium text-gray-900">{s.name}</td>
-                      <td className="px-3 py-1.5 text-gray-600">
+                      <td className="px-3 py-1.5 font-mono text-black whitespace-nowrap">{s.startDate || '-'}</td>
+                      <td className="px-3 py-1.5 font-medium text-black">{s.name}</td>
+                      <td className="px-3 py-1.5 text-black">
                         {s.school || '-'}{s.grade ? ` / ${s.grade}` : ''}
                       </td>
-                      <td className="px-3 py-1.5 text-gray-700">
+                      <td className="px-3 py-1.5 text-black">
                         {subjectSet.size > 0 ? Array.from(subjectSet).join(', ') : '-'}
                       </td>
-                      <td className="px-3 py-1.5 text-gray-600">
+                      <td className="px-3 py-1.5 text-black">
                         {teacherSet.size > 0 ? Array.from(teacherSet).join(', ') : '-'}
                       </td>
-                      <td className="px-3 py-1.5 text-gray-500">
+                      <td className="px-3 py-1.5 text-black">
                         {s.parentName ? `${s.parentName}${s.parentRelation ? `(${s.parentRelation})` : ''}` : '-'}
                       </td>
                     </tr>
@@ -234,6 +239,19 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
               </tbody>
             </table>
           )}
+          {newStudents.length > TABLE_PREVIEW && (
+            <button
+              type="button"
+              onClick={() => setNewExpanded(e => !e)}
+              className="w-full px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50 border-t border-gray-200 flex items-center justify-center gap-1"
+            >
+              {newExpanded ? (
+                <>접기 <ChevronUp size={14} /></>
+              ) : (
+                <>+ {newStudents.length - TABLE_PREVIEW}명 더 보기 <ChevronDown size={14} /></>
+              )}
+            </button>
+          )}
 
           {/* 퇴원 섹션 */}
           <div className="px-5 py-2 bg-red-50/50 border-y border-red-100 flex items-center gap-2 mt-2">
@@ -241,11 +259,11 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
             <h3 className="font-bold text-xs text-red-900">퇴원 ({withdrawnStudents.length}명)</h3>
           </div>
           {withdrawnStudents.length === 0 ? (
-            <div className="text-center py-6 text-gray-400 text-xs">이번 달 퇴원 학생이 없습니다.</div>
+            <div className="text-center py-6 text-black text-xs">이번 달 퇴원 학생이 없습니다.</div>
           ) : (
             <table className="w-full text-xs">
               <thead className="bg-white border-b border-gray-200">
-                <tr className="text-gray-500">
+                <tr className="text-black">
                   <th className="px-3 py-2 text-left font-medium whitespace-nowrap">퇴원일</th>
                   <th className="px-3 py-2 text-left font-medium">학생</th>
                   <th className="px-3 py-2 text-left font-medium">학교/학년</th>
@@ -255,7 +273,7 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {withdrawnStudents.map((s) => {
+                {(withdrawnExpanded ? withdrawnStudents : withdrawnStudents.slice(0, TABLE_PREVIEW)).map((s) => {
                   const allEnrolls = s.enrollments || [];
                   const subjectSet = new Set(allEnrolls.map(e => SUBJECT_LABEL[e.subject] || e.subject));
                   const teacherSet = new Set(
@@ -265,23 +283,36 @@ const NetChangeDetailsModal: React.FC<NetChangeDetailsModalProps> = ({
                   const reasonLabel = WITHDRAWAL_REASON_LABELS[reasonRaw] || reasonRaw || '사유 미기재';
                   return (
                     <tr key={s.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="px-3 py-1.5 font-mono text-gray-700 whitespace-nowrap">{s.withdrawalDate || '-'}</td>
-                      <td className="px-3 py-1.5 font-medium text-gray-900">{s.name}</td>
-                      <td className="px-3 py-1.5 text-gray-600">
+                      <td className="px-3 py-1.5 font-mono text-black whitespace-nowrap">{s.withdrawalDate || '-'}</td>
+                      <td className="px-3 py-1.5 font-medium text-black">{s.name}</td>
+                      <td className="px-3 py-1.5 text-black">
                         {s.school || '-'}{s.grade ? ` / ${s.grade}` : ''}
                       </td>
-                      <td className="px-3 py-1.5 text-gray-700">
+                      <td className="px-3 py-1.5 text-black">
                         {subjectSet.size > 0 ? Array.from(subjectSet).join(', ') : '-'}
                       </td>
-                      <td className="px-3 py-1.5 text-gray-600">
+                      <td className="px-3 py-1.5 text-black">
                         {teacherSet.size > 0 ? Array.from(teacherSet).join(', ') : '-'}
                       </td>
-                      <td className="px-3 py-1.5 text-gray-700">{reasonLabel}</td>
+                      <td className="px-3 py-1.5 text-black">{reasonLabel}</td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+          )}
+          {withdrawnStudents.length > TABLE_PREVIEW && (
+            <button
+              type="button"
+              onClick={() => setWithdrawnExpanded(e => !e)}
+              className="w-full px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50 border-t border-gray-200 flex items-center justify-center gap-1"
+            >
+              {withdrawnExpanded ? (
+                <>접기 <ChevronUp size={14} /></>
+              ) : (
+                <>+ {withdrawnStudents.length - TABLE_PREVIEW}명 더 보기 <ChevronDown size={14} /></>
+              )}
+            </button>
           )}
         </div>
 

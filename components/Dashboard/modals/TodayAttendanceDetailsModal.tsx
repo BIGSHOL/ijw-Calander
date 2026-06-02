@@ -157,7 +157,7 @@ const TodayAttendanceDetailsModal: React.FC<TodayAttendanceDetailsModalProps> = 
         {/* 날짜 선택 + 선택일 요약 */}
         <div className="px-5 py-3 border-b bg-gray-50">
           <div className="flex items-center gap-3 flex-wrap">
-            <label className="text-xs text-gray-600 font-medium">날짜 선택</label>
+            <label className="text-xs text-black font-medium">날짜 선택</label>
             <input
               type="date"
               value={selectedDate}
@@ -168,16 +168,16 @@ const TodayAttendanceDetailsModal: React.FC<TodayAttendanceDetailsModalProps> = 
             />
             {selectedSummary && (
               <>
-                <span className="text-gray-400 text-xs">|</span>
-                <span className="text-gray-500 text-xs">
+                <span className="text-black text-xs">|</span>
+                <span className="text-black text-xs">
                   {selectedSummary.date} ({DAY_NAMES_KO[new Date(selectedSummary.date).getDay()]})
                 </span>
                 <span className="text-2xl font-bold text-emerald-700">{selectedSummary.rate}%</span>
                 <span className="text-xs text-emerald-600">출석 <b>{selectedSummary.present}</b></span>
                 <span className="text-xs text-amber-600">지각 <b>{selectedSummary.late}</b></span>
                 <span className="text-xs text-red-600">결석 <b>{selectedSummary.absent}</b></span>
-                <span className="text-xs text-gray-500">총 <b>{selectedSummary.total}</b>건</span>
-                <span className="text-xs text-gray-400 ml-auto">
+                <span className="text-xs text-black">총 <b>{selectedSummary.total}</b>건</span>
+                <span className="text-xs text-black ml-auto">
                   {selectedSummary.source === 'daily'
                     ? 'daily_attendance'
                     : selectedSummary.source === 'records'
@@ -188,7 +188,7 @@ const TodayAttendanceDetailsModal: React.FC<TodayAttendanceDetailsModalProps> = 
             )}
           </div>
           {trendAverage && (
-            <div className="text-[10px] text-gray-400 mt-1.5">
+            <div className="text-xs text-black mt-1.5">
               최근 30일 평균: <b className="text-emerald-700">{trendAverage.avg}%</b> ({trendAverage.count}일 기준)
             </div>
           )}
@@ -199,10 +199,10 @@ const TodayAttendanceDetailsModal: React.FC<TodayAttendanceDetailsModalProps> = 
           {/* 좌: 30일 추이 */}
           <div className="w-[360px] border-r overflow-auto">
             <div className="sticky top-0 bg-white border-b px-3 py-2 z-10 shadow-sm">
-              <h3 className="font-bold text-xs text-gray-700">최근 30일 추이</h3>
+              <h3 className="font-bold text-xs text-black">최근 30일 추이</h3>
             </div>
             {isLoading ? (
-              <div className="text-center py-12 text-xs text-gray-400">로딩 중...</div>
+              <div className="text-center py-12 text-xs text-black">로딩 중...</div>
             ) : (
               <div className="divide-y divide-gray-100">
                 {[...dailySummaries].reverse().map(s => {
@@ -221,8 +221,8 @@ const TodayAttendanceDetailsModal: React.FC<TodayAttendanceDetailsModalProps> = 
                         isSelected ? 'bg-emerald-100 border-l-4 border-emerald-500' : 'border-l-4 border-transparent'
                       }`}
                     >
-                      <span className="font-mono text-gray-700 w-[44px] text-left flex-shrink-0">{shortDate}</span>
-                      <span className={`w-5 text-center flex-shrink-0 ${isWeekend ? 'text-red-400' : 'text-gray-500'}`}>{dayKo}</span>
+                      <span className="font-mono text-black w-[44px] text-left flex-shrink-0">{shortDate}</span>
+                      <span className={`w-5 text-center flex-shrink-0 ${isWeekend ? 'text-red-400' : 'text-black'}`}>{dayKo}</span>
                       {/* 막대 */}
                       <div className="flex-1 h-4 bg-gray-100 rounded overflow-hidden relative min-w-[80px]">
                         {!isEmpty && (
@@ -231,13 +231,13 @@ const TodayAttendanceDetailsModal: React.FC<TodayAttendanceDetailsModalProps> = 
                             style={{ width: `${s.rate}%` }}
                           />
                         )}
-                        <span className={`absolute inset-0 flex items-center justify-center text-[10px] font-bold ${
-                          isEmpty ? 'text-gray-300' : s.rate >= 50 ? 'text-white' : 'text-gray-700'
+                        <span className={`absolute inset-0 flex items-center justify-center text-xs font-bold ${
+                          isEmpty ? 'text-black' : s.rate >= 50 ? 'text-white' : 'text-black'
                         }`}>
                           {isEmpty ? '데이터 없음' : `${s.rate}%`}
                         </span>
                       </div>
-                      <span className={`text-[10px] font-mono w-12 text-right flex-shrink-0 ${isEmpty ? 'text-gray-300' : 'text-gray-600'}`}>
+                      <span className={`text-xs font-mono w-12 text-right flex-shrink-0 ${isEmpty ? 'text-black' : 'text-black'}`}>
                         {isEmpty ? '' : `${s.present + s.late}/${s.total}`}
                       </span>
                     </button>
@@ -250,15 +250,15 @@ const TodayAttendanceDetailsModal: React.FC<TodayAttendanceDetailsModalProps> = 
           {/* 우: 선택일 학생 명단 또는 카운트 시각화 */}
           <div className="flex-1 overflow-auto">
             <div className="sticky top-0 bg-white border-b px-3 py-2 z-10 shadow-sm flex items-center justify-between">
-              <h3 className="font-bold text-xs text-gray-700">
+              <h3 className="font-bold text-xs text-black">
                 {selectedDate} 상세
               </h3>
               {selectedSummary && selectedSummary.source !== 'empty' && (
-                <span className="text-[10px] text-gray-400">{selectedSummary.total}건</span>
+                <span className="text-xs text-black">{selectedSummary.total}건</span>
               )}
             </div>
             {selectedSummary?.source === 'empty' ? (
-              <div className="text-center py-16 text-gray-400 text-xs">
+              <div className="text-center py-16 text-black text-xs">
                 <div className="text-2xl mb-2">📭</div>
                 이 날짜에는 출석 기록이 없습니다.
               </div>
@@ -267,21 +267,21 @@ const TodayAttendanceDetailsModal: React.FC<TodayAttendanceDetailsModalProps> = 
                 {/* 카운트 시각화 (records 폴백 — 학생 명단 불가) */}
                 <div className="grid grid-cols-3 gap-2 mb-4">
                   <div className="bg-emerald-50 border border-emerald-200 rounded p-3 text-center">
-                    <div className="text-[10px] text-emerald-700 font-medium">출석</div>
+                    <div className="text-xs text-emerald-700 font-medium">출석</div>
                     <div className="text-2xl font-bold text-emerald-700 mt-1">{selectedSummary.present}</div>
                   </div>
                   <div className="bg-amber-50 border border-amber-200 rounded p-3 text-center">
-                    <div className="text-[10px] text-amber-700 font-medium">지각</div>
+                    <div className="text-xs text-amber-700 font-medium">지각</div>
                     <div className="text-2xl font-bold text-amber-700 mt-1">{selectedSummary.late}</div>
                   </div>
                   <div className="bg-red-50 border border-red-200 rounded p-3 text-center">
-                    <div className="text-[10px] text-red-700 font-medium">결석</div>
+                    <div className="text-xs text-red-700 font-medium">결석</div>
                     <div className="text-2xl font-bold text-red-700 mt-1">{selectedSummary.absent}</div>
                   </div>
                 </div>
                 {/* 비율 막대 (가로 누적) */}
                 <div className="mb-3">
-                  <div className="text-[10px] text-gray-500 mb-1 flex justify-between">
+                  <div className="text-xs text-black mb-1 flex justify-between">
                     <span>비율 분포</span>
                     <span>총 {selectedSummary.total}건</span>
                   </div>
@@ -309,16 +309,16 @@ const TodayAttendanceDetailsModal: React.FC<TodayAttendanceDetailsModalProps> = 
                     )}
                   </div>
                 </div>
-                <div className="text-[10px] text-gray-400 text-center mt-4">
+                <div className="text-xs text-black text-center mt-4">
                   출석부 셀 집계 결과 · 학생별 상세는 출석부 탭에서 확인
                 </div>
               </div>
             ) : selectedEntries.length === 0 ? (
-              <div className="text-center py-12 text-gray-400 text-xs">로딩 중이거나 데이터가 없습니다.</div>
+              <div className="text-center py-12 text-black text-xs">로딩 중이거나 데이터가 없습니다.</div>
             ) : (
               <table className="w-full text-xs">
                 <thead className="sticky top-9 bg-white border-b border-gray-200 z-[5]">
-                  <tr className="text-gray-500">
+                  <tr className="text-black">
                     <th className="px-3 py-1.5 text-left font-medium w-14">상태</th>
                     <th className="px-3 py-1.5 text-left font-medium">학생</th>
                     <th className="px-3 py-1.5 text-left font-medium">반</th>
@@ -328,12 +328,12 @@ const TodayAttendanceDetailsModal: React.FC<TodayAttendanceDetailsModalProps> = 
                   {selectedEntries.map((e, i) => (
                     <tr key={`${e.studentId}-${i}`} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="px-3 py-1">
-                        <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${statusBadge[e.status]}`}>
+                        <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-bold whitespace-nowrap ${statusBadge[e.status]}`}>
                           {statusToKo[e.status]}
                         </span>
                       </td>
-                      <td className="px-3 py-1 font-medium text-gray-900">{e.studentName}</td>
-                      <td className="px-3 py-1 text-gray-600">{e.className || '-'}</td>
+                      <td className="px-3 py-1 font-medium text-black">{e.studentName}</td>
+                      <td className="px-3 py-1 text-black">{e.className || '-'}</td>
                     </tr>
                   ))}
                 </tbody>

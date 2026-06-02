@@ -5,7 +5,7 @@
  * - read-only
  */
 import React, { useMemo, useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 import type { UnifiedStudent } from '../../../types/student';
 import { isActiveEnrollment } from '../../../utils/dashboardUtils';
 import { getMonthRange } from '../../../utils/datePeriod';
@@ -38,10 +38,15 @@ const NewStudentsModal: React.FC<NewStudentsModalProps> = ({
 }) => {
   // 월간 페이지 — offset: 0=이번 달, -1=지난 달 ...
   const [offset, setOffset] = useState(0);
+  const [tableExpanded, setTableExpanded] = useState(false);
+  const TABLE_PREVIEW = 10;
 
   // 모달 열릴 때마다 이번 달로 초기화
   useEffect(() => {
-    if (isOpen) setOffset(0);
+    if (isOpen) {
+      setOffset(0);
+      setTableExpanded(false);
+    }
   }, [isOpen]);
 
   const range = useMemo(() => getMonthRange(offset), [offset]);
@@ -100,18 +105,18 @@ const NewStudentsModal: React.FC<NewStudentsModalProps> = ({
           <div className="flex items-center gap-1">
             <button
               onClick={() => setOffset(o => o - 1)}
-              className="p-1 hover:bg-gray-100 rounded text-gray-600"
+              className="p-1 hover:bg-gray-100 rounded text-black"
               title="지난 달"
             >
               <ChevronLeft size={16} />
             </button>
-            <span className="text-sm font-bold text-gray-800 mx-2 min-w-[120px] text-center">
+            <span className="text-sm font-bold text-black mx-2 min-w-[120px] text-center">
               {range.label}
             </span>
             <button
               onClick={() => setOffset(o => o + 1)}
               disabled={offset >= 0}
-              className="p-1 hover:bg-gray-100 rounded text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-1 hover:bg-gray-100 rounded text-black disabled:opacity-30 disabled:cursor-not-allowed"
               title="다음 달"
             >
               <ChevronRight size={16} />
@@ -119,19 +124,19 @@ const NewStudentsModal: React.FC<NewStudentsModalProps> = ({
             {offset !== 0 && (
               <button
                 onClick={() => setOffset(0)}
-                className="ml-2 px-2 py-0.5 text-[10px] font-bold border border-pink-300 text-pink-700 rounded hover:bg-pink-50"
+                className="ml-2 px-2 py-0.5 text-xs font-bold border border-pink-300 text-pink-700 rounded hover:bg-pink-50"
               >
                 이번 달로
               </button>
             )}
           </div>
-          <span className="text-[10px] text-gray-400">월간 기준</span>
+          <span className="text-xs text-black">월간 기준</span>
         </div>
 
         {/* 요약 */}
         <div className="px-5 py-3 border-b bg-gray-50">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
-            <span className="text-gray-500">
+            <span className="text-black">
               총 신입생 <b className="text-pink-700 text-sm">{summary.total}명</b>
             </span>
             <span className="text-emerald-600">
@@ -144,7 +149,7 @@ const NewStudentsModal: React.FC<NewStudentsModalProps> = ({
               2과목 이상 <b>{summary.multiCount}명</b>
             </span>
           </div>
-          <div className="text-[10px] text-gray-400 mt-1.5">
+          <div className="text-xs text-black mt-1.5">
             정렬: 등록일 최신순 · 조건: 선택 월 startDate + 수강과목 1개 이상
           </div>
         </div>
@@ -152,13 +157,13 @@ const NewStudentsModal: React.FC<NewStudentsModalProps> = ({
         {/* 테이블 */}
         <div className="flex-1 overflow-auto">
           {newStudents.length === 0 ? (
-            <div className="text-center py-12 text-gray-400 text-sm">
+            <div className="text-center py-12 text-black text-sm">
               이번 달 신입생이 없습니다.
             </div>
           ) : (
             <table className="w-full text-xs">
               <thead className="sticky top-0 bg-white border-b border-gray-200 z-10">
-                <tr className="text-gray-500">
+                <tr className="text-black">
                   <th className="px-3 py-2 text-left font-medium whitespace-nowrap">등록일</th>
                   <th className="px-3 py-2 text-left font-medium">학생</th>
                   <th className="px-3 py-2 text-left font-medium">학교/학년</th>
@@ -168,7 +173,7 @@ const NewStudentsModal: React.FC<NewStudentsModalProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {newStudents.map((s) => {
+                {(tableExpanded ? newStudents : newStudents.slice(0, TABLE_PREVIEW)).map((s) => {
                   const active = (s.enrollments || []).filter((e: any) => isActiveEnrollment(e));
                   const subjectSet = new Set(active.map(e => SUBJECT_LABEL[e.subject] || e.subject));
                   const teacherSet = new Set(
@@ -181,23 +186,23 @@ const NewStudentsModal: React.FC<NewStudentsModalProps> = ({
                       key={s.id}
                       className="border-b border-gray-100 hover:bg-gray-50"
                     >
-                      <td className="px-3 py-1.5 font-mono text-gray-700 whitespace-nowrap">
+                      <td className="px-3 py-1.5 font-mono text-black whitespace-nowrap">
                         {s.startDate || '-'}
                       </td>
-                      <td className="px-3 py-1.5 font-medium text-gray-900">
+                      <td className="px-3 py-1.5 font-medium text-black">
                         {s.name}
                       </td>
-                      <td className="px-3 py-1.5 text-gray-600">
+                      <td className="px-3 py-1.5 text-black">
                         {s.school || '-'}
                         {s.grade ? ` / ${s.grade}` : ''}
                       </td>
-                      <td className="px-3 py-1.5 text-gray-700">
+                      <td className="px-3 py-1.5 text-black">
                         {subjectSet.size > 0 ? Array.from(subjectSet).join(', ') : '-'}
                       </td>
-                      <td className="px-3 py-1.5 text-gray-600">
+                      <td className="px-3 py-1.5 text-black">
                         {teacherSet.size > 0 ? Array.from(teacherSet).join(', ') : '-'}
                       </td>
-                      <td className="px-3 py-1.5 text-gray-500">
+                      <td className="px-3 py-1.5 text-black">
                         {s.parentName ? `${s.parentName}${s.parentRelation ? `(${s.parentRelation})` : ''}` : '-'}
                       </td>
                     </tr>
@@ -205,6 +210,19 @@ const NewStudentsModal: React.FC<NewStudentsModalProps> = ({
                 })}
               </tbody>
             </table>
+          )}
+          {newStudents.length > TABLE_PREVIEW && (
+            <button
+              type="button"
+              onClick={() => setTableExpanded(e => !e)}
+              className="w-full px-3 py-2.5 text-sm font-bold text-blue-700 hover:bg-blue-50 border-t border-gray-200 flex items-center justify-center gap-1"
+            >
+              {tableExpanded ? (
+                <>접기 <ChevronUp size={16} /></>
+              ) : (
+                <>+ {newStudents.length - TABLE_PREVIEW}명 더 보기 <ChevronDown size={16} /></>
+              )}
+            </button>
           )}
         </div>
 

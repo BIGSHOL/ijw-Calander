@@ -4,8 +4,8 @@
  * - 강사별 상담 건수
  * - read-only
  */
-import React from 'react';
-import { X } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, ChevronDown, ChevronUp } from 'lucide-react';
 import type { ConsultationStatsResult, StudentNeedingConsultation, ConsultationMissingReason } from '../../../hooks/useConsultationStats';
 import type { StaffPerformance } from '../PerformanceProgress';
 import { RemarksPopover } from '../../Common/RemarksPopover';
@@ -74,6 +74,11 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
   stats,
   yearMonth,
 }) => {
+  // 미완료 학생 목록 — 수학/영어 토글 (기본 접힘, 상위 5건만 노출)
+  const [mathExpanded, setMathExpanded] = useState(false);
+  const [engExpanded, setEngExpanded] = useState(false);
+  const PREVIEW_COUNT = 5;
+
   if (!isOpen) return null;
 
   const totalEnrollments = stats?.totalSubjectEnrollments || 0;  // 사실 수강 건수
@@ -134,7 +139,7 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
         {/* 요약 */}
         <div className="px-5 py-3 border-b bg-gray-50">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
-            <span className="text-gray-500">
+            <span className="text-black">
               완료율 <b className="text-indigo-700 text-sm">{rate}%</b>
             </span>
             <span className="text-emerald-600">
@@ -144,16 +149,16 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
               미완료 <b>{needing.length}</b>건
             </span>
             <span
-              className="text-gray-500 cursor-help"
+              className="text-black cursor-help"
               title={`전체 수강 ${totalEnrollments}건 중 상담 대상 ${meaningfulTotal}건\n· 제외: 상담 기록·예정 0건인 진행 대기중 학생 ${excluded}건\n· 수학+영어 동시 수강 → 2건 카운트`}
             >
               상담 대상 <b>{meaningfulTotal}</b>건
               {excluded > 0 && (
-                <span className="text-gray-400"> (전체 수강 {totalEnrollments}건 중 이력 0건 {excluded}건 제외)</span>
+                <span className="text-black"> (전체 수강 {totalEnrollments}건 중 이력 0건 {excluded}건 제외)</span>
               )}
             </span>
           </div>
-          <div className="text-[10px] text-gray-400 mt-1.5">
+          <div className="text-xs text-black mt-1.5">
             기준: 이번 달 1건 이상 학생 상담 기록 있는 (학생 × 과목) 조합 = 완료.
             상담 기록·예정이 0건인 학생은 분모에서 제외 (의미 없는 미완료 노이즈 차단).
             등록 상담은 별도 집계 (이 KPI 미포함).
@@ -166,7 +171,7 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
                 if (cnt === 0) return null;
                 const cfg = REASON_CONFIG[r];
                 return (
-                  <span key={r} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${cfg.bg} ${cfg.text}`}>
+                  <span key={r} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${cfg.bg} ${cfg.text}`}>
                     <span>{cfg.icon}</span>
                     <span>{cfg.label}</span>
                     <b>{cnt}</b>
@@ -181,9 +186,9 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
         <div className="flex-1 overflow-auto px-5 py-3 space-y-4">
           {/* 강사별 상담 건수 */}
           <section>
-            <h3 className="text-xs font-bold text-gray-700 mb-2">강사별 이번 달 학생 상담 건수</h3>
+            <h3 className="text-xs font-bold text-black mb-2">강사별 이번 달 학생 상담 건수</h3>
             {staffPerformances.length === 0 ? (
-              <div className="text-xs text-gray-400 py-2">이번 달 상담 기록 없음.</div>
+              <div className="text-xs text-black py-2">이번 달 상담 기록 없음.</div>
             ) : (
               <>
                 {/* 카테고리(수학/영어) 합계 — staff.subjects 우선 + 상담 다수결 fallback */}
@@ -197,25 +202,25 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
                   const englishTotal = engPerf.reduce((a, s) => a + s.consultationCount, 0);
                   const otherTotal = otherPerf.reduce((a, s) => a + s.consultationCount, 0);
                   return (
-                    <div className="flex flex-wrap items-center gap-3 mb-2 px-2 py-1.5 bg-gray-50 rounded text-[11px]">
-                      <span className="text-gray-500">카테고리 합계:</span>
+                    <div className="flex flex-wrap items-center gap-3 mb-2 px-2 py-1.5 bg-gray-50 rounded text-xs">
+                      <span className="text-black">카테고리 합계:</span>
                       <span className="text-emerald-700">
                         수학 <b>{mathTotal}건</b>
-                        <span className="text-gray-400"> · 강사 {mathPerf.length}명</span>
+                        <span className="text-black"> · 강사 {mathPerf.length}명</span>
                       </span>
                       <span className="text-red-700">
                         영어 <b>{englishTotal}건</b>
-                        <span className="text-gray-400"> · 강사 {engPerf.length}명</span>
+                        <span className="text-black"> · 강사 {engPerf.length}명</span>
                       </span>
                       {otherTotal > 0 && (
-                        <span className="text-gray-600">기타 <b>{otherTotal}건</b> · 강사 {otherPerf.length}명</span>
+                        <span className="text-black">기타 <b>{otherTotal}건</b> · 강사 {otherPerf.length}명</span>
                       )}
                     </div>
                   );
                 })()}
                 <table className="w-full text-xs">
                   <thead className="bg-gray-50">
-                    <tr className="text-gray-500">
+                    <tr className="text-black">
                       <th className="px-3 py-1.5 text-left font-medium">강사</th>
                       <th
                         className="px-3 py-1.5 text-right font-medium cursor-help"
@@ -239,20 +244,20 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
                         cat === 'math' ? 'text-emerald-600' :
                         cat === 'english' ? 'text-red-600' :
                         cat === 'both' ? 'text-amber-600' :
-                        'text-gray-400';
+                        'text-black';
                       return (
                         <tr key={s.id} className="border-b border-gray-100">
-                          <td className="px-3 py-1.5 font-medium text-gray-900">
+                          <td className="px-3 py-1.5 font-medium text-black">
                             {s.name}
                             {subjectLabel && (
-                              <span className={`ml-1.5 text-[10px] font-normal ${subjectColor}`}>
+                              <span className={`ml-1.5 text-xs font-normal ${subjectColor}`}>
                                 ({subjectLabel})
                               </span>
                             )}
                           </td>
-                          <td className="px-3 py-1.5 text-right font-mono">{s.consultationCount}<span className="text-gray-400 text-[10px]">건</span></td>
-                          <td className="px-3 py-1.5 text-right font-mono text-gray-700">
-                            {s.uniqueStudentCount}<span className="text-gray-400 text-[10px]">명</span>
+                          <td className="px-3 py-1.5 text-right font-mono">{s.consultationCount}<span className="text-black text-xs">건</span></td>
+                          <td className="px-3 py-1.5 text-right font-mono text-black">
+                            {s.uniqueStudentCount}<span className="text-black text-xs">명</span>
                           </td>
                         </tr>
                       );
@@ -286,11 +291,11 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
                         cat === 'math' ? 'text-emerald-600' :
                         cat === 'english' ? 'text-red-600' :
                         cat === 'both' ? 'text-amber-600' :
-                        'text-gray-400';
+                        'text-black';
                       return (
                         <tr key={t.id} className="border-b border-amber-100 last:border-b-0">
-                          <td className="px-3 py-1.5 font-medium text-gray-900">{t.name}</td>
-                          <td className={`px-3 py-1.5 text-[11px] ${color}`}>
+                          <td className="px-3 py-1.5 font-medium text-black">{t.name}</td>
+                          <td className={`px-3 py-1.5 text-xs ${color}`}>
                             {label || '-'}
                           </td>
                         </tr>
@@ -304,7 +309,7 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
 
           {/* 미완료 학생 목록 — 수학/영어 좌우 분리 */}
           <section>
-            <h3 className="text-xs font-bold text-gray-700 mb-2">
+            <h3 className="text-xs font-bold text-black mb-2">
               상담 미완료 학생 ({needing.length}건, 마지막 상담일 오래된 순)
             </h3>
             {needing.length === 0 ? (
@@ -319,60 +324,85 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
                 list: StudentNeedingConsultation[],
                 title: string,
                 subjectColor: string,
-              ) => (
-                <div className="border border-gray-200 rounded overflow-hidden">
-                  <div className={`px-3 py-1.5 text-xs font-bold ${subjectColor} border-b border-gray-200`}>
-                    {title} ({list.length}건)
+                expanded: boolean,
+                onToggle: () => void,
+              ) => {
+                const showAll = expanded || list.length <= PREVIEW_COUNT;
+                const visible = showAll ? list : list.slice(0, PREVIEW_COUNT);
+                const hidden = list.length - visible.length;
+                return (
+                  <div className="border border-gray-200 rounded overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={onToggle}
+                      className={`w-full px-3 py-2 text-sm font-bold ${subjectColor} border-b border-gray-200 flex items-center justify-between hover:brightness-95`}
+                    >
+                      <span>{title} ({list.length}건)</span>
+                      {list.length > PREVIEW_COUNT && (
+                        expanded
+                          ? <span className="inline-flex items-center gap-1 text-xs">접기 <ChevronUp size={14} /></span>
+                          : <span className="inline-flex items-center gap-1 text-xs">전체 보기 <ChevronDown size={14} /></span>
+                      )}
+                    </button>
+                    {list.length === 0 ? (
+                      <div className="px-3 py-4 text-center text-sm text-black">없음</div>
+                    ) : (
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                          <tr className="text-black">
+                            <th className="px-2 py-2 text-left font-bold">학생</th>
+                            <th className="px-2 py-2 text-left font-bold">사유</th>
+                            <th className="px-2 py-2 text-left font-bold whitespace-nowrap">마지막 상담일</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {visible.map((n, idx) => {
+                            const cfg = REASON_CONFIG[n.reason];
+                            return (
+                              <tr key={`${n.studentId}-${n.subject}-${idx}`} className="border-b border-gray-100">
+                                <td className="px-2 py-2 font-bold text-black whitespace-nowrap">{n.studentName}</td>
+                                <td className="px-2 py-2 whitespace-nowrap">
+                                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-bold ${cfg.bg} ${cfg.text}`} title={n.reasonDetail || cfg.label}>
+                                    <span>{cfg.icon}</span>
+                                    <span>{cfg.label}</span>
+                                  </span>
+                                  {n.reasonDetail && (
+                                    <span className="ml-1.5 text-xs text-black">{n.reasonDetail}</span>
+                                  )}
+                                </td>
+                                <td className="px-2 py-2 text-black font-mono whitespace-nowrap">
+                                  {n.lastConsultationDate || (
+                                    <span className="text-red-500">(상담 기록 없음)</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    )}
+                    {hidden > 0 && (
+                      <button
+                        type="button"
+                        onClick={onToggle}
+                        className="w-full px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-50 border-t border-gray-200"
+                      >
+                        + {hidden}건 더 보기
+                      </button>
+                    )}
                   </div>
-                  {list.length === 0 ? (
-                    <div className="px-3 py-4 text-center text-[11px] text-gray-400">없음</div>
-                  ) : (
-                    <table className="w-full text-xs">
-                      <thead className="bg-gray-50">
-                        <tr className="text-gray-500">
-                          <th className="px-2 py-1.5 text-left font-medium">학생</th>
-                          <th className="px-2 py-1.5 text-left font-medium">사유</th>
-                          <th className="px-2 py-1.5 text-left font-medium whitespace-nowrap">마지막 상담일</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {list.map((n, idx) => {
-                          const cfg = REASON_CONFIG[n.reason];
-                          return (
-                            <tr key={`${n.studentId}-${n.subject}-${idx}`} className="border-b border-gray-100">
-                              <td className="px-2 py-1.5 font-medium text-gray-900 whitespace-nowrap">{n.studentName}</td>
-                              <td className="px-2 py-1.5 whitespace-nowrap">
-                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${cfg.bg} ${cfg.text}`} title={n.reasonDetail || cfg.label}>
-                                  <span>{cfg.icon}</span>
-                                  <span>{cfg.label}</span>
-                                </span>
-                                {n.reasonDetail && (
-                                  <span className="ml-1.5 text-[10px] text-gray-400">{n.reasonDetail}</span>
-                                )}
-                              </td>
-                              <td className="px-2 py-1.5 text-gray-600 font-mono whitespace-nowrap">
-                                {n.lastConsultationDate || (
-                                  <span className="text-red-500">(상담 기록 없음)</span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              );
+                );
+              };
 
               return (
                 <div className="grid grid-cols-2 gap-3">
-                  {renderTable(mathList, '수학', 'bg-blue-50 text-blue-800')}
-                  {renderTable(engList, '영어', 'bg-purple-50 text-purple-800')}
+                  {renderTable(mathList, '수학', 'bg-blue-50 text-blue-800', mathExpanded, () => setMathExpanded(e => !e))}
+                  {renderTable(engList, '영어', 'bg-purple-50 text-purple-800', engExpanded, () => setEngExpanded(e => !e))}
                 </div>
               );
             })()}
             {needing.length > 200 && (
-              <div className="text-[10px] text-gray-400 mt-1">
+              <div className="text-xs text-black mt-1">
                 과목별 상위 100건씩 표시. 전체 {needing.length}건은 학생 상담 탭에서 확인하세요.
               </div>
             )}
