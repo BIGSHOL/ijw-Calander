@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { ConsultationRecord, ConsultationStatus, SchoolGrade, ConsultationSubject, SubjectConsultationDetail } from '../../types';
 import {
-    X, ChevronDown, ChevronRight, User, Phone, Calendar, MapPin, School, BookOpen,
+    X, ChevronDown, ChevronUp, ChevronRight, User, Phone, Calendar, MapPin, School, BookOpen,
     FileText, Globe, Users, Cake, Home, Smile, AlertTriangle, Target, Tag, Bus,
     XCircle, CheckCircle, Banknote, Shield, UserCheck, GraduationCap, MessageSquare, ClipboardList, Droplet, Inbox,
-    Pencil, Eye, FlaskConical, Mic, MicOff, Upload, Loader2, Square, ArrowDownToLine
+    Pencil, Eye, FlaskConical, Mic, MicOff, Upload, Loader2, Square, ArrowDownToLine, Trash2
 } from 'lucide-react';
 import { useRegistrationRecording, RegistrationExtractedData, ReportFullData } from '../../hooks/useRegistrationRecording';
 import { useUnsavedChangesGuard } from '../../hooks/useUnsavedChangesGuard';
@@ -805,6 +805,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
     // ===== 녹음/분석 기능 =====
     const recording = useRegistrationRecording();
     const [showRecordingPanel, setShowRecordingPanel] = useState(false);
+    const [recordingsListOpen, setRecordingsListOpen] = useState(false); // 녹음 목록 토글
     const [recordingFile, setRecordingFile] = useState<File | null>(null);
     const [isDragOver, setIsDragOver] = useState(false);
     const [showConsultationPicker, setShowConsultationPicker] = useState(false);
@@ -1372,6 +1373,68 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                                 />
                                             </label>
                                         </div>
+
+                                        {/* 녹음 목록 (1차/2차/3차 … 누적) — 토글 */}
+                                        {recording.reportIds.length > 0 && (
+                                            <div className="rounded-sm border border-purple-200 bg-white">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setRecordingsListOpen(o => !o)}
+                                                    className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-bold text-purple-800 hover:bg-purple-50"
+                                                >
+                                                    <span className="flex items-center gap-1.5">
+                                                        📋 녹음 목록 ({recording.reportIds.length}개 누적)
+                                                    </span>
+                                                    {recordingsListOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                                </button>
+                                                {recordingsListOpen && (
+                                                    <div className="divide-y divide-purple-100 border-t border-purple-100">
+                                                        {recording.reportIds.map((id, idx) => {
+                                                            const r = recording.reportsData[id];
+                                                            const statusKor =
+                                                                r?.status === 'completed' ? '✓ 완료'
+                                                                : r?.status === 'analyzing' ? '⌛ 분석 중'
+                                                                : r?.status === 'transcribing' ? '⌛ 받아쓰기'
+                                                                : r?.status === 'uploading' ? '⌛ 업로드 중'
+                                                                : r?.status === 'error' ? '⚠ 실패'
+                                                                : (r?.status || '대기');
+                                                            return (
+                                                                <div key={id} className="px-3 py-2 flex items-center gap-2 text-xs">
+                                                                    <span className="font-bold text-purple-700 shrink-0">{idx + 1}차</span>
+                                                                    {r?.isMerged && (
+                                                                        <span className="text-[10px] font-bold px-1 py-0.5 rounded bg-amber-100 text-amber-700 shrink-0">통합</span>
+                                                                    )}
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <div className="text-black truncate">
+                                                                            {r?.fileName || r?.studentName || id.slice(0, 12)}
+                                                                        </div>
+                                                                        {r?.consultationDate && (
+                                                                            <div className="text-[10px] text-black opacity-70">{r.consultationDate}</div>
+                                                                        )}
+                                                                    </div>
+                                                                    <span className={`text-[10px] font-bold shrink-0 ${
+                                                                        r?.status === 'completed' ? 'text-emerald-600'
+                                                                        : r?.status === 'error' ? 'text-red-600'
+                                                                        : 'text-blue-700'
+                                                                    }`}>
+                                                                        {statusKor}
+                                                                    </span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => recording.removeReport(id)}
+                                                                        className="text-red-400 hover:text-red-600 shrink-0"
+                                                                        title="이 녹음 제거"
+                                                                    >
+                                                                        <Trash2 size={12} />
+                                                                    </button>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
                                         <div
                                             onDrop={handleRecordingDrop}
                                             onDragOver={handleRecordingDragOver}
