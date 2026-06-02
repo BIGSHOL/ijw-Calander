@@ -779,14 +779,10 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                                         <Undo2 size={14} />
                                                     </button>
                                                 )}
-                                                {/* 전환 상태 indicator — 솔리드 emerald 유지 (모양 변화 없음).
-                                                    hover tooltip 만 상태에 따라 변경 */}
+                                                {/* 전환 상태 indicator — 솔리드 emerald 유지, tooltip 항상 '전환완료 (연동됨)' */}
                                                 {(() => {
                                                     const info = conversionStatusMap?.get(record.id);
                                                     const isConverted = info?.status === 'converted' || info?.status === 'matched';
-                                                    const tooltip = isConverted
-                                                        ? (info?.status === 'converted' ? '전환완료 (연동됨)' : '전환완료 (자동 매칭)')
-                                                        : '원생 전환';
                                                     return (
                                                         <button
                                                             onClick={(e) => {
@@ -799,7 +795,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                                             }}
                                                             className="inline-flex items-center justify-center p-1 rounded-sm bg-emerald-500 hover:bg-emerald-600 transition-colors"
                                                             style={{ color: 'white' }}
-                                                            title={tooltip}
+                                                            title="전환완료 (연동됨)"
                                                         >
                                                             <UserCheck size={14} />
                                                         </button>
