@@ -149,7 +149,7 @@ const loadSavedColumns = (): Set<ColumnKey> => {
 };
 
 export const ConsultationTable: React.FC<ConsultationTableProps> = ({
-    data, onEdit, onDelete, onConvertToStudent, onNavigateToStudent,
+    data, onEdit, onDelete, onNavigateToStudent,
     currentUserId, canEdit = false, canManage = false, canConvert = false,
     searchTerm = '', showSettings = false, onShowSettingsChange,
     showFilters = false, onShowFiltersChange,
@@ -759,28 +759,15 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                                         <Undo2 size={14} />
                                                     </button>
                                                 )}
-                                                {/* 전환 상태 indicator — 솔리드 emerald 유지, tooltip 항상 '전환완료 (연동됨)' */}
-                                                {(() => {
-                                                    const info = conversionStatusMap?.get(record.id);
-                                                    const isConverted = info?.status === 'converted' || info?.status === 'matched';
-                                                    return (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                if (isConverted && info?.studentId) {
-                                                                    onNavigateToStudent?.(info.studentId);
-                                                                } else {
-                                                                    onConvertToStudent?.(record);
-                                                                }
-                                                            }}
-                                                            className="inline-flex items-center justify-center p-1 rounded-sm bg-emerald-500 hover:bg-emerald-600 transition-colors"
-                                                            style={{ color: 'white' }}
-                                                            title="전환완료 (연동됨)"
-                                                        >
-                                                            <UserCheck size={14} />
-                                                        </button>
-                                                    );
-                                                })()}
+                                                {/* 전환 상태 indicator — hover 툴팁만, 클릭 동작 없음 */}
+                                                <span
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="inline-flex items-center justify-center p-1 rounded-sm bg-emerald-500 cursor-default"
+                                                    style={{ color: 'white' }}
+                                                    title="전환완료"
+                                                >
+                                                    <UserCheck size={14} />
+                                                </span>
                                             </div>
                                         </td>
                                         {/* 녹음 열 — v2: 다중 보고서 카운트 표시 */}
