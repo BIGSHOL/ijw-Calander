@@ -777,26 +777,27 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                                         <Undo2 size={14} />
                                                     </button>
                                                 )}
-                                                {/* 전환 상태 표시 — 전환완료 indicator 만 표시 (대기/동명이인 배지 제거) */}
+                                                {/* 전환 상태 indicator — 항상 표시 (UserCheck 만, ExternalLink 제거) */}
                                                 {(() => {
                                                     const info = conversionStatusMap?.get(record.id);
-                                                    if (info?.status === 'converted' || info?.status === 'matched') {
-                                                        return (
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    if (info.studentId) onNavigateToStudent?.(info.studentId);
-                                                                }}
-                                                                className="inline-flex items-center justify-center gap-0.5 px-1.5 py-1 text-xs font-bold rounded-sm bg-emerald-100 hover:bg-emerald-200 transition-colors"
-                                                                style={{ color: 'black' }}
-                                                                title={info.status === 'converted' ? '전환 완료 (연동됨)' : '전환 완료 (자동 매칭)'}
-                                                            >
-                                                                <UserCheck size={12} />
-                                                                <ExternalLink size={10} />
-                                                            </button>
-                                                        );
-                                                    }
-                                                    return null;
+                                                    const isConverted = info?.status === 'converted' || info?.status === 'matched';
+                                                    return (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (isConverted && info?.studentId) {
+                                                                    onNavigateToStudent?.(info.studentId);
+                                                                } else {
+                                                                    onConvertToStudent?.(record);
+                                                                }
+                                                            }}
+                                                            className="inline-flex items-center justify-center p-1 rounded-sm bg-emerald-500 hover:bg-emerald-600 transition-colors"
+                                                            style={{ color: 'white' }}
+                                                            title={isConverted ? '원생 보기' : '원생 전환'}
+                                                        >
+                                                            <UserCheck size={14} />
+                                                        </button>
+                                                    );
                                                 })()}
                                             </div>
                                         </td>
