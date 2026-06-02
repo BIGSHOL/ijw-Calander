@@ -289,7 +289,7 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
             </section>
           )}
 
-          {/* 미완료 학생 목록 */}
+          {/* 미완료 학생 목록 — 수학/영어 좌우 분리 */}
           <section>
             <h3 className="text-xs font-bold text-gray-700 mb-2">
               상담 미완료 학생 ({needing.length}건, 마지막 상담일 오래된 순)
@@ -298,56 +298,69 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
               <div className="text-xs text-emerald-600 py-2">
                 모든 학생이 이번 달 상담을 완료했습니다.
               </div>
-            ) : (
-              <table className="w-full text-xs">
-                <thead className="bg-gray-50">
-                  <tr className="text-gray-500">
-                    <th className="px-3 py-1.5 text-left font-medium">학생</th>
-                    <th className="px-3 py-1.5 text-left font-medium">과목</th>
-                    <th className="px-3 py-1.5 text-left font-medium">사유</th>
-                    <th className="px-3 py-1.5 text-left font-medium">마지막 상담일</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {needing.slice(0, 100).map((n, idx) => {
-                    const cfg = REASON_CONFIG[n.reason];
-                    return (
-                      <tr key={`${n.studentId}-${n.subject}-${idx}`} className="border-b border-gray-100">
-                        <td className="px-3 py-1.5 font-medium text-gray-900 whitespace-nowrap">{n.studentName}</td>
-                        <td className="px-3 py-1.5">
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                              n.subject === 'math'
-                                ? 'bg-blue-100 text-blue-700'
-                                : 'bg-purple-100 text-purple-700'
-                            }`}
-                          >
-                            {SUBJECT_KO(n.subject)}
-                          </span>
-                        </td>
-                        <td className="px-3 py-1.5 whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${cfg.bg} ${cfg.text}`} title={n.reasonDetail || cfg.label}>
-                            <span>{cfg.icon}</span>
-                            <span>{cfg.label}</span>
-                          </span>
-                          {n.reasonDetail && (
-                            <span className="ml-1.5 text-[10px] text-gray-400">{n.reasonDetail}</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-1.5 text-gray-600 font-mono">
-                          {n.lastConsultationDate || (
-                            <span className="text-red-500">(상담 기록 없음)</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-            {needing.length > 100 && (
+            ) : (() => {
+              const mathList = needing.filter(n => n.subject === 'math').slice(0, 100);
+              const engList = needing.filter(n => n.subject === 'english').slice(0, 100);
+
+              const renderTable = (
+                list: StudentNeedingConsultation[],
+                title: string,
+                subjectColor: string,
+              ) => (
+                <div className="border border-gray-200 rounded overflow-hidden">
+                  <div className={`px-3 py-1.5 text-xs font-bold ${subjectColor} border-b border-gray-200`}>
+                    {title} ({list.length}건)
+                  </div>
+                  {list.length === 0 ? (
+                    <div className="px-3 py-4 text-center text-[11px] text-gray-400">없음</div>
+                  ) : (
+                    <table className="w-full text-xs">
+                      <thead className="bg-gray-50">
+                        <tr className="text-gray-500">
+                          <th className="px-2 py-1.5 text-left font-medium">학생</th>
+                          <th className="px-2 py-1.5 text-left font-medium">사유</th>
+                          <th className="px-2 py-1.5 text-left font-medium whitespace-nowrap">마지막 상담일</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {list.map((n, idx) => {
+                          const cfg = REASON_CONFIG[n.reason];
+                          return (
+                            <tr key={`${n.studentId}-${n.subject}-${idx}`} className="border-b border-gray-100">
+                              <td className="px-2 py-1.5 font-medium text-gray-900 whitespace-nowrap">{n.studentName}</td>
+                              <td className="px-2 py-1.5 whitespace-nowrap">
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${cfg.bg} ${cfg.text}`} title={n.reasonDetail || cfg.label}>
+                                  <span>{cfg.icon}</span>
+                                  <span>{cfg.label}</span>
+                                </span>
+                                {n.reasonDetail && (
+                                  <span className="ml-1.5 text-[10px] text-gray-400">{n.reasonDetail}</span>
+                                )}
+                              </td>
+                              <td className="px-2 py-1.5 text-gray-600 font-mono whitespace-nowrap">
+                                {n.lastConsultationDate || (
+                                  <span className="text-red-500">(상담 기록 없음)</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              );
+
+              return (
+                <div className="grid grid-cols-2 gap-3">
+                  {renderTable(mathList, '수학', 'bg-blue-50 text-blue-800')}
+                  {renderTable(engList, '영어', 'bg-purple-50 text-purple-800')}
+                </div>
+              );
+            })()}
+            {needing.length > 200 && (
               <div className="text-[10px] text-gray-400 mt-1">
-                상위 100건 표시. 전체 {needing.length}건은 학생 상담 탭에서 확인하세요.
+                과목별 상위 100건씩 표시. 전체 {needing.length}건은 학생 상담 탭에서 확인하세요.
               </div>
             )}
           </section>
