@@ -109,9 +109,22 @@ const ConsultationDetailsModal: React.FC<ConsultationDetailsModalProps> = ({
             <span className="text-xs text-indigo-500">{yearMonth}</span>
           </div>
           <div className="flex items-center gap-2">
-            <RemarksPopover notes={[
-              '고등부 학생은 상담 대상에서 제외됩니다.',
-            ]} />
+            <RemarksPopover
+              notes={[
+                '고등부 학생은 상담 대상에서 제외됩니다.',
+              ]}
+              details={[
+                stats?.excludedHighSchoolStudents && stats.excludedHighSchoolStudents.length > 0
+                  ? {
+                      heading: '제외된 고등부 학생',
+                      items: stats.excludedHighSchoolStudents.map(s => ({
+                        label: s.name,
+                        sublabel: [s.grade, s.school].filter(Boolean).join(' · '),
+                      })),
+                    }
+                  : null,
+              ]}
+            />
             <button onClick={onClose} className="p-1 hover:bg-indigo-100 rounded">
               <X size={16} />
             </button>

@@ -81,6 +81,8 @@ export interface ConsultationStatsResult {
   totalSubjectEnrollments: number;  // 전체 과목 수강 건수 (수학+영어 동시 수강 → 2건)
   completedCount: number;  // 이번 달 상담 완료된 (학생×과목) 건수
   meaningfulTargetCount: number;  // 상담 대상 (학생×과목) — 이력/예정 0 건인 진행 대기중 제외
+  /** 고등부(고1/고2/고3) 상담 대상에서 제외된 학생 목록 (비고란 표시용) */
+  excludedHighSchoolStudents: { id: string; name: string; grade: string; school: string; enrolledSubjects: ('math' | 'english')[] }[];
 }
 
 /**
@@ -320,10 +322,14 @@ export function useConsultationStats(
 
       // 학생 ID -> 이름 매핑 + 등록일(startDate or createdAt) 매핑
       const studentMap = new Map<string, string>();
+      const studentGradeMap = new Map<string, string>();   // 고1/고2/고3 등 학년 필터용
+      const studentSchoolMap = new Map<string, string>();  // 학교명 (제외 학생 표시용)
       const studentStartDateMap = new Map<string, string>();  // YYYY-MM-DD
       studentsSnapshot.docs.forEach(doc => {
         const data = doc.data();
         studentMap.set(doc.id, data.name || '(이름없음)');
+        if (data.grade) studentGradeMap.set(doc.id, String(data.grade));
+        if (data.schoolName || data.school) studentSchoolMap.set(doc.id, String(data.schoolName || data.school));
         // startDate 우선, 없으면 createdAt 의 날짜 부분
         let startDate: string | undefined = data.startDate || data.enrollmentDate;
         if (!startDate && data.createdAt) {
@@ -563,17 +569,31 @@ export function useConsultationStats(
         });
       });
 
-      // 수강과목이 있는 재원생만 필터링
+      // 수강과목이 있는 재원생만 필터링 — 고등부(고1/고2/고3) 학생은 상담 대상에서 제외
       const eligibleStudents: { id: string; name: string; enrolledSubjects: ('math' | 'english')[] }[] = [];
+      const excludedHighSchoolStudents: { id: string; name: string; grade: string; school: string; enrolledSubjects: ('math' | 'english')[] }[] = [];
       studentEnrollmentMap.forEach((subjects, studentId) => {
-        if (subjects.size > 0) {
-          eligibleStudents.push({
+        if (subjects.size === 0) return;
+        const grade = studentGradeMap.get(studentId) || '';
+        const isHighSchool = grade === '고1' || grade === '고2' || grade === '고3';
+        if (isHighSchool) {
+          excludedHighSchoolStudents.push({
             id: studentId,
             name: studentMap.get(studentId) || '(이름없음)',
+            grade,
+            school: studentSchoolMap.get(studentId) || '',
             enrolledSubjects: Array.from(subjects),
           });
+          return;
         }
+        eligibleStudents.push({
+          id: studentId,
+          name: studentMap.get(studentId) || '(이름없음)',
+          enrolledSubjects: Array.from(subjects),
+        });
       });
+      // 이름 가나다순 정렬 (목록 표시용)
+      excludedHighSchoolStudents.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
 
       // 3. 학생별 과목별 상담 여부 체크 (과목 단위로 분리)
       // 선택 기간 내 상담 기록을 학생ID+과목 키로 매핑
@@ -799,6 +819,7 @@ export function useConsultationStats(
         totalSubjectEnrollments,  // 전체 과목 수강 건수 (사실 데이터, 변하지 않음)
         completedCount,
         meaningfulTargetCount,
+        excludedHighSchoolStudents,
       };
     },
     staleTime: 1000 * 60 * 5, // 5분 캐싱
@@ -826,6 +847,7 @@ export function useConsultationStats(
       totalSubjectEnrollments: 0,
       completedCount: 0,
       meaningfulTargetCount: 0,
+      excludedHighSchoolStudents: [],
     },
     loading: isLoading,
     error,
