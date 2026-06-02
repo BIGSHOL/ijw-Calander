@@ -1266,7 +1266,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
                     <div className="flex items-center gap-2">
                         <h2 className="text-sm font-bold text-primary">
-                            {draftId ? '상담대기 목록 → 상담하기' : initialData?.id ? (isViewMode ? '상담 기록 조회' : '상담 기록 수정') : '새 상담 등록'}
+                            {draftId ? '상담대기 목록 → 상담하기' : initialData?.id ? (isViewMode ? '상담 기록 조회' : '상담 기록 수정') : 'NEW 상담'}
                         </h2>
                         {initialData?.id && (
                             <button
