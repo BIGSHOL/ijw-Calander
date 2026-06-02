@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { ref, uploadBytesResumable } from 'firebase/storage';
-import { collection, doc, getDocs, onSnapshot, orderBy, query, limit, where } from 'firebase/firestore';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ref, uploadBytesResumable, deleteObject } from 'firebase/storage';
+import { collection, doc, getDocs, onSnapshot, orderBy, query, limit, where, deleteDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getApp } from 'firebase/app';
 import { db, storage } from '../firebaseConfig';
@@ -638,5 +638,31 @@ export function useRegistrationRecordingReports() {
       return snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as any);
     },
     staleTime: 1000 * 60 * 5,
+  });
+}
+
+/**
+ * 등록 상담 녹음 보고서 삭제 (Firestore 문서 + Storage 파일)
+ */
+export function useDeleteRegistrationRecordingReport() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (report: { id: string; storagePath?: string }) => {
+      if (report.storagePath) {
+        try {
+          const storageRef = ref(storage, report.storagePath);
+          await deleteObject(storageRef);
+        } catch (err: unknown) {
+          if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code !== 'storage/object-not-found') {
+            throw err;
+          }
+        }
+      }
+      await deleteDoc(doc(db, 'registration_recording_reports', report.id));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['registration_recording_reports'] });
+    },
   });
 }
