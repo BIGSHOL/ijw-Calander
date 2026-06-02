@@ -6772,51 +6772,96 @@ exports.processRegistrationRecording = functions
         });
 
         try {
-            // 1. Signed URL
+            // 1. Signed URL + 메타데이터
             const bucket = admin.storage().bucket();
             const file = bucket.file(storagePath);
-            const [signedUrl] = await file.getSignedUrl({ action: "read", expires: Date.now() + 30 * 60 * 1000 });
             const [metadata] = await file.getMetadata();
             const fileSizeMB = ((metadata.size || 0) / (1024 * 1024)).toFixed(1);
 
-            // 2. AssemblyAI 전사
-            const transcriptResponse = await fetch("https://api.assemblyai.com/v2/transcript", {
-                method: "POST",
-                headers: { "Authorization": assemblyAiKey, "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    audio_url: signedUrl,
-                    language_code: "ko",
-                    speaker_labels: true,
-                    speech_models: ["universal-3-pro", "universal-2"],
-                    word_boost: ACADEMY_WORD_BOOST,
-                    boost_param: "high",
-                }),
-            });
-            const { id: transcriptId } = await transcriptResponse.json();
-
-            // 3. 폴링 (파일 크기 기반 예상 시간)
-            const estimatedPolls = Math.max(8, Math.round(parseFloat(fileSizeMB) * 2));
-            let transcript = null;
-            for (let i = 0; i < 90; i++) {
-                await new Promise(r => setTimeout(r, 5000));
-                const pollRes = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
-                    headers: { "Authorization": assemblyAiKey },
-                });
-                const pollData = await pollRes.json();
-                if (pollData.status === "completed") { transcript = pollData; break; }
-                if (pollData.status === "error") throw new Error("음성 인식 실패: " + (pollData.error || ""));
-                if (i % 6 === 0) {
-                    const rawPct = Math.round((i / estimatedPolls) * 95);
-                    const minPct = pollData.status === "processing" ? 15 : 0;
-                    const pct = Math.min(Math.max(rawPct, minPct), 95);
-                    const label = pollData.status === "queued" ? `음성 인식 준비 중... (${pct}%)` : `음성을 텍스트로 변환 중... (${pct}%)`;
-                    await reportRef.update({ statusMessage: label, updatedAt: Date.now() });
+            // 1-A. 캐시 확인 — 같은 storagePath 로 기존에 전사가 완료된 보고서가 있으면 재사용 (AssemblyAI 호출 스킵)
+            //      "상담녹음에서 불러오기" 같은 케이스에서 같은 녹음 파일을 재분석할 때 transcription 시간을 절약.
+            let fullText = "";
+            let audioDuration = 0;
+            let speakerLabels = [];
+            let cachedTranscript = null;
+            try {
+                for (const collName of ["registration_recording_reports", "consultation_reports"]) {
+                    const snap = await db.collection(collName)
+                        .where("storagePath", "==", storagePath)
+                        .limit(5)
+                        .get();
+                    for (const doc of snap.docs) {
+                        const d = doc.data() || {};
+                        const t = (d.transcription || d.transcript || "").trim();
+                        if (t && t.length >= 30) {
+                            cachedTranscript = {
+                                text: t,
+                                durationSeconds: d.durationSeconds || d.audioDuration || 0,
+                                speakerLabels: Array.isArray(d.speakerLabels) ? d.speakerLabels : [],
+                            };
+                            break;
+                        }
+                    }
+                    if (cachedTranscript) break;
                 }
+            } catch (cacheErr) {
+                logger.warn("[processRegistrationRecording] cache lookup failed", { err: cacheErr?.message });
             }
-            if (!transcript) throw new Error("음성 인식 시간 초과");
 
-            const fullText = (transcript.text || "").trim();
-            const audioDuration = Math.round(transcript.audio_duration || 0);
+            if (cachedTranscript) {
+                logger.info("[processRegistrationRecording] reusing cached transcript", { storagePath, len: cachedTranscript.text.length });
+                fullText = cachedTranscript.text;
+                audioDuration = cachedTranscript.durationSeconds;
+                speakerLabels = cachedTranscript.speakerLabels;
+                await reportRef.update({
+                    statusMessage: "기존 전사 결과를 재사용합니다 (음성 인식 건너뜀)...",
+                    updatedAt: Date.now(),
+                });
+            } else {
+                // 2. AssemblyAI 전사 (캐시 없을 때만)
+                const [signedUrl] = await file.getSignedUrl({ action: "read", expires: Date.now() + 30 * 60 * 1000 });
+                const transcriptResponse = await fetch("https://api.assemblyai.com/v2/transcript", {
+                    method: "POST",
+                    headers: { "Authorization": assemblyAiKey, "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        audio_url: signedUrl,
+                        language_code: "ko",
+                        speaker_labels: true,
+                        speech_models: ["universal-3-pro", "universal-2"],
+                        word_boost: ACADEMY_WORD_BOOST,
+                        boost_param: "high",
+                    }),
+                });
+                const { id: transcriptId } = await transcriptResponse.json();
+
+                // 3. 폴링 (파일 크기 기반 예상 시간)
+                const estimatedPolls = Math.max(8, Math.round(parseFloat(fileSizeMB) * 2));
+                let transcript = null;
+                for (let i = 0; i < 90; i++) {
+                    await new Promise(r => setTimeout(r, 5000));
+                    const pollRes = await fetch(`https://api.assemblyai.com/v2/transcript/${transcriptId}`, {
+                        headers: { "Authorization": assemblyAiKey },
+                    });
+                    const pollData = await pollRes.json();
+                    if (pollData.status === "completed") { transcript = pollData; break; }
+                    if (pollData.status === "error") throw new Error("음성 인식 실패: " + (pollData.error || ""));
+                    if (i % 6 === 0) {
+                        const rawPct = Math.round((i / estimatedPolls) * 95);
+                        const minPct = pollData.status === "processing" ? 15 : 0;
+                        const pct = Math.min(Math.max(rawPct, minPct), 95);
+                        const label = pollData.status === "queued" ? `음성 인식 준비 중... (${pct}%)` : `음성을 텍스트로 변환 중... (${pct}%)`;
+                        await reportRef.update({ statusMessage: label, updatedAt: Date.now() });
+                    }
+                }
+                if (!transcript) throw new Error("음성 인식 시간 초과");
+
+                fullText = (transcript.text || "").trim();
+                audioDuration = Math.round(transcript.audio_duration || 0);
+                speakerLabels = (transcript.utterances || []).map(u => ({
+                    speaker: u.speaker, text: u.text, start: u.start, end: u.end,
+                }));
+            }
+
             const textLength = fullText.replace(/\s+/g, "").length;
 
             if (!fullText || textLength < 30) {
@@ -6845,13 +6890,7 @@ exports.processRegistrationRecording = functions
                 return { reportId: reportRef.id, status: "failed" };
             }
 
-            // speaker labels 추출 (상담녹음분석과 동일)
-            const speakerLabels = (transcript.utterances || []).map(u => ({
-                speaker: u.speaker,
-                text: u.text,
-                start: u.start,
-                end: u.end,
-            }));
+            // speaker labels — 캐시 케이스/신규 케이스 모두 위에서 채워둔 speakerLabels 사용
             const speakerCount = new Set(speakerLabels.map(s => s.speaker)).size;
             const formattedTranscript = speakerLabels.length > 0
                 ? speakerLabels.map(s => `[화자 ${s.speaker}] ${s.text}`).join("\n")
@@ -6862,6 +6901,7 @@ exports.processRegistrationRecording = functions
                 statusMessage: "AI가 등록상담 내용을 분석 중...",
                 transcription: fullText,
                 durationSeconds: audioDuration,
+                speakerLabels: speakerLabels || [],
                 updatedAt: Date.now(),
             });
 
