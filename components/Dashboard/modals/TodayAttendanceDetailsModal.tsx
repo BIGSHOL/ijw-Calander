@@ -10,7 +10,6 @@ import { X } from 'lucide-react';
 import { useDailyAttendanceByRange } from '../../../hooks/useDailyAttendance';
 import { useWeeklyAttendanceFromRecords } from '../../../hooks/useWeeklyAttendanceFromRecords';
 import { format, subDays } from 'date-fns';
-import { RemarksPopover } from '../../Common/RemarksPopover';
 
 interface TodayAttendanceDetailsModalProps {
   isOpen: boolean;
@@ -150,14 +149,9 @@ const TodayAttendanceDetailsModal: React.FC<TodayAttendanceDetailsModalProps> = 
             <h2 className="font-bold text-sm text-emerald-900">출석률 — 근거 데이터 (날짜별 검증)</h2>
             <span className="text-xs text-emerald-600">{range[0]} ~ {range[range.length - 1]}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <RemarksPopover notes={[
-              '고등부 학생은 상담 대상에서 제외됩니다.',
-            ]} />
-            <button onClick={onClose} className="p-1 hover:bg-emerald-100 rounded">
-              <X size={16} />
-            </button>
-          </div>
+          <button onClick={onClose} className="p-1 hover:bg-emerald-100 rounded">
+            <X size={16} />
+          </button>
         </div>
 
         {/* 날짜 선택 + 선택일 요약 */}

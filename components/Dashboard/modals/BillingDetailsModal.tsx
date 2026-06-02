@@ -8,7 +8,6 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { BillingRecord } from '../../../types/billing';
 import { useBilling } from '../../../hooks/useBilling';
-import { RemarksPopover } from '../../Common/RemarksPopover';
 
 interface BillingDetailsModalProps {
   isOpen: boolean;
@@ -110,14 +109,9 @@ const BillingDetailsModal: React.FC<BillingDetailsModalProps> = ({
             <span className="text-amber-700 text-lg">💰</span>
             <h2 className="font-bold text-sm text-amber-900">수납률 — 근거 데이터</h2>
           </div>
-          <div className="flex items-center gap-2">
-            <RemarksPopover notes={[
-              '고등부 학생은 상담 대상에서 제외됩니다.',
-            ]} />
-            <button onClick={onClose} className="p-1 hover:bg-amber-100 rounded">
-              <X size={16} />
-            </button>
-          </div>
+          <button onClick={onClose} className="p-1 hover:bg-amber-100 rounded">
+            <X size={16} />
+          </button>
         </div>
 
         {/* 월 페이지 네비 (수납은 월 단위 데이터라 월 페이지만) */}

@@ -9,7 +9,6 @@ import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { UnifiedStudent } from '../../../types/student';
 import { isActiveEnrollment } from '../../../utils/dashboardUtils';
 import { getMonthRange } from '../../../utils/datePeriod';
-import { RemarksPopover } from '../../Common/RemarksPopover';
 
 interface NewStudentsModalProps {
   isOpen: boolean;
@@ -91,14 +90,9 @@ const NewStudentsModal: React.FC<NewStudentsModalProps> = ({
             <span className="text-pink-700 text-lg">🆕</span>
             <h2 className="font-bold text-sm text-pink-900">신입생 — 근거 데이터</h2>
           </div>
-          <div className="flex items-center gap-2">
-            <RemarksPopover notes={[
-              '고등부 학생은 상담 대상에서 제외됩니다.',
-            ]} />
-            <button onClick={onClose} className="p-1 hover:bg-pink-100 rounded">
-              <X size={16} />
-            </button>
-          </div>
+          <button onClick={onClose} className="p-1 hover:bg-pink-100 rounded">
+            <X size={16} />
+          </button>
         </div>
 
         {/* 월 페이지 네비 */}
