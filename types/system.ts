@@ -159,7 +159,7 @@ export const TAB_GROUPS: TabGroup[] = [
   {
     id: 'support',
     label: '지원',
-    icon: '🛟',
+    icon: '🆘',
     tabs: ['help', 'logs'],
     order: 5,
   },
