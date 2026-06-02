@@ -1347,7 +1347,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                     )}
                                 </div>
 
-                                {(recording.status === 'idle' || recording.status === 'completed') && !recording.isRecording && !recordingFile && (
+                                {!recording.isRecording && !recordingFile && recording.status !== 'uploading' && recording.status !== 'transcribing' && recording.status !== 'analyzing' && (
                                     <div className="space-y-2">
                                         <div className="flex gap-2">
                                             <button
