@@ -1418,11 +1418,14 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                                                             <div className="text-[10px] text-black opacity-70">{r.consultationDate}</div>
                                                                         )}
                                                                     </div>
-                                                                    <span className={`text-[10px] font-bold shrink-0 ${
-                                                                        r?.status === 'completed' ? 'text-emerald-600'
-                                                                        : r?.status === 'error' ? 'text-red-600'
-                                                                        : 'text-blue-700'
-                                                                    }`}>
+                                                                    <span
+                                                                        className={`text-[10px] font-bold shrink-0 ${
+                                                                            r?.status === 'completed' ? 'text-emerald-600'
+                                                                            : r?.status === 'error' ? 'text-red-600 cursor-help'
+                                                                            : 'text-blue-700'
+                                                                        }`}
+                                                                        title={r?.status === 'error' ? (r?.errorMessage || r?.error || '처리 중 오류') : ''}
+                                                                    >
                                                                         {statusKor}
                                                                     </span>
                                                                     <button
