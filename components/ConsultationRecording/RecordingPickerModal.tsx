@@ -5,6 +5,8 @@ import { useConsultationReports, useDeleteConsultationReport } from '../../hooks
 import { useRegistrationRecordingReports, useDeleteRegistrationRecordingReport } from '../../hooks/useRegistrationRecording';
 
 export interface SelectedRecording {
+  id: string;
+  source: 'consultation' | 'registration';
   storagePath: string;
   studentName: string;
   consultationDate: string;
@@ -182,6 +184,8 @@ export function RecordingPickerModal({ isOpen, onClose, source, onSelect }: Reco
                     toggleSelect(item.id);
                   } else {
                     onSelect({
+                      id: item.id,
+                      source,
                       storagePath: item.storagePath,
                       studentName: item.studentName,
                       consultationDate: item.consultationDate,

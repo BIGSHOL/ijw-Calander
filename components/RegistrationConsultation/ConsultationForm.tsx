@@ -893,28 +893,15 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
     }, []);
 
     // 교차 분석: 상담녹음에서 불러오기
+    //
+    // Cloud Function 재호출 없이 Firestore 의 기존 분석 결과를 그대로 가져와 폼에 적용.
+    // 원본 Storage 파일이 삭제된 케이스(예: 김서율_2026-05-30 "No such object" 에러) 에서도 정상 동작.
     const handleImportFromConsultation = useCallback(async (selected: SelectedRecording) => {
-        try {
-            const studentContext: Record<string, unknown> = {};
-            if (formData.schoolName) studentContext.schoolName = formData.schoolName;
-            if (formData.grade) studentContext.grade = formData.grade;
-            if (formData.parentName) studentContext.parentName = formData.parentName;
-            if (formData.parentRelation) studentContext.parentRelation = formData.parentRelation;
-            if (formData.parentPhone) studentContext.parentPhone = formData.parentPhone;
-            if (formData.address) studentContext.address = formData.address;
-
-            await recording.processFromPath({
-                storagePath: selected.storagePath,
-                studentName: formData.studentName || selected.studentName || '미입력',
-                consultationDate: formData.consultationDate || selected.consultationDate || '',
-                counselorName: formData.counselor || selected.consultantName || '',
-                fileName: selected.fileName,
-                ...(Object.keys(studentContext).length > 0 ? { studentContext } : {}),
-            });
-        } catch {
-            // error handled by hook
-        }
-    }, [recording, formData]);
+        const collectionName = selected.source === 'consultation'
+            ? 'consultation_reports'
+            : 'registration_recording_reports';
+        await recording.attachExistingReport(selected.id, collectionName);
+    }, [recording]);
 
     const formatDuration = (sec: number) => {
         const m = Math.floor(sec / 60);
@@ -1391,7 +1378,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                                                     : r?.status === 'error' ? 'text-red-600 cursor-help'
                                                                     : 'text-blue-700'
                                                                 }`}
-                                                                title={r?.status === 'error' ? (r?.errorMessage || r?.error || '처리 중 오류') : ''}
+                                                                title={r?.status === 'error' ? ((r as any)?.errorMessage || r?.statusMessage || '처리 중 오류') : ''}
                                                             >
                                                                 {statusKor}
                                                             </span>

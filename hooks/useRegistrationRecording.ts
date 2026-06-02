@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ref, uploadBytesResumable, deleteObject } from 'firebase/storage';
-import { collection, doc, getDocs, onSnapshot, orderBy, query, limit, where, deleteDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, limit, where, deleteDoc } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { getApp } from 'firebase/app';
 import { db, storage } from '../firebaseConfig';
@@ -392,6 +392,64 @@ export function useRegistrationRecording() {
   }, []);
 
   // 다중 보고서 ID 일괄 로드 (모달 재오픈 시 v2 복원용)
+  /**
+   * 기존 보고서 ID 를 reportIds 에 append + extractedData 를 폼에 적용.
+   * "상담녹음에서 불러오기" 처럼 Cloud Function 호출 없이 Firestore 의 기존 분석 결과를
+   * 그대로 폼에 자동 채우고 싶을 때 사용. 원본 Storage 파일 삭제된 경우에도 정상 동작.
+   *
+   * 동작:
+   *  1. 지정한 컬렉션(consultation_reports / registration_recording_reports) 에서 doc 직접 fetch
+   *  2. reportsData 에 직접 주입 (registration_recording_reports 의 onSnapshot 구독은 해당 ID 없어도 무시됨)
+   *  3. reportIds 에 append → 녹음 목록에 1차/2차/3차 누적 표시
+   *  4. extractedData 가 있으면 setExtractedData → 폼 자동채우기 effect 트리거
+   */
+  const attachExistingReport = useCallback(async (
+    existingReportId: string,
+    collectionName: 'consultation_reports' | 'registration_recording_reports' = 'consultation_reports',
+  ): Promise<void> => {
+    if (!existingReportId) return;
+    try {
+      const snap = await getDoc(doc(db, collectionName, existingReportId));
+      if (!snap.exists()) {
+        setError('녹음 보고서를 찾을 수 없습니다.');
+        return;
+      }
+      const data = snap.data() as Record<string, unknown>;
+      const next: ReportFullData = {
+        id: existingReportId,
+        status: (data.status as ProcessStatus) || 'completed',
+        statusMessage: (data.statusMessage as string) || '',
+        report: data.report as any,
+        speakerRoles: data.speakerRoles as any,
+        transcription: data.transcription as string | undefined,
+        speakerLabels: data.speakerLabels as any,
+        durationSeconds: data.durationSeconds as number | undefined,
+        studentName: data.studentName as string | undefined,
+        consultationDate: data.consultationDate as string | undefined,
+        consultantName: (data.consultantName ?? data.counselorName) as string | undefined,
+        isMerged: !!data.isMerged,
+        mergedFrom: data.mergedFrom as any,
+        mergedAt: data.mergedAt as any,
+        createdAt: data.createdAt as any,
+        fileName: data.fileName as string | undefined,
+        storagePath: data.storagePath as string | undefined,
+      };
+      setReportsData(prev => ({ ...prev, [existingReportId]: next }));
+      setReportIds(prev => prev.includes(existingReportId) ? prev : [...prev, existingReportId]);
+      setActiveReportId(existingReportId);
+      setStatus('idle');
+      setStatusMessage('');
+      setError(null);
+      // 폼 자동 채우기 트리거 — ConsultationForm 의 useEffect 가 extractedData 변경 감지
+      if (data.extractedData) {
+        setExtractedData(data.extractedData as RegistrationExtractedData);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '보고서 불러오기 실패';
+      setError(msg);
+    }
+  }, []);
+
   // recordingReportIds 배열을 받아 N개 onSnapshot 구독
   const loadExistingReports = useCallback((ids: string[]) => {
     if (!ids || ids.length === 0) return;
@@ -585,6 +643,7 @@ export function useRegistrationRecording() {
     processFromPath,
     loadExistingReport,
     loadExistingReports,
+    attachExistingReport,
     loadAnalysisReportByMatch,
     removeReport,
     regenerateMergedReport,
