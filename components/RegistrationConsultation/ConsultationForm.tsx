@@ -1347,16 +1347,22 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                     )}
                                 </div>
 
-                                {recording.status === 'idle' && !recording.isRecording && !recordingFile && (
+                                {(recording.status === 'idle' || recording.status === 'completed') && !recording.isRecording && !recordingFile && (
                                     <div className="space-y-2">
                                         <div className="flex gap-2">
                                             <button
                                                 type="button"
-                                                onClick={handlePopupRecording}
+                                                onClick={() => {
+                                                    // 누적 녹음(2차/3차…): 이전 보고서 유지하고 status 만 리셋
+                                                    if (recording.reportIds.length > 0 && recording.status === 'completed') {
+                                                        recording.startNewAnalysis();
+                                                    }
+                                                    handlePopupRecording();
+                                                }}
                                                 className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-sm text-xs font-bold transition-colors"
                                             >
                                                 <Mic size={14} />
-                                                녹음 시작
+                                                {recording.reportIds.length > 0 ? `${recording.reportIds.length + 1}차 녹음 시작` : '녹음 시작'}
                                             </button>
                                             <label className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-white border border-purple-300 text-purple-700 rounded-sm text-xs font-bold hover:bg-purple-50 cursor-pointer transition-colors">
                                                 <Upload size={14} />
