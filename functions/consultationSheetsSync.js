@@ -97,6 +97,12 @@ function schoolTypeFromGrade(grade) {
     return "";
 }
 
+function gradeNumberOnly(grade) {
+    if (!grade) return "";
+    const m = String(grade).match(/^[초중고](\d+)$/);
+    return m ? m[1] : String(grade);
+}
+
 function joinAddress(a, b) {
     return [a, b].filter(nonEmpty).join(" ");
 }
@@ -363,7 +369,7 @@ function buildRow(c) {
         genderKr(c.gender),                                           // C
         c.schoolName || "",                                           // D
         schoolTypeFromGrade(c.grade),                                 // E
-        c.grade || "",                                                // F
+        gradeNumberOnly(c.grade),                                     // F
         c.careerGoal || "",                                           // G
         c.parentRelation || "",                                       // H
         c.parentName || "",                                           // I
