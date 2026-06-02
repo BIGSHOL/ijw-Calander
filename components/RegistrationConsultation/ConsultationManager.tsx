@@ -751,7 +751,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                             }`}
                             style={pendingCount > 0 ? { color: 'white' } : { color: 'black' }}
                         >
-                            대기 목록
+                            상담대기 목록
                             {pendingCount > 0 && (
                                 <span className="ml-1.5 bg-white rounded-full px-1.5 text-[10px] font-bold leading-none flex items-center" style={{ color: '#d97706' }}>
                                     {pendingCount}
