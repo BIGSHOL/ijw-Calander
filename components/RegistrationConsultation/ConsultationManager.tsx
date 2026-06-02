@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect, Suspense, lazy } from
 import { ConsultationRecord, UserProfile, UnifiedStudent, SchoolGrade, ConsultationSubject, ConsultationStatus, LevelTest } from '../../types';
 import { ConsultationDraft } from '../../types/consultationDraft';
 import { useConsultations, useCreateConsultation, useUpdateConsultation, useDeleteConsultation, isRegisteredStatus } from '../../hooks/useConsultations';
-import { usePendingDraftCount, useConsultationDrafts, useConvertDraft, useDeleteDraft } from '../../hooks/useConsultationDrafts';
+import { usePendingDraftCount, useConsultationDrafts, useConvertDraft, useDeleteDraft, useReturnConsultationToDraft } from '../../hooks/useConsultationDrafts';
 import { useStudents } from '../../hooks/useStudents';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAddLevelTest, determineLevel } from '../../hooks/useGradeProfile';
@@ -150,6 +150,28 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
     const { data: drafts = [] } = useConsultationDrafts();
     const convertDraft = useConvertDraft();
     const deleteDraft = useDeleteDraft();
+    const returnToDraft = useReturnConsultationToDraft();
+
+    // 되돌리기: 등록상담 → 상담대기 목록 (consultation_drafts 신규 생성 + 원본 consultation 삭제)
+    // 연결된 학생 doc 은 안전을 위해 보존
+    const handleReturnToDraft = useCallback(async (record: ConsultationRecord) => {
+        const ok = window.confirm(
+            `"${record.studentName}" 상담을 상담대기 목록으로 되돌리시겠습니까?\n\n` +
+            `• 이 상담은 등록상담 목록에서 제거되고 상담대기 목록에 다시 표시됩니다.\n` +
+            `${record.registeredStudentId ? '• 연결된 학생 정보는 보존됩니다 (연결만 해제).\n' : ''}` +
+            `• 이 동작은 되돌릴 수 없습니다.`
+        );
+        if (!ok) return;
+
+        try {
+            await returnToDraft.mutateAsync(record);
+            await deleteConsultation.mutateAsync(record.id);
+            setSuccessMessage('상담대기 목록으로 되돌렸습니다.');
+        } catch (err) {
+            console.error('되돌리기 실패:', err);
+            alert('되돌리기에 실패했습니다.\n' + (err instanceof Error ? err.message : String(err)));
+        }
+    }, [returnToDraft, deleteConsultation]);
 
     const handleAddRecord = useCallback((record: Omit<ConsultationRecord, 'id' | 'createdAt'>) => {
         createConsultation.mutate({
@@ -925,6 +947,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                             pendingSubjectFilter={pendingSubjectFilter}
                             onMigrationClick={() => setShowMigrationModal(true)}
                             canMigrate={canConvert || canManage}
+                            onReturnToDraft={handleReturnToDraft}
                         />
                     )}
 

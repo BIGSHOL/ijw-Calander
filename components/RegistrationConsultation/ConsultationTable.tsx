@@ -28,6 +28,7 @@ interface ConsultationTableProps {
     pendingSubjectFilter?: { values: string[]; token: number };
     onMigrationClick?: () => void; // DB 이전 모달 열기 (페이지네이션 바에 배치)
     canMigrate?: boolean;
+    onReturnToDraft?: (record: ConsultationRecord) => void; // 등록상담 → 상담대기 목록 되돌리기
 }
 
 // 필터 상태 타입
@@ -155,6 +156,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
     conversionStatusMap, onLinkStudent,
     pendingStatusFilter, pendingSubjectFilter,
     onMigrationClick, canMigrate = false,
+    onReturnToDraft,
 }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(loadSavedColumns);
@@ -763,16 +765,16 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                         {/* 전환 열 — 전환 버튼 + 전환 상태 표시 (둘 다 표시) */}
                                         <td className="px-2 py-1.5 whitespace-nowrap text-center relative" style={{ minWidth: '95px', width: '95px' }}>
                                             <div className="inline-flex items-center justify-center gap-1">
-                                                {/* 전환 버튼 — ↩️ 아이콘만, 텍스트 없음 */}
-                                                {canConvert && onConvertToStudent && (
+                                                {/* 되돌리기 버튼 — 등록상담 → 상담대기 목록 */}
+                                                {canConvert && onReturnToDraft && (
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            onConvertToStudent(record);
+                                                            onReturnToDraft(record);
                                                         }}
                                                         className="inline-flex items-center justify-center p-1 rounded-sm bg-sky-500 hover:bg-sky-600 transition-colors"
                                                         style={{ color: 'white' }}
-                                                        title="되돌리기"
+                                                        title="상담대기 목록으로 되돌리기"
                                                     >
                                                         <Undo2 size={14} />
                                                     </button>

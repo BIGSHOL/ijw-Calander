@@ -4,6 +4,7 @@ import {
     collection,
     updateDoc,
     deleteDoc,
+    addDoc,
     doc,
     query,
     where,
@@ -12,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { ConsultationDraft } from '../types/consultationDraft';
+import { ConsultationRecord } from '../types';
 
 const COLLECTION_NAME = 'consultation_drafts';
 
@@ -83,6 +85,50 @@ export const useConvertDraft = () => {
         },
         onError: (error: Error) => {
             console.error('[useConvertDraft] mutation error:', error);
+        },
+    });
+};
+
+/**
+ * 등록상담을 상담대기 목록으로 되돌리기.
+ * - consultation_drafts 컬렉션에 신규 draft 생성 (status='pending')
+ * - 원본 consultation 레코드 삭제 호출은 mutation 사용처에서 수행
+ * - 연결된 학생 doc 은 건드리지 않음 (안전)
+ */
+export const useReturnConsultationToDraft = () => {
+    return useMutation({
+        mutationFn: async (record: ConsultationRecord) => {
+            const draftData: Omit<ConsultationDraft, 'id'> = {
+                tokenId: 'returned-from-consultation',
+                status: 'pending',
+                studentName: record.studentName,
+                gender: (record.gender as any) || undefined,
+                bloodType: record.bloodType || '',
+                studentPhone: record.studentPhone || '',
+                careerGoal: record.careerGoal || '',
+                schoolName: record.schoolName,
+                grade: String(record.grade || ''),
+                subjects: record.subject ? [String(record.subject)] : [],
+                siblings: record.siblings || '',
+                parentName: record.parentName || '',
+                parentRelation: record.parentRelation || '모',
+                parentPhone: record.parentPhone || '',
+                consultationPath: record.consultationPath || '',
+                address: record.address || '',
+                shuttleBusRequest: record.shuttleBusRequest ?? false,
+                privacyAgreement: record.privacyAgreement ?? false,
+                installmentAgreement: record.installmentAgreement ?? false,
+                submittedAt: new Date().toISOString(),
+            };
+            // undefined 필드 제거 (Firestore 거부 방지)
+            const cleaned = Object.fromEntries(
+                Object.entries(draftData).filter(([, v]) => v !== undefined)
+            );
+            const ref = await addDoc(collection(db, COLLECTION_NAME), cleaned);
+            return ref.id;
+        },
+        onError: (error: Error) => {
+            console.error('[useReturnConsultationToDraft] mutation error:', error);
         },
     });
 };
