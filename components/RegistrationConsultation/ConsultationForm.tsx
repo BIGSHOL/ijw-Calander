@@ -933,12 +933,8 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
             '등록완료': ConsultationStatus.Registered,
         };
 
-        // [N차 분석 — YYYY.MM.DD] 라벨 붙여 텍스트 누적 append
-        const todayLabel = (() => {
-            const d = new Date();
-            return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`;
-        })();
-        const sectionLabel = `[${roundNumber}차 분석 — ${todayLabel}]`;
+        // ●N차 상담 요약 헤더로 텍스트 누적 append (수기기록 내용 아래에 차례로 추가됨)
+        const sectionLabel = `●${roundNumber}차 상담 요약\n-----`;
         const appendLabeled = (existing: string | undefined, incoming: string | undefined): string => {
             const inc = (incoming || '').trim();
             if (!inc) return existing || '';
