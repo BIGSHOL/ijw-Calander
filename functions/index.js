@@ -6772,14 +6772,9 @@ exports.processRegistrationRecording = functions
         });
 
         try {
-            // 1. Signed URL + 메타데이터
-            const bucket = admin.storage().bucket();
-            const file = bucket.file(storagePath);
-            const [metadata] = await file.getMetadata();
-            const fileSizeMB = ((metadata.size || 0) / (1024 * 1024)).toFixed(1);
-
-            // 1-A. 캐시 확인 — 같은 storagePath 로 기존에 전사가 완료된 보고서가 있으면 재사용 (AssemblyAI 호출 스킵)
-            //      "상담녹음에서 불러오기" 같은 케이스에서 같은 녹음 파일을 재분석할 때 transcription 시간을 절약.
+            // 1-A. 캐시 확인 (Storage 파일 접근 전에 먼저 실행)
+            //      같은 storagePath 로 기존에 전사가 완료된 보고서가 있으면 transcription/speakerLabels/audioDuration 재사용 → AssemblyAI + Storage 접근 모두 스킵.
+            //      "상담녹음에서 불러오기" + 원본 Storage 파일 삭제된 경우(예: 김서율 2026-05-30) 에서도 정상 동작.
             let fullText = "";
             let audioDuration = 0;
             let speakerLabels = [];
@@ -6818,6 +6813,25 @@ exports.processRegistrationRecording = functions
                     updatedAt: Date.now(),
                 });
             } else {
+                // 캐시 miss → Storage 접근 필요 (파일이 실제 존재해야 함)
+                const bucket = admin.storage().bucket();
+                const file = bucket.file(storagePath);
+                let metadata;
+                try {
+                    [metadata] = await file.getMetadata();
+                } catch (metaErr) {
+                    if (String(metaErr?.message || "").includes("No such object") || metaErr?.code === 404) {
+                        await reportRef.update({
+                            status: "failed",
+                            statusMessage: "원본 녹음 파일이 Storage 에서 삭제되었고, 캐시된 전사 결과도 없습니다.",
+                            updatedAt: Date.now(),
+                        });
+                        return { reportId: reportRef.id, status: "failed" };
+                    }
+                    throw metaErr;
+                }
+                const fileSizeMB = ((metadata.size || 0) / (1024 * 1024)).toFixed(1);
+
                 // 2. AssemblyAI 전사 (캐시 없을 때만)
                 const [signedUrl] = await file.getSignedUrl({ action: "read", expires: Date.now() + 30 * 60 * 1000 });
                 const transcriptResponse = await fetch("https://api.assemblyai.com/v2/transcript", {

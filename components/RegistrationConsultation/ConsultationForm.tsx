@@ -893,15 +893,31 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
     }, []);
 
     // 교차 분석: 상담녹음에서 불러오기
-    //
-    // Cloud Function 재호출 없이 Firestore 의 기존 분석 결과를 그대로 가져와 폼에 적용.
-    // 원본 Storage 파일이 삭제된 케이스(예: 김서율_2026-05-30 "No such object" 에러) 에서도 정상 동작.
+    // Cloud Function processRegistrationRecording 을 호출 → 등록상담 프롬프트로 재분석.
+    // 캐시 로직(functions/index.js)에 의해 storagePath 와 동일한 doc 의 transcription 이 있으면
+    // AssemblyAI 와 Storage 접근까지 모두 스킵 → 원본 파일 삭제된 경우에도 동작.
     const handleImportFromConsultation = useCallback(async (selected: SelectedRecording) => {
-        const collectionName = selected.source === 'consultation'
-            ? 'consultation_reports'
-            : 'registration_recording_reports';
-        await recording.attachExistingReport(selected.id, collectionName);
-    }, [recording]);
+        try {
+            const studentContext: Record<string, unknown> = {};
+            if (formData.schoolName) studentContext.schoolName = formData.schoolName;
+            if (formData.grade) studentContext.grade = formData.grade;
+            if (formData.parentName) studentContext.parentName = formData.parentName;
+            if (formData.parentRelation) studentContext.parentRelation = formData.parentRelation;
+            if (formData.parentPhone) studentContext.parentPhone = formData.parentPhone;
+            if (formData.address) studentContext.address = formData.address;
+
+            await recording.processFromPath({
+                storagePath: selected.storagePath,
+                studentName: formData.studentName || selected.studentName || '미입력',
+                consultationDate: formData.consultationDate || selected.consultationDate || '',
+                counselorName: formData.counselor || selected.consultantName || '',
+                fileName: selected.fileName,
+                ...(Object.keys(studentContext).length > 0 ? { studentContext } : {}),
+            });
+        } catch {
+            // error handled by hook
+        }
+    }, [recording, formData]);
 
     const formatDuration = (sec: number) => {
         const m = Math.floor(sec / 60);
