@@ -157,14 +157,9 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
             authorId: userProfile?.uid
         } as Omit<ConsultationRecord, 'id'>, {
             onSuccess: (result) => {
-                // draft에서 생성된 경우 draft 상태를 converted로 변경
-                if (activeDraftId && userProfile?.uid) {
-                    const newId = (result as any)?.id || '';
-                    convertDraft.mutate({
-                        draftId: activeDraftId,
-                        consultationId: newId,
-                        reviewerUid: userProfile.uid,
-                    });
+                // draft 에서 생성된 경우에도 draft 상태는 'pending' 으로 유지 (대기 목록에 계속 표시).
+                // 사용자가 명시적으로 삭제(휴지통) 할 때만 대기 목록에서 제거됨.
+                if (activeDraftId) {
                     setActiveDraftId(null);
                 }
                 // 새로 생성된 레코드를 editingRecord에 반영 (ID 포함)
@@ -812,45 +807,46 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                         </button>
                     )}
 
-                    {/* QR 토큰 관리: 생성 권한 이상 */}
+                    {/* 입학접수QR (구 QR 토큰): 생성 권한 이상 */}
                     {canCreate && (
                         <button
                             onClick={() => setShowEmbedManager(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded-sm text-xs font-bold transition-colors"
+                            className="flex items-center px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded-sm text-sm font-bold transition-colors"
+                            style={{ color: 'white' }}
                         >
-                            <Link2 size={14} />
-                            QR 토큰
+                            입학접수QR
                         </button>
                     )}
 
-                    {/* QR 접수 확인 — 항상 표시 (0건일 때는 회색 비활성 스타일) */}
+                    {/* 대기 목록 (구 QR 접수): 항상 표시 */}
                     {canCreate && (
                         <button
                             onClick={() => setShowDraftPanel(true)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-bold transition-colors relative ${
+                            className={`flex items-center px-3 py-1.5 rounded-sm text-sm font-bold transition-colors relative ${
                                 pendingCount > 0
                                     ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-600'
+                                    : 'bg-gray-200 hover:bg-gray-300 text-black'
                             }`}
+                            style={pendingCount > 0 ? { color: 'white' } : { color: 'black' }}
                         >
-                            <Inbox size={14} />
-                            QR 접수
+                            대기 목록
                             {pendingCount > 0 && (
-                                <span className="ml-1 bg-white text-amber-600 rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none">
+                                <span className="ml-1.5 bg-white rounded-full px-1.5 py-0.5 text-[11px] font-bold leading-none" style={{ color: '#d97706' }}>
                                     {pendingCount}
                                 </span>
                             )}
                         </button>
                     )}
 
-                    {/* 상담 등록: 생성 권한 필요 */}
+                    {/* NEW 상담 (구 상담 등록): 생성 권한 필요 */}
                     {canCreate && (
                         <button
                             onClick={openAddModal}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-info hover:bg-[#2563eb] text-white rounded-sm text-xs font-bold transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-info hover:bg-[#2563eb] text-white rounded-sm text-sm font-bold transition-colors"
+                            style={{ color: 'white' }}
                         >
                             <Plus size={14} />
-                            상담 등록
+                            NEW 상담
                         </button>
                     )}
                 </div>
@@ -1049,7 +1045,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                         <div className="flex items-center justify-between px-5 py-3 border-b">
                             <div className="flex items-center gap-2">
                                 <Inbox className="w-5 h-5 text-amber-500" />
-                                <h3 className="font-bold text-gray-800">QR 접수 목록</h3>
+                                <h3 className="font-bold text-base" style={{ color: 'black' }}>상담대기 목록</h3>
                                 {pendingCount > 0 && (
                                     <span className="bg-amber-100 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-full">
                                         {pendingCount}건
@@ -1069,24 +1065,25 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                                         <div className="flex items-center justify-between">
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="font-bold text-sm text-gray-800">{draft.studentName}</span>
-                                                    <span className="text-xs text-gray-400">{draft.grade}</span>
-                                                    <span className="text-xs text-gray-400">{draft.schoolName}</span>
+                                                    <span className="font-bold text-base" style={{ color: 'black' }}>{draft.studentName}</span>
+                                                    <span className="text-sm" style={{ color: 'black' }}>{draft.grade}</span>
+                                                    <span className="text-sm" style={{ color: 'black' }}>{draft.schoolName}</span>
                                                 </div>
-                                                <div className="text-xs text-gray-500 mt-0.5">
+                                                <div className="text-sm mt-0.5" style={{ color: 'black' }}>
                                                     보호자: {draft.parentName} ({draft.parentPhone})
                                                     {draft.subjects?.length > 0 && ` · ${draft.subjects.join(', ')}`}
                                                 </div>
-                                                <div className="text-[10px] text-gray-400 mt-0.5">
+                                                <div className="text-xs mt-0.5" style={{ color: 'black' }}>
                                                     {new Date(draft.submittedAt).toLocaleString('ko-KR')}
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-1 ml-2 flex-shrink-0">
                                                 <button
                                                     onClick={() => openDraftAsForm(draft)}
-                                                    className="px-2.5 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded hover:bg-indigo-700 transition-colors"
+                                                    className="px-3 py-1.5 bg-indigo-600 text-white text-sm font-bold rounded hover:bg-indigo-700 transition-colors"
+                                                    style={{ color: 'white' }}
                                                 >
-                                                    등록
+                                                    상담하기
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeleteDraft(draft.id)}

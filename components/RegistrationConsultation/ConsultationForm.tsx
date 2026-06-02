@@ -1266,7 +1266,7 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                 <div className="flex items-center justify-between px-3 py-2 border-b border-gray-200 shrink-0">
                     <div className="flex items-center gap-2">
                         <h2 className="text-sm font-bold text-primary">
-                            {draftId ? 'QR 접수 → 상담 등록' : initialData?.id ? (isViewMode ? '상담 기록 조회' : '상담 기록 수정') : '새 상담 등록'}
+                            {draftId ? '상담대기 목록 → 상담하기' : initialData?.id ? (isViewMode ? '상담 기록 조회' : '상담 기록 수정') : '새 상담 등록'}
                         </h2>
                         {initialData?.id && (
                             <button
@@ -2359,20 +2359,23 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                             )}
                         </div>
                         <div className="flex gap-2">
-                            <button
-                                type="button"
-                                onClick={handleCloseWithAutoSave}
-                                className="px-4 py-2 text-sm rounded-sm border border-slate-300 text-slate-600 font-medium hover:bg-slate-50 transition-colors"
-                            >
-                                {isViewMode ? '닫기' : '취소'}
-                            </button>
+                            {isViewMode && (
+                                <button
+                                    type="button"
+                                    onClick={handleCloseWithAutoSave}
+                                    className="px-4 py-2 text-sm rounded-sm border border-slate-300 font-bold hover:bg-slate-50 transition-colors"
+                                    style={{ color: 'black' }}
+                                >
+                                    닫기
+                                </button>
+                            )}
                             {!isViewMode && (
                                 <button
                                     type="submit"
-                                    style={{ backgroundColor: CUSTOM_COLORS.NAVY }}
-                                    className="px-4 py-2 text-sm rounded-sm text-white font-medium hover:opacity-90 shadow-sm transition-all"
+                                    style={{ backgroundColor: CUSTOM_COLORS.NAVY, color: 'white' }}
+                                    className="px-5 py-2 text-base rounded-sm font-bold hover:opacity-90 shadow-sm transition-all"
                                 >
-                                    {initialData?.id ? '수정 완료' : '등록'}
+                                    {initialData?.id ? '수정 완료' : '저장'}
                                 </button>
                             )}
                         </div>

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ConsultationRecord, CONSULTATION_STATUS_COLORS, getStatusDisplayLabel } from '../../types';
-import { Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, X, ClipboardList, UserPlus, UserCheck, ExternalLink, Filter, Users, Mic } from 'lucide-react';
+import { Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, X, ClipboardList, UserPlus, UserCheck, ExternalLink, Filter, Users, Mic, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
@@ -723,8 +723,8 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                 {/* 전환 열 (항상 첫번째) */}
                                 <th
                                     scope="col"
-                                    className="px-2 py-1.5 text-center text-xxs font-medium whitespace-nowrap"
-                                    style={{ color: COLORS.gray, minWidth: '50px', width: '50px' }}
+                                    className="px-2 py-1.5 text-center text-xs font-bold whitespace-nowrap"
+                                    style={{ color: 'black', minWidth: '95px', width: '95px' }}
                                 >
                                     전환
                                 </th>
@@ -757,76 +757,98 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                         className="hover:bg-gray-50 transition-colors cursor-pointer group"
                                         style={{ backgroundColor: idx % 2 === 0 ? 'white' : '#fafafa' }}
                                     >
-                                        {/* 전환 열 (항상 첫번째) */}
-                                        <td className="px-2 py-1.5 whitespace-nowrap text-xs text-center relative" style={{ minWidth: '50px', width: '50px' }}>
-                                            {(() => {
-                                                const info = conversionStatusMap?.get(record.id);
-                                                if (info?.status === 'converted' || info?.status === 'matched') {
-                                                    return (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                if (info.studentId) onNavigateToStudent?.(info.studentId);
-                                                            }}
-                                                            className="inline-flex items-center justify-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded-sm bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors"
-                                                            title={info.status === 'converted' ? '전환 완료 (연동됨)' : '전환 완료 (자동 매칭)'}
-                                                        >
-                                                            <UserCheck size={12} />
-                                                            <ExternalLink size={10} />
-                                                        </button>
-                                                    );
-                                                } else if (info?.status === 'ambiguous' && info.candidates) {
-                                                    return (
-                                                        <>
+                                        {/* 전환 열 — 전환 버튼 + 전환 상태 표시 (둘 다 표시) */}
+                                        <td className="px-2 py-1.5 whitespace-nowrap text-center relative" style={{ minWidth: '95px', width: '95px' }}>
+                                            <div className="inline-flex items-center justify-center gap-1">
+                                                {/* 전환 버튼 — 권한 있을 때만 항상 표시 */}
+                                                {canConvert && onConvertToStudent && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onConvertToStudent(record);
+                                                        }}
+                                                        className="inline-flex items-center justify-center gap-0.5 px-2 py-1 text-xs font-bold rounded-sm bg-sky-500 hover:bg-sky-600 transition-colors"
+                                                        style={{ color: 'white' }}
+                                                        title="원생 전환"
+                                                    >
+                                                        <RefreshCw size={12} />
+                                                        전환
+                                                    </button>
+                                                )}
+                                                {/* 전환 상태 표시 — 별도 indicator (전환 버튼 옆에 함께 표시) */}
+                                                {(() => {
+                                                    const info = conversionStatusMap?.get(record.id);
+                                                    if (info?.status === 'converted' || info?.status === 'matched') {
+                                                        return (
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    setCandidatePopover(
-                                                                        candidatePopover?.consultationId === record.id
-                                                                            ? null
-                                                                            : { consultationId: record.id, candidates: info.candidates! }
-                                                                    );
+                                                                    if (info.studentId) onNavigateToStudent?.(info.studentId);
                                                                 }}
-                                                                className="inline-flex items-center justify-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded-sm bg-violet-100 text-violet-700 hover:bg-violet-200 border border-violet-200 transition-colors"
-                                                                title={`동명이인 ${info.candidates.length}명 - 클릭하여 선택`}
+                                                                className="inline-flex items-center justify-center gap-0.5 px-1.5 py-1 text-xs font-bold rounded-sm bg-emerald-100 hover:bg-emerald-200 transition-colors"
+                                                                style={{ color: 'black' }}
+                                                                title={info.status === 'converted' ? '전환 완료 (연동됨)' : '전환 완료 (자동 매칭)'}
                                                             >
-                                                                <Users size={12} />
-                                                                {info.candidates.length}
+                                                                <UserCheck size={12} />
+                                                                <ExternalLink size={10} />
                                                             </button>
-                                                            {candidatePopover?.consultationId === record.id && (
-                                                                <div className="absolute top-full left-0 mt-1 bg-white rounded-sm shadow-lg border border-gray-200 z-20 min-w-[120px]">
-                                                                    <div className="px-2 py-1 text-[10px] text-gray-400 border-b">학생 선택</div>
-                                                                    {candidatePopover.candidates.map(c => (
-                                                                        <button
-                                                                            key={c.id}
-                                                                            onClick={(e) => {
-                                                                                e.stopPropagation();
-                                                                                onLinkStudent?.(record.id, c.id);
-                                                                                setCandidatePopover(null);
-                                                                            }}
-                                                                            className="w-full px-3 py-1.5 text-left text-xs hover:bg-violet-50 transition-colors flex items-center gap-1.5"
-                                                                        >
-                                                                            <User size={11} className="text-violet-500 shrink-0" />
-                                                                            <span className="font-medium text-gray-800">{c.name}</span>
-                                                                        </button>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </>
-                                                    );
-                                                } else if (info?.status === 'pending') {
-                                                    return (
-                                                        <span
-                                                            className="inline-flex items-center justify-center gap-0.5 px-1.5 py-0.5 text-[10px] font-medium rounded-sm bg-amber-100 text-amber-700 border border-amber-200"
-                                                            title="등록 상태이나 매칭 학생 없음"
-                                                        >
-                                                            <UserPlus size={12} />
-                                                            대기
-                                                        </span>
-                                                    );
-                                                }
-                                                return <span className="text-gray-300">-</span>;
-                                            })()}
+                                                        );
+                                                    } else if (info?.status === 'ambiguous' && info.candidates) {
+                                                        return (
+                                                            <>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setCandidatePopover(
+                                                                            candidatePopover?.consultationId === record.id
+                                                                                ? null
+                                                                                : { consultationId: record.id, candidates: info.candidates! }
+                                                                        );
+                                                                    }}
+                                                                    className="inline-flex items-center justify-center gap-0.5 px-1.5 py-1 text-xs font-bold rounded-sm bg-violet-100 hover:bg-violet-200 border border-violet-200 transition-colors"
+                                                                    style={{ color: 'black' }}
+                                                                    title={`동명이인 ${info.candidates.length}명 - 클릭하여 선택`}
+                                                                >
+                                                                    <Users size={12} />
+                                                                    {info.candidates.length}
+                                                                </button>
+                                                                {candidatePopover?.consultationId === record.id && (
+                                                                    <div className="absolute top-full left-0 mt-1 bg-white rounded-sm shadow-lg border border-gray-200 z-20 min-w-[120px]">
+                                                                        <div className="px-2 py-1 text-xs border-b" style={{ color: 'black' }}>학생 선택</div>
+                                                                        {candidatePopover.candidates.map(c => (
+                                                                            <button
+                                                                                key={c.id}
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    onLinkStudent?.(record.id, c.id);
+                                                                                    setCandidatePopover(null);
+                                                                                }}
+                                                                                className="w-full px-3 py-1.5 text-left text-sm hover:bg-violet-50 transition-colors flex items-center gap-1.5"
+                                                                                style={{ color: 'black' }}
+                                                                            >
+                                                                                <User size={11} className="text-violet-500 shrink-0" />
+                                                                                <span className="font-bold">{c.name}</span>
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </>
+                                                        );
+                                                    } else if (info?.status === 'pending') {
+                                                        return (
+                                                            <span
+                                                                className="inline-flex items-center justify-center gap-0.5 px-1.5 py-1 text-xs font-bold rounded-sm bg-amber-100 border border-amber-200"
+                                                                style={{ color: 'black' }}
+                                                                title="등록 상태이나 매칭 학생 없음"
+                                                            >
+                                                                <UserPlus size={12} />
+                                                                대기
+                                                            </span>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })()}
+                                            </div>
                                         </td>
                                         {/* 녹음 열 — v2: 다중 보고서 카운트 표시 */}
                                         <td className="px-1 py-1.5 whitespace-nowrap text-center" style={{ minWidth: '36px', width: '36px' }}>

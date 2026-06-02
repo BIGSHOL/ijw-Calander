@@ -12,7 +12,7 @@ import React, { useMemo, useState } from 'react';
 import { X, Printer } from 'lucide-react';
 import { useStudentConsultations } from '../../../../hooks/useStudentConsultations';
 import { useConsultations } from '../../../../hooks/useConsultations';
-import { exportNewStudentPrint } from '../utils/newStudentPrintExport';
+import { printNewStudentDirect } from '../utils/newStudentPrintExport';
 
 interface SubjectEnrollment {
   subject: string;          // 'math' | 'highmath' | 'english' | ...
@@ -169,7 +169,7 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
     if (!student || isPrinting) return;
     setIsPrinting(true);
     try {
-      await exportNewStudentPrint({
+      await printNewStudentDirect({
         student: {
           id: student.id,
           name: student.name,
@@ -381,10 +381,10 @@ const NewStudentDetailsModal: React.FC<NewStudentDetailsModalProps> = ({
             onClick={handlePrint}
             disabled={isPrinting}
             className="px-3 py-1.5 bg-emerald-600 text-white rounded text-xs font-bold hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1.5"
-            title="상담기록 + 수강내역 + 출석기록을 엑셀(K프린트 양식)로 다운로드"
+            title="상담기록 + 수강내역 + 출석기록 인쇄 (브라우저 인쇄창 열기)"
           >
             <Printer size={14} />
-            {isPrinting ? '생성중...' : 'K프린트 다운로드'}
+            {isPrinting ? '준비중...' : '인쇄'}
           </button>
           <button
             onClick={onClose}
