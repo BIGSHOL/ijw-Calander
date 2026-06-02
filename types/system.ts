@@ -112,62 +112,72 @@ export interface TabGroup {
 }
 
 // Tab Groups 정의 - 추후 Firebase에서 로드 가능하도록 설계
+// 2026-06-02 사용자 요청으로 재구성:
+// - 카테고리 라벨 옆 이모지 노출 (Sidebar 에서 icon + label 같이 렌더)
+// - 일부 메뉴는 '개발 예정' 카테고리로 이동 (토글로 숨김)
+// - 시험/자료실/지출/마케팅/셔틀은 위치 이동
+// - 소통 카테고리 제거 (구성원 → 개발 예정)
 export const TAB_GROUPS: TabGroup[] = [
   {
     id: 'home',
     label: '홈',
     icon: '🏠',
-    tabs: ['dashboard', 'notices'],
+    tabs: ['dashboard'],
     order: 0,
   },
   {
     id: 'schedule',
     label: '일정',
     icon: '📅',
-    tabs: ['calendar', 'gantt'],
+    tabs: ['calendar'],
     order: 1,
   },
   {
+    // 시험 관리 → 시간표 바로 밑으로 이동 (수업보고서 외부 링크 위)
     id: 'class',
     label: '수업',
     icon: '📚',
-    tabs: ['timetable', 'attendance', 'attendance-test', 'daily-attendance', 'classes', 'classroom', 'classroom-assignment', 'homework', 'exams', 'textbooks'],
+    tabs: ['timetable', 'exams', 'attendance', 'classes', 'classroom', 'textbooks'],
     order: 2,
   },
   {
+    // 마케팅·셔틀 관리 → 학생 분류 최하단으로 이동
     id: 'student',
     label: '학생',
     icon: '👥',
-    tabs: ['students', 'consultation', 'student-consultations', 'grades', 'withdrawal', 'contracts', 'reports'],
+    tabs: ['students', 'consultation', 'student-consultations', 'shuttle', 'marketing'],
     order: 3,
   },
   {
+    // 지출 관리 → 수강료 계산 바로 밑 / 자료실 → 관리 분류 최하단
     id: 'admin',
     label: '관리',
     icon: '⚙️',
-    tabs: ['tuition-calculator', 'payment', 'staff', 'billing', 'resources', 'role-management', 'payroll', 'analytics', 'expenses', 'meeting-minutes'],
+    tabs: ['tuition-calculator', 'expenses', 'staff', 'role-management', 'meeting-minutes', 'resources'],
     order: 4,
-  },
-  {
-    id: 'comm',
-    label: '소통',
-    icon: '💬',
-    tabs: ['parent-portal', 'sms-notifications'],
-    order: 5,
-  },
-  {
-    id: 'marketing',
-    label: '마케팅',
-    icon: '📣',
-    tabs: ['marketing', 'shuttle', 'timetable-distribution'],
-    order: 6,
   },
   {
     id: 'support',
     label: '지원',
-    icon: '❓',
-    tabs: ['help', 'timetable-test', 'logs'],
-    order: 7,
+    icon: '🛟',
+    tabs: ['help', 'logs'],
+    order: 5,
+  },
+  {
+    // 개발 예정 (토글 접힘 가능) — 코드는 살아있고 사이드바에서만 숨김
+    id: 'dev',
+    label: '개발 예정',
+    icon: '🛠️',
+    tabs: [
+      'notices',
+      'gantt',
+      'attendance-test', 'daily-attendance', 'classroom-assignment', 'homework',
+      'grades', 'withdrawal', 'contracts', 'reports',
+      'payment', 'billing', 'payroll', 'analytics',
+      'parent-portal', 'sms-notifications',
+      'timetable-distribution', 'timetable-test',
+    ],
+    order: 6,
   },
 ];
 

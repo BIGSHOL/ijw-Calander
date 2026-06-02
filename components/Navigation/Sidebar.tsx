@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TAB_GROUPS, TAB_META, AppTab } from '../../types';
-import { ChevronLeft, ChevronRight, ExternalLink, MessageCircle, Mic, Calculator } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, ExternalLink, MessageCircle, Mic, Calculator } from 'lucide-react';
 
 interface SidebarProps {
   currentTab: AppTab | null;
@@ -22,6 +22,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   hasChatbotAccess,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  // '개발 예정' 카테고리 토글 (기본 접힘)
+  const [devGroupOpen, setDevGroupOpen] = useState(false);
 
   // Sort groups by order
   const sortedGroups = [...TAB_GROUPS].sort((a, b) => a.order - b.order);
@@ -88,13 +90,33 @@ const Sidebar: React.FC<SidebarProps> = ({
             accessibleTabs.includes(tab)
           );
 
+          // '개발 예정' 그룹은 토글로 접힘/펼침 (기본 접힘)
+          const isDevGroup = group.id === 'dev';
+          const itemsVisible = isDevGroup ? devGroupOpen : true;
+
           return (
             <div key={group.id} className="mb-4">
-              {/* Group Title */}
+              {/* Group Title — 이모지 + 라벨, 개발예정은 클릭 토글 */}
               {!isCollapsed && (
-                <div className="px-2 py-1 text-xxs font-bold text-gray-500 uppercase tracking-wider">
-                  {group.label}
-                </div>
+                isDevGroup ? (
+                  <button
+                    type="button"
+                    onClick={() => setDevGroupOpen(o => !o)}
+                    className="w-full flex items-center justify-between px-2 py-1 text-xs font-bold text-black hover:bg-gray-100 rounded"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span aria-hidden="true">{group.icon}</span>
+                      <span>{group.label}</span>
+                      <span className="text-[10px] text-blue-700 font-bold ml-0.5">({accessibleTabsInGroup.length})</span>
+                    </span>
+                    {devGroupOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                  </button>
+                ) : (
+                  <div className="px-2 py-1 text-xs font-bold text-black flex items-center gap-1.5">
+                    <span aria-hidden="true">{group.icon}</span>
+                    <span>{group.label}</span>
+                  </div>
+                )
               )}
 
               {isCollapsed && (
@@ -102,7 +124,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               )}
 
               {/* Group Items */}
-              <div className="space-y-0.5">
+              <div className="space-y-0.5" style={{ display: itemsVisible ? undefined : 'none' }}>
                 {accessibleTabsInGroup.map(tab => {
                   const meta = TAB_META[tab];
                   const isActive = currentTab === tab;
