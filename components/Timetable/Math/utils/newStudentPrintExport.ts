@@ -1,9 +1,8 @@
 /**
- * 신입생 모달 — K프린트 업로드용 엑셀 다운로드.
+ * 신입생 모달 — 브라우저 직접 인쇄(window.print) 유틸.
  *
- * 시트 구성:
- *  - "통합데이터": 출석부(attendance_records) + 상담 + 수강내역을 한 표로 누적
- *  - "K프린트양식": 일반 기업용 인쇄 양식 (수식으로 통합데이터를 참조)
+ * 새 창에 A4 인쇄용 HTML 을 그린 뒤 자동으로 print() 호출.
+ * 학생의 attendance_records + 상담 + 수강내역을 표 형태로 한 페이지에 정리.
  */
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../../../../firebaseConfig';
@@ -38,25 +37,20 @@ export interface PrintEnrollment {
 }
 
 interface AttendanceCellRow {
-    date: string;          // YYYY-MM-DD
+    date: string;
     className: string;
     teacher: string;
-    status: string;        // 출석/지각/결석/-
-    examInfo: string;      // 시험결과 (분자/분모)
+    status: string;
+    examInfo: string;
     assignmentScore: string;
     progress: string;
-    classwork: string;     // 오늘과제
+    classwork: string;
     attitude: string;
     notes: string;
 }
 
-const STATUS_LABEL: Record<number, string> = {
-    1: '출석',
-    2: '지각',
-    0: '결석',
-};
+const STATUS_LABEL: Record<number, string> = { 1: '출석', 2: '지각', 0: '결석' };
 
-/** 학생의 attendance_records 전체 fetch → 셀 단위 row 로 평탄화 */
 async function fetchAttendanceRows(
     studentId: string,
     teacherMap: Map<string, string>,
@@ -119,22 +113,161 @@ async function fetchAttendanceRows(
     return rows;
 }
 
-/** 셀에 데이터가 하나라도 있는 row 만 유지 (전부 빈 줄 제거) */
 const isNonEmpty = (r: AttendanceCellRow): boolean =>
     !!(r.status || r.examInfo || r.assignmentScore || r.progress || r.classwork || r.attitude || r.notes);
 
-/** YY-MM-DD 짧은 형식 */
-const shortDate = (d: string): string => (d?.length >= 10 ? d.slice(2, 10) : d || '');
+const esc = (s: string | undefined): string => {
+    if (!s) return '';
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+};
 
-export async function exportNewStudentPrint(params: {
+const shortDate = (d: string): string => (d && d.length >= 10 ? d.slice(2, 10) : (d || ''));
+
+function buildHTML(params: {
     student: PrintStudent;
     consultations: PrintConsultation[];
     enrollments: PrintEnrollment[];
-    todayDate: string; // YYYY-MM-DD
+    attRows: AttendanceCellRow[];
+    todayDate: string;
+}): string {
+    const { student, consultations, enrollments, attRows, todayDate } = params;
+
+    const styles = `
+        @page { size: A4 portrait; margin: 12mm; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; color: #000; margin: 0; padding: 0; font-size: 11px; line-height: 1.4; }
+        .wrap { width: 100%; max-width: 190mm; margin: 0 auto; }
+        h1 { font-size: 18px; margin: 0 0 4px; text-align: center; }
+        .subtitle { text-align: center; font-size: 10px; color: #555; margin-bottom: 12px; }
+        .meta { text-align: right; font-size: 10px; color: #555; margin-bottom: 8px; }
+        h2 { font-size: 13px; margin: 14px 0 6px; padding: 4px 8px; background: #f3f4f6; border-left: 4px solid #374151; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+        th, td { border: 1px solid #999; padding: 4px 6px; text-align: left; vertical-align: top; font-size: 10.5px; }
+        th { background: #f3f4f6; font-weight: bold; text-align: center; }
+        .info-key { background: #f9fafb; font-weight: bold; width: 22%; text-align: center; }
+        .empty { color: #9ca3af; text-align: center; font-style: italic; padding: 8px; }
+        .nowrap { white-space: nowrap; }
+        .center { text-align: center; }
+        .footer-note { margin-top: 16px; font-size: 9px; color: #6b7280; text-align: center; font-style: italic; }
+        .btn-bar { padding: 12px; text-align: center; background: #f3f4f6; border-bottom: 1px solid #ddd; position: sticky; top: 0; z-index: 10; }
+        .btn-bar button { padding: 8px 24px; font-size: 14px; font-weight: bold; background: #059669; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 0 4px; }
+        .btn-bar button.secondary { background: #6b7280; }
+        @media print { .btn-bar { display: none; } body { padding: 0; } }
+    `;
+
+    const enrollmentRows = enrollments.length === 0
+        ? `<tr><td colspan="4" class="empty">수강 내역 없음</td></tr>`
+        : enrollments.map(e => `
+            <tr>
+                <td class="nowrap center">${esc(shortDate(e.startDate || ''))}</td>
+                <td>${esc(e.className)}</td>
+                <td class="center">${esc(e.groupLabel || e.subject)}</td>
+                <td class="center">${esc(e.teacher || '')}</td>
+            </tr>
+        `).join('');
+
+    const consultationRows = consultations.length === 0
+        ? `<tr><td colspan="4" class="empty">상담 내역 없음</td></tr>`
+        : consultations.map(c => {
+            const body = c.title
+                ? `<b>${esc(c.title)}</b>${c.content ? '<br/>' + esc(c.content).replace(/\n/g, '<br/>') : ''}`
+                : esc(c.content || '').replace(/\n/g, '<br/>');
+            return `
+                <tr>
+                    <td class="nowrap center">${esc(shortDate(c.date || ''))}</td>
+                    <td class="center">${esc(c.source)}</td>
+                    <td class="center">${esc(c.consultantName || '')}</td>
+                    <td>${body}</td>
+                </tr>
+            `;
+        }).join('');
+
+    const attendanceRows = attRows.length === 0
+        ? `<tr><td colspan="7" class="empty">출석 기록 없음</td></tr>`
+        : attRows.map(r => `
+            <tr>
+                <td class="nowrap center">${esc(shortDate(r.date))}</td>
+                <td>${esc(r.className)}</td>
+                <td class="center">${esc(r.teacher)}</td>
+                <td class="center">${esc(r.status)}</td>
+                <td class="center">${esc(r.examInfo)}${r.assignmentScore ? ' / 과제 ' + esc(r.assignmentScore) : ''}</td>
+                <td>${esc(r.progress)}${r.classwork ? ' / 과제: ' + esc(r.classwork) : ''}</td>
+                <td>${esc(r.attitude)}${r.notes ? ' ' + esc(r.notes) : ''}</td>
+            </tr>
+        `).join('');
+
+    return `<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>${esc(student.name)} 학생 보고서 - ${todayDate}</title>
+<style>${styles}</style>
+</head>
+<body>
+<div class="btn-bar">
+    <button onclick="window.print()">🖨️ 인쇄</button>
+    <button class="secondary" onclick="window.close()">닫기</button>
+</div>
+<div class="wrap">
+    <h1>강의하는 아이들 연세학원</h1>
+    <div class="subtitle">학생 보고서</div>
+    <div class="meta">발행일: ${todayDate}</div>
+
+    <table>
+        <tr>
+            <td class="info-key">학생명</td><td>${esc(student.name)}</td>
+            <td class="info-key">학교</td><td>${esc(student.school || '-')}</td>
+        </tr>
+        <tr>
+            <td class="info-key">학년</td><td>${esc(student.grade || '-')}</td>
+            <td class="info-key">학부모</td><td>${esc(student.parentName || '-')}</td>
+        </tr>
+        <tr>
+            <td class="info-key">학부모 연락처</td><td>${esc(student.parentPhone || '-')}</td>
+            <td class="info-key">본인 연락처</td><td>${esc(student.studentPhone || '-')}</td>
+        </tr>
+    </table>
+
+    <h2>◼ 수강내역 (${enrollments.length}건)</h2>
+    <table>
+        <thead>
+            <tr><th style="width:80px">시작일</th><th>반</th><th style="width:80px">과목</th><th style="width:80px">담임</th></tr>
+        </thead>
+        <tbody>${enrollmentRows}</tbody>
+    </table>
+
+    <h2>◼ 상담 내역 (${consultations.length}건)</h2>
+    <table>
+        <thead>
+            <tr><th style="width:80px">날짜</th><th style="width:60px">구분</th><th style="width:70px">상담자</th><th>제목 / 내용</th></tr>
+        </thead>
+        <tbody>${consultationRows}</tbody>
+    </table>
+
+    <div class="footer-note">※ 본 보고서는 시스템에서 자동 생성되었습니다.</div>
+</div>
+<script>
+    window.addEventListener('load', function() {
+        setTimeout(function() { window.print(); }, 300);
+    });
+</script>
+</body>
+</html>`;
+}
+
+export async function printNewStudentDirect(params: {
+    student: PrintStudent;
+    consultations: PrintConsultation[];
+    enrollments: PrintEnrollment[];
+    todayDate: string;
 }): Promise<void> {
     const { student, consultations, enrollments, todayDate } = params;
 
-    // className → teacher 매핑 (enrollment 기반)
     const teacherMap = new Map<string, string>();
     enrollments.forEach(e => {
         if (e.className && e.teacher && !teacherMap.has(e.className)) {
@@ -145,318 +278,14 @@ export async function exportNewStudentPrint(params: {
     const attRowsAll = await fetchAttendanceRows(student.id, teacherMap);
     const attRows = attRowsAll.filter(isNonEmpty);
 
-    const ExcelJS = (await import('exceljs')).default;
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = '강의하는 아이들 연세학원';
-    workbook.created = new Date();
+    const html = buildHTML({ student, consultations, enrollments, attRows, todayDate });
 
-    // ─────────────────────────────────────────────────────────────
-    // 시트 1: 통합데이터
-    // ─────────────────────────────────────────────────────────────
-    const ws1 = workbook.addWorksheet('통합데이터', {
-        views: [{ state: 'frozen', ySplit: 1 }],
-    });
-    const HEADERS = [
-        '구분', '날짜', '담임', '학생명', '학교', '학년', '반', '출결',
-        '시험결과', '과제점수', '교재/진도', '오늘과제', '태도', '특이사항',
-    ];
-    ws1.addRow(HEADERS);
-    const headerRow = ws1.getRow(1);
-    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    headerRow.fill = {
-        type: 'pattern', pattern: 'solid',
-        fgColor: { argb: 'FF374151' },
-    };
-    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-    headerRow.height = 22;
-
-    // 1-A) 출석 기록
-    attRows.forEach(r => {
-        ws1.addRow([
-            '출석', r.date, r.teacher, student.name,
-            student.school || '', student.grade || '',
-            r.className, r.status,
-            r.examInfo, r.assignmentScore, r.progress, r.classwork, r.attitude, r.notes,
-        ]);
-    });
-
-    // 1-B) 상담 기록
-    consultations.forEach(c => {
-        ws1.addRow([
-            `상담(${c.source})`, c.date || '', c.consultantName || '', student.name,
-            student.school || '', student.grade || '',
-            '', '',
-            '', '', c.title || '', '', '', c.content || '',
-        ]);
-    });
-
-    // 1-C) 수강내역
-    enrollments.forEach(e => {
-        ws1.addRow([
-            '수강', e.startDate || '', e.teacher || '', student.name,
-            student.school || '', student.grade || '',
-            e.className, '',
-            '', '', e.groupLabel || e.subject, '', '', e.endDate ? `종료: ${e.endDate}` : '',
-        ]);
-    });
-
-    // 컬럼 너비
-    const WIDTHS = [10, 12, 10, 10, 18, 8, 18, 8, 12, 10, 24, 24, 8, 30];
-    WIDTHS.forEach((w, i) => { ws1.getColumn(i + 1).width = w; });
-
-    // 모든 데이터 셀 테두리 + 정렬
-    const lastRow = ws1.rowCount;
-    for (let r = 1; r <= lastRow; r++) {
-        const row = ws1.getRow(r);
-        for (let c = 1; c <= HEADERS.length; c++) {
-            const cell = row.getCell(c);
-            cell.border = {
-                top: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-                left: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-                bottom: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-                right: { style: 'thin', color: { argb: 'FFCCCCCC' } },
-            };
-            if (r > 1) {
-                cell.alignment = { vertical: 'top', wrapText: true };
-                cell.font = { size: 10 };
-            }
-        }
+    const w = window.open('', '_blank', 'width=900,height=1100,scrollbars=yes');
+    if (!w) {
+        alert('팝업이 차단되어 인쇄창을 열 수 없습니다.\n브라우저 주소창의 팝업 차단 아이콘에서 허용 후 다시 시도해주세요.');
+        return;
     }
-
-    // 자동필터
-    ws1.autoFilter = {
-        from: { row: 1, column: 1 },
-        to: { row: 1, column: HEADERS.length },
-    };
-
-    // ─────────────────────────────────────────────────────────────
-    // 시트 2: K프린트양식 (일반 기업용 인쇄 양식)
-    // ─────────────────────────────────────────────────────────────
-    const ws2 = workbook.addWorksheet('K프린트양식', {
-        pageSetup: {
-            paperSize: 9, // A4
-            orientation: 'portrait',
-            fitToPage: true,
-            fitToWidth: 1,
-            fitToHeight: 1,
-            margins: { left: 0.5, right: 0.5, top: 0.6, bottom: 0.6, header: 0.3, footer: 0.3 },
-        },
-    });
-
-    ws2.getColumn(1).width = 14;
-    ws2.getColumn(2).width = 24;
-    ws2.getColumn(3).width = 14;
-    ws2.getColumn(4).width = 24;
-
-    // 제목
-    ws2.mergeCells('A1:D1');
-    ws2.getCell('A1').value = '강의하는 아이들 연세학원 — 학생 보고서';
-    ws2.getCell('A1').font = { size: 16, bold: true };
-    ws2.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
-    ws2.getRow(1).height = 30;
-
-    ws2.mergeCells('A2:D2');
-    ws2.getCell('A2').value = `발행일: ${todayDate}`;
-    ws2.getCell('A2').font = { size: 10, color: { argb: 'FF6B7280' } };
-    ws2.getCell('A2').alignment = { horizontal: 'right' };
-
-    // 학생 기본정보 박스
-    const infoRows: [string, string, string, string][] = [
-        ['학생명', student.name, '학교', student.school || '-'],
-        ['학년', student.grade || '-', '학부모', student.parentName || '-'],
-        ['학부모연락처', student.parentPhone || '-', '본인연락처', student.studentPhone || '-'],
-    ];
-    let row = 4;
-    infoRows.forEach(([k1, v1, k2, v2]) => {
-        ws2.getCell(`A${row}`).value = k1;
-        ws2.getCell(`B${row}`).value = v1;
-        ws2.getCell(`C${row}`).value = k2;
-        ws2.getCell(`D${row}`).value = v2;
-        ['A', 'C'].forEach(col => {
-            const c = ws2.getCell(`${col}${row}`);
-            c.font = { bold: true };
-            c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
-        });
-        for (const col of ['A', 'B', 'C', 'D']) {
-            const c = ws2.getCell(`${col}${row}`);
-            c.border = {
-                top: { style: 'thin' }, left: { style: 'thin' },
-                bottom: { style: 'thin' }, right: { style: 'thin' },
-            };
-            c.alignment = { vertical: 'middle', horizontal: col === 'A' || col === 'C' ? 'center' : 'left' };
-        }
-        row++;
-    });
-
-    // ─── 수강내역 섹션 ───
-    row += 1;
-    ws2.mergeCells(`A${row}:D${row}`);
-    ws2.getCell(`A${row}`).value = '◼ 수강내역';
-    ws2.getCell(`A${row}`).font = { bold: true, size: 12 };
-    ws2.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
-    row++;
-
-    const enrHeader = ['시작일', '반', '과목', '담임'];
-    enrHeader.forEach((h, i) => {
-        const c = ws2.getCell(row, i + 1);
-        c.value = h;
-        c.font = { bold: true };
-        c.alignment = { horizontal: 'center' };
-        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
-        c.border = {
-            top: { style: 'thin' }, left: { style: 'thin' },
-            bottom: { style: 'thin' }, right: { style: 'thin' },
-        };
-    });
-    row++;
-
-    if (enrollments.length === 0) {
-        ws2.mergeCells(`A${row}:D${row}`);
-        ws2.getCell(`A${row}`).value = '(수강내역 없음)';
-        ws2.getCell(`A${row}`).alignment = { horizontal: 'center' };
-        ws2.getCell(`A${row}`).font = { color: { argb: 'FF9CA3AF' } };
-        row++;
-    } else {
-        enrollments.forEach(e => {
-            ws2.getCell(row, 1).value = shortDate(e.startDate || '');
-            ws2.getCell(row, 2).value = e.className;
-            ws2.getCell(row, 3).value = e.groupLabel || e.subject;
-            ws2.getCell(row, 4).value = e.teacher || '';
-            for (let c = 1; c <= 4; c++) {
-                ws2.getCell(row, c).border = {
-                    top: { style: 'thin' }, left: { style: 'thin' },
-                    bottom: { style: 'thin' }, right: { style: 'thin' },
-                };
-                ws2.getCell(row, c).alignment = { vertical: 'middle' };
-            }
-            row++;
-        });
-    }
-
-    // ─── 상담 요약 섹션 ───
-    row += 1;
-    ws2.mergeCells(`A${row}:D${row}`);
-    ws2.getCell(`A${row}`).value = '◼ 상담 요약 (최근순)';
-    ws2.getCell(`A${row}`).font = { bold: true, size: 12 };
-    ws2.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDDEAFE' } };
-    row++;
-
-    const conHeader = ['날짜', '구분', '상담자', '제목/내용'];
-    conHeader.forEach((h, i) => {
-        const c = ws2.getCell(row, i + 1);
-        c.value = h;
-        c.font = { bold: true };
-        c.alignment = { horizontal: 'center' };
-        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
-        c.border = {
-            top: { style: 'thin' }, left: { style: 'thin' },
-            bottom: { style: 'thin' }, right: { style: 'thin' },
-        };
-    });
-    row++;
-
-    if (consultations.length === 0) {
-        ws2.mergeCells(`A${row}:D${row}`);
-        ws2.getCell(`A${row}`).value = '(상담 내역 없음)';
-        ws2.getCell(`A${row}`).alignment = { horizontal: 'center' };
-        ws2.getCell(`A${row}`).font = { color: { argb: 'FF9CA3AF' } };
-        row++;
-    } else {
-        consultations.forEach(c => {
-            ws2.getCell(row, 1).value = shortDate(c.date || '');
-            ws2.getCell(row, 2).value = c.source;
-            ws2.getCell(row, 3).value = c.consultantName || '';
-            const body = c.title ? `[${c.title}] ${c.content || ''}` : (c.content || '');
-            ws2.getCell(row, 4).value = body;
-            ws2.getCell(row, 4).alignment = { wrapText: true, vertical: 'top' };
-            for (let cc = 1; cc <= 4; cc++) {
-                ws2.getCell(row, cc).border = {
-                    top: { style: 'thin' }, left: { style: 'thin' },
-                    bottom: { style: 'thin' }, right: { style: 'thin' },
-                };
-            }
-            ws2.getRow(row).height = 30;
-            row++;
-        });
-    }
-
-    // ─── 출석부 기록 섹션 (통합데이터 시트 수식 참조) ───
-    row += 1;
-    ws2.mergeCells(`A${row}:D${row}`);
-    ws2.getCell(`A${row}`).value = '◼ 출석부 기록 (최근 10건)';
-    ws2.getCell(`A${row}`).font = { bold: true, size: 12 };
-    ws2.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } };
-    row++;
-
-    const attHeader = ['날짜', '반/담임', '출결/시험', '진도·특이사항'];
-    attHeader.forEach((h, i) => {
-        const c = ws2.getCell(row, i + 1);
-        c.value = h;
-        c.font = { bold: true };
-        c.alignment = { horizontal: 'center' };
-        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF3F4F6' } };
-        c.border = {
-            top: { style: 'thin' }, left: { style: 'thin' },
-            bottom: { style: 'thin' }, right: { style: 'thin' },
-        };
-    });
-    row++;
-
-    // 통합데이터 시트의 출석 row 는 헤더(1) 다음부터 attRows.length 만큼.
-    // 수식으로 직접 참조 → 사용자가 통합데이터 시트를 수정하면 양식도 자동 업데이트.
-    const previewCount = Math.min(attRows.length, 10);
-    if (previewCount === 0) {
-        ws2.mergeCells(`A${row}:D${row}`);
-        ws2.getCell(`A${row}`).value = '(출석 기록 없음)';
-        ws2.getCell(`A${row}`).alignment = { horizontal: 'center' };
-        ws2.getCell(`A${row}`).font = { color: { argb: 'FF9CA3AF' } };
-        row++;
-    } else {
-        for (let i = 0; i < previewCount; i++) {
-            const srcRow = i + 2; // 통합데이터 시트의 데이터 시작 row
-            // 날짜
-            ws2.getCell(row, 1).value = { formula: `통합데이터!B${srcRow}` };
-            // 반/담임
-            ws2.getCell(row, 2).value = { formula: `통합데이터!G${srcRow}&" / "&통합데이터!C${srcRow}` };
-            // 출결/시험
-            ws2.getCell(row, 3).value = {
-                formula: `통합데이터!H${srcRow}&IF(통합데이터!I${srcRow}<>"", " · 시험 "&통합데이터!I${srcRow}, "")&IF(통합데이터!J${srcRow}<>"", " · 과제 "&통합데이터!J${srcRow}, "")`,
-            };
-            // 진도/특이사항
-            ws2.getCell(row, 4).value = {
-                formula: `IF(통합데이터!K${srcRow}<>"", 통합데이터!K${srcRow}, "")&IF(통합데이터!L${srcRow}<>"", " | 과제: "&통합데이터!L${srcRow}, "")&IF(통합데이터!N${srcRow}<>"", " | "&통합데이터!N${srcRow}, "")`,
-            };
-            ws2.getCell(row, 4).alignment = { wrapText: true, vertical: 'top' };
-            for (let cc = 1; cc <= 4; cc++) {
-                ws2.getCell(row, cc).border = {
-                    top: { style: 'thin' }, left: { style: 'thin' },
-                    bottom: { style: 'thin' }, right: { style: 'thin' },
-                };
-            }
-            row++;
-        }
-    }
-
-    // 페이지 footer 안내
-    row += 1;
-    ws2.mergeCells(`A${row}:D${row}`);
-    ws2.getCell(`A${row}`).value = '※ 본 보고서는 "통합데이터" 시트를 원본으로 자동 생성됩니다. 인쇄 전 원본 데이터를 검토하세요.';
-    ws2.getCell(`A${row}`).font = { size: 9, color: { argb: 'FF6B7280' }, italic: true };
-    ws2.getCell(`A${row}`).alignment = { horizontal: 'center' };
-
-    // 다운로드
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    });
-    const url = URL.createObjectURL(blob);
-    const safeName = student.name.replace(/[\\/:*?"<>|]/g, '_');
-    const filename = `${safeName}_보고서_${todayDate}.xlsx`;
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
 }
