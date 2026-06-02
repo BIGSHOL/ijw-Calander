@@ -730,12 +730,12 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                         </>
                     )}
 
-                    {/* 좌측 액션 버튼 3종: 입학접수QR / 대기 목록 / NEW 상담 (우측에서 이동) */}
+                    {/* 좌측 액션 버튼 3종: 입학접수QR / 대기 목록 / NEW 상담 — TabButton 과 동일 폰트(text-xs font-bold) */}
                     <div className="w-px h-4 bg-gray-300"></div>
                     {canCreate && (
                         <button
                             onClick={() => setShowEmbedManager(true)}
-                            className="flex items-center px-3 py-1.5 bg-slate-600 hover:bg-slate-700 rounded-sm text-sm font-bold transition-colors"
+                            className="inline-flex items-center justify-center px-3 py-1.5 bg-slate-600 hover:bg-slate-700 rounded-sm text-xs font-bold transition-colors leading-none h-[26px]"
                             style={{ color: 'white' }}
                         >
                             입학접수QR
@@ -744,7 +744,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                     {canCreate && (
                         <button
                             onClick={() => setShowDraftPanel(true)}
-                            className={`flex items-center px-3 py-1.5 rounded-sm text-sm font-bold transition-colors relative ${
+                            className={`inline-flex items-center justify-center px-3 py-1.5 rounded-sm text-xs font-bold transition-colors leading-none h-[26px] ${
                                 pendingCount > 0
                                     ? 'bg-amber-500 hover:bg-amber-600'
                                     : 'bg-gray-200 hover:bg-gray-300'
@@ -753,7 +753,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                         >
                             대기 목록
                             {pendingCount > 0 && (
-                                <span className="ml-1.5 bg-white rounded-full px-1.5 py-0.5 text-[11px] font-bold leading-none" style={{ color: '#d97706' }}>
+                                <span className="ml-1.5 bg-white rounded-full px-1.5 text-[10px] font-bold leading-none flex items-center" style={{ color: '#d97706' }}>
                                     {pendingCount}
                                 </span>
                             )}
@@ -762,19 +762,14 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                     {canCreate && (
                         <button
                             onClick={openAddModal}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-info hover:bg-[#2563eb] rounded-sm text-sm font-bold transition-colors"
+                            className="inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-info hover:bg-[#2563eb] rounded-sm text-xs font-bold transition-colors leading-none h-[26px]"
                             style={{ color: 'white' }}
                         >
-                            <Plus size={14} />
+                            <Plus size={12} strokeWidth={3} />
                             NEW 상담
                         </button>
                     )}
                 </div>
-
-                {/* Center: Title */}
-                <h1 className="absolute left-1/2 -translate-x-1/2 text-sm font-black text-gray-800 tracking-tight">
-                    등록 상담
-                </h1>
 
                 {/* Right: Search & Actions */}
                 <div className="flex items-center gap-2">
