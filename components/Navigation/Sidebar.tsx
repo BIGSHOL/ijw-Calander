@@ -144,9 +144,12 @@ const Sidebar: React.FC<SidebarProps> = ({
                       aria-current={isActive ? 'page' : undefined}
                       title={isCollapsed ? meta.label : undefined}
                     >
-                      <span className="text-sm flex-shrink-0" aria-hidden="true">
-                        {meta.icon}
-                      </span>
+                      {/* 항목 이모지는 카테고리 분류에서만 노출 — collapsed 상태 fallback 으로만 표시 */}
+                      {isCollapsed && (
+                        <span className="text-sm flex-shrink-0" aria-hidden="true">
+                          {meta.icon}
+                        </span>
+                      )}
                       {!isCollapsed && (
                         <span className="flex items-center gap-1 flex-1">
                           {meta.label}
@@ -173,7 +176,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                     className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs font-medium transition-all text-gray-700 hover:bg-gray-100 hover:text-gray-900 ${isCollapsed ? 'justify-center' : ''}`}
                     title={isCollapsed ? '수업보고서' : undefined}
                   >
-                    <span className="text-sm flex-shrink-0" aria-hidden="true">📋</span>
+                    {isCollapsed && (
+                      <span className="text-sm flex-shrink-0" aria-hidden="true">📋</span>
+                    )}
                     {!isCollapsed && (
                       <span className="flex items-center gap-1">
                         수업보고서
@@ -198,7 +203,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                     title={isCollapsed ? '세션 계산기 (새 창)' : undefined}
                     aria-label="세션 계산기 새 창에서 열기"
                   >
-                    <span className="text-sm flex-shrink-0" aria-hidden="true">🧮</span>
+                    {isCollapsed && (
+                      <span className="text-sm flex-shrink-0" aria-hidden="true">🧮</span>
+                    )}
                     {!isCollapsed && (
                       <span className="flex items-center gap-1 flex-1">
                         세션 계산기
