@@ -779,37 +779,27 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                                         <Undo2 size={14} />
                                                     </button>
                                                 )}
-                                                {/* 전환 상태 indicator — 항상 표시.
-                                                    전환됨: 변경 전과 동일한 연한 emerald 스타일 + UserCheck+ExternalLink + tooltip '전환완료'
-                                                    미전환: 솔리드 emerald + UserCheck + tooltip '원생 전환' */}
+                                                {/* 전환 상태 indicator — 솔리드 emerald 유지 (모양 변화 없음).
+                                                    hover tooltip 만 상태에 따라 변경 */}
                                                 {(() => {
                                                     const info = conversionStatusMap?.get(record.id);
                                                     const isConverted = info?.status === 'converted' || info?.status === 'matched';
-                                                    if (isConverted) {
-                                                        return (
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    if (info?.studentId) onNavigateToStudent?.(info.studentId);
-                                                                }}
-                                                                className="inline-flex items-center justify-center gap-0.5 px-1.5 py-1 text-xs font-bold rounded-sm bg-emerald-100 hover:bg-emerald-200 transition-colors"
-                                                                style={{ color: '#047857' }}
-                                                                title={info?.status === 'converted' ? '전환완료 (연동됨)' : '전환완료 (자동 매칭)'}
-                                                            >
-                                                                <UserCheck size={12} />
-                                                                <ExternalLink size={10} />
-                                                            </button>
-                                                        );
-                                                    }
+                                                    const tooltip = isConverted
+                                                        ? (info?.status === 'converted' ? '전환완료 (연동됨)' : '전환완료 (자동 매칭)')
+                                                        : '원생 전환';
                                                     return (
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                onConvertToStudent?.(record);
+                                                                if (isConverted && info?.studentId) {
+                                                                    onNavigateToStudent?.(info.studentId);
+                                                                } else {
+                                                                    onConvertToStudent?.(record);
+                                                                }
                                                             }}
                                                             className="inline-flex items-center justify-center p-1 rounded-sm bg-emerald-500 hover:bg-emerald-600 transition-colors"
                                                             style={{ color: 'white' }}
-                                                            title="원생 전환"
+                                                            title={tooltip}
                                                         >
                                                             <UserCheck size={14} />
                                                         </button>
