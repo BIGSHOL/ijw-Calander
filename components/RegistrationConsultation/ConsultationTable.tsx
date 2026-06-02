@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ConsultationRecord, CONSULTATION_STATUS_COLORS, getStatusDisplayLabel } from '../../types';
-import { Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, X, ClipboardList, UserPlus, UserCheck, ExternalLink, Filter, Users, Mic, RefreshCw } from 'lucide-react';
+import { Edit2, Trash2, ChevronLeft, ChevronRight, User, Banknote, X, ClipboardList, UserPlus, UserCheck, ExternalLink, Filter, Users, Mic, RefreshCw, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { storage, STORAGE_KEYS } from '../../utils/localStorage';
@@ -26,6 +26,8 @@ interface ConsultationTableProps {
     // 대시보드 도넛 차트 클릭 → 테이블 드릴다운용 (변경 시마다 해당 필터로 강제 설정)
     pendingStatusFilter?: { values: string[]; token: number };
     pendingSubjectFilter?: { values: string[]; token: number };
+    onMigrationClick?: () => void; // DB 이전 모달 열기 (페이지네이션 바에 배치)
+    canMigrate?: boolean;
 }
 
 // 필터 상태 타입
@@ -151,7 +153,8 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
     searchTerm = '', showSettings = false, onShowSettingsChange,
     showFilters = false, onShowFiltersChange,
     conversionStatusMap, onLinkStudent,
-    pendingStatusFilter, pendingSubjectFilter
+    pendingStatusFilter, pendingSubjectFilter,
+    onMigrationClick, canMigrate = false,
 }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [visibleColumns, setVisibleColumns] = useState<Set<ColumnKey>>(loadSavedColumns);
@@ -1008,9 +1011,21 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                         <option value={50}>50개</option>
                         <option value={100}>100개</option>
                     </select>
-                    <span className="text-xs hidden sm:inline" style={{ color: COLORS.gray }}>
+                    <span className="text-sm hidden sm:inline font-bold" style={{ color: 'black' }}>
                         {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filteredData.length)} / 총 {filteredData.length}개
                     </span>
+                    {/* DB 이전 — 페이지네이션 좌측 (헤더에서 이동) */}
+                    {canMigrate && onMigrationClick && (
+                        <button
+                            onClick={onMigrationClick}
+                            className="flex items-center gap-1.5 px-3 py-1.5 ml-2 bg-success hover:bg-[#059669] rounded-sm text-sm font-bold transition-colors"
+                            style={{ color: 'white' }}
+                            title="DB 이전"
+                        >
+                            <Upload size={14} />
+                            DB 이전
+                        </button>
+                    )}
                 </div>
 
                 {/* 오른쪽: 페이지 네비게이션 */}

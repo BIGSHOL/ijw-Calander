@@ -729,6 +729,46 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                             </div>
                         </>
                     )}
+
+                    {/* 좌측 액션 버튼 3종: 입학접수QR / 대기 목록 / NEW 상담 (우측에서 이동) */}
+                    <div className="w-px h-4 bg-gray-300"></div>
+                    {canCreate && (
+                        <button
+                            onClick={() => setShowEmbedManager(true)}
+                            className="flex items-center px-3 py-1.5 bg-slate-600 hover:bg-slate-700 rounded-sm text-sm font-bold transition-colors"
+                            style={{ color: 'white' }}
+                        >
+                            입학접수QR
+                        </button>
+                    )}
+                    {canCreate && (
+                        <button
+                            onClick={() => setShowDraftPanel(true)}
+                            className={`flex items-center px-3 py-1.5 rounded-sm text-sm font-bold transition-colors relative ${
+                                pendingCount > 0
+                                    ? 'bg-amber-500 hover:bg-amber-600'
+                                    : 'bg-gray-200 hover:bg-gray-300'
+                            }`}
+                            style={pendingCount > 0 ? { color: 'white' } : { color: 'black' }}
+                        >
+                            대기 목록
+                            {pendingCount > 0 && (
+                                <span className="ml-1.5 bg-white rounded-full px-1.5 py-0.5 text-[11px] font-bold leading-none" style={{ color: '#d97706' }}>
+                                    {pendingCount}
+                                </span>
+                            )}
+                        </button>
+                    )}
+                    {canCreate && (
+                        <button
+                            onClick={openAddModal}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-info hover:bg-[#2563eb] rounded-sm text-sm font-bold transition-colors"
+                            style={{ color: 'white' }}
+                        >
+                            <Plus size={14} />
+                            NEW 상담
+                        </button>
+                    )}
                 </div>
 
                 {/* Center: Title */}
@@ -796,59 +836,8 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                         </>
                     )}
 
-                    {/* DB 불러오기: 전환 또는 관리 권한 필요 */}
-                    {(canConvert || canManage) && (
-                        <button
-                            onClick={() => setShowMigrationModal(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-success hover:bg-[#059669] text-white rounded-sm text-xs font-bold transition-colors"
-                        >
-                            <Upload size={14} />
-                            DB 이전
-                        </button>
-                    )}
-
-                    {/* 입학접수QR (구 QR 토큰): 생성 권한 이상 */}
-                    {canCreate && (
-                        <button
-                            onClick={() => setShowEmbedManager(true)}
-                            className="flex items-center px-3 py-1.5 bg-slate-600 hover:bg-slate-700 text-white rounded-sm text-sm font-bold transition-colors"
-                            style={{ color: 'white' }}
-                        >
-                            입학접수QR
-                        </button>
-                    )}
-
-                    {/* 대기 목록 (구 QR 접수): 항상 표시 */}
-                    {canCreate && (
-                        <button
-                            onClick={() => setShowDraftPanel(true)}
-                            className={`flex items-center px-3 py-1.5 rounded-sm text-sm font-bold transition-colors relative ${
-                                pendingCount > 0
-                                    ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                                    : 'bg-gray-200 hover:bg-gray-300 text-black'
-                            }`}
-                            style={pendingCount > 0 ? { color: 'white' } : { color: 'black' }}
-                        >
-                            대기 목록
-                            {pendingCount > 0 && (
-                                <span className="ml-1.5 bg-white rounded-full px-1.5 py-0.5 text-[11px] font-bold leading-none" style={{ color: '#d97706' }}>
-                                    {pendingCount}
-                                </span>
-                            )}
-                        </button>
-                    )}
-
-                    {/* NEW 상담 (구 상담 등록): 생성 권한 필요 */}
-                    {canCreate && (
-                        <button
-                            onClick={openAddModal}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-info hover:bg-[#2563eb] text-white rounded-sm text-sm font-bold transition-colors"
-                            style={{ color: 'white' }}
-                        >
-                            <Plus size={14} />
-                            NEW 상담
-                        </button>
-                    )}
+                    {/* 우측 액션 버튼들은 좌측(통계/목록/연간 옆) 으로 이동됨.
+                        DB 이전은 ConsultationTable 페이지네이션 바 좌측으로 이동됨. */}
                 </div>
             </TabSubNavigation>
 
@@ -939,6 +928,8 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                             onLinkStudent={handleLinkStudent}
                             pendingStatusFilter={pendingStatusFilter}
                             pendingSubjectFilter={pendingSubjectFilter}
+                            onMigrationClick={() => setShowMigrationModal(true)}
+                            canMigrate={canConvert || canManage}
                         />
                     )}
 
