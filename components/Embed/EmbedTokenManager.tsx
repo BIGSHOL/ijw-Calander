@@ -114,9 +114,8 @@ const EmbedTokenManager: React.FC<EmbedTokenManagerProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b">
           <div className="flex items-center gap-3">
-            <Link2 className="w-5 h-5 text-indigo-600" />
             <h2 className="text-lg font-bold text-gray-800">
-              {isConsultationOnly ? 'QR 입학상담 토큰 관리' : '임베드 공유 링크 관리'}
+              {isConsultationOnly ? '입학접수 QR' : '임베드 공유 링크 관리'}
             </h2>
           </div>
           <button
