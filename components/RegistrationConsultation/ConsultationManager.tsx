@@ -787,15 +787,6 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                     )}
                     {canCreate && (
                         <button
-                            onClick={() => setShowCompletedPanel(true)}
-                            className="inline-flex items-center justify-center px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 rounded-sm text-xs font-bold transition-colors leading-none h-[26px]"
-                            style={{ color: 'white' }}
-                        >
-                            상담완료 목록
-                        </button>
-                    )}
-                    {canCreate && (
-                        <button
                             onClick={openAddModal}
                             className="inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-info hover:bg-[#2563eb] rounded-sm text-xs font-bold transition-colors leading-none h-[26px]"
                             style={{ color: 'white' }}
@@ -1106,6 +1097,13 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                                                     style={{ color: 'white' }}
                                                 >
                                                     상담하기
+                                                </button>
+                                                <button
+                                                    onClick={() => setShowCompletedPanel(true)}
+                                                    className="px-3 py-1.5 bg-emerald-500 text-white text-sm font-bold rounded hover:bg-emerald-600 transition-colors"
+                                                    style={{ color: 'white' }}
+                                                >
+                                                    상담완료 목록
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeleteDraft(draft.id)}
