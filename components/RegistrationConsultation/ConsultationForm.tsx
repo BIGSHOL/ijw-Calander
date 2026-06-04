@@ -813,7 +813,8 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
     // 기존 등록상담에 저장된 AI 분석 보고서 복원 (v2 다중 보고서 지원)
     // 1순위: initialData.recordingReportIds (v2 배열)
     // 2순위: initialData.recordingReportId (v1 단일) → [id]로 래핑
-    // 3순위: studentName + consultationDate 매칭 (레거시 — registration_recording_reports → consultation_reports 순)
+    // 3순위: draft 모드라면 consultation_drafts/{draftId}.recordingReportIds 복원
+    // 4순위: studentName + consultationDate 매칭 (레거시 — registration_recording_reports → consultation_reports 순)
     useEffect(() => {
         let cancelled = false;
         (async () => {
@@ -823,6 +824,21 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
             if (reportIds.length > 0) {
                 recording.loadExistingReports(reportIds);
                 return;
+            }
+            // Draft 모드: consultation_drafts doc 에 저장된 recordingReportIds 복원
+            if (draftId && !cancelled) {
+                try {
+                    const { doc: docFn, getDoc } = await import('firebase/firestore');
+                    const { db: dbInst } = await import('../../firebaseConfig');
+                    const snap = await getDoc(docFn(dbInst, 'consultation_drafts', draftId));
+                    const draftIds = snap.data()?.recordingReportIds;
+                    if (Array.isArray(draftIds) && draftIds.length > 0) {
+                        recording.loadExistingReports(draftIds);
+                        return;
+                    }
+                } catch (err) {
+                    console.warn('[ConsultationForm] draft recordingReportIds 복원 실패:', err);
+                }
             }
             if (initialData?.studentName && initialData?.consultationDate && !cancelled) {
                 await recording.loadAnalysisReportByMatch(
@@ -839,9 +855,28 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
         (initialData?.recordingReportIds ?? []).join(','),
         initialData?.studentName,
         initialData?.consultationDate,
+        draftId,
         recording.loadExistingReports,
         recording.loadAnalysisReportByMatch,
     ]);
+
+    // Draft 모드: reportIds 변경 시 consultation_drafts doc 에 영속 저장 (모달 닫고 재진입 시 + 다른 컴터에서도 복원)
+    useEffect(() => {
+        if (!draftId) return;
+        if (!recording.reportIds || recording.reportIds.length === 0) return;
+        (async () => {
+            try {
+                const { doc: docFn, updateDoc } = await import('firebase/firestore');
+                const { db: dbInst } = await import('../../firebaseConfig');
+                await updateDoc(docFn(dbInst, 'consultation_drafts', draftId), {
+                    recordingReportIds: recording.reportIds,
+                });
+            } catch (err) {
+                console.warn('[ConsultationForm] draft recordingReportIds 저장 실패:', err);
+            }
+        })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [draftId, recording.reportIds.join(',')]);
 
     // 오디오 파일 드래그 앤 드롭 핸들러
     const handleRecordingDrop = useCallback((e: React.DragEvent) => {

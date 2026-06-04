@@ -37,6 +37,10 @@ export interface ConsultationDraft {
   reviewedAt?: string;        // 직원 확인 시각
   reviewedBy?: string;        // 직원 UID
   convertedToConsultationId?: string; // 전환된 consultation ID
+
+  // === 녹음/AI 분석 (상담대기 → 상담하기 모달에서 누적 import) ===
+  /** 직원이 import 한 녹음 보고서 ID 배열 (registration_recording_reports). 모달 닫고 재진입해도 복원 */
+  recordingReportIds?: string[];
 }
 
 /**
