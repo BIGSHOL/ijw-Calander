@@ -119,8 +119,11 @@ export const useReturnConsultationToDraft = () => {
                 privacyAgreement: record.privacyAgreement ?? false,
                 installmentAgreement: record.installmentAgreement ?? false,
                 submittedAt: new Date().toISOString(),
+                // 본문(메모/과목 detail/레벨테스트/후속 등) 원본 그대로 보존
+                // JSON 라운드트립으로 nested undefined 제거 (Firestore 거부 방지)
+                consultationSnapshot: JSON.parse(JSON.stringify(record)),
             };
-            // undefined 필드 제거 (Firestore 거부 방지)
+            // 최상위 undefined 필드 제거 (Firestore 거부 방지)
             const cleaned = Object.fromEntries(
                 Object.entries(draftData).filter(([, v]) => v !== undefined)
             );

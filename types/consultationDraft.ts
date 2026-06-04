@@ -1,5 +1,7 @@
 // ============ CONSULTATION DRAFT TYPES (Parent QR Form Submission) ============
 
+import type { ConsultationRecord } from './consultation';
+
 /**
  * 학부모가 QR 폼으로 제출한 상담 접수 데이터 (draft)
  * consultation_drafts 컬렉션에 저장됨
@@ -41,6 +43,10 @@ export interface ConsultationDraft {
   // === 녹음/AI 분석 (상담대기 → 상담하기 모달에서 누적 import) ===
   /** 직원이 import 한 녹음 보고서 ID 배열 (registration_recording_reports). 모달 닫고 재진입해도 복원 */
   recordingReportIds?: string[];
+
+  // === 등록상담 → 되돌리기 시 본문 보존 ===
+  /** 되돌리기 시 원본 consultation 레코드 전체 스냅샷. openDraftAsForm 에서 본문 복원용 */
+  consultationSnapshot?: Partial<ConsultationRecord>;
 }
 
 /**
