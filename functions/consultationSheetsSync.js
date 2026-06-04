@@ -107,15 +107,22 @@ function joinAddress(a, b) {
     return [a, b].filter(nonEmpty).join(" ");
 }
 
+// 신규 양식 — ▹ 프리픽스 + 항목 사이 빈 줄 (사용자 요청 양식 2026-06-02)
+//   예: "▹ 메모: \n{multi-line content}"
+//   예: "▹ 남매: 오빠"
+
 // 라벨 + 다음 줄 내용 (multi-line 텍스트용)
 function blockLine(label, content) {
-    return `- ${label}:\n${content}`;
+    return `▹ ${label}: \n${content}`;
 }
 
 // 라벨 + 같은 줄 값 (single-value용)
 function inlineLine(label, value) {
-    return `- ${label}: ${value}`;
+    return `▹ ${label}: ${value}`;
 }
+
+// 과목 헤더 (mathematical italic capital) + 굵은 가로선
+const SUBJECT_DIVIDER = "━━━━━━━━━━━━━━━━━━━━━━━";
 
 // ============ Level Test Compact Format ============
 
@@ -196,61 +203,62 @@ function buildGenericLevelTest(detail) {
 // ============ Subject Block ============
 
 const SUBJECT_META = {
-    math:    { header: "MATH",    label: "수학", lt: buildMathLevelTest    },
-    english: { header: "ENGLISH", label: "영어", lt: buildEnglishLevelTest },
-    korean:  { header: "KOREAN",  label: "국어", lt: buildGenericLevelTest },
-    science: { header: "SCIENCE", label: "과학", lt: buildGenericLevelTest },
-    etc:     { header: "ETC",     label: "기타", lt: buildGenericLevelTest },
+    math:    { header: "𝑴𝑨𝑻𝑯",    label: "수학", lt: buildMathLevelTest    },
+    english: { header: "𝑬𝑵𝑮𝑳𝑰𝑺𝑯", label: "영어", lt: buildEnglishLevelTest },
+    korean:  { header: "𝑲𝑶𝑹𝑬𝑨𝑵",  label: "국어", lt: buildGenericLevelTest },
+    science: { header: "𝑺𝑪𝑰𝑬𝑵𝑪𝑬", label: "과학", lt: buildGenericLevelTest },
+    etc:     { header: "𝑬𝑻𝑪",     label: "기타", lt: buildGenericLevelTest },
 };
 
 function buildSubjectBlock(subjectKey, detail) {
     if (!isDetailFilled(detail)) return "";
     const meta = SUBJECT_META[subjectKey];
-    const lines = [];
+    const items = [];
 
-    // 레벨테스트
+    // 레벨테스트 — 있으면 수기입력, 없으면 "{과목} 레테 미실시"
     const ltText = meta.lt(detail);
     if (nonEmpty(ltText)) {
-        lines.push("- 레테 수기입력 ✏️:");
-        lines.push(ltText);
+        items.push(blockLine("레테 수기입력 ✏️", ltText));
+    } else {
+        items.push(`▹ ${meta.label} 레테 미실시`);
     }
 
     // 다중행 텍스트 필드 (라벨 다음 줄에 내용)
-    if (nonEmpty(detail.academyHistory))       { lines.push("- 학원 히스토리:");  lines.push(detail.academyHistory); }
-    if (nonEmpty(detail.learningProgress))     { lines.push("- 학습 진도:");      lines.push(detail.learningProgress); }
-    if (nonEmpty(detail.examResults))          { lines.push("- 시험 성적:");      lines.push(detail.examResults); }
-    if (nonEmpty(detail.consultationHistory))  { lines.push("- 상담 내역:");      lines.push(detail.consultationHistory); }
+    if (nonEmpty(detail.academyHistory))       items.push(blockLine("학원 히스토리", detail.academyHistory));
+    if (nonEmpty(detail.learningProgress))     items.push(blockLine("학습 진도",     detail.learningProgress));
+    if (nonEmpty(detail.examResults))          items.push(blockLine("시험 성적",     detail.examResults));
+    if (nonEmpty(detail.consultationHistory))  items.push(blockLine("상담 내역",     detail.consultationHistory));
 
     // 단일값 필드 (라벨 같은 줄)
-    if (nonEmpty(detail.recommendedClass)) lines.push(inlineLine("추천반", detail.recommendedClass));
-    if (nonEmpty(detail.homeRoomTeacher))  lines.push(inlineLine("담임",   detail.homeRoomTeacher));
-    if (nonEmpty(detail.firstClassDate))   lines.push(inlineLine("첫 수업일", detail.firstClassDate));
+    if (nonEmpty(detail.recommendedClass)) items.push(inlineLine("추천반", detail.recommendedClass));
+    if (nonEmpty(detail.homeRoomTeacher))  items.push(inlineLine("담임",   detail.homeRoomTeacher));
+    if (nonEmpty(detail.firstClassDate))   items.push(inlineLine("첫 수업일", detail.firstClassDate));
 
-    if (lines.length === 0) return "";
+    if (items.length === 0) return "";
 
-    return `${meta.header}\n\n[${meta.label} 상담]\n${lines.join("\n")}`;
+    return `${meta.header}\n${SUBJECT_DIVIDER}\n[${meta.label} 상담]\n${items.join("\n\n")}`;
 }
 
 // ============ 기타 인적사항 Block ============
 
 function buildPersonalBlock(c) {
-    const lines = [];
-    if (nonEmpty(c.consultationDate)) lines.push(inlineLine("상담일", c.consultationDate));
-    if (nonEmpty(c.counselor))        lines.push(inlineLine("상담자", c.counselor));
-    if (nonEmpty(c.receiver))         lines.push(inlineLine("수신자", c.receiver));
+    const items = [];
+    if (nonEmpty(c.consultationDate)) items.push(inlineLine("상담일", c.consultationDate));
+    if (nonEmpty(c.counselor))        items.push(inlineLine("상담자", c.counselor));
+    if (nonEmpty(c.receiver))         items.push(inlineLine("수신자", c.receiver));
 
     // 남매: 라벨은 항상 표시 (값 없어도)
     const sibVal = [c.siblings, c.siblingsDetails].filter(nonEmpty).join(" ");
-    lines.push(inlineLine("남매", sibVal));
+    items.push(inlineLine("남매", sibVal));
 
-    if (nonEmpty(c.notes))                 { lines.push("- 메모:");        lines.push(c.notes); }
-    if (nonEmpty(c.safetyNotes))           { lines.push("- 안전사항:");    lines.push(c.safetyNotes); }
-    if (nonEmpty(c.enrollmentReason))      { lines.push("- 입학 동기:");   lines.push(c.enrollmentReason); }
-    if (nonEmpty(c.nonRegistrationReason)) { lines.push("- 미등록 사유:"); lines.push(c.nonRegistrationReason); }
-    if (nonEmpty(c.followUpDate))          lines.push(inlineLine("후속 조치일", c.followUpDate));
-    if (nonEmpty(c.followUpContent))       { lines.push("- 후속 조치:");   lines.push(c.followUpContent); }
+    if (nonEmpty(c.notes))                 items.push(blockLine("메모", c.notes));
+    if (nonEmpty(c.safetyNotes))           items.push(blockLine("안전사항", c.safetyNotes));
+    if (nonEmpty(c.enrollmentReason))      items.push(blockLine("입학 동기", c.enrollmentReason));
+    if (nonEmpty(c.nonRegistrationReason)) items.push(blockLine("미등록 사유", c.nonRegistrationReason));
+    if (nonEmpty(c.followUpDate))          items.push(inlineLine("후속 조치일", c.followUpDate));
+    if (nonEmpty(c.followUpContent))       items.push(blockLine("후속 조치", c.followUpContent));
 
-    return "[기타 인적사항]\n" + lines.join("\n");
+    return "[기타 인적사항]\n" + items.join("\n\n");
 }
 
 // 컬럼·과목·인적 블록에 들어가지 않는 모든 비어있지 않은 필드를 라벨과 함께 덤프
@@ -334,7 +342,7 @@ function buildExtraInfoBlock(c) {
     }
 
     if (lines.length === 0) return "";
-    return "[추가 정보]\n" + lines.join("\n");
+    return "[추가 정보]\n" + lines.join("\n\n");
 }
 
 function buildConsultationRecord(c) {
