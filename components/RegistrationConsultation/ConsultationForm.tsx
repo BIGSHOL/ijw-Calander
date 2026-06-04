@@ -2431,26 +2431,30 @@ export const ConsultationForm: React.FC<ConsultationFormProps> = ({
                                 </>
                             ) : (
                                 <>
-                                    {/* 편집 모드: 삭제 + 원생 전환 */}
-                                    {initialData && canDelete && onDelete && (
+                                    {/* 편집/신규 모드: 삭제 + 원생 전환 (신규는 disabled — 저장 후 활성) */}
+                                    {canDelete && onDelete && (
                                         <button
                                             type="button"
+                                            disabled={!initialData?.id}
                                             onClick={() => {
-                                                if (window.confirm('정말로 삭제하시겠습니까?')) {
+                                                if (initialData?.id && window.confirm('정말로 삭제하시겠습니까?')) {
                                                     onDelete(initialData.id);
                                                     onClose();
                                                 }
                                             }}
-                                            className="px-4 py-2 text-sm rounded-sm border border-red-300 text-red-600 font-medium hover:bg-red-50 transition-colors"
+                                            title={initialData?.id ? '' : '상담을 먼저 저장하세요'}
+                                            className="px-4 py-2 text-sm rounded-sm border border-red-300 text-red-600 font-medium hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                                         >
                                             삭제
                                         </button>
                                     )}
-                                    {initialData && canConvert && onConvertToStudent && !initialData.registeredStudentId && (
+                                    {canConvert && onConvertToStudent && !initialData?.registeredStudentId && (
                                         <button
                                             type="button"
-                                            onClick={() => onConvertToStudent(initialData)}
-                                            className="px-4 py-2 text-sm rounded-sm border border-green-300 text-green-600 font-medium hover:bg-green-50 transition-colors flex items-center gap-1"
+                                            disabled={!initialData?.id}
+                                            onClick={() => initialData?.id && onConvertToStudent(initialData)}
+                                            title={initialData?.id ? '' : '상담을 먼저 저장하세요'}
+                                            className="px-4 py-2 text-sm rounded-sm border border-green-300 text-green-600 font-medium hover:bg-green-50 transition-colors flex items-center gap-1 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                                         >
                                             <User size={14} />
                                             원생 전환
