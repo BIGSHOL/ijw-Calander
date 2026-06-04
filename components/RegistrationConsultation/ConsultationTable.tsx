@@ -764,7 +764,7 @@ export const ConsultationTable: React.FC<ConsultationTableProps> = ({
                                                     onClick={(e) => e.stopPropagation()}
                                                     className="inline-flex items-center justify-center p-1 rounded-sm bg-emerald-500 cursor-default"
                                                     style={{ color: 'white' }}
-                                                    title="전환완료"
+                                                    title="전환완료 (makeedu 연동됨)"
                                                 >
                                                     <UserCheck size={14} />
                                                 </span>

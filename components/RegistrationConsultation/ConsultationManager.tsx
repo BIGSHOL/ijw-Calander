@@ -1054,7 +1054,7 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
             {/* Draft Panel (QR 접수 목록) */}
             {showDraftPanel && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowDraftPanel(false)}>
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between px-5 py-3 border-b">
                             <div className="flex items-center gap-2">
                                 <Inbox className="w-5 h-5 text-amber-500" />
@@ -1121,14 +1121,14 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                 </div>
             )}
 
-            {/* Completed Panel (상담완료 목록) */}
+            {/* Completed Panel (상담완료 목록 — 미등록만) */}
             {showCompletedPanel && (() => {
                 const completed = consultations
-                    .filter(c => c.status !== ConsultationStatus.BeforeConsultation)
+                    .filter(c => c.status === ConsultationStatus.NotRegistered)
                     .sort((a, b) => (b.consultationDate || '').localeCompare(a.consultationDate || ''));
                 return (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowCompletedPanel(false)}>
-                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
                             <div className="flex items-center justify-between px-5 py-3 border-b">
                                 <div className="flex items-center gap-2">
                                     <CheckCircle2 className="w-5 h-5 text-emerald-500" />
