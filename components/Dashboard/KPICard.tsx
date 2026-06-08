@@ -48,26 +48,26 @@ const KPICard: React.FC<KPICardProps> = ({ data, onClick }) => {
 
   return (
     <div
-      className={`bg-white rounded-lg p-5 shadow-sm border border-gray-100 transition-all hover:shadow-md ${
+      className={`bg-white rounded-lg p-5 shadow-sm border border-gray-100 transition-all hover:shadow-md h-full flex flex-col ${
         onClick ? 'cursor-pointer hover:border-gray-300' : ''
       }`}
       onClick={onClick}
       title={description}
     >
       {/* 아이콘과 라벨 */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-gray-700">{label}</span>
         {icon && <span className="text-2xl">{icon}</span>}
       </div>
 
-      {/* 메인 값 */}
-      <div className="mb-2">
-        <span className="text-3xl font-bold leading-none" style={{ color }}>
+      {/* 메인 값 — 중앙에 큼직하게 */}
+      <div className="flex-1 flex items-center">
+        <span className="text-4xl font-bold leading-none" style={{ color }}>
           {value}
         </span>
       </div>
 
-      {/* 서브 값 및 트렌드 */}
+      {/* 서브 값 및 트렌드 — 하단 */}
       <div className="flex items-center gap-1.5 min-h-[16px]">
         {trend && (
           <div className="flex items-center gap-0.5">

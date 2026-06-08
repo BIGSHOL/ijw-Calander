@@ -721,21 +721,20 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
           </div>
         ) : (
           <>
-            {/* ── Row 1: KPI 카드 (클릭 시 근거 데이터 모달) ── */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-5">
-              {kpiCards.map(card => (
-                <KPICard
-                  key={card.id}
-                  data={card}
-                  onClick={
-                    card.id === 'billing' ? () => setIsBillingModalOpen(true)
-                    : card.id === 'consultation' ? () => setIsConsultationModalOpen(true)
-                    : card.id === 'new-students' ? () => setIsNewStudentsModalOpen(true)
-                    : card.id === 'net-change' ? () => setIsNetChangeModalOpen(true)
-                    : card.id === 'attendance' ? () => setIsTodayAttendanceModalOpen(true)
-                    : undefined
-                  }
-                />
+            {/* ── Row 1: 메인 KPI 3개 (출석률/완료율/수납률) — 정사각형 ── */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+              {kpiCards.slice(0, 3).map(card => (
+                <div key={card.id} className="aspect-square">
+                  <KPICard
+                    data={card}
+                    onClick={
+                      card.id === 'billing' ? () => setIsBillingModalOpen(true)
+                      : card.id === 'consultation' ? () => setIsConsultationModalOpen(true)
+                      : card.id === 'attendance' ? () => setIsTodayAttendanceModalOpen(true)
+                      : undefined
+                    }
+                  />
+                </div>
               ))}
             </div>
 
@@ -767,7 +766,23 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               })}
             </div>
 
-            {/* ── Row 2: 주간 출석 + 주의 필요 ── */}
+            {/* ── Row 2.5: 보조 KPI (신입생 / 순증감) — 정사각형 ── */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+              {kpiCards.slice(3).map(card => (
+                <div key={card.id} className="aspect-square">
+                  <KPICard
+                    data={card}
+                    onClick={
+                      card.id === 'new-students' ? () => setIsNewStudentsModalOpen(true)
+                      : card.id === 'net-change' ? () => setIsNetChangeModalOpen(true)
+                      : undefined
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* ── Row 3: 주간 출석 + 주의 필요 ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
               {/* 주간 출석 추이 — 도넛(평균) + 일별 미니 게이지 */}
               {(() => {
