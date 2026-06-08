@@ -1,4 +1,5 @@
 import React, { Suspense, lazy, useState, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { UserProfile, StaffMember, KPICardData } from '../../../types';
 import DashboardHeader from '../DashboardHeader';
 import KPICard from '../KPICard';
@@ -132,6 +133,7 @@ function buildSlidingWindowTrend(
 }
 
 const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMember }) => {
+  const queryClient = useQueryClient();
   const [refreshKey, setRefreshKey] = useState(0);
 
   // ── 기본 날짜 ──
@@ -705,7 +707,11 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     { id: 'add-consultation', label: '상담 기록', icon: MessageCircle, onClick: () => setIsAddConsultationOpen(true), color: '#6366f1' },
   ];
 
-  const handleRefresh = () => setRefreshKey(prev => prev + 1);
+  const handleRefresh = () => {
+    // 모든 React Query 캐시 invalidate → useStudents/useConsultations/useBilling 등 즉시 refetch
+    queryClient.invalidateQueries();
+    setRefreshKey(prev => prev + 1);
+  };
   const isLoading = studentsLoading || attendanceLoading || weeklyAttendanceLoading || billingLoading || consultationLoading;
 
   // ── 과목 색상 ──
@@ -717,7 +723,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   };
 
   return (
-    <div className="w-full p-3 bg-gray-50">
+    <div className="flex-1 min-w-0 w-full p-3 bg-gray-50 overflow-y-auto">
       <div className="max-w-[1800px] mx-auto min-w-0 [&_.grid>*]:min-w-0">
         <DashboardHeader userProfile={userProfile} staffMember={staffMember} onRefresh={handleRefresh} />
 
