@@ -20,7 +20,7 @@ import { UserPlus, MessageCircle, BookOpen, TrendingUp, TrendingDown } from 'luc
 import { SUBJECT_COLORS } from '../../../utils/styleUtils';
 import { getTodayKST } from '../../../utils/dateUtils';
 import { isActiveEnrollment as isActiveEnrollmentShared } from '../../../utils/dashboardUtils';
-import { ResponsiveContainer, LineChart, Line, YAxis, Tooltip, ReferenceDot, Label, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
+import { ResponsiveContainer, YAxis, Tooltip, ReferenceDot, Label, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 
 const AddStudentModal = lazy(() => import('../../StudentManagement/AddStudentModal'));
 const AddClassModal = lazy(() => import('../../ClassManagement/AddClassModal'));
@@ -797,15 +797,10 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
 
             {/* ── Row 3: 주간 출석(크게) + 주의 필요 — 비대칭 ── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5 [&>:first-child]:lg:col-span-2">
-              {/* 주간 출석 추이 — 도넛(평균) + 일별 미니 게이지 */}
+              {/* 주간 출석 추이 — 요일별 도넛 7개 (휴무 = 회색 풀 도넛) */}
               {(() => {
                 const validDays = weeklyAttendance.filter(d => d.source !== 'empty');
                 const avgRate = validDays.length === 0 ? 0 : Math.round(validDays.reduce((s, d) => s + d.rate, 0) / validDays.length);
-                const donutData = [
-                  { name: '출석', value: avgRate },
-                  { name: '결석', value: Math.max(0, 100 - avgRate) },
-                ];
-                const DONUT_COLORS = ['#10b981', '#f3f4f6'];
                 return (
                   <div
                     className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md border border-gray-100 cursor-pointer hover:border-emerald-300 transition-all"
@@ -813,62 +808,52 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   >
                     <h3 className="text-sm font-bold text-primary mb-3 flex items-center justify-between">
                       <span>📈 주간 출석 추이</span>
-                      <span className="text-[10px] text-gray-400 font-normal">클릭 시 요일별 상세 →</span>
+                      <span className="text-[10px] text-gray-400 font-normal">평균 {validDays.length > 0 ? `${avgRate}%` : '-'} · 클릭 시 상세 →</span>
                     </h3>
-                    <div className="flex items-center gap-4">
-                      {/* 도넛 */}
-                      <div className="relative shrink-0" style={{ width: 140, height: 140 }}>
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={donutData}
-                              dataKey="value"
-                              innerRadius={48}
-                              outerRadius={65}
-                              startAngle={90}
-                              endAngle={-270}
-                              paddingAngle={validDays.length === 0 ? 0 : 2}
-                              isAnimationActive
-                              animationDuration={700}
-                            >
-                              {donutData.map((_, idx) => (
-                                <Cell key={idx} fill={DONUT_COLORS[idx]} stroke="none" />
-                              ))}
-                            </Pie>
-                          </PieChart>
-                        </ResponsiveContainer>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                          <span className="text-2xl font-bold text-emerald-600">{validDays.length === 0 ? '-' : `${avgRate}%`}</span>
-                          <span className="text-[10px] text-gray-500 font-medium">평균</span>
-                        </div>
-                      </div>
-                      {/* 일별 미니 게이지 (요일 + 가로 막대 + %) */}
-                      <div className="flex-1 space-y-1">
-                        {weeklyAttendance.map((day, idx) => {
-                          const noData = day.source === 'empty';
-                          return (
-                            <div key={idx} className="flex items-center gap-2 text-xs">
-                              <span className="w-5 text-gray-600 font-medium shrink-0">{day.day}</span>
-                              <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full transition-all duration-500 ${
-                                    noData ? 'bg-gray-200' : 'bg-gradient-to-r from-[#10b981] to-[#34d399]'
-                                  }`}
-                                  style={{ width: `${noData ? 0 : day.rate}%` }}
-                                />
+                    <div className="grid grid-cols-7 gap-2">
+                      {weeklyAttendance.map((day, idx) => {
+                        const isClosed = day.source === 'empty';
+                        const data = isClosed
+                          ? [{ name: 'closed', value: 100 }]
+                          : [
+                              { name: '출석', value: day.rate },
+                              { name: '미출석', value: Math.max(0, 100 - day.rate) },
+                            ];
+                        const colors = isClosed
+                          ? ['#e5e7eb']
+                          : ['#10b981', '#f3f4f6'];
+                        return (
+                          <div key={idx} className="flex flex-col items-center">
+                            <div className="relative w-full" style={{ aspectRatio: '1 / 1' }}>
+                              <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                  <Pie
+                                    data={data}
+                                    dataKey="value"
+                                    innerRadius="62%"
+                                    outerRadius="92%"
+                                    startAngle={90}
+                                    endAngle={-270}
+                                    paddingAngle={isClosed ? 0 : 1}
+                                    isAnimationActive
+                                    animationDuration={500}
+                                  >
+                                    {data.map((_, i) => (
+                                      <Cell key={i} fill={colors[i]} stroke="none" />
+                                    ))}
+                                  </Pie>
+                                </PieChart>
+                              </ResponsiveContainer>
+                              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                <span className={`text-xs font-bold ${isClosed ? 'text-gray-400' : 'text-emerald-600'}`}>
+                                  {isClosed ? '휴무' : `${day.rate}%`}
+                                </span>
                               </div>
-                              <span className={`w-10 text-right font-bold shrink-0 ${noData ? 'text-gray-300' : 'text-gray-700'}`}>
-                                {noData ? '-' : `${day.rate}%`}
-                              </span>
                             </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div className="text-center mt-3 pt-3 border-t border-gray-100 text-[10px] text-gray-400">
-                      {validDays.length === 0
-                        ? '출석 데이터 없음'
-                        : `평균 출석률 ${avgRate}% · ${validDays.length}일 기준`}
+                            <span className={`mt-1 text-xs font-medium ${isClosed ? 'text-gray-400' : 'text-gray-700'}`}>{day.day}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -928,8 +913,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               </div>
             </div>
 
-            {/* ── Row 4: 미납 + 상담 후속조치(크게) — 비대칭 ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5 [&>:last-child]:lg:col-span-2">
+            {/* ── Row 4: 미납 + 상담 후속조치 — 균등 ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
               {/* 미납 현황 */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
