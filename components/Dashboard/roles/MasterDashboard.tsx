@@ -20,7 +20,7 @@ import { UserPlus, MessageCircle, BookOpen, TrendingUp, TrendingDown } from 'luc
 import { SUBJECT_COLORS } from '../../../utils/styleUtils';
 import { getTodayKST } from '../../../utils/dateUtils';
 import { isActiveEnrollment as isActiveEnrollmentShared } from '../../../utils/dashboardUtils';
-import { ResponsiveContainer, LineChart, Line, YAxis, Tooltip, ReferenceDot, Label } from 'recharts';
+import { ResponsiveContainer, LineChart, Line, YAxis, Tooltip, ReferenceDot, Label, PieChart, Pie, Cell } from 'recharts';
 
 const AddStudentModal = lazy(() => import('../../StudentManagement/AddStudentModal'));
 const AddClassModal = lazy(() => import('../../ClassManagement/AddClassModal'));
@@ -513,11 +513,11 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   <React.Fragment key={card.key}>
                     <Line
                       yAxisId={card.key}
-                      type="linear"
+                      type="monotone"
                       dataKey={card.key}
                       name={card.label}
                       stroke={card.color}
-                      strokeWidth={1.8}
+                      strokeWidth={2}
                       strokeDasharray={(card as any).dashed ? '4 4' : undefined}
                       dot={(props: any) => {
                         const i = props.index;
@@ -526,8 +526,10 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                         }
                         return <g key={`${card.key}-${i}`} />;
                       }}
+                      activeDot={{ r: 5, fill: card.color, stroke: 'white', strokeWidth: 2 }}
                       isAnimationActive
                       animationDuration={700}
+                      animationEasing="ease-in-out"
                     />
                     <ReferenceDot yAxisId={card.key} x={maxIdx} y={max} r={0} ifOverflow="extendDomain">
                       <Label value={`${max}↑`} position="top" fontSize={9} fill={card.color} />
@@ -767,54 +769,82 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
 
             {/* ── Row 2: 주간 출석 + 주의 필요 ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
-              {/* 주간 출석 추이 (클릭 시 요일별 근거 데이터 모달) */}
-              <div
-                className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md border border-gray-100 cursor-pointer hover:border-emerald-300 transition-all"
-                onClick={() => setIsWeeklyAttendanceModalOpen(true)}
-              >
-                <h3 className="text-xs font-bold text-primary mb-2 flex items-center justify-between">
-                  <span>📈 주간 출석 추이</span>
-                  <span className="text-[10px] text-gray-400 font-normal">클릭 시 요일별 상세 →</span>
-                </h3>
-                <div className="flex items-end justify-between h-20 gap-1">
-                  {weeklyAttendance.map((day, idx) => {
-                    const noData = day.source === 'empty';
-                    return (
-                      <div key={idx} className="flex-1 flex flex-col items-center gap-0.5">
-                        <div className="w-full bg-gray-100 rounded-t flex items-end relative" style={{ height: '60px' }}>
-                          <div
-                            className={`w-full rounded-t transition-all duration-500 ${
-                              noData ? 'bg-gray-200' : 'bg-gradient-to-t from-[#10b981] to-[#34d399]'
-                            }`}
-                            style={{ height: `${noData ? 0 : day.rate}%` }}
-                          />
-                          {/* 막대 중앙 % 표시 */}
-                          <span
-                            className={`absolute inset-0 flex items-center justify-center text-[10px] font-bold pointer-events-none ${
-                              noData
-                                ? 'text-gray-300'
-                                : day.rate >= 50
-                                ? 'text-white'
-                                : 'text-gray-700'
-                            }`}
-                          >
-                            {noData ? '-' : `${day.rate}%`}
-                          </span>
+              {/* 주간 출석 추이 — 도넛(평균) + 일별 미니 게이지 */}
+              {(() => {
+                const validDays = weeklyAttendance.filter(d => d.source !== 'empty');
+                const avgRate = validDays.length === 0 ? 0 : Math.round(validDays.reduce((s, d) => s + d.rate, 0) / validDays.length);
+                const donutData = [
+                  { name: '출석', value: avgRate },
+                  { name: '결석', value: Math.max(0, 100 - avgRate) },
+                ];
+                const DONUT_COLORS = ['#10b981', '#f3f4f6'];
+                return (
+                  <div
+                    className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md border border-gray-100 cursor-pointer hover:border-emerald-300 transition-all"
+                    onClick={() => setIsWeeklyAttendanceModalOpen(true)}
+                  >
+                    <h3 className="text-sm font-bold text-primary mb-3 flex items-center justify-between">
+                      <span>📈 주간 출석 추이</span>
+                      <span className="text-[10px] text-gray-400 font-normal">클릭 시 요일별 상세 →</span>
+                    </h3>
+                    <div className="flex items-center gap-4">
+                      {/* 도넛 */}
+                      <div className="relative shrink-0" style={{ width: 140, height: 140 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={donutData}
+                              dataKey="value"
+                              innerRadius={48}
+                              outerRadius={65}
+                              startAngle={90}
+                              endAngle={-270}
+                              paddingAngle={validDays.length === 0 ? 0 : 2}
+                              isAnimationActive
+                              animationDuration={700}
+                            >
+                              {donutData.map((_, idx) => (
+                                <Cell key={idx} fill={DONUT_COLORS[idx]} stroke="none" />
+                              ))}
+                            </Pie>
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                          <span className="text-2xl font-bold text-emerald-600">{validDays.length === 0 ? '-' : `${avgRate}%`}</span>
+                          <span className="text-[10px] text-gray-500 font-medium">평균</span>
                         </div>
-                        <span className="text-micro text-gray-500 font-medium">{day.day}</span>
                       </div>
-                    );
-                  })}
-                </div>
-                <div className="text-center mt-1.5 text-micro text-gray-400">
-                  {(() => {
-                    const validDays = weeklyAttendance.filter(d => d.source !== 'empty');
-                    if (validDays.length === 0) return '평균 출석률: 데이터 없음';
-                    const avg = Math.round(validDays.reduce((s, d) => s + d.rate, 0) / validDays.length);
-                    return `평균 출석률: ${avg}% (${validDays.length}일 기준)`;
-                  })()}
-                </div>
-              </div>
+                      {/* 일별 미니 게이지 (요일 + 가로 막대 + %) */}
+                      <div className="flex-1 space-y-1">
+                        {weeklyAttendance.map((day, idx) => {
+                          const noData = day.source === 'empty';
+                          return (
+                            <div key={idx} className="flex items-center gap-2 text-xs">
+                              <span className="w-5 text-gray-600 font-medium shrink-0">{day.day}</span>
+                              <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-500 ${
+                                    noData ? 'bg-gray-200' : 'bg-gradient-to-r from-[#10b981] to-[#34d399]'
+                                  }`}
+                                  style={{ width: `${noData ? 0 : day.rate}%` }}
+                                />
+                              </div>
+                              <span className={`w-10 text-right font-bold shrink-0 ${noData ? 'text-gray-300' : 'text-gray-700'}`}>
+                                {noData ? '-' : `${day.rate}%`}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="text-center mt-3 pt-3 border-t border-gray-100 text-[10px] text-gray-400">
+                      {validDays.length === 0
+                        ? '출석 데이터 없음'
+                        : `평균 출석률 ${avgRate}% · ${validDays.length}일 기준`}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* 주의 필요 */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
