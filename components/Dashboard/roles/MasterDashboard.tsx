@@ -745,7 +745,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
 
             {/* ── 재원생(7) / 신입(3) / 퇴원(2) 추이 — 12-col 비대칭 ── */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-5">
-              <div className="lg:col-span-7">
+              <div className="lg:col-span-8">
                 {renderTrendCard({
                   title: '재원생',
                   totalUnit: '명',
@@ -755,7 +755,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   combined: combinedTrend,
                 })}
               </div>
-              <div className="lg:col-span-3">
+              <div className="lg:col-span-2">
                 {renderTrendCard({
                   title: '신입생 (이번달)',
                   totalUnit: '명',
