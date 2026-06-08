@@ -721,69 +721,73 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
           </div>
         ) : (
           <>
-            {/* ── Row 1: 메인 KPI 3개 (출석률/완료율/수납률) — 정사각형 ── */}
+            {/* ── Row 1: 메인 KPI 3개 (출석률/완료율/수납률) ── */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
               {kpiCards.slice(0, 3).map(card => (
-                <div key={card.id} className="aspect-square">
-                  <KPICard
-                    data={card}
-                    onClick={
-                      card.id === 'billing' ? () => setIsBillingModalOpen(true)
-                      : card.id === 'consultation' ? () => setIsConsultationModalOpen(true)
-                      : card.id === 'attendance' ? () => setIsTodayAttendanceModalOpen(true)
-                      : undefined
-                    }
-                  />
-                </div>
+                <KPICard
+                  key={card.id}
+                  data={card}
+                  onClick={
+                    card.id === 'billing' ? () => setIsBillingModalOpen(true)
+                    : card.id === 'consultation' ? () => setIsConsultationModalOpen(true)
+                    : card.id === 'attendance' ? () => setIsTodayAttendanceModalOpen(true)
+                    : undefined
+                  }
+                />
               ))}
             </div>
 
-            {/* ── 재원생 / 신입 / 퇴원 추이 (박스 3개) ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
-              {renderTrendCard({
-                title: '👥 재원생',
-                totalUnit: '명',
-                total: activeStudents,
-                totalDelta: newStudentsThisMonth - withdrawalData.count,
-                cards: trendCards,
-                combined: combinedTrend,
-              })}
-              {renderTrendCard({
-                title: '🆕 신입생 (이번달)',
-                totalUnit: '명',
-                total: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
-                totalDelta: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
-                cards: newCards,
-                combined: newCombined,
-              })}
-              {renderTrendCard({
-                title: '🚪 퇴원 (이번달)',
-                totalUnit: '명',
-                total: enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn,
-                totalDelta: -(enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn),
-                cards: withdrawnCards,
-                combined: withdrawnCombined,
-              })}
+            {/* ── 재원생(크게) / 신입 / 퇴원 추이 — 비대칭 grid (재원생 col-span-2) ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-5">
+              <div className="lg:col-span-2">
+                {renderTrendCard({
+                  title: '👥 재원생',
+                  totalUnit: '명',
+                  total: activeStudents,
+                  totalDelta: newStudentsThisMonth - withdrawalData.count,
+                  cards: trendCards,
+                  combined: combinedTrend,
+                })}
+              </div>
+              <div>
+                {renderTrendCard({
+                  title: '🆕 신입생 (이번달)',
+                  totalUnit: '명',
+                  total: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
+                  totalDelta: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
+                  cards: newCards,
+                  combined: newCombined,
+                })}
+              </div>
+              <div>
+                {renderTrendCard({
+                  title: '🚪 퇴원 (이번달)',
+                  totalUnit: '명',
+                  total: enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn,
+                  totalDelta: -(enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn),
+                  cards: withdrawnCards,
+                  combined: withdrawnCombined,
+                })}
+              </div>
             </div>
 
-            {/* ── Row 2.5: 보조 KPI (신입생 / 순증감) — 정사각형 ── */}
+            {/* ── Row 2.5: 보조 KPI (신입생 / 순증감) ── */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
               {kpiCards.slice(3).map(card => (
-                <div key={card.id} className="aspect-square">
-                  <KPICard
-                    data={card}
-                    onClick={
-                      card.id === 'new-students' ? () => setIsNewStudentsModalOpen(true)
-                      : card.id === 'net-change' ? () => setIsNetChangeModalOpen(true)
-                      : undefined
-                    }
-                  />
-                </div>
+                <KPICard
+                  key={card.id}
+                  data={card}
+                  onClick={
+                    card.id === 'new-students' ? () => setIsNewStudentsModalOpen(true)
+                    : card.id === 'net-change' ? () => setIsNetChangeModalOpen(true)
+                    : undefined
+                  }
+                />
               ))}
             </div>
 
-            {/* ── Row 3: 주간 출석 + 주의 필요 ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+            {/* ── Row 3: 주간 출석(크게) + 주의 필요 — 비대칭 ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5 [&>:first-child]:lg:col-span-2">
               {/* 주간 출석 추이 — 도넛(평균) + 일별 미니 게이지 */}
               {(() => {
                 const validDays = weeklyAttendance.filter(d => d.source !== 'empty');
@@ -915,8 +919,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               </div>
             </div>
 
-            {/* ── Row 3: 미납 현황 + 상담 후속조치 ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+            {/* ── Row 4: 미납 + 상담 후속조치(크게) — 비대칭 ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5 [&>:last-child]:lg:col-span-2">
               {/* 미납 현황 */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
