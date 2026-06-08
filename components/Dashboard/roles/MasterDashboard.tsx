@@ -20,7 +20,7 @@ import { UserPlus, MessageCircle, BookOpen, TrendingUp, TrendingDown } from 'luc
 import { SUBJECT_COLORS } from '../../../utils/styleUtils';
 import { getTodayKST } from '../../../utils/dateUtils';
 import { isActiveEnrollment as isActiveEnrollmentShared } from '../../../utils/dashboardUtils';
-import { ResponsiveContainer, YAxis, Tooltip, ReferenceDot, Label, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
+import { ResponsiveContainer, XAxis, YAxis, Tooltip, ReferenceDot, Label, PieChart, Pie, Cell, AreaChart, Area, BarChart, Bar, LabelList } from 'recharts';
 
 const AddStudentModal = lazy(() => import('../../StudentManagement/AddStudentModal'));
 const AddClassModal = lazy(() => import('../../ClassManagement/AddClassModal'));
@@ -933,33 +933,53 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
 
             {/* ── Row 4: 미납 + 상담 후속조치 — 균등 ── */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
-              {/* 미납 현황 */}
+              {/* 미납 현황 — 가로 막대 (top 7) */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-semibold text-slate-700">미납 현황</h3>
                   {pendingCount > 0 ? (
-                    <span className="text-xxs font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded">
+                    <span className="text-xxs font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">
                       {pendingCount}건 / {unpaidRecords.reduce((s, r) => s + (r.unpaidAmount || 0), 0).toLocaleString()}원
                     </span>
                   ) : null}
                 </div>
                 {unpaidRecords.length > 0 ? (
-                  <div className="space-y-1 max-h-32 overflow-y-auto">
-                    {unpaidRecords.slice(0, 10).map((r, idx) => (
-                      <div key={idx} className="flex items-center justify-between py-1 px-2 bg-gray-50 rounded text-xxs">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-800">{r.studentName || r.externalStudentId}</span>
-                          <span className="text-gray-400">{r.grade}</span>
-                        </div>
-                        <span className="font-bold text-red-600">{(r.unpaidAmount || 0).toLocaleString()}원</span>
-                      </div>
-                    ))}
-                    {unpaidRecords.length > 10 ? (
-                      <div className="text-xxs text-gray-400 text-center pt-1">외 {unpaidRecords.length - 10}건 더</div>
+                  <div style={{ height: 200 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={unpaidRecords.slice(0, 7).map(r => ({
+                          name: r.studentName || r.externalStudentId,
+                          amount: r.unpaidAmount || 0,
+                        }))}
+                        layout="vertical"
+                        margin={{ top: 4, right: 50, left: 8, bottom: 4 }}
+                      >
+                        <XAxis type="number" hide />
+                        <YAxis type="category" dataKey="name" width={60} tick={{ fontSize: 11, fill: '#475569' }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          cursor={{ fill: '#f1f5f9' }}
+                          content={({ active, payload }: any) => {
+                            if (!active || !payload?.length) return null;
+                            const d = payload[0].payload;
+                            return (
+                              <div className="bg-white border border-slate-200 rounded shadow text-xs p-2">
+                                <div className="font-semibold text-slate-700">{d.name}</div>
+                                <div className="text-rose-600 font-bold">{d.amount.toLocaleString()}원</div>
+                              </div>
+                            );
+                          }}
+                        />
+                        <Bar dataKey="amount" fill="#fb7185" radius={[0, 4, 4, 0]} isAnimationActive animationDuration={600}>
+                          <LabelList dataKey="amount" position="right" formatter={(v: number) => `${(v / 10000).toFixed(0)}만`} style={{ fontSize: 10, fill: '#64748b' }} />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                    {unpaidRecords.length > 7 ? (
+                      <div className="text-[10px] text-slate-400 text-center mt-1">외 {unpaidRecords.length - 7}건 더</div>
                     ) : null}
                   </div>
                 ) : (
-                  <div className="text-xxs text-green-600 py-4 text-center">미납 없음</div>
+                  <div className="text-xxs text-emerald-600 py-8 text-center">미납 없음</div>
                 )}
               </div>
 
@@ -1000,49 +1020,45 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
 
             {/* ── Row 4: 오늘 수업 + 퇴원 사유 + 등록 전환율 ── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3">
-              {/* 오늘의 수업 현황 - 요약 + 미기록만 표시 */}
+              {/* 오늘의 수업 — 세로 막대 (전체/완료/미기록) */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-semibold text-slate-700">오늘의 수업</h3>
+                  <span className="text-[10px] text-slate-400">{todayClasses.length}개 수업</span>
                 </div>
                 {todayClasses.length > 0 ? (
-                  <>
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="flex-1 bg-gray-50 rounded px-2 py-1.5 text-center">
-                        <div className="text-sm font-semibold text-slate-700">{todayClasses.length}</div>
-                        <div className="text-micro text-gray-500">전체</div>
-                      </div>
-                      <div className="flex-1 bg-green-50 rounded px-2 py-1.5 text-center">
-                        <div className="text-sm font-bold text-green-600">{todayClasses.filter(c => c.isRecorded).length}</div>
-                        <div className="text-micro text-gray-500">출석 완료</div>
-                      </div>
-                      <div className="flex-1 bg-red-50 rounded px-2 py-1.5 text-center">
-                        <div className="text-sm font-bold text-red-500">{todayClasses.filter(c => !c.isRecorded).length}</div>
-                        <div className="text-micro text-gray-500">미기록</div>
-                      </div>
-                    </div>
-                    {todayClasses.filter(c => !c.isRecorded).length > 0 ? (
-                      <div className="space-y-1 max-h-24 overflow-y-auto">
-                        <div className="text-xxs text-gray-400 mb-0.5">미기록 수업:</div>
-                        {todayClasses.filter(c => !c.isRecorded).slice(0, 8).map((c, idx) => (
-                          <div key={idx} className="flex items-center justify-between py-0.5 px-2 bg-gray-50 rounded text-xxs">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: SUBJECT_COLORS[c.subject]?.bg || '#6b7280' }} />
-                              <span className="font-medium text-gray-800 truncate">{c.className}</span>
-                            </div>
-                            <span className="text-gray-400 flex-shrink-0">{c.studentCount || 0}명</span>
-                          </div>
-                        ))}
-                        {todayClasses.filter(c => !c.isRecorded).length > 8 ? (
-                          <div className="text-xxs text-gray-400 text-center">외 {todayClasses.filter(c => !c.isRecorded).length - 8}개</div>
-                        ) : null}
-                      </div>
-                    ) : (
-                      <div className="text-xxs text-green-600 text-center py-1">모든 수업 출석 기록 완료</div>
-                    )}
-                  </>
+                  <div style={{ height: 200 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={[
+                          { name: '전체', value: todayClasses.length, fill: '#94a3b8' },
+                          { name: '출석 완료', value: todayClasses.filter(c => c.isRecorded).length, fill: '#10b981' },
+                          { name: '미기록', value: todayClasses.filter(c => !c.isRecorded).length, fill: '#fb7185' },
+                        ]}
+                        margin={{ top: 16, right: 8, left: 8, bottom: 4 }}
+                      >
+                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#475569' }} axisLine={false} tickLine={false} />
+                        <YAxis hide />
+                        <Tooltip cursor={{ fill: '#f1f5f9' }}
+                          content={({ active, payload }: any) => {
+                            if (!active || !payload?.length) return null;
+                            const d = payload[0].payload;
+                            return (
+                              <div className="bg-white border border-slate-200 rounded shadow text-xs p-2">
+                                <div className="font-semibold text-slate-700">{d.name}</div>
+                                <div className="text-slate-800 font-bold">{d.value}개</div>
+                              </div>
+                            );
+                          }}
+                        />
+                        <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive animationDuration={600}>
+                          <LabelList dataKey="value" position="top" style={{ fontSize: 12, fill: '#1e293b', fontWeight: 'bold' }} />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 ) : (
-                  <div className="text-xxs text-gray-400 py-4 text-center">오늘 예정된 수업 없음</div>
+                  <div className="text-xxs text-slate-400 py-8 text-center">오늘 예정된 수업 없음</div>
                 )}
               </div>
 
@@ -1089,35 +1105,40 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 </div>
               </div>
 
-              {/* 등록 상담 전환율 */}
+              {/* 등록 상담 전환율 — 세로 막대 */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
-                <h3 className="text-sm font-semibold text-slate-700 mb-2">이번 달 등록 상담</h3>
-                <div className="flex items-center justify-center gap-4 py-2">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">{regConversionData.total}</div>
-                    <div className="text-xxs text-gray-500">전체 상담</div>
-                  </div>
-                  <div className="text-lg text-gray-300">→</div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{regConversionData.registered}</div>
-                    <div className="text-xxs text-gray-500">등록 완료</div>
-                  </div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-semibold text-slate-700">이번 달 등록 상담</h3>
+                  <span className="text-[10px] font-bold text-slate-700">전환율 {regConversionData.rate}%</span>
                 </div>
-                {/* 전환율 바 */}
-                <div className="mt-1">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-xxs text-gray-500">전환율</span>
-                    <span className="text-xxs font-bold text-primary">{regConversionData.rate}%</span>
-                  </div>
-                  <div className="w-full bg-gray-100 rounded-sm h-2">
-                    <div
-                      className="h-2 rounded-sm transition-all duration-500"
-                      style={{
-                        width: `${regConversionData.rate}%`,
-                        backgroundColor: regConversionData.rate >= 50 ? '#10b981' : regConversionData.rate >= 30 ? '#f59e0b' : '#ef4444',
-                      }}
-                    />
-                  </div>
+                <div style={{ height: 180 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={[
+                        { name: '전체 상담', value: regConversionData.total, fill: '#94a3b8' },
+                        { name: '등록 완료', value: regConversionData.registered, fill: '#10b981' },
+                      ]}
+                      margin={{ top: 16, right: 8, left: 8, bottom: 4 }}
+                    >
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#475569' }} axisLine={false} tickLine={false} />
+                      <YAxis hide />
+                      <Tooltip cursor={{ fill: '#f1f5f9' }}
+                        content={({ active, payload }: any) => {
+                          if (!active || !payload?.length) return null;
+                          const d = payload[0].payload;
+                          return (
+                            <div className="bg-white border border-slate-200 rounded shadow text-xs p-2">
+                              <div className="font-semibold text-slate-700">{d.name}</div>
+                              <div className="text-slate-800 font-bold">{d.value}건</div>
+                            </div>
+                          );
+                        }}
+                      />
+                      <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive animationDuration={600}>
+                        <LabelList dataKey="value" position="top" style={{ fontSize: 12, fill: '#1e293b', fontWeight: 'bold' }} />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
                 {/* 상태별 분류 */}
                 {regConsultations && regConsultations.length > 0 ? (
