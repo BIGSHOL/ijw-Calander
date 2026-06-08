@@ -48,39 +48,39 @@ const KPICard: React.FC<KPICardProps> = ({ data, onClick }) => {
 
   return (
     <div
-      className={`bg-white rounded-sm p-3 shadow-sm border border-gray-100 transition-all hover:shadow-md ${
+      className={`bg-white rounded-lg p-5 shadow-sm border border-gray-100 transition-all hover:shadow-md ${
         onClick ? 'cursor-pointer hover:border-gray-300' : ''
       }`}
       onClick={onClick}
       title={description}
     >
       {/* 아이콘과 라벨 */}
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs font-medium text-gray-600">{label}</span>
-        {icon && <span className="text-lg">{icon}</span>}
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-semibold text-gray-700">{label}</span>
+        {icon && <span className="text-2xl">{icon}</span>}
       </div>
 
       {/* 메인 값 */}
-      <div className="mb-1">
-        <span className="text-2xl font-bold" style={{ color }}>
+      <div className="mb-2">
+        <span className="text-3xl font-bold leading-none" style={{ color }}>
           {value}
         </span>
       </div>
 
       {/* 서브 값 및 트렌드 */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 min-h-[16px]">
         {trend && (
           <div className="flex items-center gap-0.5">
             {getTrendIcon(trend)}
             {trendValue && (
-              <span className={`text-xxs font-medium ${getTrendColor(trend)}`}>
+              <span className={`text-xs font-medium ${getTrendColor(trend)}`}>
                 {trendValue}
               </span>
             )}
           </div>
         )}
         {subValue && (
-          <span className="text-xxs text-gray-500">{subValue}</span>
+          <span className="text-xs text-gray-500">{subValue}</span>
         )}
       </div>
     </div>

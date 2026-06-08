@@ -452,24 +452,24 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     const { title, totalUnit, total, totalDelta, cards, combined } = opts;
     const totalIsUp = totalDelta >= 0;
     return (
-      <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+      <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex flex-col h-full">
         {/* 헤더: 타이틀 + 총 카운트 + 변동 */}
-        <div className="flex items-baseline justify-between mb-2 pb-2 border-b border-gray-100 gap-2 flex-wrap">
+        <div className="flex items-baseline justify-between mb-3 pb-3 border-b border-gray-100 gap-2 flex-wrap">
           <div className="flex items-center gap-2">
-            <h3 className="text-xs font-bold text-primary">{title}</h3>
+            <h3 className="text-sm font-bold text-primary">{title}</h3>
             <div className="flex items-baseline gap-0.5">
-              <span className="text-xl font-bold text-gray-800">{total}</span>
-              <span className="text-xxs text-gray-400">{totalUnit}</span>
+              <span className="text-2xl font-bold text-gray-800">{total}</span>
+              <span className="text-xs text-gray-400">{totalUnit}</span>
             </div>
-            <div className={`flex items-center gap-0.5 text-xxs font-bold ${totalIsUp ? 'text-emerald-600' : 'text-red-500'}`}>
-              <TrendingUp size={10} />
+            <div className={`flex items-center gap-0.5 text-xs font-bold ${totalIsUp ? 'text-emerald-600' : 'text-red-500'}`}>
+              <TrendingUp size={12} />
               <span>{totalIsUp ? '+' : ''}{totalDelta}</span>
             </div>
           </div>
         </div>
 
         {/* 차트 (꺾은선 + 마커) */}
-        <div style={{ height: 170 }}>
+        <div className="flex-1" style={{ minHeight: 200 }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={combined} margin={{ top: 18, right: 24, left: 4, bottom: 0 }}>
               {/* 각 시리즈별 별도 Y축(hide) — 자체 스케일로 변동을 크게 시각화 */}
@@ -720,7 +720,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
         ) : (
           <>
             {/* ── Row 1: KPI 카드 (클릭 시 근거 데이터 모달) ── */}
-            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-5">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-5">
               {kpiCards.map(card => (
                 <KPICard
                   key={card.id}
