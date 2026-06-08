@@ -40,25 +40,92 @@ interface MasterDashboardProps {
 const DAY_NAMES_KO = ['일', '월', '화', '수', '목', '금', '토'];
 
 /**
- * 1단계 디자인 — sparkline placeholder 용 mock trend.
- * 현재 카운트에 수렴하는 30일 시계열 가짜 생성.
- * TODO(2단계): Firebase 일일 스냅샷 컬렉션에서 실데이터로 교체.
+ * 30일 KST 날짜 문자열 시퀀스 (yyyy-mm-dd, 오래된 것 → 최신)
  */
-function generateMockTrend(current: number, days: number = 30, volatility: number = 0.06): { day: number; value: number }[] {
-  if (current <= 0) return Array.from({ length: days }, (_, i) => ({ day: i, value: 0 }));
-  const points: { day: number; value: number }[] = [];
-  // 시작값: 현재의 92% 부근에서 살짝 random
-  let value = current * (0.9 + Math.random() * 0.06);
-  for (let i = 0; i < days; i++) {
-    const remaining = days - i;
-    const trendStep = (current - value) / Math.max(1, remaining);
-    const noise = (Math.random() - 0.5) * current * volatility;
-    value = Math.max(0, value + trendStep + noise);
-    points.push({ day: i, value: Math.round(value) });
+function buildDateStringSequence(endDateStr: string, days: number = 30): string[] {
+  const result: string[] = [];
+  const base = new Date(`${endDateStr}T00:00:00+09:00`);
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(base);
+    d.setDate(d.getDate() - i);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    result.push(`${y}-${m}-${day}`);
   }
-  // 마지막은 정확히 현재값으로 수렴
-  points[days - 1] = { day: days - 1, value: current };
-  return points;
+  return result;
+}
+
+/**
+ * 학생/enrollment startDate-withdrawalDate 윈도우 기반으로
+ * 일자별 active 재원생 수 계산 (수학/영어/2과목).
+ */
+function buildActiveTrend(
+  students: any[],
+  subject: 'math' | 'english' | 'multi2',
+  endDateStr: string,
+  days: number = 30
+): { day: number; value: number }[] {
+  const dates = buildDateStringSequence(endDateStr, days);
+  return dates.map((dStr, idx) => {
+    let count = 0;
+    students.forEach(s => {
+      if (!s.startDate || s.startDate > dStr) return;
+      const wd = s.withdrawalDate || s.endDate;
+      if (wd && wd <= dStr) return;
+      const enrollments = s.enrollments || [];
+      const hasSub = (sub: string) => enrollments.some((e: any) => {
+        if (e.subject !== sub) return false;
+        const eStart = e.enrollmentDate || s.startDate;
+        if (eStart > dStr) return false;
+        if (e.withdrawalDate && e.withdrawalDate <= dStr) return false;
+        return true;
+      });
+      const hasMath = hasSub('math');
+      const hasEng = hasSub('english');
+      if (subject === 'math' && hasMath) count++;
+      else if (subject === 'english' && hasEng) count++;
+      else if (subject === 'multi2' && hasMath && hasEng) count++;
+    });
+    return { day: idx, value: count };
+  });
+}
+
+/**
+ * 이번 달 시작부터 각 일자까지 신입/퇴원 학생 누적 카운트.
+ * 일자가 monthStart 이전이면 0.
+ * 마지막 점 = 카드의 "이번 달 신입/퇴원" 카운트와 일치.
+ */
+function buildMonthlyCumulativeTrend(
+  students: any[],
+  type: 'newMath' | 'newEnglish' | 'withdrawnMath' | 'withdrawnEnglish',
+  endDateStr: string,
+  monthStartStr: string,
+  days: number = 30
+): { day: number; value: number }[] {
+  const dates = buildDateStringSequence(endDateStr, days);
+  const subject = (type === 'newMath' || type === 'withdrawnMath') ? 'math' : 'english';
+  const isNew = type === 'newMath' || type === 'newEnglish';
+  return dates.map((dStr, idx) => {
+    if (dStr < monthStartStr) return { day: idx, value: 0 };
+    let count = 0;
+    students.forEach(s => {
+      if (isNew) {
+        if (!s.startDate || s.startDate < monthStartStr || s.startDate > dStr) return;
+        const hasSub = (s.enrollments || []).some((e: any) =>
+          e.subject === subject &&
+          (!e.withdrawalDate || e.withdrawalDate > dStr)
+        );
+        if (hasSub) count++;
+      } else {
+        if (s.status !== 'withdrawn' || !s.withdrawalDate) return;
+        if (s.withdrawalDate < monthStartStr || s.withdrawalDate > dStr) return;
+        const hasSub = (s.enrollments || []).some((e: any) => e.subject === subject);
+        if (hasSub) count++;
+      }
+    });
+    return { day: idx, value: count };
+  });
 }
 
 const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMember }) => {
@@ -302,12 +369,12 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     // 사용자 결정(2026-05-15): subjectDistribution 대신 시간표 hook 결과로 카운트
     // (시간표 헤더와 정확히 일치 — 수학 226, 영어 296 등).
     const cards: { key: string; label: string; count: number; color: string; trend: { day: number; value: number }[] }[] = [];
-    cards.push({ key: 'math', label: '수학', count: mathActiveCount, color: COLOR_MAP['수학'], trend: generateMockTrend(Math.max(1, mathActiveCount)) });
-    cards.push({ key: 'english', label: '영어', count: englishActiveCount, color: COLOR_MAP['영어'], trend: generateMockTrend(Math.max(1, englishActiveCount)) });
-    cards.push({ key: 'multi2', label: '2과목 수강', count: multi2Count, color: COLOR_MAP['2과목 수강'], trend: generateMockTrend(Math.max(1, multi2Count)) });
+    cards.push({ key: 'math', label: '수학', count: mathActiveCount, color: COLOR_MAP['수학'], trend: buildActiveTrend(students, 'math', today) });
+    cards.push({ key: 'english', label: '영어', count: englishActiveCount, color: COLOR_MAP['영어'], trend: buildActiveTrend(students, 'english', today) });
+    cards.push({ key: 'multi2', label: '2과목 수강', count: multi2Count, color: COLOR_MAP['2과목 수강'], trend: buildActiveTrend(students, 'multi2', today) });
     return cards;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mathActiveCount, englishActiveCount, multi2Count]);
+  }, [mathActiveCount, englishActiveCount, multi2Count, students, today]);
 
   // 이번 달 신입생/퇴원 — 과목별 (수학 math 만 / 영어)
   // 신입생 = 이번 달 학원 등록 + active 수강과목 1개 이상 (status 무관)
@@ -339,18 +406,24 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   }, [students, currentMonthStart, currentMonthEnd]);
 
   // 신입 박스 (수학/영어 2라인) — 영어는 점선으로 표시 (겹침 방지)
-  const newCards = useMemo(() => [
-    { key: 'mathNew', label: '수학 신입', count: enrollmentBySubject.mathNew, color: COLOR_MAP['수학'], trend: generateMockTrend(Math.max(1, enrollmentBySubject.mathNew), 30, 0.18) },
-    { key: 'englishNew', label: '영어 신입', count: enrollmentBySubject.englishNew, color: COLOR_MAP['영어'], trend: generateMockTrend(Math.max(1, enrollmentBySubject.englishNew), 30, 0.18), dashed: true },
+  const newCards = useMemo(() => {
+    const monthStartStr = format(currentMonthStart, 'yyyy-MM-dd');
+    return [
+      { key: 'mathNew', label: '수학 신입', count: enrollmentBySubject.mathNew, color: COLOR_MAP['수학'], trend: buildMonthlyCumulativeTrend(students, 'newMath', today, monthStartStr) },
+      { key: 'englishNew', label: '영어 신입', count: enrollmentBySubject.englishNew, color: COLOR_MAP['영어'], trend: buildMonthlyCumulativeTrend(students, 'newEnglish', today, monthStartStr), dashed: true },
+    ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [enrollmentBySubject.mathNew, enrollmentBySubject.englishNew]);
+  }, [enrollmentBySubject.mathNew, enrollmentBySubject.englishNew, students, today, currentMonthStart]);
 
   // 퇴원 박스 (수학/영어 2라인) — 영어는 점선으로 표시 (겹침 방지)
-  const withdrawnCards = useMemo(() => [
-    { key: 'mathWithdrawn', label: '수학 퇴원', count: enrollmentBySubject.mathWithdrawn, color: COLOR_MAP['수학'], trend: generateMockTrend(Math.max(1, enrollmentBySubject.mathWithdrawn), 30, 0.18) },
-    { key: 'englishWithdrawn', label: '영어 퇴원', count: enrollmentBySubject.englishWithdrawn, color: COLOR_MAP['영어'], trend: generateMockTrend(Math.max(1, enrollmentBySubject.englishWithdrawn), 30, 0.18), dashed: true },
+  const withdrawnCards = useMemo(() => {
+    const monthStartStr = format(currentMonthStart, 'yyyy-MM-dd');
+    return [
+      { key: 'mathWithdrawn', label: '수학 퇴원', count: enrollmentBySubject.mathWithdrawn, color: COLOR_MAP['수학'], trend: buildMonthlyCumulativeTrend(students, 'withdrawnMath', today, monthStartStr) },
+      { key: 'englishWithdrawn', label: '영어 퇴원', count: enrollmentBySubject.englishWithdrawn, color: COLOR_MAP['영어'], trend: buildMonthlyCumulativeTrend(students, 'withdrawnEnglish', today, monthStartStr), dashed: true },
+    ];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  ], [enrollmentBySubject.mathWithdrawn, enrollmentBySubject.englishWithdrawn]);
+  }, [enrollmentBySubject.mathWithdrawn, enrollmentBySubject.englishWithdrawn, students, today, currentMonthStart]);
 
   // 통합 차트 데이터 헬퍼 — cards 배열을 받아 { day, [key1]: v1, [key2]: v2, ... } row 들로
   const makeCombined = (cards: typeof trendCards) => {
@@ -489,7 +562,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
             );
           })}
         </div>
-        <div className="text-micro text-gray-400 text-right mt-0.5">최근 30일 추이 (mock, 지난달 최고 대비)</div>
+        <div className="text-micro text-gray-400 text-right mt-0.5">최근 30일 추이 (지난달 최고 대비)</div>
       </div>
     );
   };
