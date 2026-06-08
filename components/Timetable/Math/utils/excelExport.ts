@@ -325,8 +325,6 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
 
     const {
         weekLabel,
-        filteredClasses,
-        allResources,
         orderedSelectedDays,
         weekDates,
         teachers,
@@ -350,11 +348,27 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
             return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
         })();
 
-    // 시트명: 과목 + 주차 (타이틀 행 제거 대신 시트명에 포함)
-    const safeSheetName = `${subjectFilter || '수학'} ${weekLabel}`.replace(/[\\/:*?"\[\]]/g, '_').slice(0, 31);
-    const sheet = workbook.addWorksheet(safeSheetName, {
-        views: [{ state: 'frozen', xSplit: 1, ySplit: 4 }],
-    });
+    // ─── 한 워크시트(탭) 렌더링 헬퍼 ───
+    // 전체 시트와 강사별 시트가 동일한 그리기 로직을 공유한다.
+    //   sheetClasses      : 이 탭에 그릴 수업 목록 (전체 or 강사별로 필터된 것)
+    //   sheetNameOverride : 탭 이름 (없으면 "과목 주차")
+    //   sheetResources    : 표시할 리소스(강사 컬럼) 목록 (강사별 탭은 [강사명] 1개만)
+    // 반환: { safeSheetName, metaEntries } — _meta(라운드트립) 작성용
+    const buildSheet = (
+        sheetClasses: TimetableClass[],
+        sheetNameOverride?: string,
+        sheetResources?: string[],
+    ) => {
+        // 본문 전체가 참조하는 변수를 인자로 shadow (알고리즘 무변경)
+        const filteredClasses = sheetClasses;
+        const allResources = sheetResources ?? params.allResources;
+
+        // 시트명: 과목 + 주차 (전체 탭) 또는 강사명 (강사별 탭)
+        const safeSheetName = (sheetNameOverride ?? `${subjectFilter || '수학'} ${weekLabel}`)
+            .replace(/[\\/:*?"\[\]]/g, '_').slice(0, 31);
+        const sheet = workbook.addWorksheet(safeSheetName, {
+            views: [{ state: 'frozen', xSplit: 1, ySplit: 4 }],
+        });
 
     // 그룹 분류
     const monThuDays = orderedSelectedDays.filter(d => d === '월' || d === '목');
@@ -1523,6 +1537,38 @@ export async function exportMathTimetableToExcel(params: ExportTimetableParams):
             c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: EMPTY_BG } };
             c.border = { top: THIN, bottom: THICK, left: THIN, right: THICK };
         }
+    });
+
+        return { safeSheetName, metaEntries };
+    };
+    // ─── buildSheet 끝 ───
+
+    // ① 전체 시트 (기존 동작 그대로 — 모든 강사 컬럼 포함)
+    const { safeSheetName, metaEntries } = buildSheet(params.filteredClasses);
+
+    // ② 강사별 시트 — 전체 탭에 표시되는 강사(allResources: 정렬·숨김 이미 반영)마다 탭 1개.
+    //    각 탭은 그 강사가 담당하는 수업·컬럼만 포함한다 (allResources=[강사명]).
+    //    · 수업이 없는 강사는 스킵
+    //    · 시트명 31자/금지문자/중복(_meta·전체탭·동명이인) 처리
+    const usedSheetNames = new Set<string>([safeSheetName, '_meta']);
+    (params.allResources || []).forEach(resource => {
+        const teacherName = (resource || '').trim();
+        if (!teacherName) return;
+        // 이 강사가 담당하는 수업만 필터 (대표강사 또는 슬롯강사)
+        const teacherClasses = params.filteredClasses.filter(c => {
+            if ((c.teacher || '').trim() === teacherName) return true;
+            const slots = c.slotTeachers || {};
+            return Object.values(slots).some(v => (v || '').trim() === teacherName);
+        });
+        if (teacherClasses.length === 0) return;
+        // 시트명 결정 (충돌 시 " (2)" 접미)
+        let sheetName = teacherName.replace(/[\\/:*?"\[\]]/g, '_').slice(0, 31);
+        let n = 2;
+        while (usedSheetNames.has(sheetName)) {
+            sheetName = `${teacherName.slice(0, 27)} (${n++})`.slice(0, 31);
+        }
+        usedSheetNames.add(sheetName);
+        buildSheet(teacherClasses, sheetName, [teacherName]);
     });
 
     // ─── _meta hidden 시트 작성 (라운드트립 가져오기용) ───
