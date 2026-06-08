@@ -521,11 +521,11 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   <React.Fragment key={card.key}>
                     <Area
                       yAxisId={card.key}
-                      type="monotone"
+                      type="linear"
                       dataKey={card.key}
                       name={card.label}
                       stroke={card.color}
-                      strokeWidth={2}
+                      strokeWidth={1.5}
                       strokeDasharray={(card as any).dashed ? '4 4' : undefined}
                       fill={`url(#grad-${card.key})`}
                       dot={(props: any) => {
@@ -827,13 +827,25 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                               data={slices}
                               dataKey="value"
                               nameKey="name"
-                              innerRadius="62%"
-                              outerRadius="92%"
+                              innerRadius="58%"
+                              outerRadius="82%"
                               startAngle={90}
                               endAngle={-270}
                               paddingAngle={2}
                               isAnimationActive
                               animationDuration={600}
+                              labelLine={false}
+                              label={(props: any) => {
+                                const RADIAN = Math.PI / 180;
+                                const radius = props.outerRadius + 12;
+                                const x = props.cx + radius * Math.cos(-props.midAngle * RADIAN);
+                                const y = props.cy + radius * Math.sin(-props.midAngle * RADIAN);
+                                return (
+                                  <text x={x} y={y} fill="#475569" fontSize={11} fontWeight={600} textAnchor="middle" dominantBaseline="middle">
+                                    {props.name}
+                                  </text>
+                                );
+                              }}
                             >
                               {slices.map((s, i) => (
                                 <Cell key={i} fill={s.color} stroke="none" />
