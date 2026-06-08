@@ -11,7 +11,7 @@ import { ConsultationDashboard } from './ConsultationDashboard';
 import { ConsultationTable } from './ConsultationTable';
 import { ConsultationYearView } from './ConsultationYearView';
 import { ConsultationForm } from './ConsultationForm';
-import { LayoutDashboard, List, Calendar, Plus, ChevronLeft, ChevronRight, Upload, Loader2, Search, Settings2, Filter, Inbox, X, Trash2, Link2, CheckCircle2 } from 'lucide-react';
+import { LayoutDashboard, List, Calendar, Plus, ChevronLeft, ChevronRight, Upload, Loader2, Search, Settings2, Filter, Inbox, X, Trash2, Link2 } from 'lucide-react';
 import { TabSubNavigation } from '../Common/TabSubNavigation';
 import { TabButton } from '../Common/TabButton';
 import { VideoLoading } from '../Common/VideoLoading';
@@ -122,7 +122,6 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
     const [editingRecord, setEditingRecord] = useState<ConsultationRecord | null>(null);
     const [showMigrationModal, setShowMigrationModal] = useState(false);
     const [showDraftPanel, setShowDraftPanel] = useState(false);
-    const [showCompletedPanel, setShowCompletedPanel] = useState(false);
     const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
     const [showEmbedManager, setShowEmbedManager] = useState(false);
     // 등록/수정/삭제 성공 토스트 (자동 dismiss)
@@ -607,6 +606,65 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
     const handleDeleteDraft = async (draftId: string) => {
         if (!confirm('이 접수 건을 삭제하시겠습니까?')) return;
         deleteDraft.mutate(draftId);
+    };
+
+    // 상담완료(미등록) 빠른 처리 — draft → consultation 생성 + draft converted 마킹
+    const handleQuickComplete = async (draft: ConsultationDraft) => {
+        if (!window.confirm(`"${draft.studentName}" 학생을 정말 상담완료 하시겠습니까?\n\n상담완료 처리 시 상태가 '미등록' 으로 등록상담 목록에 추가됩니다.`)) return;
+
+        const recordData: Omit<ConsultationRecord, 'id' | 'createdAt'> = {
+            studentName: draft.studentName,
+            gender: draft.gender,
+            bloodType: draft.bloodType || '',
+            schoolName: draft.schoolName,
+            grade: (draft.grade as SchoolGrade) || SchoolGrade.Middle1,
+            studentPhone: draft.studentPhone || '',
+            parentName: draft.parentName,
+            parentRelation: draft.parentRelation || '모',
+            parentPhone: draft.parentPhone,
+            address: draft.address || '',
+            careerGoal: draft.careerGoal || '',
+            siblings: draft.siblings || '',
+            shuttleBusRequest: draft.shuttleBusRequest,
+            privacyAgreement: draft.privacyAgreement,
+            installmentAgreement: draft.installmentAgreement,
+            consultationPath: draft.consultationPath || '',
+            birthDate: '',
+            safetyNotes: '',
+            siblingsDetails: '',
+            studentType: '',
+            consultationDate: new Date().toISOString().slice(0, 10),
+            subject: (draft.subjects?.[0] as ConsultationSubject) || ConsultationSubject.Math,
+            status: ConsultationStatus.NotRegistered,
+            counselor: '',
+            receiver: '',
+            registrar: '',
+            paymentAmount: '',
+            paymentDate: '',
+            notes: '',
+            nonRegistrationReason: '',
+            followUpDate: '',
+            followUpContent: '',
+        };
+
+        try {
+            const result = await createConsultation.mutateAsync({
+                ...recordData,
+                authorId: userProfile?.uid,
+            } as Omit<ConsultationRecord, 'id'>);
+            const newId = (result as any)?.id || '';
+            if (newId) {
+                await convertDraft.mutateAsync({
+                    draftId: draft.id,
+                    consultationId: newId,
+                    reviewerUid: userProfile?.uid || '',
+                });
+            }
+            setSuccessMessage('상담완료(미등록) 처리되었습니다.');
+        } catch (err) {
+            console.error('상담완료 처리 실패:', err);
+            alert('상담완료 처리에 실패했습니다.\n' + (err instanceof Error ? err.message : String(err)));
+        }
     };
 
     const openEditModal = (record: ConsultationRecord) => {
@@ -1099,11 +1157,11 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                                                     상담하기
                                                 </button>
                                                 <button
-                                                    onClick={() => setShowCompletedPanel(true)}
+                                                    onClick={() => handleQuickComplete(draft)}
                                                     className="px-3 py-1.5 bg-emerald-500 text-white text-sm font-bold rounded hover:bg-emerald-600 transition-colors"
                                                     style={{ color: 'white' }}
                                                 >
-                                                    상담완료 목록
+                                                    상담완료
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeleteDraft(draft.id)}
@@ -1120,77 +1178,6 @@ const ConsultationManager: React.FC<ConsultationManagerProps> = ({ userProfile, 
                     </div>
                 </div>
             )}
-
-            {/* Completed Panel (상담완료 목록 — 미등록만) */}
-            {showCompletedPanel && (() => {
-                const completed = consultations
-                    .filter(c => c.status === ConsultationStatus.NotRegistered)
-                    .sort((a, b) => (b.consultationDate || '').localeCompare(a.consultationDate || ''));
-                return (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowCompletedPanel(false)}>
-                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-                            <div className="flex items-center justify-between px-5 py-3 border-b">
-                                <div className="flex items-center gap-2">
-                                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                                    <h3 className="font-bold text-base" style={{ color: 'black' }}>상담완료 목록</h3>
-                                    {completed.length > 0 && (
-                                        <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-0.5 rounded-full">
-                                            {completed.length}건
-                                        </span>
-                                    )}
-                                </div>
-                                <button onClick={() => setShowCompletedPanel(false)} className="p-1 hover:bg-gray-100 rounded">
-                                    <X size={18} className="text-gray-500" />
-                                </button>
-                            </div>
-                            <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                                {completed.length === 0 ? (
-                                    <p className="text-center text-gray-400 py-8 text-sm">상담 완료된 항목이 없습니다</p>
-                                ) : (
-                                    completed.map(record => (
-                                        <div
-                                            key={record.id}
-                                            onClick={() => {
-                                                setEditingRecord(record);
-                                                setActiveDraftId(null);
-                                                setShowCompletedPanel(false);
-                                                setIsFormOpen(true);
-                                            }}
-                                            className="border rounded-lg p-3 hover:bg-gray-50 transition-colors cursor-pointer"
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="font-bold text-base" style={{ color: 'black' }}>{record.studentName}</span>
-                                                        <span className="text-sm" style={{ color: 'black' }}>{record.grade}</span>
-                                                        <span className="text-sm" style={{ color: 'black' }}>{record.schoolName}</span>
-                                                        <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold">
-                                                            {record.status}
-                                                        </span>
-                                                        {record.registeredStudentId && (
-                                                            <span className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-bold">
-                                                                원생 전환됨
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="text-sm mt-0.5" style={{ color: 'black' }}>
-                                                        보호자: {record.parentName || '-'} ({record.parentPhone || '-'})
-                                                        {record.subject && ` · ${record.subject}`}
-                                                        {record.counselor && ` · 상담자: ${record.counselor}`}
-                                                    </div>
-                                                    <div className="text-xs mt-0.5" style={{ color: 'black' }}>
-                                                        상담일: {record.consultationDate || '-'}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                );
-            })()}
 
             {/* 성공 토스트 — 등록/수정 시 자동 표시 후 2.5초 dismiss */}
             {successMessage && (
