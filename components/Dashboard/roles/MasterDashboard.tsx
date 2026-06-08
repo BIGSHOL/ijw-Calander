@@ -456,7 +456,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
         {/* 헤더: 타이틀 + 총 카운트 + 변동 */}
         <div className="flex items-baseline justify-between mb-3 pb-3 border-b border-gray-100 gap-2 flex-wrap">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold text-primary">{title}</h3>
+            <h3 className="text-sm font-semibold text-slate-700">{title}</h3>
             <div className="flex items-baseline gap-0.5">
               <span className="text-2xl font-bold text-gray-800">{total}</span>
               <span className="text-xs text-gray-400">{totalUnit}</span>
@@ -653,14 +653,14 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
       id: 'attendance', label: '오늘 출석률', value: `${attendanceRate}%`,
       subValue: `${presentCount}/${totalCount}`,
       trend: attendanceRate >= 90 ? 'up' : attendanceRate >= 80 ? 'stable' : 'down',
-      icon: '✅', color: '#10b981',
+      color: '#0f766e',
       description: '오늘 (출석+지각) / 오늘 전체 출결 기록 — daily_attendance 우선, 비어있으면 attendance_records 셀로 fallback. 클릭 시 날짜별 검증 가능.',
     },
     {
       id: 'consultation', label: '상담 완료율', value: `${consultationRate}%`,
       subValue: `${consultedSubjectCount}건 완료 / 총 ${totalSubjectEnrollments}건`,
       trend: consultationRate >= 85 ? 'up' : 'stable',
-      icon: '💬', color: '#6366f1',
+      color: '#1e40af',
       description: '이번 달 상담 완료 (학생×과목 단위) / 이번 달 활성 수강과목 전체. 클릭 시 강사별 상세 + 상담 필요 학생 명단.',
     },
     {
@@ -668,13 +668,13 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
       subValue: `${totalPaid.toLocaleString()}/${totalBilled.toLocaleString()}원`,
       trend: billingRate >= 90 ? 'up' : billingRate >= 80 ? 'stable' : 'down',
       trendValue: pendingCount > 0 ? `미납 ${pendingCount}건` : undefined,
-      icon: '💰', color: '#f59e0b',
+      color: '#0369a1',
       description: '이번 달 실제 수납액 / 청구액. 클릭 시 청구·미납 명단.',
     },
     {
       id: 'new-students', label: '신입생', value: newStudentsThisMonth,
       subValue: '이번 달', trend: newStudentsThisMonth > 0 ? 'up' : 'stable',
-      icon: '🆕', color: '#ec4899',
+      color: '#0891b2',
       description: '이번 달 학원 등록(startDate) + 활성 수강과목 1개 이상인 학생. 클릭 시 주간/월간 페이지 + 학생 명단.',
     },
     {
@@ -682,7 +682,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
       value: `${withdrawalData.netChange >= 0 ? '+' : ''}${withdrawalData.netChange}`,
       subValue: `신입생 ${newStudentsThisMonth} / 퇴원 ${withdrawalData.count}`,
       trend: withdrawalData.netChange > 0 ? 'up' : withdrawalData.netChange < 0 ? 'down' : 'stable',
-      icon: '📊', color: '#6b7280',
+      color: '#475569',
       description: '학원 재원생 수의 순수 증감폭 = 신입생 - 퇴원.\n+면 학원이 커지는 중, -면 줄어드는 중, 0이면 변화 없음.\n클릭 시 주간/월간 페이지 + 신입생·퇴원 명단 한 화면에 표시.',
     },
   ];
@@ -730,27 +730,24 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
           </div>
         ) : (
           <>
-            {/* ── Row 1: 메인 KPI 3개 (출석률/완료율/수납률) ── */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
-              {kpiCards.slice(0, 3).map(card => (
-                <KPICard
-                  key={card.id}
-                  data={card}
-                  onClick={
-                    card.id === 'billing' ? () => setIsBillingModalOpen(true)
-                    : card.id === 'consultation' ? () => setIsConsultationModalOpen(true)
-                    : card.id === 'attendance' ? () => setIsTodayAttendanceModalOpen(true)
-                    : undefined
-                  }
-                />
-              ))}
+            {/* ── Row 1: 메인 KPI 3개 — 비대칭 4/5/3 ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-5">
+              <div className="lg:col-span-4">
+                <KPICard data={kpiCards[0]} onClick={() => setIsTodayAttendanceModalOpen(true)} />
+              </div>
+              <div className="lg:col-span-5">
+                <KPICard data={kpiCards[1]} onClick={() => setIsConsultationModalOpen(true)} />
+              </div>
+              <div className="lg:col-span-3">
+                <KPICard data={kpiCards[2]} onClick={() => setIsBillingModalOpen(true)} />
+              </div>
             </div>
 
-            {/* ── 재원생(크게) / 신입 / 퇴원 추이 — 비대칭 grid (재원생 col-span-2) ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-5">
-              <div className="lg:col-span-2">
+            {/* ── 재원생(7) / 신입(3) / 퇴원(2) 추이 — 12-col 비대칭 ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-5">
+              <div className="lg:col-span-7">
                 {renderTrendCard({
-                  title: '👥 재원생',
+                  title: '재원생',
                   totalUnit: '명',
                   total: activeStudents,
                   totalDelta: newStudentsThisMonth - withdrawalData.count,
@@ -758,9 +755,9 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   combined: combinedTrend,
                 })}
               </div>
-              <div>
+              <div className="lg:col-span-3">
                 {renderTrendCard({
-                  title: '🆕 신입생 (이번달)',
+                  title: '신입생 (이번달)',
                   totalUnit: '명',
                   total: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
                   totalDelta: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
@@ -768,9 +765,9 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   combined: newCombined,
                 })}
               </div>
-              <div>
+              <div className="lg:col-span-2">
                 {renderTrendCard({
-                  title: '🚪 퇴원 (이번달)',
+                  title: '퇴원 (이번달)',
                   totalUnit: '명',
                   total: enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn,
                   totalDelta: -(enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn),
@@ -780,62 +777,55 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               </div>
             </div>
 
-            {/* ── Row 2.5: 보조 KPI (신입생 / 순증감) ── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-              {kpiCards.slice(3).map(card => (
-                <KPICard
-                  key={card.id}
-                  data={card}
-                  onClick={
-                    card.id === 'new-students' ? () => setIsNewStudentsModalOpen(true)
-                    : card.id === 'net-change' ? () => setIsNetChangeModalOpen(true)
-                    : undefined
-                  }
-                />
-              ))}
+            {/* ── Row 2.5: 보조 KPI (신입생 / 순증감) — 비대칭 5/7 ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-5">
+              <div className="lg:col-span-5">
+                <KPICard data={kpiCards[3]} onClick={() => setIsNewStudentsModalOpen(true)} />
+              </div>
+              <div className="lg:col-span-7">
+                <KPICard data={kpiCards[4]} onClick={() => setIsNetChangeModalOpen(true)} />
+              </div>
             </div>
 
             {/* ── Row 3: 주간 출석(크게) + 주의 필요 — 비대칭 ── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5 [&>:first-child]:lg:col-span-2">
-              {/* 주간 출석 추이 — 1개 도넛에 7요일 슬라이스 (휴무=회색) */}
+              {/* 주간 출석 추이 — 도넛만 (요일 라벨 없음) */}
               {(() => {
                 const validDays = weeklyAttendance.filter(d => d.source !== 'empty');
                 const avgRate = validDays.length === 0 ? 0 : Math.round(validDays.reduce((s, d) => s + d.rate, 0) / validDays.length);
-                const colorByRate = (rate: number, isClosed: boolean) => {
-                  if (isClosed) return '#e5e7eb';
-                  if (rate >= 95) return '#047857';
-                  if (rate >= 85) return '#10b981';
-                  if (rate >= 70) return '#34d399';
-                  if (rate >= 50) return '#86efac';
-                  if (rate > 0) return '#fde68a';
-                  return '#fca5a5';
+                const colorByRate = (rate: number, isEmpty: boolean) => {
+                  if (isEmpty) return '#e5e7eb';
+                  if (rate >= 95) return '#0f766e';
+                  if (rate >= 85) return '#14b8a6';
+                  if (rate >= 70) return '#5eead4';
+                  if (rate >= 50) return '#99f6e4';
+                  return '#cbd5e1';
                 };
                 const slices = weeklyAttendance.map(d => ({
                   name: d.day,
-                  value: 1, // 각 요일 동일 1/7 슬라이스
+                  value: 1,
                   rate: d.rate,
-                  isClosed: d.source === 'empty',
+                  isEmpty: d.source === 'empty',
                   color: colorByRate(d.rate, d.source === 'empty'),
                 }));
                 return (
                   <div
-                    className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md border border-gray-100 cursor-pointer hover:border-emerald-300 transition-all"
+                    className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md border border-gray-100 cursor-pointer hover:border-slate-300 transition-all"
                     onClick={() => setIsWeeklyAttendanceModalOpen(true)}
                   >
-                    <h3 className="text-sm font-bold text-primary mb-3 flex items-center justify-between">
-                      <span>📈 주간 출석 추이</span>
-                      <span className="text-[10px] text-gray-400 font-normal">클릭 시 요일별 상세 →</span>
+                    <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center justify-between">
+                      <span>주간 출석 추이</span>
+                      <span className="text-[10px] text-slate-400 font-normal">클릭 시 요일별 상세 →</span>
                     </h3>
-                    <div className="flex items-center gap-4">
-                      {/* 도넛 — 7 슬라이스 */}
-                      <div className="relative shrink-0" style={{ width: 180, height: 180 }}>
+                    <div className="flex items-center justify-center" style={{ minHeight: 200 }}>
+                      <div className="relative" style={{ width: 200, height: 200 }}>
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
                             <Pie
                               data={slices}
                               dataKey="value"
                               nameKey="name"
-                              innerRadius="60%"
+                              innerRadius="62%"
                               outerRadius="92%"
                               startAngle={90}
                               endAngle={-270}
@@ -852,10 +842,10 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                                 if (!active || !payload?.length) return null;
                                 const d = payload[0]?.payload;
                                 return (
-                                  <div className="bg-white border border-gray-200 rounded shadow text-xs p-2">
-                                    <div className="font-bold text-gray-700">{d.name}요일</div>
-                                    <div className={d.isClosed ? 'text-gray-400' : 'text-emerald-600 font-bold'}>
-                                      {d.isClosed ? '휴무' : `출석률 ${d.rate}%`}
+                                  <div className="bg-white border border-slate-200 rounded shadow text-xs p-2">
+                                    <div className="font-semibold text-slate-700">{d.name}요일</div>
+                                    <div className={d.isEmpty ? 'text-slate-400' : 'text-slate-800 font-bold'}>
+                                      {d.isEmpty ? '데이터 없음' : `출석률 ${d.rate}%`}
                                     </div>
                                   </div>
                                 );
@@ -864,21 +854,9 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                           </PieChart>
                         </ResponsiveContainer>
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                          <span className="text-2xl font-bold text-emerald-600">{validDays.length === 0 ? '-' : `${avgRate}%`}</span>
-                          <span className="text-[10px] text-gray-500 font-medium">주간 평균</span>
+                          <span className="text-3xl font-bold text-slate-800">{validDays.length === 0 ? '-' : `${avgRate}%`}</span>
+                          <span className="text-[10px] text-slate-500 font-medium mt-0.5">주간 평균</span>
                         </div>
-                      </div>
-                      {/* 요일별 범례 (색상 + 요일 + %) */}
-                      <div className="flex-1 grid grid-cols-2 gap-x-3 gap-y-1.5">
-                        {slices.map((s, i) => (
-                          <div key={i} className="flex items-center gap-1.5 text-xs">
-                            <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: s.color }} />
-                            <span className="font-medium text-gray-700 w-3">{s.name}</span>
-                            <span className={`text-xs font-bold ml-auto ${s.isClosed ? 'text-gray-400' : 'text-gray-800'}`}>
-                              {s.isClosed ? '휴무' : `${s.rate}%`}
-                            </span>
-                          </div>
-                        ))}
                       </div>
                     </div>
                   </div>
@@ -887,7 +865,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
 
               {/* 주의 필요 */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
-                <h3 className="text-xs font-bold text-primary mb-2">⚠️ 주의 필요</h3>
+                <h3 className="text-sm font-semibold text-slate-700 mb-2">주의 필요</h3>
                 <div className="space-y-1.5">
                   {pendingCount > 0 ? (
                     <div className="flex items-center gap-1.5 text-xxs text-red-600">
@@ -944,7 +922,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               {/* 미납 현황 */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-bold text-primary">💰 미납 현황</h3>
+                  <h3 className="text-sm font-semibold text-slate-700">미납 현황</h3>
                   {pendingCount > 0 ? (
                     <span className="text-xxs font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded">
                       {pendingCount}건 / {unpaidRecords.reduce((s, r) => s + (r.unpaidAmount || 0), 0).toLocaleString()}원
@@ -974,7 +952,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               {/* 상담 후속조치 */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-bold text-primary">📋 상담 후속조치</h3>
+                  <h3 className="text-sm font-semibold text-slate-700">상담 후속조치</h3>
                   {followUpData.total > 0 ? (
                     <span className="text-xxs font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
                       {followUpData.total}건 대기
@@ -1011,13 +989,13 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               {/* 오늘의 수업 현황 - 요약 + 미기록만 표시 */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-bold text-primary">📚 오늘의 수업</h3>
+                  <h3 className="text-sm font-semibold text-slate-700">오늘의 수업</h3>
                 </div>
                 {todayClasses.length > 0 ? (
                   <>
                     <div className="flex items-center gap-3 mb-2">
                       <div className="flex-1 bg-gray-50 rounded px-2 py-1.5 text-center">
-                        <div className="text-sm font-bold text-primary">{todayClasses.length}</div>
+                        <div className="text-sm font-semibold text-slate-700">{todayClasses.length}</div>
                         <div className="text-micro text-gray-500">전체</div>
                       </div>
                       <div className="flex-1 bg-green-50 rounded px-2 py-1.5 text-center">
@@ -1057,7 +1035,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               {/* 퇴원 현황 + 최근 시험 */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xs font-bold text-primary">🚪 이번 달 퇴원</h3>
+                  <h3 className="text-sm font-semibold text-slate-700">이번 달 퇴원</h3>
                   {withdrawalData.count > 0 ? (
                     <span className="text-xxs font-bold text-gray-600 bg-gray-100 px-1.5 py-0.5 rounded">{withdrawalData.count}명</span>
                   ) : null}
@@ -1076,7 +1054,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 )}
 
                 <div className="border-t border-gray-100 pt-2">
-                  <h3 className="text-xs font-bold text-primary mb-1.5">📝 최근 시험</h3>
+                  <h3 className="text-sm font-semibold text-slate-700 mb-1.5">📝 최근 시험</h3>
                   {recentExamList.length > 0 ? (
                     <div className="space-y-1">
                       {recentExamList.map((exam, idx) => (
@@ -1099,7 +1077,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
 
               {/* 등록 상담 전환율 */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
-                <h3 className="text-xs font-bold text-primary mb-2">📞 이번 달 등록 상담</h3>
+                <h3 className="text-sm font-semibold text-slate-700 mb-2">이번 달 등록 상담</h3>
                 <div className="flex items-center justify-center gap-4 py-2">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-primary">{regConversionData.total}</div>
