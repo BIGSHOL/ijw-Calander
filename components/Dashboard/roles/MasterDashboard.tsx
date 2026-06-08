@@ -717,8 +717,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   };
 
   return (
-    <div className="w-full p-3 bg-gray-50 overflow-x-auto">
-      <div className="max-w-[1800px] mx-auto min-w-[768px]">
+    <div className="w-full p-3 bg-gray-50">
+      <div className="max-w-[1800px] mx-auto min-w-0 [&_.grid>*]:min-w-0">
         <DashboardHeader userProfile={userProfile} staffMember={staffMember} onRefresh={handleRefresh} />
 
         {isLoading ? (
@@ -730,24 +730,24 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
           </div>
         ) : (
           <>
-            {/* ── Row 1: 메인 KPI 3개 — 비대칭 4/5/3 ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-5">
-              <div className="lg:col-span-4">
+            {/* ── Row 1: 메인 KPI 3개 — 비대칭 4/5/3 (좁은 viewport는 1/3 col) ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-12 gap-4 mb-5">
+              <div className="lg:col-span-4 min-w-0">
                 <KPICard data={kpiCards[0]} onClick={() => setIsTodayAttendanceModalOpen(true)} />
               </div>
-              <div className="lg:col-span-5">
+              <div className="lg:col-span-5 min-w-0">
                 <KPICard data={kpiCards[1]} onClick={() => setIsConsultationModalOpen(true)} />
               </div>
-              <div className="lg:col-span-3">
+              <div className="lg:col-span-3 min-w-0">
                 <KPICard data={kpiCards[2]} onClick={() => setIsBillingModalOpen(true)} />
               </div>
             </div>
 
             {/* ── 재원생(7) / 신입(3) / 퇴원(2) 추이 — 12-col 비대칭 ── */}
             {/* ── 모자이크: 재원생(크게) + 신입/퇴원 sparkline + 보조 KPI 통합 ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-5" style={{ gridAutoFlow: 'dense' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 mb-5" style={{ gridAutoFlow: 'dense' }}>
               {/* 재원생 — 매우 큰 박스 (col-span-7, row-span-2) */}
-              <div className="lg:col-span-7 lg:row-span-2">
+              <div className="md:col-span-2 lg:col-span-7 lg:row-span-2 min-w-0">
                 {renderTrendCard({
                   title: '재원생',
                   totalUnit: '명',
@@ -758,7 +758,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 })}
               </div>
               {/* 신입생 sparkline */}
-              <div className="lg:col-span-3">
+              <div className="lg:col-span-3 min-w-0">
                 {renderTrendCard({
                   title: '신입생 (이번달)',
                   totalUnit: '명',
@@ -769,7 +769,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 })}
               </div>
               {/* 퇴원 — 세로로 길게 (row-span-2) */}
-              <div className="lg:col-span-2 lg:row-span-2">
+              <div className="lg:col-span-2 lg:row-span-2 min-w-0">
                 {renderTrendCard({
                   title: '퇴원 (이번달)',
                   totalUnit: '명',
@@ -780,11 +780,11 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 })}
               </div>
               {/* 보조 KPI: 신입생 (재원생 하단 좌측) */}
-              <div className="lg:col-span-2">
+              <div className="lg:col-span-2 min-w-0">
                 <KPICard data={kpiCards[3]} onClick={() => setIsNewStudentsModalOpen(true)} />
               </div>
               {/* 보조 KPI: 순증감 (재원생 하단 우측) — 신입 sparkline 아래 */}
-              <div className="lg:col-span-1">
+              <div className="lg:col-span-1 min-w-0">
                 <KPICard data={kpiCards[4]} onClick={() => setIsNetChangeModalOpen(true)} />
               </div>
             </div>
