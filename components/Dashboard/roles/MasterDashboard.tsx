@@ -20,7 +20,7 @@ import { UserPlus, MessageCircle, BookOpen, TrendingUp, TrendingDown } from 'luc
 import { SUBJECT_COLORS } from '../../../utils/styleUtils';
 import { getTodayKST } from '../../../utils/dateUtils';
 import { isActiveEnrollment as isActiveEnrollmentShared } from '../../../utils/dashboardUtils';
-import { ResponsiveContainer, LineChart, Line, YAxis, Tooltip, ReferenceDot, Label, PieChart, Pie, Cell } from 'recharts';
+import { ResponsiveContainer, LineChart, Line, YAxis, Tooltip, ReferenceDot, Label, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 
 const AddStudentModal = lazy(() => import('../../StudentManagement/AddStudentModal'));
 const AddClassModal = lazy(() => import('../../ClassManagement/AddClassModal'));
@@ -471,7 +471,15 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
         {/* 차트 (꺾은선 + 마커) */}
         <div className="flex-1" style={{ minHeight: 200 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={combined} margin={{ top: 18, right: 24, left: 4, bottom: 0 }}>
+            <AreaChart data={combined} margin={{ top: 18, right: 24, left: 4, bottom: 0 }}>
+              <defs>
+                {cards.map(c => (
+                  <linearGradient key={`grad-${c.key}`} id={`grad-${c.key}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={c.color} stopOpacity={0.35} />
+                    <stop offset="100%" stopColor={c.color} stopOpacity={0} />
+                  </linearGradient>
+                ))}
+              </defs>
               {/* 각 시리즈별 별도 Y축(hide) — 자체 스케일로 변동을 크게 시각화 */}
               {cards.map(c => (
                 <YAxis key={`yaxis-${c.key}`} yAxisId={c.key} hide domain={['dataMin - 1', 'dataMax + 1']} />
@@ -511,7 +519,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 const todayVal = series[todayIdx];
                 return (
                   <React.Fragment key={card.key}>
-                    <Line
+                    <Area
                       yAxisId={card.key}
                       type="monotone"
                       dataKey={card.key}
@@ -519,6 +527,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                       stroke={card.color}
                       strokeWidth={2}
                       strokeDasharray={(card as any).dashed ? '4 4' : undefined}
+                      fill={`url(#grad-${card.key})`}
                       dot={(props: any) => {
                         const i = props.index;
                         if (i === maxIdx || i === minIdx || i === todayIdx) {
@@ -545,7 +554,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   </React.Fragment>
                 );
               })}
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
 
