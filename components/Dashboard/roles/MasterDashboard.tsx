@@ -744,8 +744,10 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
             </div>
 
             {/* ── 재원생(7) / 신입(3) / 퇴원(2) 추이 — 12-col 비대칭 ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-5">
-              <div className="lg:col-span-8">
+            {/* ── 모자이크: 재원생(크게) + 신입/퇴원 sparkline + 보조 KPI 통합 ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-5" style={{ gridAutoFlow: 'dense' }}>
+              {/* 재원생 — 매우 큰 박스 (col-span-7, row-span-2) */}
+              <div className="lg:col-span-7 lg:row-span-2">
                 {renderTrendCard({
                   title: '재원생',
                   totalUnit: '명',
@@ -755,7 +757,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   combined: combinedTrend,
                 })}
               </div>
-              <div className="lg:col-span-2">
+              {/* 신입생 sparkline */}
+              <div className="lg:col-span-3">
                 {renderTrendCard({
                   title: '신입생 (이번달)',
                   totalUnit: '명',
@@ -765,7 +768,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   combined: newCombined,
                 })}
               </div>
-              <div className="lg:col-span-2">
+              {/* 퇴원 — 세로로 길게 (row-span-2) */}
+              <div className="lg:col-span-2 lg:row-span-2">
                 {renderTrendCard({
                   title: '퇴원 (이번달)',
                   totalUnit: '명',
@@ -775,14 +779,12 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   combined: withdrawnCombined,
                 })}
               </div>
-            </div>
-
-            {/* ── Row 2.5: 보조 KPI (신입생 / 순증감) — 비대칭 5/7 ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 mb-5">
-              <div className="lg:col-span-5">
+              {/* 보조 KPI: 신입생 (재원생 하단 좌측) */}
+              <div className="lg:col-span-2">
                 <KPICard data={kpiCards[3]} onClick={() => setIsNewStudentsModalOpen(true)} />
               </div>
-              <div className="lg:col-span-7">
+              {/* 보조 KPI: 순증감 (재원생 하단 우측) — 신입 sparkline 아래 */}
+              <div className="lg:col-span-1">
                 <KPICard data={kpiCards[4]} onClick={() => setIsNetChangeModalOpen(true)} />
               </div>
             </div>
