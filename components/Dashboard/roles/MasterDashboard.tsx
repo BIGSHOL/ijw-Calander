@@ -797,10 +797,26 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
 
             {/* ── Row 3: 주간 출석(크게) + 주의 필요 — 비대칭 ── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5 [&>:first-child]:lg:col-span-2">
-              {/* 주간 출석 추이 — 요일별 도넛 7개 (휴무 = 회색 풀 도넛) */}
+              {/* 주간 출석 추이 — 1개 도넛에 7요일 슬라이스 (휴무=회색) */}
               {(() => {
                 const validDays = weeklyAttendance.filter(d => d.source !== 'empty');
                 const avgRate = validDays.length === 0 ? 0 : Math.round(validDays.reduce((s, d) => s + d.rate, 0) / validDays.length);
+                const colorByRate = (rate: number, isClosed: boolean) => {
+                  if (isClosed) return '#e5e7eb';
+                  if (rate >= 95) return '#047857';
+                  if (rate >= 85) return '#10b981';
+                  if (rate >= 70) return '#34d399';
+                  if (rate >= 50) return '#86efac';
+                  if (rate > 0) return '#fde68a';
+                  return '#fca5a5';
+                };
+                const slices = weeklyAttendance.map(d => ({
+                  name: d.day,
+                  value: 1, // 각 요일 동일 1/7 슬라이스
+                  rate: d.rate,
+                  isClosed: d.source === 'empty',
+                  color: colorByRate(d.rate, d.source === 'empty'),
+                }));
                 return (
                   <div
                     className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md border border-gray-100 cursor-pointer hover:border-emerald-300 transition-all"
@@ -808,52 +824,62 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   >
                     <h3 className="text-sm font-bold text-primary mb-3 flex items-center justify-between">
                       <span>📈 주간 출석 추이</span>
-                      <span className="text-[10px] text-gray-400 font-normal">평균 {validDays.length > 0 ? `${avgRate}%` : '-'} · 클릭 시 상세 →</span>
+                      <span className="text-[10px] text-gray-400 font-normal">클릭 시 요일별 상세 →</span>
                     </h3>
-                    <div className="grid grid-cols-7 gap-2">
-                      {weeklyAttendance.map((day, idx) => {
-                        const isClosed = day.source === 'empty';
-                        const data = isClosed
-                          ? [{ name: 'closed', value: 100 }]
-                          : [
-                              { name: '출석', value: day.rate },
-                              { name: '미출석', value: Math.max(0, 100 - day.rate) },
-                            ];
-                        const colors = isClosed
-                          ? ['#e5e7eb']
-                          : ['#10b981', '#f3f4f6'];
-                        return (
-                          <div key={idx} className="flex flex-col items-center">
-                            <div className="relative w-full" style={{ aspectRatio: '1 / 1' }}>
-                              <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                  <Pie
-                                    data={data}
-                                    dataKey="value"
-                                    innerRadius="62%"
-                                    outerRadius="92%"
-                                    startAngle={90}
-                                    endAngle={-270}
-                                    paddingAngle={isClosed ? 0 : 1}
-                                    isAnimationActive
-                                    animationDuration={500}
-                                  >
-                                    {data.map((_, i) => (
-                                      <Cell key={i} fill={colors[i]} stroke="none" />
-                                    ))}
-                                  </Pie>
-                                </PieChart>
-                              </ResponsiveContainer>
-                              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                <span className={`text-xs font-bold ${isClosed ? 'text-gray-400' : 'text-emerald-600'}`}>
-                                  {isClosed ? '휴무' : `${day.rate}%`}
-                                </span>
-                              </div>
-                            </div>
-                            <span className={`mt-1 text-xs font-medium ${isClosed ? 'text-gray-400' : 'text-gray-700'}`}>{day.day}</span>
+                    <div className="flex items-center gap-4">
+                      {/* 도넛 — 7 슬라이스 */}
+                      <div className="relative shrink-0" style={{ width: 180, height: 180 }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={slices}
+                              dataKey="value"
+                              nameKey="name"
+                              innerRadius="60%"
+                              outerRadius="92%"
+                              startAngle={90}
+                              endAngle={-270}
+                              paddingAngle={2}
+                              isAnimationActive
+                              animationDuration={600}
+                            >
+                              {slices.map((s, i) => (
+                                <Cell key={i} fill={s.color} stroke="none" />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              content={({ active, payload }: any) => {
+                                if (!active || !payload?.length) return null;
+                                const d = payload[0]?.payload;
+                                return (
+                                  <div className="bg-white border border-gray-200 rounded shadow text-xs p-2">
+                                    <div className="font-bold text-gray-700">{d.name}요일</div>
+                                    <div className={d.isClosed ? 'text-gray-400' : 'text-emerald-600 font-bold'}>
+                                      {d.isClosed ? '휴무' : `출석률 ${d.rate}%`}
+                                    </div>
+                                  </div>
+                                );
+                              }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                          <span className="text-2xl font-bold text-emerald-600">{validDays.length === 0 ? '-' : `${avgRate}%`}</span>
+                          <span className="text-[10px] text-gray-500 font-medium">주간 평균</span>
+                        </div>
+                      </div>
+                      {/* 요일별 범례 (색상 + 요일 + %) */}
+                      <div className="flex-1 grid grid-cols-2 gap-x-3 gap-y-1.5">
+                        {slices.map((s, i) => (
+                          <div key={i} className="flex items-center gap-1.5 text-xs">
+                            <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: s.color }} />
+                            <span className="font-medium text-gray-700 w-3">{s.name}</span>
+                            <span className={`text-xs font-bold ml-auto ${s.isClosed ? 'text-gray-400' : 'text-gray-800'}`}>
+                              {s.isClosed ? '휴무' : `${s.rate}%`}
+                            </span>
                           </div>
-                        );
-                      })}
+                        ))}
+                      </div>
                     </div>
                   </div>
                 );
