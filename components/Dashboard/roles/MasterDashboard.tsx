@@ -92,34 +92,37 @@ function buildActiveTrend(
 }
 
 /**
- * 이번 달 시작부터 각 일자까지 신입/퇴원 학생 누적 카운트.
- * 일자가 monthStart 이전이면 0.
- * 마지막 점 = 카드의 "이번 달 신입/퇴원" 카운트와 일치.
+ * 슬라이딩 30일 윈도우 누적 신입/퇴원 카운트.
+ * 각 일자 d 에서 [d - windowDays + 1, d] 동안 startDate/withdrawalDate가 있는 학생 수.
+ * 매일 윈도우가 한 칸씩 이동하므로 변동이 시각적으로 풍성.
  */
-function buildMonthlyCumulativeTrend(
+function buildSlidingWindowTrend(
   students: any[],
   type: 'newMath' | 'newEnglish' | 'withdrawnMath' | 'withdrawnEnglish',
   endDateStr: string,
-  monthStartStr: string,
-  days: number = 30
+  days: number = 30,
+  windowDays: number = 30
 ): { day: number; value: number }[] {
   const dates = buildDateStringSequence(endDateStr, days);
   const subject = (type === 'newMath' || type === 'withdrawnMath') ? 'math' : 'english';
   const isNew = type === 'newMath' || type === 'newEnglish';
   return dates.map((dStr, idx) => {
-    if (dStr < monthStartStr) return { day: idx, value: 0 };
+    const dDate = new Date(`${dStr}T00:00:00+09:00`);
+    const wStart = new Date(dDate);
+    wStart.setDate(wStart.getDate() - windowDays + 1);
+    const y = wStart.getFullYear();
+    const m = String(wStart.getMonth() + 1).padStart(2, '0');
+    const day = String(wStart.getDate()).padStart(2, '0');
+    const wStartStr = `${y}-${m}-${day}`;
     let count = 0;
     students.forEach(s => {
       if (isNew) {
-        if (!s.startDate || s.startDate < monthStartStr || s.startDate > dStr) return;
-        const hasSub = (s.enrollments || []).some((e: any) =>
-          e.subject === subject &&
-          (!e.withdrawalDate || e.withdrawalDate > dStr)
-        );
+        if (!s.startDate || s.startDate < wStartStr || s.startDate > dStr) return;
+        const hasSub = (s.enrollments || []).some((e: any) => e.subject === subject);
         if (hasSub) count++;
       } else {
         if (s.status !== 'withdrawn' || !s.withdrawalDate) return;
-        if (s.withdrawalDate < monthStartStr || s.withdrawalDate > dStr) return;
+        if (s.withdrawalDate < wStartStr || s.withdrawalDate > dStr) return;
         const hasSub = (s.enrollments || []).some((e: any) => e.subject === subject);
         if (hasSub) count++;
       }
@@ -406,24 +409,19 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   }, [students, currentMonthStart, currentMonthEnd]);
 
   // 신입 박스 (수학/영어 2라인) — 영어는 점선으로 표시 (겹침 방지)
-  const newCards = useMemo(() => {
-    const monthStartStr = format(currentMonthStart, 'yyyy-MM-dd');
-    return [
-      { key: 'mathNew', label: '수학 신입', count: enrollmentBySubject.mathNew, color: COLOR_MAP['수학'], trend: buildMonthlyCumulativeTrend(students, 'newMath', today, monthStartStr) },
-      { key: 'englishNew', label: '영어 신입', count: enrollmentBySubject.englishNew, color: COLOR_MAP['영어'], trend: buildMonthlyCumulativeTrend(students, 'newEnglish', today, monthStartStr), dashed: true },
-    ];
+  // sparkline: 슬라이딩 30일 누적 (매일 윈도우가 한 칸씩 이동 → 시각적 변동 풍성)
+  const newCards = useMemo(() => [
+    { key: 'mathNew', label: '수학 신입', count: enrollmentBySubject.mathNew, color: COLOR_MAP['수학'], trend: buildSlidingWindowTrend(students, 'newMath', today) },
+    { key: 'englishNew', label: '영어 신입', count: enrollmentBySubject.englishNew, color: COLOR_MAP['영어'], trend: buildSlidingWindowTrend(students, 'newEnglish', today), dashed: true },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enrollmentBySubject.mathNew, enrollmentBySubject.englishNew, students, today, currentMonthStart]);
+  ], [enrollmentBySubject.mathNew, enrollmentBySubject.englishNew, students, today]);
 
   // 퇴원 박스 (수학/영어 2라인) — 영어는 점선으로 표시 (겹침 방지)
-  const withdrawnCards = useMemo(() => {
-    const monthStartStr = format(currentMonthStart, 'yyyy-MM-dd');
-    return [
-      { key: 'mathWithdrawn', label: '수학 퇴원', count: enrollmentBySubject.mathWithdrawn, color: COLOR_MAP['수학'], trend: buildMonthlyCumulativeTrend(students, 'withdrawnMath', today, monthStartStr) },
-      { key: 'englishWithdrawn', label: '영어 퇴원', count: enrollmentBySubject.englishWithdrawn, color: COLOR_MAP['영어'], trend: buildMonthlyCumulativeTrend(students, 'withdrawnEnglish', today, monthStartStr), dashed: true },
-    ];
+  const withdrawnCards = useMemo(() => [
+    { key: 'mathWithdrawn', label: '수학 퇴원', count: enrollmentBySubject.mathWithdrawn, color: COLOR_MAP['수학'], trend: buildSlidingWindowTrend(students, 'withdrawnMath', today) },
+    { key: 'englishWithdrawn', label: '영어 퇴원', count: enrollmentBySubject.englishWithdrawn, color: COLOR_MAP['영어'], trend: buildSlidingWindowTrend(students, 'withdrawnEnglish', today), dashed: true },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enrollmentBySubject.mathWithdrawn, enrollmentBySubject.englishWithdrawn, students, today, currentMonthStart]);
+  ], [enrollmentBySubject.mathWithdrawn, enrollmentBySubject.englishWithdrawn, students, today]);
 
   // 통합 차트 데이터 헬퍼 — cards 배열을 받아 { day, [key1]: v1, [key2]: v2, ... } row 들로
   const makeCombined = (cards: typeof trendCards) => {
@@ -474,7 +472,10 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
         <div style={{ height: 170 }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={combined} margin={{ top: 18, right: 24, left: 4, bottom: 0 }}>
-              <YAxis hide domain={['dataMin - 5', 'dataMax + 5']} />
+              {/* 각 시리즈별 별도 Y축(hide) — 자체 스케일로 변동을 크게 시각화 */}
+              {cards.map(c => (
+                <YAxis key={`yaxis-${c.key}`} yAxisId={c.key} hide domain={['dataMin - 1', 'dataMax + 1']} />
+              ))}
               <Tooltip
                 cursor={{ stroke: '#9ca3af', strokeDasharray: '3 3' }}
                 content={({ active, payload, label }: any) => {
@@ -511,6 +512,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 return (
                   <React.Fragment key={card.key}>
                     <Line
+                      yAxisId={card.key}
                       type="linear"
                       dataKey={card.key}
                       name={card.label}
@@ -527,14 +529,14 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                       isAnimationActive
                       animationDuration={700}
                     />
-                    <ReferenceDot x={maxIdx} y={max} r={0} ifOverflow="extendDomain">
+                    <ReferenceDot yAxisId={card.key} x={maxIdx} y={max} r={0} ifOverflow="extendDomain">
                       <Label value={`${max}↑`} position="top" fontSize={9} fill={card.color} />
                     </ReferenceDot>
-                    <ReferenceDot x={minIdx} y={min} r={0} ifOverflow="extendDomain">
+                    <ReferenceDot yAxisId={card.key} x={minIdx} y={min} r={0} ifOverflow="extendDomain">
                       <Label value={`${min}↓`} position="bottom" fontSize={9} fill={card.color} />
                     </ReferenceDot>
                     {todayIdx !== maxIdx && todayIdx !== minIdx && (
-                      <ReferenceDot x={todayIdx} y={todayVal} r={0} ifOverflow="extendDomain">
+                      <ReferenceDot yAxisId={card.key} x={todayIdx} y={todayVal} r={0} ifOverflow="extendDomain">
                         <Label value={`${todayVal}`} position="right" fontSize={9} fill={card.color} />
                       </ReferenceDot>
                     )}
