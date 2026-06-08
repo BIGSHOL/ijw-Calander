@@ -452,7 +452,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     const { title, totalUnit, total, totalDelta, cards, combined } = opts;
     const totalIsUp = totalDelta >= 0;
     return (
-      <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
+      <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
         {/* 헤더: 타이틀 + 총 카운트 + 변동 */}
         <div className="flex items-baseline justify-between mb-2 pb-2 border-b border-gray-100 gap-2 flex-wrap">
           <div className="flex items-center gap-2">
@@ -720,7 +720,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
         ) : (
           <>
             {/* ── Row 1: KPI 카드 (클릭 시 근거 데이터 모달) ── */}
-            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 mb-3">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-5">
               {kpiCards.map(card => (
                 <KPICard
                   key={card.id}
@@ -738,7 +738,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
             </div>
 
             {/* ── 재원생 / 신입 / 퇴원 추이 (박스 3개) ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
               {renderTrendCard({
                 title: '👥 재원생',
                 totalUnit: '명',
@@ -766,10 +766,10 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
             </div>
 
             {/* ── Row 2: 주간 출석 + 주의 필요 ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
               {/* 주간 출석 추이 (클릭 시 요일별 근거 데이터 모달) */}
               <div
-                className="bg-white rounded-sm p-3 shadow-sm border border-gray-100 cursor-pointer hover:border-emerald-300 hover:shadow-md transition-all"
+                className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md border border-gray-100 cursor-pointer hover:border-emerald-300 transition-all"
                 onClick={() => setIsWeeklyAttendanceModalOpen(true)}
               >
                 <h3 className="text-xs font-bold text-primary mb-2 flex items-center justify-between">
@@ -817,7 +817,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               </div>
 
               {/* 주의 필요 */}
-              <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
+              <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <h3 className="text-xs font-bold text-primary mb-2">⚠️ 주의 필요</h3>
                 <div className="space-y-1.5">
                   {pendingCount > 0 ? (
@@ -871,9 +871,9 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
             </div>
 
             {/* ── Row 3: 미납 현황 + 상담 후속조치 ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
               {/* 미납 현황 */}
-              <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
+              <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-xs font-bold text-primary">💰 미납 현황</h3>
                   {pendingCount > 0 ? (
@@ -903,7 +903,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               </div>
 
               {/* 상담 후속조치 */}
-              <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
+              <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-xs font-bold text-primary">📋 상담 후속조치</h3>
                   {followUpData.total > 0 ? (
@@ -940,7 +940,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
             {/* ── Row 4: 오늘 수업 + 퇴원 사유 + 등록 전환율 ── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3">
               {/* 오늘의 수업 현황 - 요약 + 미기록만 표시 */}
-              <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
+              <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-xs font-bold text-primary">📚 오늘의 수업</h3>
                 </div>
@@ -986,7 +986,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               </div>
 
               {/* 퇴원 현황 + 최근 시험 */}
-              <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
+              <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-xs font-bold text-primary">🚪 이번 달 퇴원</h3>
                   {withdrawalData.count > 0 ? (
@@ -1029,7 +1029,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               </div>
 
               {/* 등록 상담 전환율 */}
-              <div className="bg-white rounded-sm p-3 shadow-sm border border-gray-100">
+              <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <h3 className="text-xs font-bold text-primary mb-2">📞 이번 달 등록 상담</h3>
                 <div className="flex items-center justify-center gap-4 py-2">
                   <div className="text-center">
