@@ -879,62 +879,44 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 );
               })()}
 
-              {/* 주의 필요 — 각 항목 좌우 분산해서 카드 폭 채움 */}
+              {/* 주의 필요 — 콘텐츠 중앙 정렬 + 카드 내부 max-w로 박스 좁게 */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
-                <h3 className="text-xl sm:text-2xl font-bold text-black mb-3">주의 필요</h3>
-                <div className="space-y-3">
+                <h3 className="text-xl sm:text-2xl font-bold text-black mb-3 text-center">주의 필요</h3>
+                <div className="space-y-3 max-w-md mx-auto">
                   {pendingCount > 0 ? (
-                    <div className="flex items-center justify-between gap-2 text-xl text-red-600 font-bold">
-                      <span className="flex items-center gap-2 min-w-0">
-                        <span className="w-2 h-2 bg-red-600 rounded-full flex-shrink-0" />
-                        <span>미납</span>
-                      </span>
-                      <span className="text-right">{pendingCount}건 · {unpaidRecords.reduce((s, r) => s + (r.unpaidAmount || 0), 0).toLocaleString()}원</span>
+                    <div className="flex items-center justify-center gap-2 text-xl text-red-600 font-bold">
+                      <span className="w-2 h-2 bg-red-600 rounded-full flex-shrink-0" />
+                      <span>미납 {pendingCount}건 · {unpaidRecords.reduce((s, r) => s + (r.unpaidAmount || 0), 0).toLocaleString()}원</span>
                     </div>
                   ) : null}
                   {followUpData.urgent.length > 0 ? (
-                    <div className="flex items-center justify-between gap-2 text-xl text-red-600 font-bold">
-                      <span className="flex items-center gap-2 min-w-0">
-                        <span className="w-2 h-2 bg-red-600 rounded-full flex-shrink-0" />
-                        <span>긴급 후속조치 (3일 이내)</span>
-                      </span>
-                      <span className="text-right">{followUpData.urgent.length}건</span>
+                    <div className="flex items-center justify-center gap-2 text-xl text-red-600 font-bold">
+                      <span className="w-2 h-2 bg-red-600 rounded-full flex-shrink-0" />
+                      <span>긴급 후속조치 {followUpData.urgent.length}건 (3일 이내)</span>
                     </div>
                   ) : null}
                   {followUpData.pending.length > 0 ? (
-                    <div className="flex items-center justify-between gap-2 text-xl text-orange-600 font-bold">
-                      <span className="flex items-center gap-2 min-w-0">
-                        <span className="w-2 h-2 bg-orange-600 rounded-full flex-shrink-0" />
-                        <span>상담 후속조치 대기</span>
-                      </span>
-                      <span className="text-right">{followUpData.pending.length}건</span>
+                    <div className="flex items-center justify-center gap-2 text-xl text-orange-600 font-bold">
+                      <span className="w-2 h-2 bg-orange-600 rounded-full flex-shrink-0" />
+                      <span>상담 후속조치 대기 {followUpData.pending.length}건</span>
                     </div>
                   ) : null}
                   {stats?.studentsNeedingConsultation && stats.studentsNeedingConsultation.length > 0 ? (
-                    <div className="flex items-center justify-between gap-2 text-xl text-orange-600 font-bold">
-                      <span className="flex items-center gap-2 min-w-0">
-                        <span className="w-2 h-2 bg-orange-600 rounded-full flex-shrink-0" />
-                        <span>이번 달 미상담</span>
-                      </span>
-                      <span className="text-right">{stats.studentsNeedingConsultation.length}건</span>
+                    <div className="flex items-center justify-center gap-2 text-xl text-orange-600 font-bold">
+                      <span className="w-2 h-2 bg-orange-600 rounded-full flex-shrink-0" />
+                      <span>이번 달 미상담 {stats.studentsNeedingConsultation.length}건</span>
                     </div>
                   ) : null}
                   {withdrawalData.count > 0 ? (
-                    <div className="flex items-center justify-between gap-2 text-xl text-yellow-600 font-bold">
-                      <span className="flex items-center gap-2 min-w-0">
-                        <span className="w-2 h-2 bg-yellow-600 rounded-full flex-shrink-0" />
-                        <span>이번 달 퇴원</span>
-                      </span>
-                      <span className="text-right">{withdrawalData.count}명</span>
+                    <div className="flex items-center justify-center gap-2 text-xl text-yellow-600 font-bold">
+                      <span className="w-2 h-2 bg-yellow-600 rounded-full flex-shrink-0" />
+                      <span>이번 달 퇴원 {withdrawalData.count}명</span>
                     </div>
                   ) : null}
                   {totalCount > 0 && attendanceRate < 80 ? (
-                    <div className="flex items-center justify-between gap-2 text-xl text-yellow-600 font-bold">
-                      <span className="flex items-center gap-2 min-w-0">
-                        <span className="w-2 h-2 bg-yellow-600 rounded-full flex-shrink-0" />
-                        <span>오늘 출석률 낮음</span>
-                      </span>
-                      <span className="text-right">{attendanceRate}%</span>
+                    <div className="flex items-center justify-center gap-2 text-xl text-yellow-600 font-bold">
+                      <span className="w-2 h-2 bg-yellow-600 rounded-full flex-shrink-0" />
+                      <span>오늘 출석률 낮음 ({attendanceRate}%)</span>
                     </div>
                   ) : null}
                   {pendingCount === 0 && followUpData.total === 0 && withdrawalData.count === 0
