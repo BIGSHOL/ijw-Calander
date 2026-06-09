@@ -53,17 +53,21 @@ const KPICard: React.FC<KPICardProps> = ({ data, onClick }) => {
   const isZeroValue = /^[+-]?0+%?$/.test(String(value).trim());
   if (isZeroValue) return null;
 
+  // 값이 %로 끝나면 진행바 표시 (카드 가운데 빈 공간 채우는 시각 요소)
+  const percentMatch = String(value).trim().match(/^(\d+(?:\.\d+)?)%$/);
+  const percent = percentMatch ? Math.min(100, Math.max(0, parseFloat(percentMatch[1]))) : null;
+
   return (
     <div
-      className={`bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100 transition-all hover:shadow-md ${
+      className={`bg-white rounded-lg p-4 sm:p-5 shadow-sm border border-gray-100 transition-all hover:shadow-md ${
         onClick ? 'cursor-pointer hover:border-gray-300' : ''
       }`}
       onClick={onClick}
       title={description}
     >
-      {/* 라벨 + 큰 값 + 서브 — 카드 폭 끝까지 분산 (라벨 폰트 매우 크게) */}
+      {/* 1행: 라벨 + 큰 값 */}
       <div className="flex items-baseline justify-between gap-3 w-full">
-        <span className="text-2xl sm:text-3xl font-bold text-black shrink-0 leading-none">{label}</span>
+        <span className="text-xl sm:text-2xl font-bold text-black shrink-0 leading-none">{label}</span>
         <div className="flex items-baseline justify-end gap-2 min-w-0">
           <span className="text-5xl sm:text-6xl font-bold leading-none truncate" style={{ color }}>
             {value}
@@ -76,9 +80,19 @@ const KPICard: React.FC<KPICardProps> = ({ data, onClick }) => {
         </div>
       </div>
 
-      {/* 서브 값 — 카드 하단 우측 끝 */}
+      {/* 2행: 진행바 (% 값일 때만 — 가운데 빈 공간 채움) */}
+      {percent !== null && (
+        <div className="mt-3 w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-700"
+            style={{ width: `${percent}%`, backgroundColor: color }}
+          />
+        </div>
+      )}
+
+      {/* 3행: 서브 값 */}
       {subValue && (
-        <div className="mt-2 text-base sm:text-lg text-black font-semibold text-right truncate">
+        <div className="mt-2 text-base sm:text-lg text-black font-semibold truncate">
           {subValue}
         </div>
       )}

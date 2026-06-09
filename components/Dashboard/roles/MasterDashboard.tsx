@@ -885,31 +885,31 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 <h3 className="text-xl sm:text-2xl font-bold text-black mb-3">주의 필요</h3>
                 <div className="space-y-3">
                   {pendingCount > 0 ? (
-                    <div className="flex items-center gap-1.5 text-lg text-red-600 font-bold">
+                    <div className="flex items-center gap-1.5 text-xl text-red-600 font-bold">
                       <span className="w-1 h-1 bg-red-600 rounded-sm flex-shrink-0" />
                       미납 {pendingCount}건 (총 {unpaidRecords.reduce((s, r) => s + (r.unpaidAmount || 0), 0).toLocaleString()}원)
                     </div>
                   ) : null}
                   {followUpData.urgent.length > 0 ? (
-                    <div className="flex items-center gap-1.5 text-lg text-red-600 font-bold">
+                    <div className="flex items-center gap-1.5 text-xl text-red-600 font-bold">
                       <span className="w-1 h-1 bg-red-600 rounded-sm flex-shrink-0" />
                       긴급 후속조치 {followUpData.urgent.length}건 (3일 이내)
                     </div>
                   ) : null}
                   {followUpData.pending.length > 0 ? (
-                    <div className="flex items-center gap-1.5 text-lg text-orange-600 font-bold">
+                    <div className="flex items-center gap-1.5 text-xl text-orange-600 font-bold">
                       <span className="w-1 h-1 bg-orange-600 rounded-sm flex-shrink-0" />
                       상담 후속조치 대기 {followUpData.pending.length}건
                     </div>
                   ) : null}
                   {stats?.studentsNeedingConsultation && stats.studentsNeedingConsultation.length > 0 ? (
-                    <div className="flex items-center gap-1.5 text-lg text-orange-600 font-bold">
+                    <div className="flex items-center gap-1.5 text-xl text-orange-600 font-bold">
                       <span className="w-1 h-1 bg-orange-600 rounded-sm flex-shrink-0" />
                       이번 달 미상담 {stats.studentsNeedingConsultation.length}건
                     </div>
                   ) : null}
                   {withdrawalData.count > 0 ? (
-                    <div className="flex items-center gap-1.5 text-lg text-yellow-600 font-bold">
+                    <div className="flex items-center gap-1.5 text-xl text-yellow-600 font-bold">
                       <span className="w-1 h-1 bg-yellow-600 rounded-sm flex-shrink-0" />
                       이번 달 퇴원 {withdrawalData.count}명
                     </div>
@@ -920,7 +920,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                       오늘 출석 데이터 없음
                     </div>
                   ) : attendanceRate < 80 ? (
-                    <div className="flex items-center gap-1.5 text-lg text-yellow-600 font-bold">
+                    <div className="flex items-center gap-1.5 text-xl text-yellow-600 font-bold">
                       <span className="w-1 h-1 bg-yellow-600 rounded-sm flex-shrink-0" />
                       오늘 출석률 낮음 ({attendanceRate}%)
                     </div>
