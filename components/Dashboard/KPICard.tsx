@@ -49,9 +49,13 @@ const KPICard: React.FC<KPICardProps> = ({ data, onClick }) => {
   // trendValue가 '+0', '0', '-0' 같은 의미 없는 값이면 숨김
   const isZeroTrend = !trendValue || /^[+-]?0+$/.test(String(trendValue).trim());
 
+  // 메인 값이 0 / 0% / +0 / -0 이면 카드 표시 안 함 (0 이상으로 올라가면 자동 표시)
+  const isZeroValue = /^[+-]?0+%?$/.test(String(value).trim());
+  if (isZeroValue) return null;
+
   return (
     <div
-      className={`bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100 transition-all hover:shadow-md h-full flex flex-col justify-center ${
+      className={`bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100 transition-all hover:shadow-md ${
         onClick ? 'cursor-pointer hover:border-gray-300' : ''
       }`}
       onClick={onClick}

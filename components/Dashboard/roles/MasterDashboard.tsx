@@ -454,7 +454,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     const { title, totalUnit, total, totalDelta, cards, combined } = opts;
     const totalIsUp = totalDelta >= 0;
     return (
-      <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex flex-col h-full">
+      <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex flex-col">
         {/* 헤더: 타이틀 + 총 카운트 + 변동 (inline) */}
         <div className="flex items-baseline gap-2 sm:gap-3 mb-3 pb-3 border-b border-gray-100 flex-wrap">
           <h3 className="text-lg sm:text-xl font-bold text-black">{title}</h3>
@@ -470,8 +470,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
           )}
         </div>
 
-        {/* 차트 (꺾은선 + 마커) */}
-        <div className="flex-1" style={{ minHeight: 260 }}>
+        {/* 차트 (꺾은선 + 마커) — 고정 높이로 안정적 렌더링 */}
+        <div style={{ height: 220 }}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={combined} margin={{ top: 18, right: 24, left: 4, bottom: 0 }}>
               <defs>
@@ -766,26 +766,30 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   combined: combinedTrend,
                 })}
               </div>
-              <div className="lg:col-span-3 min-w-0">
-                {renderTrendCard({
-                  title: '신입생',
-                  totalUnit: '명',
-                  total: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
-                  totalDelta: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
-                  cards: newCards,
-                  combined: newCombined,
-                })}
-              </div>
-              <div className="lg:col-span-2 min-w-0">
-                {renderTrendCard({
-                  title: '퇴원',
-                  totalUnit: '명',
-                  total: enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn,
-                  totalDelta: -(enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn),
-                  cards: withdrawnCards,
-                  combined: withdrawnCombined,
-                })}
-              </div>
+              {(enrollmentBySubject.mathNew + enrollmentBySubject.englishNew) > 0 && (
+                <div className="lg:col-span-3 min-w-0">
+                  {renderTrendCard({
+                    title: '신입생',
+                    totalUnit: '명',
+                    total: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
+                    totalDelta: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
+                    cards: newCards,
+                    combined: newCombined,
+                  })}
+                </div>
+              )}
+              {(enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn) > 0 && (
+                <div className="lg:col-span-2 min-w-0">
+                  {renderTrendCard({
+                    title: '퇴원',
+                    totalUnit: '명',
+                    total: enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn,
+                    totalDelta: -(enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn),
+                    cards: withdrawnCards,
+                    combined: withdrawnCombined,
+                  })}
+                </div>
+              )}
             </div>
 
             {/* ── Row 3: 주간 출석(크게) + 주의 필요 — 비대칭 ── */}
