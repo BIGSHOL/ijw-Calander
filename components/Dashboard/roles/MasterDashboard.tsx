@@ -816,8 +816,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                       <span>주간 출석 추이</span>
                       <span className="text-[10px] text-black font-normal">클릭 시 요일별 상세 →</span>
                     </h3>
-                    <div className="flex items-center justify-center" style={{ minHeight: 260 }}>
-                      <div className="relative" style={{ width: 260, height: 260 }}>
+                    <div className="flex items-center justify-center w-full" style={{ minHeight: 240 }}>
+                      <div className="relative w-full max-w-md" style={{ aspectRatio: '1 / 1', maxHeight: 320 }}>
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
                             <Pie
@@ -1024,7 +1024,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   <span className="text-[10px] text-black">{todayClasses.length}개 수업</span>
                 </div>
                 {todayClasses.length > 0 ? (
-                  <div style={{ height: 200 }}>
+                  <div style={{ height: 150 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={[
@@ -1032,8 +1032,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                           { name: '출석 완료', value: todayClasses.filter(c => c.isRecorded).length, fill: '#059669' },
                           { name: '미기록', value: todayClasses.filter(c => !c.isRecorded).length, fill: '#fb7185' },
                         ].filter(d => d.value > 0)}
-                        margin={{ top: 20, right: 8, left: 8, bottom: 4 }}
-                        barCategoryGap="40%"
+                        margin={{ top: 20, right: 4, left: 4, bottom: 4 }}
+                        barCategoryGap="10%"
                       >
                         <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#1e293b', fontWeight: 600 }} axisLine={false} tickLine={false} />
                         <YAxis hide />
@@ -1049,7 +1049,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                             );
                           }}
                         />
-                        <Bar dataKey="value" radius={[8, 8, 8, 8]} maxBarSize={36} isAnimationActive animationDuration={600}>
+                        <Bar dataKey="value" radius={[8, 8, 8, 8]} isAnimationActive animationDuration={600}>
                           <LabelList dataKey="value" position="top" style={{ fontSize: 14, fill: '#1e293b', fontWeight: 'bold' }} />
                         </Bar>
                       </BarChart>
@@ -1060,66 +1060,59 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 )}
               </div>
 
-              {/* 퇴원 현황 + 최근 시험 */}
-              <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-base sm:text-lg font-semibold text-black">이번 달 퇴원</h3>
-                  {withdrawalData.count > 0 ? (
-                    <span className="text-xxs font-bold text-black bg-gray-100 px-1.5 py-0.5 rounded">{withdrawalData.count}명</span>
-                  ) : null}
-                </div>
-                {withdrawalData.count > 0 ? (
-                  <div className="space-y-1 mb-3">
-                    {withdrawalData.reasons.slice(0, 4).map(([reason, count], idx) => (
-                      <div key={idx} className="flex items-center justify-between text-xxs py-0.5 px-2 bg-gray-50 rounded">
+              {/* 퇴원: 데이터 있을 때만 표시 — 없으면 sparkline 헤더에 이미 0명 노출 */}
+              {withdrawalData.count > 0 ? (
+                <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-base sm:text-lg font-semibold text-black">이번 달 퇴원 사유</h3>
+                    <span className="text-sm font-bold text-black bg-gray-100 px-2 py-0.5 rounded">{withdrawalData.count}명</span>
+                  </div>
+                  <div className="space-y-1">
+                    {withdrawalData.reasons.slice(0, 5).map(([reason, count], idx) => (
+                      <div key={idx} className="flex items-center justify-between text-sm py-1 px-2 bg-gray-50 rounded">
                         <span className="text-black">{reason}</span>
                         <span className="font-bold text-black">{count}명</span>
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <div className="text-sm text-emerald-600 font-medium py-1 text-center mb-2">퇴원 없음</div>
-                )}
-
-                <div className="border-t border-gray-100 pt-2">
-                  <h3 className="text-sm font-semibold text-black mb-1.5">📝 최근 시험</h3>
-                  {recentExamList.length > 0 ? (
-                    <div className="space-y-1">
-                      {recentExamList.map((exam, idx) => (
-                        <div key={idx} className="flex items-center justify-between text-xxs py-0.5">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span className="font-medium px-1 py-0.5 rounded text-white flex-shrink-0" style={{ backgroundColor: subjectColor(exam.subject), fontSize: '9px' }}>
-                              {exam.subject}
-                            </span>
-                            <span className="text-black truncate">{exam.title}</span>
-                          </div>
-                          <span className="text-black flex-shrink-0 ml-1">{exam.date}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-black font-medium py-1 text-center">등록된 시험 없음</div>
-                  )}
                 </div>
-              </div>
+              ) : recentExamList.length > 0 ? (
+                <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+                  <h3 className="text-base sm:text-lg font-semibold text-black mb-2">최근 시험</h3>
+                  <div className="space-y-1">
+                    {recentExamList.map((exam, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-sm py-1">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-medium px-1.5 py-0.5 rounded text-white flex-shrink-0" style={{ backgroundColor: subjectColor(exam.subject), fontSize: '10px' }}>
+                            {exam.subject}
+                          </span>
+                          <span className="text-black truncate">{exam.title}</span>
+                        </div>
+                        <span className="text-black flex-shrink-0 ml-1">{exam.date}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
-              {/* 등록 상담 전환율 — 반원 게이지 (속도계) */}
+              {/* 등록 상담 전환율 — 반원 게이지 (속도계). 전체 0이면 카드 숨김 */}
+              {regConversionData.total > 0 ? (
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
-                <h3 className="text-base sm:text-lg font-semibold text-black mb-2">이번 달 등록 상담</h3>
-                <div className="relative" style={{ height: 180 }}>
+                <h3 className="text-base sm:text-lg font-semibold text-black mb-1">이번 달 등록 상담</h3>
+                <div className="relative" style={{ height: 150 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={[
-                          { name: '등록', value: regConversionData.rate, fill: regConversionData.rate >= 50 ? '#10b981' : regConversionData.rate >= 30 ? '#f59e0b' : '#ef4444' },
+                          { name: '등록', value: Math.max(regConversionData.rate, 0.01), fill: regConversionData.rate >= 50 ? '#10b981' : regConversionData.rate >= 30 ? '#f59e0b' : '#ef4444' },
                           { name: '미등록', value: Math.max(0, 100 - regConversionData.rate), fill: '#e5e7eb' },
                         ]}
                         cx="50%"
-                        cy="85%"
+                        cy="90%"
                         startAngle={180}
                         endAngle={0}
                         innerRadius="100%"
-                        outerRadius="160%"
+                        outerRadius="170%"
                         dataKey="value"
                         stroke="none"
                         isAnimationActive
@@ -1127,22 +1120,11 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                       />
                     </PieChart>
                   </ResponsiveContainer>
-                  <div className="absolute inset-x-0 bottom-2 flex flex-col items-center pointer-events-none">
-                    <span className="text-4xl font-bold text-black leading-none">{regConversionData.rate}<span className="text-xl">%</span></span>
-                    <span className="text-xs text-black mt-1">전환율</span>
-                  </div>
-                  <div className="absolute bottom-0 left-2 text-xs text-black font-medium">0%</div>
-                  <div className="absolute bottom-0 right-2 text-xs text-black font-medium">100%</div>
-                </div>
-                <div className="flex items-center justify-center gap-4 mt-2 pt-2 border-t border-gray-100">
-                  <div className="text-center">
-                    <div className="text-xl font-bold text-black">{regConversionData.total}</div>
-                    <div className="text-xs text-black">전체 상담</div>
-                  </div>
-                  <div className="text-base text-black">→</div>
-                  <div className="text-center">
-                    <div className="text-xl font-bold text-emerald-600">{regConversionData.registered}</div>
-                    <div className="text-xs text-black">등록 완료</div>
+                  <div className="absolute inset-x-0 bottom-1 flex flex-col items-center pointer-events-none">
+                    <span className="text-4xl font-bold text-black leading-none">
+                      <span className="text-base font-medium text-black mr-1">{regConversionData.registered}/{regConversionData.total}</span>
+                      {regConversionData.rate}<span className="text-xl">%</span>
+                    </span>
                   </div>
                 </div>
                 {/* 상태별 분류 */}
@@ -1156,7 +1138,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                       return Object.entries(statusCounts)
                         .sort(([, a], [, b]) => b - a)
                         .map(([status, count], idx) => (
-                          <div key={idx} className="flex items-center justify-between text-xxs">
+                          <div key={idx} className="flex items-center justify-between text-sm">
                             <span className={`font-medium ${isRegisteredStatus(status) ? 'text-green-600' : 'text-black'}`}>
                               {status}
                             </span>
@@ -1167,6 +1149,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   </div>
                 ) : null}
               </div>
+              ) : null}
             </div>
 
             {/* ── Row 5: 빠른 작업 ── */}
