@@ -31,7 +31,6 @@ const ConsultationDetailsModal = lazy(() => import('../modals/ConsultationDetail
 const NewStudentsModal = lazy(() => import('../modals/NewStudentsModal'));
 const NetChangeDetailsModal = lazy(() => import('../modals/NetChangeDetailsModal'));
 const WeeklyAttendanceDetailsModal = lazy(() => import('../modals/WeeklyAttendanceDetailsModal'));
-const TodayAttendanceDetailsModal = lazy(() => import('../modals/TodayAttendanceDetailsModal'));
 
 interface MasterDashboardProps {
   userProfile: UserProfile;
@@ -654,13 +653,6 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   // 재원생 카드는 통합 추이 차트 헤더에 이미 표시되므로 중복 제거 (사용자 결정 2026-05-15).
   const kpiCards: KPICardData[] = [
     {
-      id: 'attendance', label: '오늘 출석률', value: `${attendanceRate}%`,
-      subValue: `${presentCount}/${totalCount}`,
-      trend: attendanceRate >= 90 ? 'up' : attendanceRate >= 80 ? 'stable' : 'down',
-      color: '#0f766e',
-      description: '오늘 (출석+지각) / 오늘 전체 출결 기록 — daily_attendance 우선, 비어있으면 attendance_records 셀로 fallback. 클릭 시 날짜별 검증 가능.',
-    },
-    {
       id: 'consultation', label: '상담 완료율', value: `${consultationRate}%`,
       subValue: `${consultedSubjectCount}건 완료 / 총 ${totalSubjectEnrollments}건`,
       trend: consultationRate >= 85 ? 'up' : 'stable',
@@ -701,7 +693,6 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
   const [isNewStudentsModalOpen, setIsNewStudentsModalOpen] = useState(false);
   const [isNetChangeModalOpen, setIsNetChangeModalOpen] = useState(false);
   const [isWeeklyAttendanceModalOpen, setIsWeeklyAttendanceModalOpen] = useState(false);
-  const [isTodayAttendanceModalOpen, setIsTodayAttendanceModalOpen] = useState(false);
 
   const quickActions: QuickAction[] = [
     { id: 'add-student', label: '학생 추가', icon: UserPlus, onClick: () => setIsAddStudentOpen(true), color: 'rgb(8, 20, 41)' /* primary */ },
@@ -738,12 +729,11 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
           </div>
         ) : (
           <>
-            {/* ── Row 1: 메인 KPI — 정사각형 카드, 가운데 정렬 ── */}
+            {/* ── Row 1: 메인 KPI — 정사각형 카드, 가운데 정렬 (오늘 출석률 제거) ── */}
             <div className="flex flex-wrap justify-center gap-4 mb-5">
               {[
-                { card: kpiCards[0], onClick: () => setIsTodayAttendanceModalOpen(true) },
-                { card: kpiCards[1], onClick: () => setIsConsultationModalOpen(true) },
-                { card: kpiCards[2], onClick: () => setIsBillingModalOpen(true) },
+                { card: kpiCards[0], onClick: () => setIsConsultationModalOpen(true) },
+                { card: kpiCards[1], onClick: () => setIsBillingModalOpen(true) },
               ]
                 .filter(({ card }) => !/^[+-]?0+%?$/.test(String(card.value).trim()))
                 .map(({ card, onClick }) => (
@@ -1208,12 +1198,6 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
           weeklyFromRecords={weeklyFromRecords}
           students={students}
           weeklySummary={weeklyAttendance}
-        />
-        {/* 오늘 출석률 근거 데이터 모달 (날짜 선택 + 30일 추이) */}
-        <TodayAttendanceDetailsModal
-          isOpen={isTodayAttendanceModalOpen}
-          onClose={() => setIsTodayAttendanceModalOpen(false)}
-          defaultDate={today}
         />
       </Suspense>
     </div>
