@@ -1032,9 +1032,10 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                           { name: '출석 완료', value: todayClasses.filter(c => c.isRecorded).length, fill: '#059669' },
                           { name: '미기록', value: todayClasses.filter(c => !c.isRecorded).length, fill: '#fb7185' },
                         ].filter(d => d.value > 0)}
-                        margin={{ top: 16, right: 8, left: 8, bottom: 4 }}
+                        margin={{ top: 20, right: 8, left: 8, bottom: 4 }}
+                        barCategoryGap="40%"
                       >
-                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#475569' }} axisLine={false} tickLine={false} />
+                        <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#1e293b', fontWeight: 600 }} axisLine={false} tickLine={false} />
                         <YAxis hide />
                         <Tooltip cursor={{ fill: '#f1f5f9' }}
                           content={({ active, payload }: any) => {
@@ -1048,8 +1049,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                             );
                           }}
                         />
-                        <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive animationDuration={600}>
-                          <LabelList dataKey="value" position="top" style={{ fontSize: 12, fill: '#1e293b', fontWeight: 'bold' }} />
+                        <Bar dataKey="value" radius={[8, 8, 8, 8]} maxBarSize={36} isAnimationActive animationDuration={600}>
+                          <LabelList dataKey="value" position="top" style={{ fontSize: 14, fill: '#1e293b', fontWeight: 'bold' }} />
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
@@ -1102,40 +1103,47 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 </div>
               </div>
 
-              {/* 등록 상담 전환율 — 세로 막대 */}
+              {/* 등록 상담 전환율 — 반원 게이지 (속도계) */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-base sm:text-lg font-semibold text-black">이번 달 등록 상담</h3>
-                  <span className="text-[10px] font-bold text-black">전환율 {regConversionData.rate}%</span>
-                </div>
-                <div style={{ height: 180 }}>
+                <h3 className="text-base sm:text-lg font-semibold text-black mb-2">이번 달 등록 상담</h3>
+                <div className="relative" style={{ height: 180 }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={[
-                        { name: '전체 상담', value: regConversionData.total, fill: '#10b981' },
-                        { name: '등록 완료', value: regConversionData.registered, fill: '#059669' },
-                      ].filter(d => d.value > 0)}
-                      margin={{ top: 16, right: 8, left: 8, bottom: 4 }}
-                    >
-                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#475569' }} axisLine={false} tickLine={false} />
-                      <YAxis hide />
-                      <Tooltip cursor={{ fill: '#f1f5f9' }}
-                        content={({ active, payload }: any) => {
-                          if (!active || !payload?.length) return null;
-                          const d = payload[0].payload;
-                          return (
-                            <div className="bg-white border border-slate-200 rounded shadow text-xs p-2">
-                              <div className="font-semibold text-black">{d.name}</div>
-                              <div className="text-black font-bold">{d.value}건</div>
-                            </div>
-                          );
-                        }}
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: '등록', value: regConversionData.rate, fill: regConversionData.rate >= 50 ? '#10b981' : regConversionData.rate >= 30 ? '#f59e0b' : '#ef4444' },
+                          { name: '미등록', value: Math.max(0, 100 - regConversionData.rate), fill: '#e5e7eb' },
+                        ]}
+                        cx="50%"
+                        cy="85%"
+                        startAngle={180}
+                        endAngle={0}
+                        innerRadius="100%"
+                        outerRadius="160%"
+                        dataKey="value"
+                        stroke="none"
+                        isAnimationActive
+                        animationDuration={700}
                       />
-                      <Bar dataKey="value" radius={[6, 6, 0, 0]} isAnimationActive animationDuration={600}>
-                        <LabelList dataKey="value" position="top" style={{ fontSize: 12, fill: '#1e293b', fontWeight: 'bold' }} />
-                      </Bar>
-                    </BarChart>
+                    </PieChart>
                   </ResponsiveContainer>
+                  <div className="absolute inset-x-0 bottom-2 flex flex-col items-center pointer-events-none">
+                    <span className="text-4xl font-bold text-black leading-none">{regConversionData.rate}<span className="text-xl">%</span></span>
+                    <span className="text-xs text-black mt-1">전환율</span>
+                  </div>
+                  <div className="absolute bottom-0 left-2 text-xs text-black font-medium">0%</div>
+                  <div className="absolute bottom-0 right-2 text-xs text-black font-medium">100%</div>
+                </div>
+                <div className="flex items-center justify-center gap-4 mt-2 pt-2 border-t border-gray-100">
+                  <div className="text-center">
+                    <div className="text-xl font-bold text-black">{regConversionData.total}</div>
+                    <div className="text-xs text-black">전체 상담</div>
+                  </div>
+                  <div className="text-base text-black">→</div>
+                  <div className="text-center">
+                    <div className="text-xl font-bold text-emerald-600">{regConversionData.registered}</div>
+                    <div className="text-xs text-black">등록 완료</div>
+                  </div>
                 </div>
                 {/* 상태별 분류 */}
                 {regConsultations && regConsultations.length > 0 ? (
