@@ -61,24 +61,24 @@ const KPICard: React.FC<KPICardProps> = ({ data, onClick }) => {
       onClick={onClick}
       title={description}
     >
-      {/* 라벨 + 큰 값 + 서브 + 트렌드 — 카드 폭 끝까지 분산 */}
-      <div className="flex items-baseline justify-between gap-2 w-full">
-        <span className="text-base sm:text-lg font-semibold text-black shrink-0">{label}</span>
-        <div className="flex items-baseline justify-end gap-2 min-w-0 flex-1">
-          <span className="text-4xl sm:text-5xl font-bold leading-none truncate" style={{ color }}>
+      {/* 라벨 + 큰 값 + 서브 — 카드 폭 끝까지 분산 (라벨 폰트 매우 크게) */}
+      <div className="flex items-baseline justify-between gap-3 w-full">
+        <span className="text-2xl sm:text-3xl font-bold text-black shrink-0 leading-none">{label}</span>
+        <div className="flex items-baseline justify-end gap-2 min-w-0">
+          <span className="text-5xl sm:text-6xl font-bold leading-none truncate" style={{ color }}>
             {value}
           </span>
           {trend && !isZeroTrend && (
-            <span className={`text-base font-bold shrink-0 ${getTrendColor(trend)}`}>
+            <span className={`text-lg font-bold shrink-0 ${getTrendColor(trend)}`}>
               {trendValue}
             </span>
           )}
         </div>
       </div>
 
-      {/* 서브 값 — 카드 하단 가득 채워서 우측 끝까지 정보 분산 */}
+      {/* 서브 값 — 카드 하단 우측 끝 */}
       {subValue && (
-        <div className="mt-1.5 text-sm sm:text-base text-black font-medium text-right truncate">
+        <div className="mt-2 text-base sm:text-lg text-black font-semibold text-right truncate">
           {subValue}
         </div>
       )}

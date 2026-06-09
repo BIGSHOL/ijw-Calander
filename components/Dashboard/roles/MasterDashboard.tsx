@@ -818,20 +818,20 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                     className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md border border-gray-100 cursor-pointer hover:border-slate-300 transition-all"
                     onClick={() => setIsWeeklyAttendanceModalOpen(true)}
                   >
-                    <h3 className="text-sm font-semibold text-black mb-3 flex items-center justify-between">
+                    <h3 className="text-xl sm:text-2xl font-bold text-black mb-3 flex items-center justify-between">
                       <span>주간 출석 추이</span>
-                      <span className="text-[10px] text-black font-normal">클릭 시 요일별 상세 →</span>
+                      <span className="text-base text-black font-semibold">클릭 시 요일별 상세 →</span>
                     </h3>
-                    <div className="flex items-center justify-center w-full" style={{ minHeight: 320 }}>
-                      <div className="relative w-full" style={{ height: 360 }}>
+                    <div className="flex items-center justify-center w-full" style={{ minHeight: 360 }}>
+                      <div className="relative w-full" style={{ height: 420 }}>
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
                             <Pie
                               data={slices}
                               dataKey="value"
                               nameKey="name"
-                              innerRadius="58%"
-                              outerRadius="82%"
+                              innerRadius="62%"
+                              outerRadius="92%"
                               startAngle={90}
                               endAngle={-270}
                               paddingAngle={2}
@@ -840,11 +840,11 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                               labelLine={false}
                               label={(props: any) => {
                                 const RADIAN = Math.PI / 180;
-                                const radius = props.outerRadius + 12;
+                                const radius = props.outerRadius + 18;
                                 const x = props.cx + radius * Math.cos(-props.midAngle * RADIAN);
                                 const y = props.cy + radius * Math.sin(-props.midAngle * RADIAN);
                                 return (
-                                  <text x={x} y={y} fill="#475569" fontSize={11} fontWeight={600} textAnchor="middle" dominantBaseline="middle">
+                                  <text x={x} y={y} fill="#000" fontSize={18} fontWeight={700} textAnchor="middle" dominantBaseline="middle">
                                     {props.name}
                                   </text>
                                 );
@@ -882,34 +882,34 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
 
               {/* 주의 필요 */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
-                <h3 className="text-sm font-semibold text-black mb-2">주의 필요</h3>
-                <div className="space-y-1.5">
+                <h3 className="text-xl sm:text-2xl font-bold text-black mb-3">주의 필요</h3>
+                <div className="space-y-3">
                   {pendingCount > 0 ? (
-                    <div className="flex items-center gap-1.5 text-sm text-red-600 font-medium">
+                    <div className="flex items-center gap-1.5 text-lg text-red-600 font-bold">
                       <span className="w-1 h-1 bg-red-600 rounded-sm flex-shrink-0" />
                       미납 {pendingCount}건 (총 {unpaidRecords.reduce((s, r) => s + (r.unpaidAmount || 0), 0).toLocaleString()}원)
                     </div>
                   ) : null}
                   {followUpData.urgent.length > 0 ? (
-                    <div className="flex items-center gap-1.5 text-sm text-red-600 font-medium">
+                    <div className="flex items-center gap-1.5 text-lg text-red-600 font-bold">
                       <span className="w-1 h-1 bg-red-600 rounded-sm flex-shrink-0" />
                       긴급 후속조치 {followUpData.urgent.length}건 (3일 이내)
                     </div>
                   ) : null}
                   {followUpData.pending.length > 0 ? (
-                    <div className="flex items-center gap-1.5 text-sm text-orange-600 font-medium">
+                    <div className="flex items-center gap-1.5 text-lg text-orange-600 font-bold">
                       <span className="w-1 h-1 bg-orange-600 rounded-sm flex-shrink-0" />
                       상담 후속조치 대기 {followUpData.pending.length}건
                     </div>
                   ) : null}
                   {stats?.studentsNeedingConsultation && stats.studentsNeedingConsultation.length > 0 ? (
-                    <div className="flex items-center gap-1.5 text-sm text-orange-600 font-medium">
+                    <div className="flex items-center gap-1.5 text-lg text-orange-600 font-bold">
                       <span className="w-1 h-1 bg-orange-600 rounded-sm flex-shrink-0" />
                       이번 달 미상담 {stats.studentsNeedingConsultation.length}건
                     </div>
                   ) : null}
                   {withdrawalData.count > 0 ? (
-                    <div className="flex items-center gap-1.5 text-sm text-yellow-600 font-medium">
+                    <div className="flex items-center gap-1.5 text-lg text-yellow-600 font-bold">
                       <span className="w-1 h-1 bg-yellow-600 rounded-sm flex-shrink-0" />
                       이번 달 퇴원 {withdrawalData.count}명
                     </div>
@@ -920,7 +920,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                       오늘 출석 데이터 없음
                     </div>
                   ) : attendanceRate < 80 ? (
-                    <div className="flex items-center gap-1.5 text-sm text-yellow-600 font-medium">
+                    <div className="flex items-center gap-1.5 text-lg text-yellow-600 font-bold">
                       <span className="w-1 h-1 bg-yellow-600 rounded-sm flex-shrink-0" />
                       오늘 출석률 낮음 ({attendanceRate}%)
                     </div>
