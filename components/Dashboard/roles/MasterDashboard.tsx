@@ -454,19 +454,21 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     const { title, totalUnit, total, totalDelta, cards, combined } = opts;
     const totalIsUp = totalDelta >= 0;
     return (
-      <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex flex-col h-full">
+      <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex flex-col h-full">
         {/* 헤더: 타이틀 + 총 카운트 + 변동 */}
         <div className="flex items-baseline justify-between mb-3 pb-3 border-b border-gray-100 gap-2 flex-wrap">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold text-black">{title}</h3>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-base sm:text-lg font-semibold text-black">{title}</h3>
             <div className="flex items-baseline gap-0.5">
-              <span className="text-2xl font-bold text-black">{total}</span>
-              <span className="text-xs text-black">{totalUnit}</span>
+              <span className="text-2xl sm:text-3xl font-bold text-black">{total}</span>
+              <span className="text-sm text-black">{totalUnit}</span>
             </div>
-            <div className={`flex items-center gap-0.5 text-xs font-bold ${totalIsUp ? 'text-emerald-600' : 'text-red-500'}`}>
-              <TrendingUp size={12} />
-              <span>{totalIsUp ? '+' : ''}{totalDelta}</span>
-            </div>
+            {totalDelta !== 0 && (
+              <div className={`flex items-center gap-0.5 text-sm font-bold ${totalIsUp ? 'text-emerald-600' : 'text-red-500'}`}>
+                <TrendingUp size={14} />
+                <span>{totalIsUp ? '+' : ''}{totalDelta}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -750,10 +752,9 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
             </div>
 
             {/* ── 재원생(7) / 신입(3) / 퇴원(2) 추이 — 12-col 비대칭 ── */}
-            {/* ── 모자이크: 재원생(크게) + 신입/퇴원 sparkline + 보조 KPI 통합 ── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 mb-5" style={{ gridAutoFlow: 'dense' }}>
-              {/* 재원생 — 매우 큰 박스 (col-span-7, row-span-2) */}
-              <div className="md:col-span-2 lg:col-span-7 lg:row-span-2 min-w-0">
+            {/* ── 재원생(크게) + 신입 + 퇴원 sparkline ── */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 mb-5">
+              <div className="md:col-span-2 lg:col-span-7 min-w-0">
                 {renderTrendCard({
                   title: '재원생',
                   totalUnit: '명',
@@ -763,10 +764,9 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   combined: combinedTrend,
                 })}
               </div>
-              {/* 신입생 sparkline */}
               <div className="lg:col-span-3 min-w-0">
                 {renderTrendCard({
-                  title: '신입생 (이번달)',
+                  title: '신입생',
                   totalUnit: '명',
                   total: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
                   totalDelta: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
@@ -774,24 +774,15 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   combined: newCombined,
                 })}
               </div>
-              {/* 퇴원 — 세로로 길게 (row-span-2) */}
-              <div className="lg:col-span-2 lg:row-span-2 min-w-0">
+              <div className="lg:col-span-2 min-w-0">
                 {renderTrendCard({
-                  title: '퇴원 (이번달)',
+                  title: '퇴원',
                   totalUnit: '명',
                   total: enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn,
                   totalDelta: -(enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn),
                   cards: withdrawnCards,
                   combined: withdrawnCombined,
                 })}
-              </div>
-              {/* 보조 KPI: 신입생 (재원생 하단 좌측) */}
-              <div className="lg:col-span-2 min-w-0">
-                <KPICard data={kpiCards[3]} onClick={() => setIsNewStudentsModalOpen(true)} />
-              </div>
-              {/* 보조 KPI: 순증감 (재원생 하단 우측) — 신입 sparkline 아래 */}
-              <div className="lg:col-span-1 min-w-0">
-                <KPICard data={kpiCards[4]} onClick={() => setIsNetChangeModalOpen(true)} />
               </div>
             </div>
 
@@ -942,9 +933,9 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               {/* 미납 현황 — 가로 막대 (top 7) */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-semibold text-black">미납 현황</h3>
+                  <h3 className="text-base sm:text-lg font-semibold text-black">미납 현황</h3>
                   {pendingCount > 0 ? (
-                    <span className="text-xxs font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">
+                    <span className="text-sm font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">
                       {pendingCount}건 / {unpaidRecords.reduce((s, r) => s + (r.unpaidAmount || 0), 0).toLocaleString()}원
                     </span>
                   ) : null}
@@ -981,7 +972,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                       </BarChart>
                     </ResponsiveContainer>
                     {unpaidRecords.length > 7 ? (
-                      <div className="text-[10px] text-black text-center mt-1">외 {unpaidRecords.length - 7}건 더</div>
+                      <div className="text-xs text-black text-center mt-1">외 {unpaidRecords.length - 7}건 더</div>
                     ) : null}
                   </div>
                 ) : (
@@ -992,9 +983,9 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               {/* 상담 후속조치 */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-semibold text-black">상담 후속조치</h3>
+                  <h3 className="text-base sm:text-lg font-semibold text-black">상담 후속조치</h3>
                   {followUpData.total > 0 ? (
-                    <span className="text-xxs font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
+                    <span className="text-sm font-bold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded">
                       {followUpData.total}건 대기
                     </span>
                   ) : null}
@@ -1029,7 +1020,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               {/* 오늘의 수업 — 세로 막대 (전체/완료/미기록) */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-semibold text-black">오늘의 수업</h3>
+                  <h3 className="text-base sm:text-lg font-semibold text-black">오늘의 수업</h3>
                   <span className="text-[10px] text-black">{todayClasses.length}개 수업</span>
                 </div>
                 {todayClasses.length > 0 ? (
@@ -1040,7 +1031,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                           { name: '전체', value: todayClasses.length, fill: '#10b981' },
                           { name: '출석 완료', value: todayClasses.filter(c => c.isRecorded).length, fill: '#059669' },
                           { name: '미기록', value: todayClasses.filter(c => !c.isRecorded).length, fill: '#fb7185' },
-                        ]}
+                        ].filter(d => d.value > 0)}
                         margin={{ top: 16, right: 8, left: 8, bottom: 4 }}
                       >
                         <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#475569' }} axisLine={false} tickLine={false} />
@@ -1071,7 +1062,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               {/* 퇴원 현황 + 최근 시험 */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-semibold text-black">이번 달 퇴원</h3>
+                  <h3 className="text-base sm:text-lg font-semibold text-black">이번 달 퇴원</h3>
                   {withdrawalData.count > 0 ? (
                     <span className="text-xxs font-bold text-black bg-gray-100 px-1.5 py-0.5 rounded">{withdrawalData.count}명</span>
                   ) : null}
@@ -1114,7 +1105,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               {/* 등록 상담 전환율 — 세로 막대 */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-semibold text-black">이번 달 등록 상담</h3>
+                  <h3 className="text-base sm:text-lg font-semibold text-black">이번 달 등록 상담</h3>
                   <span className="text-[10px] font-bold text-black">전환율 {regConversionData.rate}%</span>
                 </div>
                 <div style={{ height: 180 }}>
@@ -1123,7 +1114,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                       data={[
                         { name: '전체 상담', value: regConversionData.total, fill: '#10b981' },
                         { name: '등록 완료', value: regConversionData.registered, fill: '#059669' },
-                      ]}
+                      ].filter(d => d.value > 0)}
                       margin={{ top: 16, right: 8, left: 8, bottom: 4 }}
                     >
                       <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#475569' }} axisLine={false} tickLine={false} />

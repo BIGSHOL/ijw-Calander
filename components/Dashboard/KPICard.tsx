@@ -46,41 +46,42 @@ const KPICard: React.FC<KPICardProps> = ({ data, onClick }) => {
     }
   };
 
+  // trendValue가 '+0', '0', '-0' 같은 의미 없는 값이면 숨김
+  const isZeroTrend = !trendValue || /^[+-]?0+$/.test(String(trendValue).trim());
+
   return (
     <div
-      className={`bg-white rounded-lg p-3 shadow-sm border border-gray-100 transition-all hover:shadow-md ${
+      className={`bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100 transition-all hover:shadow-md ${
         onClick ? 'cursor-pointer hover:border-gray-300' : ''
       }`}
       onClick={onClick}
       title={description}
     >
       {/* 아이콘과 라벨 */}
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-xs font-semibold text-black">{label}</span>
-        {icon && <span className="text-lg">{icon}</span>}
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-sm sm:text-base font-semibold text-black">{label}</span>
+        {icon && <span className="text-xl sm:text-2xl">{icon}</span>}
       </div>
 
       {/* 메인 값 */}
       <div>
-        <span className="text-2xl font-bold leading-tight" style={{ color }}>
+        <span className="text-3xl sm:text-4xl font-bold leading-tight" style={{ color }}>
           {value}
         </span>
       </div>
 
       {/* 서브 값 및 트렌드 */}
-      <div className="flex items-center gap-1.5 mt-0.5">
-        {trend && (
+      <div className="flex items-center gap-1.5 mt-1">
+        {trend && !isZeroTrend && (
           <div className="flex items-center gap-0.5">
             {getTrendIcon(trend)}
-            {trendValue && (
-              <span className={`text-[10px] font-medium ${getTrendColor(trend)}`}>
-                {trendValue}
-              </span>
-            )}
+            <span className={`text-xs font-medium ${getTrendColor(trend)}`}>
+              {trendValue}
+            </span>
           </div>
         )}
         {subValue && (
-          <span className="text-[10px] text-black">{subValue}</span>
+          <span className="text-xs text-black">{subValue}</span>
         )}
       </div>
     </div>
