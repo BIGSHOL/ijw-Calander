@@ -59,43 +59,45 @@ const KPICard: React.FC<KPICardProps> = ({ data, onClick }) => {
 
   return (
     <div
-      className={`bg-white rounded-lg p-4 sm:p-5 shadow-sm border border-gray-100 transition-all hover:shadow-md ${
+      className={`bg-white rounded-lg p-4 sm:p-5 shadow-sm border border-gray-100 transition-all hover:shadow-md aspect-square flex flex-col justify-between ${
         onClick ? 'cursor-pointer hover:border-gray-300' : ''
       }`}
       onClick={onClick}
       title={description}
     >
-      {/* 1행: 라벨 + 큰 값 */}
-      <div className="flex items-baseline justify-between gap-3 w-full">
+      {/* 1행: 라벨 (상단) */}
+      <div className="flex items-center justify-between gap-2 w-full">
         <span className="text-xl sm:text-2xl font-bold text-black shrink-0 leading-none">{label}</span>
-        <div className="flex items-baseline justify-end gap-2 min-w-0">
-          <span className="text-5xl sm:text-6xl font-bold leading-none truncate" style={{ color }}>
-            {value}
+        {trend && !isZeroTrend && (
+          <span className={`text-base sm:text-lg font-bold shrink-0 ${getTrendColor(trend)}`}>
+            {trendValue}
           </span>
-          {trend && !isZeroTrend && (
-            <span className={`text-lg font-bold shrink-0 ${getTrendColor(trend)}`}>
-              {trendValue}
-            </span>
-          )}
-        </div>
+        )}
       </div>
 
-      {/* 2행: 진행바 (% 값일 때만 — 가운데 빈 공간 채움) */}
-      {percent !== null && (
-        <div className="mt-3 w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-700"
-            style={{ width: `${percent}%`, backgroundColor: color }}
-          />
-        </div>
-      )}
+      {/* 2행: 큰 값 (중앙) */}
+      <div className="flex items-center justify-center flex-1 w-full">
+        <span className="text-5xl sm:text-7xl font-bold leading-none truncate" style={{ color }}>
+          {value}
+        </span>
+      </div>
 
-      {/* 3행: 서브 값 */}
-      {subValue && (
-        <div className="mt-2 text-base sm:text-lg text-black font-semibold truncate">
-          {subValue}
-        </div>
-      )}
+      {/* 3행: 진행바 + 서브 값 (하단) */}
+      <div className="w-full">
+        {percent !== null && (
+          <div className="mb-2 w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${percent}%`, backgroundColor: color }}
+            />
+          </div>
+        )}
+        {subValue && (
+          <div className="text-base sm:text-lg text-black font-semibold truncate text-center">
+            {subValue}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -454,7 +454,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     const { title, totalUnit, total, totalDelta, cards, combined } = opts;
     const totalIsUp = totalDelta >= 0;
     return (
-      <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex flex-col">
+      <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex flex-col aspect-square">
         {/* 헤더: 타이틀 + 총 카운트 + 변동 (inline) */}
         <div className="flex items-baseline gap-2 sm:gap-3 mb-3 pb-3 border-b border-gray-100 flex-wrap">
           <h3 className="text-lg sm:text-xl font-bold text-black">{title}</h3>
@@ -470,8 +470,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
           )}
         </div>
 
-        {/* 차트 (꺾은선 + 마커) — 고정 높이로 안정적 렌더링 */}
-        <div style={{ height: 220 }}>
+        {/* 차트 (꺾은선 + 마커) — flex-1로 정사각형 안 남는 공간 채움 */}
+        <div className="flex-1 min-h-0" style={{ minHeight: 160 }}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={combined} margin={{ top: 18, right: 24, left: 4, bottom: 0 }}>
               <defs>
@@ -561,7 +561,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
         </div>
 
         {/* 범례 (하단 중앙) — 라벨 + 카운트 + 지난달 최고 대비 변동 */}
-        <div className="flex items-center justify-center gap-3 mt-2 pt-2 border-t border-gray-100 flex-wrap">
+        <div className="flex items-center justify-center gap-x-3 gap-y-1 mt-2 pt-2 border-t border-gray-100 flex-wrap">
           {cards.map(card => {
             const series = card.trend.map(p => p.value);
             const max = Math.max(...series);
@@ -569,17 +569,17 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
             const isUp = delta >= 0;
             return (
               <div key={card.key} className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: card.color }} />
-                <span className="text-sm sm:text-base font-bold text-black">{card.label}</span>
-                <span className="text-sm sm:text-base font-bold" style={{ color: card.color }}>{card.count}</span>
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: card.color }} />
+                <span className="text-base sm:text-lg font-bold text-black">{card.label}</span>
+                <span className="text-base sm:text-lg font-bold text-black">{card.count}</span>
                 {delta !== 0 && (
-                  <span className={`text-xs font-bold ${isUp ? 'text-emerald-600' : 'text-red-500'}`}>{isUp ? '+' : ''}{delta}</span>
+                  <span className={`text-sm sm:text-base font-bold ${isUp ? 'text-emerald-600' : 'text-red-500'}`}>{isUp ? '+' : ''}{delta}</span>
                 )}
               </div>
             );
           })}
         </div>
-        <div className="text-micro text-black text-right mt-0.5">최근 30일 추이 (지난달 최고 대비)</div>
+        <div className="text-sm sm:text-base font-semibold text-black text-right mt-1">최근 30일 추이 (지난달 최고 대비)</div>
       </div>
     );
   };
@@ -738,8 +738,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
           </div>
         ) : (
           <>
-            {/* ── Row 1: 메인 KPI — 0값 카드는 자동 숨김, 나머지는 flex 균등 ── */}
-            <div className="flex flex-col sm:flex-row gap-4 mb-5">
+            {/* ── Row 1: 메인 KPI — 정사각형 카드, 가운데 정렬 ── */}
+            <div className="flex flex-wrap justify-center gap-4 mb-5">
               {[
                 { card: kpiCards[0], onClick: () => setIsTodayAttendanceModalOpen(true) },
                 { card: kpiCards[1], onClick: () => setIsConsultationModalOpen(true) },
@@ -747,16 +747,15 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               ]
                 .filter(({ card }) => !/^[+-]?0+%?$/.test(String(card.value).trim()))
                 .map(({ card, onClick }) => (
-                  <div key={card.id} className="flex-1 min-w-0">
+                  <div key={card.id} className="w-full sm:w-72 md:w-80">
                     <KPICard data={card} onClick={onClick} />
                   </div>
                 ))}
             </div>
 
-            {/* ── 재원생(7) / 신입(3) / 퇴원(2) 추이 — 12-col 비대칭 ── */}
-            {/* ── 재원생(크게) + 신입 + 퇴원 sparkline (0명은 숨김) ── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 mb-5 items-start">
-              <div className="md:col-span-2 lg:col-span-7 min-w-0">
+            {/* ── 재원생 / 신입생 / 퇴원 — 정사각형 균등 그리드 ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-5 items-start">
+              <div className="min-w-0">
                 {renderTrendCard({
                   title: '재원생',
                   totalUnit: '명',
@@ -767,7 +766,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 })}
               </div>
               {(enrollmentBySubject.mathNew + enrollmentBySubject.englishNew) > 0 && (
-                <div className="lg:col-span-3 min-w-0">
+                <div className="min-w-0">
                   {renderTrendCard({
                     title: '신입생',
                     totalUnit: '명',
@@ -779,7 +778,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 </div>
               )}
               {(enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn) > 0 && (
-                <div className="lg:col-span-2 min-w-0">
+                <div className="min-w-0">
                   {renderTrendCard({
                     title: '퇴원',
                     totalUnit: '명',
