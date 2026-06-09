@@ -879,58 +879,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 );
               })()}
 
-              {/* 주의 필요 — 카드 자체 max-w로 좁게 + 콘텐츠 중앙 정렬 */}
-              <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100 max-w-md mx-auto w-full">
-                <h3 className="text-xl sm:text-2xl font-bold text-black mb-3 text-center">주의 필요</h3>
-                <div className="space-y-3">
-                  {pendingCount > 0 ? (
-                    <div className="flex items-center justify-center gap-2 text-xl text-red-600 font-bold">
-                      <span className="w-2 h-2 bg-red-600 rounded-full flex-shrink-0" />
-                      <span>미납 {pendingCount}건 · {unpaidRecords.reduce((s, r) => s + (r.unpaidAmount || 0), 0).toLocaleString()}원</span>
-                    </div>
-                  ) : null}
-                  {followUpData.urgent.length > 0 ? (
-                    <div className="flex items-center justify-center gap-2 text-xl text-red-600 font-bold">
-                      <span className="w-2 h-2 bg-red-600 rounded-full flex-shrink-0" />
-                      <span>긴급 후속조치 {followUpData.urgent.length}건 (3일 이내)</span>
-                    </div>
-                  ) : null}
-                  {followUpData.pending.length > 0 ? (
-                    <div className="flex items-center justify-center gap-2 text-xl text-orange-600 font-bold">
-                      <span className="w-2 h-2 bg-orange-600 rounded-full flex-shrink-0" />
-                      <span>상담 후속조치 대기 {followUpData.pending.length}건</span>
-                    </div>
-                  ) : null}
-                  {stats?.studentsNeedingConsultation && stats.studentsNeedingConsultation.length > 0 ? (
-                    <div className="flex items-center justify-center gap-2 text-xl text-orange-600 font-bold">
-                      <span className="w-2 h-2 bg-orange-600 rounded-full flex-shrink-0" />
-                      <span>이번 달 미상담 {stats.studentsNeedingConsultation.length}건</span>
-                    </div>
-                  ) : null}
-                  {withdrawalData.count > 0 ? (
-                    <div className="flex items-center justify-center gap-2 text-xl text-yellow-600 font-bold">
-                      <span className="w-2 h-2 bg-yellow-600 rounded-full flex-shrink-0" />
-                      <span>이번 달 퇴원 {withdrawalData.count}명</span>
-                    </div>
-                  ) : null}
-                  {totalCount > 0 && attendanceRate < 80 ? (
-                    <div className="flex items-center justify-center gap-2 text-xl text-yellow-600 font-bold">
-                      <span className="w-2 h-2 bg-yellow-600 rounded-full flex-shrink-0" />
-                      <span>오늘 출석률 낮음 ({attendanceRate}%)</span>
-                    </div>
-                  ) : null}
-                  {pendingCount === 0 && followUpData.total === 0 && withdrawalData.count === 0
-                    && (totalCount === 0 || attendanceRate >= 80)
-                    && (!stats?.studentsNeedingConsultation || stats.studentsNeedingConsultation.length === 0) ? (
-                    <div className="text-sm text-emerald-600 font-medium">모든 항목 정상입니다.</div>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-
-            {/* ── Row 4: 미납 + 상담 후속조치 — 균등 ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5 items-start">
-              {/* 미납 현황 — 가로 막대 (top 7) */}
+              {/* 미납 현황 — 가로 막대 (top 7) — Row 3 우측으로 이동 */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-xl sm:text-2xl font-bold text-black">미납 현황</h3>
@@ -977,6 +926,57 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 ) : (
                   <div className="text-sm text-emerald-600 font-medium py-8 text-center">미납 없음</div>
                 )}
+              </div>
+            </div>
+
+            {/* ── Row 4: 주의 필요 + 상담 후속조치 — 균등 ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5 items-start">
+              {/* 주의 필요 — 상담 후속조치 옆으로 이동 + 폰트 크게 */}
+              <div className="bg-white rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+                <h3 className="text-2xl sm:text-3xl font-bold text-black mb-4 text-center">주의 필요</h3>
+                <div className="space-y-4">
+                  {pendingCount > 0 ? (
+                    <div className="flex items-center justify-center gap-3 text-2xl sm:text-3xl text-red-600 font-bold">
+                      <span className="w-3.5 h-3.5 bg-red-600 rounded-full flex-shrink-0" />
+                      <span>미납 {pendingCount}건 · {unpaidRecords.reduce((s, r) => s + (r.unpaidAmount || 0), 0).toLocaleString()}원</span>
+                    </div>
+                  ) : null}
+                  {followUpData.urgent.length > 0 ? (
+                    <div className="flex items-center justify-center gap-3 text-2xl sm:text-3xl text-red-600 font-bold">
+                      <span className="w-3.5 h-3.5 bg-red-600 rounded-full flex-shrink-0" />
+                      <span>긴급 후속조치 {followUpData.urgent.length}건 (3일 이내)</span>
+                    </div>
+                  ) : null}
+                  {followUpData.pending.length > 0 ? (
+                    <div className="flex items-center justify-center gap-3 text-2xl sm:text-3xl text-orange-600 font-bold">
+                      <span className="w-3.5 h-3.5 bg-orange-600 rounded-full flex-shrink-0" />
+                      <span>상담 후속조치 대기 {followUpData.pending.length}건</span>
+                    </div>
+                  ) : null}
+                  {stats?.studentsNeedingConsultation && stats.studentsNeedingConsultation.length > 0 ? (
+                    <div className="flex items-center justify-center gap-3 text-2xl sm:text-3xl text-orange-600 font-bold">
+                      <span className="w-3.5 h-3.5 bg-orange-600 rounded-full flex-shrink-0" />
+                      <span>이번 달 미상담 {stats.studentsNeedingConsultation.length}건</span>
+                    </div>
+                  ) : null}
+                  {withdrawalData.count > 0 ? (
+                    <div className="flex items-center justify-center gap-3 text-2xl sm:text-3xl text-yellow-600 font-bold">
+                      <span className="w-3.5 h-3.5 bg-yellow-600 rounded-full flex-shrink-0" />
+                      <span>이번 달 퇴원 {withdrawalData.count}명</span>
+                    </div>
+                  ) : null}
+                  {totalCount > 0 && attendanceRate < 80 ? (
+                    <div className="flex items-center justify-center gap-3 text-2xl sm:text-3xl text-yellow-600 font-bold">
+                      <span className="w-3.5 h-3.5 bg-yellow-600 rounded-full flex-shrink-0" />
+                      <span>오늘 출석률 낮음 ({attendanceRate}%)</span>
+                    </div>
+                  ) : null}
+                  {pendingCount === 0 && followUpData.total === 0 && withdrawalData.count === 0
+                    && (totalCount === 0 || attendanceRate >= 80)
+                    && (!stats?.studentsNeedingConsultation || stats.studentsNeedingConsultation.length === 0) ? (
+                    <div className="text-xl text-emerald-600 font-bold text-center">모든 항목 정상입니다.</div>
+                  ) : null}
+                </div>
               </div>
 
               {/* 상담 후속조치 */}
