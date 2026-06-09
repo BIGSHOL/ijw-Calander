@@ -738,22 +738,24 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
           </div>
         ) : (
           <>
-            {/* ── Row 1: 메인 KPI 3개 — 비대칭 4/5/3 (좁은 viewport는 1/3 col) ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-12 gap-4 mb-5">
-              <div className="lg:col-span-4 min-w-0">
-                <KPICard data={kpiCards[0]} onClick={() => setIsTodayAttendanceModalOpen(true)} />
-              </div>
-              <div className="lg:col-span-5 min-w-0">
-                <KPICard data={kpiCards[1]} onClick={() => setIsConsultationModalOpen(true)} />
-              </div>
-              <div className="lg:col-span-3 min-w-0">
-                <KPICard data={kpiCards[2]} onClick={() => setIsBillingModalOpen(true)} />
-              </div>
+            {/* ── Row 1: 메인 KPI — 0값 카드는 자동 숨김, 나머지는 flex 균등 ── */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-5">
+              {[
+                { card: kpiCards[0], onClick: () => setIsTodayAttendanceModalOpen(true) },
+                { card: kpiCards[1], onClick: () => setIsConsultationModalOpen(true) },
+                { card: kpiCards[2], onClick: () => setIsBillingModalOpen(true) },
+              ]
+                .filter(({ card }) => !/^[+-]?0+%?$/.test(String(card.value).trim()))
+                .map(({ card, onClick }) => (
+                  <div key={card.id} className="flex-1 min-w-0">
+                    <KPICard data={card} onClick={onClick} />
+                  </div>
+                ))}
             </div>
 
             {/* ── 재원생(7) / 신입(3) / 퇴원(2) 추이 — 12-col 비대칭 ── */}
-            {/* ── 재원생(크게) + 신입 + 퇴원 sparkline ── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 mb-5">
+            {/* ── 재원생(크게) + 신입 + 퇴원 sparkline (0명은 숨김) ── */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 mb-5 items-start">
               <div className="md:col-span-2 lg:col-span-7 min-w-0">
                 {renderTrendCard({
                   title: '재원생',
@@ -764,30 +766,34 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   combined: combinedTrend,
                 })}
               </div>
-              <div className="lg:col-span-3 min-w-0">
-                {renderTrendCard({
-                  title: '신입생',
-                  totalUnit: '명',
-                  total: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
-                  totalDelta: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
-                  cards: newCards,
-                  combined: newCombined,
-                })}
-              </div>
-              <div className="lg:col-span-2 min-w-0">
-                {renderTrendCard({
-                  title: '퇴원',
-                  totalUnit: '명',
-                  total: enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn,
-                  totalDelta: -(enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn),
-                  cards: withdrawnCards,
-                  combined: withdrawnCombined,
-                })}
-              </div>
+              {(enrollmentBySubject.mathNew + enrollmentBySubject.englishNew) > 0 && (
+                <div className="lg:col-span-3 min-w-0">
+                  {renderTrendCard({
+                    title: '신입생',
+                    totalUnit: '명',
+                    total: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
+                    totalDelta: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
+                    cards: newCards,
+                    combined: newCombined,
+                  })}
+                </div>
+              )}
+              {(enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn) > 0 && (
+                <div className="lg:col-span-2 min-w-0">
+                  {renderTrendCard({
+                    title: '퇴원',
+                    totalUnit: '명',
+                    total: enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn,
+                    totalDelta: -(enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn),
+                    cards: withdrawnCards,
+                    combined: withdrawnCombined,
+                  })}
+                </div>
+              )}
             </div>
 
             {/* ── Row 3: 주간 출석(크게) + 주의 필요 — 비대칭 ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5 [&>:first-child]:lg:col-span-2">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5 items-start [&>:first-child]:lg:col-span-2">
               {/* 주간 출석 추이 — 도넛만 (요일 라벨 없음) */}
               {(() => {
                 const validDays = weeklyAttendance.filter(d => d.source !== 'empty');
@@ -929,7 +935,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
             </div>
 
             {/* ── Row 4: 미납 + 상담 후속조치 — 균등 ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5 items-start">
               {/* 미납 현황 — 가로 막대 (top 7) */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
@@ -1015,7 +1021,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
             </div>
 
             {/* ── Row 4: 오늘 수업 + 퇴원 사유 + 등록 전환율 ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3 items-start">
               {/* 오늘의 수업 — 세로 막대 (전체 수업 수 / 출석 완료 / 미기록) */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
