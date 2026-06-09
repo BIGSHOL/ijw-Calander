@@ -51,39 +51,31 @@ const KPICard: React.FC<KPICardProps> = ({ data, onClick }) => {
 
   return (
     <div
-      className={`bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100 transition-all hover:shadow-md ${
+      className={`bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-100 transition-all hover:shadow-md h-full flex flex-col justify-center ${
         onClick ? 'cursor-pointer hover:border-gray-300' : ''
       }`}
       onClick={onClick}
       title={description}
     >
-      {/* 아이콘과 라벨 */}
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-sm sm:text-base font-semibold text-black">{label}</span>
-        {icon && <span className="text-xl sm:text-2xl">{icon}</span>}
-      </div>
-
-      {/* 메인 값 */}
-      <div>
-        <span className="text-3xl sm:text-4xl font-bold leading-tight" style={{ color }}>
+      {/* 라벨 + 큰 값 inline */}
+      <div className="flex items-baseline gap-2 flex-wrap">
+        <span className="text-base sm:text-lg font-semibold text-black">{label}</span>
+        <span className="text-4xl sm:text-5xl font-bold leading-none" style={{ color }}>
           {value}
         </span>
+        {trend && !isZeroTrend && (
+          <span className={`text-base font-bold ${getTrendColor(trend)}`}>
+            {trendValue}
+          </span>
+        )}
       </div>
 
-      {/* 서브 값 및 트렌드 */}
-      <div className="flex items-center gap-1.5 mt-1">
-        {trend && !isZeroTrend && (
-          <div className="flex items-center gap-0.5">
-            {getTrendIcon(trend)}
-            <span className={`text-xs font-medium ${getTrendColor(trend)}`}>
-              {trendValue}
-            </span>
-          </div>
-        )}
-        {subValue && (
-          <span className="text-xs text-black">{subValue}</span>
-        )}
-      </div>
+      {/* 서브 값 inline */}
+      {subValue && (
+        <div className="mt-1.5 text-sm sm:text-base text-black font-medium">
+          {subValue}
+        </div>
+      )}
     </div>
   );
 };

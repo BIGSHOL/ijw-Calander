@@ -455,25 +455,23 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
     const totalIsUp = totalDelta >= 0;
     return (
       <div className="bg-white rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100 flex flex-col h-full">
-        {/* 헤더: 타이틀 + 총 카운트 + 변동 */}
-        <div className="flex items-baseline justify-between mb-3 pb-3 border-b border-gray-100 gap-2 flex-wrap">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="text-base sm:text-lg font-semibold text-black">{title}</h3>
-            <div className="flex items-baseline gap-0.5">
-              <span className="text-2xl sm:text-3xl font-bold text-black">{total}</span>
-              <span className="text-sm text-black">{totalUnit}</span>
-            </div>
-            {totalDelta !== 0 && (
-              <div className={`flex items-center gap-0.5 text-sm font-bold ${totalIsUp ? 'text-emerald-600' : 'text-red-500'}`}>
-                <TrendingUp size={14} />
-                <span>{totalIsUp ? '+' : ''}{totalDelta}</span>
-              </div>
-            )}
+        {/* 헤더: 타이틀 + 총 카운트 + 변동 (inline) */}
+        <div className="flex items-baseline gap-2 sm:gap-3 mb-3 pb-3 border-b border-gray-100 flex-wrap">
+          <h3 className="text-lg sm:text-xl font-bold text-black">{title}</h3>
+          <div className="flex items-baseline gap-0.5">
+            <span className="text-3xl sm:text-4xl font-bold text-black leading-none">{total}</span>
+            <span className="text-base text-black">{totalUnit}</span>
           </div>
+          {totalDelta !== 0 && (
+            <div className={`flex items-center gap-0.5 text-base font-bold ${totalIsUp ? 'text-emerald-600' : 'text-red-500'}`}>
+              <TrendingUp size={16} />
+              <span>{totalIsUp ? '+' : ''}{totalDelta}</span>
+            </div>
+          )}
         </div>
 
         {/* 차트 (꺾은선 + 마커) */}
-        <div className="flex-1" style={{ minHeight: 200 }}>
+        <div className="flex-1" style={{ minHeight: 260 }}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={combined} margin={{ top: 18, right: 24, left: 4, bottom: 0 }}>
               <defs>
@@ -818,8 +816,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                       <span>주간 출석 추이</span>
                       <span className="text-[10px] text-black font-normal">클릭 시 요일별 상세 →</span>
                     </h3>
-                    <div className="flex items-center justify-center w-full" style={{ minHeight: 240 }}>
-                      <div className="relative w-full max-w-md" style={{ aspectRatio: '1 / 1', maxHeight: 320 }}>
+                    <div className="flex items-center justify-center w-full" style={{ minHeight: 320 }}>
+                      <div className="relative w-full" style={{ height: 360 }}>
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
                             <Pie
@@ -867,8 +865,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                           </PieChart>
                         </ResponsiveContainer>
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                          <span className="text-3xl font-bold text-black">{validDays.length === 0 ? '-' : `${avgRate}%`}</span>
-                          <span className="text-[10px] text-black font-medium mt-0.5">주간 평균</span>
+                          <span className="text-6xl font-bold text-black leading-none">{validDays.length === 0 ? '-' : `${avgRate}%`}</span>
+                          <span className="text-base text-black font-semibold mt-2">주간 평균</span>
                         </div>
                       </div>
                     </div>
@@ -943,8 +941,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   ) : null}
                 </div>
                 {unpaidRecords.length > 0 ? (
-                  <div className="overflow-y-auto" style={{ maxHeight: 280 }}>
-                    <div style={{ height: Math.max(unpaidRecords.length * 34 + 8, 100) }}>
+                  <div className="overflow-y-auto" style={{ maxHeight: 380 }}>
+                    <div style={{ height: Math.max(unpaidRecords.length * 42 + 8, 120) }}>
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart
                           data={unpaidRecords.map(r => ({
@@ -1025,7 +1023,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   <span className="text-xs text-black font-medium">{todayClasses.filter(c => c.isRecorded).length}/{todayClasses.length} 출석 기록</span>
                 </div>
                 {todayClasses.length > 0 ? (
-                  <div style={{ height: 150 }}>
+                  <div style={{ height: 240 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={[
@@ -1100,7 +1098,7 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               {regConversionData.total > 0 ? (
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <h3 className="text-base sm:text-lg font-semibold text-black mb-1">이번 달 등록 상담</h3>
-                <div className="relative" style={{ height: 150 }}>
+                <div className="relative" style={{ height: 220 }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
