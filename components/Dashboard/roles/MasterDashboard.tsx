@@ -792,8 +792,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
               )}
             </div>
 
-            {/* ── Row 3: 주간 출석(크게) + 주의 필요 — 비대칭 ── */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5 items-start [&>:first-child]:lg:col-span-2">
+            {/* ── Row 3: 주간 출석 + 주의 필요 — 1:1 (도넛 카드 좌우 여백 제거) ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5 items-start">
               {/* 주간 출석 추이 — 도넛만 (요일 라벨 없음) */}
               {(() => {
                 const validDays = weeklyAttendance.filter(d => d.source !== 'empty');
