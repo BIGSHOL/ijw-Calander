@@ -879,10 +879,10 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                 );
               })()}
 
-              {/* 주의 필요 — 콘텐츠 중앙 정렬 + 카드 내부 max-w로 박스 좁게 */}
-              <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+              {/* 주의 필요 — 카드 자체 max-w로 좁게 + 콘텐츠 중앙 정렬 */}
+              <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100 max-w-md mx-auto w-full">
                 <h3 className="text-xl sm:text-2xl font-bold text-black mb-3 text-center">주의 필요</h3>
-                <div className="space-y-3 max-w-md mx-auto">
+                <div className="space-y-3">
                   {pendingCount > 0 ? (
                     <div className="flex items-center justify-center gap-2 text-xl text-red-600 font-bold">
                       <span className="w-2 h-2 bg-red-600 rounded-full flex-shrink-0" />
