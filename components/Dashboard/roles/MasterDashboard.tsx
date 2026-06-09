@@ -770,8 +770,10 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   {renderTrendCard({
                     title: '신입생',
                     totalUnit: '명',
-                    total: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
-                    totalDelta: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
+                    // 학생 헤드카운트 (수학+영어 둘 다 등록한 신입생은 1로 카운트)
+                    // 과목별 라인 합산은 사용 안 함 — students.startDate 기반
+                    total: newStudentsThisMonth,
+                    totalDelta: newStudentsThisMonth,
                     cards: newCards,
                     combined: newCombined,
                   })}
