@@ -570,11 +570,13 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
             const delta = card.count - max;
             const isUp = delta >= 0;
             return (
-              <div key={card.key} className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: card.color }} />
-                <span className="text-xxs font-bold text-black">{card.label}</span>
-                <span className="text-xxs font-bold" style={{ color: card.color }}>{card.count}</span>
-                <span className={`text-micro font-bold ${isUp ? 'text-emerald-600' : 'text-red-500'}`}>{isUp ? '+' : ''}{delta}</span>
+              <div key={card.key} className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: card.color }} />
+                <span className="text-sm sm:text-base font-bold text-black">{card.label}</span>
+                <span className="text-sm sm:text-base font-bold" style={{ color: card.color }}>{card.count}</span>
+                {delta !== 0 && (
+                  <span className={`text-xs font-bold ${isUp ? 'text-emerald-600' : 'text-red-500'}`}>{isUp ? '+' : ''}{delta}</span>
+                )}
               </div>
             );
           })}
@@ -941,39 +943,38 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   ) : null}
                 </div>
                 {unpaidRecords.length > 0 ? (
-                  <div style={{ height: 200 }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={unpaidRecords.slice(0, 7).map(r => ({
-                          name: r.studentName || r.externalStudentId,
-                          amount: r.unpaidAmount || 0,
-                        }))}
-                        layout="vertical"
-                        margin={{ top: 4, right: 50, left: 8, bottom: 4 }}
-                      >
-                        <XAxis type="number" hide />
-                        <YAxis type="category" dataKey="name" width={60} tick={{ fontSize: 11, fill: '#475569' }} axisLine={false} tickLine={false} />
-                        <Tooltip
-                          cursor={{ fill: '#f1f5f9' }}
-                          content={({ active, payload }: any) => {
-                            if (!active || !payload?.length) return null;
-                            const d = payload[0].payload;
-                            return (
-                              <div className="bg-white border border-slate-200 rounded shadow text-xs p-2">
-                                <div className="font-semibold text-black">{d.name}</div>
-                                <div className="text-rose-600 font-bold">{d.amount.toLocaleString()}원</div>
-                              </div>
-                            );
-                          }}
-                        />
-                        <Bar dataKey="amount" fill="#fb7185" radius={[0, 4, 4, 0]} isAnimationActive animationDuration={600}>
-                          <LabelList dataKey="amount" position="right" formatter={(v: number) => `${(v / 10000).toFixed(0)}만`} style={{ fontSize: 10, fill: '#64748b' }} />
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                    {unpaidRecords.length > 7 ? (
-                      <div className="text-xs text-black text-center mt-1">외 {unpaidRecords.length - 7}건 더</div>
-                    ) : null}
+                  <div className="overflow-y-auto" style={{ maxHeight: 280 }}>
+                    <div style={{ height: Math.max(unpaidRecords.length * 34 + 8, 100) }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={unpaidRecords.map(r => ({
+                            name: r.studentName || r.externalStudentId,
+                            amount: r.unpaidAmount || 0,
+                          }))}
+                          layout="vertical"
+                          margin={{ top: 4, right: 60, left: 4, bottom: 4 }}
+                        >
+                          <XAxis type="number" hide />
+                          <YAxis type="category" dataKey="name" width={72} tick={{ fontSize: 14, fill: '#000', fontWeight: 600 }} axisLine={false} tickLine={false} />
+                          <Tooltip
+                            cursor={{ fill: '#fff1f2' }}
+                            content={({ active, payload }: any) => {
+                              if (!active || !payload?.length) return null;
+                              const d = payload[0].payload;
+                              return (
+                                <div className="bg-white border border-slate-200 rounded shadow text-sm p-2">
+                                  <div className="font-semibold text-black">{d.name}</div>
+                                  <div className="text-rose-600 font-bold">{d.amount.toLocaleString()}원</div>
+                                </div>
+                              );
+                            }}
+                          />
+                          <Bar dataKey="amount" fill="#fb7185" radius={[0, 4, 4, 0]} isAnimationActive animationDuration={600}>
+                            <LabelList dataKey="amount" position="right" formatter={(v: number) => `${(v / 10000).toFixed(0)}만`} style={{ fontSize: 13, fill: '#000', fontWeight: 700 }} />
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
                 ) : (
                   <div className="text-sm text-emerald-600 font-medium py-8 text-center">미납 없음</div>
@@ -991,18 +992,18 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   ) : null}
                 </div>
                 {followUpData.total > 0 ? (
-                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto">
                     {[...followUpData.urgent, ...followUpData.pending].slice(0, 10).map((c, idx) => {
                       const urgency = getFollowUpUrgency(c);
                       const daysLeft = c.followUpDate ? getFollowUpDaysLeft(c.followUpDate) : null;
                       return (
-                        <div key={idx} className="flex items-center justify-between py-1 px-2 bg-gray-50 rounded text-xxs">
+                        <div key={idx} className="flex items-center justify-between py-1.5 px-2.5 bg-gray-50 rounded text-sm">
                           <div className="flex items-center gap-2 min-w-0">
-                            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${urgency === 'urgent' ? 'bg-red-500' : 'bg-orange-400'}`} />
-                            <span className="font-medium text-black truncate">{c.studentName}</span>
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${urgency === 'urgent' ? 'bg-red-500' : 'bg-orange-400'}`} />
+                            <span className="font-semibold text-black truncate">{c.studentName}</span>
                             <span className="text-black truncate">{c.title}</span>
                           </div>
-                          <span className={`flex-shrink-0 font-medium ${daysLeft !== null && daysLeft <= 0 ? 'text-red-600' : daysLeft !== null && daysLeft <= 3 ? 'text-orange-600' : 'text-black'}`}>
+                          <span className={`flex-shrink-0 font-bold ${daysLeft !== null && daysLeft <= 0 ? 'text-red-600' : daysLeft !== null && daysLeft <= 3 ? 'text-orange-600' : 'text-black'}`}>
                             {daysLeft !== null ? (daysLeft <= 0 ? `${Math.abs(daysLeft)}일 지남` : `${daysLeft}일 남음`) : '기한 없음'}
                           </span>
                         </div>
@@ -1017,20 +1018,20 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
 
             {/* ── Row 4: 오늘 수업 + 퇴원 사유 + 등록 전환율 ── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-3">
-              {/* 오늘의 수업 — 세로 막대 (전체/완료/미기록) */}
+              {/* 오늘의 수업 — 세로 막대 (전체 수업 수 / 출석 완료 / 미기록) */}
               <div className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-base sm:text-lg font-semibold text-black">오늘의 수업</h3>
-                  <span className="text-[10px] text-black">{todayClasses.length}개 수업</span>
+                  <h3 className="text-base sm:text-lg font-semibold text-black">오늘의 수업 ({todayClasses.length}개)</h3>
+                  <span className="text-xs text-black font-medium">{todayClasses.filter(c => c.isRecorded).length}/{todayClasses.length} 출석 기록</span>
                 </div>
                 {todayClasses.length > 0 ? (
                   <div style={{ height: 150 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={[
-                          { name: '전체', value: todayClasses.length, fill: '#10b981' },
-                          { name: '출석 완료', value: todayClasses.filter(c => c.isRecorded).length, fill: '#059669' },
-                          { name: '미기록', value: todayClasses.filter(c => !c.isRecorded).length, fill: '#fb7185' },
+                          { name: `전체 수업 (${todayClasses.length}개)`, value: todayClasses.length, fill: '#10b981' },
+                          { name: `출석 완료 (${todayClasses.filter(c => c.isRecorded).length}개)`, value: todayClasses.filter(c => c.isRecorded).length, fill: '#059669' },
+                          { name: `미기록 (${todayClasses.filter(c => !c.isRecorded).length}개)`, value: todayClasses.filter(c => !c.isRecorded).length, fill: '#fb7185' },
                         ].filter(d => d.value > 0)}
                         margin={{ top: 20, right: 4, left: 4, bottom: 4 }}
                         barCategoryGap="10%"
@@ -1104,8 +1105,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                     <PieChart>
                       <Pie
                         data={[
-                          { name: '등록', value: Math.max(regConversionData.rate, 0.01), fill: regConversionData.rate >= 50 ? '#10b981' : regConversionData.rate >= 30 ? '#f59e0b' : '#ef4444' },
-                          { name: '미등록', value: Math.max(0, 100 - regConversionData.rate), fill: '#e5e7eb' },
+                          { name: '등록 완료', value: Math.max(regConversionData.registered, 0.001), fill: '#059669' },
+                          { name: '미등록/대기', value: Math.max(regConversionData.total - regConversionData.registered, 0.001), fill: '#a7f3d0' },
                         ]}
                         cx="50%"
                         cy="90%"
@@ -1121,10 +1122,8 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-x-0 bottom-1 flex flex-col items-center pointer-events-none">
-                    <span className="text-4xl font-bold text-black leading-none">
-                      <span className="text-base font-medium text-black mr-1">{regConversionData.registered}/{regConversionData.total}</span>
-                      {regConversionData.rate}<span className="text-xl">%</span>
-                    </span>
+                    <span className="text-5xl font-bold text-emerald-700 leading-none">{regConversionData.total}</span>
+                    <span className="text-xs font-medium text-black mt-1">전체 상담 건수</span>
                   </div>
                 </div>
                 {/* 상태별 분류 */}
