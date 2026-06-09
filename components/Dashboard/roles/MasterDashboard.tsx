@@ -766,30 +766,26 @@ const MasterDashboard: React.FC<MasterDashboardProps> = ({ userProfile, staffMem
                   combined: combinedTrend,
                 })}
               </div>
-              {(enrollmentBySubject.mathNew + enrollmentBySubject.englishNew) > 0 && (
-                <div className="lg:col-span-3 min-w-0">
-                  {renderTrendCard({
-                    title: '신입생',
-                    totalUnit: '명',
-                    total: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
-                    totalDelta: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
-                    cards: newCards,
-                    combined: newCombined,
-                  })}
-                </div>
-              )}
-              {(enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn) > 0 && (
-                <div className="lg:col-span-2 min-w-0">
-                  {renderTrendCard({
-                    title: '퇴원',
-                    totalUnit: '명',
-                    total: enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn,
-                    totalDelta: -(enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn),
-                    cards: withdrawnCards,
-                    combined: withdrawnCombined,
-                  })}
-                </div>
-              )}
+              <div className="lg:col-span-3 min-w-0">
+                {renderTrendCard({
+                  title: '신입생',
+                  totalUnit: '명',
+                  total: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
+                  totalDelta: enrollmentBySubject.mathNew + enrollmentBySubject.englishNew,
+                  cards: newCards,
+                  combined: newCombined,
+                })}
+              </div>
+              <div className="lg:col-span-2 min-w-0">
+                {renderTrendCard({
+                  title: '퇴원',
+                  totalUnit: '명',
+                  total: enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn,
+                  totalDelta: -(enrollmentBySubject.mathWithdrawn + enrollmentBySubject.englishWithdrawn),
+                  cards: withdrawnCards,
+                  combined: withdrawnCombined,
+                })}
+              </div>
             </div>
 
             {/* ── Row 3: 주간 출석(크게) + 주의 필요 — 비대칭 ── */}
